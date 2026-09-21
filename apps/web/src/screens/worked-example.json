@@ -171,7 +171,7 @@
     "levelPlan": {
       "bayCount": {
         "value": "46",
-        "node": "n127",
+        "node": "n135",
         "parameterId": "parking.laid_out_bays",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -179,7 +179,7 @@
       },
       "areaPerBayM2": {
         "value": "41.68",
-        "node": "n129",
+        "node": "n137",
         "parameterId": "parking.area_per_bay_m2",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -1431,7 +1431,7 @@
           },
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-          "node": "n133",
+          "node": "n141",
           "provenanceClass": "DERIVED"
         },
         "candidates": [
@@ -1514,7 +1514,7 @@
         },
         "rank": 1,
         "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-        "node": "n133",
+        "node": "n141",
         "provenanceClass": "DERIVED"
       },
       "candidates": [

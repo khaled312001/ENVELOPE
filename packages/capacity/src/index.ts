@@ -5,5 +5,6 @@ export * from './layout.js';
 export * from './access.js';
 export * from './level-plan.js';
 export * from './massing.js';
+export * from './building.js';
 export * from './bands.js';
 export * from './pipeline.js';

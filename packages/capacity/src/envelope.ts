@@ -99,16 +99,30 @@ export interface EnvelopeSolution extends BuildableEnvelope {
    */
   readonly finalContext: EvalContext;
   /**
-   * The setback-permitted ring and the tower plate, as polygons.
+   * The setback line, the podium and the tower plate, as polygons.
    *
    * Carried out of the solver rather than recomputed downstream. The parking
    * layout has to pack a real rectangle and the massing view has to draw a real
    * outline; both used to be handed the plot boundary and a number, which meant
    * the drawing showed bays inside the setback and a slab wider than the plate.
    * A second offset computed elsewhere is a second answer nobody reconciles.
+   *
+   * `setbackRing` is the per-edge offset itself. `podiumRing` is the podium the
+   * footprint figure describes — the setback ring cut down to the coverage cap
+   * where that cap binds (see `podiumPlacement`).
    */
+  readonly setbackRing: Ring;
   readonly podiumRing: Ring;
   readonly plateRing: Ring;
+  /**
+   * Set when the coverage cap made the podium smaller than the setback line.
+   *
+   * The cap fixes the podium's AREA. It says nothing about where on the plot the
+   * podium stands, so the ring is the setback ring scaled about its centre to that
+   * area, and this is the traced assumption that says so. Undefined when the
+   * podium is the setback ring, because then nothing was placed.
+   */
+  readonly podiumPlacement: Traced<string> | undefined;
 }
 
 export class EnvelopeHaltedError extends Error {
@@ -478,7 +492,28 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
 
   // Geometric realisability: the plate must be a real polygon inside the podium,
   // not merely a number. INV-10 checks the arithmetic; this checks the geometry.
-  const podiumRing = offset.ring;
+  //
+  // THE PODIUM RING IS THE PODIUM FOOTPRINT, not the setback line. They were the
+  // same ring until the coverage cap bound, and then the footprint figure said
+  // min(setback, coverage) while every drawing and the parking layout used the
+  // whole setback ring — a slab, and a car park packed into it, larger than the
+  // number beside them. Cut to the cap here, once, so every consumer agrees.
+  const setbackRing = offset.ring;
+  const coverageBinds = podiumM2.lt(setbackFootprintM2);
+  const podiumRing = coverageBinds
+    ? scaleToArea(setbackRing, podiumM2.times(1_000_000).toDecimalPlaces(0).toNumber())
+    : setbackRing;
+  if (coverageBinds) verifiedArea(podiumRing, 'podium footprint');
+  const podiumPlacement = coverageBinds
+    ? tracer.assumed('envelope.podium_placement', 'centred in the setback line', {
+        label: 'where the podium stands',
+        basis:
+          'The coverage cap fixes how much of the plot the podium may cover, not where ' +
+          'it stands. The podium is drawn as the setback line scaled about its centre ' +
+          'to the capped area, which keeps its proportions and an equal margin on ' +
+          'every side. Its area is the cited figure; its position is this assumption.',
+      })
+    : undefined;
   // scaleToArea works in mm²; plateM2 is m².
   const plateRing = plateCap
     ? scaleToArea(podiumRing, plateM2.times(1_000_000).toDecimalPlaces(0).toNumber())
@@ -534,8 +569,10 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     resolutions,
     blocked: [],
     finalContext: finalCtx,
+    setbackRing,
     podiumRing,
     plateRing,
+    podiumPlacement,
   };
 }
 

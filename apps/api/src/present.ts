@@ -243,6 +243,18 @@ export function presentRun(
       })),
     },
 
+    /**
+     * The run as one building, exactly as the engine assembled it.
+     *
+     * Passed through, not re-shaped: it is plain JSON by construction (see
+     * `BuildingModel` in `@envelope/core`), and every drawing of this run — the
+     * sheets, the massing, the DXF — reads it. A presenter that re-shaped it would
+     * be a fourth assembly of the same building, and the one most likely to drift.
+     * Its geometry is integer millimetres in plot coordinates, unlike the metre
+     * strings above; the model's own type says so and every reader converts once.
+     */
+    building: output.building,
+
     capacity: {
       bandA: toWire(capacity.regulationLimitedGfa),
       bandB: toWire(capacity.geometryLimitedGfa),

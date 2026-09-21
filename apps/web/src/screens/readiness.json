@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T11:55:04.978Z",
+  "generatedAt": "2026-09-21T17:19:34.966Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
@@ -38,10 +38,34 @@
       "basis": "no cited rule fixes the gross area consumed per bay. 32 m²/bay is the mid-point of the 28–35 m²/bay range typical of a structured basement, and it is ranked in the assumption register because the parking band moves roughly in proportion to it."
     },
     {
+      "parameterId": "parking.ramp_width_m",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "A 6 m strip: the two-way driveway width of Table B.11, so two cars pass on the ramp as they do in the aisle. B.7.2.2 sets its own ramp widths and they are not encoded here, so this width is not checked against them."
+    },
+    {
+      "parameterId": "parking.ramp_run_m",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "A 30 m run reserved for the ramp in plan, or the whole packable depth when that is shorter. It sets the gradient the ramp needs to climb one level, which is reported but not assessed: B.7.2.2 is not encoded. A longer run costs bays; a shorter one steepens the ramp."
+    },
+    {
       "parameterId": "massing.podium_levels",
       "runs": 1,
       "maxRelativeEffect": "0",
       "basis": "How many of the permitted levels are podium is stated on the affection plan — \"G+2P+8\" is two — and this run was not given one, so the massing shows a single podium level. It changes the picture and the podium roof level; it changes no capacity figure in this run. Enter the podium count to replace it."
+    },
+    {
+      "parameterId": "building.parking_levels_placement",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "The run states how many parking levels it has and how many levels are podium, not which levels the parking occupies. They are placed in the podium from the ground up — the client's own description of a Dubai podium is \"all garage and core\" — and any the podium cannot hold go below grade. It moves the picture and the section; it moves no capacity figure."
+    },
+    {
+      "parameterId": "building.tower_placement",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "The tower plate cap fixes the plate's area, not where it stands on the podium roof. It is drawn as the podium outline scaled about its centre to the capped area. Where the tower actually sits is a design decision this engine does not make, and the massing has always said so."
     }
   ],
   "deferred": [

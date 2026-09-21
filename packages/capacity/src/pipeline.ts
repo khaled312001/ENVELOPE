@@ -25,6 +25,7 @@
  */
 
 import {
+  type BuildingModel,
   type CapacityResult,
   Decimal,
   type ParkingInFar,
@@ -45,6 +46,7 @@ import {
 } from '@envelope/rules';
 
 import { computeBands, type BandSource } from './bands.js';
+import { buildBuildingModel } from './building.js';
 import { solveEnvelope, type EnvelopeSolution } from './envelope.js';
 import { planParkingLevel, type LevelPlan } from './level-plan.js';
 import { buildMassing, type MassingResult } from './massing.js';
@@ -176,6 +178,12 @@ export interface RunOutput {
   readonly levelPlanRefusal: string | undefined;
   /** The envelope as volumes, for the 3D view and the drawing. */
   readonly massing: MassingResult;
+  /**
+   * The run as one building: levels at their elevations, the parking on each,
+   * the ramps between them. Every drawing of this run — the sheets, the massing
+   * view, the DXF — reads this and nothing else, so they cannot disagree.
+   */
+  readonly building: BuildingModel;
 }
 
 export class RunBlockedError extends Error {
@@ -479,6 +487,16 @@ export function runPipeline(input: RunInput): RunOutput {
       : { podiumLevels: { value: input.podiumLevels, actor: input.actor } }),
   });
 
+  const building = buildBuildingModel({
+    tracer,
+    plot: input.plot,
+    envelope,
+    massing,
+    parkingLevels: parking.levelsAvailable,
+    levelPlan,
+    levelPlanRefusal,
+  });
+
   return {
     envelope,
     parking,
@@ -491,6 +509,7 @@ export function runPipeline(input: RunInput): RunOutput {
     levelPlan,
     levelPlanRefusal,
     massing,
+    building,
   };
 }
 

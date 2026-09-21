@@ -82,6 +82,25 @@ export interface LevelPlan {
   };
   /** The ring the rectangle was inscribed in, so a drawing can show both. */
   readonly podiumRing: Ring;
+  /**
+   * The deducted strip, in plot coordinates — where cores and plant may go on
+   * this drawing. Undefined when the run deducted nothing.
+   */
+  readonly reservedZone: readonly Pt[] | undefined;
+  /**
+   * The ramp strip, in plot coordinates, with its low and high edges.
+   *
+   * `foot` is the edge at the packing rectangle's origin side and `head` the far
+   * one: the ramp is taken to climb away from the origin. Which way a ramp runs
+   * is part of the same assumption as its run (`parking.ramp_run_m`).
+   */
+  readonly rampStrip: {
+    readonly world: readonly Pt[];
+    readonly foot: readonly [Pt, Pt];
+    readonly head: readonly [Pt, Pt];
+    readonly widthM: TracedDecimal;
+    readonly runM: TracedDecimal;
+  } | undefined;
   readonly bayCount: Traced<number>;
   readonly areaPerBayM2: TracedDecimal;
   /** What was taken off the level before packing, and where the number came from. */
@@ -210,6 +229,26 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     world: toWorld(r),
   }));
 
+  const local = (x: Decimal, y: Decimal): Pt =>
+    fromLocal(rect, x.times(1000).toNumber(), y.times(1000).toNumber());
+  const reservedZone = layout.reserved
+    ? toWorld({ ...layout.reserved, kind: 'OBSTRUCTION', row: -1 })
+    : undefined;
+  const rampRect = layout.rects.find((r) => r.kind === 'RAMP');
+  const rampStrip =
+    rampRect && layout.ramp
+      ? {
+          world: toWorld(rampRect),
+          foot: [local(rampRect.x, rampRect.y), local(rampRect.x.plus(rampRect.width), rampRect.y)] as const,
+          head: [
+            local(rampRect.x, rampRect.y.plus(rampRect.height)),
+            local(rampRect.x.plus(rampRect.width), rampRect.y.plus(rampRect.height)),
+          ] as const,
+          widthM: layout.ramp.widthM,
+          runM: layout.ramp.runM,
+        }
+      : undefined;
+
   const notAssessed = [...layout.notes, ...access.notAssessed];
   if (!rect.exact) {
     // Stated as a shortfall in square metres, not only as a ratio: "94% of the
@@ -246,6 +285,8 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
       coverage: rect.coverage,
     },
     podiumRing: input.podiumRing,
+    reservedZone,
+    rampStrip,
     bayCount: layout.bayCount,
     areaPerBayM2: layout.areaPerBayM2,
     deductionsM2: deductionsTraced,

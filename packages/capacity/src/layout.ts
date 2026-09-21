@@ -194,6 +194,21 @@ export interface ParkingLayoutResult {
   readonly moduleDepthM: TracedDecimal;
   readonly usableAreaM2: TracedDecimal;
   readonly standard: BayStandard;
+  /**
+   * The ramp strip's plan size, traced, when the level reserves one.
+   *
+   * Both were constants in this file with no derivation — a 6 m × 30 m strip
+   * that moved the bay count by a whole run of bays, and nothing a reader could
+   * open to ask why 30. They are assumptions and are now declared as such.
+   */
+  readonly ramp: { readonly widthM: TracedDecimal; readonly runM: TracedDecimal } | undefined;
+  /**
+   * The strip the deduction was taken from, in the same local metres as `rects`:
+   * the full width, at the far end of the depth. Undefined when nothing was
+   * deducted. It is where the cores and plant are *allowed* to be on this
+   * drawing, not where anyone put them.
+   */
+  readonly reserved: Rect | undefined;
   /** Rows that came out partial, and why. Reported, not hidden. */
   readonly notes: readonly string[];
 }
@@ -208,6 +223,16 @@ export interface ParkingLayoutResult {
  */
 const RAMP_WIDTH_M = '6';
 const RAMP_RUN_M = '30';
+
+const RAMP_WIDTH_BASIS =
+  'A 6 m strip: the two-way driveway width of Table B.11, so two cars pass on the ' +
+  'ramp as they do in the aisle. B.7.2.2 sets its own ramp widths and they are not ' +
+  'encoded here, so this width is not checked against them.';
+const RAMP_RUN_BASIS =
+  'A 30 m run reserved for the ramp in plan, or the whole packable depth when that ' +
+  'is shorter. It sets the gradient the ramp needs to climb one level, which is ' +
+  'reported but not assessed: B.7.2.2 is not encoded. A longer run costs bays; a ' +
+  'shorter one steepens the ramp.';
 
 /**
  * Lay out one parking level.
@@ -315,8 +340,35 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     : new Decimal(0);
   let cursorY = new Decimal(0);
 
+  let ramp: ParkingLayoutResult['ramp'];
   if (input.includeRamp) {
     const rampRun = Decimal.min(new Decimal(RAMP_RUN_M), availableDepth);
+    const widthAssumed = tracer.assumed('parking.ramp_width_m', new Decimal(RAMP_WIDTH_M), {
+      basis: RAMP_WIDTH_BASIS,
+      label: 'ramp width',
+      unit: 'm',
+    });
+    const runAssumed = tracer.assumed('parking.ramp_run_m', new Decimal(RAMP_RUN_M), {
+      basis: RAMP_RUN_BASIS,
+      label: 'ramp run',
+      unit: 'm',
+    });
+    ramp = {
+      widthM: cursorX.eq(widthAssumed.value)
+        ? widthAssumed
+        : tracer.computed('parking.ramp_width_drawn_m', cursorX, {
+            formula: `min(${RAMP_WIDTH_M} m ramp width, ${footprint.widthM.toFixed(2)} m level width)`,
+            uses: { width: widthAssumed },
+            unit: 'm',
+          }),
+      runM: rampRun.eq(runAssumed.value)
+        ? runAssumed
+        : tracer.computed('parking.ramp_run_drawn_m', rampRun, {
+            formula: `min(${RAMP_RUN_M} m ramp run, ${availableDepth.toFixed(2)} m packable depth)`,
+            uses: { run: runAssumed, usable: usableArea },
+            unit: 'm',
+          }),
+    };
     rects.push({
       kind: RectKind.RAMP,
       row: -1,
@@ -467,8 +519,19 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     },
   });
 
+  const reserved: Rect | undefined = deductedDepth.gt(0)
+    ? {
+        x: new Decimal(0),
+        y: footprint.depthM.minus(deductedDepth),
+        width: footprint.widthM,
+        height: deductedDepth,
+      }
+    : undefined;
+
   return {
     rects,
+    ramp,
+    reserved,
     bayCount: bayCountTraced,
     areaPerBayM2: areaPerBay,
     moduleDepthM: moduleDepth,

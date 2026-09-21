@@ -253,6 +253,30 @@ describe('runs', () => {
     expect(podium(omitted.json())).toMatchObject({ value: '1', provenanceClass: 'ASSUMED' });
   });
 
+  it('sends the building model every drawing reads, and it reaches the graph it came with', async () => {
+    // The sheets, the massing and the DXF are drawn from this and nothing else. A
+    // run response without it would leave the web to reassemble a building from
+    // area figures, which is the defect the model exists to end.
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: plot.plotId, podiumLevels: 2 },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.building.schema).toBe('envelope.building/1');
+    expect(body.building.levels.length).toBeGreaterThan(0);
+    expect(body.building.section).not.toBeNull();
+
+    const nodes = new Set((body.provenance.nodes as { id: string }[]).map((n) => n.id));
+    expect(nodes.has(body.building.drawnBays.node)).toBe(true);
+    for (const level of body.building.levels as { outlineSource: { node: string } }[]) {
+      expect(nodes.has(level.outlineSource.node)).toBe(true);
+    }
+  });
+
   it('blocks while parking-in-FAR is open — FR-DEF-002', async () => {
     const plot = await createPlot();
     const res = await app.inject({

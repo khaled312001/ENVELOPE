@@ -12,6 +12,8 @@
  * could omit it would make the badge a lie.
  */
 
+import type { BuildingModel } from '@envelope/core';
+
 import type { TracedWire } from '../components/TracedValue.js';
 import type { ProvTree } from '../components/ProvenanceTree.js';
 import type { AssumptionEntry } from '../components/AssumptionRegister.js';
@@ -173,6 +175,11 @@ export interface RunView {
     readonly podiumImplication: string;
   };
   readonly massing: MassingView;
+  /**
+   * The run as one building — what the sheets, the massing and the DXF all draw.
+   * A type import only: the web never runs engine code, it reads the engine's JSON.
+   */
+  readonly building: BuildingModel;
   readonly levelPlan: LevelPlanView | null;
   /** Why no level was laid out. Present only when `levelPlan` is null. */
   readonly levelPlanRefusal: string | null;

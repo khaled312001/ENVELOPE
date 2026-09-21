@@ -83,7 +83,7 @@ import { buildRunReport } from './report.js';
 import { canReview, type Actor } from './identity.js';
 import { gateAck, plotInput, runRequest, shareRequest, type RunRequest } from './schemas.js';
 import { registerIntakeRoutes } from './intake-route.js';
-import { runDrawing, runDrawingSet, runSheets, type DrawableRun } from './drawing.js';
+import { runDrawing, runDrawingSet, runGlb, runSheets, type DrawableRun } from './drawing.js';
 import { runWorkbookSpec, type ExportableRun } from './workbook.js';
 import { SqliteAccountRepository, type AccountRepository } from './account-store.js';
 import { normaliseEmail } from './accounts.js';
@@ -1148,6 +1148,15 @@ export async function build(
       reply.header('content-type', 'application/dxf');
       reply.header('content-disposition', `attachment; filename="${drawing.name}.dxf"`);
       return drawing.dxf;
+    }
+
+    // The massing as glTF binary, for any 3D viewer. Same gates, same model, and the
+    // two sentences travel in the file's own metadata (`extras`).
+    if (format === 'glb') {
+      const glb = await runGlb(payload as unknown as DrawableRun);
+      reply.header('content-type', 'model/gltf-binary');
+      reply.header('content-disposition', `attachment; filename="${glb.name}.glb"`);
+      return reply.send(glb.bytes);
     }
 
     if (format === 'xlsx') {

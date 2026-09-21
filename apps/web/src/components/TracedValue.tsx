@@ -42,7 +42,7 @@ export const CLASS_DESCRIPTION: Readonly<Record<ProvenanceClass, string>> = {
   VARIANCE: 'Governed by a documented exemption. Open to see the evidence.',
 };
 
-const CLASS_LABEL: Readonly<Record<ProvenanceClass, string>> = {
+export const CLASS_LABEL: Readonly<Record<ProvenanceClass, string>> = {
   DERIVED: 'Derived',
   ASSUMED: 'Assumed',
   USER_SET: 'You set this',

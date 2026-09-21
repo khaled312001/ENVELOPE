@@ -101,6 +101,24 @@ const FORBIDDEN = [
       'until the day one of them did not.',
   },
   {
+    pkg: 'massing',
+    forbids: [
+      '@envelope/capacity',
+      '@envelope/geometry',
+      '@envelope/rules',
+      '@envelope/invariants',
+      '@envelope/validation',
+      '@envelope/intake',
+      '@envelope/report',
+      '@envelope/exports',
+    ],
+    why:
+      'The massing view is the most persuasive drawing in the product. Built from the ' +
+      'building model alone, it can only stand up what the engine computed; able to ' +
+      'reach the engine, it could size its own tower, and the most convincing picture ' +
+      'on screen would be the one nobody checked.',
+  },
+  {
     pkg: 'core',
     forbids: [
       '@envelope/capacity',
@@ -112,6 +130,7 @@ const FORBIDDEN = [
       '@envelope/intake',
       '@envelope/exports',
       '@envelope/sheets',
+      '@envelope/massing',
     ],
     why: 'core is the bottom of the graph. Anything it depends on is a cycle.',
   },

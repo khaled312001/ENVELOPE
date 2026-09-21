@@ -41,6 +41,7 @@ import {
   round2,
   type Box,
 } from './plane.js';
+import { placeCars } from './cars.js';
 import { type LegendEntry, PAPER, paperFurniture, VIEWPORT } from './strip.js';
 import {
   type ModelItem,
@@ -356,24 +357,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
   }
 
   // --- bays: outline, car, number -----------------------------------------------------------
-  for (const bay of parking.bays) {
-    const [p0, p1, p2] = bay.outline as readonly [ModelPoint, ModelPoint, ModelPoint, ModelPoint];
-    const c = centroidOf(bay.outline);
-    // The long side is the car's axis.
-    const longFirst = lengthOf(p0, p1) >= lengthOf(p1, p2);
-    const [la, lb] = longFirst ? [p0, p1] : [p1, p2];
-    const bayLength = lengthOf(la, lb);
-    let axis = angleOf(la, lb);
-    // Nose into the bay, away from the aisle it was driven in from.
-    const aisle = nearestOnCentreLines(parking.aisles.map((x) => x.centreLine), c);
-    if (aisle) {
-      const rad = (axis * Math.PI) / 180;
-      const ahead = { x: c.x + Math.cos(rad) * 1000, y: c.y + Math.sin(rad) * 1000 };
-      if (dist2(ahead, aisle) < dist2(c, aisle)) axis += 180;
-    }
-    const rad = (axis * Math.PI) / 180;
-    const tail = mm(c.x - Math.cos(rad) * (bayLength / 2 - 260), c.y - Math.sin(rad) * (bayLength / 2 - 260));
-
+  for (const { bay, at: c, rotationDeg: axis, tail } of placeCars(parking)) {
     items.push(
       shape(bay.accessible ? Role.BAY_ACCESSIBLE : Role.BAY, bay.outline, true, {
         source: parking.baysSource,
@@ -381,7 +365,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
         name: `Bay ${bay.number}${bay.accessible ? ', accessible' : ''}`,
       }),
     );
-    items.push({ kind: 'symbol', role: Role.CAR, symbol: SymbolName.CAR, at: c, rotationDeg: round2(axis), scale: 1, bay: bay.number });
+    items.push({ kind: 'symbol', role: Role.CAR, symbol: SymbolName.CAR, at: c, rotationDeg: axis, scale: 1, bay: bay.number });
     items.push(label(Role.BAY_NUMBER, tail, String(bay.number), 1.6, axis + 90));
   }
 
@@ -636,28 +620,3 @@ function sameRing(a: ModelRing, b: ModelRing): boolean {
   return a.length === b.length && a.every((p, i) => p.x === b[i]!.x && p.y === b[i]!.y);
 }
 
-function dist2(p: { x: number; y: number }, q: { x: number; y: number }): number {
-  return (p.x - q.x) ** 2 + (p.y - q.y) ** 2;
-}
-
-/** The nearest point on any aisle's centre line — the aisle a bay is driven into from. */
-function nearestOnCentreLines(
-  lines: readonly (readonly [ModelPoint, ModelPoint])[],
-  c: ModelPoint,
-): { x: number; y: number } | null {
-  let best: { x: number; y: number } | null = null;
-  let bestD = Infinity;
-  for (const [a, b] of lines) {
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const l2 = dx * dx + dy * dy;
-    const t = l2 === 0 ? 0 : Math.min(1, Math.max(0, ((c.x - a.x) * dx + (c.y - a.y) * dy) / l2));
-    const q = { x: a.x + dx * t, y: a.y + dy * t };
-    const d = dist2(c, q);
-    if (d < bestD) {
-      bestD = d;
-      best = q;
-    }
-  }
-  return best;
-}

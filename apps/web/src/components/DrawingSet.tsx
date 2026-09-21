@@ -428,7 +428,9 @@ function FactValue({
   readonly onInspect: (nodeId: string) => void;
 }): JSX.Element {
   const { node, provenanceClass: cls } = fact;
-  if (!node || !cls) return <span className="value">{fact.value}</span>;
+  // An untraced fact is words — the level's name — not a quantity, so it is not
+  // set as one: `.value` never wraps, and at 320px this line then widened the page.
+  if (!node || !cls) return <span>{fact.value}</span>;
   return (
     <button
       type="button"

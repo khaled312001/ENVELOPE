@@ -62,6 +62,9 @@ importers:
       '@envelope/invariants':
         specifier: workspace:*
         version: link:../../packages/invariants
+      '@envelope/massing':
+        specifier: workspace:*
+        version: link:../../packages/massing
       '@envelope/report':
         specifier: workspace:*
         version: link:../../packages/report
@@ -92,6 +95,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@envelope/massing':
+        specifier: workspace:*
+        version: link:../../packages/massing
       '@envelope/sheets':
         specifier: workspace:*
         version: link:../../packages/sheets
@@ -192,6 +198,22 @@ importers:
       decimal.js:
         specifier: ^10.6.0
         version: 10.6.0
+
+  packages/massing:
+    dependencies:
+      '@envelope/core':
+        specifier: workspace:*
+        version: link:../core
+      '@envelope/sheets':
+        specifier: workspace:*
+        version: link:../sheets
+      three:
+        specifier: ^0.185.1
+        version: 0.185.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.185.4
+        version: 0.185.4
 
   packages/report:
     dependencies:

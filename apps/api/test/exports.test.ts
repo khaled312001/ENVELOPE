@@ -270,6 +270,41 @@ describe('XLSX export', () => {
   });
 });
 
+describe('glTF export', () => {
+  it('returns the massing as a .glb with no extension a viewer is required to support', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/runs/${run.runId}/export?format=glb`,
+      headers: REVIEWER,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('model/gltf-binary');
+    expect(res.headers['content-disposition']).toContain(`envelope-${run.runId}.glb`);
+
+    const bytes = res.rawPayload;
+    // "glTF", version 2, and the length in the header is the length sent.
+    expect(bytes.readUInt32LE(0)).toBe(0x46546c67);
+    expect(bytes.readUInt32LE(4)).toBe(2);
+    expect(bytes.readUInt32LE(8)).toBe(bytes.length);
+    const json = JSON.parse(bytes.subarray(20, 20 + bytes.readUInt32LE(12)).toString('utf8')) as {
+      extensionsRequired?: string[];
+      scene: number;
+      scenes: { extras?: { notice?: string[] } }[];
+      nodes: { name?: string }[];
+    };
+    expect(json.extensionsRequired).toBeUndefined();
+    // The file has no title block, so the two sentences travel in its metadata.
+    expect(json.scenes[json.scene]!.extras!.notice!.join(' ')).toMatch(
+      /NOT FOR CONSTRUCTION\. REGULATORY VALIDITY: NOT ASSESSED\./,
+    );
+    // A node of cars for every parking level the engine placed bays on.
+    const model = run.building as { levels: { id: string; parking: unknown }[] };
+    for (const level of model.levels.filter((l) => l.parking)) {
+      expect(json.nodes.some((n) => n.name === `${level.id} cars`), level.id).toBe(true);
+    }
+  });
+});
+
 describe('gates apply to every format', () => {
   it('refuses a drawing to a run whose assumptions were never read', async () => {
     const plot = (
@@ -284,7 +319,7 @@ describe('gates apply to every format', () => {
       })
     ).json();
 
-    for (const format of ['dxf', 'xlsx']) {
+    for (const format of ['dxf', 'xlsx', 'glb']) {
       const res = await app.inject({
         method: 'POST',
         url: `/api/runs/${fresh.runId}/export?format=${format}`,

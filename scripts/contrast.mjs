@@ -866,9 +866,18 @@ function assertNoLiteralColours() {
  * token it stands behind, or it is a second palette quietly drifting from the
  * first. Its token must be measured somewhere, as (6) demands of every sheet. And
  * amber may appear only on an ASSUMED value's ink, as (4) demands.
+ *
+ * The .glb is held to the same rules for the same reason. A 3D file is written
+ * with the light palette whatever theme the person exporting was in, so
+ * `@envelope/massing` spells its colours the same way — `var(--token, #hex)` —
+ * and each one is read here. Its amber belongs on the `assumed:` ink and nowhere
+ * else; the scene builder colours by provenance class, so that one entry is the
+ * only way amber can reach the model.
  */
-const SHEET_SOURCE = 'packages/sheets/src/svg.ts';
-const SHEET_SRC = readFileSync(new URL(`../${SHEET_SOURCE}`, import.meta.url), 'utf8');
+const DRAWING_SOURCES = [
+  { file: 'packages/sheets/src/svg.ts', amberOk: /sh-c-assumed/, what: 'an ASSUMED value' },
+  { file: 'packages/massing/src/palette.ts', amberOk: /^\s*assumed:/, what: 'the ASSUMED ink' },
+].map((s) => ({ ...s, src: readFileSync(new URL(`../${s.file}`, import.meta.url), 'utf8') }));
 
 function assertSheetStylesheet() {
   const measured = new Set();
@@ -876,33 +885,35 @@ function assertSheetStylesheet() {
     measured.add(fg);
     measured.add(bg);
   }
-  const fallbacks = [...SHEET_SRC.matchAll(/var\((--[\w-]+),\s*(#[0-9a-fA-F]{3,8})\)/g)];
-  if (fallbacks.length === 0) {
-    fail(`${SHEET_SOURCE}: no var(--token, #hex) found. A scan that matched nothing is not a pass.`);
+  for (const { file, src, amberOk, what } of DRAWING_SOURCES) {
+    const fallbacks = [...src.matchAll(/var\((--[\w-]+),\s*(#[0-9a-fA-F]{3,8})\)/g)];
+    if (fallbacks.length === 0) {
+      fail(`${file}: no var(--token, #hex) found. A scan that matched nothing is not a pass.`);
+    }
+    for (const [, token, hex] of fallbacks) {
+      const want = LIGHT[token] === undefined ? null : rgb(resolve(LIGHT, LIGHT[token]));
+      if (!want) {
+        fail(`${file}: ${token} is not a light-theme colour, so its fallback ${hex} stands behind nothing.`);
+        continue;
+      }
+      const got = rgb(hex);
+      if (!got || got.some((c, i) => c !== want[i])) {
+        fail(
+          `${file}: ${token} falls back to ${hex}, but the light theme says ` +
+            `${resolve(LIGHT, LIGHT[token])}. A fallback that drifted is a second palette.`,
+        );
+      }
+      if (!measured.has(token)) {
+        fail(`${file}: paints ${token} and no pair measures it. Unmeasured is a failure, not a skip.`);
+      }
+    }
+    for (const [i, line] of src.split('\n').entries()) {
+      if (line.includes('var(--uncertain') && !amberOk.test(line)) {
+        fail(`${file}:${i + 1} paints amber on something other than ${what}.`);
+      }
+    }
+    console.log(`\nDRAWING COLOURS — ${fallbacks.length} token fallback(s) in ${file}, each checked against the light palette.`);
   }
-  for (const [, token, hex] of fallbacks) {
-    const want = LIGHT[token] === undefined ? null : rgb(resolve(LIGHT, LIGHT[token]));
-    if (!want) {
-      fail(`${SHEET_SOURCE}: ${token} is not a light-theme colour, so its fallback ${hex} stands behind nothing.`);
-      continue;
-    }
-    const got = rgb(hex);
-    if (!got || got.some((c, i) => c !== want[i])) {
-      fail(
-        `${SHEET_SOURCE}: ${token} falls back to ${hex}, but the light theme says ` +
-          `${resolve(LIGHT, LIGHT[token])}. A fallback that drifted is a second palette.`,
-      );
-    }
-    if (!measured.has(token)) {
-      fail(`${SHEET_SOURCE}: paints ${token} and no pair measures it. Unmeasured is a failure, not a skip.`);
-    }
-  }
-  for (const [i, line] of SHEET_SRC.split('\n').entries()) {
-    if (line.includes('var(--uncertain') && !line.includes('sh-c-assumed')) {
-      fail(`${SHEET_SOURCE}:${i + 1} paints amber on something other than an ASSUMED value.`);
-    }
-  }
-  console.log(`\nDRAWING STYLESHEET — ${fallbacks.length} token fallback(s) in ${SHEET_SOURCE}, each checked against the light palette.`);
 }
 
 /* -------------------------------------------------------------------------

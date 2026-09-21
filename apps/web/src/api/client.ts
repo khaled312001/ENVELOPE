@@ -682,7 +682,7 @@ export const api = {
   exportRunFile: async (
     actor: Actor,
     runId: string,
-    format: 'dxf' | 'xlsx',
+    format: 'dxf' | 'xlsx' | 'glb',
     /** One sheet of the drawing set, by its stable id. DXF only; omitted, the whole building. */
     sheetId?: string,
   ): Promise<Blob> => {

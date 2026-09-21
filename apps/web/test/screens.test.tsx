@@ -446,7 +446,7 @@ describe('VehicleAccessPanel', () => {
 describe('MassingPanel', () => {
   it('draws the podium amber when nobody has entered a podium level count', () => {
     const out = html(
-      <MassingPanel run={run} plotVertices={plotView.vertices} onInspect={() => {}} />,
+      <MassingPanel run={run} onInspect={() => {}} />,
     );
     // The 3D view is the most persuasive surface in the product. A massing whose
     // split between podium and tower rests on an assumption must say so in
@@ -457,15 +457,46 @@ describe('MassingPanel', () => {
 
   it('lists every volume with the height it was extruded to', () => {
     const out = html(
-      <MassingPanel run={run} plotVertices={plotView.vertices} onInspect={() => {}} />,
+      <MassingPanel run={run} onInspect={() => {}} />,
     );
     for (const m of run.massing.masses) expect(out).toContain(m.label);
     expect(out).toContain(run.massing.totalHeightM.value);
   });
 
+  it('lists every level of the 3D view in a table a screen reader can read', () => {
+    const model = run.building!;
+    const out = html(<MassingPanel run={run} onInspect={() => {}} />);
+    // The table is the canvas's equivalent: every level, its traced floor level and,
+    // on a parking level, the engine's own bay count.
+    for (const level of model.levels) {
+      expect(out).toContain(`${level.id} <span class="muted">· ${level.name}</span>`);
+    }
+    expect(out).toContain(model.drawnBays.value);
+    expect(out).toContain('Every level and ramp in the 3D view');
+    // The ramp is painted in the view, so it is in the table too, with its gradient.
+    for (const r of model.ramps) expect(out).toContain(`Ramp ${r.id}`);
+  });
+
+  it('says in words where the engine placed each part, and what the model leaves out', () => {
+    const model = run.building!;
+    const out = html(<MassingPanel run={run} onInspect={() => {}} />);
+    for (const p of model.placements.filter((x) => x.source.provenanceClass === 'ASSUMED')) {
+      expect(out).toContain(p.statement);
+    }
+    expect(out).toContain('Not in this model');
+    for (const n of model.notModelled) expect(out).toContain(n.replace(/'/g, '&#x27;'));
+  });
+
+  it('refuses to stand up a run stored before the building model existed', () => {
+    const { building: _drop, ...stored } = run;
+    const out = html(<MassingPanel run={stored} onInspect={() => {}} />);
+    expect(out).toContain('no 3D view of it');
+    expect(out).not.toContain('massing-viewer');
+  });
+
   it('never claims the height ceiling was checked for anything but planning', () => {
     const out = html(
-      <MassingPanel run={run} plotVertices={plotView.vertices} onInspect={() => {}} />,
+      <MassingPanel run={run} onInspect={() => {}} />,
     );
     expect(out).toMatch(/planning limit, not a structural or aviation one/);
   });

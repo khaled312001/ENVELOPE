@@ -1,0 +1,19 @@
+{
+  "name": "@envelope/massing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "sideEffects": false,
+  "scripts": { "build": "tsc -b" },
+  "dependencies": {
+    "@envelope/core": "workspace:*",
+    "@envelope/sheets": "workspace:*",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.4"
+  }
+}

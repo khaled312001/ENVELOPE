@@ -38,6 +38,7 @@ export default defineConfig({
       '@envelope/intake': pkg('intake'),
       '@envelope/exports': pkg('exports'),
       '@envelope/sheets': pkg('sheets'),
+      '@envelope/massing': pkg('massing'),
     },
   },
 });

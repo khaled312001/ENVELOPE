@@ -390,7 +390,7 @@ export function EngineApp({
                 }
               />
               {plot ? (
-                <MassingPanel run={run} plotVertices={plot.vertices} onInspect={inspect} />
+                <MassingPanel run={run} onInspect={inspect} />
               ) : null}
               <EnvelopePanel run={run} onInspect={inspect} />
             </>
@@ -982,6 +982,15 @@ function ExportPanel({
             >
               Download the CAD drawing (DXF)
             </button>
+            {run.building ? (
+              <button
+                type="button"
+                className="button"
+                onClick={() => void download(actor, run.runId, 'glb', onError)}
+              >
+                Download the 3D model (glTF)
+              </button>
+            ) : null}
             <button
               type="button"
               className="button"
@@ -1000,6 +1009,15 @@ function ExportPanel({
             <strong>not</strong> included: round-tripping IFC is a body of work this
             phase has not quoted, and a badly-shaped one would be worse than none.
           </p>
+          {run.building ? (
+            <p className="fine-print">
+              The 3D model is the massing view as a <code>.glb</code> file, which opens in
+              Blender and in any glTF 2.0 viewer. It is in metres,
+              measured from the middle of the plot, with a node for each level and its
+              cars. It carries the same two sentences in its metadata, because a 3D file
+              has no title block to print them in.
+            </p>
+          ) : null}
 
           {/*
             One sheet at a time, behind the same two gates as the whole building.
@@ -1043,7 +1061,7 @@ function ExportPanel({
 async function download(
   actor: Actor,
   runId: string,
-  format: 'dxf' | 'xlsx',
+  format: 'dxf' | 'xlsx' | 'glb',
   onError: (e: ApiError) => void,
   sheet?: { readonly id: string; readonly number: string },
 ): Promise<void> {

@@ -57,17 +57,22 @@ packages/
   sheets/      the drawing set, composed from the engine's BuildingModel: site plan, one
                sheet per parking level, typical floor, sections. ONE display list that
                the screen, the A3 set and the DXF all walk. Type imports from `core` only
+  massing/     the building in 3D: the scene the viewer draws and the .glb the API
+               writes, both built by one call from BuildingModel. `core` + `sheets` +
+               three.js — never the engine
   report/      HTML → PDF · JSON export · the A3 drawing set. `core` + `sheets`
   exports/     DXF R12 (the building in 3D, or one sheet) · XLSX. `core` + `sheets` —
                never the engine
 apps/
   api/         Fastify + Zod · SQLite or MySQL behind one repository seam
-  web/         React + TypeScript + Vite · Three.js massing view · the sheets, drawn by
-               React from the same helpers the SVG writer calls
+  web/         React + TypeScript + Vite · the 3D view (`@envelope/massing`, drawn on
+               demand) · the sheets, drawn by React from the helpers the SVG writer calls
 ```
 
-**A drawing is never assembled from area figures.** Every sheet, every DXF and the
-report's drawing set come from `BuildingModel`, which the engine builds once. A run
+**A drawing is never assembled from area figures.** Every sheet, every DXF, the
+report's drawing set, the 3D view and the .glb come from `BuildingModel`, which the
+engine builds once. Where a car stands and which way it faces is one function
+(`placeCars` in `sheets`) that the sheet, the DXF and the 3D view all call. A run
 stored before the model existed gets a 409 and a sentence, not a drawing rebuilt from
 its numbers — that rebuilding was the defect the model was made to end.
 
@@ -78,11 +83,16 @@ its numbers — that rebuilding was the defect the model was made to end.
 
 Step 0 reads an affection plan and is *not* gated — a plot whose sheet is not to
 hand is still a plot. Step 3 also carries the developer-standard picker and the
-saleable-efficiency question. Step 5 carries the 3D massing; step 6 carries the
+saleable-efficiency question. Step 5 carries the 3D view — every level at its floor,
+every car in its bay, the ramp as a slope, the envelope as glass — with a levels table
+that is its equivalent for a screen reader; step 6 carries the
 drawing set — every parking level with its bays numbered and a car in each, the
 site plan, the typical floor and two sections — and the vehicle-access
 recommendation. Step 9 emits HTML, JSON, the **A3 drawing set, DXF (the building,
-or any one sheet) and XLSX**, all behind the same G3/G4 gates.
+or any one sheet), the 3D model as .glb and XLSX**, all behind the same G3/G4 gates.
+The .glb is written by the API, not the browser, for exactly that reason: the browser
+holds the same model and could write the same bytes, and would then have passed the
+gates only because it said so.
 
 `pnpm boundaries` asserts those `✗` lines across manifests, project references *and*
 source imports. It is not decoration: adding `"@envelope/capacity": "workspace:*"` to
@@ -108,13 +118,13 @@ and [`apps/api/src/report.ts`](apps/api/src/report.ts). Two rules govern those f
 | Gate | Catches |
 |---|---|
 | `pnpm boundaries` | Someone re-adding a forbidden dependency. |
-| `pnpm contrast` | A colour pair below WCAG 2.2. An **unresolvable** pair counts as a failure, not a skip — a checker reporting "0 failures" over pairs it never measured is the vacuous pass this codebase refuses everywhere else. It also reads `packages/sheets/src/svg.ts`, because the drawings are inked from a stylesheet held in a string that no `.css` scan would find: every `var(--token, #hex)` fallback there must equal the light palette's value, and amber may sit only on `.sh-c-assumed`. |
-| `pnpm parity` | A renderer dropping, doubling or misplacing a bay while the others stay right. Over four plots it counts cars and bays in the React sheet, the SVG sheet, each sheet's DXF and the whole-building DXF (per level, by layer), against the engine's own figure — and checks the screen draws the paper's geometry path for path. Part of `pnpm test`; named so it can be run alone. |
+| `pnpm contrast` | A colour pair below WCAG 2.2. An **unresolvable** pair counts as a failure, not a skip — a checker reporting "0 failures" over pairs it never measured is the vacuous pass this codebase refuses everywhere else. It also reads `packages/sheets/src/svg.ts`, because the drawings are inked from a stylesheet held in a string that no `.css` scan would find: every `var(--token, #hex)` fallback there must equal the light palette's value, and amber may sit only on `.sh-c-assumed`. The .glb's file palette (`packages/massing/src/palette.ts`) is read the same way, with amber allowed on its `assumed:` ink alone. |
+| `pnpm parity` | A renderer dropping, doubling or misplacing a bay while the others stay right. Over four plots it counts cars and bays in the React sheet, the SVG sheet, each sheet's DXF and the whole-building DXF (per level, by layer), against the engine's own figure — and checks the screen draws the paper's geometry path for path. The 3D view is counted too, without a browser: each level's instanced cars against the engine's count, each car at the sheet's point and heading for the same bay, at its level's floor. And the .glb is written by the real writer and read back by three's loader. Part of `pnpm test`; named so it can be run alone. |
 | `pnpm dxf` | The file a user actually downloads being wrong. It boots the real API, computes three runs (the landing page's worked example among them), signs the gates, downloads the building and every sheet, and has `dxf-parser` — a reader that never saw our writer — check each: it parses, every layer and block is declared, text is ASCII, both sentences are inside, `$INSUNITS` is metres, and the cars are the engine's bays at the level's height. It was made to fail on a doctored file before it was trusted. |
 | `pnpm test` | The engine, the API contract, and the screens rendered against **real engine output** rather than a fixture. |
 | `pnpm typecheck` | Both the sources *and* `tsconfig.tests.json`. Test files sit outside every package's `rootDir`, so for a long time nothing typechecked them — and the web render fixture had been structurally not a `Plot` for as long as it existed. It surfaced only when the access placement read `edge.start.x` and got `undefined`. A fixture that has drifted from the type it claims to be goes on proving the screens work against a shape the API never sends. |
 | `pnpm example` | The landing page quoting a figure the engine no longer returns. It printed a governing capacity of 6,352.5 m² for months after the engine started returning 6,774.194 for the same input — on the page that sells traced numbers. `scripts/verify-worked-example.mjs` re-runs the real API for the recorded input and diffs it against `apps/web/src/screens/worked-example.json`, which is the only place the page reads a number from. |
-| `pnpm smoke` | What only exists once a browser lays the page out. Every accessibility defect found so far was found here: a page that scrolled sideways on a phone, a target nobody could hit, a visually-hidden span that widened the document. |
+| `pnpm smoke` | What only exists once a browser lays the page out. Every accessibility defect found so far was found here: a page that scrolled sideways on a phone, a target nobody could hit, a visually-hidden span that widened the document. It also holds the 3D view to §13.1 **inside the canvas**, where no stylesheet gate can look: it hides the DOM labels, measures the amber WebGL painted, and fails both ways — too little where a painted outline or ramp is assumed, any at all where nothing painted is. Softening the amber to grey was tried on purpose and caught. |
 | `pnpm amber` | §13.1 in pixels, which `pnpm contrast` structurally cannot see. Contrast governs *who may paint amber* and *that it out-contrasts every chrome ink*; only a browser knows **how much of the first screen it fills and what is competing with it**. The landing fold once measured 0px² of amber against 37,738px² of accent with every stylesheet gate green — the callout was real, correct and whitelisted, and sat inside a closed disclosure. Moving it out was not enough either: it landed 51px below the fold, then 165px below at 900. Each state passed everything else. It also names, without failing, every route holding `ASSUMED` values the first screen does not show. Needs a running server, so it sits beside `smoke` rather than in `check`. |
 
 Screens are also reviewed by looking at them — `pnpm shots` writes one PNG per screen.
@@ -223,10 +233,13 @@ is a defect even when it makes something easier.
   bounding box.** `largestInscribedRectangle` errs by containment, so the bay count is a
   floor. On a non-rectangular podium the shortfall is reported in m², not hidden in a ratio.
 - **The massing is built in the engine, not the renderer.** A 3D view is the most persuasive
-  surface in the product; a massing assembled by `MassingViewer` would be a building nobody
-  computed, drawn convincingly. Each volume's colour is the provenance class of its own
-  height. The podium/tower split is not derivable from a run — the affection plan states it
-  — so an unentered podium level count is `ASSUMED`, amber, and said in words as well.
+  surface in the product; a massing assembled by a viewer would be a building nobody
+  computed, drawn convincingly. `@envelope/massing` takes a `BuildingModel` and nothing
+  else: every object is one element of it, coloured by the provenance class of the value
+  that element names, and a click on it opens that value's derivation. It draws no slab
+  thickness, core or façade, because the model has none; `notModelled` says so under the
+  picture. The podium/tower split is not derivable from a run — the affection plan states
+  it — so an unentered podium level count is `ASSUMED`, amber, and said in words as well.
 - **Degenerate geometry raises.** Slivers, self-intersections and near-tangent offsets throw
   rather than return a plausible wrong answer (PRD §14.3).
 - **Invariant failure blocks emission.** Never a warning, never a configurable severity.

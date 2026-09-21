@@ -17,6 +17,7 @@
 
 import type { BuildingModel } from '@envelope/core';
 import { buildingDxf, sheetDxf } from '@envelope/exports';
+import { buildingGlb } from '@envelope/massing';
 import { drawingSetHtml } from '@envelope/report';
 import { composeSheets, type Sheet } from '@envelope/sheets';
 
@@ -85,4 +86,24 @@ export function runDrawing(run: DrawableRun, sheetId?: string): { readonly dxf: 
     );
   }
   return { dxf: sheetDxf(sheet, meta), name: `envelope-${run.runId}-${sheet.number}` };
+}
+
+/**
+ * The building as a .glb: the massing view, as a file.
+ *
+ * Written here rather than in the browser, which already holds the same model and
+ * could write the same bytes. The difference is the gates. This route is reached
+ * only past G3 and G4, checked against the stored content, and a file the browser
+ * wrote for itself would have passed them only if the browser said so.
+ */
+export async function runGlb(run: DrawableRun): Promise<{ readonly bytes: Buffer; readonly name: string }> {
+  const model = run.building;
+  if (!model) {
+    throw new DrawingUnavailableError(
+      'this run was computed before drawings were built from the building model, so it has no ' +
+        '3D model to export. Compute the run again and export the new one.',
+    );
+  }
+  const bytes = await buildingGlb(model, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId });
+  return { bytes: Buffer.from(bytes), name: `envelope-${run.runId}` };
 }

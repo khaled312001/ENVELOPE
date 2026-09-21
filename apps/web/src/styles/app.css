@@ -1755,7 +1755,7 @@ button.plot-legend__row:active {
 
 .massing-viewer {
   width: 100%;
-  height: clamp(18rem, 46vh, 30rem);
+  height: clamp(20rem, 58vh, 36rem);
   border: var(--border-width) solid var(--border-default);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);

@@ -23,6 +23,7 @@
     "zod": "^3.24.1",
     "@envelope/intake": "workspace:*",
     "@envelope/exports": "workspace:*",
-    "@envelope/sheets": "workspace:*"
+    "@envelope/sheets": "workspace:*",
+    "@envelope/massing": "workspace:*"
   }
 }

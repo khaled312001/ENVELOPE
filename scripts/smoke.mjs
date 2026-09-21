@@ -519,12 +519,17 @@ await step('the governing band is named, and the binding one is marked', async (
   if (/realistic/i.test(t)) throw new Error('a "realistic" band appeared');
 });
 
-await step('the massing view stands the envelope up, and says what it assumed', async () => {
-  // The canvas is `role="presentation"` on purpose — it duplicates numbers
-  // stated in the table beside it, and announcing it would make a screen reader
-  // read geometry. So the assertion is on the table and the amber notice, which
-  // are the parts that carry meaning.
-  await page.locator('.massing-viewer canvas').waitFor({ timeout: wait(10000) });
+await step('the massing view stands the building up, and says what it assumed', async () => {
+  // The canvas is hidden from assistive technology on purpose — it duplicates the
+  // levels table beside it, and announcing it would make a screen reader read
+  // geometry. So the meaning is asserted on the table and the amber notice; the
+  // canvas only has to have drawn. It draws on demand, so "drawn" is a frame count
+  // the viewer reports, not a canvas element that exists and may be blank.
+  await page.waitForFunction(
+    () => Number(document.querySelector('.massing-viewer')?.dataset.frames ?? 0) > 0,
+    null,
+    { timeout: wait(20000) },
+  );
   const t = await page.textContent('body');
   if (!/Podium/.test(t)) throw new Error('no podium volume listed');
   // The podium count came from the sheet and was confirmed on the rules step, so
@@ -547,16 +552,81 @@ await step('the massing view stands the envelope up, and says what it assumed', 
   }
 });
 
-await step('the parking level is drawn, not summarised', async () => {
+await step('the 3D view holds the engine’s bays, and paints its assumptions amber', async () => {
+  const section = page.locator('section[aria-labelledby="massing-heading"]');
+  const viewer = page.locator('.massing-viewer');
+  // Cars on the GPU, counted off the scene, against the engine's own figure in the
+  // table under it. `pnpm parity` proves the builder; this proves the page ran it.
+  const drawn = Number(await viewer.getAttribute('data-cars'));
+  const row = section.locator('tbody tr', { has: page.locator('th', { hasText: /^\s*Every parking level/ }) });
+  const engine = Number(((await row.locator('td').nth(1).textContent()) ?? '').match(/\d+/)?.[0] ?? NaN);
+  if (!(drawn > 0) || drawn !== engine) {
+    throw new Error(`the 3D view drew ${drawn} cars; the engine placed ${engine}`);
+  }
+
+  // §13.1 inside the canvas, where no stylesheet gate can look. The words pinned to
+  // the model are DOM and could carry the amber on their own, so they are hidden
+  // for the measurement: this counts only what WebGL painted.
+  //
+  // What the canvas paints by class is the slabs (their outline's class) and the
+  // ramps (their gradient's). A floor level is not painted, so an assumed one is
+  // not expected to show — which is why this reads the table's Outline-or-slope
+  // column rather than counting every amber value on the panel.
+  const levels = section.locator('table', { has: page.locator('caption', { hasText: /Every level and ramp/ }) });
+  const outlines = await levels.locator('button[aria-label*=" outline: Assumed"]').count();
+  const ramps = await levels
+    .locator('tbody tr', { has: page.locator('th', { hasText: /^\s*Ramp/ }) })
+    .locator('.traced--assumed')
+    .count();
+  await page.locator('.massing-viewer__labels').evaluate((el) => { el.style.visibility = 'hidden'; });
+  const png = await page.locator('.massing-viewer__canvas').screenshot();
+  await page.locator('.massing-viewer__labels').evaluate((el) => { el.style.visibility = ''; });
+  const share = await page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let amber = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i] / 255, gr = d[i + 1] / 255, b = d[i + 2] / 255;
+      const max = Math.max(r, gr, b), min = Math.min(r, gr, b), delta = max - min;
+      if (delta < 0.12 || max === 0) continue; // greys and near-greys carry no hue
+      let h = max === r ? ((gr - b) / delta) % 6 : max === gr ? (b - r) / delta + 2 : (r - gr) / delta + 4;
+      h *= 60;
+      if (h < 0) h += 360;
+      if (h >= 18 && h <= 50 && delta / max >= 0.25) amber += 1;
+    }
+    return amber / (d.length / 4);
+  }, png.toString('base64'));
+  const pct = `${(share * 100).toFixed(2)}%`;
+  console.log(`         amber inside the canvas: ${pct} of its pixels; ${outlines} assumed outline(s), ${ramps} assumed ramp(s)`);
+  // Both ways. Amber where the model is assumed, in proportion to what is; and none
+  // where nothing is — amber that turns up on a cited slab is the same defect.
+  if (outlines > 0 && share < 0.01) throw new Error(`${outlines} assumed outline(s), and only ${pct} of the view is amber`);
+  if (outlines === 0 && ramps > 0 && share < 0.0005) throw new Error(`an assumed ramp, and only ${pct} of the view is amber`);
+  if (outlines === 0 && ramps === 0 && share >= 0.0005) throw new Error(`nothing painted is assumed, and ${pct} of the view is amber`);
+});
+
+await step('the parking levels are drawn bay by bay, one sheet a level', async () => {
   await NAV(/^Parking$/);
-  await page.locator('.parking-plan__svg').waitFor({ timeout: wait(8000) });
-  const bays = await page.locator('.parking-plan__svg polygon').count();
-  if (bays < 10) throw new Error(`only ${bays} shapes drawn — this is a summary, not a layout`);
+  await page.locator('.sheet-set').waitFor({ timeout: wait(8000) });
+  const selected = await page.locator('[role="tab"][aria-selected="true"]').innerText();
+  if (!/A-1\d\d/.test(selected)) throw new Error(`the drawing set opened on "${selected}", not a parking level`);
+  const sheet = page.locator('.sheet-view__svg').first();
+  const bays = await sheet.locator('[data-bay]').count();
+  const cars = await sheet.locator('[data-car]').count();
+  if (bays < 10) throw new Error(`only ${bays} bays drawn — this is a summary, not a layout`);
+  if (cars !== bays) throw new Error(`${bays} bays but ${cars} cars on the sheet`);
 
   const t = await page.textContent('body');
-  // The ramp is the one shape whose compliance is unknown, and the legend has
-  // to say so rather than letting a tidy picture imply otherwise.
-  if (!/plan area only/i.test(t)) throw new Error('the ramp was drawn as if it were checked');
+  // The ramp is the one shape whose compliance is unknown, and the sheet has to
+  // say so on the drawing rather than let a tidy picture imply otherwise.
+  if (!/GRADIENT NOT ASSESSED/.test(t)) throw new Error('the ramp was drawn as if it were checked');
   if (!/B\.7\.2\.2/.test(t)) throw new Error('the ramp clause is not cited');
 });
 
@@ -641,9 +711,10 @@ await step('the export hands over a report and a JSON document', async () => {
   }
 });
 
-await step('the drawing and the workbook download, behind the same gates', async () => {
+await step('the drawing, the 3D model and the workbook download, behind the same gates', async () => {
   for (const [label, ext] of [
     [/download the cad drawing/i, 'dxf'],
+    [/download the 3d model/i, 'glb'],
     [/download the workbook/i, 'xlsx'],
   ]) {
     const [dl] = await Promise.all([
@@ -652,6 +723,13 @@ await step('the drawing and the workbook download, behind the same gates', async
     ]);
     const name = dl.suggestedFilename();
     if (!name.endsWith(`.${ext}`)) throw new Error(`${ext} download was named ${name}`);
+    if (ext === 'glb') {
+      // The file, not the button: a GLB header, and the two sentences in its metadata.
+      const bytes = readFileSync(await dl.path());
+      if (bytes.readUInt32LE(0) !== 0x46546c67) throw new Error(`${name} is not a GLB file`);
+      const json = bytes.subarray(20, 20 + bytes.readUInt32LE(12)).toString('utf8');
+      if (!json.includes('REGULATORY VALIDITY: NOT ASSESSED')) throw new Error(`${name} does not say it is not assessed`);
+    }
   }
 });
 

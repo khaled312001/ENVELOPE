@@ -164,6 +164,8 @@
 .lp-plan,
 .lp-diagram,
 .massing-viewer,
+.sheet-view__scroller,
+.sheet-set__tabs,
 .dwg-frame {
   direction: ltr;
 }

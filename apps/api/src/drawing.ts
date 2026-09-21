@@ -1,153 +1,88 @@
 /**
- * The run, as a CAD drawing.
+ * The run, as CAD drawings.
  *
  * A composition-root adapter, and it is under the same two rules as
  * `checks.ts` and `report.ts`:
  *
- * 1. **Nothing here computes a number a user will see.** Every coordinate in
- *    this file was produced by the engine and travelled here as a string. The
- *    only arithmetic is metres to millimetres, which `pointFromMetres` does.
- * 2. **Nothing is supplied that the engine did not produce.** No bay is drawn
- *    that the layout did not place; when there is no level plan the drawing
- *    carries the boundary and the envelope and says so in the annotation, rather
- *    than filling the plot with a plausible grid of rectangles.
- *
- * `@envelope/exports` cannot see the engine (Principle 4), so the translation is
- * written by hand. That is the price of the boundary and it is being paid here
- * on purpose — the alternative is an exporter that can recompute, and therefore
- * an exporter that can disagree with the report of the same run.
+ * 1. **Nothing here computes a number a user will see.** It used to: the API
+ *    handed `@envelope/exports` metre strings and this file rebuilt rings from
+ *    them, chose layers, and wrote its own annotation lines. The drawing is now
+ *    composed once from the engine's `BuildingModel` by `@envelope/sheets`, and
+ *    this file only picks which drawing was asked for.
+ * 2. **Nothing is supplied that the engine did not produce.** A run stored before
+ *    the model existed has no model, and it gets a 409 that says so — not a
+ *    drawing reassembled from its area figures, which is the defect the model was
+ *    built to end.
  */
 
-import { Decimal, type Plot } from '@envelope/core';
-import {
-  disclaimerText,
-  pointFromMetres,
-  siteDrawing,
-  writeDxf,
-  type DxfPoint,
-} from '@envelope/exports';
-
-/** A point as it arrives on the wire: metres, three decimals, as strings. */
-interface WirePoint {
-  readonly x: string;
-  readonly y: string;
-}
-
-interface WireRect {
-  readonly kind: string;
-  readonly outline: readonly WirePoint[];
-}
+import type { BuildingModel } from '@envelope/core';
+import { buildingDxf, sheetDxf } from '@envelope/exports';
+import { drawingSetHtml } from '@envelope/report';
+import { composeSheets, type Sheet } from '@envelope/sheets';
 
 /** The slice of a presented run this drawing reads. Deliberately narrow. */
 export interface DrawableRun {
   readonly runId: string;
-  readonly plot: { readonly plotNumber: string; readonly areaM2: string };
-  readonly envelope: {
-    readonly podiumOutline: readonly WirePoint[];
-    readonly towerOutline: readonly WirePoint[];
-    readonly maxLevelsByHeight: { readonly value: string };
-  };
-  readonly capacity: { readonly governingBand: string; readonly governingGfa: { readonly value: string } };
-  readonly levelPlan: {
-    readonly bayCount: { readonly value: string };
-    readonly areaPerBayM2: { readonly value: string };
-    readonly rects: readonly WireRect[];
-    readonly access: {
-      readonly recommended: { readonly opening: { readonly start: WirePoint; readonly end: WirePoint } } | null;
-    };
-  } | null;
+  readonly plot: { readonly plotNumber: string; readonly community: string };
+  readonly building?: BuildingModel;
 }
 
-const pt = (p: WirePoint): DxfPoint => pointFromMetres(new Decimal(p.x), new Decimal(p.y));
-const ring = (r: readonly WirePoint[]): readonly DxfPoint[] => r.map(pt);
+export class DrawingUnavailableError extends Error {
+  override readonly name = 'DrawingUnavailableError';
+  readonly statusCode = 409;
+}
+
+export class UnknownSheetError extends Error {
+  override readonly name = 'UnknownSheetError';
+  readonly statusCode = 404;
+}
 
 /**
- * Draw a run.
- *
- * The plot ring comes from the stored `Plot` rather than from the payload,
- * because the payload carries the plot's *area* and not its boundary — and a
- * boundary reconstructed from an area is the drawing this whole file exists to
- * avoid.
+ * The run's drawing set, for the report to print. Empty for a run stored before
+ * the model existed: the report says so rather than drawing from area figures.
  */
-export function runDrawing(plot: Plot, run: DrawableRun): string {
-  const lp = run.levelPlan;
-  /* With no plate cap the tower IS the podium outline, and there is no placement
-     to disclose — drawing it again would put a second copy of the setback line on
-     another layer. Compared as the strings the engine emitted, not recomputed. */
-  const towerIsPodium =
-    JSON.stringify(run.envelope.towerOutline) === JSON.stringify(run.envelope.podiumOutline);
-  const of = (kind: string): readonly (readonly DxfPoint[])[] =>
-    (lp?.rects ?? []).filter((r) => r.kind === kind).map((r) => ring(r.outline));
+export function runSheets(run: DrawableRun): readonly Sheet[] {
+  const model = run.building;
+  if (!model) return [];
+  return composeSheets(model, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId });
+}
 
-  /*
-    THE OPENING, EXACTLY AS THE ENGINE PLACED IT: two points on the boundary.
-
-    This used to add one metre to y to make a "throat", on the argument that a
-    polyline coincident with the plot line cannot be selected. Two things were
-    wrong with it. The metre was north whatever the edge faced, so on a northern
-    or a slanted road edge the throat stood outside the plot or lay along the
-    boundary — a shape nobody computed, in the one file this adapter promises
-    draws only what the engine produced. And selection is what the layer is for:
-    `ENV-VEHICLE-ACCESS` switches on and off on its own.
-  */
-  const access: (readonly DxfPoint[])[] = [];
-  if (lp?.access.recommended) {
-    const o = lp.access.recommended.opening;
-    access.push([pt(o.start), pt(o.end)]);
+/** The run's drawing set as one printable A3 document, or a 409 saying why there is none. */
+export function runDrawingSet(run: DrawableRun): string {
+  const sheets = runSheets(run);
+  if (sheets.length === 0) {
+    throw new DrawingUnavailableError(
+      'this run was computed before drawings were built from the building model, so it has no ' +
+        'drawing set. Compute the run again and export the new one.',
+    );
   }
+  return drawingSetHtml(sheets, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId });
+}
 
-  // Annotations sit above the plot, in the order a reader scans: what this is,
-  // then what it says, then what it refuses to say.
-  const top = plot.ring.reduce((m, p) => Math.max(m, p.y), 0) / 1000;
-  const bottom = plot.ring.reduce((m, p) => Math.min(m, p.y), 0) / 1000;
-  const left = plot.ring.reduce((m, p) => Math.min(m, p.x), 0) / 1000;
+/**
+ * Draw a run: the whole building in 3D, or one sheet of the set.
+ *
+ * `sheetId` is a sheet's stable id — `site`, `level-B1`, `typical`, `section-a`.
+ * An id the set does not contain is a 404 naming the ones it does, rather than a
+ * silent fallback to the whole building.
+ */
+export function runDrawing(run: DrawableRun, sheetId?: string): { readonly dxf: string; readonly name: string } {
+  const model = run.building;
+  if (!model) {
+    throw new DrawingUnavailableError(
+      'this run was computed before drawings were built from the building model, so it has no ' +
+        'drawing to export. Compute the run again and export the new one.',
+    );
+  }
+  const meta = { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId };
+  const sheets = composeSheets(model, meta);
+  if (!sheetId) return { dxf: buildingDxf(model, sheets, meta), name: `envelope-${run.runId}` };
 
-  const lines = [
-    `Plot ${plot.plotNumber} - ${run.plot.areaM2} sq.m - run ${run.runId}`,
-    `Governing band ${run.capacity.governingBand}: ${run.capacity.governingGfa.value} sq.m GFA ` +
-      `over ${run.envelope.maxLevelsByHeight.value} level(s)`,
-    lp
-      ? `Parking level: ${lp.bayCount.value} bays laid out at ${lp.areaPerBayM2.value} sq.m/bay`
-      : 'Parking level: NOT LAID OUT for this plot. No bays are drawn.',
-    // Said in the file because the layers alone cannot say it. The tower's AREA is
-    // the plate cap; its POSITION on the podium roof is not decided by the engine.
-    ...(towerIsPodium
-      ? []
-      : ['Tower outline on ENV-ASSUMED: area from the plate cap, position not decided.']),
-  ];
-
-  /*
-    WHICH LAYER EACH RING IS ON IS A CLAIM ABOUT ITS PROVENANCE.
-
-    The podium outline IS the setback line — `envelope.ts` takes it straight
-    from the per-edge offset, which every edge's cited setback produced — so it
-    goes on `ENV-SETBACK-LINE`, which was empty on every export until now.
-
-    The tower outline goes on `ENV-ASSUMED` and not on `ENV-ENVELOPE-TOWER`.
-    Its area is derived; where it sits is the podium shrunk about its centroid,
-    and `massing.ts` says in so many words that the engine does not decide it.
-    A ring drawn in the envelope colour would have claimed a placement nobody
-    made. The two envelope layers stay in the table, empty, until the engine
-    produces a podium ring cut to the coverage cap and a placed tower.
-  */
-  const doc = siteDrawing({
-    plot: ring(plot.ring.map((p) => ({ x: String(p.x / 1000), y: String(p.y / 1000) }))),
-    setbackLine: ring(run.envelope.podiumOutline),
-    assumedRings: towerIsPodium ? [] : [ring(run.envelope.towerOutline)],
-    parking: {
-      bays: [...of('BAY'), ...of('ACCESSIBLE_BAY')],
-      aisles: of('AISLE'),
-      ramps: of('RAMP'),
-      access,
-    },
-    annotations: lines.map((value, i) => ({
-      at: pointFromMetres(left, top + 3.6 - i * 1.2),
-      value,
-    })),
-  });
-
-  return writeDxf({
-    ...doc,
-    texts: [...doc.texts, disclaimerText(pointFromMetres(left, bottom - 3))],
-  });
+  const sheet = sheets.find((s) => s.id === sheetId);
+  if (!sheet) {
+    throw new UnknownSheetError(
+      `this run has no sheet "${sheetId}". Its sheets are: ${sheets.map((s) => s.id).join(', ')}.`,
+    );
+  }
+  return { dxf: sheetDxf(sheet, meta), name: `envelope-${run.runId}-${sheet.number}` };
 }

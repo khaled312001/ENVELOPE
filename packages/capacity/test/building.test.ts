@@ -279,10 +279,10 @@ describe('the podium is the footprint the figure describes', () => {
   });
 });
 
-describe('section A–A', () => {
+describe('the sections', () => {
   it('runs along the ramp, and draws each ramp climbing one floor over its run', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2 }));
-    const section = out.building.section!;
+    const section = out.building.sections[0]!;
     expect(section.taken).toMatch(/ramp/);
     expect(section.ramps).toHaveLength(1);
     const r = section.ramps[0]!;
@@ -294,7 +294,7 @@ describe('section A–A', () => {
 
   it('opens the slab a ramp passes through, and only that slab', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 3, parkingLevelsAvailable: 2 }));
-    const byId = new Map(out.building.section!.levels.map((l) => [l.levelId, l]));
+    const byId = new Map(out.building.sections[0]!.levels.map((l) => [l.levelId, l]));
     expect(byId.get('L01')!.openings.length).toBeGreaterThan(0);
     expect(byId.get('L02')!.openings).toEqual([]);
     // Cut plus opening is the whole slab: nothing lost, nothing doubled.
@@ -307,7 +307,7 @@ describe('section A–A', () => {
 
   it('lies inside the plot: every slab span within the boundary spans', () => {
     const out = runPipeline(input(RECT_120x80));
-    const section = out.building.section!;
+    const section = out.building.sections[0]!;
     const [plotFrom, plotTo] = [section.plot[0]![0], section.plot[section.plot.length - 1]![1]];
     expect(plotFrom).toBe(0);
     expect(plotTo).toBe(section.lengthMm);
@@ -319,9 +319,19 @@ describe('section A–A', () => {
     }
   });
 
+  it('with a ramp, adds the long section, which cuts the tower the ramp section misses', () => {
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2 }));
+    expect(out.building.sections.map((x) => x.id)).toEqual(['A', 'B']);
+    const long = out.building.sections[1]!;
+    expect(long.taken).toMatch(/longest side/);
+    expect(long.ramps).toEqual([]);
+    const tower = out.building.levels.find((l) => l.use === 'TYPICAL')!;
+    expect(long.levels.find((l) => l.levelId === tower.id)!.cut.length).toBeGreaterThan(0);
+  });
+
   it('with no ramp, is the long section through the podium', () => {
     const out = runPipeline(input(RECT_80x40, { parkingLevelsAvailable: 1 }));
-    const section = out.building.section!;
+    const section = out.building.sections[0]!;
     expect(section.ramps).toEqual([]);
     expect(section.taken).toMatch(/longest side/);
     // 80 × 40: the long section is 80 m, boundary to boundary.

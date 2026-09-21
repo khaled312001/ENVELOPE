@@ -15,9 +15,11 @@
  * turned an assumption into a fact, and only the real file can prove otherwise.
  */
 
+import type { IDxf } from 'dxf-parser';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { parseDxf } from '../../../test-support/dxf.js';
 import { subjectHash } from '../src/gates.js';
 import { build } from '../src/server.js';
 import { SqliteRunRepository } from '../src/store.js';
@@ -74,7 +76,7 @@ const RUN_BODY = {
 
 let app: FastifyInstance;
 let repo: SqliteRunRepository;
-let run: Record<string, never> & { runId: string; levelPlan: Record<string, unknown> };
+let run: Record<string, never> & { runId: string; levelPlan: Record<string, unknown>; building: unknown };
 
 beforeAll(async () => {
   repo = new SqliteRunRepository(':memory:');
@@ -144,6 +146,9 @@ describe('the run carries a parking level', () => {
 
 describe('DXF export', () => {
   let dxf: string;
+  let parsed: IDxf;
+  const building = (): { drawnBays: { value: string }; levels: { id: string; parking: unknown }[] } =>
+    run.building as never;
 
   beforeAll(async () => {
     const res = await app.inject({
@@ -153,65 +158,58 @@ describe('DXF export', () => {
     });
     expect(res.statusCode).toBe(200);
     dxf = res.body;
+    parsed = parseDxf(dxf);
   });
 
-  it('is a real R12 file AutoCAD will open', () => {
+  it('is a real R12 file AutoCAD will open, and a second reader agrees', () => {
     expect(dxf.startsWith('0\r\nSECTION')).toBe(true);
     expect(dxf).toContain('AC1009');
     expect(dxf.trimEnd().endsWith('EOF')).toBe(true);
+    expect(parsed.entities.length).toBeGreaterThan(100);
   });
 
-  it('puts bays, aisles, the ramp and the driveway on separate layers', () => {
-    // A reviewer's first move is to switch things off. One ENV-PARKING layer
-    // would make all four arguments happen at once.
-    for (const layer of [
-      'ENV-PARKING-BAY',
-      'ENV-PARKING-AISLE',
-      'ENV-PARKING-RAMP',
-      'ENV-VEHICLE-ACCESS',
-    ]) {
-      expect(dxf).toContain(layer);
+  it("puts each level's bays, cars and aisles on that level's own layers", () => {
+    // A reviewer's first move is to switch things off: one level, then the bays on
+    // it. One ENV-PARKING layer would make every argument happen at once.
+    const layers = Object.keys(parsed.tables.layer.layers);
+    for (const level of building().levels.filter((l) => l.parking)) {
+      for (const role of ['BAY', 'CAR', 'AISLE']) expect(layers).toContain(`ENV-${level.id}-${role}`);
     }
+    expect(layers).toContain('ENV-SITE-ACCESS');
   });
 
-  it('draws exactly the bays the engine placed, and no others', () => {
-    const bays = (run.levelPlan as { rects: { kind: string }[] }).rects.filter(
-      (r) => r.kind === 'BAY',
-    ).length;
-    // Counted as POLYLINE entities on the bay layer, not as occurrences of the
-    // layer name: R12 repeats the name on every VERTEX and on the SEQEND, so a
-    // string count would pass on a file holding a sixth of the bays.
-    const drawn = dxf.split('0\r\nPOLYLINE\r\n8\r\nENV-PARKING-BAY\r\n').length - 1;
-    expect(drawn).toBe(bays);
-    expect(bays).toBeGreaterThan(10);
+  it('draws exactly the bays the engine placed on every level, one car in each, and no others', () => {
+    const drawn = Number(building().drawnBays.value);
+    expect(drawn).toBeGreaterThan(10);
+    const cars = parsed.entities.filter((e) => e.type === 'INSERT' && (e as { name?: string }).name === 'CAR');
+    // Counted as parsed entities, not as occurrences of a layer name: R12 repeats
+    // the name on every VERTEX and on the SEQEND, so a string count would pass on
+    // a file holding a sixth of the bays.
+    const bays = parsed.entities.filter((e) => e.type === 'POLYLINE' && /^ENV-[A-Z0-9]+-BAY(-ACCESSIBLE)?$/.test(e.layer));
+    expect(cars).toHaveLength(drawn);
+    expect(bays).toHaveLength(drawn);
   });
 
-  /** The polylines on one layer, each as its VERTEX count and its closed flag. */
+  /** The polylines on one layer, each as its vertex count and its closed flag. */
   const onLayer = (layer: string): { vertices: number; closed: boolean }[] =>
-    dxf
-      .split(`0\r\nPOLYLINE\r\n8\r\n${layer}\r\n`)
-      .slice(1)
-      .map((chunk) => {
-        const body = chunk.slice(0, chunk.indexOf('0\r\nSEQEND'));
-        const flag = /(?:^|\r\n)70\r\n\s*(\d+)\r\n/.exec(body);
-        return {
-          vertices: body.split('0\r\nVERTEX\r\n').length - 1,
-          closed: flag !== null && (Number(flag[1]) & 1) === 1,
-        };
+    parsed.entities
+      .filter((e) => e.type === 'POLYLINE' && e.layer === layer)
+      .map((e) => {
+        const p = e as unknown as { vertices: unknown[]; shape: boolean };
+        return { vertices: p.vertices.length, closed: p.shape === true };
       });
 
   it('draws the driveway opening the engine placed, and nothing beyond it', () => {
     // It used to be a closed four-point throat, made by adding a metre to y —
     // north whatever the edge faced. Two open points on the boundary is the
     // opening; anything more is a shape the engine never computed.
-    const access = onLayer('ENV-VEHICLE-ACCESS');
+    const access = onLayer('ENV-SITE-ACCESS');
     expect(access).toHaveLength(1);
     expect(access[0]).toEqual({ vertices: 2, closed: false });
   });
 
   it('puts the setback line on its own layer, once', () => {
-    // ENV-SETBACK-LINE was in the layer table of every export and held nothing.
-    const setback = onLayer('ENV-SETBACK-LINE');
+    const setback = onLayer('ENV-SITE-SETBACK');
     expect(setback).toHaveLength(1);
     expect(setback[0]?.closed).toBe(true);
     expect(setback[0]?.vertices).toBeGreaterThanOrEqual(3);
@@ -221,10 +219,29 @@ describe('DXF export', () => {
     expect(dxf).toContain('REGULATORY VALIDITY: NOT ASSESSED');
   });
 
-  it('is offered as a download rather than rendered', () => {
-    // A DXF that opens as text in a browser tab is a DXF the client will think
-    // is broken.
-    expect(dxf.length).toBeGreaterThan(2000);
+  it('exports one sheet on its own when asked, named by its sheet number', async () => {
+    const level = building().levels.find((l) => l.parking)!;
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/runs/${run.runId}/export?format=dxf&sheet=level-${level.id}`,
+      headers: REVIEWER,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-disposition']).toMatch(/A-10\d\.dxf/);
+    const one = parseDxf(res.body);
+    const layers = new Set(one.entities.map((e) => e.layer));
+    expect([...layers].some((l) => l.startsWith(`ENV-${level.id}-`))).toBe(true);
+    expect(one.entities.some((e) => e.type === '3DFACE')).toBe(false);
+  });
+
+  it('refuses a sheet the set does not have, and names the ones it does', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/runs/${run.runId}/export?format=dxf&sheet=level-Z9`,
+      headers: REVIEWER,
+    });
+    expect(res.statusCode).toBe(404);
+    expect(res.json().message).toMatch(/Its sheets are: site, /);
   });
 });
 

@@ -230,3 +230,136 @@
     display: initial;
   }
 }
+
+/* ==========================================================================
+ * THE DRAWING SET
+ *
+ * The sheets `@envelope/sheets` composes from the engine's building model, on
+ * screen. The sheet's own inks are NOT here: they are `SHEET_CSS`, one string
+ * the screen, the SVG export and the report all embed, so a line cannot be one
+ * colour in the browser and another on paper. This section styles only what
+ * surrounds a sheet — the tabs that pick it and the region that scrolls it.
+ * ======================================================================= */
+
+.sheet-set { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* The stepper's tab, reused rather than redrawn: a rail under the chosen sheet,
+   the surface ladder for response, and no shadow. Wraps rather than scrolls —
+   a set is six or seven sheets, and a tab that scrolled out of view is a sheet
+   nobody knew was there. */
+.sheet-set__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  border-block-end: var(--border-width) solid var(--border-default);
+}
+.sheet-tab {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-block-size: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  background-color: transparent;
+  border: none;
+  border-block-end: var(--rail-w) solid transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.sheet-tab:hover,
+.sheet-tab:focus-visible {
+  background-color: var(--surface-inset);
+  color: var(--text-primary);
+}
+.sheet-tab[aria-selected='true'] {
+  color: var(--text-primary);
+  border-block-end-color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+/* A sheet number is a reference a reader quotes back — "see A-102" — so it is
+   set as a figure, the way every other quoted figure in the product is. */
+.sheet-tab__number {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sheet-tab {
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard);
+  }
+}
+
+.sheet-set__panel { display: flex; flex-direction: column; gap: var(--space-4); }
+.sheet-view { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+
+/*
+ * THE SHEET SCROLLS INSIDE ITS OWN REGION, AND THE PAGE DOES NOT.
+ *
+ * An A3 sheet shrunk to a phone's width puts a 2 mm label at under two pixels:
+ * a picture of a drawing, not a drawing. So below 40rem the sheet keeps its
+ * width and this region scrolls — focusable, so a keyboard can scroll it too,
+ * and contained, so reaching its end does not drag the page sideways with it.
+ */
+.sheet-view__scroller {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-raised);
+}
+.sheet-view__svg {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 40rem;
+  block-size: auto;
+  aspect-ratio: 420 / 297;
+}
+/* Every element drawn from a traced value opens its derivation. */
+.sheet-view__svg [data-node] { cursor: pointer; }
+
+.sheet-facts { display: flex; flex-direction: column; gap: var(--space-3); }
+.sheet-facts__notes {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* One DXF per sheet, on the export step. A list of links in two columns where
+   there is room; a single column on a phone. */
+.sheet-downloads {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+  gap: var(--space-2) var(--space-4);
+}
+
+/* Zoom. Ghost buttons, because they act on the drawing rather than the run, and a
+   row of solid buttons above a sheet reads as the sheet's own title block. */
+.sheet-view__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.sheet-view__zoom {
+  min-inline-size: 9rem;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+/* Zoomed, the sheet is taller than a screen: the region scrolls both ways and
+   stops short of the viewport, so the tools above it stay in reach. */
+.sheet-view__scroller.is-zoomed {
+  overflow: auto;
+  max-block-size: min(80vh, 56rem);
+}

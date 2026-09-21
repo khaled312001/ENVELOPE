@@ -23,13 +23,7 @@ import {
   RectKind,
 } from '../packages/capacity/dist/index.js';
 import { parseAffectionPlan, blockingGaps } from '../packages/intake/dist/index.js';
-import {
-  disclaimerText,
-  LAYER,
-  pointFromMetres,
-  siteDrawing,
-  writeDxf,
-} from '../packages/exports/dist/index.js';
+import { Aci, layerName, writeDxf } from '../packages/exports/dist/index.js';
 
 const ROOT = new URL('..', import.meta.url);
 const SHEET = 'docs/00-source/samples/affection-plan/IC1-CTYL-16_011-warsan1-621.pdf';
@@ -141,63 +135,60 @@ for (const r of access.rejected) console.log(`  rejected    edge ${r.edgeSeq}: $
 for (const n of access.notAssessed) console.log(`  NOT ASSESSED ${n}`);
 
 // --- 4. draw it -------------------------------------------------------------
-const rect = (r) => [
-  pointFromMetres(r.x, r.y),
-  pointFromMetres(r.x.plus(r.width), r.y),
-  pointFromMetres(r.x.plus(r.width), r.y.plus(r.height)),
-  pointFromMetres(r.x, r.y.plus(r.height)),
+// The engine's rectangles, each on its own layer so a reviewer can switch them
+// off, in the same `ENV-<level>-<ROLE>` scheme the product's own drawings use.
+// Nothing is drawn that the engine did not place: the driveway is the two points
+// of the opening on the boundary, not a throat invented to make it visible.
+const at = (x, y) => ({ x: mm(x), y: mm(y) });
+const rectPoints = (r) => [
+  at(r.x, r.y),
+  at(r.x.plus(r.width), r.y),
+  at(r.x.plus(r.width), r.y.plus(r.height)),
+  at(r.x, r.y.plus(r.height)),
 ];
+const ROLE_OF = {
+  [RectKind.BAY]: 'bay',
+  [RectKind.ACCESSIBLE_BAY]: 'bay-accessible',
+  [RectKind.AISLE]: 'aisle',
+  [RectKind.RAMP]: 'ramp',
+  [RectKind.OBSTRUCTION]: 'reserved',
+};
+const COLOUR_OF = {
+  plot: Aci.WHITE, bay: Aci.GREEN, 'bay-accessible': Aci.BLUE, aisle: Aci.GREY,
+  // The ramp's position is not assessed, and the deduction behind the reserved
+  // zone is ASSUMED — so the one gets grey and the other gets amber.
+  ramp: Aci.GREY, reserved: Aci.AMBER, access: Aci.CYAN, annotation: Aci.WHITE,
+};
+const layer = (role) => layerName('P1', role);
 
-const doc = siteDrawing({
-  plot: [
-    pointFromMetres(0, 0),
-    pointFromMetres(widthM, 0),
-    pointFromMetres(widthM, depthM),
-    pointFromMetres(0, depthM),
-  ],
-  annotations: [
-    { at: pointFromMetres(0, depthM.plus(2)),
-      value: `Plot ${facts.parcelId?.value ?? ''} - ${areaM2} sq.m - FAR ${facts.far.value}` },
-    { at: pointFromMetres(0, depthM.plus(3.4)),
-      value: `Parking: ${layout.bayCount.value} bays at ${layout.areaPerBayM2.value} sq.m/bay` },
-  ],
-});
-
-// Bays and aisles on their own layers, so a reviewer can switch them off.
-const polylines = [...doc.polylines];
-for (const r of layout.rects) {
-  const layer =
-    r.kind === RectKind.RAMP ? LAYER.ASSUMED
-    : r.kind === RectKind.AISLE ? LAYER.SETBACK
-    : LAYER.PODIUM;
-  polylines.push({ layer, points: rect(r), closed: true });
-}
-
+const entities = [
+  { kind: 'polyline', layer: layer('plot'), points: corners.map(([x, y]) => at(x, y)), closed: true, z: 0 },
+  ...layout.rects.map((r) => ({
+    kind: 'polyline', layer: layer(ROLE_OF[r.kind]), points: rectPoints(r), closed: true, z: 0,
+  })),
+];
 if (access.recommended) {
-  const a = access.recommended.value;
-  // The opening sits on the boundary; drawn as a 1 m deep throat so it reads as
-  // a gap in the plot line rather than as a coincident duplicate of it.
-  const x0 = Number(a.opening.start.x) / 1000;
-  const x1 = Number(a.opening.end.x) / 1000;
-  polylines.push({
-    layer: LAYER.SETBACK,
-    points: [
-      pointFromMetres(x0, 0),
-      pointFromMetres(x1, 0),
-      pointFromMetres(x1, 1),
-      pointFromMetres(x0, 1),
-    ],
-    closed: true,
-  });
+  const o = access.recommended.value.opening;
+  entities.push({ kind: 'polyline', layer: layer('access'), points: [o.start, o.end], closed: false, z: 0 });
 }
+const note = (y, value) => ({
+  kind: 'text', layer: layer('annotation'), at: at(0, y), z: 0, heightM: 0.8, rotationDeg: 0, align: 'start', value,
+});
+entities.push(
+  note(depthM.plus(3.4), `Plot ${facts.parcelId?.value ?? ''} - ${areaM2} sq.m - FAR ${facts.far.value}`),
+  note(depthM.plus(2), `Parking: ${layout.bayCount.value} bays at ${layout.areaPerBayM2.value} sq.m/bay`),
+  note(-2, 'NOT FOR CONSTRUCTION'),
+  note(-3.4, 'REGULATORY VALIDITY: NOT ASSESSED'),
+);
 
+const used = [...new Set(entities.map((e) => e.layer))];
 const out = writeDxf({
-  ...doc,
-  polylines,
-  texts: [...doc.texts, disclaimerText(pointFromMetres(0, -3))],
+  layers: used.map((name) => ({ name, color: COLOUR_OF[name.slice('ENV-P1-'.length).toLowerCase()] ?? Aci.WHITE })),
+  blocks: [],
+  entities,
 });
 
 const dst = fileURLToPath(new URL('docs/04-delivery/demo-parking-warsan.dxf', ROOT));
 await writeFile(dst, out, 'ascii');
 console.log(`\nWrote ${dst}`);
-console.log(`  ${(out.length / 1024).toFixed(0)} KB, ${polylines.length} polylines`);
+console.log(`  ${(out.length / 1024).toFixed(0)} KB, ${entities.length} entities on ${used.length} layers`);

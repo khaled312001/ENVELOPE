@@ -29,11 +29,13 @@ import {
 import { analysePlot, initGeometry, outwardBearingDeg, type Ring } from '@envelope/geometry';
 import { asOfNow, loadSeedRulesForDevelopment, RuleStore } from '@envelope/rules';
 import { buildAssumptionRegister, runPipeline, type RunInput } from '@envelope/capacity';
+import { composeSheets, sheetSvg } from '@envelope/sheets';
 
 import { runChecks } from '../../api/src/checks.js';
 import { ENGINE_VERSION, presentRun } from '../../api/src/present.js';
 import type { PlotView, RunView } from '../src/api/client.js';
 import { CapacityBands } from '../src/components/CapacityBands.js';
+import { DrawingSet, SheetView } from '../src/components/DrawingSet.js';
 import { AssumptionRegister } from '../src/components/AssumptionRegister.js';
 import { MassingPanel } from '../src/components/MassingPanel.js';
 import { ParkingPlan, VehicleAccessPanel } from '../src/components/ParkingPlan.js';
@@ -350,6 +352,76 @@ describe('ParkingPlan', () => {
   it('describes the whole figure for a reader who cannot see it', () => {
     const out = html(<ParkingPlan levelPlan={run.levelPlan!} onInspect={() => {}} />);
     expect(out).toMatch(/aria-label="[^"]*bays laid out/);
+  });
+
+  it('leaves the drawing to the drawing set when asked, and keeps the figures', () => {
+    // One level drawn by two renderers is two chances to disagree.
+    const out = html(<ParkingPlan levelPlan={run.levelPlan!} onInspect={() => {}} figure={false} />);
+    expect(out).not.toContain('<svg');
+    expect(out).toContain('Bays laid out');
+    expect(out).toContain('Module depth');
+  });
+});
+
+/**
+ * The drawing set is the same display list the SVG export, the DXF and the report
+ * draw. Two ways it could lie on screen: by drawing something the export does not
+ * (a second renderer that has drifted), and by leaving a value on the sheet that a
+ * keyboard cannot reach.
+ */
+describe('DrawingSet', () => {
+  const meta = (): { plotNumber: string; community: string; runId: string } => ({
+    plotNumber: run.plot.plotNumber,
+    community: run.plot.community,
+    runId: run.runId,
+  });
+  /** Every `d` attribute, in document order. The geometry, and nothing else. */
+  const paths = (markup: string): string[] => [...markup.matchAll(/\sd="([^"]*)"/g)].map((m) => m[1]!);
+
+  it('has one tab per sheet the engine composed, and opens on a parking level', () => {
+    const sheets = composeSheets(run.building!, meta());
+    const out = html(<DrawingSet run={run} onInspect={() => {}} />);
+    expect(out.split('role="tab"').length - 1).toBe(sheets.length);
+    const first = sheets.find((s) => s.kind === 'PARKING')!;
+    expect(out).toMatch(new RegExp(`aria-selected="true"[^>]*>(?:<[^>]+>)*${first.number}<`));
+  });
+
+  it('draws what the SVG export draws, path for path, with a car in every bay the engine placed', () => {
+    for (const sheet of composeSheets(run.building!, meta())) {
+      const react = html(<SheetView sheet={sheet} idPrefix="t" onInspect={() => {}} />);
+      const svg = sheetSvg(sheet, 't');
+      expect(paths(react), sheet.id).toEqual(paths(svg));
+      const level = run.building!.levels.find((l) => l.id === sheet.levelId);
+      if (sheet.kind === 'PARKING') {
+        const bays = Number(level!.parking!.bayCount.value);
+        expect(bays).toBeGreaterThan(0);
+        expect(react.split('data-car=').length - 1).toBe(bays);
+        expect(react.split('data-bay=').length - 1).toBe(bays);
+      }
+    }
+  });
+
+  it('lists every traced value the title strip quotes as a button, in its own ink', () => {
+    const sheet = composeSheets(run.building!, meta()).find((s) => s.kind === 'PARKING')!;
+    const traced = sheet.facts.filter((f) => f.node && f.provenanceClass);
+    expect(traced.length).toBeGreaterThan(0);
+    const out = html(<DrawingSet run={run} onInspect={() => {}} />);
+    for (const f of traced) {
+      expect(out).toContain(`class="traced traced--${f.provenanceClass!.toLowerCase()}" aria-label="${f.label}: ${f.value}.`);
+    }
+  });
+
+  it('keeps the two sentences on the sheet itself', () => {
+    const out = html(<DrawingSet run={run} onInspect={() => {}} />);
+    expect(out).toContain('NOT FOR CONSTRUCTION');
+    expect(out).toContain('REGULATORY VALIDITY: NOT ASSESSED');
+  });
+
+  it('says why a run stored before the building model has no drawing, rather than drawing one', () => {
+    const { building: _omitted, ...old } = run;
+    const out = html(<DrawingSet run={old} onInspect={() => {}} />);
+    expect(out).toContain('computed before drawings were made from the building model');
+    expect(out).not.toContain('<svg');
   });
 });
 

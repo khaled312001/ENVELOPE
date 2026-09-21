@@ -22,7 +22,12 @@ import {
   EdgeKind,
 } from '@envelope/core';
 import type { Citation, NodeId, ProvenanceEdge, ProvenanceNode, TracedWire } from '@envelope/core';
-import { describe, expect, it } from 'vitest';
+import { runPipeline } from '@envelope/capacity';
+import { composeSheets, type Sheet } from '@envelope/sheets';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { initGeometry } from '@envelope/geometry';
+
+import { META, RECT_80x40, runInput } from '../../../test-support/pipeline.js';
 
 import {
   CLAIM_STATEMENT_VERBATIM,
@@ -38,6 +43,7 @@ import {
   fromJson,
   groupDigits,
   runFingerprint,
+  drawingSetHtml,
   toHtml,
   toJson,
   toJsonString,
@@ -771,7 +777,15 @@ describe('HTML report', () => {
     const footer = html.slice(html.indexOf('<footer'));
     expect(footer).toContain('run_01JB8Z0M4Q');
     expect(footer).toContain(ANNEX_VERSION);
-    expect(html).toContain('position: fixed');
+  });
+
+  it('repeats the footer on paper in the page margin, where it cannot cover a heading', () => {
+    // It was a fixed element, and the Chromium that prints these put it at the TOP
+    // of every page, over each section's heading. A margin box is outside the
+    // content area by definition.
+    expect(html).toMatch(/@bottom-left \{ content: "Run run_01JB8Z0M4Q[^"]*Metric definitions annex/);
+    expect(html).toMatch(/@bottom-right \{ content: "REGULATORY VALIDITY: NOT ASSESSED/);
+    expect(html).not.toMatch(/position:\s*fixed/);
   });
 
   it('cites the metric definitions annex version — FR-DEF-001 AC4', () => {
@@ -844,6 +858,43 @@ describe('HTML report', () => {
     // the report must not quietly present placeholder definitions as signed ones.
     expect(html).toContain('Unsigned metric definitions annex');
     expect(html).toContain('is NOT SIGNED');
+  });
+});
+
+describe('the drawing set', () => {
+  beforeAll(async () => {
+    await initGeometry();
+  });
+  const sheets = (): readonly Sheet[] => composeSheets(runPipeline(runInput(RECT_80x40)).building, META);
+
+  it('is listed in the report, sheet by sheet, and not drawn inside it', () => {
+    // Drawn inside the A4 report, Chromium printed each A3 sheet at 0.91 of true
+    // size — a scale bar that lies. So the report names the set and the set is
+    // its own document.
+    const set = sheets();
+    const out = toHtml(makeRun(), { sheets: set });
+    for (const s of set) expect(out).toContain(`<span class="mono">${s.number}</span> ${s.title}`);
+    expect(out).not.toContain('<svg');
+  });
+
+  it('says why there is none, rather than drawing one, for a run without a model', () => {
+    expect(toHtml(makeRun())).toContain('computed before drawings were made from the building model');
+  });
+
+  it('prints every sheet on its own A3 landscape page, each carrying both sentences', () => {
+    const set = sheets();
+    const out = drawingSetHtml(set, META);
+    expect(out).toContain('@page { size: 420mm 297mm; margin: 0; }');
+    expect(out.split('<svg').length - 1).toBe(set.length);
+    expect(out.split('NOT FOR CONSTRUCTION').length - 1).toBeGreaterThan(set.length);
+    expect(out.split('REGULATORY VALIDITY: NOT ASSESSED').length - 1).toBeGreaterThan(set.length);
+    // Every hatch and clip id is unique, or one sheet's ramp hatch paints another's.
+    const ids = [...out.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('refuses to be an empty set', () => {
+    expect(() => drawingSetHtml([], META)).toThrow(/no sheets/);
   });
 });
 

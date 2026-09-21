@@ -20,14 +20,16 @@
  * The base rules target paper: A4, real `break-before: page` boundaries between
  * §3.4's sections, `break-inside: avoid` on every card and table row, and
  * `display: table-header-group` so a long table repeats its own header on each
- * sheet. The footer carrying the run id and the annex version is
- * `position: fixed`, which Chromium repeats on every printed page, sitting in
- * the page's bottom margin — deliberately not a CSS Paged Media margin box,
- * because Chromium does not implement `@bottom-center` and a margin box would
- * silently render nothing. Page *numbers* are the one thing this technique
- * cannot supply: `counter(page)` is only readable inside those margin boxes. If
- * numbering is wanted it comes from the print driver's own footer template, and
- * the identity that has to survive a photocopied page is here regardless.
+ * sheet. The footer carrying the run id and the annex version is a pair of CSS
+ * Paged Media margin boxes (`pageFooter`), with page numbers.
+ *
+ * It used to be a fixed-position element, chosen deliberately because Chromium
+ * did not implement margin boxes and one would have rendered nothing. Chromium
+ * has since (131), and the fixed element was then measured in the Edge that
+ * prints these: it sat at the TOP of every page, over each section's heading,
+ * while every test passed. So the margin boxes carry it on every page, and the
+ * element stays in flow at the end of the document — a browser without margin
+ * boxes still prints the identity once, rather than nowhere.
  *
  * ## The uncertainty treatment is load-bearing
  *
@@ -65,6 +67,7 @@
 
 import { CapacityBand, ClaimStatus, RenderHint, metric } from '@envelope/core';
 import type { Citation, MetricDefinition, TracedWire } from '@envelope/core';
+import { type Sheet, sheetSvg } from '@envelope/sheets';
 
 import {
   InvariantStatus,
@@ -722,17 +725,18 @@ dd { margin: 0; }
   @page { size: A4; margin: 16mm 15mm 24mm; }
   html { font-size: 10.5pt; }
   body { padding: 0; }
-  /* Chromium repeats a fixed element on every printed page. The negative offset
-     parks it inside the page's bottom margin, which the 24mm reserves. */
-  .running-footer {
-    position: fixed;
-    left: 0; right: 0; bottom: -14mm;
-    margin: 0;
-    background: var(--paper);
-  }
+  /* On every page the footer is a page-margin box (see pageFooter); this
+     element stays in flow, printed once at the end. It used to be fixed with a
+     negative offset meant to park it in the bottom margin, and the Chromium that
+     prints these put it at the TOP of every page instead — "2 · Capacity" was
+     unreadable on paper while every test passed. A margin box cannot overlap the
+     content: it is not in the content area at all. */
+  .running-footer { margin-top: 12mm; }
   a { text-decoration: none; }
   .skip-link { display: none; }
 }
+
+.sheet-list { font-family: var(--font-ui); }
 `;
 
 // ---------------------------------------------------------------------------
@@ -1299,6 +1303,150 @@ function provenanceAppendix(run: RunReport, indexes: Indexes): string {
 }
 
 // ---------------------------------------------------------------------------
+// The printed running footer
+// ---------------------------------------------------------------------------
+
+/** A CSS string literal. The values are ours, but a run id is still input. */
+const cssString = (text: string): string =>
+  `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ')}"`;
+
+/**
+ * The running footer, on every printed page, as page-margin boxes.
+ *
+ * Margin boxes sit in the page margin rather than the content area, so they
+ * cannot cover a heading the way the fixed element did. They take no custom
+ * properties — the page context does not inherit from `:root` — so the ink is
+ * the report's `--ink-2` written out, and the sentence is the one the on-screen
+ * footer carries.
+ */
+function pageFooter(run: RunReport): string {
+  const left = [
+    `Run ${run.runId}`,
+    `Metric definitions annex ${run.metricDefinitionsVersion}`,
+    `Rule set ${run.ruleSet.ruleSetVersion}`,
+    `Engine ${run.engineVersion}`,
+  ].join('   ·   ');
+  const box = 'font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 7pt; color: #4a515c;';
+  return (
+    `@media print { @page { ` +
+    `@bottom-left { content: ${cssString(left)}; ${box} } ` +
+    `@bottom-right { content: "REGULATORY VALIDITY: NOT ASSESSED   ·   page " counter(page) " of " counter(pages); ${box} } ` +
+    `} }`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Drawings
+// ---------------------------------------------------------------------------
+
+/**
+ * The drawing set, composed by the caller from the run's building model.
+ *
+ * Passed beside the report rather than inside it. `RunReport` is the §3.4
+ * artifact — stored, fingerprinted and round-tripped as JSON — and a sheet is a
+ * derived picture of data the model already carries; storing it would store the
+ * same building twice, in two shapes that could drift.
+ */
+export interface ReportDrawings {
+  readonly sheets: readonly Sheet[];
+}
+
+/**
+ * The report LISTS the sheets; it does not print them.
+ *
+ * It did, on A3 pages named inside the A4 report, and the PDF was measured
+ * before that was kept: Chromium honoured the page size and then drew the sheet
+ * at 0.91 of it, so a 1:250 sheet printed at about 1:275 with "1:250" in its title
+ * strip — a scale bar that lies. A drawing set is also, conventionally, a document
+ * of its own. So it is one: `drawingSetHtml`, A3 throughout, opened beside the
+ * report from the same export step behind the same gates.
+ */
+function drawingsSection(drawings: ReportDrawings | undefined): string {
+  const head = `<section data-prd="drawings"><h2>11 · Drawing set</h2>`;
+  if (!drawings || drawings.sheets.length === 0) {
+    return (
+      head +
+      `<p>${notAssessedChip('no drawings')} This run was computed before drawings were made ` +
+      `from the building model, so it has none. Compute the run again to draw it; nothing is ` +
+      `redrawn from area figures.</p></section>`
+    );
+  }
+  const list = drawings.sheets
+    .map((s) => `<li><span class="mono">${esc(s.number)}</span> ${esc(s.title)}</li>`)
+    .join('');
+  return (
+    head +
+    `<p>Every sheet is drawn from the one building model the figures above were computed ` +
+    `from — the same drawing the screen shows and the DXF carries. The set is issued with ` +
+    `this report as its own A3 document, one sheet to a page at the scale in its title ` +
+    `strip.</p>` +
+    `<ol class="sheet-list">${list}</ol></section>`
+  );
+}
+
+export interface DrawingSetMeta {
+  readonly plotNumber: string;
+  readonly community: string;
+  readonly runId: string;
+}
+
+/** Page geometry for the set: A3 landscape, no margin — each sheet has its own frame. */
+const DRAWING_SET_STYLESHEET = `
+@page { size: 420mm 297mm; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #ffffff; color: #14171c; }
+body { font-family: "Inter", "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif; }
+.set-head, .set-sheet { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.set-head { padding-top: 24px; padding-bottom: 8px; }
+.set-head h1 { font-size: 1.25rem; margin: 0 0 8px; }
+.set-head p { margin: 0 0 8px; color: #4a515c; }
+.set-sheet { margin-top: 24px; margin-bottom: 32px; }
+.set-sheet svg { display: block; width: 100%; height: auto; border: 1px solid #c9ced8; }
+@media print {
+  .set-head { display: none; }
+  .set-sheet { max-width: none; margin: 0; padding: 0; break-after: page; }
+  .set-sheet:last-child { break-after: auto; }
+  /* A hair under the page, so rounding cannot push a sheet onto a second page
+     and leave a blank one behind it. */
+  .set-sheet svg { width: 420mm; height: 296.8mm; border: none; }
+}
+`;
+
+/**
+ * The drawing set as one printable document: every sheet, A3 landscape, one to a
+ * page, at true size. Self-contained, like the report — it references nothing
+ * external, so it prints the same on a machine with no network.
+ *
+ * The set's own cover lines are screen-only; on paper every sheet already carries
+ * the plot, the run, NOT FOR CONSTRUCTION and REGULATORY VALIDITY: NOT ASSESSED
+ * in its title strip, and a sheet separated from the set keeps them.
+ */
+export function drawingSetHtml(sheets: readonly Sheet[], meta: DrawingSetMeta): string {
+  if (sheets.length === 0) {
+    throw new Error('a drawing set with no sheets is not a drawing set; the caller must say why there are none');
+  }
+  const title = `Drawing set — Plot ${meta.plotNumber}, ${meta.community}`;
+  const pages = sheets
+    .map(
+      (s) =>
+        `<section class="set-sheet" aria-label="${esc(`${s.number} ${s.title}`)}">${sheetSvg(s, `set-${s.id}`)}</section>`,
+    )
+    .join('');
+  return (
+    `<!doctype html>` +
+    `<html lang="en" dir="ltr"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width, initial-scale=1">` +
+    `<title>${esc(title)}</title>` +
+    `<style>${DRAWING_SET_STYLESHEET}</style></head>` +
+    `<body><header class="set-head"><h1>${esc(title)}</h1>` +
+    `<p>Run <code>${esc(meta.runId)}</code> · ${sheets.length} sheet${sheets.length === 1 ? '' : 's'}. ` +
+    `Printed, each sheet fills one A3 landscape page at the scale in its title strip.</p>` +
+    `<p><strong>NOT FOR CONSTRUCTION. REGULATORY VALIDITY: NOT ASSESSED.</strong></p></header>` +
+    `<main>${pages}</main></body></html>`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Document
 // ---------------------------------------------------------------------------
 
@@ -1318,7 +1466,7 @@ function provenanceAppendix(run: RunReport, indexes: Indexes): string {
  * @throws {AnnexVersionMismatchError} when the run cites a different annex.
  * @throws {UndefinedMetricError} when an area term is absent from the annex.
  */
-export function toHtml(run: RunReport): string {
+export function toHtml(run: RunReport, drawings?: ReportDrawings): string {
   assertEmittable(run);
 
   const indexes: Indexes = { provenance: new Registry<TracedWire>(), citations: new Registry<Citation>() };
@@ -1337,7 +1485,7 @@ export function toHtml(run: RunReport): string {
     definitionsSection(run),
   ].join('');
 
-  const appendix = provenanceAppendix(run, indexes);
+  const appendix = provenanceAppendix(run, indexes) + drawingsSection(drawings);
 
   const footer =
     `<footer class="running-footer">` +
@@ -1355,7 +1503,7 @@ export function toHtml(run: RunReport): string {
     `<html lang="en" dir="ltr"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width, initial-scale=1">` +
     `<title>${esc(title)}</title>` +
-    `<style>${STYLESHEET}</style></head>` +
+    `<style>${STYLESHEET}${pageFooter(run)}</style></head>` +
     `<body><a class="skip-link" href="#main">Skip to the report</a>` +
     `<main id="main">${body}${appendix}</main>` +
     footer +

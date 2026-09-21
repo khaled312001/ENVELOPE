@@ -315,11 +315,11 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
         unit: 'bays',
       });
 
-  // --- section A–A --------------------------------------------------------------------
-  const section = sectionOf(input.plot, envelope.setbackRing, envelope.podiumRing, levels, ramps, strip);
-  if (!section) {
+  // --- sections -----------------------------------------------------------------------
+  const sections = sectionsOf(input.plot, envelope.setbackRing, envelope.podiumRing, levels, ramps, strip);
+  if (sections.length === 0) {
     notModelled.push(
-      'Section A–A. No line through the scheme crossed the plot boundary, so no section was cut.',
+      'Sections. No line through the scheme crossed the plot boundary, so no section was cut.',
     );
   }
 
@@ -354,58 +354,81 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       : null,
     drawnBays: toWire(drawnBays),
     placements,
-    section,
+    sections,
     notModelled,
   };
 }
 
 /**
- * Cut section A–A.
+ * Cut the sections.
  *
- * Where the cut goes is a view, not a quantity — no figure depends on it — so it
- * is chosen by a stated rule rather than traced as an assumption: along the ramp
- * when there is one, because the ramp is the one element a plan cannot show and
- * the client's sentence names it; otherwise through the middle of the podium,
- * parallel to the longest boundary, which is the conventional long section.
+ * Where a cut goes is a view, not a quantity — no figure depends on it — so it is
+ * chosen by a stated rule rather than traced as an assumption:
+ *
+ * - **A–A runs along the ramp**, when there is one, because the ramp is the one
+ *   element a plan cannot show and the client's sentence names it.
+ * - **The long section** runs through the middle of the podium, parallel to the
+ *   longest boundary. It is B–B when A–A is the ramp, and A–A when there is no
+ *   ramp. It is the one that cuts the tower: a ramp near the podium edge often
+ *   misses the plate entirely, and a section whose tower is all dashed outline is
+ *   a section of the car park.
  *
  * Every span comes from `lineSpans`, on the millimetre grid. The drawing only
  * reads them.
  */
-function sectionOf(
+function sectionsOf(
   plot: Plot,
   setbackRing: readonly Pt[],
   podiumRing: readonly Pt[],
   levels: readonly ModelLevel[],
   ramps: readonly ModelRamp[],
   strip: LevelPlan['rampStrip'],
-): ModelSection | null {
-  let a: Pt;
-  let b: Pt;
-  let taken: string;
-  if (strip && ramps.length > 0) {
-    a = midpoint(strip.foot[0], strip.foot[1]) as Pt;
-    b = midpoint(strip.head[0], strip.head[1]) as Pt;
-    taken = 'Along the ramp, up its run, through the middle of the ramp strip.';
-  } else {
-    let longest = plot.edges[0]!;
-    for (const e of plot.edges) {
-      if (lengthSquared(e.start, e.end) > lengthSquared(longest.start, longest.end)) longest = e;
-    }
-    const xs = podiumRing.map((p) => p.x);
-    const ys = podiumRing.map((p) => p.y);
-    a = {
-      x: Math.round((Math.min(...xs) + Math.max(...xs)) / 2) as Mm,
-      y: Math.round((Math.min(...ys) + Math.max(...ys)) / 2) as Mm,
-    };
-    b = {
-      x: (a.x + longest.end.x - longest.start.x) as Mm,
-      y: (a.y + longest.end.y - longest.start.y) as Mm,
-    };
-    taken =
-      `Through the middle of the podium, parallel to boundary ${longest.seq}, ` +
-      'the longest side of the plot.';
+): ModelSection[] {
+  let longest = plot.edges[0]!;
+  for (const e of plot.edges) {
+    if (lengthSquared(e.start, e.end) > lengthSquared(longest.start, longest.end)) longest = e;
   }
+  const xs = podiumRing.map((p) => p.x);
+  const ys = podiumRing.map((p) => p.y);
+  const centre: Pt = {
+    x: Math.round((Math.min(...xs) + Math.max(...xs)) / 2) as Mm,
+    y: Math.round((Math.min(...ys) + Math.max(...ys)) / 2) as Mm,
+  };
+  const along: Pt = {
+    x: (centre.x + longest.end.x - longest.start.x) as Mm,
+    y: (centre.y + longest.end.y - longest.start.y) as Mm,
+  };
+  const longTaken =
+    `Through the middle of the podium, parallel to boundary ${longest.seq}, ` +
+    'the longest side of the plot.';
 
+  const context = { plot, setbackRing, levels, ramps, strip };
+  const sections: (ModelSection | null)[] =
+    strip && ramps.length > 0
+      ? [
+          cut('A', midpoint(strip.foot[0], strip.foot[1]) as Pt, midpoint(strip.head[0], strip.head[1]) as Pt,
+            'Along the ramp, up its run, through the middle of the ramp strip.', true, context),
+          cut('B', centre, along, longTaken, false, context),
+        ]
+      : [cut('A', centre, along, longTaken, false, context)];
+  return sections.filter((x): x is ModelSection => x !== null);
+}
+
+function cut(
+  id: ModelSection['id'],
+  a: Pt,
+  b: Pt,
+  taken: string,
+  alongRamp: boolean,
+  context: {
+    readonly plot: Plot;
+    readonly setbackRing: readonly Pt[];
+    readonly levels: readonly ModelLevel[];
+    readonly ramps: readonly ModelRamp[];
+    readonly strip: LevelPlan['rampStrip'];
+  },
+): ModelSection | null {
+  const { plot, setbackRing, levels, ramps, strip } = context;
   const plotSpans = lineSpans(plot.ring, a, b);
   if (plotSpans.length === 0) return null;
   const origin = plotSpans[0]![0];
@@ -414,15 +437,16 @@ function sectionOf(
   const rebase = (spans: readonly (readonly [number, number])[]): ModelSpan[] =>
     spans.map(([s, e]) => [(s - origin) as Mm, (e - origin) as Mm] as const);
 
-  const holes = strip ? lineSpans(strip.world, a, b) : [];
+  // Where the line crosses the ramp strip, the slabs a ramp joins are open.
+  const holes = strip && ramps.length > 0 ? lineSpans(strip.world, a, b) : [];
   const rampLevels = new Set(ramps.flatMap((r) => [r.fromLevelId, r.toLevelId]));
   const extent = (ring: readonly ModelPoint[]): ModelSpan => {
-    const along = ring.map((p) => distanceAlong(p as Pt, a, b) - origin);
-    return [Math.min(...along) as Mm, Math.max(...along) as Mm];
+    const d = ring.map((p) => distanceAlong(p as Pt, a, b) - origin);
+    return [Math.min(...d) as Mm, Math.max(...d) as Mm];
   };
 
   return {
-    id: 'A',
+    id,
     line: [pt(pointAlong(a, b, origin)), pt(pointAlong(a, b, end))],
     taken,
     lengthMm: (end - origin) as Mm,
@@ -438,17 +462,21 @@ function sectionOf(
         beyond: extent(level.outline),
       };
     }),
-    ramps: ramps.map((r) => ({
-      rampId: r.id,
-      foot: {
-        alongMm: (distanceAlong(midpoint(r.foot[0], r.foot[1]) as Pt, a, b) - origin) as Mm,
-        elevationMm: r.fromElevationMm,
-      },
-      head: {
-        alongMm: (distanceAlong(midpoint(r.head[0], r.head[1]) as Pt, a, b) - origin) as Mm,
-        elevationMm: r.toElevationMm,
-      },
-    })),
+    // A ramp is drawn as a slope only on the section that runs along it; any other
+    // cut crosses it, and shows it as the opening it leaves in the slab.
+    ramps: alongRamp
+      ? ramps.map((r) => ({
+          rampId: r.id,
+          foot: {
+            alongMm: (distanceAlong(midpoint(r.foot[0], r.foot[1]) as Pt, a, b) - origin) as Mm,
+            elevationMm: r.fromElevationMm,
+          },
+          head: {
+            alongMm: (distanceAlong(midpoint(r.head[0], r.head[1]) as Pt, a, b) - origin) as Mm,
+            elevationMm: r.toElevationMm,
+          },
+        }))
+      : [],
   };
 }
 
@@ -498,5 +526,6 @@ function parkingOf(plan: LevelPlan): NonNullable<ModelLevel['parking']> {
       : null,
     rampStrip: plan.rampStrip ? plan.rampStrip.world.map(pt) : null,
     baysSource: source(plan.bayCount),
+    bayCount: toWire(plan.bayCount),
   };
 }

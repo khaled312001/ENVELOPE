@@ -116,6 +116,11 @@ export interface ModelLevel {
     /** The ramp strip reserved on this level, whether or not a ramp uses it. */
     readonly rampStrip: ModelRing | null;
     readonly baysSource: ElementSource;
+    /**
+     * The engine's count for this level, traced. A sheet prints this, never the
+     * length of `bays` — and `pnpm parity` fails the day the two differ.
+     */
+    readonly bayCount: TracedWire;
   } | null;
 }
 
@@ -173,7 +178,7 @@ export interface ModelAccess {
 export type ModelSpan = readonly [Mm, Mm];
 
 /**
- * Section A–A, as the engine cut it.
+ * A section, as the engine cut it.
  *
  * A section is spans: along the cut line, where each slab is and where it is not.
  * They are computed in the kernel (`lineSpans`), on the millimetre grid, so the
@@ -182,7 +187,8 @@ export type ModelSpan = readonly [Mm, Mm];
  * the cut enters the plot.
  */
 export interface ModelSection {
-  readonly id: 'A';
+  /** A–A along the ramp when there is one; the long section through the tower. */
+  readonly id: 'A' | 'B';
   /** In plan, boundary to boundary. The site plan draws it with its section marks. */
   readonly line: readonly [ModelPoint, ModelPoint];
   /** Where and why the cut was taken — a view, not a quantity, and said as one. */
@@ -237,8 +243,8 @@ export interface BuildingModel {
     readonly source: ElementSource;
     readonly statement: string;
   }[];
-  /** `null` only when no line through the scheme crosses the plot — said in `notModelled`. */
-  readonly section: ModelSection | null;
+  /** Empty only when no line through the scheme crosses the plot — said in `notModelled`. */
+  readonly sections: readonly ModelSection[];
   /** What this model does not contain, and why. Shown with every drawing of it. */
   readonly notModelled: readonly string[];
 }

@@ -11,6 +11,7 @@
     { "path": "../../packages/invariants" },
     { "path": "../../packages/validation" },
     { "path": "../../packages/report" },
-    { "path": "../../packages/exports" }
+    { "path": "../../packages/exports" },
+    { "path": "../../packages/sheets" }
   ]
 }

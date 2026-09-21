@@ -42,6 +42,7 @@ import { PlotCanvas } from './components/PlotCanvas.js';
 import { ProvenanceTree, type ProvTree } from './components/ProvenanceTree.js';
 import { ProvenanceLegend, TracedValue } from './components/TracedValue.js';
 import { MassingPanel } from './components/MassingPanel.js';
+import { DrawingSet, useSheets } from './components/DrawingSet.js';
 import { ParkingPlan, VehicleAccessPanel } from './components/ParkingPlan.js';
 import { AffectionPlanIntake, type Prefill } from './screens/AffectionPlanIntake.js';
 import { ChecksStep } from './screens/ChecksStep.js';
@@ -404,22 +405,32 @@ export function EngineApp({
                     <header className="panel__header">
                       <div>
                         <h2 id="level-heading" className="panel__title">
-                          The level, laid out
+                          The drawings
                         </h2>
                         <p className="panel__subtitle">
-                          Bays, aisles and the ramp placed as rectangles to Table B.11. A
-                          bay count that cannot be laid out is not a bay count — but the
-                          supply figure that fixed the governing capacity was not this
-                          drawing. It was an available area divided by an assumed factor,
-                          computed before the level was laid out at all. The two are
-                          compared on the parking page.
+                          Every parking level with its bays numbered and a car in each,
+                          the site plan, the typical floor and two sections, all drawn from
+                          the one building the engine computed. A bay count that cannot be
+                          laid out is not a bay count — but the supply figure that fixed
+                          the governing capacity was not this drawing. It was an available
+                          area divided by an assumed factor, computed before the level was
+                          laid out at all. The two are compared on the parking page.
                         </p>
                       </div>
                     </header>
+                    {/* A run stored before the building model existed has no sheets;
+                        it keeps the level drawing it was computed with, below. */}
+                    {run.building ? (
+                      <>
+                        <DrawingSet run={run} onInspect={inspect} />
+                        <h3 className="panel__subheading">The level as packed</h3>
+                      </>
+                    ) : null}
                     <ParkingPlan
                       levelPlan={run.levelPlan}
                       plotVertices={plot?.vertices}
                       onInspect={inspect}
+                      figure={!run.building}
                     />
                   </section>
                   <VehicleAccessPanel levelPlan={run.levelPlan} onInspect={inspect} />
@@ -770,8 +781,11 @@ function ExportPanel({
   readonly onGoToAssumptions: () => void;
   readonly onError: (e: ApiError) => void;
 }): JSX.Element {
-  const [done, setDone] = useState<{ result: ExportResult; html: string } | null>(null);
+  const [done, setDone] = useState<{ result: ExportResult; html: string; sheets: string | null } | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
+  const sheets = useSheets(run);
   const canSign = Boolean(actor.licence);
   const ready =
     Boolean(gates['G3_ASSUMPTIONS_ACKNOWLEDGED']) && Boolean(gates['G4_REVIEWER_NAMED']);
@@ -847,11 +861,15 @@ function ExportPanel({
           onClick={async () => {
             setBusy(true);
             try {
-              const [result, html] = await Promise.all([
+              // The drawing set only when the run has a model to draw; a run stored
+              // before it existed would be refused, and that refusal is not a
+              // reason to withhold the report.
+              const [result, html, sheets] = await Promise.all([
                 api.exportRun(actor, run.runId),
                 api.exportRunHtml(actor, run.runId),
+                run.building ? api.exportRunHtml(actor, run.runId, 'sheets') : Promise.resolve(null),
               ]);
-              setDone({ result, html });
+              setDone({ result, html, sheets });
             } catch (e) {
               if (e instanceof ApiError) onError(e);
             } finally {
@@ -926,6 +944,15 @@ function ExportPanel({
             >
               Open the report
             </button>
+            {done.sheets ? (
+              <button
+                type="button"
+                className="button"
+                onClick={() => openDocument(done.sheets!, 'text/html')}
+              >
+                Open the drawing set (A3)
+              </button>
+            ) : null}
             <button
               type="button"
               className="button"
@@ -965,12 +992,39 @@ function ExportPanel({
           </div>
 
           <p className="fine-print">
-            The drawing carries the plot boundary, the setback footprint, the tower
-            plate, and every bay, aisle and ramp the engine placed — each on its own
-            layer so a reviewer can switch them off. Revit and IFC are{' '}
+            The CAD drawing is the whole building: every parking level at its own
+            height with a car in every bay, the ramps as slopes between levels, and the
+            massing stood up as 3D faces. Each level has its own layers —{' '}
+            <code>ENV-B1-BAY</code>, <code>ENV-B1-CAR</code> — so a reviewer can switch
+            off one level, or one kind of thing on it. Revit and IFC are{' '}
             <strong>not</strong> included: round-tripping IFC is a body of work this
             phase has not quoted, and a badly-shaped one would be worse than none.
           </p>
+
+          {/*
+            One sheet at a time, behind the same two gates as the whole building.
+            A consultant who needs level B2 should not have to take the building
+            apart to get it, and a sheet downloaded alone is exactly the sheet on
+            screen — flat, framed and titled, at true size in metres.
+          */}
+          {sheets.length > 0 ? (
+            <>
+              <h3 className="panel__subheading">One sheet at a time</h3>
+              <ul className="sheet-downloads">
+                {sheets.map((s) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      className="link-button"
+                      onClick={() => void download(actor, run.runId, 'dxf', onError, s)}
+                    >
+                      Download {s.number}: {s.title} (DXF)
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
         </>
       ) : null}
     </section>
@@ -991,13 +1045,14 @@ async function download(
   runId: string,
   format: 'dxf' | 'xlsx',
   onError: (e: ApiError) => void,
+  sheet?: { readonly id: string; readonly number: string },
 ): Promise<void> {
   try {
-    const blob = await api.exportRunFile(actor, runId, format);
+    const blob = await api.exportRunFile(actor, runId, format, sheet?.id);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `envelope-${runId.slice(0, 8)}.${format}`;
+    a.download = `envelope-${runId.slice(0, 8)}${sheet ? `-${sheet.number}` : ''}.${format}`;
     document.body.appendChild(a);
     a.click();
     a.remove();

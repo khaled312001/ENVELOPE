@@ -83,6 +83,24 @@ const FORBIDDEN = [
       'with the report of the same run, and nothing would catch it.',
   },
   {
+    pkg: 'sheets',
+    forbids: [
+      '@envelope/capacity',
+      '@envelope/geometry',
+      '@envelope/rules',
+      '@envelope/invariants',
+      '@envelope/validation',
+      '@envelope/intake',
+      '@envelope/report',
+      '@envelope/exports',
+    ],
+    why:
+      'The sheets are drawn from the building model and nothing else. A sheet that ' +
+      'could reach the engine could lay out its own bays, and the drawing on screen, ' +
+      'the DXF and the report would then be three drawings that happen to agree — ' +
+      'until the day one of them did not.',
+  },
+  {
     pkg: 'core',
     forbids: [
       '@envelope/capacity',
@@ -93,12 +111,52 @@ const FORBIDDEN = [
       '@envelope/report',
       '@envelope/intake',
       '@envelope/exports',
+      '@envelope/sheets',
     ],
     why: 'core is the bottom of the graph. Anything it depends on is a cycle.',
   },
 ];
 
 const failures = [];
+
+/*
+  THE SOURCE CHECK, AND WHY IT NOW TESTS ITSELF FIRST.
+
+  These patterns used to be written as `new RegExp(\`from\s+...\`)`. Inside a
+  template literal `\s` is not an escape — it cooks to a plain `s` — so the pattern
+  was `froms+'@envelope/...` and matched no import that has ever been written. The
+  third layer of this gate reported "boundaries hold" over every source file
+  without being able to see a single import in any of them: the vacuous pass this
+  codebase refuses everywhere else, inside the gate that guards the strongest
+  guarantee in the architecture.
+
+  So the patterns are built from `String.raw`, and before any file is read each
+  one must catch the imports it exists to catch. A check that cannot fail is
+  reported as a failure of the check.
+*/
+function importPatterns(banned) {
+  const slug = banned.split('/')[1];
+  return {
+    bare: new RegExp(String.raw`from\s+['"]${banned}(?:['"/])`),
+    relative: new RegExp(String.raw`from\s+['"](?:\.{1,2}/)+(?:packages/)?${slug}/`),
+  };
+}
+
+for (const [banned, sample, which] of [
+  ['@envelope/capacity', "import { runPipeline } from '@envelope/capacity';", 'bare'],
+  ['@envelope/capacity', 'import type { X } from "@envelope/capacity/dist/x.js";', 'bare'],
+  ['@envelope/geometry', "import { area } from '../../geometry/src/index.js';", 'relative'],
+  ['@envelope/rules', "export * from '../../../packages/rules/src/store.js';", 'relative'],
+]) {
+  if (!importPatterns(banned)[which].test(sample)) {
+    console.error(`\nThe boundary check cannot see a forbidden import: ${sample}\n`);
+    process.exit(1);
+  }
+}
+if (importPatterns('@envelope/core').bare.test("import { x } from '@envelope/core-extras';")) {
+  console.error('\nThe boundary check matches a package it was not asked about (@envelope/core-extras).\n');
+  process.exit(1);
+}
 
 for (const rule of FORBIDDEN) {
   const dir = join(ROOT, 'packages', rule.pkg);
@@ -136,9 +194,7 @@ for (const rule of FORBIDDEN) {
   for (const file of walk(join(dir, 'src'))) {
     const text = readFileSync(file, 'utf8');
     for (const banned of rule.forbids) {
-      const bare = new RegExp(`from\s+['"]${banned}`, 'g');
-      const slug = banned.split('/')[1];
-      const relative = new RegExp(`from\s+['"][./]+${slug}/`, 'g');
+      const { bare, relative } = importPatterns(banned);
       if (bare.test(text) || relative.test(text)) {
         failures.push(
           `${file.slice(ROOT.length)} imports ${banned}. ${rule.why}`,

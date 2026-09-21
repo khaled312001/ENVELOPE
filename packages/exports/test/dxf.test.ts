@@ -1,30 +1,23 @@
 /**
- * DXF output, checked as a format rather than as a string.
+ * DXF output, checked as a format and then read back by a DXF parser.
  *
- * The failure mode this guards against is specific: DXF is a flat sequence of
- * (group code, value) pairs, so one stray or missing line shifts every
- * subsequent code by one. The file still looks plausible in a text editor and
- * opens as an empty drawing. Asserting that codes and values stay paired, and
- * that the section markers nest, catches that where an eyeball does not.
+ * Two different failures, two different checks. DXF is a flat sequence of
+ * (group code, value) pairs, so one stray line shifts every code after it and the
+ * file opens as an empty drawing while still looking plausible in a text editor —
+ * the pairing check catches that. And a file can pair perfectly and still hold
+ * the wrong drawing — so each file is also parsed by `dxf-parser`, an
+ * independent reader, and what it finds is counted against the engine.
  */
 
-import { describe, expect, it } from 'vitest';
+import { runPipeline } from '@envelope/capacity';
+import { initGeometry } from '@envelope/geometry';
+import { composeSheets } from '@envelope/sheets';
+import type { IDxf, IInsertEntity, ITextEntity } from 'dxf-parser';
+import { beforeAll, describe, expect, it } from 'vitest';
 
-import {
-  disclaimerText,
-  LAYER,
-  pointFromMetres,
-  siteDrawing,
-  writeDxf,
-  type DxfPoint,
-} from '../src/index.js';
-
-const square = (side: number): readonly DxfPoint[] => [
-  pointFromMetres(0, 0),
-  pointFromMetres(side, 0),
-  pointFromMetres(side, side),
-  pointFromMetres(0, side),
-];
+import { parseDxf as parse } from '../../../test-support/dxf.js';
+import { META, RECT_80x40, runInput, SKEWED } from '../../../test-support/pipeline.js';
+import { buildingDxf, dxfText, layerName, sheetDxf, writeDxf } from '../src/index.js';
 
 function pairs(dxf: string): readonly (readonly [string, string])[] {
   const lines = dxf.split('\r\n');
@@ -32,77 +25,123 @@ function pairs(dxf: string): readonly (readonly [string, string])[] {
   if (lines.at(-1) === '') lines.pop();
   expect(lines.length % 2, 'group codes and values must pair exactly').toBe(0);
   const out: (readonly [string, string])[] = [];
-  for (let i = 0; i < lines.length; i += 2) {
-    out.push([lines[i]!.trim(), lines[i + 1]!]);
-  }
+  for (let i = 0; i < lines.length; i += 2) out.push([lines[i]!.trim(), lines[i + 1]!]);
   return out;
 }
 
+const inserts = (dxf: IDxf, block: string): IInsertEntity[] =>
+  dxf.entities.filter((e): e is IInsertEntity => e.type === 'INSERT' && (e as IInsertEntity).name === block);
+
+beforeAll(async () => {
+  await initGeometry();
+});
+
 describe('writeDxf', () => {
+  const doc = writeDxf({
+    layers: [{ name: 'A', color: 7 }],
+    blocks: [{ name: 'B', polylines: [{ points: [[0, 0], [1, 0]], closed: false }] }],
+    entities: [
+      { kind: 'polyline', layer: 'A', points: [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }], closed: true, z: 0 },
+      { kind: 'text', layer: 'A', at: { x: 0, y: 0 }, z: 0, heightM: 1, rotationDeg: 0, align: 'middle', value: 'x' },
+    ],
+  });
+
   it('emits paired group codes and terminates with EOF', () => {
-    const dxf = writeDxf(siteDrawing({ plot: square(40) }));
-    const p = pairs(dxf);
+    const p = pairs(doc);
     expect(p.at(-1)).toEqual(['0', 'EOF']);
-    for (const [code] of p) expect(code).toMatch(/^\d+$/);
   });
 
   it('opens and closes every section', () => {
-    const p = pairs(writeDxf(siteDrawing({ plot: square(40) })));
-    const starts = p.filter(([c, v]) => c === '0' && v === 'SECTION').length;
-    const ends = p.filter(([c, v]) => c === '0' && v === 'ENDSEC').length;
-    expect(starts).toBe(3); // HEADER, TABLES, ENTITIES
-    expect(ends).toBe(starts);
+    const p = pairs(doc);
+    const opens = p.filter(([c, v]) => c === '0' && v === 'SECTION').length;
+    const closes = p.filter(([c, v]) => c === '0' && v === 'ENDSEC').length;
+    expect(opens).toBe(4); // HEADER, TABLES, BLOCKS, ENTITIES
+    expect(closes).toBe(opens);
   });
 
-  it('declares R12 so every CAD tool reads it without negotiation', () => {
-    expect(writeDxf(siteDrawing({ plot: square(40) }))).toContain('AC1009');
+  it('declares R12 in metres, so every CAD tool reads it and scales it on insert', () => {
+    expect(doc).toContain('$ACADVER\r\n1\r\nAC1009');
+    expect(doc).toContain('$INSUNITS\r\n70\r\n6');
   });
 
   it('converts kernel millimetres to metres exactly once', () => {
-    const dxf = writeDxf(siteDrawing({ plot: square(40) }));
-    // a 40 m square must appear as 40.0000, never 40000 or 0.0400
-    expect(dxf).toContain('40.0000');
-    expect(dxf).not.toContain('40000.0000');
+    const vertexX = pairs(doc).filter(([c]) => c === '10').map(([, v]) => v);
+    expect(vertexX).toContain('1.0000');
+    expect(vertexX).not.toContain('1000.0000');
   });
 
-  it('closes the plot boundary polyline', () => {
-    const p = pairs(writeDxf(siteDrawing({ plot: square(40) })));
-    const polyIdx = p.findIndex(([c, v]) => c === '0' && v === 'POLYLINE');
-    const closedFlag = p.slice(polyIdx, polyIdx + 8).find(([c]) => c === '70');
-    expect(closedFlag?.[1]).toBe('1');
+  it('writes ± and ° as their CAD codes and nothing else outside ASCII', () => {
+    expect(dxfText('L00  ±0.00')).toBe('L00  %%p0.00');
+    expect(dxfText('45°')).toBe('45%%d');
+    expect(dxfText('مخطط')).toBe('????');
+  });
+});
+
+describe('a parking level, read back', () => {
+  it('holds one CAR insert per bay the engine laid out, on that level\'s layers', () => {
+    for (const ring of [RECT_80x40, SKEWED]) {
+      const out = runPipeline(runInput(ring));
+      for (const sheet of composeSheets(out.building, META).filter((s) => s.kind === 'PARKING')) {
+        const level = out.building.levels.find((l) => l.id === sheet.levelId)!;
+        const dxf = parse(sheetDxf(sheet, META));
+        const cars = inserts(dxf, 'CAR');
+        expect(cars).toHaveLength(Number(level.parking!.bayCount.value));
+        for (const car of cars) expect(car.layer).toBe(layerName(level.id, 'car'));
+        // Counted as parsed entities on the bay layer, not as string occurrences:
+        // R12 repeats the layer on every VERTEX and SEQEND.
+        const bays = dxf.entities.filter(
+          (e) => e.type === 'POLYLINE' && (e.layer === layerName(level.id, 'bay') || e.layer === layerName(level.id, 'bay-accessible')),
+        );
+        expect(bays).toHaveLength(cars.length);
+      }
+    }
   });
 
-  it('emits one VERTEX per point plus a SEQEND', () => {
-    const p = pairs(writeDxf(siteDrawing({ plot: square(40) })));
-    expect(p.filter(([c, v]) => c === '0' && v === 'VERTEX')).toHaveLength(4);
-    expect(p.filter(([c, v]) => c === '0' && v === 'SEQEND')).toHaveLength(1);
+  it('defines the CAR block it inserts, and declares every layer it draws on', () => {
+    const out = runPipeline(runInput(RECT_80x40));
+    const sheet = composeSheets(out.building, META).find((s) => s.kind === 'PARKING')!;
+    const dxf = parse(sheetDxf(sheet, META));
+    expect(Object.keys(dxf.blocks)).toEqual(expect.arrayContaining(['CAR', 'ARROW', 'ARROW2']));
+    expect(dxf.blocks['CAR']!.entities.length).toBeGreaterThan(0);
+    const declared = new Set(Object.keys(dxf.tables.layer.layers));
+    for (const e of dxf.entities) expect(declared.has(e.layer), e.layer).toBe(true);
   });
 
-  it('separates derived setbacks from assumed geometry by layer', () => {
-    const dxf = writeDxf(
-      siteDrawing({
-        plot: square(40),
-        setbackLine: square(34),
-        assumedRings: [square(20)],
-      }),
-    );
-    expect(dxf).toContain(LAYER.SETBACK);
-    expect(dxf).toContain(LAYER.ASSUMED);
+  it('keeps the engine\'s words, and carries the disclaimer inside the file', () => {
+    const out = runPipeline(runInput(RECT_80x40));
+    const sheet = composeSheets(out.building, META).find((s) => s.kind === 'PARKING')!;
+    const texts = parse(sheetDxf(sheet, META)).entities
+      .filter((e): e is ITextEntity => e.type === 'TEXT')
+      .map((t) => t.text);
+    expect(texts).toContain('6.00M WIDE 2 WAY DRIVEWAY');
+    expect(texts.join(' ')).toMatch(/REGULATORY VALIDITY: NOT ASSESSED/);
+    for (const t of texts) expect(t).toMatch(/^[\x20-\x7E]*$/);
+  });
+});
+
+describe('the building, in three dimensions', () => {
+  it('puts every parking level at its own elevation, with every car the model draws', () => {
+    const out = runPipeline(runInput(RECT_80x40, { podiumLevels: 2 }));
+    const sheets = composeSheets(out.building, META);
+    const dxf = parse(buildingDxf(out.building, sheets, META));
+    expect(inserts(dxf, 'CAR')).toHaveLength(Number(out.building.drawnBays.value));
+    for (const level of out.building.levels.filter((l) => l.parking)) {
+      const cars = inserts(dxf, 'CAR').filter((c) => c.layer === layerName(level.id, 'car'));
+      expect(cars.length).toBeGreaterThan(0);
+      for (const c of cars) expect(c.position.z).toBeCloseTo(level.elevationMm / 1000, 4);
+    }
   });
 
-  it('carries the not-assessed disclaimer into the drawing', () => {
-    const doc = siteDrawing({ plot: square(40) });
-    const withNote = { ...doc, texts: [...doc.texts, disclaimerText(pointFromMetres(0, -4))] };
-    expect(writeDxf(withNote)).toContain('REGULATORY VALIDITY: NOT ASSESSED');
-  });
-
-  it('does not emit non-ASCII into an R12 file', () => {
-    const doc = siteDrawing({
-      plot: square(40),
-      annotations: [{ at: pointFromMetres(1, 1), value: 'مساحة 1,365.23 m²' }],
-    });
-    const dxf = writeDxf(doc);
-    // eslint-disable-next-line no-control-regex
-    expect(/[^\x00-\x7F]/.test(dxf)).toBe(false);
+  it('stands the massing up as faces, and the ramp as a slope between two levels', () => {
+    const out = runPipeline(runInput(RECT_80x40, { podiumLevels: 2 }));
+    const dxf = parse(buildingDxf(out.building, composeSheets(out.building, META), META));
+    const faces = dxf.entities.filter((e) => e.type === '3DFACE') as unknown as { layer: string; vertices: { z: number }[] }[];
+    const top = out.building.levels.at(-1)!;
+    expect(faces.some((f) => f.layer === layerName(top.id, 'MASS'))).toBe(true);
+    const ramp = faces.find((f) => f.layer === layerName('R1', 'ramp'))!;
+    // dxf-parser 1.1.2 loops `i <= 4` and appends an empty fifth vertex to every
+    // 3DFACE; a face has four corners, so the fifth is the reader's, not the file's.
+    const zs = ramp.vertices.slice(0, 4).map((v) => v.z);
+    expect(Math.max(...zs) - Math.min(...zs)).toBeCloseTo(out.envelope.floorToFloorM.value.toNumber(), 4);
   });
 });

@@ -178,8 +178,12 @@ export interface RunView {
   /**
    * The run as one building — what the sheets, the massing and the DXF all draw.
    * A type import only: the web never runs engine code, it reads the engine's JSON.
+   *
+   * Optional because a run is stored as it was presented, and a run computed
+   * before the model existed was presented without one. Such a run has no
+   * drawing — the screen says so rather than assembling one from area figures.
    */
-  readonly building: BuildingModel;
+  readonly building?: BuildingModel;
   readonly levelPlan: LevelPlanView | null;
   /** Why no level was laid out. Present only when `levelPlan` is null. */
   readonly levelPlanRefusal: string | null;
@@ -655,8 +659,8 @@ export const api = {
    * document is produced by the server and is the same bytes the JSON export
    * describes, so there is no second rendering path to drift.
    */
-  exportRunHtml: async (actor: Actor, runId: string): Promise<string> => {
-    const res = await fetch(`/api/runs/${runId}/export?format=html`, {
+  exportRunHtml: async (actor: Actor, runId: string, format: 'html' | 'sheets' = 'html'): Promise<string> => {
+    const res = await fetch(`/api/runs/${runId}/export?format=${format}`, {
       method: 'POST',
       headers: headers(actor, false),
     });
@@ -679,8 +683,11 @@ export const api = {
     actor: Actor,
     runId: string,
     format: 'dxf' | 'xlsx',
+    /** One sheet of the drawing set, by its stable id. DXF only; omitted, the whole building. */
+    sheetId?: string,
   ): Promise<Blob> => {
-    const res = await fetch(`/api/runs/${runId}/export?format=${format}`, {
+    const sheet = sheetId ? `&sheet=${encodeURIComponent(sheetId)}` : '';
+    const res = await fetch(`/api/runs/${runId}/export?format=${format}${sheet}`, {
       method: 'POST',
       headers: headers(actor, false),
     });

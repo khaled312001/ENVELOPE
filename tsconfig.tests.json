@@ -42,5 +42,5 @@
       "@envelope/*": ["packages/*/dist/index.d.ts"]
     }
   },
-  "include": ["packages/*/test/**/*.ts", "packages/*/test/**/*.tsx", "apps/*/test/**/*.ts", "apps/*/test/**/*.tsx"]
+  "include": ["test-support/**/*.ts", "packages/*/test/**/*.ts", "packages/*/test/**/*.tsx", "apps/*/test/**/*.ts", "apps/*/test/**/*.tsx"]
 }

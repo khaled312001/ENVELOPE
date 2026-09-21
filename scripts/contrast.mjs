@@ -850,6 +850,61 @@ function assertNoLiteralColours() {
   }
 }
 
+/**
+ * (8) THE DRAWING STYLESHEET IS HELD TO THE SAME RULES, READ FROM ITS SOURCE.
+ *
+ * `@envelope/sheets` inks every drawing — the sheet on screen, the drawing set on
+ * paper — from `SHEET_CSS`, a stylesheet held in a TypeScript string. (4), (6) and
+ * (7) could not see it: they read `apps/web/src/styles/*.css`, and a string in a
+ * package is not a file in that directory. It paints amber, and it writes a colour
+ * literal behind every token — precisely the two things this checker exists to
+ * see, sitting where it did not look.
+ *
+ * The literals are deliberate: the drawing set prints without the web's tokens, so
+ * each `var(--token, #hex)` falls back to the light theme. So here a literal is
+ * not banned, it is MEASURED — it must be the light palette's own value for the
+ * token it stands behind, or it is a second palette quietly drifting from the
+ * first. Its token must be measured somewhere, as (6) demands of every sheet. And
+ * amber may appear only on an ASSUMED value's ink, as (4) demands.
+ */
+const SHEET_SOURCE = 'packages/sheets/src/svg.ts';
+const SHEET_SRC = readFileSync(new URL(`../${SHEET_SOURCE}`, import.meta.url), 'utf8');
+
+function assertSheetStylesheet() {
+  const measured = new Set();
+  for (const [fg, bg] of [...PAIRS, ...EXCLUDED, ...HOUSE_PAIRS]) {
+    measured.add(fg);
+    measured.add(bg);
+  }
+  const fallbacks = [...SHEET_SRC.matchAll(/var\((--[\w-]+),\s*(#[0-9a-fA-F]{3,8})\)/g)];
+  if (fallbacks.length === 0) {
+    fail(`${SHEET_SOURCE}: no var(--token, #hex) found. A scan that matched nothing is not a pass.`);
+  }
+  for (const [, token, hex] of fallbacks) {
+    const want = LIGHT[token] === undefined ? null : rgb(resolve(LIGHT, LIGHT[token]));
+    if (!want) {
+      fail(`${SHEET_SOURCE}: ${token} is not a light-theme colour, so its fallback ${hex} stands behind nothing.`);
+      continue;
+    }
+    const got = rgb(hex);
+    if (!got || got.some((c, i) => c !== want[i])) {
+      fail(
+        `${SHEET_SOURCE}: ${token} falls back to ${hex}, but the light theme says ` +
+          `${resolve(LIGHT, LIGHT[token])}. A fallback that drifted is a second palette.`,
+      );
+    }
+    if (!measured.has(token)) {
+      fail(`${SHEET_SOURCE}: paints ${token} and no pair measures it. Unmeasured is a failure, not a skip.`);
+    }
+  }
+  for (const [i, line] of SHEET_SRC.split('\n').entries()) {
+    if (line.includes('var(--uncertain') && !line.includes('sh-c-assumed')) {
+      fail(`${SHEET_SOURCE}:${i + 1} paints amber on something other than an ASSUMED value.`);
+    }
+  }
+  console.log(`\nDRAWING STYLESHEET — ${fallbacks.length} token fallback(s) in ${SHEET_SOURCE}, each checked against the light palette.`);
+}
+
 /* -------------------------------------------------------------------------
  * GUARDS on the lane structure itself
  * ---------------------------------------------------------------------- */
@@ -991,6 +1046,7 @@ assertAmberExclusive();
 assertRailWidths();
 assertEveryPaintedTokenIsMeasured();
 assertNoLiteralColours();
+assertSheetStylesheet();
 
 console.log(
   `\n${rows.length} WCAG row(s) across three themes: ${rows.length - failures} pass, ` +

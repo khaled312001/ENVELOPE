@@ -54,12 +54,22 @@ packages/
                level plan · massing · bands A/B/C
   invariants/  18 checks. Depends on `core` ONLY. ✗ never capacity, geometry, rules
   validation/  independent validation + five-way claim statement. ✗ never capacity/geometry
-  report/      HTML → PDF · JSON export
-  exports/     DXF R12 · XLSX. Depends on `core` ONLY — never the engine
+  sheets/      the drawing set, composed from the engine's BuildingModel: site plan, one
+               sheet per parking level, typical floor, sections. ONE display list that
+               the screen, the A3 set and the DXF all walk. Type imports from `core` only
+  report/      HTML → PDF · JSON export · the A3 drawing set. `core` + `sheets`
+  exports/     DXF R12 (the building in 3D, or one sheet) · XLSX. `core` + `sheets` —
+               never the engine
 apps/
   api/         Fastify + Zod · SQLite or MySQL behind one repository seam
-  web/         React + TypeScript + Vite · Three.js massing view
+  web/         React + TypeScript + Vite · Three.js massing view · the sheets, drawn by
+               React from the same helpers the SVG writer calls
 ```
+
+**A drawing is never assembled from area figures.** Every sheet, every DXF and the
+report's drawing set come from `BuildingModel`, which the engine builds once. A run
+stored before the model existed gets a 409 and a sentence, not a drawing rebuilt from
+its numbers — that rebuilding was the defect the model was made to end.
 
 ### The nine-step flow, as built
 
@@ -69,8 +79,10 @@ apps/
 Step 0 reads an affection plan and is *not* gated — a plot whose sheet is not to
 hand is still a plot. Step 3 also carries the developer-standard picker and the
 saleable-efficiency question. Step 5 carries the 3D massing; step 6 carries the
-parking level drawn as rectangles and the vehicle-access recommendation. Step 9
-emits HTML, JSON, **DXF and XLSX**, all four behind the same G3/G4 gates.
+drawing set — every parking level with its bays numbered and a car in each, the
+site plan, the typical floor and two sections — and the vehicle-access
+recommendation. Step 9 emits HTML, JSON, the **A3 drawing set, DXF (the building,
+or any one sheet) and XLSX**, all behind the same G3/G4 gates.
 
 `pnpm boundaries` asserts those `✗` lines across manifests, project references *and*
 source imports. It is not decoration: adding `"@envelope/capacity": "workspace:*"` to
@@ -96,7 +108,9 @@ and [`apps/api/src/report.ts`](apps/api/src/report.ts). Two rules govern those f
 | Gate | Catches |
 |---|---|
 | `pnpm boundaries` | Someone re-adding a forbidden dependency. |
-| `pnpm contrast` | A colour pair below WCAG 2.2. An **unresolvable** pair counts as a failure, not a skip — a checker reporting "0 failures" over pairs it never measured is the vacuous pass this codebase refuses everywhere else. |
+| `pnpm contrast` | A colour pair below WCAG 2.2. An **unresolvable** pair counts as a failure, not a skip — a checker reporting "0 failures" over pairs it never measured is the vacuous pass this codebase refuses everywhere else. It also reads `packages/sheets/src/svg.ts`, because the drawings are inked from a stylesheet held in a string that no `.css` scan would find: every `var(--token, #hex)` fallback there must equal the light palette's value, and amber may sit only on `.sh-c-assumed`. |
+| `pnpm parity` | A renderer dropping, doubling or misplacing a bay while the others stay right. Over four plots it counts cars and bays in the React sheet, the SVG sheet, each sheet's DXF and the whole-building DXF (per level, by layer), against the engine's own figure — and checks the screen draws the paper's geometry path for path. Part of `pnpm test`; named so it can be run alone. |
+| `pnpm dxf` | The file a user actually downloads being wrong. It boots the real API, computes three runs (the landing page's worked example among them), signs the gates, downloads the building and every sheet, and has `dxf-parser` — a reader that never saw our writer — check each: it parses, every layer and block is declared, text is ASCII, both sentences are inside, `$INSUNITS` is metres, and the cars are the engine's bays at the level's height. It was made to fail on a doctored file before it was trusted. |
 | `pnpm test` | The engine, the API contract, and the screens rendered against **real engine output** rather than a fixture. |
 | `pnpm typecheck` | Both the sources *and* `tsconfig.tests.json`. Test files sit outside every package's `rootDir`, so for a long time nothing typechecked them — and the web render fixture had been structurally not a `Plot` for as long as it existed. It surfaced only when the access placement read `edge.start.x` and got `undefined`. A fixture that has drifted from the type it claims to be goes on proving the screens work against a shape the API never sends. |
 | `pnpm example` | The landing page quoting a figure the engine no longer returns. It printed a governing capacity of 6,352.5 m² for months after the engine started returning 6,774.194 for the same input — on the page that sells traced numbers. `scripts/verify-worked-example.mjs` re-runs the real API for the recorded input and diffs it against `apps/web/src/screens/worked-example.json`, which is the only place the page reads a number from. |

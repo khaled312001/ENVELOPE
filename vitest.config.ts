@@ -37,6 +37,7 @@ export default defineConfig({
       '@envelope/report': pkg('report'),
       '@envelope/intake': pkg('intake'),
       '@envelope/exports': pkg('exports'),
+      '@envelope/sheets': pkg('sheets'),
     },
   },
 });

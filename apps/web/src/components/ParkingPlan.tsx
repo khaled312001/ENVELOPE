@@ -80,11 +80,19 @@ export function ParkingPlan({
   levelPlan,
   plotVertices,
   onInspect,
+  figure = true,
 }: {
   readonly levelPlan: LevelPlanView;
   /** The plot boundary, drawn behind the podium so the setback is visible. */
   readonly plotVertices?: readonly WirePoint[] | undefined;
   readonly onInspect: (nodeId: string) => void;
+  /**
+   * Draw the level. Off where a drawing set already draws it — the run screen,
+   * whose sheets are composed from the building model — so one level is not
+   * drawn twice by two renderers that could disagree. What is left is the
+   * packing statement and the level's figures, which the sheet does not carry.
+   */
+  readonly figure?: boolean;
 }): JSX.Element {
   const num = (p: WirePoint): Pt => ({ x: Number(p.x), y: Number(p.y) });
   const podium = levelPlan.podiumRing.map(num);
@@ -92,6 +100,57 @@ export function ParkingPlan({
   const all = [...podium, ...plot, ...levelPlan.rects.flatMap((r) => r.outline.map(num))];
 
   if (all.length < 3) return <p className="muted">No level was laid out for this run.</p>;
+
+  const packing = levelPlan.packingRect.exact ? (
+    <>
+      The podium is a rectangle, so the level was packed on its own outline —
+      nothing was given up to draw it.
+    </>
+  ) : (
+    <>
+      <strong>The podium is not a rectangle.</strong> The level was packed into
+      the largest rectangle inside it — {levelPlan.packingRect.coveragePct}% of the
+      footprint{figure ? ', shown dashed' : ''}. The bay count is a floor, not a ceiling.
+    </>
+  );
+
+  const figures = (
+    <dl className="kv kv--grid">
+      <div>
+        <dt>Bays laid out</dt>
+        <dd>
+          <TracedValue traced={levelPlan.bayCount} onInspect={onInspect} />
+        </dd>
+      </div>
+      <div>
+        <dt>Area per bay achieved</dt>
+        <dd>
+          <TracedValue traced={levelPlan.areaPerBayM2} onInspect={onInspect} />
+        </dd>
+      </div>
+      <div>
+        <dt>Module depth</dt>
+        <dd>
+          <TracedValue traced={levelPlan.moduleDepthM} onInspect={onInspect} />
+        </dd>
+      </div>
+      <div>
+        <dt>Cores, plant and ramp landing</dt>
+        <dd>
+          <TracedValue traced={levelPlan.deductionsM2} onInspect={onInspect} />
+        </dd>
+      </div>
+    </dl>
+  );
+
+  if (!figure) {
+    return (
+      <div className="parking-plan">
+        <p className="fine-print">{packing}</p>
+        {figures}
+      </div>
+    );
+  }
 
   const minX = Math.min(...all.map((p) => p.x));
   const maxX = Math.max(...all.map((p) => p.x));
@@ -215,20 +274,7 @@ export function ParkingPlan({
           ) : null}
         </svg>
 
-        <figcaption className="fine-print">
-          {levelPlan.packingRect.exact ? (
-            <>
-              The podium is a rectangle, so the level was packed on its own outline —
-              nothing was given up to draw it.
-            </>
-          ) : (
-            <>
-              <strong>The podium is not a rectangle.</strong> The level was packed into
-              the largest rectangle inside it — {levelPlan.packingRect.coveragePct}% of the
-              footprint, shown dashed. The bay count is a floor, not a ceiling.
-            </>
-          )}
-        </figcaption>
+        <figcaption className="fine-print">{packing}</figcaption>
       </figure>
 
       {/*
@@ -265,32 +311,7 @@ export function ParkingPlan({
         </li>
       </ul>
 
-      <dl className="kv kv--grid">
-        <div>
-          <dt>Bays laid out</dt>
-          <dd>
-            <TracedValue traced={levelPlan.bayCount} onInspect={onInspect} />
-          </dd>
-        </div>
-        <div>
-          <dt>Area per bay achieved</dt>
-          <dd>
-            <TracedValue traced={levelPlan.areaPerBayM2} onInspect={onInspect} />
-          </dd>
-        </div>
-        <div>
-          <dt>Module depth</dt>
-          <dd>
-            <TracedValue traced={levelPlan.moduleDepthM} onInspect={onInspect} />
-          </dd>
-        </div>
-        <div>
-          <dt>Cores, plant and ramp landing</dt>
-          <dd>
-            <TracedValue traced={levelPlan.deductionsM2} onInspect={onInspect} />
-          </dd>
-        </div>
-      </dl>
+      {figures}
     </div>
   );
 }

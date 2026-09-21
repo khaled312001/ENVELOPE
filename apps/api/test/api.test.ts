@@ -268,7 +268,7 @@ describe('runs', () => {
     const body = res.json();
     expect(body.building.schema).toBe('envelope.building/1');
     expect(body.building.levels.length).toBeGreaterThan(0);
-    expect(body.building.section).not.toBeNull();
+    expect(body.building.sections.length).toBeGreaterThan(0);
 
     const nodes = new Set((body.provenance.nodes as { id: string }[]).map((n) => n.id));
     expect(nodes.has(body.building.drawnBays.node)).toBe(true);

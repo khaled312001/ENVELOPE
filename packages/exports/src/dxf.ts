@@ -11,69 +11,118 @@
  *
  * 1. **R12 is the format everything reads.** It predates the object model that
  *    later versions layer on, so AutoCAD, BricsCAD, Revit's DWG import,
- *    LibreCAD and every online viewer accept it without negotiation. A newer
- *    DXF buys features this drawing does not use.
- * 2. **Layers carry the provenance.** Setback lines land on a different layer
- *    from the plot boundary, and the assumed envelope on a different layer
- *    again, so the amber/neutral distinction the screen makes survives into the
- *    CAD file rather than being flattened into anonymous geometry.
+ *    LibreCAD and every online viewer accept it without negotiation.
+ * 2. **Layers carry the provenance.** Every level is on its own layers and every
+ *    element keeps the colour of the value that placed it, so the amber/neutral
+ *    distinction the screen makes survives into the CAD file rather than being
+ *    flattened into anonymous geometry.
  * 3. **Millimetres in, metres out, once.** The kernel holds integer millimetres
  *    (PRD §14.3); CAD files for Dubai plots are drawn in metres. Converting in
  *    exactly one place means the factor cannot drift between entity types.
- */
-
-import { Decimal, mmToM, type Mm } from '@envelope/core';
-
-/** A point in kernel units — integer millimetres. */
-export interface DxfPoint {
-  readonly x: Mm;
-  readonly y: Mm;
-}
-
-/**
- * DXF colour indices used by this writer.
  *
- * Chosen to mirror the screen's provenance palette rather than to be pretty:
- * a reader who has seen the web view should recognise the same distinction in
- * the CAD file without a legend.
+ * WHAT IT DRAWS IS THE SHEET, NOT A SECOND DRAWING OF THE SAME THING.
+ *
+ * Until the building model, this file was handed rectangles by the API and laid
+ * them out itself — which made the DXF a second assembly of the scheme, able to
+ * disagree with the screen. Now the sheet is composed once (`@envelope/sheets`)
+ * and this file writes its display list: a bay on screen is a POLYLINE here, a
+ * car on screen is an INSERT of the CAR block here, and `pnpm parity` counts
+ * both.
  */
-export const DxfColor = {
-  /** White/black by background — the surveyed plot boundary. */
-  BOUNDARY: 7,
-  /** Cyan — a bound derived from a cited rule. */
-  DERIVED: 4,
-  /** Yellow — an assumption. The amber of §13.1, as close as ACI gets. */
-  ASSUMED: 2,
-  /** Green — the resulting buildable envelope. */
-  ENVELOPE: 3,
-  /** Grey — annotation. */
-  ANNOTATION: 8,
+
+import type { BuildingModel, Mm, ModelPoint, ProvenanceClass } from '@envelope/core';
+import {
+  inkClass,
+  type ModelItem,
+  type Role,
+  type Sheet,
+  SheetKind,
+  type SymbolName,
+  SYMBOLS,
+} from '@envelope/sheets';
+
+// ---------------------------------------------------------------------------
+// The format
+// ---------------------------------------------------------------------------
+
+/** AutoCAD Colour Index values this writer uses. */
+export const Aci = {
+  RED: 1,
+  YELLOW: 2,
+  GREEN: 3,
+  CYAN: 4,
+  BLUE: 5,
+  WHITE: 7,
+  GREY: 8,
+  LIGHT_GREY: 9,
+  /** Orange — the nearest ACI has to the amber of §13.1. */
+  AMBER: 30,
 } as const;
-export type DxfColor = (typeof DxfColor)[keyof typeof DxfColor];
+export type Aci = (typeof Aci)[keyof typeof Aci];
 
 export interface DxfLayer {
   readonly name: string;
-  readonly color: DxfColor;
+  readonly color: Aci;
 }
 
-export interface DxfPolyline {
-  readonly layer: string;
-  readonly points: readonly DxfPoint[];
-  readonly closed: boolean;
+/** A point in millimetres with an elevation, for 3D entities. */
+export interface DxfPoint3 {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
 }
 
-export interface DxfText {
-  readonly layer: string;
-  readonly at: DxfPoint;
-  /** Text height in metres — DXF has no notion of "points". */
-  readonly heightM: number;
-  readonly value: string;
+export type DxfEntity =
+  | {
+      readonly kind: 'polyline';
+      readonly layer: string;
+      /** Millimetres. */
+      readonly points: readonly { readonly x: number; readonly y: number }[];
+      readonly closed: boolean;
+      /** Elevation of the whole polyline, millimetres. */
+      readonly z: number;
+      readonly color?: Aci;
+    }
+  | {
+      readonly kind: 'text';
+      readonly layer: string;
+      readonly at: { readonly x: number; readonly y: number };
+      readonly z: number;
+      /** Text height in metres — DXF has no notion of "points". */
+      readonly heightM: number;
+      readonly rotationDeg: number;
+      readonly align: 'start' | 'middle' | 'end';
+      readonly value: string;
+      readonly color?: Aci;
+    }
+  | {
+      readonly kind: 'insert';
+      readonly layer: string;
+      readonly block: string;
+      readonly at: { readonly x: number; readonly y: number };
+      readonly z: number;
+      readonly rotationDeg: number;
+      /** Drawing units (metres) per block unit. */
+      readonly scale: number;
+    }
+  | {
+      readonly kind: '3dface';
+      readonly layer: string;
+      /** Three or four corners, millimetres. A triangle repeats its last corner. */
+      readonly corners: readonly DxfPoint3[];
+      readonly color?: Aci;
+    };
+
+/** A block, in metres about its insertion point. */
+export interface DxfBlock {
+  readonly name: string;
+  readonly polylines: readonly { readonly points: readonly (readonly [number, number])[]; readonly closed: boolean }[];
 }
 
 export interface DxfDocument {
   readonly layers: readonly DxfLayer[];
-  readonly polylines: readonly DxfPolyline[];
-  readonly texts: readonly DxfText[];
+  readonly blocks: readonly DxfBlock[];
+  readonly entities: readonly DxfEntity[];
 }
 
 /**
@@ -92,12 +141,25 @@ function fmt(pairs: readonly Pair[]): string {
   return pairs.map(([code, value]) => `${code}\r\n${value}`).join('\r\n') + '\r\n';
 }
 
-/** Millimetres to metres, at the DXF precision this drawing needs. */
-function m(v: Mm): string {
-  return mmToM(v).toFixed(4);
+/** Millimetres to metres, at the precision this drawing needs. */
+function m(v: number): string {
+  return (Math.round(v) / 1000).toFixed(4);
 }
 
-function header(extents: { min: DxfPoint; max: DxfPoint } | undefined): Pair[] {
+const deg = (v: number): string => (Math.round(v * 1000) / 1000).toFixed(3);
+
+/**
+ * Text for an R12 file, which is not Unicode.
+ *
+ * `±` and `°` have control codes every CAD reader knows (`%%p`, `%%d`) and are
+ * written as those; anything else outside ASCII would be mojibake in the
+ * drawing, so it becomes a visible `?` rather than being written blind.
+ */
+export function dxfText(value: string): string {
+  return value.replace(/±/g, '%%p').replace(/°/g, '%%d').replace(/[^\x20-\x7E]/g, '?');
+}
+
+function header(extents: { min: DxfPoint3; max: DxfPoint3 } | undefined): Pair[] {
   const pairs: Pair[] = [
     [0, 'SECTION'],
     [2, 'HEADER'],
@@ -111,11 +173,11 @@ function header(extents: { min: DxfPoint; max: DxfPoint } | undefined): Pair[] {
       [9, '$EXTMIN'],
       [10, m(extents.min.x)],
       [20, m(extents.min.y)],
-      [30, '0.0'],
+      [30, m(extents.min.z)],
       [9, '$EXTMAX'],
       [10, m(extents.max.x)],
       [20, m(extents.max.y)],
-      [30, '0.0'],
+      [30, m(extents.max.z)],
     );
   }
   pairs.push([0, 'ENDSEC']);
@@ -123,73 +185,130 @@ function header(extents: { min: DxfPoint; max: DxfPoint } | undefined): Pair[] {
 }
 
 function tables(layers: readonly DxfLayer[]): Pair[] {
+  // Layer 0 is where block contents live, so an inserted car takes the layer and
+  // colour of its INSERT. It exists in every drawing; declaring it is belt and
+  // braces for importers that do not assume it.
+  const all = [{ name: '0', color: Aci.WHITE }, ...layers.filter((l) => l.name !== '0')];
   const pairs: Pair[] = [
     [0, 'SECTION'],
     [2, 'TABLES'],
     [0, 'TABLE'],
     [2, 'LAYER'],
-    [70, layers.length],
+    [70, all.length],
   ];
-  for (const layer of layers) {
-    pairs.push(
-      [0, 'LAYER'],
-      [2, layer.name],
-      [70, 0],
-      [62, layer.color],
-      [6, 'CONTINUOUS'],
-    );
+  for (const layer of all) {
+    pairs.push([0, 'LAYER'], [2, layer.name], [70, 0], [62, layer.color], [6, 'CONTINUOUS']);
   }
   pairs.push([0, 'ENDTAB'], [0, 'ENDSEC']);
   return pairs;
 }
 
-function polyline(p: DxfPolyline): Pair[] {
-  // R12 has no LWPOLYLINE. POLYLINE/VERTEX/SEQEND is the portable spelling.
+function blocks(list: readonly DxfBlock[]): Pair[] {
   const pairs: Pair[] = [
-    [0, 'POLYLINE'],
-    [8, p.layer],
-    [66, 1], // vertices follow
-    [70, p.closed ? 1 : 0],
-    [10, '0.0'],
-    [20, '0.0'],
-    [30, '0.0'],
+    [0, 'SECTION'],
+    [2, 'BLOCKS'],
   ];
-  for (const pt of p.points) {
-    pairs.push([0, 'VERTEX'], [8, p.layer], [10, m(pt.x)], [20, m(pt.y)], [30, '0.0']);
+  for (const block of list) {
+    pairs.push([0, 'BLOCK'], [8, '0'], [2, block.name], [70, 0], [10, '0.0'], [20, '0.0'], [30, '0.0'], [3, block.name]);
+    for (const line of block.polylines) {
+      pairs.push([0, 'POLYLINE'], [8, '0'], [66, 1], [70, line.closed ? 1 : 0], [10, '0.0'], [20, '0.0'], [30, '0.0']);
+      for (const [x, y] of line.points) {
+        pairs.push([0, 'VERTEX'], [8, '0'], [10, x.toFixed(4)], [20, y.toFixed(4)], [30, '0.0']);
+      }
+      pairs.push([0, 'SEQEND'], [8, '0']);
+    }
+    pairs.push([0, 'ENDBLK'], [8, '0']);
   }
-  pairs.push([0, 'SEQEND'], [8, p.layer]);
+  pairs.push([0, 'ENDSEC']);
   return pairs;
 }
 
-function text(t: DxfText): Pair[] {
-  return [
-    [0, 'TEXT'],
-    [8, t.layer],
-    [10, m(t.at.x)],
-    [20, m(t.at.y)],
-    [30, '0.0'],
-    [40, t.heightM.toFixed(4)],
-    // DXF R12 is not Unicode. Anything outside ASCII would be mojibake in the
-    // drawing, so it is transliterated to a marker rather than written blind.
-    [1, t.value.replace(/[^\x20-\x7E]/g, '?')],
-  ];
+function entity(e: DxfEntity): Pair[] {
+  const color: Pair[] = 'color' in e && e.color !== undefined ? [[62, e.color]] : [];
+  switch (e.kind) {
+    case 'polyline': {
+      // R12 has no LWPOLYLINE. POLYLINE/VERTEX/SEQEND is the portable spelling;
+      // the header point's z is the elevation of the whole polyline.
+      const pairs: Pair[] = [
+        [0, 'POLYLINE'],
+        [8, e.layer],
+        ...color,
+        [66, 1],
+        [70, e.closed ? 1 : 0],
+        [10, '0.0'],
+        [20, '0.0'],
+        [30, m(e.z)],
+      ];
+      for (const p of e.points) {
+        pairs.push([0, 'VERTEX'], [8, e.layer], [10, m(p.x)], [20, m(p.y)], [30, m(e.z)]);
+      }
+      pairs.push([0, 'SEQEND'], [8, e.layer]);
+      return pairs;
+    }
+    case 'text': {
+      const h = e.align === 'start' ? 0 : e.align === 'middle' ? 1 : 2;
+      return [
+        [0, 'TEXT'],
+        [8, e.layer],
+        ...color,
+        [10, m(e.at.x)],
+        [20, m(e.at.y)],
+        [30, m(e.z)],
+        [40, e.heightM.toFixed(4)],
+        [1, dxfText(e.value)],
+        [50, deg(e.rotationDeg)],
+        // Horizontal justification, and middle vertically, about the second
+        // alignment point — which is the same point, so the text sits where the
+        // screen puts it.
+        [72, h],
+        [11, m(e.at.x)],
+        [21, m(e.at.y)],
+        [31, m(e.z)],
+        [73, 2],
+      ];
+    }
+    case 'insert':
+      return [
+        [0, 'INSERT'],
+        [8, e.layer],
+        [2, e.block],
+        [10, m(e.at.x)],
+        [20, m(e.at.y)],
+        [30, m(e.z)],
+        [41, e.scale.toFixed(6)],
+        [42, e.scale.toFixed(6)],
+        [43, e.scale.toFixed(6)],
+        [50, deg(e.rotationDeg)],
+      ];
+    case '3dface': {
+      const c = [...e.corners];
+      while (c.length < 4) c.push(c[c.length - 1]!);
+      const pairs: Pair[] = [[0, '3DFACE'], [8, e.layer], ...color];
+      c.slice(0, 4).forEach((p, i) => pairs.push([10 + i, m(p.x)], [20 + i, m(p.y)], [30 + i, m(p.z)]));
+      return pairs;
+    }
+  }
 }
 
-function extentsOf(doc: DxfDocument): { min: DxfPoint; max: DxfPoint } | undefined {
-  const pts = doc.polylines.flatMap((p) => p.points).concat(doc.texts.map((t) => t.at));
-  const first = pts[0];
-  if (!first) return undefined;
-  let minX = first.x;
-  let minY = first.y;
-  let maxX = first.x;
-  let maxY = first.y;
-  for (const p of pts) {
-    if (p.x < minX) minX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y > maxY) maxY = p.y;
+function extentsOf(doc: DxfDocument): { min: DxfPoint3; max: DxfPoint3 } | undefined {
+  const pts: DxfPoint3[] = [];
+  for (const e of doc.entities) {
+    if (e.kind === 'polyline') pts.push(...e.points.map((p) => ({ ...p, z: e.z })));
+    else if (e.kind === '3dface') pts.push(...e.corners);
+    else pts.push({ ...e.at, z: e.z });
   }
-  return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
+  if (pts.length === 0) return undefined;
+  const min = { x: Infinity, y: Infinity, z: Infinity };
+  const max = { x: -Infinity, y: -Infinity, z: -Infinity };
+  for (const p of pts) {
+    min.x = Math.min(min.x, p.x);
+    min.y = Math.min(min.y, p.y);
+    min.z = Math.min(min.z, p.z);
+    max.x = Math.max(max.x, p.x);
+    max.y = Math.max(max.y, p.y);
+    max.z = Math.max(max.z, p.z);
+  }
+  return { min, max };
 }
 
 /** Serialise a document to DXF R12 text. */
@@ -197,12 +316,12 @@ export function writeDxf(doc: DxfDocument): string {
   return (
     fmt(header(extentsOf(doc))) +
     fmt(tables(doc.layers)) +
+    fmt(blocks(doc.blocks)) +
     fmt([
       [0, 'SECTION'],
       [2, 'ENTITIES'],
     ]) +
-    doc.polylines.map((p) => fmt(polyline(p))).join('') +
-    doc.texts.map((t) => fmt(text(t))).join('') +
+    doc.entities.map((e) => fmt(entity(e))).join('') +
     fmt([
       [0, 'ENDSEC'],
       [0, 'EOF'],
@@ -211,152 +330,296 @@ export function writeDxf(doc: DxfDocument): string {
 }
 
 // ---------------------------------------------------------------------------
-// The site drawing
+// The drawing standard: layers, colours, blocks
 // ---------------------------------------------------------------------------
 
-/** Layer names, fixed so a receiving CAD standard can map them once. */
-export const LAYER = {
-  PLOT: 'ENV-PLOT-BOUNDARY',
-  SETBACK: 'ENV-SETBACK-LINE',
-  PODIUM: 'ENV-ENVELOPE-PODIUM',
-  TOWER: 'ENV-ENVELOPE-TOWER',
-  ASSUMED: 'ENV-ASSUMED',
-  TEXT: 'ENV-ANNOTATION',
-  /**
-   * The parking level, on four layers rather than one.
-   *
-   * A reviewer's first move on receiving this file is to switch things off:
-   * bays off to check the aisle runs, ramp off to see what it costs, access off
-   * to argue with the placement. One `ENV-PARKING` layer would make all four
-   * arguments happen at once.
-   */
-  PARKING_BAY: 'ENV-PARKING-BAY',
-  PARKING_AISLE: 'ENV-PARKING-AISLE',
-  PARKING_RAMP: 'ENV-PARKING-RAMP',
-  ACCESS: 'ENV-VEHICLE-ACCESS',
-} as const;
-
-export interface SiteDrawingInput {
-  readonly plot: readonly DxfPoint[];
-  readonly setbackLine?: readonly DxfPoint[];
-  readonly podiumFootprint?: readonly DxfPoint[];
-  readonly towerFootprint?: readonly DxfPoint[];
-  /**
-   * Rings whose position rests on an assumption rather than a cited rule.
-   * Drawn on their own layer so the distinction is not lost on export.
-   */
-  readonly assumedRings?: readonly (readonly DxfPoint[])[];
-  readonly annotations?: readonly { readonly at: DxfPoint; readonly value: string }[];
-  /**
-   * The parking level, as drawn rectangles.
-   *
-   * Taken as four separate lists rather than as one list of tagged shapes so
-   * that the layer assignment lives here, in the drawing standard, instead of
-   * in whichever caller happened to build the export. The client reads these
-   * files in AutoCAD; the layer names are the only part of the format he will
-   * ever configure, and they should be decided once.
-   */
-  readonly parking?: {
-    readonly bays?: readonly (readonly DxfPoint[])[];
-    readonly aisles?: readonly (readonly DxfPoint[])[];
-    readonly ramps?: readonly (readonly DxfPoint[])[];
-    /**
-     * The driveway opening: the stretch of boundary the engine chose, as an OPEN
-     * polyline on its own layer. It used to arrive as a closed four-point "throat"
-     * one metre deep, built by the caller by adding a metre to y — which is north
-     * whatever the edge's orientation, so on any edge that was not a southern
-     * boundary the throat stood outside the plot or lay along the edge instead of
-     * across it. A shape the engine never computed, in a file whose one promise is
-     * that it draws what the engine placed. The layer is what makes it selectable.
-     */
-    readonly access?: readonly (readonly DxfPoint[])[];
-  };
+/**
+ * One layer per level per role: `ENV-B1-BAY`, `ENV-L00-AISLE`, `ENV-SITE-SETBACK`.
+ *
+ * A reviewer's first move on receiving this file is to switch things off — bays
+ * off to check the aisle runs, the ramp off to see what it costs, every level but
+ * one off to read it alone. One layer per role per level is what makes each of
+ * those one click, and the names are fixed so an office CAD standard can map them
+ * once.
+ */
+export function layerName(prefix: string, role: Role | 'MASS' | 'TEXT'): string {
+  return `ENV-${prefix}-${role}`.toUpperCase().replace(/[^A-Z0-9_-]/g, '_').slice(0, 31);
 }
+
+/** The colour of a role, when its ink is not its provenance class. */
+const ROLE_ACI: Readonly<Partial<Record<Role, Aci>>> = {
+  plot: Aci.WHITE,
+  'edge-label': Aci.GREY,
+  dimension: Aci.GREY,
+  bay: Aci.CYAN,
+  'bay-accessible': Aci.GREEN,
+  'bay-number': Aci.GREY,
+  car: Aci.GREY,
+  aisle: Aci.LIGHT_GREY,
+  'aisle-arrow': Aci.GREY,
+  // The ramp is NOT ASSESSED, and its ink says so here as on screen: the deferred
+  // grey, never the amber of an assumption and never the green of a citation.
+  ramp: Aci.GREY,
+  'ramp-arrow': Aci.GREY,
+  access: Aci.RED,
+  'access-arrow': Aci.RED,
+  'cut-line': Aci.BLUE,
+  'level-mark': Aci.GREY,
+};
+
+/** Provenance class to ACI — the screen's palette, as near as 256 colours get. */
+export const CLASS_ACI: Readonly<Record<ProvenanceClass, Aci>> = {
+  DERIVED: Aci.GREEN,
+  ASSUMED: Aci.AMBER,
+  USER_SET: Aci.BLUE,
+  OBSERVED: Aci.CYAN,
+  TRADEOFF: Aci.WHITE,
+  VARIANCE: Aci.WHITE,
+};
+
+/** The sheets' symbols as blocks, in metres. The same geometry the screen draws. */
+export function symbolBlocks(): DxfBlock[] {
+  return (Object.keys(SYMBOLS) as SymbolName[]).map((name) => {
+    // The car is defined in millimetres; the arrows in units of their own length.
+    const unit = name === 'CAR' ? 1 / 1000 : 1;
+    return {
+      name,
+      polylines: SYMBOLS[name].polylines.map((line) => ({
+        closed: line.closed,
+        points: line.points.map(([u, v]) => [u * unit, v * unit] as const),
+      })),
+    };
+  });
+}
+
+function prefixOf(sheet: Sheet): string {
+  if (sheet.kind === SheetKind.PARKING && sheet.levelId) return sheet.levelId;
+  if (sheet.kind === SheetKind.SITE) return 'SITE';
+  if (sheet.kind === SheetKind.TYPICAL) return 'TYPICAL';
+  return sheet.id.toUpperCase();
+}
+
+/** A sheet's model items as DXF entities, at an elevation, on the sheet's layers. */
+function itemsToEntities(
+  sheet: Sheet,
+  items: readonly ModelItem[],
+  prefix: string,
+  z: number,
+  layers: Map<string, Aci>,
+): DxfEntity[] {
+  const out: DxfEntity[] = [];
+  const use = (role: Role): string => {
+    const name = layerName(prefix, role);
+    if (!layers.has(name)) layers.set(name, ROLE_ACI[role] ?? Aci.WHITE);
+    return name;
+  };
+  for (const item of items) {
+    const ink = inkClass(item);
+    const color = ink ? { color: CLASS_ACI[ink] } : {};
+    if (item.kind === 'shape') {
+      out.push({ kind: 'polyline', layer: use(item.role), points: item.points, closed: item.closed, z, ...color });
+    } else if (item.kind === 'text') {
+      out.push({
+        kind: 'text',
+        layer: use(item.role),
+        at: item.at,
+        z,
+        // Paper millimetres × the sheet's scale = model millimetres; ÷ 1000 = metres.
+        heightM: (item.sizeMm * sheet.view.scale) / 1000,
+        rotationDeg: item.rotationDeg,
+        align: item.anchor,
+        value: item.value,
+        ...color,
+      });
+    } else {
+      out.push({
+        kind: 'insert',
+        layer: use(item.role),
+        block: item.symbol,
+        at: item.at,
+        z,
+        rotationDeg: item.rotationDeg,
+        scale: item.symbol === 'CAR' ? item.scale : item.scale / 1000,
+      });
+    }
+  }
+  return out;
+}
+
+/** What every drawing says about itself, above the geometry. */
+function titleLines(sheetTitle: string, meta: DxfMeta): string[] {
+  return [
+    `${sheetTitle} - plot ${meta.plotNumber}, ${meta.community} - run ${meta.runId}`,
+    'NOT FOR CONSTRUCTION. REGULATORY VALIDITY: NOT ASSESSED.',
+    'Generated capacity study, not a submission drawing. Layers: ENV-<level>-<element>.',
+  ];
+}
+
+export interface DxfMeta {
+  readonly plotNumber: string;
+  readonly community: string;
+  readonly runId: string;
+}
+
+function titleBlock(lines: readonly string[], anchor: ModelPoint, scale: number, layers: Map<string, Aci>): DxfEntity[] {
+  const layer = layerName('ANNOTATION', 'TEXT');
+  layers.set(layer, Aci.WHITE);
+  const h = (3 * scale) / 1000;
+  return lines.map((value, i) => ({
+    kind: 'text' as const,
+    layer,
+    at: { x: anchor.x, y: anchor.y + (lines.length - i) * h * 1000 * 1.7 },
+    z: 0,
+    heightM: h,
+    rotationDeg: 0,
+    align: 'start' as const,
+    value,
+  }));
+}
+
+function topLeft(items: readonly ModelItem[]): ModelPoint {
+  let minX = Infinity;
+  let maxY = -Infinity;
+  for (const item of items) {
+    const pts = item.kind === 'shape' ? item.points : [item.at];
+    for (const p of pts) {
+      minX = Math.min(minX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+  }
+  return { x: (Number.isFinite(minX) ? minX : 0) as Mm, y: (Number.isFinite(maxY) ? maxY : 0) as Mm };
+}
+
+// ---------------------------------------------------------------------------
+// The drawings
+// ---------------------------------------------------------------------------
 
 /**
- * Build the site drawing: boundary, setback line, and the resulting envelope.
+ * One sheet as its own DXF: a parking level, the site plan, a section.
  *
- * This is the "2D" the client asked for when he was shown the affection plan and
- * asked whether software could read it and draw the result — his own answer to
- * "2D or 3D?" was "2D", because the setback line on the plot is the thing he
- * would check first.
+ * Flat, at elevation zero, at true size in metres — the file an architect x-refs
+ * into his own sheet. A section is drawn in its own plane, distance along the cut
+ * against elevation, which is how a section is drawn in CAD.
  */
-export function siteDrawing(input: SiteDrawingInput): DxfDocument {
-  const polylines: DxfPolyline[] = [{ layer: LAYER.PLOT, points: input.plot, closed: true }];
-  if (input.setbackLine) {
-    polylines.push({ layer: LAYER.SETBACK, points: input.setbackLine, closed: true });
-  }
-  if (input.podiumFootprint) {
-    polylines.push({ layer: LAYER.PODIUM, points: input.podiumFootprint, closed: true });
-  }
-  if (input.towerFootprint) {
-    polylines.push({ layer: LAYER.TOWER, points: input.towerFootprint, closed: true });
-  }
-  for (const ring of input.assumedRings ?? []) {
-    polylines.push({ layer: LAYER.ASSUMED, points: ring, closed: true });
-  }
-
-  const parking = input.parking;
-  for (const r of parking?.bays ?? []) {
-    polylines.push({ layer: LAYER.PARKING_BAY, points: r, closed: true });
-  }
-  for (const r of parking?.aisles ?? []) {
-    polylines.push({ layer: LAYER.PARKING_AISLE, points: r, closed: true });
-  }
-  for (const r of parking?.ramps ?? []) {
-    polylines.push({ layer: LAYER.PARKING_RAMP, points: r, closed: true });
-  }
-  for (const r of parking?.access ?? []) {
-    polylines.push({ layer: LAYER.ACCESS, points: r, closed: false });
-  }
-
-  return {
-    layers: [
-      { name: LAYER.PLOT, color: DxfColor.BOUNDARY },
-      { name: LAYER.SETBACK, color: DxfColor.DERIVED },
-      { name: LAYER.PODIUM, color: DxfColor.ENVELOPE },
-      { name: LAYER.TOWER, color: DxfColor.ENVELOPE },
-      { name: LAYER.ASSUMED, color: DxfColor.ASSUMED },
-      { name: LAYER.TEXT, color: DxfColor.ANNOTATION },
-      { name: LAYER.PARKING_BAY, color: DxfColor.ENVELOPE },
-      { name: LAYER.PARKING_AISLE, color: DxfColor.DERIVED },
-      // The ramp carries the assumed colour deliberately: only its plan area is
-      // reserved. Gradient, transitions and headroom under B.7.2.2 are not
-      // assessed, and a ramp drawn in the same ink as a cited setback would
-      // claim they were.
-      { name: LAYER.PARKING_RAMP, color: DxfColor.ASSUMED },
-      { name: LAYER.ACCESS, color: DxfColor.BOUNDARY },
-    ],
-    polylines,
-    texts: (input.annotations ?? []).map((a) => ({
-      layer: LAYER.TEXT,
-      at: a.at,
-      heightM: 0.5,
-      value: a.value,
-    })),
-  };
+export function sheetDxf(sheet: Sheet, meta: DxfMeta): string {
+  const layers = new Map<string, Aci>();
+  const entities = itemsToEntities(sheet, sheet.items, prefixOf(sheet), 0, layers);
+  entities.push(...titleBlock(titleLines(`${sheet.number} ${sheet.title}`, meta), topLeft(sheet.items), sheet.view.scale, layers));
+  return writeDxf({
+    layers: [...layers].map(([name, color]) => ({ name, color })),
+    blocks: symbolBlocks(),
+    entities,
+  });
 }
+
+/** Roles that belong to the site and are drawn once, at grade — not on every level. */
+const SITE_ROLES: ReadonlySet<Role> = new Set<Role>(['plot', 'edge-label', 'setback', 'dimension']);
 
 /**
- * The disclaimer block every exported drawing carries.
+ * The whole building in one DXF, in three dimensions.
  *
- * The same sentence the report and the screen carry. A DXF is the output most
- * likely to be detached from its context — forwarded, x-reffed into a submission
- * set, printed — so the claim it does *not* make travels inside it.
+ * The site plan at grade; every parking level's plan at its own floor level, on
+ * its own layers; every slab outline at its level; the massing as 3DFACE walls,
+ * so the file orbits in AutoCAD as the screen's massing does; each ramp as the
+ * sloped face it is. Sections are left to their own files: a section is a view,
+ * and drawn into a 3D model it would stand in the car park.
  */
-export function disclaimerText(at: DxfPoint): DxfText {
-  return {
-    layer: LAYER.TEXT,
-    at,
-    heightM: 0.4,
-    value:
-      'REGULATORY VALIDITY: NOT ASSESSED. Generated capacity study, not a submission drawing.',
-  };
+export function buildingDxf(model: BuildingModel, sheets: readonly Sheet[], meta: DxfMeta): string {
+  const layers = new Map<string, Aci>();
+  const entities: DxfEntity[] = [];
+  const site = sheets.find((s) => s.kind === SheetKind.SITE);
+  if (site) entities.push(...itemsToEntities(site, site.items, 'SITE', 0, layers));
+
+  for (const sheet of sheets.filter((s) => s.kind === SheetKind.PARKING)) {
+    const level = model.levels.find((l) => l.id === sheet.levelId);
+    if (!level) continue;
+    const own = sheet.items.filter((i) => !SITE_ROLES.has(i.role));
+    entities.push(...itemsToEntities(sheet, own, level.id, level.elevationMm, layers));
+  }
+
+  for (const level of model.levels) {
+    const slab = layerName(level.id, 'slab');
+    const mass = layerName(level.id, 'MASS');
+    const color = CLASS_ACI[level.outlineSource.provenanceClass];
+    layers.set(slab, color);
+    layers.set(mass, color);
+    if (!level.parking) {
+      entities.push({ kind: 'polyline', layer: slab, points: level.outline, closed: true, z: level.elevationMm });
+    }
+    const z0 = level.elevationMm;
+    const z1 = level.elevationMm + level.heightMm;
+    const ring = level.outline;
+    ring.forEach((p, i) => {
+      const q = ring[(i + 1) % ring.length]!;
+      entities.push({
+        kind: '3dface',
+        layer: mass,
+        corners: [
+          { x: p.x, y: p.y, z: z0 },
+          { x: q.x, y: q.y, z: z0 },
+          { x: q.x, y: q.y, z: z1 },
+          { x: p.x, y: p.y, z: z1 },
+        ],
+      });
+    });
+    // The floor, when the ring is convex: a fan of triangles from its first
+    // vertex is then exact. A concave floor is left as its outline rather than
+    // triangulated by a routine nobody has checked against it.
+    if (isConvex(ring)) {
+      for (let i = 1; i + 1 < ring.length; i += 1) {
+        entities.push({
+          kind: '3dface',
+          layer: mass,
+          corners: [ring[0]!, ring[i]!, ring[i + 1]!].map((p) => ({ x: p.x, y: p.y, z: z0 })),
+        });
+      }
+    }
+  }
+
+  for (const ramp of model.ramps) {
+    const layer = layerName(ramp.id, 'ramp');
+    layers.set(layer, Aci.GREY);
+    const [f0, f1] = ramp.foot;
+    const [h0, h1] = ramp.head;
+    entities.push({
+      kind: '3dface',
+      layer,
+      corners: [
+        { x: f0.x, y: f0.y, z: ramp.fromElevationMm },
+        { x: f1.x, y: f1.y, z: ramp.fromElevationMm },
+        { x: h1.x, y: h1.y, z: ramp.toElevationMm },
+        { x: h0.x, y: h0.y, z: ramp.toElevationMm },
+      ],
+    });
+  }
+
+  const scale = site?.view.scale ?? 500;
+  entities.push(
+    ...titleBlock(
+      [...titleLines('Building model, all levels', meta), 'Sections are exported as their own drawings.'],
+      topLeft(site?.items ?? []),
+      scale,
+      layers,
+    ),
+  );
+  return writeDxf({
+    layers: [...layers].map(([name, color]) => ({ name, color })),
+    blocks: symbolBlocks(),
+    entities,
+  });
 }
 
-/** Metres to kernel millimetres, for callers building rings from metre input. */
-export function pointFromMetres(x: Decimal | number, y: Decimal | number): DxfPoint {
-  const toMm = (v: Decimal | number): Mm =>
-    Math.round(new Decimal(v as never).times(1000).toNumber()) as Mm;
-  return { x: toMm(x), y: toMm(y) };
+function isConvex(ring: readonly ModelPoint[]): boolean {
+  let sign = 0;
+  for (let i = 0; i < ring.length; i += 1) {
+    const a = ring[i]!;
+    const b = ring[(i + 1) % ring.length]!;
+    const c = ring[(i + 2) % ring.length]!;
+    const cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+    if (cross === 0) continue;
+    const s = Math.sign(cross);
+    if (sign === 0) sign = s;
+    else if (s !== sign) return false;
+  }
+  return true;
 }

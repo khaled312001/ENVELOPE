@@ -33,7 +33,7 @@ export interface TracedWire {
 }
 
 /** Plain-language description of each class, for the title and the legend. */
-const CLASS_DESCRIPTION: Readonly<Record<ProvenanceClass, string>> = {
+export const CLASS_DESCRIPTION: Readonly<Record<ProvenanceClass, string>> = {
   DERIVED: 'Computed from a cited rule. Open to see the clause.',
   ASSUMED: 'Assumed — no rule governs this. You can edit it.',
   USER_SET: 'You entered this value.',

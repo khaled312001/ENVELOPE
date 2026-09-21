@@ -83,7 +83,7 @@ import { buildRunReport } from './report.js';
 import { canReview, type Actor } from './identity.js';
 import { gateAck, plotInput, runRequest, shareRequest, type RunRequest } from './schemas.js';
 import { registerIntakeRoutes } from './intake-route.js';
-import { runDrawing, type DrawableRun } from './drawing.js';
+import { runDrawing, runDrawingSet, runSheets, type DrawableRun } from './drawing.js';
 import { runWorkbookSpec, type ExportableRun } from './workbook.js';
 import { SqliteAccountRepository, type AccountRepository } from './account-store.js';
 import { normaliseEmail } from './accounts.js';
@@ -1114,7 +1114,14 @@ export async function build(
     const format = (request.query as { format?: string }).format ?? 'json';
     if (format === 'html') {
       reply.header('content-type', 'text/html; charset=utf-8');
-      return toHtml(reviewed);
+      return toHtml(reviewed, { sheets: runSheets(payload as unknown as DrawableRun) });
+    }
+
+    // The drawing set: every sheet, A3, one to a page. Its own document rather
+    // than pages inside the A4 report — see `drawingsSection` in the report.
+    if (format === 'sheets') {
+      reply.header('content-type', 'text/html; charset=utf-8');
+      return runDrawingSet(payload as unknown as DrawableRun);
     }
 
     /**
@@ -1133,13 +1140,14 @@ export async function build(
      * shipping none.
      */
     if (format === 'dxf') {
-      const plot = await loadPlot(repo, run.plotId);
+      // No `sheet`: the whole building, every level at its elevation, in 3D.
+      // With one: that sheet alone, flat, at true size — the file an architect
+      // x-refs into his own drawing.
+      const sheet = (request.query as { sheet?: string }).sheet;
+      const drawing = runDrawing(payload as unknown as DrawableRun, sheet);
       reply.header('content-type', 'application/dxf');
-      reply.header(
-        'content-disposition',
-        `attachment; filename="envelope-${run.runId}.dxf"`,
-      );
-      return runDrawing(plot, payload as unknown as DrawableRun);
+      reply.header('content-disposition', `attachment; filename="${drawing.name}.dxf"`);
+      return drawing.dxf;
     }
 
     if (format === 'xlsx') {

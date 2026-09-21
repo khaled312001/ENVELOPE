@@ -15,11 +15,25 @@
  * palette are wired to the same fact.
  */
 
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 
 import type { MassingView, RunView, WirePoint } from '../api/client.js';
-import { MassingViewer, type Mass } from './MassingViewer.js';
+import type { Mass } from './MassingViewer.js';
 import { TracedValue } from './TracedValue.js';
+
+/*
+  THREE.JS IS FETCHED WHEN A MASSING IS ON SCREEN, AND NOT BEFORE.
+
+  It was a static import, so every page on the site — the landing page, the 404 —
+  downloaded and parsed a 3D engine to render prose. `App.tsx` is imported by
+  `Root.tsx` so the engine can stay mounted behind the public pages, which put this
+  module, and therefore `three`, on the critical path of the first paint of `/`.
+
+  The type import above is erased at compile time and pulls nothing in.
+*/
+const MassingViewer = lazy(() =>
+  import('./MassingViewer.js').then((m) => ({ default: m.MassingViewer })),
+);
 
 const toRing = (ring: readonly WirePoint[]): readonly (readonly [number, number])[] =>
   ring.map((p) => [Number(p.x), Number(p.y)] as const);
@@ -100,12 +114,16 @@ export function MassingPanel({
         ) : null}
       </header>
 
-      <MassingViewer
-        plot={toRing(plotVertices)}
-        masses={masses}
-        {...(parking ? { parking } : {})}
-        className="massing-viewer"
-      />
+      {/* The fallback holds the viewer's box, so nothing below it moves when the
+          canvas arrives — the same box the CSS gives `.massing-viewer`. */}
+      <Suspense fallback={<div className="massing-viewer" aria-hidden="true" />}>
+        <MassingViewer
+          plot={toRing(plotVertices)}
+          masses={masses}
+          {...(parking ? { parking } : {})}
+          className="massing-viewer"
+        />
+      </Suspense>
 
       {/*
         Amber in the picture, amber in the words. A reader who cannot see the

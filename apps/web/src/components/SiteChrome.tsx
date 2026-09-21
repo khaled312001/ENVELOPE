@@ -399,6 +399,26 @@ function Colophon({
  * THE CHROME
  * ======================================================================= */
 
+/**
+ * "This part is still English", said in Arabic.
+ *
+ * Exported because a route marked `partial` places it itself, directly above the
+ * subtree that is English — `SiteChrome` cannot know where inside a route the
+ * translated part ends. `dir`/`lang` are set here and not inherited, because the
+ * notice is the one Arabic block inside an English region.
+ */
+export function UntranslatedNotice(): JSX.Element {
+  const { t } = useLocale();
+  return (
+    <section className="shell section section--minor" dir="rtl" lang="ar">
+      <div className="plate plate--quiet">
+        <p className="plate__title">{t.untranslated.title}</p>
+        <p className="plate__subtitle">{t.untranslated.body}</p>
+      </div>
+    </section>
+  );
+}
+
 export function SiteChrome({
   route,
   navigate,
@@ -473,14 +493,7 @@ export function SiteChrome({
       <Nav route={route} navigate={navigate} tool={tool} />
       {aside}
       <main id="main" {...(bodyIsEnglish ? { dir: 'ltr' as const, lang: 'en' } : {})}>
-        {bodyIsEnglish ? (
-          <section className="shell section section--minor" dir="rtl" lang="ar">
-            <div className="plate plate--quiet">
-              <p className="plate__title">{t.untranslated.title}</p>
-              <p className="plate__subtitle">{t.untranslated.body}</p>
-            </div>
-          </section>
-        ) : null}
+        {bodyIsEnglish ? <UntranslatedNotice /> : null}
         {children}
       </main>
       <Colophon

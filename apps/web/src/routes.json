@@ -41,7 +41,7 @@
     "nav": "footer-only",
     "group": "product",
     "needsActor": true,
-    "arabic": "translated"
+    "arabic": "partial"
   },
   {
     "path": "/work",

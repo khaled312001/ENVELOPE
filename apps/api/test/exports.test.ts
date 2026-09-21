@@ -186,6 +186,37 @@ describe('DXF export', () => {
     expect(bays).toBeGreaterThan(10);
   });
 
+  /** The polylines on one layer, each as its VERTEX count and its closed flag. */
+  const onLayer = (layer: string): { vertices: number; closed: boolean }[] =>
+    dxf
+      .split(`0\r\nPOLYLINE\r\n8\r\n${layer}\r\n`)
+      .slice(1)
+      .map((chunk) => {
+        const body = chunk.slice(0, chunk.indexOf('0\r\nSEQEND'));
+        const flag = /(?:^|\r\n)70\r\n\s*(\d+)\r\n/.exec(body);
+        return {
+          vertices: body.split('0\r\nVERTEX\r\n').length - 1,
+          closed: flag !== null && (Number(flag[1]) & 1) === 1,
+        };
+      });
+
+  it('draws the driveway opening the engine placed, and nothing beyond it', () => {
+    // It used to be a closed four-point throat, made by adding a metre to y —
+    // north whatever the edge faced. Two open points on the boundary is the
+    // opening; anything more is a shape the engine never computed.
+    const access = onLayer('ENV-VEHICLE-ACCESS');
+    expect(access).toHaveLength(1);
+    expect(access[0]).toEqual({ vertices: 2, closed: false });
+  });
+
+  it('puts the setback line on its own layer, once', () => {
+    // ENV-SETBACK-LINE was in the layer table of every export and held nothing.
+    const setback = onLayer('ENV-SETBACK-LINE');
+    expect(setback).toHaveLength(1);
+    expect(setback[0]?.closed).toBe(true);
+    expect(setback[0]?.vertices).toBeGreaterThanOrEqual(3);
+  });
+
   it('carries the disclaimer inside the file, not beside it', () => {
     expect(dxf).toContain('REGULATORY VALIDITY: NOT ASSESSED');
   });

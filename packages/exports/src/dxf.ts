@@ -260,7 +260,15 @@ export interface SiteDrawingInput {
     readonly bays?: readonly (readonly DxfPoint[])[];
     readonly aisles?: readonly (readonly DxfPoint[])[];
     readonly ramps?: readonly (readonly DxfPoint[])[];
-    /** The driveway opening, drawn as a throat so it reads as a gap. */
+    /**
+     * The driveway opening: the stretch of boundary the engine chose, as an OPEN
+     * polyline on its own layer. It used to arrive as a closed four-point "throat"
+     * one metre deep, built by the caller by adding a metre to y — which is north
+     * whatever the edge's orientation, so on any edge that was not a southern
+     * boundary the throat stood outside the plot or lay along the edge instead of
+     * across it. A shape the engine never computed, in a file whose one promise is
+     * that it draws what the engine placed. The layer is what makes it selectable.
+     */
     readonly access?: readonly (readonly DxfPoint[])[];
   };
 }
@@ -299,7 +307,7 @@ export function siteDrawing(input: SiteDrawingInput): DxfDocument {
     polylines.push({ layer: LAYER.PARKING_RAMP, points: r, closed: true });
   }
   for (const r of parking?.access ?? []) {
-    polylines.push({ layer: LAYER.ACCESS, points: r, closed: true });
+    polylines.push({ layer: LAYER.ACCESS, points: r, closed: false });
   }
 
   return {

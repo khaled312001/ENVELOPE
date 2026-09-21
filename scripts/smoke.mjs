@@ -386,6 +386,16 @@ await step('confirming the plot (G1)', async () => {
   await page.getByRole('heading', { name: /does parking count toward far/i }).waitFor({ timeout: 5000 });
 });
 
+await step('the sheet\'s podium count waits on the rules step to be confirmed', async () => {
+  // The Warsan sheet prints G+2P+8. It used to be read at intake and dropped at
+  // the composition root, so every massing showed one podium level in amber. It
+  // now arrives here pre-filled — visible and editable before it goes anywhere.
+  const value = await page.getByLabel('Podium levels').inputValue();
+  if (value !== '2') throw new Error(`podium levels pre-filled as "${value}", not the sheet's 2`);
+  const t = await page.textContent('body');
+  if (!t.includes('G+2P+8')) throw new Error('the field does not say where its value came from');
+});
+
 await step('the parking question has no pre-selected answer', async () => {
   const checked = await page.locator('input[name="parking-far"]:checked').count();
   if (checked !== 0) throw new Error(`${checked} option(s) pre-selected — FR-DEF-002 forbids a default`);
@@ -464,10 +474,23 @@ await step('the massing view stands the envelope up, and says what it assumed', 
   await page.locator('.massing-viewer canvas').waitFor({ timeout: 10000 });
   const t = await page.textContent('body');
   if (!/Podium/.test(t)) throw new Error('no podium volume listed');
-  // The podium level count is not derivable from a run; an unentered one must
-  // read as an assumption rather than as a fact drawn in confident green.
-  if (!/rests on an assumption/i.test(t)) {
-    throw new Error('the assumed podium height was not declared');
+  // The podium count came from the sheet and was confirmed on the rules step, so
+  // it is the reader's value and the massing must not call it an assumption. The
+  // unentered case — ASSUMED, amber, with a basis — is asserted in
+  // `apps/api/test/api.test.ts`, where both halves sit side by side.
+  // Read from the row itself. Falling back to the body text would pass on any
+  // "2" anywhere on the page, which is a check that cannot fail.
+  const podium = page.locator('section[aria-labelledby="massing-heading"] tbody tr', {
+    has: page.locator('th', { hasText: /^\s*Podium/ }),
+  });
+  if ((await podium.count()) === 0) throw new Error('no podium row in the massing table');
+  const levels = await podium.first().locator('td').first().textContent();
+  // The cell reads "2levels (You set this)", so a word boundary never falls after the 2.
+  if (!/^\s*2(?!\d)/.test(levels ?? '')) {
+    throw new Error(`the podium shows "${levels}" levels, not the sheet's 2`);
+  }
+  if (/rests on an assumption/i.test(t)) {
+    throw new Error('a podium count the reader confirmed is still described as assumed');
   }
 });
 

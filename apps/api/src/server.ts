@@ -76,8 +76,8 @@ import {
 import { Gate, requireExportGates, subjectHash, type GateRecord } from './gates.js';
 import { ENGINE_VERSION, presentRun } from './present.js';
 import { buildRunReport } from './report.js';
-import { actorFrom, canReview } from './identity.js';
-import { gateAck, plotInput, runRequest, shareRequest } from './schemas.js';
+import { actorFrom, canReview, type Actor } from './identity.js';
+import { gateAck, plotInput, runRequest, shareRequest, type RunRequest } from './schemas.js';
 import { registerIntakeRoutes } from './intake-route.js';
 import { runDrawing, type DrawableRun } from './drawing.js';
 import { runWorkbookSpec, type ExportableRun } from './workbook.js';
@@ -525,39 +525,7 @@ export async function build(
     const asOf = asOfNow(new Date().toISOString().slice(0, 10));
     const rules = store.load(asOf);
 
-    const input: RunInput = {
-      plot,
-      rules,
-      actor: { id: actor.id, name: actor.name },
-      parkingInFar: body.parkingInFar,
-      unitMix: {
-        source: body.unitMix.source,
-        entries: body.unitMix.entries.map(
-          (e): UnitTypeMix => ({
-            typeId: e.typeId,
-            label: e.label,
-            share: new Decimal(e.share),
-            nsaM2: new Decimal(e.nsaM2),
-          }),
-        ),
-        ...(body.unitMix.basis !== undefined ? { basis: body.unitMix.basis } : {}),
-      },
-      parkingLevelsAvailable: body.parkingLevelsAvailable,
-      parkingUsableFraction: {
-        value: new Decimal(body.parkingUsableFraction.value),
-        source: body.parkingUsableFraction.source,
-        ...(body.parkingUsableFraction.basis !== undefined
-          ? { basis: body.parkingUsableFraction.basis }
-          : {}),
-      },
-      saleableEfficiency: {
-        value: new Decimal(body.saleableEfficiency.value),
-        source: body.saleableEfficiency.source,
-        ...(body.saleableEfficiency.basis ? { basis: body.saleableEfficiency.basis } : {}),
-        actor,
-      },
-      realismDiscount: new Decimal(body.realismDiscount),
-    };
+    const input = runInputFrom(body, plot, rules, actor);
 
     // The baseline must be taken immediately before the run and read
     // immediately after, with no await between: the geometry counters are
@@ -923,37 +891,8 @@ export async function build(
     const rules = store.load(asOfNow(new Date().toISOString().slice(0, 10)));
 
     const cmp = compareParkingInFar({
-      plot,
-      rules,
-      actor: { id: actor.id, name: actor.name },
+      ...runInputFrom(body, plot, rules, actor),
       parkingInFar: 'EXCLUDED_FROM_FAR',
-      unitMix: {
-        source: body.unitMix.source,
-        entries: body.unitMix.entries.map(
-          (e): UnitTypeMix => ({
-            typeId: e.typeId,
-            label: e.label,
-            share: new Decimal(e.share),
-            nsaM2: new Decimal(e.nsaM2),
-          }),
-        ),
-        ...(body.unitMix.basis !== undefined ? { basis: body.unitMix.basis } : {}),
-      },
-      parkingLevelsAvailable: body.parkingLevelsAvailable,
-      parkingUsableFraction: {
-        value: new Decimal(body.parkingUsableFraction.value),
-        source: body.parkingUsableFraction.source,
-        ...(body.parkingUsableFraction.basis !== undefined
-          ? { basis: body.parkingUsableFraction.basis }
-          : {}),
-      },
-      saleableEfficiency: {
-        value: new Decimal(body.saleableEfficiency.value),
-        source: body.saleableEfficiency.source,
-        ...(body.saleableEfficiency.basis ? { basis: body.saleableEfficiency.basis } : {}),
-        actor,
-      },
-      realismDiscount: new Decimal(body.realismDiscount),
     });
 
     const side = (r: typeof cmp.countsTowardFar) =>
@@ -1253,6 +1192,63 @@ function serialisePlot(plot: Plot): string {
  * produced by the kernel on the 1 mm grid, so re-asserting is restoring a fact
  * rather than claiming one. `asMm`/`asMm2` do exactly that and nothing else.
  */
+/**
+ * THE ONE PLACE A RUN REQUEST BECOMES A `RunInput`.
+ *
+ * There were two, written out field by field in `/api/runs` and in the
+ * parking-in-FAR comparison, and they had already drifted in the way two copies
+ * of one mapping do: when the podium level count was added to the request, only
+ * one of them would have learned it, and the comparison would have compared a
+ * run the reader never asked for. The comparison now spreads this and overrides
+ * the single field it exists to vary.
+ *
+ * `podiumLevels` is passed only when the request carries it. Absent, the engine
+ * records the podium as ASSUMED with its own basis string — which is the honest
+ * state when nobody entered it, and was, until this function, the ONLY state:
+ * the affection plan's `G+2P+8` was read at intake and then dropped here.
+ */
+function runInputFrom(
+  body: RunRequest,
+  plot: Plot,
+  rules: RunInput['rules'],
+  actor: Actor,
+): RunInput {
+  return {
+    plot,
+    rules,
+    actor: { id: actor.id, name: actor.name },
+    parkingInFar: body.parkingInFar,
+    unitMix: {
+      source: body.unitMix.source,
+      entries: body.unitMix.entries.map(
+        (e): UnitTypeMix => ({
+          typeId: e.typeId,
+          label: e.label,
+          share: new Decimal(e.share),
+          nsaM2: new Decimal(e.nsaM2),
+        }),
+      ),
+      ...(body.unitMix.basis !== undefined ? { basis: body.unitMix.basis } : {}),
+    },
+    parkingLevelsAvailable: body.parkingLevelsAvailable,
+    parkingUsableFraction: {
+      value: new Decimal(body.parkingUsableFraction.value),
+      source: body.parkingUsableFraction.source,
+      ...(body.parkingUsableFraction.basis !== undefined
+        ? { basis: body.parkingUsableFraction.basis }
+        : {}),
+    },
+    saleableEfficiency: {
+      value: new Decimal(body.saleableEfficiency.value),
+      source: body.saleableEfficiency.source,
+      ...(body.saleableEfficiency.basis ? { basis: body.saleableEfficiency.basis } : {}),
+      actor,
+    },
+    realismDiscount: new Decimal(body.realismDiscount),
+    ...(body.podiumLevels !== undefined ? { podiumLevels: body.podiumLevels } : {}),
+  };
+}
+
 async function loadPlot(repo: RunRepository, plotId: string): Promise<Plot> {
   const stored = await repo.getPlot(plotId);
   if (!stored) throw Object.assign(new Error('plot not found'), { statusCode: 404 });

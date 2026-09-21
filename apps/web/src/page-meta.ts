@@ -74,8 +74,16 @@ export interface PageMeta {
    * A route flipped to `translated` while its screen still holds English strings
    * would silence the notice, so this field goes with the screen's dictionary in
    * the same change, never ahead of it.
+   *
+   * `partial` EXISTS BECAUSE `/app` WAS MARKED `translated` AND WAS NOT. Its first
+   * screen — the antechamber — is Arabic; the ten engine steps behind it are not.
+   * Neither binary value was true: `untranslated` would have set the Arabic
+   * antechamber left-to-right under an "this is English" notice, and `translated`
+   * silenced the notice over ten screens of English. `partial` means the route's
+   * own component declares where its English begins, which `Root.tsx` does for the
+   * engine by marking that one subtree `dir="ltr" lang="en"` with the notice above it.
    */
-  readonly arabic: 'translated' | 'untranslated';
+  readonly arabic: 'translated' | 'partial' | 'untranslated';
 }
 
 type RouteRecord = PageMeta & { readonly path: Route };
@@ -112,6 +120,8 @@ export const NOT_FOUND_META: PageMeta = {
   nav: 'footer-only',
   group: 'reference',
   needsActor: false,
-  /* `NotFound.tsx` reaches for no dictionary, so the notice is owed here too. */
-  arabic: 'untranslated',
+  /* Flipped in the same change as `i18n/notFound.ar.ts`, which is what the field
+     requires: `NotFound.tsx` reads `useDict(EN, AR)` and its site list reads the
+     chrome's own route labels. */
+  arabic: 'translated',
 };

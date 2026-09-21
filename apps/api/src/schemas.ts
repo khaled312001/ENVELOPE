@@ -113,6 +113,16 @@ export const runRequest = z.object({
       path: ['basis'],
     }),
   parkingLevelsAvailable: z.number().int().min(0).max(8),
+  /**
+   * How many of the permitted levels are podium — the `2` in `G+2P+8`.
+   *
+   * Optional, and absence is not a default: the engine records an unentered count
+   * as ASSUMED, amber, with its own basis string. Sent, it is USER_SET by the actor
+   * who confirmed it, including when the screen pre-filled it from the affection
+   * plan — the sheet was read by a parser and confirmed by a person, and the person
+   * is the one whose name the value carries.
+   */
+  podiumLevels: z.number().int().min(0).max(20).optional(),
   parkingUsableFraction: z.object({
     value: decimalString,
     source: z.enum(['DERIVED', 'ASSUMED']),

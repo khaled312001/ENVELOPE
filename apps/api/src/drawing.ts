@@ -71,18 +71,29 @@ const ring = (r: readonly WirePoint[]): readonly DxfPoint[] => r.map(pt);
  */
 export function runDrawing(plot: Plot, run: DrawableRun): string {
   const lp = run.levelPlan;
+  /* With no plate cap the tower IS the podium outline, and there is no placement
+     to disclose — drawing it again would put a second copy of the setback line on
+     another layer. Compared as the strings the engine emitted, not recomputed. */
+  const towerIsPodium =
+    JSON.stringify(run.envelope.towerOutline) === JSON.stringify(run.envelope.podiumOutline);
   const of = (kind: string): readonly (readonly DxfPoint[])[] =>
     (lp?.rects ?? []).filter((r) => r.kind === kind).map((r) => ring(r.outline));
 
-  // The opening lies on the boundary. Drawn 1 m deep so it reads as a gap in
-  // the plot line rather than as a coincident duplicate of it — two identical
-  // polylines on one edge is a drawing nobody can select.
+  /*
+    THE OPENING, EXACTLY AS THE ENGINE PLACED IT: two points on the boundary.
+
+    This used to add one metre to y to make a "throat", on the argument that a
+    polyline coincident with the plot line cannot be selected. Two things were
+    wrong with it. The metre was north whatever the edge faced, so on a northern
+    or a slanted road edge the throat stood outside the plot or lay along the
+    boundary — a shape nobody computed, in the one file this adapter promises
+    draws only what the engine produced. And selection is what the layer is for:
+    `ENV-VEHICLE-ACCESS` switches on and off on its own.
+  */
   const access: (readonly DxfPoint[])[] = [];
   if (lp?.access.recommended) {
     const o = lp.access.recommended.opening;
-    const nudge = (p: WirePoint, dy: number): DxfPoint =>
-      pointFromMetres(new Decimal(p.x), new Decimal(p.y).plus(dy));
-    access.push([pt(o.start), pt(o.end), nudge(o.end, 1), nudge(o.start, 1)]);
+    access.push([pt(o.start), pt(o.end)]);
   }
 
   // Annotations sit above the plot, in the order a reader scans: what this is,
@@ -98,12 +109,31 @@ export function runDrawing(plot: Plot, run: DrawableRun): string {
     lp
       ? `Parking level: ${lp.bayCount.value} bays laid out at ${lp.areaPerBayM2.value} sq.m/bay`
       : 'Parking level: NOT LAID OUT for this plot. No bays are drawn.',
+    // Said in the file because the layers alone cannot say it. The tower's AREA is
+    // the plate cap; its POSITION on the podium roof is not decided by the engine.
+    ...(towerIsPodium
+      ? []
+      : ['Tower outline on ENV-ASSUMED: area from the plate cap, position not decided.']),
   ];
 
+  /*
+    WHICH LAYER EACH RING IS ON IS A CLAIM ABOUT ITS PROVENANCE.
+
+    The podium outline IS the setback line — `envelope.ts` takes it straight
+    from the per-edge offset, which every edge's cited setback produced — so it
+    goes on `ENV-SETBACK-LINE`, which was empty on every export until now.
+
+    The tower outline goes on `ENV-ASSUMED` and not on `ENV-ENVELOPE-TOWER`.
+    Its area is derived; where it sits is the podium shrunk about its centroid,
+    and `massing.ts` says in so many words that the engine does not decide it.
+    A ring drawn in the envelope colour would have claimed a placement nobody
+    made. The two envelope layers stay in the table, empty, until the engine
+    produces a podium ring cut to the coverage cap and a placed tower.
+  */
   const doc = siteDrawing({
     plot: ring(plot.ring.map((p) => ({ x: String(p.x / 1000), y: String(p.y / 1000) }))),
-    podiumFootprint: ring(run.envelope.podiumOutline),
-    towerFootprint: ring(run.envelope.towerOutline),
+    setbackLine: ring(run.envelope.podiumOutline),
+    assumedRings: towerIsPodium ? [] : [ring(run.envelope.towerOutline)],
     parking: {
       bays: [...of('BAY'), ...of('ACCESSIBLE_BAY')],
       aisles: of('AISLE'),

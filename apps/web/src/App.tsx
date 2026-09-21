@@ -316,6 +316,7 @@ export function EngineApp({
             <RulesStep
               actor={actor}
               plot={plot}
+              sheetPodiumLevels={prefill?.podiumLevels ?? null}
               busy={busy}
               onRun={async (body) => {
                 setBusy(true);

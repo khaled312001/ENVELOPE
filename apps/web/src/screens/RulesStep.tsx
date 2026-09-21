@@ -51,12 +51,15 @@ const DEFAULT_MIX_BASIS =
 export function RulesStep({
   actor,
   plot,
+  sheetPodiumLevels,
   busy,
   onRun,
   onError,
 }: {
   readonly actor: Actor;
   readonly plot: PlotView;
+  /** What the affection plan printed, if it was read at step 0. */
+  readonly sheetPodiumLevels: { readonly value: number; readonly raw: string } | null;
   readonly busy: boolean;
   readonly onRun: (body: RunRequestBody) => void;
   readonly onError: (e: ApiError) => void;
@@ -66,6 +69,17 @@ export function RulesStep({
   );
   const [parkingInFar, setParkingInFar] = useState<RunRequestBody['parkingInFar'] | ''>('');
   const [levels, setLevels] = useState(2);
+  /*
+    EMPTY MEANS "NOT ENTERED", NOT ZERO AND NOT ONE.
+
+    Left empty, the request omits the field and the engine records the podium as
+    ASSUMED with its own basis — amber on the capacity step, listed in the report.
+    Pre-filled from the sheet, it is still a field the reader can see and change
+    before it goes anywhere, and what is sent is recorded under their name.
+  */
+  const [podium, setPodium] = useState<string>(
+    sheetPodiumLevels ? String(sheetPodiumLevels.value) : '',
+  );
   const [comparison, setComparison] = useState<ParkingComparison | null>(null);
   const [standards, setStandards] = useState<StandardsView | null>(null);
   const [scenarioId, setScenarioId] = useState<string>('');
@@ -119,6 +133,7 @@ export function RulesStep({
         }
       : { source: 'ASSUMED', entries: DEFAULT_MIX, basis: DEFAULT_MIX_BASIS },
     parkingLevelsAvailable: levels,
+    ...(podium.trim() !== '' ? { podiumLevels: Number(podium) } : {}),
     parkingUsableFraction: {
       value: '0.85',
       source: 'ASSUMED',
@@ -292,6 +307,34 @@ export function RulesStep({
             value={levels}
             onChange={(e) => setLevels(Number(e.target.value))}
           />
+        </div>
+        <div className="field field--compact">
+          <label htmlFor="podium-levels">Podium levels</label>
+          <input
+            id="podium-levels"
+            className="input input--num"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={20}
+            value={podium}
+            onChange={(e) => setPodium(e.target.value)}
+            aria-describedby="podium-levels-hint"
+          />
+          <p id="podium-levels-hint" className="field__help">
+            {sheetPodiumLevels ? (
+              <>
+                Read from the affection plan as{' '}
+                <span className="value">{sheetPodiumLevels.raw}</span>. Confirm or change it —
+                the run records it under your name.
+              </>
+            ) : (
+              <>
+                The number of podium levels in the height code, such as the 2 in G+2P+8. Left
+                empty, the massing shows one podium level and marks it as assumed.
+              </>
+            )}
+          </p>
         </div>
       </section>
 

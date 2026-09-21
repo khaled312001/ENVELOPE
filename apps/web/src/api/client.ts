@@ -535,6 +535,8 @@ export interface RunRequestBody {
     readonly basis?: string;
   };
   readonly parkingLevelsAvailable: number;
+  /** The `2` in `G+2P+8`. Omitted, the engine assumes one podium level, in amber. */
+  readonly podiumLevels?: number;
   readonly parkingUsableFraction: {
     readonly value: string;
     readonly source: 'DERIVED' | 'ASSUMED';

@@ -224,6 +224,35 @@ describe('runs', () => {
     expect(body.warning).toMatch(/not a capacity assessment/);
   });
 
+  it('carries the podium count to the engine instead of assuming it', async () => {
+    // The affection plan's G+2P+8 was read at intake and then dropped at the
+    // composition root, so every massing showed one podium level, in amber,
+    // whatever the sheet said. Sent, it is the reader's value; omitted, it is
+    // still an assumption with a basis — and both halves are asserted, because a
+    // fix that made the field required would have traded a dropped input for a
+    // hidden default.
+    const plot = await createPlot();
+    const podium = (body: { massing: { masses: { id: string; levels: { value: string; provenanceClass: string } }[] } }) =>
+      body.massing.masses.find((m) => m.id === 'podium')!.levels;
+
+    const sent = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: plot.plotId, podiumLevels: 2 },
+    });
+    expect(sent.statusCode).toBe(201);
+    expect(podium(sent.json())).toMatchObject({ value: '2', provenanceClass: 'USER_SET' });
+
+    const omitted = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: plot.plotId },
+    });
+    expect(podium(omitted.json())).toMatchObject({ value: '1', provenanceClass: 'ASSUMED' });
+  });
+
   it('blocks while parking-in-FAR is open — FR-DEF-002', async () => {
     const plot = await createPlot();
     const res = await app.inject({

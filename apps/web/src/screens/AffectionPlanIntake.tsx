@@ -46,6 +46,13 @@ export interface Prefill {
   readonly plotNumber: string;
   readonly community: string;
   readonly statedAreaM2: string;
+  /**
+   * The podium count, when the sheet states one — `G+2P+8` is two. Carried to
+   * step 3 as a pre-filled field the reader confirms, never straight into a run:
+   * the parser read it, and the person who confirms it is the one it is recorded
+   * against. Absent when the sheet prints no height code at all.
+   */
+  readonly podiumLevels?: { readonly value: number; readonly raw: string };
 }
 
 const MAX_BYTES = 3 * 1024 * 1024;
@@ -354,6 +361,14 @@ function Reading({
               plotNumber: f.parcelId?.value ?? '',
               community: f.community?.value ?? '',
               statedAreaM2: f.totalAreaSqm?.value ?? '',
+              ...(f.height
+                ? {
+                    podiumLevels: {
+                      value: f.height.value.podiumLevels,
+                      raw: f.height.value.raw,
+                    },
+                  }
+                : {}),
             })
           }
         >
@@ -362,7 +377,8 @@ function Reading({
       </div>
       <div>
         <p className="fine-print">
-          The plot number, community and stated area carry over. Width and depth do not:
+          The plot number, community and stated area carry over, and the podium count
+          waits for you to confirm it on the rules step. Width and depth do not carry over:
           the sheet gives an area, and a rectangle inferred from an area is a plot shape
           nobody surveyed. Enter the dimensions and the 2% check will compare them against
           the area above.

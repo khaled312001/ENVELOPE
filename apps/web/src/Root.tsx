@@ -10,10 +10,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { EngineApp, Header, useTheme } from './App.js';
-import { LanguageToggle, useT } from './i18n/locale.js';
+import { LanguageToggle, useLocale, useT } from './i18n/locale.js';
 import { useSession } from './session.js';
 import type { Actor } from './api/client.js';
-import { SiteChrome } from './components/SiteChrome.js';
+import { SiteChrome, UntranslatedNotice } from './components/SiteChrome.js';
 import { NOT_FOUND_PAGE, PAGES } from './pages.js';
 import { NOT_FOUND, useRouter, type Href } from './router.js';
 
@@ -133,6 +133,7 @@ export default function Root(): JSX.Element {
   }, [route]);
 
   const t = useT();
+  const { locale } = useLocale();
   const spec = route === NOT_FOUND ? NOT_FOUND_PAGE : PAGES[route];
 
   /**
@@ -223,7 +224,19 @@ export default function Root(): JSX.Element {
         : {})}
     >
       {engineMounted ? (
-        <div hidden={!showEngine}>
+        /*
+          THE ENGINE IS WHERE `/app`'S ENGLISH BEGINS, so this subtree — and only
+          this one — is marked as the English it contains when the page is Arabic.
+          The antechamber above it is translated; the ten steps are not yet. The
+          route is `partial` in `routes.json` for exactly this reason, and the notice
+          sits here rather than in `SiteChrome` because only this component knows
+          where the boundary is.
+        */
+        <div
+          hidden={!showEngine}
+          {...(locale === 'ar' ? { dir: 'ltr' as const, lang: 'en' } : {})}
+        >
+          {locale === 'ar' ? <UntranslatedNotice /> : null}
           <EngineApp navigate={navigate} actor={actor} setActor={setActor} search={search} />
         </div>
       ) : null}

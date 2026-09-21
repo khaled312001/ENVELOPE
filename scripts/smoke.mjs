@@ -38,8 +38,11 @@ const browser = await chromium.launch({
   args: process.env.SMOKE_HOST_RULES ? [`--host-resolver-rules=${process.env.SMOKE_HOST_RULES}`] : [],
 });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+let passingHostCheck = false;
 page.on('console', (m) => {
   if (m.type() !== 'error') return;
+  // The CDN's own browser check, answered once before the walk starts (see below).
+  if (passingHostCheck) return;
   const at = m.location()?.url ?? '';
   // The one 404 this walk asks for. A deployment answers an unknown path with a real
   // 404 status (a dev server answers 200), and the browser logs that document load
@@ -67,6 +70,25 @@ const BASE = process.env.SMOKE_URL ?? 'http://localhost:5173/';
 const REMOTE = !['localhost', '127.0.0.1'].includes(new URL(BASE).hostname);
 const wait = (ms) => (REMOTE ? ms * 6 : ms);
 if (REMOTE) page.setDefaultTimeout(wait(30000));
+
+/**
+ * THE HOST'S BROWSER CHECK IS PASSED ONCE, BEFORE ANYTHING IS MEASURED.
+ *
+ * Hostinger's CDN answers an automated browser's first request with its own
+ * "Checking your browser" page — a 403 — and lets it through a few seconds later on a
+ * cookie. `curl` is not stopped; this browser is. The first walk against the live
+ * site failed three landing-page steps on that page and passed every other step, so
+ * the failures described the host's bot filter, not the release. The check is the
+ * host's, so it is completed the way the host intends — by waiting — and not worked
+ * around. Nothing of ours is cached by it: every step below still loads its route
+ * from the server, and the only error not counted is the check's own 403.
+ */
+if (REMOTE) {
+  passingHostCheck = true;
+  await page.goto(BASE);
+  await page.waitForSelector('#main', { timeout: 60000 });
+  passingHostCheck = false;
+}
 
 /**
  * WCAG 1.4.10 — reflow, measured on the document rather than eyeballed.

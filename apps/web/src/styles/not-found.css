@@ -1,0 +1,323 @@
+/*
+ * The 404 — rendered at whatever address the visitor asked for.
+ *
+ * OWNER: the `/404` page agent.  CLASS PREFIX: `.nf-`.
+ *
+ * The echoed path is a SPECIMEN, not a sentence: mono, on an inset surface, in a
+ * `<code>` chip. That is a styling decision doing real work — escaping stops
+ * markup but it does not stop words, and a path set as running prose would let
+ * `/we-are-fully-compliant-and-certified` render that sentence on a TOP.ai page
+ * in the house voice.
+
+ * No selector outside that prefix may be declared here, and no rule in this file may
+ * write a hex value or reach for `var(--uncertain*)`. Amber reaches a page only
+ * through `[data-state="assumed"]`, `.traced--assumed` or `.margin-tally`, which is
+ * what keeps `assertAmberExclusive` stable while six page stylesheets are written in
+ * parallel — a whitelist widened once per page is not a whitelist.
+ *
+ * The chassis classes come from `styles/site.css`: `.shell`, `.section`, `.railed`,
+ * `.plate`, `.figure`, `.schedule`, `.callout`, `.meter`, `.empty`, `.cta`,
+ * `.eyebrow`, `.index`, `.grid`, `.refusal`, `.reveal`, `[data-state]`. This file
+ * adds nothing structural; if a page needs a chassis rule, the chassis is wrong.
+ *
+ * ONE EXCEPTION, DECLARED RATHER THAN DISCOVERED. The index section stands on
+ * `--surface-sunken`, which is `site.css`'s `.section--zoned` — a chassis rule the
+ * markup cannot ask for, because this pass owns three stylesheets and no `.tsx`.
+ * It is written here against the section that HOLDS the index rather than against
+ * the second section, and it should be deleted the day `NotFound.tsx` can say
+ * `.section--zoned` for itself. Nothing else here is a chassis rule in disguise.
+ *
+ * WHAT THIS FILE DOES NOT CONTAIN, and why each absence is deliberate:
+ *
+ *   No `opacity`, anywhere. Motion on this page is the chassis `.reveal`, which
+ *   animates `transform` only. A scroll-driven fade holds its start state for
+ *   anything that has never entered a viewport, so an opacity reveal prints blank
+ *   and screenshots blank — the defect that once emptied three sections of the
+ *   landing page below the fold.
+ *
+ *   No amber. This page prints no figure, reads no fixture and makes no request, so
+ *   it has no ASSUMED value and therefore no claim on the one coloured ground in
+ *   the system.
+ *
+ *   No state rail and no fill on the echo chip beyond the inset ground. A 404 is
+ *   not a warning, an error state or a fault: it is an address with no page, said
+ *   once, in ink.
+ */
+
+/* The opening section carries no `.section__body`, so it sets its own interval
+   rather than borrowing the chassis rule that governs one. */
+.nf > .section--opening > * + * {
+  margin-block-start: var(--space-5);
+}
+
+/* --- The statement ------------------------------------------------------- */
+
+/* Two rungs above the h2, per the type scale, and at --weight-light: this is the
+   only line on the page big enough to earn it. */
+.nf__title {
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+  max-inline-size: var(--measure-banner);
+  text-wrap: balance;
+}
+@supports (text-box: trim-both cap alphabetic) {
+  .nf__title {
+    text-box: trim-both cap alphabetic;
+  }
+}
+
+.nf__lede {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  max-inline-size: var(--measure-lede);
+  text-wrap: pretty;
+}
+/* The same voice one rank down, under a section heading rather than the title.
+   It also needs a leading interval of its own: `.section__head h2` carries
+   `margin-block-end: 0` and the chassis's `* + *` rule governs `.section__body`,
+   not the head — so this paragraph sat on the heading's baseline with no gap at
+   all, on both of the sections that have one. */
+.nf__lede--sub {
+  margin-block-start: var(--space-4);
+  color: var(--text-secondary);
+}
+
+.nf__note {
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-prose);
+  text-wrap: pretty;
+}
+.nf__note--fine {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  max-inline-size: var(--measure-fine);
+}
+
+/* --- The echo ------------------------------------------------------------ */
+
+/* Baseline-aligned so the mono chip sits on the label's line rather than beside
+   it, and wrapping so that a long address takes a second line instead of the
+   document taking a horizontal scrollbar. */
+.nf__echo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  min-inline-size: 0;
+}
+.nf__echo-label {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+}
+
+/* THE SPECIMEN. `overflow-wrap: anywhere` rather than a scroller: a 320px page
+   that scrolls sideways is the defect this repository has found more often than
+   any other, and an address is not content a reader needs to pan.
+
+   `anywhere` AND NOT `break-word`, and the difference is the whole rule. Only
+   `anywhere` shrinks the element's MIN-CONTENT size, and a flex item's default
+   `min-inline-size: auto` refuses to go below that — so with `break-word` an
+   80-character mono address would set a floor several hundred pixels wide inside
+   a 288px column, wrap visually and widen the document anyway. */
+.nf__path {
+  display: inline-block;
+  max-inline-size: 100%;
+  padding: var(--space-1) var(--space-3);
+  background: var(--surface-inset);
+  border: var(--border-width) solid var(--border-control);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: slashed-zero lining-nums;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* --- The site list ------------------------------------------------------- */
+
+/*
+ * THE INDEX SITS ON ITS OWN GROUND.
+ *
+ * This page was one continuous surface from the masthead to the colophon, and §5.1
+ * gives the language three ways to break that — a datum rule, a change of GROUND and
+ * an inversion — of which only the rule was being spent. The index of every page on
+ * the site is the one object on a 404 that is not prose: it is a generated list read
+ * from the same route record the nav reads, so it is a different KIND of thing from
+ * the two paragraphs around it, and a ground is how this language says so. It costs
+ * no hue, which is why this product can afford it at all.
+ *
+ * `:has()` rather than a positional selector, and rather than a class: the ground
+ * belongs to the section that holds the index, not to the second section, and a
+ * `:nth-of-type` would silently move the ground the first time a section is inserted.
+ * The chassis already uses `:has()` for the callout's mark track.
+ *
+ * The bleed is written with `max()` and a PERCENTAGE, never `100vw`. Every section
+ * here carries `.shell`, so a background painted on one stops at 78rem and reads as
+ * a very wide card; `max-inline-size: none` plus a padding that rebuilds the same
+ * column is `.shell`'s own geometry with the ground running edge to edge behind it.
+ * `vw` includes the classic scrollbar, and `calc(50% - 50vw)` is the single most
+ * common way a page acquires a horizontal scrollbar at 320px — which is where every
+ * accessibility defect in this repository has been found.
+ */
+.nf > .section:has(.nf__map) {
+  max-inline-size: none;
+  padding-inline: max(
+    var(--page-gutter),
+    calc(50% - var(--page-max) / 2 + var(--page-gutter))
+  );
+  background: var(--surface-sunken);
+}
+
+/*
+ * The tracks are CAPPED rather than shared out. `1fr` split a 1,152px column between
+ * two groups, so two lists of two and three short links each sat in a 528px track and
+ * the section measured 76% empty — the ground would only have made a bigger empty
+ * field. Capped at 20rem and packed to the start, the index reads as an index and the
+ * ground behind it reads as a chapter. `min()` keeps the floor below 320px, where the
+ * track collapses to one column anyway.
+ */
+.nf__map {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 20rem));
+  justify-content: start;
+  gap: var(--space-5) var(--space-6);
+}
+.nf__group > h3 {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+  padding-block-end: var(--space-2);
+  border-block-end: var(--border-width) solid var(--border-strong);
+  margin-block-end: var(--space-2);
+}
+.nf__group a,
+.nf__ways a {
+  /* 44px of hit area from the box itself, never from an absolutely positioned
+     overlay: on a tight gap an overlay steals its neighbour's target. */
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap-min);
+  padding-inline: var(--space-2);
+  /* The 44px box is the target; the text still has to begin on the same vertical as
+     the heading above it, so the inline padding is given back as a negative margin
+     rather than being left to indent the whole index off the rail. */
+  margin-inline-start: calc(var(--space-2) * -1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--border-width);
+  /* The ground the press lands on. It is a custom property rather than a literal
+     token because the index sits on a ZONED section and the rest of the page does
+     not: `--surface-inset` is 1.18:1 against the page and 1.05:1 against a zoned
+     ground, so one value cannot be a press in both places. This is the same
+     indirection `site.css` uses for `--response-ground-press`, in the one place on
+     this page that needs it. */
+  --nf-press: var(--surface-inset);
+}
+.nf > .section:has(.nf__map) .nf__group a {
+  --nf-press: var(--surface-raised);
+}
+
+/*
+ * THE RESPONSE, and it is three channels rather than one.
+ *
+ * The whole of it used to be a thicker underline on hover: nothing at all for a
+ * keyboard beyond the global focus ring, and nothing at all for a press — so on
+ * touch, where `:hover` is absent or sticky, tapping a link on this page produced no
+ * acknowledgement whatsoever until the route changed. That is most of what makes a
+ * page read as printed rather than as software.
+ *
+ * `--accent-hover` is the accent's own second rung, and it is safe on every ground
+ * without a new measurement — by construction rather than by assertion. In light it
+ * is #1f47b0 against #2b5cd9 and in dark #9dbaf8 against #7ba3f5: each is
+ * CHANNEL-WISE monotonic against the accent in the direction its theme runs, so its
+ * luminance is strictly further from every light ground and strictly further from
+ * every dark one. `--accent` is measured at 4.84 or better on all nine in three
+ * themes, so the hover can only be above that. It is also the same swap
+ * `.colophon__group a:hover` already makes, in the file that owns the chassis.
+ *
+ * The press ground is the device `.nav a:active` and `.colophon__group a:active`
+ * use, so a reader who has pressed a link anywhere else on this site has met it.
+ *
+ * NONE OF IT IS INSIDE A MOTION GUARD. A press has to be acknowledged whether or not
+ * the reader asked for reduced motion; only the interpolation between the two states
+ * is guarded, below.
+ */
+.nf__group a:hover,
+.nf__ways a:hover {
+  color: var(--accent-hover);
+  text-decoration-thickness: var(--border-width-emphasis);
+}
+.nf__group a:focus-visible,
+.nf__ways a:focus-visible,
+.nf__group a:active,
+.nf__ways a:active {
+  color: var(--accent-hover);
+  background-color: var(--nf-press);
+  text-decoration-thickness: var(--border-width-emphasis);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nf__group a,
+  .nf__ways a {
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard),
+      text-decoration-thickness var(--duration-fast) var(--ease-standard);
+  }
+  /* Down in 80ms, back in 140ms. The asymmetry is the whole of what makes a control
+     feel attached to a finger, and it costs one declaration. */
+  .nf__group a:active,
+  .nf__ways a:active {
+    transition-duration: var(--duration-instant);
+  }
+}
+
+/* --- Where to go instead ------------------------------------------------- */
+
+.nf__ways {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-6);
+}
+
+.nf__residue {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-fine);
+  padding-block-start: var(--space-4);
+  border-block-start: var(--border-width) solid var(--border-subtle);
+  text-wrap: pretty;
+}
+.nf__residue > strong {
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* The 40rem fold. The list stacks rather than narrowing: two 8rem columns of link
+   text is a pair of gutters, not a pair of columns. */
+@media (max-width: 40rem) {
+  .nf__map {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nf__ways {
+    flex-direction: column;
+  }
+}

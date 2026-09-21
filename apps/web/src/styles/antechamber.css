@@ -1,0 +1,306 @@
+/*
+ * `/app` with no actor — the antechamber.
+ *
+ * OWNER: the `/app` page.  CLASS PREFIX: `.ac-`.
+ *
+ * This is the first screen behind every public call to action, so it keeps the
+ * shared chrome and it is site copy rather than app chrome. The three lines above
+ * the fields are the page, not decoration around it: why the name is wanted, what
+ * the licence field does and does not do, and that this is not authentication.
+ *
+ * No selector outside that prefix may be declared here, and no rule in this file may
+ * write a hex value or reach for `var(--uncertain*)`. Amber reaches a page only
+ * through `[data-state="assumed"]`, `.traced--assumed` or `.margin-tally`, which is
+ * what keeps `assertAmberExclusive` stable while six page stylesheets are written in
+ * parallel — a whitelist widened once per page is not a whitelist. This page carries
+ * no assumed value and therefore no amber at all, and `antechamber.test.tsx` asserts
+ * the absence rather than trusting this sentence.
+ *
+ * The chassis classes come from `styles/site.css`: `.shell`, `.section`,
+ * `.section__head`, `.plate`, `.callout`, `.cta`, `.reveal`; the control family
+ * (`.input`, `.button`, `.field`, `.field__help`) comes from `styles/app.css`, which
+ * owns one control family in one file. This file adds nothing structural; if a page
+ * needs a chassis rule, the chassis is wrong.
+ *
+ * ONE EXCEPTION, DECLARED RATHER THAN DISCOVERED. The form section stands on
+ * `--surface-sunken`, which is `site.css`'s `.section--zoned` — a chassis rule the
+ * markup cannot ask for, because this pass owns three stylesheets and no `.tsx`. It
+ * should be deleted the day `Antechamber.tsx` can say `.section--zoned` for itself.
+ * Nothing else here is a chassis rule in disguise.
+ *
+ * TWO THINGS THE CHASSIS DOES NOT OWN, AND THEY ARE COMPOSED HERE RATHER THAN
+ * INVENTED. Said out loud so the next page does not solve them a third way:
+ *
+ *   1. There is no `h1` rule and no frontispiece class in `site.css`. The page title
+ *      below is assembled from the type tokens the design language assigns to an h1
+ *      — `--text-4xl`, `--weight-light`, `--leading-display`, `--tracking-banner` —
+ *      and from nothing else. The h2s take the chassis rule by sitting inside
+ *      `.section__head`, which is why they are wrapped rather than styled here.
+ *   2. There is no prose-link rule. Nothing in `site.css` or `app.css` colours an
+ *      `<a>` outside the nav, the colophon and the skip link, so an inline link in
+ *      body copy renders in the user agent's own blue — a colour no token declares
+ *      and no checker measures. It is set here, scoped to this page. The chassis
+ *      should own it; that is a one-rule change in a file this page does not own.
+ */
+
+/* --- The opening ------------------------------------------------------- */
+
+.ac__title {
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-banner);
+  /* Capped in characters rather than pixels, so the line count holds as the clamp
+     grows the face. */
+  max-inline-size: var(--measure-banner);
+  text-wrap: balance;
+  margin-block-end: var(--rhythm-block);
+}
+/* A text box is taller than the caps inside it, so a heading aligned to the box
+   sits visibly low against the rule above it. The chassis trims its h2s the same
+   way; this is the same declaration, not a second idea. */
+@supports (text-box: trim-both cap alphabetic) {
+  .ac__title { text-box: trim-both cap alphabetic; }
+}
+
+.ac__lede {
+  max-inline-size: var(--measure-prose);
+  color: var(--text-secondary);
+}
+.ac__lede > p + p { margin-block-start: var(--space-4); }
+
+/* Inline links in body copy. `.button` is excluded: an anchor wearing the control
+   family keeps the control family's ink. */
+.ac a:not(.button) {
+  color: var(--accent);
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--border-width);
+}
+/*
+ * THE RESPONSE, and it is what this page was missing rather than colour.
+ *
+ * An inline link here had one state: painted. No hover, no press, and nothing at all
+ * for a touch reader — who gets no acknowledgement of a tap until the route changes.
+ * A page whose only motion is its arrival is the shape the client's sentence
+ * describes, and the fix is response rather than more entrance.
+ *
+ * `--accent-hover` is the accent's own second rung, and it needs no new measurement
+ * — by construction rather than by assertion. In light it is #1f47b0 against
+ * #2b5cd9 and in dark #9dbaf8 against #7ba3f5: each is CHANNEL-WISE monotonic
+ * against the accent in the direction its theme runs, so its luminance is strictly
+ * further from every light ground and strictly further from every dark one, and
+ * `--accent` is already measured at 4.84 or better on all nine in three themes. It
+ * is the same swap `.colophon__group a:hover` makes in the file that owns the
+ * chassis.
+ *
+ * The press adds the ground `.nav a:active` and `.colophon__group a:active` already
+ * use, so a reader who has pressed a link anywhere on this site has met it. This
+ * page's links are in the two sections that stand on the PAGE ground, never on the
+ * zoned one, so one press ground is enough here — `--surface-inset` is 1.18:1
+ * against the page. `:focus-visible` answers exactly as hover does, so the keyboard
+ * is not a second design; the ring itself stays the global one.
+ *
+ * The colour changes sit OUTSIDE the motion guard on purpose: a press has to be
+ * acknowledged whether or not the reader asked for reduced motion. Only the
+ * interpolation is guarded.
+ */
+.ac a:not(.button):hover {
+  color: var(--accent-hover);
+  text-decoration-thickness: var(--border-width-emphasis);
+}
+.ac a:not(.button):active,
+.ac a:not(.button):focus-visible {
+  color: var(--accent-hover);
+  background-color: var(--surface-inset);
+  text-decoration-thickness: var(--border-width-emphasis);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ac a:not(.button) {
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard),
+      text-decoration-thickness var(--duration-fast) var(--ease-standard);
+  }
+  /* Down in 80ms, back in 140ms — the asymmetry is what makes a control feel
+     attached to a finger. */
+  .ac a:not(.button):active { transition-duration: var(--duration-instant); }
+}
+.ac a.button { text-decoration: none; }
+
+/* --- The form ----------------------------------------------------------- */
+
+/*
+ * THE FORM STANDS ON ITS OWN GROUND, AND THAT IS THE WHOLE OF THIS PAGE'S SHADE.
+ *
+ * The page was one continuous surface from the masthead to the colophon: three
+ * sections, two hairlines, and a white plate on a near-white page separated from it
+ * by 1.06:1 and a hairline. §5.1 gives this language three honest ways to break that
+ * — a datum rule, a change of GROUND and an inversion — and none of them costs a
+ * hue, which is the only reason a product whose amber has to stay the loudest thing
+ * on every surface can afford any of them at all.
+ *
+ * ONE of the three is spent here, and it is the quiet one. The form is the page: the
+ * two sections around it are the argument for entering a name and the limit on what
+ * entering it buys, and the middle one is where the reader acts. A zoned ground puts
+ * the plate a real rung above what it stands on — 1.11:1 in light against 1.06:1 on
+ * the page, and considerably more in dark — so the form reads as an object rather
+ * than as an outline. THE INVERSION IS NOT SPENT ON THIS PAGE. A three-section page
+ * whose last two paragraphs arrive in reverse would be spending the strongest device
+ * in the language on the smallest surface that could carry it, and the device is only
+ * strong while it is rare.
+ *
+ * `[aria-labelledby]` is the selector because the form section is the only one on
+ * this page that has a heading to point at — the opening is a frontispiece and the
+ * closing section's h2 is unreferenced. It is a stand-in: the section wants
+ * `.section--zoned`, which `site.css` already owns and already measures, and this
+ * pass owns three stylesheets and no markup.
+ *
+ * The bleed is `max()` over a PERCENTAGE and never `100vw`. Every section here
+ * carries `.shell`, so a ground painted on one stops at 78rem and reads as a very
+ * wide card; this rebuilds `.shell`'s own column with padding and lets the ground run
+ * edge to edge behind it. `vw` includes the classic scrollbar, and `calc(50% - 50vw)`
+ * is the commonest way a page acquires a horizontal scrollbar at 320px — which is
+ * where every accessibility defect in this repository has been found.
+ */
+.ac > .section[aria-labelledby] {
+  max-inline-size: none;
+  padding-inline: max(
+    var(--page-gutter),
+    calc(50% - var(--page-max) / 2 + var(--page-gutter))
+  );
+  background: var(--surface-sunken);
+}
+
+.ac__form { max-inline-size: var(--measure-lede); }
+
+/*
+ * The 44px floor, as a PROPERTY of each control rather than as an overlay.
+ *
+ * `app.css` pitches `.input` and `.button` at `--control-h` (40px), which is the
+ * visual size of a control inside a dense engine screen. This is a public page with
+ * two fields and two actions on it, so both reach `--tap-min`. It is done with
+ * `min-block-size` and a real gap: an absolutely positioned 44px expander over a
+ * 40px control overhangs by 4px and, at a small gap, steals its neighbour's target
+ * — a 2.5.8 regression introduced by a 2.5.8 fix.
+ *
+ * The gaps that separate them are the chassis's own — `.plate`'s `--space-4` between
+ * fields and `.cta`'s `--space-3` between actions — and both are at or above
+ * `--tap-gap-min`.
+ */
+.ac__form .input,
+.ac__form .button { min-block-size: var(--tap-min); }
+
+/* `.cta` opens a section elsewhere; inside a plate it is the next row of one, and
+   the plate's own gap already separates it. */
+.ac__form > .cta { margin-block-start: var(--space-2); }
+
+/* The plate is already inset at the page's tightest width, so the callout inside it
+   gives back its extra inline padding rather than stacking two insets at 320px. */
+.ac__form .callout { padding-inline: var(--space-4); }
+
+.ac__hints {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/*
+ * The unrecognised step id is the VISITOR's own text, echoed back so the address is
+ * answered rather than quietly substituted — which makes it the one string on this
+ * page whose length nobody here controls. A long id with no space in it would push
+ * the document sideways, and every accessibility defect found in this project has
+ * been found at 320px. It breaks mid-word rather than being truncated: a truncated
+ * id would be the page paraphrasing what the reader asked for, on the line whose
+ * whole point is that it does not.
+ */
+.ac__hints .callout__body { overflow-wrap: anywhere; }
+
+/*
+ * The empty-required-field message.
+ *
+ * NOT PAINTED IN A PROVENANCE INK, and that is the decision rather than an
+ * omission. `--variance` names NEVER CLAIMED and a discrepancy the engine found;
+ * a form field nobody has typed into is neither, and spending a provenance colour
+ * on it would teach a reader that the red on this site means "you made a mistake".
+ * The message is carried by the words, by the neutral case of the status rail, by
+ * `aria-invalid`, and by focus moving to the field — never by colour, and never by
+ * a placeholder that disappears the moment anyone types.
+ */
+.ac__error {
+  margin-block-start: var(--space-2);
+  padding-inline-start: var(--space-3);
+  border-inline-start: var(--rail-w) solid var(--border-strong);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  max-inline-size: var(--measure-fine);
+}
+.ac__error > strong { font-weight: var(--weight-medium); }
+
+/* ==========================================================================
+ * THE ACCOUNT PANEL
+ * ==========================================================================
+ *
+ * It sits inside `.plate`, so the ground, the border and the radius are the
+ * chassis's and nothing here restates them. What is here is the three things a
+ * shared plate cannot know: how wide a form should be, how its actions sit, and
+ * what a panel looks like while it does not yet know who you are.
+ */
+
+.ac-account {
+  /* The lede above it is set to a measure; a form that ran the full shell width
+     beside it would read as a different page rather than the next thing on this
+     one. */
+  max-inline-size: var(--measure-prose);
+}
+
+.ac-account__heading {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+  margin: 0 0 var(--space-3);
+}
+
+.ac-account__terms {
+  margin: 0 0 var(--space-5);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+.ac-account__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/*
+ * The two controls are a submit and a mode change, and they are NOT a pair of
+ * equals — one completes the form and the other rewrites it. `space-between` would
+ * have set them at opposite ends of the panel as though the reader were choosing
+ * between two ways to finish. They sit together, in reading order, with the
+ * secondary one after.
+ */
+.ac-account__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+/*
+ * THE WAITING STATE IS RESERVED, NOT COLLAPSED.
+ *
+ * `/api/auth/me` answers in a few milliseconds on a local server and in rather more
+ * on a bad connection. Without a floor the panel is a one-line box that becomes a
+ * three-field form, and everything below it jumps — on the screen behind every
+ * call to action, at the moment a reader is deciding whether to trust the product.
+ *
+ * The height is the sign-in form's, so the common case settles into the space
+ * already held for it.
+ */
+.ac-account--waiting {
+  min-block-size: 18rem;
+  display: flex;
+  align-items: center;
+}

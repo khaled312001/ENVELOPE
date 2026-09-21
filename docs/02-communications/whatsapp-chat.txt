@@ -1,0 +1,84 @@
+29/08/26, 21:07 - Messages and calls are end-to-end encrypted. Only people in this chat can read, listen to, or share them. *Learn more*
+29/08/26, 21:07 - 
+29/08/26, 21:06 - +971 54 717 8555: Hi Khaled, I would like to discuss a web development project
+29/08/26, 21:07 - +971 54 717 8555: PTT-20260829-WA0057.opus (file attached)
+29/08/26, 21:08 - khaled ahmed: اهلا وسهلا بيك يا بشمهندس 
+شكرا ليك
+29/08/26, 21:08 - khaled ahmed: ممكن بكره الضهر ان شاء الله لو متاح
+29/08/26, 21:08 - khaled ahmed: او لو حابب تكتبلي البريف هنا
+29/08/26, 21:08 - +971 54 717 8555: تمام ان شاء الله 👍
+29/08/26, 21:09 - +971 54 717 8555: ENVELOPE_Deck.pdf (file attached)
+ENVELOPE_Deck
+29/08/26, 21:09 - +971 54 717 8555: ENVELOPE_PRD_v2.pdf (file attached)
+ENVELOPE_PRD_v2.pdf
+29/08/26, 21:10 - +971 54 717 8555: كل قرار في التصميم لازم يكون له واحد من اثنين:
+
+A — Rule-based
+
+مثلاً:
+
+Corridor width = 1.8m
+
+Source: Dubai Building Code — Section X
+
+أو:
+
+B — Objective-based
+
+مثلاً:
+
+Core moved 2.4m east.
+
+Reason: increased sellable area by 3.7% while maintaining all regulatory constraints.
+29/08/26, 21:10 - +971 54 717 8555: IMG-20260829-WA0058.jpg (file attached)
+عندنا 4 inputs 
+1-affection plan
+2- Regulations 
+3-developer standards 
+4-RFP
+
+منهم ال engine يفهم المطلوب ويطبقة علي ال regulation 
+
+كل خطوة مربوطه مرجع مفيش هتطلع من غير ماتكون مدروسه
+
+لما تطبق الفكره نقدر نعرض علي البلديه اننا ناخد منهم references و presented data النظام يتعلم منهاازاي المشاريع السابقه اتصممت،، وفنفس الوقت ميتجاوزش القوانين الي موجوده دلوقتي علشان لو المباني دي مبنيه بقوانين قديمه يتجاهلها وياخد الصح
+مثلا مشروع قديم عامل ال setback 1.5m و فلregulation 2m ال ai ميقلدش المشروع ياخد الصح بس
+
+الهدف اننا نعمل نظام ai يقدر ياخد قطعه الارض و كل القيود و المتطلبات الخاصه بيها ويولد افضل حلول تطوير ممكنه للمشروع , فا النظام مش checker ال checker هيكون موجود ف مرحله من المراحل المراجعه علشان يكون متوافق معانا
+29/08/26, 21:10 - +971 54 717 8555: LLM
+ │
+ ├── Understand documents
+ ├── Extract requirements
+ ├── Explain decisions
+ └── Interface with user
+        │
+        ▼
+Knowledge / Rule Engine
+        │
+        ▼
+Constraint Solver
+        │
+        ▼
+Geometry / Generation Engine
+        │
+        ▼
+Optimization Engine
+        │
+        ▼
+BIM / CAD Output
+29/08/26, 21:11 - +971 54 717 8555: PTT-20260829-WA0060.opus (file attached)
+29/08/26, 21:13 - +971 54 717 8555: PTT-20260829-WA0061.opus (file attached)
+29/08/26, 21:15 - khaled ahmed: تمام هراجع التفاصيل كامله وارد عليك
+انا حاليا برضو شغال على بروجكت كبير لشركه عقارات تبع هندسة مدني في دبي
+مبنيه على الحوكمه
+29/08/26, 21:15 - khaled ahmed: تمام يا هندسه باذن الله اقدر افيدك
+29/08/26, 21:15 - +971 54 717 8555: تماام حلو اوي
+29/08/26, 21:15 - +971 54 717 8555: ان شاء الله شكرا جزيلا
+29/08/26, 21:15 - khaled ahmed: اسمها شركه Sigma PMO
+29/08/26, 21:16 - khaled ahmed: العفو
+29/08/26, 21:16 - +971 54 717 8555: هشوفها دلوقتي
+29/08/26, 21:16 - khaled ahmed: ممكن ابعتلك ملف pdf بس ياريت متشيرهوش مع حد
+29/08/26, 21:16 - +971 54 717 8555: حاضر اكيد
+29/08/26, 21:16 - khaled ahmed: Sigma-PMO-User-Guide-AR-4.pdf (file attached)
+Sigma-PMO-User-Guide-AR.pdf
+29/08/26, 21:17 - khaled ahmed: اتفضل اقراه تقريباً قريب من فكرتك

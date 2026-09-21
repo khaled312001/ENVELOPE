@@ -1,0 +1,24 @@
+{
+  // Solution file. It holds no sources of its own — `tsc -b` from the repo root
+  // builds every project in dependency order, which is also the order that
+  // proves the dependency graph is acyclic.
+  //
+  // The order below is the architecture, top to bottom. `invariants`,
+  // `validation` and `report` sit beside the engine rather than after it,
+  // because none of them may depend on it (Principle 4, §16.3) — `pnpm
+  // boundaries` is what keeps that true.
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/intake" },
+    { "path": "packages/geometry" },
+    { "path": "packages/rules" },
+    { "path": "packages/capacity" },
+    { "path": "packages/invariants" },
+    { "path": "packages/validation" },
+    { "path": "packages/report" },
+    { "path": "packages/exports" },
+    { "path": "apps/api" },
+    { "path": "apps/web" }
+  ]
+}

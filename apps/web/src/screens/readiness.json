@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-08-31T11:55:04.978Z",
+  "engineVersion": "0.1.0",
+  "readiness": {
+    "rulesApproved": 0,
+    "rulesTotal": 13,
+    "definitionsSigned": 0,
+    "definitionsTotal": 14,
+    "annexVersion": "0.1.0-UNSIGNED",
+    "annexSigned": false,
+    "invariantsRan": 10,
+    "invariantsTotal": 18,
+    "blocking": "No rule in this deployment is approved and the metric definitions annex is unsigned. Every figure below is an engine demonstration. None of it is a capacity assessment and none of it may be quoted to a third party."
+  },
+  "volume": {
+    "plots": 1,
+    "runs": 1,
+    "runsShown": 1,
+    "exported": 0,
+    "reviewed": 0
+  },
+  "governingBands": {
+    "REGULATORY": 0,
+    "GEOMETRIC": 0,
+    "PARKING": 1
+  },
+  "assumptionExposure": [
+    {
+      "parameterId": "parking.usable_fraction",
+      "runs": 1,
+      "maxRelativeEffect": "0.214286",
+      "basis": "the usable fraction of a parking level after cores, ramps and plant"
+    },
+    {
+      "parameterId": "parking.bay_area_factor",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "no cited rule fixes the gross area consumed per bay. 32 m²/bay is the mid-point of the 28–35 m²/bay range typical of a structured basement, and it is ranked in the assumption register because the parking band moves roughly in proportion to it."
+    },
+    {
+      "parameterId": "massing.podium_levels",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "How many of the permitted levels are podium is stated on the affection plan — \"G+2P+8\" is two — and this run was not given one, so the massing shows a single podium level. It changes the picture and the podium roof level; it changes no capacity figure in this run. Enter the podium count to replace it."
+    }
+  ],
+  "deferred": [
+    {
+      "ruleId": "R-EGRESS-TRAVEL-DISTANCE",
+      "parameterId": "egress.travel_distance.max",
+      "isLifeSafety": true,
+      "citation": {
+        "instrumentId": "PLACEHOLDER-NOT-A-REAL-INSTRUMENT",
+        "instrumentVersion": "0.0.0-draft",
+        "clauseReference": "UAE FLS Code, Chapter 2",
+        "documentUri": "urn:envelope:placeholder:unsourced",
+        "sourcePage": 0,
+        "sourceBbox": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "sourceTextVerbatim": "[NOT SOURCED] maximum travel distance to an exit"
+      }
+    },
+    {
+      "ruleId": "R-FACADE-FIRE-PERFORMANCE",
+      "parameterId": "facade.fire_performance",
+      "isLifeSafety": false,
+      "citation": {
+        "instrumentId": "PLACEHOLDER-NOT-A-REAL-INSTRUMENT",
+        "instrumentVersion": "0.0.0-draft",
+        "clauseReference": "UAE FLS Code, Chapter 1",
+        "documentUri": "urn:envelope:placeholder:unsourced",
+        "sourcePage": 0,
+        "sourceBbox": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "sourceTextVerbatim": "[NOT SOURCED] façade fire performance"
+      }
+    }
+  ],
+  "recentRuns": []
+}

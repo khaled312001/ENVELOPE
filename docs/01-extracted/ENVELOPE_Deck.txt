@@ -1,0 +1,231 @@
+AI DEVELOPMENT CAPACITY & DESIGN GENERATION ENGINE
+
+ENVELOPE
+
+What can be built on this plot --
+answered in minutes, with every number traceable.
+
+Dubai residential towers · Phase 0 to Phase 5 · Confidential
+THE PROBLEM
+
+The most expensive question in development is answered
+badly
+
+"What can we build on this plot?" decides whether land is bought and at what price. It is currently answered slowly, once, and without
+evidence.
+
+2­6 weeks       to a first capacity answer, by which time the bid deadline has usually passed
+
+AED 50k­250k    per feasibility study, which makes exploring a second option uneconomic
+
+One option      explored out of hundreds that were legally and commercially possible
+
+Zero citations  behind the numbers that then drive the entire financial model
+
+An efficiency percentage typed into a spreadsheet becomes a fact in the pro forma. Nobody can trace where it came from.
+
+                                                                                                                                                                                                                                                                02
+THE OPPORTUNITY
+
+The rules already exist. They have never been executable.
+
+Dubai has an unusually complete and consolidated regulatory framework. It is written for human readers -- which is exactly why it can be
+structured.
+
+Dubai Building Code                           UAE Fire & Life Safety                                                  Development Control                         Developer standards &
+                                              Code                                                                    Regulations                                 RFPs
+843 pages
+                                              707 pages                                                               Per plot                                    Per client
+Parts A­K. Defines FAR, gross floor area,
+setbacks, corridors, accessibility, vertical  Egress, travel distance, dead ends, exit                                Height, land use, setbacks and building     Unit mix, minimum areas, core and
+transportation.                               capacity. Cross-referenced directly by                                  lines for the specific plot. Overrides the  corridor preferences, efficiency targets,
+                                              the DBC.                                                                code where it speaks.                       commercial objectives.
+
+1,550 pages of shared rules -- plus a different DCR for every plot.
+
+No consultant reads all of it on any project. They apply the subset they remember. Different consultants apply different subsets, and nobody can prove
+which subset was used. Structuring this once, properly, is the asset.
+
+Page counts from the Dubai Building Code 2021 Edition and the UAE Fire and Life Safety Code of Practice as supplied.                                                                                         03
+PRODUCT VISION
+
+From plot to development decision, in one pipeline
+
+INPUTS    Plot · Regulations · Developer standards · RFP · Precedents                                               The order matters
+GENERATE
+OPTIMIZE  Envelope, massing, core, floor plate and units -- built from constraints, not                             Most tools start at the middle of this
+          checked against them                                                                                      pipeline, because they need a design to
+                                                                                                                    already exist.
+          Scored against objectives the developer declares, with explicit weights                                   ENVELOPE starts at the top, with a plot
+                                                                                                                    and an intention, and nothing drawn.
+VALIDATE  Hard constraints enforced, invariants proven, coverage gaps declared                                      That is the whole difference -- and it is
+                                                                                                                    why validation sits inside generation
+EXPLAIN   Every controlling number resolves to a rule, an assumption, an objective or a                             rather than after it.
+          person
+                                                                                                                                                                                     04
+Precedents inform the answer. They never authorise it -- a previously approved scheme is evidence, not permission.
+WHAT MAKES ENVELOPE DIFFERENT
+
+A rule is not a test. It is an instruction.
+
+A compliance checker asks whether a drawing passes. ENVELOPE turns the same rule into something that constructs buildable volume
+from an empty plot.
+
+COMPLIANCE CHECKER                                                                                            ENVELOPE
+
+"Is this setback at least 5.25 m?"                                                                            "Offset every boundary inward by 5.25 m."
+
+Needs a drawing to exist.                                                                                     Needs only a plot.
+Returns pass or fail.                                                                                         Returns the buildable footprint.
+Cannot tell you what to build instead.                                                                        The rule generates the answer.
+
+And the real code is harder than that                                                                         Assume G+10  setback 7.50 m        7.6 floors
+
+In the Dubai Building Code, the setback from a neighbouring plot depends on                                   Assume G+7   setback 6.00 m        6.9 floors
+how many floors the building has -- 3.00 m at ground, rising to 7.50 m at G+9
+and above. But the number of floors depends on the footprint, and the footprint                               Assume G+6   setback 5.25 m        6.6 floors 
+depends on the setback.
+                                                                                                              Converges in three passes. A checker cannot resolve this -- it has nothing to check yet.
+
+Setback values: Dubai Building Code 2021, Part B, Table B.1. Worked through on an 80 × 40 m plot at FAR 5.0.                                                                                            05
+PHASE STRATEGY
+
+Six phases, each one a dependency of the next
+
+The ordering is technical necessity, not caution. You cannot judge a generated tower until you can compute exactly what volume it may
+occupy.
+
+PHASE 0                  PHASE 1                    PHASE 2                   PHASE 3                   PHASE 4                      PHASE 5
+
+Capacity                 Configurations             Precedent                 AI Extraction             Generation                   Optimization
+
+Deterministic envelope,  Developer standards, RFP,  Approved projects as      Documents read and        Massing, core, floor plate,  Multi-objective search
+capacity and parking     ranked options             evidence and calibration  structured automatically  unit layouts                 and trade-off frontiers
+
+SELLABLE ON ITS OWN                                 EACH UNLOCKED BY THE ONE BEFORE IT
+
+Phase 2 needs a deterministic baseline to calibrate precedent against.
+Phase 3 needs a rule model for extracted documents to be structured into.
+Phase 4 needs constraints that can construct, not merely check.
+Phase 5 needs a generator whose output is already trustworthy.
+
+                                                                                                                                                                                                                                                                 06
+PHASE 0 -- THE MVP
+
+A deterministic engine that computes capacity and shows
+its working
+
+One community, one land use, residential towers. Form-based input. No AI in the computation path -- deliberately.
+
+WHAT IT COMPUTES                                  WHY NO AI IN PHASE 0
+
+    Buildable envelope from plot geometry         Extraction is not the risky part of this product. Geometry, rules and
+    FAR, height, coverage and setbacks applied    defensible provenance are.
+    Parking demand, area and podium implication
+    Capacity bands, with the binding limit named       A form takes ninety seconds. The extraction pipeline takes six weeks to
+    Assumption register, ranked by sensitivity         debug.
+    Invariant and constraint checks
+    PDF report and JSON export                         AI extraction needs a rule model to extract into -- Phase 0 builds it.
+
+                                                       It isolates the variable: if Phase 0 fails, we know it failed on geometry or
+                                                       rules, not on document reading.
+
+8­12 weeks · four people · ten real plots · 40 rules · benchmarked against two independent architects
+
+                                                                                                                                                                                                                                                                07
+THE TRUS T L AY ER
+
+Speed is worthless if the number cannot be defended
+
+Four mechanisms, all built in Phase 0, because none of them can be retrofitted later.
+
+Provenance            Every number resolves to a cited rule, a declared assumption, an objective, or a named person. The system never
+                      says "the AI decided."
+
+Human-approved rules  AI may draft a rule. A licensed architect approves it. Unapproved rules cannot be loaded by the engine -- there is
+                      no override flag.
+
+Assumption register   Where no rule governs, the system declares an assumption, ranks it by how much it moves the answer, and
+                      requires acknowledgement before export.
+
+Invariant checks      Independent arithmetic proofs: areas must sum, ratios must reconcile, parking must fit. A configuration that fails is
+                      never emitted.
+
+No hidden defaults. If we filled a gap, it is amber on the screen and listed in the report.
+
+                                                                                                                                                                                                                                                                08
+THE CAPACITY MODEL
+
+Five capacities. Most feasibility work reports one.
+
+Knowing which limit binds is worth more than knowing the maximum -- it tells you whether to negotiate, redesign, or accept.
+
+Regulatory capacity              What FAR and the area caps permit                                                           Phase 0
+
+Geometric capacity               What the envelope physically holds within height and footprint limits                       Phase 0
+
+Parking capacity                 What the achievable parking supply can actually support                                     Phase 0
+
+Commercially preferred capacity  What the developer's own declared objectives select                                         Phase 1
+
+Historically observed capacity   What comparable approved plots actually achieved                                            Phase 2
+
+The governing capacity is the smallest of them -- and we name it, rather than reporting a maximum the plot will never deliver.
+
+                                                                                                                                                                                                                                                                09
+THE AI BOUNDARY
+
+AI reads. The engine computes. Humans approve.
+
+Language models are excellent at reading documents and writing explanations, and unacceptable at computing an area. We use each for
+what it is reliable at.
+
+AI READS AND STRUCTURES                     THE ENGINE COMPUTES                    HUMANS APPROVE
+
+     Reads regulations, standards and RFPs       Geometry, areas and envelopes          Licensed architects approve every rule
+
+Proposes structured candidate rules         Rule applicability and evaluation      Objectives and weights are declared, not
+Classifies and normalises requirements      Capacity, parking and metrics          inferred
+
+                                                                                   Assumptions acknowledged before export
+
+Drafts explanations from the evidence       Constraint enforcement and invariants  Final professional certification
+
+An AI may draft a rule. It never becomes one. And it never computes a number you see on a report.
+
+                                                                                                                                                                                                                                                                10
+THE BUSINESS MOAT
+
+Four assets. The last one cannot be bought.
+
+Ordered by how hard each is to replicate. The visible parts of the product are the least defensible.
+
+01  Executable Dubai regulation model  Structured, cited, versioned, human-approved rules. Months of licensed-architect work,      Hard
+                                       and every regulatory change we absorb widens the gap for a new entrant.
+
+02  Developer standards library        Each client's house rules structured once, reused on every project. Creates switching cost  Harder
+                                       from the second project onward.
+
+03  Precedent corpus                   Approved projects normalised into evidence -- what capacity was actually achieved, not      Harder
+                                       merely permitted.
+
+04  Approval feedback loop             Which ENVELOPE-derived schemes were approved, amended or rejected. Nobody can               Hardest
+                                       purchase this dataset. It compounds with every project.                                                           11
+
+Not a moat: the model, the interface, the optimiser. All commodity. We are not betting on any of them.
+THE DECISION
+
+Phase 0 is not a calculator.
+
+It is the foundation asset for the
+entire AI design-generation platform.
+
+The rule model                         The geometry engine                   The provenance system                  The invariant layer
+
+Every later phase computes against it  Generation and optimisation both run  Cannot be retrofitted -- only rebuilt  Makes an impossible building
+                                       on it                                                                        unpublishable
+
+Build the Phase 0 engine. Validate it against real projects. Then scale it into the platform.
+
+                                                                                                                                                                                                                                                             12
+

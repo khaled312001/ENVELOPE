@@ -1,0 +1,114 @@
+/*
+ * `/work` — what this account has done.
+ *
+ * The screen is three schedules and a disclosure, and it borrows almost everything:
+ * `.schedule` from `site.css` gives it the table, the stacked-at-narrow behaviour
+ * and the row rules; `.plate`, `.chip`, `.value` and `.muted` are the chassis's. What
+ * is here is the handful of rules a list of RUNS needs that a list of anything else
+ * does not.
+ *
+ * NOTHING IN THIS FILE PAINTS `--uncertain`. The screen shows a COUNT of assumptions
+ * per run, and a count is a fact about a run rather than an assumed value — painting
+ * it amber would teach a reader that amber means "there were some", which is exactly
+ * the reservation §13.1 exists to protect. The amber belongs to the assumption
+ * itself, inside the run.
+ */
+
+.wk__lede {
+  max-inline-size: var(--measure-prose);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+.wk__note {
+  max-inline-size: var(--measure-prose);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+/*
+ * An empty list says what would fill it, in a sentence, on the page ground.
+ *
+ * Not an illustration and not a bordered box. An empty state drawn as a card is a
+ * card that says nothing is there, which is more furniture for less information —
+ * and on this screen the empty case is the ORDINARY case for a reader who has just
+ * made an account.
+ */
+.wk__empty {
+  padding-block: var(--space-5);
+}
+
+/* Two facts in one cell: the plot number is the identifier and the community is what
+   decides which rules applied to it. Stacked, because they are not a pair of equals. */
+.wk__plot {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+.wk__community {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/*
+ * The band sits under its own figure rather than in a column of its own.
+ *
+ * A column of governing capacities beside a column of bands is a portfolio
+ * valuation, and the three-band model exists to refuse exactly that comparison. Kept
+ * together they are one statement — this many square metres, from this band — which
+ * is the only form in which either half is true.
+ */
+.wk__band {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+.wk__reviewer {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.wk__when {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+/*
+ * The drafts list is deliberately NOT a `.schedule`.
+ *
+ * A draft has no provenance graph, no fingerprint and nothing computed in it, and
+ * giving it the same table treatment as a run would put an unvalidated form beside a
+ * traced value in one visual grammar. Three fields on a rule is enough, and the
+ * difference in shape is the statement.
+ */
+.wk__drafts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wk__drafts > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3) var(--space-5);
+  padding-block: var(--space-4);
+  border-block-start: var(--border-width) solid var(--border-default);
+}
+.wk__drafts > li:last-child {
+  border-block-end: var(--border-width) solid var(--border-default);
+}
+/* The label takes the room; the timestamp and the link sit at the end of the row. */
+.wk__drafts > li > :first-child {
+  flex: 1 1 16rem;
+}

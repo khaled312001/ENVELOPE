@@ -1,0 +1,722 @@
+<meta charset="utf-8">
+<title>TOP.ai — عرض فني ومالي</title>
+<!--FONTS-->
+<style>
+  :root{
+    --primary:#0B1E3F; --primary2:#12294D; --primary3:#1A3766;
+    --accent:#F5A623; --accent-l:#FBC978; --accent-d:#9A6510;
+    --brand:#00C2A8; --brand-l:#5FDFCF; --brand-d:#00776A;
+    --highlight:#FF7A1A;
+    --bg:#F4F5F7; --bone:#FAFBFD; --line:#E2E7EE; --line2:#CBD4E1;
+    --ink:#1A1A1A; --muted:#4F5F78;
+    --grad:linear-gradient(135deg,var(--primary),var(--primary2));
+    --grad-accent:linear-gradient(135deg,var(--accent),var(--accent-d));
+    --grad-brand:linear-gradient(135deg,var(--brand),var(--brand-d));
+    --green:#0E8A5F; --red:#C62828; --amber:#8A5A00;
+    --amber-bg:#FFF7E6;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Tajawal','Cairo','IBM Plex Sans',system-ui,sans-serif;
+    font-size:15px; line-height:1.95; direction:rtl;
+  }
+  .page{
+    max-width:960px; margin:0 auto; background:#fff;
+    box-shadow:0 1px 3px rgba(11,30,63,.06);
+  }
+  .wrap{padding:44px 52px}
+  @media (max-width:720px){ .wrap{padding:28px 20px} body{font-size:14.5px} }
+
+  /* ---------- cover ---------- */
+  .cover{
+    background:var(--grad); color:#fff; padding:64px 52px 56px; position:relative;
+    overflow:hidden;
+  }
+  .cover::after{
+    content:""; position:absolute; inset-inline-end:-120px; top:-120px;
+    width:420px; height:420px; border-radius:50%;
+    background:radial-gradient(circle,rgba(0,194,168,.28),transparent 62%);
+  }
+  .cover .kicker{
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--brand-l); font-family:'IBM Plex Sans',sans-serif; font-weight:600;
+  }
+  .cover h1{
+    font-family:'Cairo',sans-serif; font-weight:800; font-size:44px;
+    line-height:1.25; margin:14px 0 6px; position:relative;
+  }
+  .cover h1 span{color:var(--accent-l)}
+  .cover .sub{font-size:17px; color:#D5DEEC; max-width:56ch; position:relative}
+  .cover .meta{
+    display:flex; flex-wrap:wrap; gap:10px 34px; margin-top:34px;
+    padding-top:22px; border-top:1px solid rgba(255,255,255,.18);
+    font-size:13.5px; color:#C3CFE2; position:relative;
+  }
+  .cover .meta b{color:#fff; font-weight:600}
+
+  /* ---------- typography ---------- */
+  h2.section{
+    font-family:'Cairo',sans-serif; font-weight:800; font-size:25px;
+    color:var(--primary); margin:0 0 6px; padding-top:8px;
+  }
+  h2.section .n{
+    font-family:'IBM Plex Sans',sans-serif; color:var(--brand-d);
+    font-size:15px; font-weight:700; margin-inline-end:10px;
+  }
+  .lede{color:var(--muted); font-size:15.5px; margin:0 0 22px; max-width:70ch}
+  h3{font-family:'Cairo',sans-serif; font-weight:700; font-size:18px; color:var(--primary2); margin:30px 0 8px}
+  h4{font-family:'Cairo',sans-serif; font-weight:700; font-size:15.5px; color:var(--primary3); margin:20px 0 6px}
+  p{margin:0 0 14px}
+  hr.rule{border:0; border-top:1px solid var(--line); margin:40px 0}
+  .en{font-family:'IBM Plex Sans',sans-serif; direction:ltr; display:inline-block}
+  strong{font-weight:700; color:var(--primary)}
+
+  /* ---------- quote ---------- */
+  .quote{
+    background:var(--bone); border:1px solid var(--line);
+    border-inline-start:4px solid var(--accent);
+    border-radius:10px 4px 4px 10px; padding:18px 22px; margin:20px 0;
+  }
+  .quote p{font-size:16.5px; color:var(--primary); margin:0 0 8px; font-weight:500}
+  .quote cite{font-style:normal; font-size:12.5px; color:var(--muted)}
+
+  /* ---------- callouts ---------- */
+  .note{border-radius:10px; padding:16px 20px; margin:18px 0; border:1px solid}
+  .note h4{margin:0 0 6px; font-size:15px}
+  .note p:last-child{margin-bottom:0}
+  .note.warn{background:var(--amber-bg); border-color:#E8C879; color:#3D2A00}
+  .note.warn h4{color:var(--amber)}
+  .note.good{background:#E9F7F1; border-color:#9BD9C2; color:#0B3A2B}
+  .note.good h4{color:var(--green)}
+  .note.info{background:#EDF2FB; border-color:#BFD0EC; color:#122A4D}
+  .note.info h4{color:var(--primary2)}
+
+  /* ---------- tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:16px 0; font-size:14px}
+  th,td{padding:11px 13px; border-bottom:1px solid var(--line); text-align:right; vertical-align:top}
+  thead th{
+    background:var(--primary); color:#fff; font-family:'Cairo',sans-serif;
+    font-weight:700; font-size:13.5px; border-bottom:0;
+  }
+  thead th:first-child{border-start-start-radius:8px}
+  thead th:last-child{border-start-end-radius:8px}
+  tbody tr:nth-child(even){background:var(--bone)}
+  td.num{font-family:'IBM Plex Sans',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .scroll{overflow-x:auto; -webkit-overflow-scrolling:touch}
+
+  /* ---------- lists ---------- */
+  ul.clean{list-style:none; padding:0; margin:14px 0}
+  ul.clean li{position:relative; padding-inline-start:26px; margin-bottom:10px}
+  ul.clean li::before{
+    content:"◆"; position:absolute; inset-inline-start:0; top:-1px;
+    color:var(--brand-d); font-size:11px;
+  }
+  ul.yes li::before{content:"✔"; color:var(--green); font-size:13px}
+  ul.no  li::before{content:"✕"; color:var(--red); font-size:13px}
+
+  /* ---------- grids ---------- */
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:18px 0}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:18px 0}
+  @media (max-width:720px){ .grid2,.grid3{grid-template-columns:1fr} }
+  .card{background:var(--bone); border:1px solid var(--line); border-radius:12px; padding:18px 20px}
+  .card h4{margin:0 0 6px}
+  .card p{margin:0; font-size:14px; color:var(--muted)}
+  .card .big{
+    font-family:'IBM Plex Sans',sans-serif; font-size:30px; font-weight:700;
+    color:var(--primary); line-height:1.15; display:block; margin-bottom:2px;
+  }
+
+  /* ---------- pipeline ---------- */
+  .flow{display:grid; gap:12px; margin:22px 0}
+  .flow .step{
+    display:grid; grid-template-columns:44px 1fr; gap:16px; align-items:start;
+    background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px;
+  }
+  .flow .step .b{
+    width:44px; height:44px; border-radius:11px; background:var(--grad);
+    color:#fff; display:grid; place-items:center; font-family:'IBM Plex Sans',sans-serif;
+    font-weight:700; font-size:17px;
+  }
+  .flow .step h4{margin:2px 0 4px}
+  .flow .step p{margin:0; font-size:14px; color:var(--muted)}
+
+  /* ---------- roadmap ---------- */
+  .road{display:grid; gap:10px; margin:20px 0}
+  .road .d{
+    display:grid; grid-template-columns:92px 1fr; gap:16px; align-items:center;
+    border:1px solid var(--line); border-radius:10px; padding:13px 16px; background:#fff;
+  }
+  .road .d .t{
+    font-family:'Cairo',sans-serif; font-weight:700; font-size:13.5px;
+    color:#fff; background:var(--primary3); border-radius:7px;
+    text-align:center; padding:7px 4px;
+  }
+  .road .d p{margin:0; font-size:14px}
+
+  /* ---------- price ---------- */
+  .price{
+    background:var(--grad); color:#fff; border-radius:16px; padding:34px 36px; margin:24px 0;
+    position:relative; overflow:hidden;
+  }
+  .price::after{
+    content:""; position:absolute; inset-inline-start:-90px; bottom:-90px;
+    width:280px; height:280px; border-radius:50%;
+    background:radial-gradient(circle,rgba(245,166,35,.25),transparent 65%);
+  }
+  .price .row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    gap:20px; flex-wrap:wrap; position:relative;
+  }
+  .price .lbl{font-family:'Cairo',sans-serif; font-weight:700; font-size:19px}
+  .price .amt{
+    font-family:'IBM Plex Sans',sans-serif; font-weight:700; font-size:46px;
+    color:var(--accent-l); line-height:1;
+  }
+  .price .amt small{font-size:17px; color:#D5DEEC; font-weight:500; margin-inline-start:8px}
+  .price .fine{
+    margin-top:20px; padding-top:18px; border-top:1px solid rgba(255,255,255,.2);
+    font-size:13.5px; color:#C3CFE2; position:relative;
+  }
+  .price .fine p{margin:0 0 6px}
+
+  /* ---------- footer ---------- */
+  .foot{
+    background:var(--primary); color:#fff; padding:40px 52px; text-align:center;
+  }
+  .foot h3{font-family:'Cairo',sans-serif; color:#fff; font-size:23px; margin:0 0 10px}
+  .foot p{color:#C3CFE2; margin:0 0 4px; font-size:14.5px}
+  .foot .sig{
+    margin-top:22px; padding-top:20px; border-top:1px solid rgba(255,255,255,.18);
+    font-size:13px; color:#9FB0C9;
+  }
+  .foot .nm{font-family:'Cairo',sans-serif; color:var(--accent-l); font-weight:700; font-size:16px}
+
+  .badge{
+    display:inline-block; font-family:'IBM Plex Sans',sans-serif; font-size:11px;
+    font-weight:600; letter-spacing:.05em; padding:3px 9px; border-radius:20px;
+    background:var(--brand); color:#04302A; vertical-align:middle;
+  }
+  .badge.grey{background:var(--line2); color:var(--primary)}
+</style>
+
+<div class="page">
+
+<!-- ═══════════════ COVER ═══════════════ -->
+<div class="cover">
+  <div class="kicker">Barmagly &nbsp;·&nbsp; Technical &amp; Commercial Proposal</div>
+  <h1>TOP<span>.ai</span><br>محرك الطاقة الاستيعابية<br>لقطع أراضي دبي</h1>
+  <p class="sub">
+    من الأفكشن بلان إلى مخطط باركينج قابل للفتح في الأوتوكاد — بأرقام كل واحد منها
+    يقدر يوصل لبند في كود دبي للبناء.
+  </p>
+  <div class="meta">
+    <span>مُقدَّم إلى: <b>م. محمد أمين — Top Concept</b></span>
+    <span>مُقدَّم من: <b>برمجلي</b></span>
+    <span>التاريخ: <b>30 أغسطس 2026</b></span>
+    <span>مدة التنفيذ: <b>7 أيام</b></span>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ═══════════════ 1 ═══════════════ -->
+<h2 class="section"><span class="n">01</span>الملخص التنفيذي</h2>
+<p class="lede">
+  في اجتماع 30 أغسطس قلت الجملة اللي بنى عليها العرض ده كله.
+</p>
+
+<div class="quote">
+  <p>«لو عارف يفهم إزاي يحط الباركينج صح، وتوزيعته صح، والرامب بتاعي ماشي صح — أنا كده حلّصت <span class="en">3–4</span> شهور.»</p>
+  <cite>— تسجيل الاجتماع، الدقيقة 09:13</cite>
+</div>
+
+<p>
+  ودي مش حاجة صغيرة. الـ <span class="en">3–4</span> شهور دي هي أغلى حاجة في المشروع، وهي اللي بيتحدد فيها
+  <strong>عدد الوحدات</strong> — لأن زي ما قلت بنفسك في الدقيقة 03:23: كل وحدة مربوطة
+  بموقف، فاللي بيزوّد المواقف بيزوّد الوحدات.
+</p>
+
+<p>
+  <strong>العرض ده مش لبناء المنتج من الصفر.</strong> فيه محرك حسابات شغّال ومختبَر بالفعل —
+  اتبنى على مدى شهور، وبيعدّي حاليًا <span class="en">316</span> اختبار آلي، وبيقرأ الثلاث
+  أفكشن بلانات الحقيقية اللي معانا ويطلّع نفس الأرقام المطبوعة عليها بالظبط. الأسبوع ده
+  لتجميع دا كله في منتج تقدر تفتحه قدام حد ويشوفه شغّال.
+</p>
+
+<div class="grid3">
+  <div class="card">
+    <span class="big">4</span>
+    <h4>مدخلات</h4>
+    <p>أفكشن بلان · RFP · كود دبي · معايير المطوّر — زي ما عدّدتهم بنفسك.</p>
+  </div>
+  <div class="card">
+    <span class="big">7</span>
+    <h4>أيام</h4>
+    <p>من أول رفع الملف لحد تسليم نسخة شغّالة على سيرفر.</p>
+  </div>
+  <div class="card">
+    <span class="big">4</span>
+    <h4>صيغ تصدير</h4>
+    <p>أوتوكاد <span class="en">DXF</span> · إكسل · <span class="en">PDF</span> · <span class="en">JSON</span>.</p>
+  </div>
+</div>
+
+<div class="note good">
+  <h4>الحاجة اللي بتفرّقنا عن أي أداة تانية</h4>
+  <p>
+    كل رقم بيطلع من النظام بيقول لك <b>هو جه منين</b>. لو جاي من بند في الكود، البند مكتوب
+    ورقم صفحته معاه. ولو مفيش بند بيحكمه، النظام بيقول لك «دي فرضية» بلون كهرماني واضح،
+    ويكتب لك على أي أساس افترضها — <b>ما بيحطّش رقم من عنده وساكت</b>. دي مش ميزة شكلية:
+    دي الفرق بين أداة تقدر تدافع عنها قدام الأوثوريتي، وأداة بتديك رقم لازم تراجعه بنفسك
+    من الأول.
+  </p>
+</div>
+
+<hr class="rule">
+
+<!-- ═══════════════ 2 ═══════════════ -->
+<h2 class="section"><span class="n">02</span>من نحن — برمجلي</h2>
+<p class="lede">
+  شركة تطوير برمجيات بتبني أنظمة تشغيل حقيقية، مش صفحات عرض.
+</p>
+<p>
+  اشتغلنا قبل كده على أنظمة بتتعامل مع فلوس وقواعد وحسابات ما تقبلش الخطأ — منصات محاسبية
+  بدفتر قيود مزدوج، ومحركات قواعد بتقرر حسب شروط متغيّرة، وتكاملات مع أنظمة خارجية.
+  ونفس المنهج بينطبق هنا: النظام اللي بيحسب طاقة استيعابية قطعة أرض لازم يكون
+  <strong>محدَّد النتيجة</strong> — يعني نفس المدخلات تدّي نفس المخرجات بالظبط، كل مرة.
+</p>
+<h4>خبرة مباشرة في نفس عناصر المشروع ده</h4>
+<ul class="clean">
+  <li><b>استخراج بيانات من ملفات <span class="en">PDF</span></b> — بقراءة النص وموقعه على الصفحة، مش تخمين.</li>
+  <li><b>محركات قواعد</b> — قواعد كسجلات بيانات ليها تاريخ سريان ومرجع، مش شروط مدفونة في الكود.</li>
+  <li><b>هندسة حسابية دقيقة</b> — حساب بأعداد صحيحة بالمليمتر، عشان مايحصلش خطأ تقريب يكبر.</li>
+  <li><b>تصدير لصيغ هندسية</b> — <span class="en">DXF</span> مكتوب بإيدينا عشان يفتح في أي برنامج.</li>
+</ul>
+
+<hr class="rule">
+
+<!-- ═══════════════ 3 ═══════════════ -->
+<h2 class="section"><span class="n">03</span>المشكلة — إيه اللي بياكل الوقت فعلاً</h2>
+
+<p>
+  في الاجتماع فتحت الأفكشن بلان بتاع قطعة في ورسان، وفي أقل من 4 دقايق كنت قريت منه كل حاجة:
+  الاستعمال، الارتفاع <span class="en">G+2P+8</span>، الـ <span class="en">GFA</span> والـ
+  <span class="en">FAR</span>، الارتدادات، ونسبة التغطية. <strong>دي مش المشكلة.</strong>
+</p>
+
+<p>
+  المشكلة اللي بعدها: إنك تحوّل الكلام ده لمخطط باركينج فعلي — حارات ومسارات ورامب ومداخل —
+  وتطلّع منه عدد الوحدات اللي المطوّر بيسعّر عليه. ودي اللي بتاخد شهور.
+</p>
+
+<h3>وليه بتاخد شهور</h3>
+<div class="scroll"><table>
+  <thead><tr><th>الخطوة</th><th>بتتعمل دلوقتي إزاي</th><th>المشكلة فيها</th></tr></thead>
+  <tbody>
+    <tr><td>قراءة الأفكشن بلان</td><td>بالعين، ونقل يدوي</td><td>سريعة — بس النقل اليدوي بيغلط</td></tr>
+    <tr><td>تطبيق كود دبي</td><td>الرجوع لـ <span class="en">843</span> صفحة</td><td>مين اللي فاكر جدول <span class="en">B.13</span> بالظبط؟</td></tr>
+    <tr><td>معايير المطوّر</td><td>كتيّب منفصل لكل مطوّر</td><td>بتتعارض مع الكود ومع الـ RFP</td></tr>
+    <tr><td><b>توزيع الباركينج</b></td><td>رسم يدوي، ومحاولة ورا محاولة</td><td><b>دي الـ <span class="en">3–4</span> شهور</b></td></tr>
+    <tr><td>عدد الوحدات</td><td>بيطلع في الآخر</td><td>لو غلط، ترجع من الأول</td></tr>
+  </tbody>
+</table></div>
+
+<div class="note info">
+  <h4>الملاحظة اللي المنتج كله مبني عليها</h4>
+  <p>
+    عدد الوحدات مش بيتحدد بالـ <span class="en">FAR</span> لوحده. بيتحدد بـ <b>أقل</b> رقم
+    من اتنين: اللي الـ <span class="en">GFA</span> يسمح بيه، واللي الباركينج يقدر يخدمه.
+    وفي أغلب قطع دبي، <b>الباركينج هو اللي بيقيّد</b>. فلو النظام عرف يوزّع الباركينج صح،
+    يبقى عرف عدد الوحدات — مش العكس.
+  </p>
+</div>
+
+<hr class="rule">
+
+<!-- ═══════════════ 4 ═══════════════ -->
+<h2 class="section"><span class="n">04</span>المدخلات الأربعة</h2>
+<p class="lede">
+  دي اللي إنت عدّدتها بنفسك في الدقيقة 11:15. النظام مبني حواليها.
+</p>
+
+<div class="scroll"><table>
+  <thead><tr><th style="width:30px">#</th><th>المدخل</th><th>بيدّي إيه</th><th>حالته دلوقتي</th></tr></thead>
+  <tbody>
+    <tr><td class="num">1</td><td><b>الأفكشن بلان</b></td>
+        <td>المساحة · <span class="en">FAR</span> · <span class="en">GFA</span> · الارتفاع · الارتدادات · التغطية · الاستعمال</td>
+        <td><span class="badge">قارئ آلي شغّال</span></td></tr>
+    <tr><td class="num">2</td><td><b>الـ RFP</b></td>
+        <td>ميكس الوحدات · المساحات المستهدفة · البلكونات · المتطلبات التجارية</td>
+        <td><span class="badge grey">رفع + استخراج نص</span></td></tr>
+    <tr><td class="num">3</td><td><b>كود دبي للبناء</b></td>
+        <td>نِسَب المواقف · أبعاد الحارات · المداخل · الارتدادات</td>
+        <td><span class="badge">البنود المطلوبة مكوَّدة</span></td></tr>
+    <tr><td class="num">4</td><td><b>معايير المطوّر</b></td>
+        <td>كفاءة البدروم · نسب البلكونة · الخدمات · شبكة الأعمدة</td>
+        <td><span class="badge grey">عزيزي كنموذج</span></td></tr>
+  </tbody>
+</table></div>
+
+<h3>حاجة مهمة عن ترتيب الأولوية بينهم</h3>
+<p>
+  كود دبي نفسه، في البند <span class="en">B.7.2.6.1</span>، بيقول بالحرف إن متطلبات المواقف
+  المكتوبة في <b>الأفكشن بلان أو الـ DCR</b> <b>بتعلو على</b> جدول <span class="en">B.13</span>.
+  يعني الترتيب مش اختيار مننا — هو مكتوب في الكود، والنظام بيطبّقه كده.
+</p>
+
+<hr class="rule">
+
+<!-- ═══════════════ 5 ═══════════════ -->
+<h2 class="section"><span class="n">05</span>إزاي النظام بيشتغل</h2>
+<p class="lede">سبع خطوات، من رفع ملف لحد ملف أوتوكاد.</p>
+
+<div class="flow">
+  <div class="step"><div class="b">1</div><div>
+    <h4>ترفع الأفكشن بلان</h4>
+    <p>
+      النظام بيقرأ الـ <span class="en">PDF</span> ويطلّع منه المساحة والـ <span class="en">FAR</span>
+      والـ <span class="en">GFA</span> والارتفاع والارتدادات والتغطية — ويوريك <b>مكان كل رقم على
+      الورقة</b> عشان تتأكد بنفسك. وبيعمل مراجعة حسابية: الـ <span class="en">FAR</span> × المساحة
+      لازم يطلّع الـ <span class="en">GFA</span> المطبوع. لو ما طلعش، بيقول لك.
+    </p>
+  </div></div>
+
+  <div class="step"><div class="b">2</div><div>
+    <h4>ترسم القطعة بالأبعاد</h4>
+    <p>
+      زي ما إنت اقترحت بالظبط في الدقيقة 12:56: «يرسم من هنا لهنا 30 متر، ومن هنا لهنا 20 متر».
+      وبتحدّد كل ضلع هو شارع ولا جار — لأن ده اللي بيحدد الارتداد والمدخل.
+    </p>
+  </div></div>
+
+  <div class="step"><div class="b">3</div><div>
+    <h4>يحسب الظرف البنائي</h4>
+    <p>
+      البوديوم بياخد الأرض كلها، والبرج بيتراجع بالارتداد وبيتقيّد بنسبة التغطية —
+      نفس الكلام اللي شرحته في الدقيقة 05:04. والنتيجة: مساحة البصمة، وعدد الأدوار،
+      والـ <span class="en">GFA</span> المحقَّق.
+    </p>
+  </div></div>
+
+  <div class="step"><div class="b">4</div><div>
+    <h4>يوزّع الباركينج فعليًا</h4>
+    <p>
+      مش بيقسّم مساحة على رقم — بيحطّ الحارات والممرات والرامب <b>كأشكال هندسية حقيقية</b>
+      بأبعاد جدول <span class="en">B.11</span>: حارة 2.5 × 5.5 م، وممر 6.00 م للاتجاهين —
+      نفس الرقم المكتوب على رسوماتك في الأوتوكاد. وبيحسب الرامب من ضمن العرض، مش فوق الحارات.
+    </p>
+  </div></div>
+
+  <div class="step"><div class="b">5</div><div>
+    <h4>يرشّح مكان المدخل</h4>
+    <p>
+      بنفس القاعدة اللي إنت قلتها: على ضلع شارع مش على جار، عرض <span class="en">6</span> م
+      (<span class="en">3</span> رايح و<span class="en">3</span> جاي)، وبمسافة
+      <span class="en">15</span> م صافية من كل ركن حسب <span class="en">B.7.2.1</span>.
+      ولو القطعة على شارعين، البند نفسه بيقول ياخد <b>الشارع الفرعي</b> — والنظام بيمشي عليه.
+      وبيوريك <b>كل البدائل</b> مرتّبة، مش بديل واحد، عشان القرار يفضل قرارك.
+    </p>
+  </div></div>
+
+  <div class="step"><div class="b">6</div><div>
+    <h4>يطلّع عدد الوحدات</h4>
+    <p>
+      بيقارن اللي الـ <span class="en">GFA</span> يسمح بيه باللي الباركينج يخدمه، وياخد الأقل —
+      <b>ويقول لك مين الاتنين اللي قيّد</b>. ودي المعلومة اللي بتقرر تعمل إيه بعد كده.
+    </p>
+  </div></div>
+
+  <div class="step"><div class="b">7</div><div>
+    <h4>تصدّر</h4>
+    <p>
+      <span class="en">DXF</span> يفتح في الأوتوكاد على طبقات مرتّبة · إكسل بجداول المساحات
+      والمواقف · <span class="en">PDF</span> تقرير كامل بالمرجعية.
+    </p>
+  </div></div>
+</div>
+
+<hr class="rule">
+
+<!-- ═══════════════ 6 ═══════════════ -->
+<h2 class="section"><span class="n">06</span>مبدأ المرجعية — أهم جزء في المنتج</h2>
+<p class="lede">
+  ده اللي بيخلّي النظام أداة قرار مش صندوق أسود.
+</p>
+
+<p>
+  أي رقم بيطلع من النظام بيكون له واحد من أربع حالات، وكل حالة ليها شكل مختلف على الشاشة
+  وفي التقرير وفي ملف الإكسل:
+</p>
+
+<div class="scroll"><table>
+  <thead><tr><th>الحالة</th><th>معناها</th><th>شكلها</th></tr></thead>
+  <tbody>
+    <tr><td><b>مُشتَق</b><br><span class="en" style="font-size:12px;color:#4F5F78">DERIVED</span></td>
+        <td>محسوب من بند في الكود، والبند مكتوب ورقم صفحته معاه</td>
+        <td>عادي، وجنبه المرجع</td></tr>
+    <tr><td><b>مفترَض</b><br><span class="en" style="font-size:12px;color:#4F5F78">ASSUMED</span></td>
+        <td>مفيش بند بيحكمه، فالنظام افترض — <b>وكتب على أي أساس</b></td>
+        <td>كهرماني وواضح جدًا، وقابل للتعديل</td></tr>
+    <tr><td><b>مُدخَل</b><br><span class="en" style="font-size:12px;color:#4F5F78">USER_SET</span></td>
+        <td>إنت اللي كتبته أو عدّلته</td>
+        <td>وجنبه اسمك</td></tr>
+    <tr><td><b>استثناء</b><br><span class="en" style="font-size:12px;color:#4F5F78">VARIANCE</span></td>
+        <td>فيه استثناء موثّق من الجهة</td>
+        <td>إطار أحمر ومعاه المستند</td></tr>
+  </tbody>
+</table></div>
+
+<div class="note warn">
+  <h4>ليه اللون الكهرماني ده مهم للدرجادي</h4>
+  <p>
+    أخطر حاجة ممكن تحصل في أداة زي دي إن حد ياخد <b>فرضية</b> على إنها <b>حقيقة</b>. عشان كده
+    الفرضيات بتبان بشكل صارخ في كل مكان — على الشاشة، وفي الـ <span class="en">PDF</span>،
+    وحتى جوه ملف الإكسل نفسه لما تفتحه. وفي آخر كل تقرير في <b>«سجل الفرضيات»</b>: كل فرضية،
+    وأساسها، وتأثيرها على النتيجة لو طلعت غلط.
+  </p>
+</div>
+
+<h3>حالة حقيقية من الملفات اللي معانا</h3>
+<p>
+  من التلات أفكشن بلانات اللي عندنا، فيه واحدة —
+  <span class="en">DJAZ1MED12RES011</span> — مكتوب عليها الارتفاع
+  <span class="en">G+11</span> و<b>خلاص</b>. مفيش <span class="en">FAR</span>، ولا
+  <span class="en">GFA</span>، ولا ارتداد، ولا نسبة تغطية.
+</p>
+<p>
+  أسهل حاجة إن النظام ياخد الـ <span class="en">FAR</span> من قطعة جنبها ويكمّل. <b>النظام
+  بتاعنا بيرفض.</b> بيقول لك: «الأرقام دي مش مكتوبة على الورقة — لازم تجيبها من الـ
+  <span class="en">DCR</span> أو تدخّلها بنفسك»، وبيوقف الحساب. لأن رقم مخترَع بيوصل لجدول
+  جدوى، والرفض بيوصل لواحد يقدر يتصرّف.
+</p>
+
+<div class="note warn">
+  <h4>حاجة لازم تكون مكتوبة بوضوح في كل مخرَج</h4>
+  <p>
+    <b>النظام ده ما بيقولش إن التصميم مطابق للكود.</b> ده مش تواضع — ده وضع قانوني.
+    كل تقرير وكل ملف تصدير بيطلع مكتوب عليه
+    «<span class="en">REGULATORY VALIDITY: NOT ASSESSED</span>» — دراسة طاقة استيعابية،
+    مش شهادة مطابقة، ولا بتتقدّم للأوثوريتي على إنها كده. اللي بيراجع المطابقة هو المهندس
+    المسؤول، والنظام بيديله شغل مرتّب يراجعه، مش بديل عنه.
+  </p>
+</div>
+
+<hr class="rule">
+
+<!-- ═══════════════ 7 ═══════════════ -->
+<h2 class="section"><span class="n">07</span>المخرجات والتصدير</h2>
+
+<div class="grid2">
+  <div class="card">
+    <h4>أوتوكاد — <span class="en">DXF</span></h4>
+    <p>
+      حدود القطعة · خطوط الارتداد · بصمة البوديوم والبرج · مخطط الباركينج بالحارات
+      والممرات والرامب. كل حاجة على <b>طبقة باسمها</b>، والمفترَض على طبقة لوحده عشان
+      يفضل مميّز حتى بعد ما يخرج من النظام. <span class="en">R12</span> — بيفتح في أي
+      إصدار أوتوكاد وأي عارض.
+    </p>
+  </div>
+  <div class="card">
+    <h4>إكسل</h4>
+    <p>
+      جدول المساحات · جدول الوحدات · جدول المواقف · وسجل الفرضيات. كل صف مكتوب جنبه
+      مرجعيته، والصفوف المفترَضة <b>ملوّنة كهرماني بإطار متقطّع</b> — عشان اللي هياخد
+      الأرقام دي ويحطها في جدول جدوى يشوف الفرق.
+    </p>
+  </div>
+  <div class="card">
+    <h4><span class="en">PDF</span> — التقرير</h4>
+    <p>
+      التقرير الكامل: المدخلات، والقواعد اللي اتطبّقت بمراجعها، والنتائج، وسجل الفرضيات،
+      وبيان «اللي النظام ما قيّمهوش».
+    </p>
+  </div>
+  <div class="card">
+    <h4><span class="en">JSON</span></h4>
+    <p>
+      كل تشغيلة بتتحفظ كاملة — مدخلاتها ومخرجاتها ونسخة القواعد وقت التشغيل. تقدر ترجع
+      لتشغيلة من شهر وتعيد تشغيلها وتطلّع نفس النتيجة بالحرف.
+    </p>
+  </div>
+</div>
+
+<div class="note info">
+  <h4>عن الريفيت — كلام صريح</h4>
+  <p>
+    إنت ذكرت في الدقيقة 07:34 موضوع <span class="en">Autodesk APS</span> والـ
+    <span class="en">IFC</span>، وقلت بنفسك إنك مش متعامل مع الـ <span class="en">IFC</span>.
+    <b>ما بنعرضهوش في الأسبوع ده</b> — لأنه اشتراك خارجي وتكامل لوحده وموديل بيانات كامل،
+    ومش صح نبيعهولك جوه سعر أسبوع. الـ <span class="en">DXF</span> بيفتح في الريفيت عن طريق
+    الاستيراد، ودي تغطّي عرض المفهوم. ولو حبيت الـ <span class="en">IFC</span> بجد، ده
+    بند منفصل نتكلم فيه بعد ما تشوف الأداة شغّالة.
+  </p>
+</div>
+
+<hr class="rule">
+
+<!-- ═══════════════ 8 ═══════════════ -->
+<h2 class="section"><span class="n">08</span>التقنية</h2>
+
+<div class="scroll"><table>
+  <thead><tr><th>الطبقة</th><th>التقنية</th><th>ليه</th></tr></thead>
+  <tbody>
+    <tr><td>قاعدة البيانات</td><td><b><span class="en">MySQL</span></b></td>
+        <td>زي ما طلبت. متاحة على أي استضافة عادية، ومش محتاجة إعداد خاص.</td></tr>
+    <tr><td>الواجهة الخلفية</td><td><span class="en">Node.js + Fastify</span></td><td>سريعة، وعقود مدخلاتها متحقَّق منها.</td></tr>
+    <tr><td>الواجهة الأمامية</td><td><span class="en">React + TypeScript</span></td><td>نفس نظام الأنواع من الحساب للشاشة — الأرقام ما تتوهش في النص.</td></tr>
+    <tr><td>العرض ثلاثي الأبعاد</td><td><span class="en">Three.js / WebGL</span></td><td>شبيه بالعرض اللي شفناه، من غير أي برنامج يتنصّب.</td></tr>
+    <tr><td>قراءة الـ <span class="en">PDF</span></td><td><span class="en">pdf.js</span></td><td>بتقرأ النص وموقعه — عشان نقدر نوريك مكان الرقم على الورقة.</td></tr>
+    <tr><td>الحساب الهندسي</td><td>أعداد صحيحة بالمليمتر</td><td>مفيش أخطاء تقريب بتكبر مع الخطوات.</td></tr>
+  </tbody>
+</table></div>
+
+<hr class="rule">
+
+<!-- ═══════════════ 9 ═══════════════ -->
+<h2 class="section"><span class="n">09</span>نطاق العمل</h2>
+<p class="lede">
+  الجزء اللي المفروض تقراه مرتين. اللي مش مكتوب هنا، مش داخل.
+</p>
+
+<h3>اللي يشمله العرض</h3>
+<ul class="clean yes">
+  <li>رفع الأفكشن بلان (<span class="en">PDF</span>) والاستخراج الآلي لبياناته، مع شاشة مراجعة توريك مكان كل رقم على الورقة.</li>
+  <li>مراجعة حسابية للورقة نفسها (<span class="en">FAR</span> × المساحة = <span class="en">GFA</span>) مع تنبيه لو ما اتطابقتش.</li>
+  <li>رسم قطعة الأرض بإدخال أطوال الأضلاع، وتصنيف كل ضلع (شارع / جار / فضاء).</li>
+  <li>حساب الظرف البنائي: بصمة البوديوم والبرج، عدد الأدوار، الـ <span class="en">GFA</span> المحقَّق.</li>
+  <li>ميكس الوحدات وعدد الوحدات، مع بيان مين القيد الحاكم (الـ <span class="en">GFA</span> ولا الباركينج).</li>
+  <li><b>توليد مخطط باركينج فعلي</b> — حارات وممرات ورامب بأبعاد جدول <span class="en">B.11</span> — وحساب كفاءة م²/موقف.</li>
+  <li><b>ترشيح مكان المدخل المروري</b> — على أي ضلع شارع (مش على جار)، بعرض <span class="en">6</span> م، وبمسافة <span class="en">15</span> م صافية من كل ركن حسب <span class="en">B.7.2.1</span>، ومع تفضيل الشارع الفرعي زي ما البند بيقول. وبيوريك كل البدائل مش بديل واحد.</li>
+  <li>عرض ثلاثي الأبعاد للكتلة مع إمكانية تعديل البارامترات وإعادة الحساب فورًا.</li>
+  <li>تصدير <span class="en">DXF</span> بطبقات · إكسل بأربع أوراق · تقرير <span class="en">PDF</span> · <span class="en">JSON</span>.</li>
+  <li>تكويد بنود كود دبي الخاصة بالمواقف والأبعاد والارتدادات، بمراجعها وأرقام صفحاتها.</li>
+  <li>معايير مطوّر واحد (عزيزي) كنموذج، بالطريقة اللي تخلّي إضافة غيره شغل بيانات مش شغل كود.</li>
+  <li>قاعدة <span class="en">MySQL</span> + نشر على سيرفر + تسليم الكود كامل.</li>
+</ul>
+
+<h3>اللي <u>ما</u> يشمله العرض</h3>
+<ul class="clean no">
+  <li><b>أي ادّعاء بالمطابقة للكود.</b> النظام بيحسب ويستشهد — ما بيشهدش. ودي حاجة دائمة مش مرحلية.</li>
+  <li>توليد مخططات الوحدات الداخلية (غرف وحمامات) زي <span class="en">drafted.ai</span> — ده مشروع لوحده.</li>
+  <li>تكامل <span class="en">Revit / IFC / Autodesk APS</span>.</li>
+  <li>تكويد الـ <span class="en">843</span> صفحة كود دبي كاملة — بنكوّد بنود الباركينج والارتدادات والأبعاد بس.</li>
+  <li>كود الحريق الإماراتي (<span class="en">707</span> صفحة) — مسافات الهروب والمخارج مش متقيّمة.</li>
+  <li>معايير إعمار وداماك ونخيل — عزيزي بس في الأسبوع ده.</li>
+  <li>مراجعة ميول الرامب وارتفاعاته (<span class="en">B.7.2.2</span>) — بنحجز مساحة الرامب في المخطط وبنقول صراحة إن الميل مش متقيّم.</li>
+  <li><b>الاختيار الأمثل آليًا لمكان الرامب والكور.</b> إنت طلبتها في الدقيقة 34:37 («السوفتوير يفهم فين أحسن مكان أحط الرامب... best case كل مرة»)، وهي أكبر طلب في الميتنج. دي مسألة بحث بين آلاف الاحتمالات، ومحتاجة مرحلة لوحدها. النسخة دي بترسم توزيع صحيح — مش بتدوّر على الأفضل.</li>
+  <li>كود الدفاع المدني (<span class="en">DCD</span>) ومسافات الهروب — مستند منفصل مش موجود معانا.</li>
+  <li>غرفة الزبالة والكور — بيتحجزلهم مساحة ضمن الخصم، بس مش بيتحطوا في مكان محدد.</li>
+  <li>رسم قطعة الأرض على خرايط جوجل زي زينيريت — الرسم بالأبعاد بس.</li>
+  <li>نظام مستخدمين وصلاحيات وشركات متعددة.</li>
+  <li>تطبيق موبايل.</li>
+</ul>
+
+<div class="note warn">
+  <h4>نقطة أمانة عن المدة والسعر</h4>
+  <p>
+    الأسبوع ده كفاية <b>لأن المحرك الحسابي موجود ومختبَر بالفعل</b>. لو كنا هنبدأ من الصفر،
+    الشغل ده مداه شهور مش أيام. اللي بيتسلّم في آخر الأسبوع هو <b>نسخة شغّالة تعرضها</b> —
+    وهي بالظبط اللي إنت قلت إنك عايزها في الدقيقة 09:58: «حاجة مدّينة في بوكس كـ
+    <span class="en">collab</span> صغير عشان أعرضه على حد». مش نظام إنتاج بيشتغل عليه
+    فريق يوميًا — ده بيحتاج المرحلة اللي بعدها.
+  </p>
+</div>
+
+<hr class="rule">
+
+<!-- ═══════════════ 10 ═══════════════ -->
+<h2 class="section"><span class="n">10</span>خارطة الطريق — 7 أيام</h2>
+
+<div class="road">
+  <div class="d"><div class="t">اليوم 1</div><p>شاشة رفع الأفكشن بلان + الاستخراج الآلي + شاشة المراجعة اللي بتوريك مكان كل رقم على الورقة.</p></div>
+  <div class="d"><div class="t">اليوم 2</div><p>أداة رسم القطعة بالأبعاد، وتصنيف الأضلاع، وحساب الارتدادات وخطوطها.</p></div>
+  <div class="d"><div class="t">اليوم 3</div><p>ربط محرك السعة: البصمة والأدوار والـ <span class="en">GFA</span> وميكس الوحدات وعدد الوحدات.</p></div>
+  <div class="d"><div class="t">اليوم 4</div><p><b>مخطط الباركينج</b> — الحارات والممرات والرامب، وحساب م²/موقف، وتحديد القيد الحاكم.</p></div>
+  <div class="d"><div class="t">اليوم 5</div><p>العرض ثلاثي الأبعاد، والتعديل الحي على البارامترات مع إعادة الحساب.</p></div>
+  <div class="d"><div class="t">اليوم 6</div><p>التصدير: <span class="en">DXF</span> وإكسل و<span class="en">PDF</span>، وقاعدة <span class="en">MySQL</span>.</p></div>
+  <div class="d"><div class="t">اليوم 7</div><p>الاختبار على الثلاث قطع الحقيقية، والنشر على السيرفر، والتسليم وجلسة الشرح.</p></div>
+</div>
+
+<div class="note info">
+  <h4>مراجعة في نص الطريق</h4>
+  <p>
+    آخر اليوم الرابع بنعرض لك اللي وصلنا له شغّال. لو حبيت تغيّر أولوية حاجة، ده الوقت
+    المناسب — بعد كده بيبقى تأجيل للتسليم.
+  </p>
+</div>
+
+<hr class="rule">
+
+<!-- ═══════════════ 11 ═══════════════ -->
+<h2 class="section"><span class="n">11</span>عرض السعر</h2>
+
+<div class="price">
+  <div class="row">
+    <div class="lbl">TOP.ai — النسخة الأولى الشغّالة</div>
+    <div class="amt">25,000 <small>جنيه مصري</small></div>
+  </div>
+  <div class="fine">
+    <p><b>جدول الدفع:</b> 50% مقدّم عند الاعتماد (12,500 ج.م) · 50% عند التسليم (12,500 ج.م).</p>
+    <p><b>يشمل:</b> الكود المصدري كامل ومملوك لك · النشر على سيرفر · جلسة شرح · 14 يوم إصلاح أعطال بعد التسليم.</p>
+    <p><b>ما يشملش:</b> رسوم الاستضافة والدومين (بتتدفع لمزوّد الخدمة مباشرة) · أي بند مذكور في «اللي ما يشملهوش العرض».</p>
+  </div>
+</div>
+
+<h3>الاستضافة والدومين</h3>
+<p>
+  الاستضافة والدومين بتتحجز باسمك وبتتدفع مباشرة لمزوّد الخدمة — إحنا بننشر عليها ومابناخدش
+  عمولة. استضافة عادية بتدعم <span class="en">Node.js</span> و<span class="en">MySQL</span>
+  كافية تمامًا للنسخة دي.
+</p>
+
+<hr class="rule">
+
+<!-- ═══════════════ 12 ═══════════════ -->
+<h2 class="section"><span class="n">12</span>ما بعد التسليم</h2>
+<p class="lede">
+  التوسّعات الطبيعية، مرتّبة بالقيمة اللي بتضيفها — مش بترتيب الصعوبة.
+</p>
+
+<div class="scroll"><table>
+  <thead><tr><th>التوسّع</th><th>القيمة</th></tr></thead>
+  <tbody>
+    <tr><td><b>معايير باقي المطوّرين</b> (إعمار · داماك · نخيل)</td>
+        <td>أعلى قيمة وأقل مجهود — بيانات مش كود. ودي اللي بتخلّي الأداة تفرق فعلاً في السوق.</td></tr>
+    <tr><td><b>تحديد المدخل المروري آليًا</b></td>
+        <td>يكمّل الجملة اللي قلتها: الباركينج <b>والمداخل</b>. محتاج بيانات الشوارع.</td></tr>
+    <tr><td><b>استخراج بيانات الـ RFP آليًا</b></td>
+        <td>ميكس الوحدات والمساحات المستهدفة من مستند 235 صفحة، من غير قراءة يدوية.</td></tr>
+    <tr><td><b>مراجعة الرامب</b> (<span class="en">B.7.2.2</span>)</td>
+        <td>ميول وارتفاعات — يقفل آخر جزء مفتوح في مسار الباركينج.</td></tr>
+    <tr><td><b>مقارنة سيناريوهات</b></td>
+        <td>تجرّب أكتر من ميكس وتشوف الفرق في عدد الوحدات جنب بعض.</td></tr>
+    <tr><td><b>تكامل <span class="en">IFC</span> / ريفيت</b></td>
+        <td>أعلى تكلفة، ومحتاج قرار على اشتراك <span class="en">Autodesk</span>.</td></tr>
+  </tbody>
+</table></div>
+
+<div class="note good">
+  <h4>عن اسم المشروع</h4>
+  <p>
+    اقتراحنا: <b>TOP.ai</b> يبقى اسم المنتج اللي تعرضه وتبيعه — قريب من
+    <span class="en">Top Concept</span>، قصير، وسهل يتقال ويتفتكر.
+    و<b>ENVELOPE</b> يفضل اسم المحرك الحسابي جوه. الفصل ده مفيد: تقدر تغيّر شكل المنتج
+    وتسويقه من غير ما تلمس المحرك، وتقدر تبيع المحرك لغير ده لو حبيت.
+  </p>
+</div>
+
+</div><!-- /wrap -->
+
+<div class="foot">
+  <h3>جاهزين نبدأ</h3>
+  <p>سبعة أيام من يوم الاعتماد، ونسخة شغّالة تفتحها قدام أي حد.</p>
+  <p>وأول حاجة هتشوفها: أفكشن بلان بتترفع، وأرقامها بتطلع لوحدها.</p>
+  <div class="sig">
+    <div class="nm">برمجلي</div>
+    <p style="margin-top:4px">تطوير برمجيات · عرض صالح 30 يوم من تاريخه</p>
+  </div>
+</div>
+
+</div><!-- /page -->

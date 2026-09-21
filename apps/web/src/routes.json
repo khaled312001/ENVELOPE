@@ -1,0 +1,68 @@
+[
+  {
+    "path": "/",
+    "title": "TOP.ai — development capacity",
+    "description": "TOP.ai reports what a plot's encoded rules imply, and the derivation of every figure that says so. Regulatory validity is never assessed and never claimed.",
+    "navLabel": null,
+    "footerLabel": "The answer",
+    "nav": "footer-only",
+    "group": "product",
+    "needsActor": false,
+    "arabic": "untranslated"
+  },
+  {
+    "path": "/parking",
+    "title": "Parking — TOP.ai",
+    "description": "How the parking number is actually made: an assumed area factor first, a placed level second, and the gap between them measured rather than hidden.",
+    "navLabel": "Parking",
+    "footerLabel": "Parking",
+    "nav": "primary",
+    "group": "product",
+    "needsActor": false,
+    "arabic": "untranslated"
+  },
+  {
+    "path": "/refusals",
+    "title": "What it refuses — TOP.ai",
+    "description": "Everything this engine will not do, opening with the refusals it performs at runtime. If you are looking for the overclaim, start here.",
+    "navLabel": "What it refuses",
+    "footerLabel": "What it refuses",
+    "nav": "primary",
+    "group": "claim",
+    "needsActor": false,
+    "arabic": "untranslated"
+  },
+  {
+    "path": "/app",
+    "title": "The engine — TOP.ai",
+    "description": "Run a plot through the engine and watch each step refuse, assume or derive in the open.",
+    "navLabel": null,
+    "footerLabel": "Run a plot",
+    "nav": "footer-only",
+    "group": "product",
+    "needsActor": true,
+    "arabic": "translated"
+  },
+  {
+    "path": "/work",
+    "title": "Your work — TOP.ai",
+    "description": "Every run this account authored, kept exactly as it was computed, with what governed it and what it assumed. No totals and no averages: a mean of two governing capacities from two plots is not a fact about anything.",
+    "navLabel": null,
+    "footerLabel": "Your work",
+    "nav": "footer-only",
+    "group": "product",
+    "needsActor": false,
+    "arabic": "untranslated"
+  },
+  {
+    "path": "/dashboard",
+    "title": "Deployment readiness — TOP.ai",
+    "description": "What is not ready in this deployment, and the human action that would change each figure. Readiness, not uptime — nothing here monitors availability.",
+    "navLabel": "Readiness",
+    "footerLabel": "Deployment readiness",
+    "nav": "primary",
+    "group": "claim",
+    "needsActor": false,
+    "arabic": "translated"
+  }
+]

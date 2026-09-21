@@ -1,0 +1,156 @@
+/**
+ * Affection-plan intake over HTTP.
+ *
+ * This is the feature the client reacted to most directly in the 30 Aug 2026
+ * meeting. Offered an upload box that reads the file by itself:
+ *
+ *   Khaled — "أنا لو عملتلك upload box كده، ترفع فيه الفايل ده، وتلقائيًا
+ *             يستخرج النص واللي فيه."
+ *   Client — "الله الله."                                            — 14:53
+ *
+ * Two decisions shape the endpoint, and both are about not overreaching:
+ *
+ * 1. **It reads. It does not create a plot.** The response is what the sheet
+ *    says, what it does not say, and the arithmetic re-checked — nothing is
+ *    persisted. Turning a parse straight into a `Plot` would let a
+ *    mis-recognised number enter the system with nobody having looked at it,
+ *    and the whole point of the review screen is that somebody looks.
+ *
+ * 2. **A gap is an answer.** `missing[]` comes back populated and `blocking`
+ *    tells the caller whether computation may proceed at all. The sheet for
+ *    `DJAZ1MED12RES011` prints a height and nothing else; this endpoint reports
+ *    that faithfully rather than returning a tidy object with plausible holes
+ *    filled in.
+ */
+
+import {
+  blockingGaps,
+  crossChecksPassed,
+  parseAffectionPlan,
+  type AffectionPlanFacts,
+} from '@envelope/intake';
+import { ProvenanceGraph, toWire, Tracer, type Traced } from '@envelope/core';
+import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
+
+/**
+ * The upload.
+ *
+ * Base64 in a JSON body rather than multipart. An affection plan is one sheet —
+ * the three real ones are 1.2–1.5 MB, so ~2 MB encoded, inside the server's 4 MB
+ * body limit — and this keeps the contract inspectable with `curl` and the
+ * client a plain `fetch`. Multipart earns its complexity when files are large or
+ * numerous; here it would only add a dependency and a parser.
+ */
+export const affectionPlanUpload = z.object({
+  /** Base64-encoded PDF. */
+  content: z.string().min(1, 'the file is empty'),
+  /** Original filename, kept so the citation's `documentUri` names something real. */
+  filename: z.string().min(1).max(255),
+});
+
+const PDF_MAGIC = '%PDF-';
+
+/** A traced value on the wire, plus the sheet text it was read from. */
+function fieldOf(t: Traced<unknown> | undefined): unknown {
+  if (!t) return null;
+  const wire = toWire(t as Traced<string>);
+  return { ...wire, value: String((t as { value: unknown }).value) };
+}
+
+/**
+ * Serialise the facts for the review screen.
+ *
+ * Structured values — height, setbacks, coverage — are sent as their objects
+ * rather than as `String(...)`, because the screen renders a podium row and a
+ * tower row from them. Their provenance travels alongside.
+ */
+function present(facts: AffectionPlanFacts): unknown {
+  const traced = (t: Traced<unknown> | undefined): unknown =>
+    t === undefined
+      ? null
+      : {
+          value: t.value,
+          node: t.node,
+          parameterId: t.parameterId,
+          provenanceClass: t.provenanceClass,
+          ...(t.unit === undefined ? {} : { unit: t.unit }),
+        };
+
+  return {
+    parcelId: fieldOf(facts.parcelId),
+    community: fieldOf(facts.community),
+    developer: fieldOf(facts.developer),
+    landUse: fieldOf(facts.landUse),
+    issueDate: fieldOf(facts.issueDate),
+    drawingRef: fieldOf(facts.drawingRef),
+    parkingDeferredTo: fieldOf(facts.parkingDeferredTo),
+
+    totalAreaSqm: fieldOf(facts.totalAreaSqm),
+    far: fieldOf(facts.far),
+    gfaSqm: fieldOf(facts.gfaSqm),
+
+    height: traced(facts.height),
+    setbacks: traced(facts.setbacks),
+    coverage: traced(facts.coverage),
+
+    missing: facts.missing,
+    crossChecks: facts.crossChecks,
+    crossChecksPassed: crossChecksPassed(facts),
+    blocking: blockingGaps(facts),
+  };
+}
+
+export function registerIntakeRoutes(app: FastifyInstance): void {
+  /**
+   * Read an affection plan and report what it says.
+   *
+   * Never 4xx for a sheet that merely omits things — an incomplete plan is a
+   * valid document and a normal answer. It 4xx's only when the upload is not a
+   * PDF at all, which is a caller error rather than a finding.
+   */
+  app.post('/api/intake/affection-plan', async (request, reply) => {
+    const body = affectionPlanUpload.parse(request.body);
+
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(Buffer.from(body.content, 'base64'));
+    } catch {
+      return reply.code(400).send({ error: 'content is not valid base64' });
+    }
+
+    // Check the magic rather than trusting the extension: a renamed .docx
+    // reaches the parser as a stream of nonsense and fails with a stack trace
+    // the user cannot act on. This fails with a sentence they can.
+    const head = Buffer.from(bytes.slice(0, 8)).toString('latin1');
+    if (!head.startsWith(PDF_MAGIC)) {
+      return reply.code(400).send({
+        error: 'not a PDF',
+        detail:
+          `${body.filename} does not begin with ${PDF_MAGIC}. Affection plans are issued ` +
+          'as PDFs; a screenshot or a scanned image cannot be read for its printed values.',
+      });
+    }
+
+    const tracer = new Tracer(new ProvenanceGraph());
+    let facts: AffectionPlanFacts;
+    try {
+      facts = await parseAffectionPlan(bytes, { documentUri: body.filename, tracer });
+    } catch (error) {
+      return reply.code(422).send({
+        error: 'the PDF could not be read',
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    return {
+      filename: body.filename,
+      facts: present(facts),
+      // Said on every response, not only where a gap exists. A reader who sees
+      // a full set of numbers is exactly the reader most likely to forget.
+      disclaimer:
+        'REGULATORY VALIDITY: NOT ASSESSED. These are the values printed on the sheet, ' +
+        're-read and re-checked. Confirm each against the document before use.',
+    };
+  });
+}

@@ -1,0 +1,672 @@
+/*
+ * Design tokens.
+ *
+ * Semantic names only. A component never writes a hex value: it writes
+ * `var(--surface-raised)` and the theme decides. That is what makes the dark
+ * theme a token swap rather than a second design, and it is why the amber
+ * ASSUMED treatment can be verified once instead of audited per screen.
+ *
+ * ---
+ *
+ * The palette is built around one hard constraint that is not aesthetic.
+ * PRD §13.1: "The amber ASSUMED treatment is the most important UI decision in
+ * the product. The core failure mode is a user mistaking an assumption for a
+ * fact. Making assumptions visually loud, everywhere, permanently, is the
+ * mitigation. This must survive design review; softening it for aesthetic
+ * reasons defeats the product."
+ *
+ * So amber is not an accent colour that happens to be used for warnings. It is
+ * the loudest thing on the page, it is reserved exclusively for uncertainty, and
+ * nothing else in the system is permitted to use it. Everything else — the
+ * neutrals, the single blue, the restrained red — is quiet so that it can be.
+ *
+ * Every uncertainty state also carries a **non-colour cue** (a border pattern, a
+ * glyph, a dotted underline). Colour alone fails WCAG 1.4.1, fails in greyscale
+ * print, and fails for the ~8% of men with colour vision deficiency — and this
+ * report is printed and taken into rooms.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* --- Spacing: a 4px rhythm. --- */
+  --space-hair: 0.125rem;  /*  2px — the scale said "nothing between these steps",
+                              and then seven rules invented `gap: 2px` or `3px` for
+                              the tight label/value pairs in .field--compact, .kv,
+                              .choice, .comparison__side, .plot-legend, .sensitivity
+                              and .prov-branch__row. That is not seven mistakes; it
+                              is one missing token. */
+  --space-1: 0.25rem;   /*  4px */
+  --space-2: 0.5rem;    /*  8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.5rem;    /* 24px */
+  --space-6: 2rem;      /* 32px */
+  --space-7: 3rem;      /* 48px */
+  --space-8: 4rem;      /* 64px */
+  /* The scale stopped at 64px, so a major/minor section distinction was not
+     merely unchosen — it was unwritable. app.css uses --space-7 zero times and
+     --space-6 twice in a thousand lines, which is why every engine screen reads
+     as one continuous 16px-spaced list from header to footer while the landing
+     page reads as designed. */
+  --space-9: 6rem;      /*  96px */
+  --space-10: 8rem;     /* 128px */
+
+  /* Section rhythm, named semantically so a screen asks for "the gap that opens a
+     section" instead of picking a number. Applied ASYMMETRICALLY: a section opens
+     rather than ends. Both ends of every clamp are scale steps, not literals —
+     otherwise adding --space-9 and --space-10 above would buy two tokens nothing
+     consumes while every rhythm rule kept its own `8rem`. */
+  --rhythm-major: clamp(var(--space-7), 8vw, var(--space-10));  /* 48 → 128px */
+  --rhythm-minor: clamp(var(--space-6), 6vw, var(--space-9));   /* 32 →  96px */
+  --rhythm-block: clamp(var(--space-5), 3vw, var(--space-7));   /* 24 →  48px */
+
+  /* Stacking. Two hand-picked literals and no scale, until now. A rule that
+     references an UNDEFINED custom property is worse than a literal, because the
+     declaration becomes invalid at computed-value time and the element silently
+     loses its stacking — so the scale is declared here, in the token file, and not
+     described in a sentence inside a pattern. */
+  --z-raised: 1;
+  --z-sticky: 20;
+  --z-overlay: 40;
+
+  /* ONE page column. --content-max was 76rem for the app and a local --lp-max was
+     78rem for the landing, so crossing from the site into the engine shifted and
+     re-measured the column by 32px for a reason no reader can name. */
+  --page-max: 78rem;
+  --page-gutter: clamp(1rem, 4vw, 3rem);
+  /* RETIRED ALIAS. --content-max has live consumers in app.css; it is aliased here
+     and migrated by whoever owns those rules. A custom property that is referenced
+     but no longer declared makes every `max-width: var(--content-max)` invalid at
+     computed-value time — max-width resolves to `none` and the column runs the full
+     page. Alias, migrate, then delete. */
+  --content-max: var(--page-max);
+
+  /* The shared rail. There were six independent grid declarations with no common
+     column edge, so nothing lined up down the page. One rail, and the section
+     index, the numbered limit, the claim title, the table's rank column and the
+     margin tally all begin on one invisible vertical the eye reads even though
+     nothing draws it. This is the mechanic that most reads as "drawn" per unit of
+     effort, because it is subtractive. */
+  --rail: 4.5rem;
+  --label-col: 9rem;   /* the re-emitted header column in a stacked schedule */
+
+  /* --- Sizing. There was no sizing scale at all: control height was 2.5rem in
+     three rules, 2rem in one, 3rem in one and 44px in two, and the horizontal
+     meter — one conceptual object — existed at four heights, four radii, two fill
+     mechanisms and four fill colours. --- */
+  --control-h-sm: 2rem;     /* 32px */
+  --control-h: 2.5rem;      /* 40px */
+  --control-h-lg: 3rem;     /* 48px */
+  /* Named separately from --control-h because it is a WCAG 2.5.8 FLOOR, not a
+     visual size. A 32px icon button keeps its visual size and gets its 44px hit
+     area from min-block-size plus a minimum gap — never from an absolutely
+     positioned overlay, which on a 4px gap steals its neighbour's target. */
+  --tap-min: 2.75rem;       /* 44px */
+  --tap-gap-min: 0.5rem;    /*  8px — the minimum gap between two tap targets */
+
+  --meter-h: 0.5rem;        /*  8px */
+  --meter-h-lg: 0.75rem;    /* 12px */
+
+  /* The status rail is the most repeated device in the product: nine components at
+     six widths, with the state colours re-declared per component and two corner
+     treatments, so the same device read as two shapes on two screens. Two widths,
+     and the asymmetry is the design.
+
+     THE EMPHASIS WIDTH IS SPENT ON ASSUMED, AND ON NOTHING ELSE. Not on BINDING,
+     not on VARIANCE, not on an editorial pull-out. This is load-bearing rather
+     than tidy: the greyscale and photocopy argument rests on "a column of 6px
+     marks reads as a POSITION, not a hue" — and position stops identifying ASSUMED
+     the moment a second state shares the width. Amber and the accent separate by
+     only 1.21x in light and 1.36x in dark, which on a photocopy is two mid-greys.
+     Share the width and that channel collapses back into colour alone. `pnpm
+     contrast` cannot see that; only assertRailWidths can. */
+  --rail-w: 3px;
+  --rail-w-emphasis: 6px;   /* ASSUMED only. One documented exception, and it is
+                               the same device rather than a second one:
+                               .margin-tally--none keeps the 6px in --border-strong,
+                               because "nothing is assumed here" only reads as a
+                               statement if it occupies the same column at the same
+                               width. It is not a state; it is the statement that
+                               there is no state. */
+
+  --glyph: 0.875em;         /* the optical box for the drawn mark set */
+  --glyph-stroke: 1.5;
+  --tick: 0.5rem;           /*  8px — the datum tick at the rail edge */
+  --tick-lg: 0.75rem;       /* 12px */
+
+  /* --- Type. ---
+     IBM Plex, loaded in `index.html`, over the system stack. Plex Sans and Plex
+     Mono share metrics and a skeleton, which is what lets a mono figure sit
+     inside a sans sentence without looking pasted in — and a traced value is
+     precisely a figure quoted inside a sentence. Every fallback below is a real
+     face on some platform, so a page with no network is degraded, not broken. */
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Numbers are the product. Tabular figures so columns align and a digit
+     changing does not reflow the row. */
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "JetBrains Mono",
+    "Cascadia Mono", Menlo, Consolas, monospace;
+
+  /* THE RAMP: Major Third, 1.25, above a 16px anchor; linear −2px below it,
+     because 1.25 downward gives 12.8 and 10.24 and 12px is this product's stated
+     floor. Four sizes used to be packed inside 12–16px — steps of 1.083 and 1.067,
+     both below the point at which a size step reads as a decision rather than as
+     two people editing the same file — and then there was a hole from 20 to 28,
+     precisely where a section heading belongs. */
+  --text-xs:   0.75rem;    /* 12px — the floor. Nothing smaller carries meaning. */
+  --text-sm:   0.875rem;   /* 14px  x1.167 from xs  (was 13px, a 1.083 non-step) */
+  --text-base: 1rem;       /* 16px  x1.143 — THE ANCHOR (was 15px)               */
+  --text-md:   var(--text-base);  /* RETIRED ALIAS, nine references. It was a 1px
+                                     "step" used as a hierarchy level in five
+                                     places on the landing page, and the eye cannot
+                                     read 1px as a level. Deleted after one release;
+                                     kept until then because a referenced but
+                                     undeclared property makes every rule that reads
+                                     it invalid at computed-value time. */
+  --text-lg:   1.25rem;    /* 20px  x1.25   panel title, note title              */
+  --text-xl:   1.5625rem;  /* 25px  x1.25²  the binding band's figure, the
+                              comparison value, the brand mark. Neither figure moves
+                              to --text-figure: that is the GOVERNING number's size,
+                              and giving it to a comparison row would flatten the one
+                              rank §15.3 protects. */
+  --text-2xl:  1.9531rem;  /* 31.25px x1.25³  A RUNG WITH NO CONSUMER, DECLARED
+                              ANYWAY, AND SAID PLAINLY. Its only call site was the
+                              governing figure, which moves to --text-figure below.
+                              A geometric ramp with a missing rung is not a ramp, and
+                              the next heading needing a size between 25 and 39 must
+                              find one already named rather than inventing 32px. */
+  --text-3xl:  clamp(1.5rem, 4.8vw, 2.4414rem);   /* 24 → 39.06px x1.25⁴  H2 */
+  /*        x1.25⁵ = 48.83px IS DELIBERATELY EMPTY.
+     H1 sits TWO rungs above H2, not one. The old --text-4xl and --text-3xl clamped
+     to 57.6 and 52 — a ratio of 1.108 — and shared their tracking and their weight,
+     so an H1 differed from an H2 by 11% in size and by nothing else at all. One
+     step makes an H1 a slightly larger H2; two makes it unmistakable. The two
+     clamps reach their ceilings at the same viewport width (813.8 and 813.9px), so
+     H1:H2 is exactly 1.5625 through the whole scaling band. */
+  --text-4xl:  clamp(2.25rem, 7.5vw, 3.8147rem);  /* 36 → 61.04px x1.25⁶  H1 */
+  /* OFF the ramp, between the fourth and fifth rungs. A RESULT IS NOT A HEADING and
+     must never be confusable with one, and it must outrank every heading it can
+     appear beneath. Giving the figure its own name is also what stops a ramp
+     re-pitch silently shrinking the product's hero number from 40px to 31.25px. The
+     28px floor is unchanged: a fixed 40px figure measured 250px and scrolled a
+     320px page sideways. */
+  --text-figure: clamp(1.75rem, 5.4vw, 2.75rem);  /* 28 → 44px */
+
+  /* Tracking. Large type needs negative tracking to hold together and small
+     uppercase needs positive tracking to stay legible; naming every one of them
+     stops each screen inventing its own — there were eight letter-spacing literals
+     for five near-identical small-caps treatments, while --tracking-label, the
+     token written to prevent exactly that, was referenced zero times in app.css. */
+  --tracking-banner:  -0.035em;  /* --text-4xl only; -0.028 is not tight enough at
+                                    61px */
+  --tracking-display: -0.028em;  /* --text-3xl */
+  --tracking-tight:   -0.015em;  /* --text-lg .. --text-2xl, and figures */
+  --tracking-normal:   0;        /* body, and what a mono figure resets to. Its
+                                    absence is why a global h1–h4 rule invented a
+                                    fourth unnamed tight value, -0.011em */
+  --tracking-label:    0.09em;   /* uppercase micro-labels at --text-xs. ONE label
+                                    track, not two: the micro-label is unified onto
+                                    a single treatment at a single size, and a
+                                    second track with no consumer does not make the
+                                    first one principled — it makes the count
+                                    wrong. */
+
+  --leading-flat:    1;      /* glyph boxes and index numerals, which were centred
+                                to a line box rather than to a cap line */
+  --leading-display: 1.04;   /* --text-4xl and --text-figure. The three largest
+                                headings hard-coded 1.02 and 1.08 because nothing in
+                                the system said what leading a 61px headline should
+                                have */
+  --leading-head:    1.1;    /* --text-2xl, --text-3xl */
+  --leading-tight:   1.2;    /* --text-lg, --text-xl */
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+
+  --weight-light:    300;    /* --text-3xl and above ONLY: the hero h1, the hero
+                                lede, a section h2. Never below. Plex's
+                                characteristic display move is Light at 42px and
+                                above; 600 at 61px is the convention Carbon and
+                                Stripe both explicitly reject. Here it does double
+                                duty, because lowering the page's total ink weight
+                                raises amber's relative loudness. Declared as a
+                                token rather than described in a sentence: a rule
+                                referencing an undefined custom property becomes
+                                invalid at computed-value time and the heading
+                                silently falls back to inherited weight. */
+  --weight-normal:   400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+
+  /* --measure was 68ch applied at FOUR different font sizes, so "the measure"
+     produced four physical columns spanning roughly 100px under one name — which is
+     why a panel subtitle wrapped at ~430px inside an 1,150px panel and read as a
+     wrapping fault rather than a decision. Sized so prose, lede and fine print all
+     land on a ~590px column. */
+  --measure-prose:  62ch;   /* --text-base 16px */
+  --measure-lede:   50ch;   /* --text-lg   20px */
+  --measure-fine:   70ch;   /* --text-sm   14px */
+  --measure-banner: 15ch;   /* the H1, capped in characters rather than pixels. It
+                               is NOT what prevents a 320px overflow: Plex Sans's
+                               digit advance is 0.6em, so 15ch at the H1's 36px floor
+                               computes to 324px against a 288px column and the cap
+                               is inactive below a viewport of about 356px. What
+                               holds the line there is the grid track plus
+                               min-inline-size: 0, and normal wrapping. */
+  /* RETIRED ALIAS, with live call sites across app.css and landing.css. Deleting it
+     before they migrate makes every `max-width: var(--measure)` invalid at
+     computed-value time: max-width resolves to `none` and the paragraphs run the
+     full page column. That is invisible to typecheck, test and smoke — nothing
+     measures a line length. Same treatment as --text-md. */
+  --measure: var(--measure-prose);
+
+  /* --- Radii. Re-pitched DOWN from 3/6/10. A large radius reads "app"; a small one
+     reads "drawn", and this artefact is a drawing. The names are unchanged, so this
+     is a value edit and not a 38-site rename. It absorbs the twelve radius
+     literals: the meter family's 2/3/4px and the `999px` written twice for what is
+     visually one pill. --- */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-pill: 999px;   /* the system's ONE documented exception, named the way
+                             Carbon names its tag radius — so it is a decision and
+                             not a magic number written twice. */
+  --radius-round: 50%;    /* replaces the `50%` literals written for round counters
+                             and status glyphs. */
+
+  --border-width: 1px;
+  --border-width-emphasis: 2px;
+
+  /* --- Focus. ---
+     --focus-ring is GONE, and the replacement lands with the deletion rather than
+     after it: it had three live consumers (the global :focus-visible, the dropzone
+     label, the traced value) and removing the token first makes all three
+     declarations invalid at computed-value time — box-shadow unset, no ring, no
+     focus indication, on a form-heavy nine-step flow. That is a 2.4.7 and 2.4.11
+     regression none of typecheck, test, shots or smoke can see.
+
+     Why an outline rather than a two-ring box-shadow: --focus-ring hard-coded
+     --surface-base as its inner halo, so on a raised, sunken, inset or amber ground
+     it painted the wrong colour behind the ring — and it was structurally
+     unmeasurable as a pair. An outline with an offset composites correctly over any
+     ground and needs no knowledge of what it sits on, so --accent-focus is measured
+     as a single foreground against each of the nine. */
+  --focus-width: 2px;
+  --focus-offset: 2px;
+
+  /* --- Motion. Short, and off entirely when the reader asked for that.
+
+     FOUR DURATIONS, AND THE SCALE IS BY WHAT IS MOVING RATHER THAN BY HOW FAR.
+     The vocabulary that spends them — hover, press, focus, disclosure, route,
+     reveal — is written once, in site.css §18, and nothing else is permitted to
+     invent a fifth. --- */
+  --duration-instant: 80ms;   /* press-down, and a value's hover ring. A press is
+                                 FASTER than its release: :active overrides
+                                 transition-duration to this, so a control goes
+                                 down in 80ms and comes back in 140ms, and that
+                                 asymmetry is the whole of what makes a control
+                                 feel attached to a finger. */
+  --duration-fast: 140ms;     /* a control's border, ground and colour */
+  --duration-base: 200ms;     /* a plate's ground, the nav's elevation, a
+                                 disclosure opening, a route arriving */
+  --duration-reveal: 420ms;   /* entrances, and nothing else */
+  /* --duration-slow is DELETED. It had zero consumers in the stylesheets and zero
+     here; the one use ever proposed for it was a derivation inspector this language
+     does not specify. A duration with no consumer is decoration in a token file.
+     --ease-in is not added for the same reason: nothing in this language leaves —
+     the modal, the toast, the menu and the popover are all refused, and those are
+     the four components that have an exit. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);      /* entrances */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);  /* state changes */
+
+  /* The ONLY distance anything in this product ever travels. Naming it as a single
+     token is what stops a future contributor writing a 40px slide. */
+  --motion-rise: 0.75rem;   /* 12px */
+  /* 40ms, not 60ms. Six hero children carry --motion-order 0-5, so the stagger
+     SPAN is 5 x --stagger-step: at 60ms that is 300ms against the design
+     language's 240ms ceiling, and the ceiling is not a taste — `pnpm shots` is
+     how this repo runs design review, and a stagger long enough to photograph
+     the page mid-state produces a screenshot that lies about the design. 5 x 40
+     = 200ms. Any future staggered group inherits the corrected budget. */
+  --stagger-step: 40ms;
+}
+
+/* ---------------------------------------------------------------------------
+ * Light theme
+ *
+ * THE NEUTRALS HAVE A TEMPERATURE AND A LADDER, and both are repairs rather than
+ * taste.
+ *
+ * THE LADDER FIRST. It was #fbfbfa / #ffffff / #f2f2f0 / #ebebe8 — four
+ * off-whites, of which the two that mattered most were separated by 1.04:1. That
+ * is below the just-noticeable difference for a large field, so a reader did not
+ * perceive a surface ladder at all: they perceived one flat white page with
+ * hairline boxes drawn on it, and 85% of the landing fold was three tones nobody
+ * could tell apart. A plate had no lift, the drawing well did not recede, and the
+ * one hover the chassis defined — raised swapping to base — was a no-op nobody
+ * could have caught by looking. The rungs are pitched EVENLY now, about 6% of
+ * luminance each: 1.000 / 1.091 / 1.145 / 1.206 against white. Every rung is
+ * floored in HOUSE_PAIRS at just under its measured value, so the ladder is a
+ * contract rather than a record of whatever the tokens happened to do.
+ *
+ * THE TEMPERATURE IS THE OTHER HALF, and the direction is not arbitrary: the
+ * grounds are COOL — blue-grey, chroma 7 to 12 out of 255, rising as the ladder
+ * descends — because cool is the one temperature that moves the neutrals AWAY
+ * from the amber. --uncertain-surface is the only coloured surface in the
+ * language (chroma 29) and its loudness at page scale is that filled ground; a
+ * warm paper white would have been a paler tint of the same hue, and the ASSUMED
+ * fill would have had to fight it. Warm cream on cool blue-grey is an OPPOSITION,
+ * and the amber gains more from that than it loses to a deeper page. The cost is
+ * declared rather than discovered: the amber ground's luminance separation from
+ * the page falls from 1.06 to 1.04, and HOUSE_PAIRS now measures that row so a
+ * later ground edit cannot close the last of it in silence.
+ *
+ * It also makes the two themes one family re-pitched instead of two designs. The
+ * dark greys were already cool and the light ones faintly warm, so the "token
+ * swap, not a second design" claim was true of the roles and false of the hues.
+ *
+ * WHAT DID NOT MOVE, and the omission is the point: --uncertain,
+ * --uncertain-strong, --uncertain-surface, --accent, --variance and --derived.
+ * Deepening the grounds would have bought more ladder if the blue had been
+ * darkened with them — --accent on --surface-inset is what caps the range at
+ * 1.21 — and darkening the blue forces darkening the amber to keep §13.1's rank,
+ * which is how a colour pass ends up muddying the one token it was told to
+ * protect. The ladder was pitched to fit the inks instead. The neutral INKS moved
+ * with their grounds, because a hairline on a deeper page has to be deeper, and
+ * every one of those moves raises a contrast ratio rather than lowering it.
+ * ------------------------------------------------------------------------ */
+:root {
+  --surface-base: #f6f8fd;
+  --surface-raised: #ffffff;
+  --surface-sunken: #eef1f8;
+  --surface-inset: #e7ebf3;
+
+  --text-primary: #14161c;
+  --text-secondary: #55555f;
+  /* It was #757581, tuned against --surface-raised ONLY (4.55) and measured only
+     there — while being a ground 24 times across the three stylesheets. Measured
+     on the rest: sunken 4.06, inset 3.81, base 4.39, deferred 4.13. Four live
+     1.4.3 failures, and --surface-sunken is the ground under GOVERNING CAPACITY,
+     BINDING CONSTRAINT, HEADROOM, LEVELS and LOST TO WHOLE FLOORS — the five
+     labels around the product's hero number. A token tuned against one ground and
+     painted on nine is a token measured by accident. New worst case 4.81. */
+  --text-tertiary: #656571;
+  --text-inverse: #ffffff;
+
+  /* Decorative separators. Exempt from 1.4.11 — they carry no information a
+     reader needs, and raising them to 3:1 turns every panel into a wireframe. */
+  --border-subtle: #dbdee5;
+  --border-default: #c8cbd3;
+  /*
+    The boundary of an interactive control — input, button, radio card.
+    WCAG 1.4.11 covers "visual information required to identify user interface
+    components", so this one is not decorative and is held at 3:1. It exists
+    separately from --border-default precisely so the exemption above stays
+    honest instead of being claimed for everything.
+  */
+  /* The comment above argues this token exists apart from --border-default
+     "precisely so the exemption stays honest". That only works if it passes on the
+     grounds it is painted on. At #91918d: sunken 2.82, inset 2.65, deferred 2.87 —
+     the dashed `.dropzone` edge app.css calls "the first thing a new user touches",
+     and the dashed `.not-assessed` boundary, one of two non-colour cues for the
+     deferred state. New worst case 3.18. */
+  --border-control: #7f8187;
+  /* INFORMATIVE STRUCTURE, and now the token that carries it: the datum rule, the
+     plate cap, the meter, the neutral status rail, the table header rule, the
+     eyebrow hairline. It was #94948e, which passed at 3.05 on --surface-raised —
+     the only ground ever checked — and measured 2.55 on --surface-inset, the
+     non-governing capacity bar's own track. A meter whose entire job is "which of
+     these three is smaller" is the canonical 1.4.11 case. New worst case 3.62. */
+  --border-strong: #77797f;
+
+  /* One blue. Interactive affordance and nothing else. */
+  --accent: #2b5cd9;
+  --accent-hover: #1f47b0;
+  --accent-subtle: #eaf0fd;
+  --accent-focus: #2b5cd9;
+
+  /* ASSUMED — the loudest thing in the system. Deliberately.
+
+     It was #a35c00, and on every light ground the interactive blue OUT-CONTRASTED
+     the alarm: --accent 5.78 against --uncertain 5.14 on a panel. Because the ratio
+     between two dark foregrounds on a light ground is ground-independent, that
+     inversion held on all nine grounds at once. On a product whose named failure
+     mode is a user mistaking an assumption for a fact, the loudest colour on the
+     page was a link. Now 6.99, leading --accent by 1.210x on each of the nine. The
+     darkening is 0.6 of a stop; it stays unmistakably amber. */
+  --uncertain: #854b00;
+  /* THE SECOND HALF OF THE ROW ABOVE, and moving one without the other is the
+     defect. --uncertain-strong and --uncertain are spent as TWO RANKS — the strong
+     one on the value text, the other on the drawn pencil — and they measured 1.540x
+     apart. Darkening --uncertain alone collapsed that to 1.132x: at 13% they are one
+     ink and the rank is spent on nothing. Both channels take the same 0.816 scale
+     the other token took (122 -> 100, 68 -> 56), which keeps the hue relationship and
+     restores the separation to 1.425x. Contrast only improves — worst case 8.34, up
+     from 6.62 — so this is the opposite of a softening. */
+  --uncertain-strong: #643800;
+  --uncertain-surface: #fdf3e0;
+  /* The dotted underline under an ASSUMED value, measured against the amber
+     surface it is drawn on — not against white. At #e0a54a it was 1.98:1 there:
+     a non-colour cue nobody could see, which is not a cue. */
+  --uncertain-border: #a87a32;
+
+  /* VARIANCE — a documented exemption. Serious, not alarming. */
+  --variance: #a8271f;
+  --variance-surface: #fdeceb;
+  /* §20.3 specifies VARIANCE as "Red border, evidence link" — the border IS half
+     the specification. At #d98a84 it measured 2.32 on its own surface against a 3.0
+     floor, the largest failure in the shipped palette, and the same token draws the
+     rule on NEVER CLAIMED. Now 3.49 worst case. --variance itself is NOT moved: it
+     paints the product's central refusal and is under the same protection as the
+     amber, and lightening it so that amber would outrank it is that softening
+     arrived at from the other side. */
+  --variance-border: #c0655e;
+
+  /* DERIVED — confirmation, used sparingly. */
+  --derived: #1f6b45;
+  --derived-surface: #e9f5ee;
+
+  /*
+    The one inverted band on the landing page.
+
+    Named rather than written as a literal because the page uses it for exactly
+    one paragraph — the one saying nothing in this deployment is approved — and
+    a hard-coded #16161a there would be the first colour in the system that no
+    theme could follow and no checker would measure. `--border-on-contrast` is a
+    control boundary on that band and is held to 1.4.11's 3:1 like every other
+    control boundary, which is why it is not simply `--text-secondary`.
+  */
+  --surface-contrast: #14161c;
+  --text-on-contrast: #f2f4f8;
+  --text-on-contrast-dim: #b6b6bf;
+  --border-on-contrast: #6e6e78;
+
+  /* Deferred / not assessed — present, legible, and obviously empty. */
+  --deferred: #656971;
+  --deferred-surface: #f3f5f9;
+  /* The hatch is the non-colour cue for "not assessed" (§20.3), so it is held
+     to 1.4.11's 3:1 like any other informative graphic. At #d8d8d3 it was
+     1.43:1 — present in the CSS and invisible on screen. */
+  /* At #8d8d8a it measured 2.97 on --surface-sunken, which is the ground of the
+     hero drawing's setback hatch — the largest and most-viewed instance of the
+     pattern, captioned "what the setback rules take away". New worst case 3.36. */
+  --deferred-hatch: #7c7f85;
+
+  --shadow-sm: 0 1px 2px rgb(16 16 26 / 0.06);
+  --shadow-md: 0 2px 8px rgb(16 16 26 / 0.08), 0 1px 2px rgb(16 16 26 / 0.04);
+  --shadow-lg: 0 8px 28px rgb(16 16 26 / 0.12), 0 2px 6px rgb(16 16 26 / 0.06);
+}
+
+/* ---------------------------------------------------------------------------
+ * Dark theme — the same roles, re-pitched. Not an inversion.
+ *
+ * Amber stays the loudest thing on the page here too; a dark theme that let the
+ * assumption treatment recede would defeat §13.1 just as surely as softening it
+ * in light mode would.
+ *
+ * THE SAME LADDER REPAIR, AND ONE MORE. The page lifts off absolute black to a
+ * graphite, and that is what buys the room: base to raised is 1.14:1 and base to
+ * sunken 1.09:1, where the sunken rung used to be 1.04:1 — a zoned section that
+ * was not a section. And --surface-contrast goes to near-black, because in a dark
+ * theme the inverted band's only available direction is DOWN: at #08080a it was
+ * 1.07:1 from the page, which is a band nobody sees. It is 1.17:1 now, and that
+ * pair is floored in HOUSE_PAIRS in both screen themes.
+ * ------------------------------------------------------------------------ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --surface-base: #16181d;
+    --surface-raised: #21242a;
+    --surface-sunken: #0c0e11;
+    --surface-inset: #2e3139;
+
+    --text-primary: #eef0f5;
+    --text-secondary: #a8a8b2;
+    --text-tertiary: #9ca0a8;
+    --text-inverse: #16181d;
+
+    --border-subtle: #35383f;
+    --border-default: #44474f;
+    --border-control: #7d8087;
+    --border-strong: #84878e;
+
+    --accent: #7ba3f5;
+    --accent-hover: #9dbaf8;
+    --accent-subtle: #1c2230;
+    --accent-focus: #7ba3f5;
+
+    --uncertain: #f0b45c;
+    --uncertain-strong: #ffd08a;
+    --uncertain-surface: #33260f;
+    --uncertain-border: #a17b33;
+
+    --variance: #f08b84;
+    --variance-surface: #33191a;
+    --variance-border: #b47069;
+
+    --derived: #6cc396;
+    --derived-surface: #14261d;
+
+    --surface-contrast: #010204;
+    --text-on-contrast: #eef0f5;
+    --text-on-contrast-dim: #a8a8b2;
+    --border-on-contrast: #66666d;
+
+    --deferred: #8c9098;
+    --deferred-surface: #202226;
+    --deferred-hatch: #7f8289;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 2px 8px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.35);
+  }
+}
+
+:root[data-theme='dark'] {
+  --surface-base: #16181d;
+  --surface-raised: #21242a;
+  --surface-sunken: #0c0e11;
+  --surface-inset: #2e3139;
+
+  --text-primary: #eef0f5;
+  --text-secondary: #a8a8b2;
+  --text-tertiary: #9ca0a8;
+  --text-inverse: #16181d;
+
+  --border-subtle: #35383f;
+  --border-default: #44474f;
+  --border-control: #7d8087;
+  --border-strong: #84878e;
+
+  --accent: #7ba3f5;
+  --accent-hover: #9dbaf8;
+  --accent-subtle: #1c2230;
+  --accent-focus: #7ba3f5;
+
+  --uncertain: #f0b45c;
+  --uncertain-strong: #ffd08a;
+  --uncertain-surface: #33260f;
+  --uncertain-border: #a17b33;
+
+  --variance: #f08b84;
+  --variance-surface: #33191a;
+  --variance-border: #b47069;
+
+  --derived: #6cc396;
+  --derived-surface: #14261d;
+
+  --surface-contrast: #010204;
+  --text-on-contrast: #eef0f5;
+  --text-on-contrast-dim: #a8a8b2;
+  --border-on-contrast: #66666d;
+
+  --deferred: #8c9098;
+  --deferred-surface: #202226;
+  --deferred-hatch: #7f8289;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.35);
+  }
+
+/* ---------------------------------------------------------------------------
+ * Print. The report leaves the screen and goes into a room.
+ *
+ * A THIRD MEASURED THEME, not a handful of overrides. `scripts/contrast.mjs`
+ * iterates light, dark and print, so paper — the medium CLAUDE.md calls the one
+ * these reports are actually carried into — stops being the only one with no
+ * gate. Every token not named here keeps its screen value while sitting on white
+ * paper, which is why the omissions below are decisions rather than gaps.
+ * ------------------------------------------------------------------------ */
+@media print {
+  :root {
+    --surface-base: #ffffff;
+    --surface-raised: #ffffff;
+    --surface-sunken: #ffffff;
+    --surface-inset: #ededed;   /* a 7% tint a laser can dither without banding.
+                                   It is the meter track, so it is the one rung of
+                                   the surface ladder that does NOT go flat here —
+                                   the object the rung exists for. */
+    --text-primary: #000000;
+    --text-secondary: #333333;
+    --text-tertiary: #545460;
+
+    --border-subtle: #c8c8c8;
+    --border-default: #a0a0a0;
+    --border-control: #595959;
+    --border-strong: #4a4a4a;
+
+    --deferred: #333333;
+    --deferred-surface: #ffffff;
+    --deferred-hatch: #5e5e5e;  /* tokenises the #666 that provenance.css hard-coded
+                                   for the hatch carrying NOT ASSESSED on a
+                                   photocopy — the highest-stakes graphic in the
+                                   system, and the one no checker had ever seen. */
+
+    /* The inverted band inverts back. A full-bleed black band costs a page of
+       toner and photocopies to mud. */
+    --surface-contrast: #ffffff;
+    --text-on-contrast: #000000;
+    --text-on-contrast-dim: #333333;
+    --border-on-contrast: #595959;
+
+    /* Every state SURFACE goes white. Not an amber exception — a uniform rule.
+       A cream fill dithers to a grey smudge, and the ASSUMED treatment already
+       drops its ground on paper and carries on its other four channels. */
+    --uncertain-surface: #ffffff;
+    --variance-surface: #ffffff;
+    --derived-surface: #ffffff;
+    --accent-subtle: #ffffff;
+
+    /* --accent, --uncertain, --uncertain-strong, --uncertain-border, --variance,
+       --variance-border and --derived are DELIBERATELY NOT OVERRIDDEN. Collapsing
+       them to #000000 is the obvious print theme and it deletes the provenance
+       colour system in the medium that matters most: an ASSUMED note and a BINDING
+       note would print as the same black rail on white. Keeping the inks chromatic
+       is what lets §7.4's ordering invariant hold in all three themes instead of
+       being suspended for paper. */
+
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+  }
+}

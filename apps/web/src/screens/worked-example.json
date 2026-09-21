@@ -1,0 +1,1592 @@
+{
+  "_": [
+    "The one run the landing page prints in full.",
+    "",
+    "`input` is the request the page describes in words; `verified` is what the",
+    "engine returned for it. Neither half is edited by hand: run",
+    "`node scripts/verify-worked-example.mjs --write` and take what the engine says.",
+    "`pnpm check` runs the same script without --write and fails if the page has",
+    "drifted, which it silently had — see the header of that script."
+  ],
+  "input": {
+    "plot": {
+      "plotNumber": "345-1234",
+      "community": "Business Bay",
+      "landUse": "RESIDENTIAL_MULTI",
+      "vertices": [
+        {
+          "x": "0",
+          "y": "0"
+        },
+        {
+          "x": "80",
+          "y": "0"
+        },
+        {
+          "x": "80",
+          "y": "40"
+        },
+        {
+          "x": "0",
+          "y": "40"
+        }
+      ],
+      "edges": [
+        {
+          "seq": 0,
+          "classification": "ROAD",
+          "roadHierarchy": "LOCAL"
+        },
+        {
+          "seq": 1,
+          "classification": "ADJACENT_PLOT"
+        },
+        {
+          "seq": 2,
+          "classification": "ROAD",
+          "roadHierarchy": "COLLECTOR"
+        },
+        {
+          "seq": 3,
+          "classification": "ADJACENT_PLOT"
+        }
+      ]
+    },
+    "run": {
+      "parkingInFar": "EXCLUDED_FROM_FAR",
+      "unitMix": {
+        "source": "USER_SET",
+        "entries": [
+          {
+            "typeId": "1BED",
+            "label": "1 bedroom",
+            "share": "0.5",
+            "nsaM2": "70"
+          },
+          {
+            "typeId": "2BED",
+            "label": "2 bedroom",
+            "share": "0.5",
+            "nsaM2": "110"
+          }
+        ]
+      },
+      "parkingLevelsAvailable": 2,
+      "parkingUsableFraction": {
+        "value": "0.85",
+        "source": "ASSUMED",
+        "basis": "the usable fraction of a parking level after cores, ramps and plant"
+      },
+      "saleableEfficiency": {
+        "value": "0.93",
+        "source": "USER_SET",
+        "basis": "the conservative end of the saleable-to-GFA range in the project brief on file"
+      },
+      "realismDiscount": "1.00",
+      "useDraftRules": true
+    }
+  },
+  "verified": {
+    "plotAreaM2": "3200.00",
+    "setbacksM": [
+      {
+        "seq": 0,
+        "setbackM": "4.500",
+        "ruleId": "R-SETBACK-ROAD-RES"
+      },
+      {
+        "seq": 1,
+        "setbackM": "7.500",
+        "ruleId": "R-SETBACK-BOUNDARY-RES"
+      },
+      {
+        "seq": 2,
+        "setbackM": "6.000",
+        "ruleId": "R-SETBACK-ROAD-RES"
+      },
+      {
+        "seq": 3,
+        "setbackM": "7.500",
+        "ruleId": "R-SETBACK-BOUNDARY-RES"
+      }
+    ],
+    "footprintM2": "1917.5",
+    "coverageCapM2": "1920",
+    "towerPlateCapM2": "1280",
+    "maxLevelsByHeight": "14",
+    "podiumOutline": [
+      {
+        "x": "72.500",
+        "y": "34.000"
+      },
+      {
+        "x": "7.500",
+        "y": "34.000"
+      },
+      {
+        "x": "7.500",
+        "y": "4.500"
+      },
+      {
+        "x": "72.500",
+        "y": "4.500"
+      }
+    ],
+    "towerOutline": [
+      {
+        "x": "66.553",
+        "y": "31.301"
+      },
+      {
+        "x": "13.447",
+        "y": "31.301"
+      },
+      {
+        "x": "13.447",
+        "y": "7.199"
+      },
+      {
+        "x": "66.553",
+        "y": "7.199"
+      }
+    ],
+    "totalBays": "265",
+    "bayAreaFactorM2": "32",
+    "bayAreaFactorClass": "ASSUMED",
+    "bandAM2": "16000",
+    "bandBM2": "17920",
+    "bandCM2": "6774.194",
+    "governingBand": "PARKING",
+    "governingGfaM2": "6774.194",
+    "headroomToNextM2": "9225.81",
+    "nextBindingBand": "REGULATORY",
+    "levels": "5",
+    "formulas": {
+      "bandA": "FAR 5 × plot area 3200.00 m² (parking excluded from FAR)",
+      "bandB": "tower plate 1280.00 m² × 14 level(s)",
+      "bandC": "70 unit(s) supportable by parking × 96.77 m² GFA per unit",
+      "governingGfa": "min(band A, band B, band C)",
+      "levels": "floor(min(14, governing GFA ÷ tower plate))"
+    },
+    "levelPlan": {
+      "bayCount": {
+        "value": "46",
+        "node": "n127",
+        "parameterId": "parking.laid_out_bays",
+        "provenanceClass": "DERIVED",
+        "renderHint": "NEUTRAL_WITH_CITATION",
+        "unit": "bays"
+      },
+      "areaPerBayM2": {
+        "value": "41.68",
+        "node": "n129",
+        "parameterId": "parking.area_per_bay_m2",
+        "provenanceClass": "DERIVED",
+        "renderHint": "NEUTRAL_WITH_CITATION",
+        "unit": "m²/bay"
+      },
+      "deductionsM2": {
+        "value": "287.62",
+        "node": "n117",
+        "parameterId": "parking.layout_deductions_m2",
+        "provenanceClass": "ASSUMED",
+        "renderHint": "AMBER_DOTTED_EDITABLE",
+        "unit": "m²"
+      },
+      "moduleDepthM": {
+        "value": "17",
+        "node": "n121",
+        "parameterId": "parking.module_depth_m",
+        "provenanceClass": "DERIVED",
+        "renderHint": "NEUTRAL_WITH_CITATION",
+        "unit": "m"
+      },
+      "usableAreaM2": {
+        "value": "1629.88",
+        "node": "n123",
+        "parameterId": "parking.layout_usable_area_m2",
+        "provenanceClass": "ASSUMED",
+        "renderHint": "AMBER_DOTTED_EDITABLE",
+        "unit": "m²"
+      },
+      "standard": {
+        "angle": "DEG_90",
+        "driveway": "TWO_WAY",
+        "bayWidthM": "2.5",
+        "bayLengthM": "5.5",
+        "drivewayWidthM": "6"
+      },
+      "podiumRing": [
+        {
+          "x": "72.500",
+          "y": "34.000"
+        },
+        {
+          "x": "7.500",
+          "y": "34.000"
+        },
+        {
+          "x": "7.500",
+          "y": "4.500"
+        },
+        {
+          "x": "72.500",
+          "y": "4.500"
+        }
+      ],
+      "packingRect": {
+        "widthM": "65.000",
+        "depthM": "29.500",
+        "exact": true,
+        "coveragePct": "100.0",
+        "outline": [
+          {
+            "x": "72.500",
+            "y": "34.000"
+          },
+          {
+            "x": "7.500",
+            "y": "34.000"
+          },
+          {
+            "x": "7.500",
+            "y": "4.500"
+          },
+          {
+            "x": "72.500",
+            "y": "4.500"
+          }
+        ]
+      },
+      "rects": [
+        {
+          "kind": "RAMP",
+          "row": -1,
+          "widthM": "6.000",
+          "heightM": "25.075",
+          "outline": [
+            {
+              "x": "72.500",
+              "y": "34.000"
+            },
+            {
+              "x": "66.500",
+              "y": "34.000"
+            },
+            {
+              "x": "66.500",
+              "y": "8.925"
+            },
+            {
+              "x": "72.500",
+              "y": "8.925"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "66.500",
+              "y": "34.000"
+            },
+            {
+              "x": "64.000",
+              "y": "34.000"
+            },
+            {
+              "x": "64.000",
+              "y": "28.500"
+            },
+            {
+              "x": "66.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "64.000",
+              "y": "34.000"
+            },
+            {
+              "x": "61.500",
+              "y": "34.000"
+            },
+            {
+              "x": "61.500",
+              "y": "28.500"
+            },
+            {
+              "x": "64.000",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "61.500",
+              "y": "34.000"
+            },
+            {
+              "x": "59.000",
+              "y": "34.000"
+            },
+            {
+              "x": "59.000",
+              "y": "28.500"
+            },
+            {
+              "x": "61.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "59.000",
+              "y": "34.000"
+            },
+            {
+              "x": "56.500",
+              "y": "34.000"
+            },
+            {
+              "x": "56.500",
+              "y": "28.500"
+            },
+            {
+              "x": "59.000",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "56.500",
+              "y": "34.000"
+            },
+            {
+              "x": "54.000",
+              "y": "34.000"
+            },
+            {
+              "x": "54.000",
+              "y": "28.500"
+            },
+            {
+              "x": "56.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "54.000",
+              "y": "34.000"
+            },
+            {
+              "x": "51.500",
+              "y": "34.000"
+            },
+            {
+              "x": "51.500",
+              "y": "28.500"
+            },
+            {
+              "x": "54.000",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "51.500",
+              "y": "34.000"
+            },
+            {
+              "x": "49.000",
+              "y": "34.000"
+            },
+            {
+              "x": "49.000",
+              "y": "28.500"
+            },
+            {
+              "x": "51.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "49.000",
+              "y": "34.000"
+            },
+            {
+              "x": "46.500",
+              "y": "34.000"
+            },
+            {
+              "x": "46.500",
+              "y": "28.500"
+            },
+            {
+              "x": "49.000",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "46.500",
+              "y": "34.000"
+            },
+            {
+              "x": "44.000",
+              "y": "34.000"
+            },
+            {
+              "x": "44.000",
+              "y": "28.500"
+            },
+            {
+              "x": "46.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "44.000",
+              "y": "34.000"
+            },
+            {
+              "x": "41.500",
+              "y": "34.000"
+            },
+            {
+              "x": "41.500",
+              "y": "28.500"
+            },
+            {
+              "x": "44.000",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "41.500",
+              "y": "34.000"
+            },
+            {
+              "x": "39.000",
+              "y": "34.000"
+            },
+            {
+              "x": "39.000",
+              "y": "28.500"
+            },
+            {
+              "x": "41.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "39.000",
+              "y": "34.000"
+            },
+            {
+              "x": "36.500",
+              "y": "34.000"
+            },
+            {
+              "x": "36.500",
+              "y": "28.500"
+            },
+            {
+              "x": "39.000",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "36.500",
+              "y": "34.000"
+            },
+            {
+              "x": "34.000",
+              "y": "34.000"
+            },
+            {
+              "x": "34.000",
+              "y": "28.500"
+            },
+            {
+              "x": "36.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "34.000",
+              "y": "34.000"
+            },
+            {
+              "x": "31.500",
+              "y": "34.000"
+            },
+            {
+              "x": "31.500",
+              "y": "28.500"
+            },
+            {
+              "x": "34.000",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "31.500",
+              "y": "34.000"
+            },
+            {
+              "x": "29.000",
+              "y": "34.000"
+            },
+            {
+              "x": "29.000",
+              "y": "28.500"
+            },
+            {
+              "x": "31.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "29.000",
+              "y": "34.000"
+            },
+            {
+              "x": "26.500",
+              "y": "34.000"
+            },
+            {
+              "x": "26.500",
+              "y": "28.500"
+            },
+            {
+              "x": "29.000",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "26.500",
+              "y": "34.000"
+            },
+            {
+              "x": "24.000",
+              "y": "34.000"
+            },
+            {
+              "x": "24.000",
+              "y": "28.500"
+            },
+            {
+              "x": "26.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "24.000",
+              "y": "34.000"
+            },
+            {
+              "x": "21.500",
+              "y": "34.000"
+            },
+            {
+              "x": "21.500",
+              "y": "28.500"
+            },
+            {
+              "x": "24.000",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "21.500",
+              "y": "34.000"
+            },
+            {
+              "x": "19.000",
+              "y": "34.000"
+            },
+            {
+              "x": "19.000",
+              "y": "28.500"
+            },
+            {
+              "x": "21.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "19.000",
+              "y": "34.000"
+            },
+            {
+              "x": "16.500",
+              "y": "34.000"
+            },
+            {
+              "x": "16.500",
+              "y": "28.500"
+            },
+            {
+              "x": "19.000",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "16.500",
+              "y": "34.000"
+            },
+            {
+              "x": "14.000",
+              "y": "34.000"
+            },
+            {
+              "x": "14.000",
+              "y": "28.500"
+            },
+            {
+              "x": "16.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "14.000",
+              "y": "34.000"
+            },
+            {
+              "x": "11.500",
+              "y": "34.000"
+            },
+            {
+              "x": "11.500",
+              "y": "28.500"
+            },
+            {
+              "x": "14.000",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "11.500",
+              "y": "34.000"
+            },
+            {
+              "x": "9.000",
+              "y": "34.000"
+            },
+            {
+              "x": "9.000",
+              "y": "28.500"
+            },
+            {
+              "x": "11.500",
+              "y": "28.500"
+            }
+          ]
+        },
+        {
+          "kind": "AISLE",
+          "row": 0,
+          "widthM": "59.000",
+          "heightM": "6.000",
+          "outline": [
+            {
+              "x": "66.500",
+              "y": "28.500"
+            },
+            {
+              "x": "7.500",
+              "y": "28.500"
+            },
+            {
+              "x": "7.500",
+              "y": "22.500"
+            },
+            {
+              "x": "66.500",
+              "y": "22.500"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "66.500",
+              "y": "22.500"
+            },
+            {
+              "x": "64.000",
+              "y": "22.500"
+            },
+            {
+              "x": "64.000",
+              "y": "17.000"
+            },
+            {
+              "x": "66.500",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "64.000",
+              "y": "22.500"
+            },
+            {
+              "x": "61.500",
+              "y": "22.500"
+            },
+            {
+              "x": "61.500",
+              "y": "17.000"
+            },
+            {
+              "x": "64.000",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "61.500",
+              "y": "22.500"
+            },
+            {
+              "x": "59.000",
+              "y": "22.500"
+            },
+            {
+              "x": "59.000",
+              "y": "17.000"
+            },
+            {
+              "x": "61.500",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "59.000",
+              "y": "22.500"
+            },
+            {
+              "x": "56.500",
+              "y": "22.500"
+            },
+            {
+              "x": "56.500",
+              "y": "17.000"
+            },
+            {
+              "x": "59.000",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "56.500",
+              "y": "22.500"
+            },
+            {
+              "x": "54.000",
+              "y": "22.500"
+            },
+            {
+              "x": "54.000",
+              "y": "17.000"
+            },
+            {
+              "x": "56.500",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "54.000",
+              "y": "22.500"
+            },
+            {
+              "x": "51.500",
+              "y": "22.500"
+            },
+            {
+              "x": "51.500",
+              "y": "17.000"
+            },
+            {
+              "x": "54.000",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "51.500",
+              "y": "22.500"
+            },
+            {
+              "x": "49.000",
+              "y": "22.500"
+            },
+            {
+              "x": "49.000",
+              "y": "17.000"
+            },
+            {
+              "x": "51.500",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "49.000",
+              "y": "22.500"
+            },
+            {
+              "x": "46.500",
+              "y": "22.500"
+            },
+            {
+              "x": "46.500",
+              "y": "17.000"
+            },
+            {
+              "x": "49.000",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "46.500",
+              "y": "22.500"
+            },
+            {
+              "x": "44.000",
+              "y": "22.500"
+            },
+            {
+              "x": "44.000",
+              "y": "17.000"
+            },
+            {
+              "x": "46.500",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "44.000",
+              "y": "22.500"
+            },
+            {
+              "x": "41.500",
+              "y": "22.500"
+            },
+            {
+              "x": "41.500",
+              "y": "17.000"
+            },
+            {
+              "x": "44.000",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "41.500",
+              "y": "22.500"
+            },
+            {
+              "x": "39.000",
+              "y": "22.500"
+            },
+            {
+              "x": "39.000",
+              "y": "17.000"
+            },
+            {
+              "x": "41.500",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "39.000",
+              "y": "22.500"
+            },
+            {
+              "x": "36.500",
+              "y": "22.500"
+            },
+            {
+              "x": "36.500",
+              "y": "17.000"
+            },
+            {
+              "x": "39.000",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "36.500",
+              "y": "22.500"
+            },
+            {
+              "x": "34.000",
+              "y": "22.500"
+            },
+            {
+              "x": "34.000",
+              "y": "17.000"
+            },
+            {
+              "x": "36.500",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "34.000",
+              "y": "22.500"
+            },
+            {
+              "x": "31.500",
+              "y": "22.500"
+            },
+            {
+              "x": "31.500",
+              "y": "17.000"
+            },
+            {
+              "x": "34.000",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "31.500",
+              "y": "22.500"
+            },
+            {
+              "x": "29.000",
+              "y": "22.500"
+            },
+            {
+              "x": "29.000",
+              "y": "17.000"
+            },
+            {
+              "x": "31.500",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "29.000",
+              "y": "22.500"
+            },
+            {
+              "x": "26.500",
+              "y": "22.500"
+            },
+            {
+              "x": "26.500",
+              "y": "17.000"
+            },
+            {
+              "x": "29.000",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "26.500",
+              "y": "22.500"
+            },
+            {
+              "x": "24.000",
+              "y": "22.500"
+            },
+            {
+              "x": "24.000",
+              "y": "17.000"
+            },
+            {
+              "x": "26.500",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "24.000",
+              "y": "22.500"
+            },
+            {
+              "x": "21.500",
+              "y": "22.500"
+            },
+            {
+              "x": "21.500",
+              "y": "17.000"
+            },
+            {
+              "x": "24.000",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "21.500",
+              "y": "22.500"
+            },
+            {
+              "x": "19.000",
+              "y": "22.500"
+            },
+            {
+              "x": "19.000",
+              "y": "17.000"
+            },
+            {
+              "x": "21.500",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "19.000",
+              "y": "22.500"
+            },
+            {
+              "x": "16.500",
+              "y": "22.500"
+            },
+            {
+              "x": "16.500",
+              "y": "17.000"
+            },
+            {
+              "x": "19.000",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "16.500",
+              "y": "22.500"
+            },
+            {
+              "x": "14.000",
+              "y": "22.500"
+            },
+            {
+              "x": "14.000",
+              "y": "17.000"
+            },
+            {
+              "x": "16.500",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "14.000",
+              "y": "22.500"
+            },
+            {
+              "x": "11.500",
+              "y": "22.500"
+            },
+            {
+              "x": "11.500",
+              "y": "17.000"
+            },
+            {
+              "x": "14.000",
+              "y": "17.000"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": 0,
+          "widthM": "2.500",
+          "heightM": "5.500",
+          "outline": [
+            {
+              "x": "11.500",
+              "y": "22.500"
+            },
+            {
+              "x": "9.000",
+              "y": "22.500"
+            },
+            {
+              "x": "9.000",
+              "y": "17.000"
+            },
+            {
+              "x": "11.500",
+              "y": "17.000"
+            }
+          ]
+        }
+      ],
+      "access": {
+        "recommended": {
+          "edgeSeq": 0,
+          "hierarchy": "LOCAL",
+          "usableWindowM": "50.00",
+          "centreOffsetM": "40.00",
+          "widthM": "6.00",
+          "opening": {
+            "start": {
+              "x": "37.000",
+              "y": "0.000"
+            },
+            "end": {
+              "x": "43.000",
+              "y": "0.000"
+            }
+          },
+          "rank": 1,
+          "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
+          "node": "n133",
+          "provenanceClass": "DERIVED"
+        },
+        "candidates": [
+          {
+            "edgeSeq": 0,
+            "hierarchy": "LOCAL",
+            "usableWindowM": "50.00",
+            "centreOffsetM": "40.00",
+            "widthM": "6.00",
+            "opening": {
+              "start": {
+                "x": "37.000",
+                "y": "0.000"
+              },
+              "end": {
+                "x": "43.000",
+                "y": "0.000"
+              }
+            },
+            "rank": 1,
+            "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one"
+          },
+          {
+            "edgeSeq": 2,
+            "hierarchy": "COLLECTOR",
+            "usableWindowM": "50.00",
+            "centreOffsetM": "40.00",
+            "widthM": "6.00",
+            "opening": {
+              "start": {
+                "x": "43.000",
+                "y": "40.000"
+              },
+              "end": {
+                "x": "37.000",
+                "y": "40.000"
+              }
+            },
+            "rank": 2,
+            "rationale": "COLLECTOR road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one"
+          }
+        ],
+        "rejected": [
+          {
+            "edgeSeq": 1,
+            "classification": "ADJACENT_PLOT",
+            "reason": "shares a boundary with a neighbouring plot — a vehicle cannot enter through it"
+          },
+          {
+            "edgeSeq": 3,
+            "classification": "ADJACENT_PLOT",
+            "reason": "shares a boundary with a neighbouring plot — a vehicle cannot enter through it"
+          }
+        ]
+      },
+      "notAssessed": [
+        "A 6 m × 25.08 m ramp strip is reserved down one edge, and the bay runs are packed into the remaining width. Gradient, transitions and headroom under B.7.2.2 are NOT ASSESSED — only the plan area is reserved.",
+        "8.08 m of depth is left unused — too shallow for a bay (5.5 m) plus its aisle (6 m). It is reported rather than quietly filled.",
+        "Whether a T junction sits opposite the chosen opening (B.7.2.1: \"Vehicle access shall not be located opposite a T junction\"). That needs the surrounding road network, which no affection plan carries.",
+        "RTA approval. B.7.2.1 defers the location to RTA requirements and the Dubai access management manual; nothing here substitutes for that.",
+        "Whether a traffic impact study is required for this development."
+      ]
+    },
+    "access": {
+      "recommended": {
+        "edgeSeq": 0,
+        "hierarchy": "LOCAL",
+        "usableWindowM": "50.00",
+        "centreOffsetM": "40.00",
+        "widthM": "6.00",
+        "opening": {
+          "start": {
+            "x": "37.000",
+            "y": "0.000"
+          },
+          "end": {
+            "x": "43.000",
+            "y": "0.000"
+          }
+        },
+        "rank": 1,
+        "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
+        "node": "n133",
+        "provenanceClass": "DERIVED"
+      },
+      "candidates": [
+        {
+          "edgeSeq": 0,
+          "hierarchy": "LOCAL",
+          "usableWindowM": "50.00",
+          "centreOffsetM": "40.00",
+          "widthM": "6.00",
+          "opening": {
+            "start": {
+              "x": "37.000",
+              "y": "0.000"
+            },
+            "end": {
+              "x": "43.000",
+              "y": "0.000"
+            }
+          },
+          "rank": 1,
+          "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one"
+        },
+        {
+          "edgeSeq": 2,
+          "hierarchy": "COLLECTOR",
+          "usableWindowM": "50.00",
+          "centreOffsetM": "40.00",
+          "widthM": "6.00",
+          "opening": {
+            "start": {
+              "x": "43.000",
+              "y": "40.000"
+            },
+            "end": {
+              "x": "37.000",
+              "y": "40.000"
+            }
+          },
+          "rank": 2,
+          "rationale": "COLLECTOR road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one"
+        }
+      ],
+      "rejected": [
+        {
+          "edgeSeq": 1,
+          "classification": "ADJACENT_PLOT",
+          "reason": "shares a boundary with a neighbouring plot — a vehicle cannot enter through it"
+        },
+        {
+          "edgeSeq": 3,
+          "classification": "ADJACENT_PLOT",
+          "reason": "shares a boundary with a neighbouring plot — a vehicle cannot enter through it"
+        }
+      ]
+    },
+    "levelPlanRefusal": null,
+    "bayAreaFactorBasis": "no cited rule fixes the gross area consumed per bay. 32 m²/bay is the mid-point of the 28–35 m²/bay range typical of a structured basement, and it is ranked in the assumption register because the parking band moves roughly in proportion to it.",
+    "parkingInFar": {
+      "countsTowardFar": {
+        "regulatoryGfaM2": "7520.00",
+        "governingGfaM2": "6774.19",
+        "governingBand": "PARKING"
+      },
+      "excludedFromFar": {
+        "regulatoryGfaM2": "16000.00",
+        "governingGfaM2": "6774.19",
+        "governingBand": "PARKING"
+      },
+      "regulatorySpreadM2": "8480.00",
+      "governingSpreadM2": "0.00",
+      "governingSpreadRelative": "0.000000",
+      "verdict": "The parking-in-FAR treatment moves regulatory capacity by 8480 m², but not the governing capacity: the parking limit binds below both treatments. On this plot the open regulatory question does not change the answer — though it would on a plot where the FAR ceiling binds."
+    }
+  }
+}

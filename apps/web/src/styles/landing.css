@@ -1,0 +1,1665 @@
+/* ---------------------------------------------------------------------------
+ * `/` — TOP.ai, development capacity.
+ *
+ * Built from the same tokens as the engine, on purpose. A marketing page with its
+ * own palette is a page that can make a claim the product's own colour language
+ * would have flagged — the amber that means "assumed" and the red that means "never
+ * claimed" have to mean the same thing here as they do on a report, or the reader
+ * learns them twice and trusts neither.
+ *
+ * NOTHING HERE INTRODUCES A COLOUR. Every rule below reaches for a token, and every
+ * token it reaches for is measured by `scripts/contrast.mjs` on all nine grounds in
+ * all three themes.
+ *
+ * AND NOTHING HERE PAINTS AMBER EXCEPT THE TWO SELECTORS THAT ARE ALLOWED TO.
+ * `.lp-claim--partial` and `.lp-status--partial` are two of the seven entries in
+ * `assertAmberExclusive`'s whitelist — a partially-quantified claim is genuinely an
+ * uncertainty statement about that claim's support, and the chip is emitted from the
+ * same value as the row it sits in, so the two must carry one colour or the row says
+ * two things. Every other amber on this page arrives through `[data-state='assumed']`
+ * and `.traced--assumed`, which are declared once, in `site.css` and
+ * `provenance.css`. That is the whole point of the state layer: the amber mapping
+ * exists exactly once in the codebase, so there is no second copy to miss.
+ *
+ * ---
+ *
+ * WHAT THIS FILE NO LONGER OWNS.
+ *
+ * The skip link, the sticky bar, the brand, the nav and the footer are gone: they
+ * belong to `SiteChrome` now, and they became duplicates the moment a second public
+ * route existed. The section rhythm, the rail, the plate, the figure frame, the
+ * callout, the meter, the CTA row, the drawn marks and the scroll reveal are
+ * `site.css`'s — six pages each inventing a section rhythm is six section rhythms,
+ * and the misalignment is read before a word of the copy is.
+ *
+ * So what is left here is what is true of THIS page and of nothing else: the hero
+ * grid, the plan drawing's own ink, the capacity rows, the claim verdicts, the limit
+ * rows and the one inverted band.
+ *
+ * The visual language is a drawing sheet: a hairline grid, hard rules between
+ * sections, numerals set in mono, section indices in the margin, and one dark band.
+ * That is not a style picked from a moodboard — it is the register the artefact
+ * belongs to. The output of this product is a document an architect puts in front of
+ * a committee, and a page that looked like a growth-stage SaaS site would be
+ * promising a different thing from the one that arrives.
+ * ------------------------------------------------------------------------ */
+
+/*
+ * `--lp-max` IS GONE. It was 78rem here while `--content-max` was 76rem for the
+ * engine, so crossing from the site into the app shifted and re-measured the column
+ * by 32px for a reason no reader could name. One page column, named once, in
+ * `tokens.css`: `--page-max`, applied by the `.shell` chassis class. Nothing below
+ * sets its own maximum width.
+ */
+.lp {
+  background: var(--surface-base);
+}
+
+/* ==========================================================================
+ * THE FOLD
+ * ======================================================================= */
+
+/*
+ * `repeat(auto-fit, minmax(23rem, 1fr))` gave two equal columns and therefore no
+ * entry point: the eye had no reason to start on the left. Committed asymmetry —
+ * 0.85fr of argument against 1.15fr of artefact — is what makes the drawing read as
+ * the evidence and the copy as the claim.
+ */
+.lp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: clamp(var(--space-5), 4vw, var(--space-8));
+  /*
+    `start`, and the hero pattern says `center`. The pattern was written for a copy
+    column holding a headline, a lede and a button row; this one also carries the
+    governing figure, its derivation, the amber assumption and the validity stamp, so
+    it runs roughly twice the height of the drawing. Centred against that, the drawing
+    floats into the middle of the page and leaves the first screen with nothing on it
+    but words — on a page whose whole argument is that the artefact is real. The
+    pattern's own note says the artefact is the thing that proves the claim; aligning
+    to the top is that note applied at a width where the columns still sit side by
+    side, rather than only at the width where they stack.
+  */
+  align-items: start;
+  /*
+    THE HERO TAKES THE MINOR RHYTHM AT ITS HEAD, NOT THE MAJOR ONE.
+
+    Every other section opens on `--rhythm-major`, and that is right for a section
+    whose job is to be separated from the one above it. Nothing is above this one.
+    At 1440 the major rhythm put 115px of empty page between a masthead ending at
+    y=88 and an eyebrow starting at y=254, and every pixel of it was spent pushing
+    the governing figure and the amber assumption under it further down the page.
+  */
+  padding-block: var(--rhythm-minor) var(--rhythm-minor);
+}
+.lp-hero__copy,
+.lp-hero__figure {
+  min-inline-size: 0;
+}
+/*
+  And a tighter block rhythm than a body section, for the reason the `align-items`
+  note above already gives: this column carries a headline, a lede, the governing
+  figure, its derivation, the amber assumption, the validity stamp and a CTA, where
+  the pattern was written for a headline, a lede and a button row. Seven blocks at
+  the body rhythm is 48px spent six times over, and what it buys is a fold that
+  holds the claim but not the answer — on a page whose entire argument is the
+  answer and the assumption under it, together.
+*/
+.lp-hero__copy > * + * {
+  margin-block-start: var(--space-5);
+}
+
+.lp-hero__h1 {
+  font-size: var(--text-4xl);
+  /* Plex's characteristic display move is Light at 42px and above. 600 at 61px is
+     the convention Carbon and Stripe both explicitly reject, and lowering the page's
+     total ink weight is also what raises amber's relative loudness. */
+  font-weight: var(--weight-light);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-banner);
+  /* 15ch caps the headline at desktop, where an uncapped 61px H1 would run the full
+     page column and read as a banner rather than a sentence. It is NOT what prevents
+     a 320px overflow and saying so would be wrong by arithmetic: Plex Sans's digit
+     advance is 0.6em, so 15ch at the H1's 36px floor computes to 324px against a
+     288px column and the cap is inactive below a viewport of about 356px. What holds
+     the line there is the grid track plus `min-inline-size: 0`, and normal wrapping. */
+  max-inline-size: var(--measure-banner);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+
+.lp-hero__lede {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-lede);
+  text-wrap: pretty;
+}
+.lp-hero__lede strong {
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* --- The answer ---------------------------------------------------------- */
+
+.lp-answer__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+  margin-block-end: var(--space-3);
+}
+
+/*
+ * REGULATORY VALIDITY, at equal weight to the figure above it and never smaller.
+ *
+ * `--variance` is not softened here and may not be: it paints NEVER CLAIMED and
+ * REGULATORY VALIDITY — NOT ASSESSED, which is the product's central refusal, and it
+ * is under the same protection as the amber. The mark is drawn rather than typed —
+ * a dingbat is resolved by whatever face the OS supplies, and on Windows U+26A0
+ * commonly resolves through Segoe UI Emoji as a filled colour glyph at a different
+ * weight and baseline, which is a rendering artefact inside a trust signal.
+ */
+.lp-validity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-raised);
+  border: var(--border-width-emphasis) solid var(--variance-border);
+  border-inline-start: var(--rail-w) solid var(--variance);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-prose);
+}
+.lp-validity__mark {
+  display: inline-flex;
+  color: var(--variance);
+  /* The glyph box is 0.875em of the surrounding text; nudging it to the cap line of
+     the first line of prose is what stops it reading as a bullet. */
+  padding-block-start: 0.15em;
+}
+.lp-validity strong {
+  color: var(--variance);
+  font-weight: var(--weight-medium);
+}
+
+/*
+ * The hero's calls to action take the large control height. `--lg` is a size in the
+ * control family that `app.css` does not implement, and declaring `.button--lg`
+ * here would put a control-family selector in a page stylesheet — the same defect as
+ * two definitions of a button in two files. So the size is applied by placement,
+ * which is the one thing a page IS allowed to own.
+ */
+.lp-cta > .button {
+  min-block-size: var(--control-h-lg);
+  padding-inline: var(--space-5);
+  font-size: var(--text-base);
+}
+
+/* ==========================================================================
+ * THE PLAN
+ * ======================================================================= */
+
+/*
+ * The drawing is the run beside it, to scale, in the kernel's own coordinates. That
+ * constraint is what keeps it honest: there is no artistic licence available here,
+ * because moving a line would make the figure disagree with the numbers printed
+ * under it.
+ *
+ * The frame, the registration corners, the caption, the spec list and the source
+ * line are the `.figure` chassis. What is below is only the ink inside the drawing.
+ */
+.lp-plan {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  font-family: var(--font-mono);
+}
+
+.lp-plan__boundary {
+  fill: none;
+  stroke: var(--text-primary);
+  stroke-width: 0.55;
+}
+/*
+ * The podium is drawn as a LINE, dashed, over an opaque fill — the way a set-back
+ * building line is drawn on a real plan, and the reason it is not a block of colour.
+ * A solid accent-filled rectangle was the first version and it read as a rendering:
+ * it put a building on the page, which is precisely what the limits section says
+ * this product does not produce.
+ */
+.lp-plan__podium {
+  fill: var(--surface-raised);
+  stroke: var(--accent);
+  stroke-width: 0.4;
+  stroke-dasharray: 2.2 1.3;
+}
+/*
+ * THE TOWER CAP IS A LINE, AND THE OTHER HALF OF A CUT §9 ORDERED.
+ *
+ * §9 says the plan's podium fill becomes a stroke, "which is also more correct as
+ * a drawing, and removes the largest non-amber chromatic area on the page". The
+ * podium half landed; this one did not, and `--accent-subtle` here measured
+ * 42,157px² on the fold — 44% of the amber's own filled area, sitting 300px from
+ * the amber callout it is not allowed to compete with.
+ *
+ * IT ALSO HAD THE DRAWING'S HIERARCHY INVERTED. The footprint after offset is
+ * 1,917.5 m² and is what the setback rules actually produce; the tower plate cap
+ * is the smaller, secondary figure. The larger, more important zone was painted
+ * white and the smaller one got the only fill on the drawing.
+ *
+ * With no fill the three zones read as three TONES rather than one colour and two
+ * whites: the setback strip is the sunken well seen through the hatch, the
+ * buildable footprint is the raised plate that covers it, and the cap is a line
+ * drawn inside that. Which is how a plan is drawn.
+ */
+.lp-plan__tower {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 0.45;
+}
+.lp-plan__hatch {
+  stroke: var(--deferred-hatch);
+  stroke-width: 0.55;
+}
+.lp-plan__rule line {
+  stroke: var(--border-strong);
+  stroke-width: 0.25;
+}
+
+/*
+ * THE LABEL IS INK, NOT BLUE, and §9 names this one by hand: "blue currently
+ * paints a decorative eyebrow dot, PLAN LABELS, a podium fill, a tag, a bar fill
+ * and a citation superscript", against a token whose own rule is "one blue,
+ * interactive affordance and nothing else". A caption inside a drawing is not an
+ * affordance, and a figure written in the interactive colour is a figure a reader
+ * has been taught to click.
+ *
+ * TWO RANKS, the way every other figure on this page is set: the caption in
+ * `--text-secondary` and the number in `--text-primary`. It also puts the drawing's
+ * own figure in the same ink as the figure in the schedule below it, which is the
+ * pair a reader is being invited to check against each other.
+ */
+.lp-plan__label text {
+  fill: var(--text-secondary);
+  font-size: 2.1px;
+  letter-spacing: 0.3px;
+}
+.lp-plan__label .lp-plan__label-v {
+  fill: var(--text-primary);
+  font-size: 3.4px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0;
+}
+
+.lp-plan__dim text {
+  font-size: 3.2px;
+  font-weight: var(--weight-semibold);
+  fill: var(--text-primary);
+  /* The setback figures sit on the hatch. A halo puts them back on the panel colour
+     so 1.4.3 is met against a surface rather than against a texture — moving the
+     text off the texture rather than weakening the texture, which would trade 1.4.3
+     for 1.4.11 and call it a fix. */
+  paint-order: stroke fill;
+  stroke: var(--surface-sunken);
+  stroke-width: 1.1px;
+  stroke-linejoin: round;
+}
+.lp-plan__overall text {
+  font-size: 2.7px;
+  fill: var(--text-secondary);
+}
+.lp-plan__edge text {
+  font-size: 2.1px;
+  letter-spacing: 0.32px;
+  fill: var(--text-tertiary);
+}
+/* On a phone the figure is half as wide, so type set in user units halves with it.
+   These sizes are chosen so the rendered result stays above the 12px floor at 320px,
+   at the cost of a chunkier drawing — the right trade. */
+@media (max-width: 44rem) {
+  .lp-plan__dim text { font-size: 4.2px; }
+  .lp-plan__overall text { font-size: 3.6px; }
+  .lp-plan__edge text { font-size: 2.9px; letter-spacing: 0.2px; }
+  .lp-plan__label text { font-size: 2.9px; letter-spacing: 0.15px; }
+  .lp-plan__label .lp-plan__label-v { font-size: 4.4px; }
+}
+
+/* THE ARTEFACT GOES FIRST ON A PHONE. It is the thing that proves the claim, and a
+   reader who has scrolled past three paragraphs to reach it has already decided. */
+@media (max-width: 64rem) {
+  .lp-hero { grid-template-columns: minmax(0, 1fr); }
+  .lp-hero__figure { order: -1; }
+}
+
+/* ==========================================================================
+ * SECTIONS AND PROSE
+ * ======================================================================= */
+
+/* The rhythm, the horizon and the rail are the chassis'. What is left is the one
+   thing a page owns: how its own prose is measured — and which of its chapters
+   change ground. */
+.lp-section {
+  break-inside: auto;
+}
+
+/*
+ * THE CHAPTERS.
+ *
+ * Every section on this page computed `background: rgba(0,0,0,0)`, so from the
+ * masthead to the colophon the reader met one continuous ground 6,506px tall,
+ * broken by nothing but the same hairline datum six times over. That is the
+ * literal content of the client's sentence — the page did not read restrained, it
+ * read unfinished — and it is not a colour problem: the honest ways to break a
+ * long page are a rule, a change of GROUND, and an inversion. It had one of the
+ * three and spent it six times.
+ *
+ * SO THE GROUND ALTERNATES, and it costs no hue at all. 01, 03 and 05 sit on
+ * `--surface-sunken`; the hero, 02 and 04 stay on the page. The surface ladder was
+ * repitched in `tokens.css` at about 6% of luminance a rung — base to sunken is
+ * 1.06:1 and floored in `HOUSE_PAIRS` — so this is a difference a reader can now
+ * actually see, where the three off-whites it replaces were 1.04:1 apart and below
+ * the just-noticeable difference for a field this size.
+ *
+ * WHICH THREE, AND WHY THOSE. Not by position — by what is standing on them. 01
+ * holds the three capacity plates, 03 the four guarantee plates and 05 the
+ * five-row refusal schedule: the three sections whose content is objects rather
+ * than prose, and objects need a ground to lift off. A white plate on a white page
+ * is an absence with a hairline drawn round it; on a sunken chapter it is 1.13:1
+ * up and reads as a thing on a surface, with no shadow involved and therefore
+ * nothing lost on paper.
+ *
+ * AND NOT ONE OF THEM CARRIES AMBER ON ITS OWN GROUND. That is the constraint that
+ * chose them as much as the plates did. Every ASSUMED treatment on this page — the
+ * hero callout, the `.lp-costed` chip, the legend inside guarantee 3 — sits inside
+ * a RAISED plate, so the chapter ground never gets behind one. It matters because
+ * the direction is not neutral: `--uncertain-surface` is LIGHTER than sunken and
+ * DARKER than base, so an amber block on a zoned section would flip polarity and
+ * lose separation (1.027 against 1.036). A chapter ground that made the amber
+ * quieter would be a §13.1 defect arrived at through a layout decision, which is
+ * exactly the shape of failure that is hardest to see in review.
+ *
+ * THE BLEED IS BUILT FROM PERCENTAGES AND NOT FROM `vw`, and that is not fussiness.
+ * `100vw` includes the classic scrollbar, so every full-bleed rule written with it
+ * overflows sideways by 15px on the machines that have one — and every
+ * accessibility defect ever found in this repository has been a sideways scroll on
+ * a page that looked fine on the machine it was built on. A percentage is resolved
+ * against `.lp`'s content box, which the scrollbar is already outside of. The
+ * padding restates `.shell`'s own arithmetic so the text still starts on the one
+ * column: half the leftover, plus the gutter, floored at the gutter. Verified at
+ * 320, 400, 640, 900, 1100, 1249, 1440, 1920 and 2560: a zoned section's body
+ * column and a plain one's are the same two numbers at every width, and the
+ * document never scrolls sideways.
+ *
+ * AND THEY ARE SELECTED BY ID, WHICH IS A COUPLING WORTH WRITING DOWN. `#capacities`,
+ * `#guarantees` and `#limits` are the nav's own anchor targets, so they are the only
+ * stable named handle this markup offers — `:nth-of-type` would re-zone the whole page
+ * the first time somebody inserts a section, which is the same defect the hero's
+ * stagger avoids by taking `--motion-order` from an inline style rather than from DOM
+ * position. The cost is that renaming an anchor silently drops a chapter. It is a
+ * visible failure (three greys become one) rather than a silent wrong answer, and the
+ * alternative fails invisibly, so this is the right side of that trade.
+ */
+#capacities.lp-section,
+#guarantees.lp-section,
+#limits.lp-section {
+  background: var(--surface-sunken);
+  max-inline-size: none;
+  padding-inline: max(
+    var(--page-gutter),
+    calc((100% - var(--page-max)) / 2 + var(--page-gutter))
+  );
+}
+.lp-lede {
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-lede);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+  margin-block-start: var(--space-3);
+}
+.lp-prose {
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-prose);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+.lp-prose em {
+  color: var(--text-primary);
+  font-style: italic;
+}
+.lp-after {
+  margin-block-start: var(--rhythm-block);
+}
+
+/* ==========================================================================
+ * THE CAPACITY ROWS
+ * ======================================================================= */
+
+.lp-bands {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lp-bands--single {
+  margin-block-start: 0;
+}
+
+.lp-band {
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-raised);
+  /* THE PLATE EDGE, not the interior rule. `--border-subtle` is the token for a
+     rule INSIDE a plate — a schedule's row divider — and using it as the plate's
+     own boundary is what left three answers looking like three faint rectangles.
+     `--border-default` is the declared plate edge and it is floored in
+     `HOUSE_PAIRS` on both grounds this row can sit on: 1.48 against the page and
+     1.40 on a zoned chapter. */
+  border: var(--border-width) solid var(--border-default);
+  /* The neutral rail is --border-strong at 3:1, not --border-default at 1.5:1. A
+     stripe that is informative when coloured is informative when neutral, because
+     "no state" is information. */
+  border-inline-start: var(--rail-w) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  min-inline-size: 0;
+}
+/*
+ * The binding row.
+ *
+ * Colour carries none of this on its own: the row says "binds" in words and the
+ * figure is a size larger. IT DOES NOT TAKE THE 6px RAIL. Six pixels is ASSUMED's
+ * alone — the greyscale and photocopy argument rests on 6px reading as a POSITION
+ * rather than a hue, and position stops identifying ASSUMED the moment a second
+ * state shares the width. `assertRailWidths` fails the build on any other selector
+ * reaching for it.
+ *
+ * AND IT DOES NOT TAKE A FILLED GROUND. It used to set `--accent-subtle`, which
+ * made the hero band a 465×657px blue panel containing a 378×332px amber callout
+ * inset 47px from its edge — so the amber read as an annotation *on* the blue
+ * rather than as the loudest thing on the page. Measured across the whole
+ * document: 430,184px² of accent ground against a fraction of that in amber.
+ *
+ * The redundant coding this rule exists to provide is already carried three
+ * times over — the word "binds", the larger figure, the accent rail and the
+ * accent meter fill — so the ground was the one channel that could be given up
+ * without losing a non-colour cue. Giving it up is what leaves the amber as the
+ * only filled coloured surface above the fold, which is §13.1's actual
+ * requirement rather than its letter.
+ */
+.lp-band.is-binding {
+  border-color: var(--accent);
+  border-inline-start-color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.lp-band__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.lp-band__letter {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-tertiary);
+  border: var(--border-width) solid var(--border-control);
+  border-radius: var(--radius-sm);
+  padding: 0.1em 0.45em;
+  flex: none;
+}
+.lp-band.is-binding .lp-band__letter {
+  color: var(--text-inverse);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.lp-band__name {
+  flex: 1 1 14rem;
+  min-inline-size: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.lp-tag {
+  display: inline-block;
+  margin-inline-start: var(--space-2);
+  padding: 0.1em 0.5em;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.lp-tag--binds {
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--accent);
+  color: var(--accent);
+}
+
+/*
+ * The value is a button, because on every other screen in this product it is.
+ *
+ * Clicking a number to reach its derivation is the single idea the whole system is
+ * built around; a landing page that described it in prose and then printed inert
+ * numbers would be arguing for a feature it had chosen not to show.
+ */
+.lp-band__value {
+  font: inherit;
+  background: none;
+  border: none;
+  /* Inline padding, and an equal negative end margin so the figure still sits hard
+     on the column's right edge. The padding exists so there is a GROUND to change
+     — a hover that repaints a zero-width box is the no-op this page had. 8px is
+     pulled back out of the band's own 24px inset, so nothing reaches the rule. */
+  padding: var(--space-1) var(--space-2);
+  margin-inline-start: auto;
+  margin-inline-end: calc(var(--space-2) * -1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  text-align: end;
+  min-inline-size: 0;
+  /*
+   * THE SHARED RESPONSE VOCABULARY, NOT A SECOND ONE.
+   *
+   * `site.css` §18 names the two grounds a control moves through — one rung down
+   * the ladder under the pointer, two under a press — and binds them to
+   * `--response-ground-hover` / `--response-ground-press` so a zoned section can
+   * repoint the whole vocabulary in one place instead of every consumer restating
+   * it. This control is not `.interactive` (it is a figure, not a plate, and it
+   * needs a chip's radius rather than a plate's), so it sets the same two
+   * properties and consumes them the same way. Two rungs from raised, because a
+   * value chip is small and one rung at this size is a difference nobody sees.
+   */
+  --response-ground-hover: var(--surface-sunken);
+  --response-ground-press: var(--surface-inset);
+}
+/*
+ * `:hover` behind `(hover: hover)` because on touch it is sticky and would leave
+ * the last number a reader pressed looking permanently active. `:focus-visible`
+ * answers exactly as the pointer does, from the same declaration rather than from
+ * a second one somebody has to remember — the keyboard is not a second design.
+ *
+ * THE COLOUR CHANGES ARE OUTSIDE THE MOTION GUARD. Only the interpolation is
+ * inside it. A reader who asked for reduced motion asked for less movement, not
+ * for a page that stops acknowledging them.
+ */
+@media (hover: hover) {
+  .lp-band__value:hover {
+    background-color: var(--response-ground-hover);
+  }
+}
+.lp-band__value:focus-visible {
+  background-color: var(--response-ground-hover);
+  /* Instant, always. A focus ring that fades in is a ring that is not there yet,
+     on the one indicator 2.4.11 exists for. */
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: var(--focus-offset);
+}
+.lp-band__value:active {
+  background-color: var(--response-ground-press);
+}
+.lp-band__number {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  text-decoration: underline dotted var(--border-strong);
+  text-underline-offset: 5px;
+}
+.lp-band.is-binding .lp-band__number {
+  font-size: var(--text-xl);
+}
+.lp-band__unit {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.lp-band__why {
+  font-size: var(--text-xs);
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/*
+ * THE UNDERLINE ANSWERS TOO, and it answers a keyboard as well as a pointer. It
+ * used to repaint on `:hover` alone and in one frame — so the number's dotted rule
+ * flicked from grey to blue with no interpolation, and a reader arriving by tab saw
+ * nothing happen to it at all.
+ *
+ * `text-decoration-color` is animatable, so this costs a property in the list below
+ * and no new token, no new hue and nothing to add to the print lock.
+ */
+.lp-band__value:focus-visible .lp-band__number,
+.lp-band__value:active .lp-band__number {
+  text-decoration-color: var(--accent);
+}
+@media (hover: hover) {
+  .lp-band__value:hover .lp-band__number {
+    text-decoration-color: var(--accent);
+  }
+}
+/*
+ * AND ONLY THE INTERPOLATION IS GUARDED. Down in 80ms, back in 140ms — the
+ * fast-in / slow-out asymmetry a physical control has, expressed as a shorter
+ * duration on `:active` rather than as a second curve. `--ease-standard` because
+ * this ANSWERS a reader; `--ease-out` is for something arriving.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-band__value {
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+  .lp-band__number {
+    transition: text-decoration-color var(--duration-fast) var(--ease-standard);
+  }
+  .lp-band__value:active {
+    transition-duration: var(--duration-instant);
+  }
+}
+
+/*
+ * THE HERO ROW, and the one size on this page that is off the type ramp.
+ *
+ * `--text-figure` rather than `--text-2xl`: a RESULT IS NOT A HEADING and must never
+ * be confusable with one. Giving the governing figure its own name is also what
+ * stops a ramp re-pitch silently shrinking the product's hero number from 44px to
+ * 31.25px — which is exactly what happened when it was pinned to a heading rung.
+ */
+.lp-band--hero .lp-band__head {
+  align-items: baseline;
+}
+.lp-band--hero .lp-band__number,
+.lp-band.is-binding.lp-band--hero .lp-band__number {
+  font-size: var(--text-figure);
+  line-height: var(--leading-display);
+  font-weight: var(--weight-medium);
+}
+.lp-band--hero .lp-band__unit {
+  font-size: var(--text-lg);
+}
+@media (max-width: 30rem) {
+  /* The figure gets its own line rather than competing with the band name for a
+     288px row. `margin-inline-start: auto` on a wrapped flex line pushes it to the
+     end, which puts a 44px figure hard against the right rule; it starts on the
+     rail instead. */
+  .lp-band--hero .lp-band__value {
+    margin-inline-start: 0;
+    text-align: start;
+  }
+}
+
+.lp-band__meter {
+  margin-block-start: var(--space-3);
+}
+
+.lp-band__why-panel {
+  margin-block-start: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  border-inline-start: var(--rail-w) solid var(--border-strong);
+}
+.lp-band__formula {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.lp-band__formula + .lp-band__formula {
+  margin-block-start: var(--space-2);
+}
+.lp-band__note {
+  margin-block-start: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  max-inline-size: var(--measure-fine);
+}
+
+/*
+ * The assumption, inside the disclosure, on the amber ground.
+ *
+ * The `.callout` chassis and `[data-state='assumed']` supply every one of the five
+ * channels — the ground, the 6px rail, the drawn pencil, the dotted underline that
+ * scales with the type, the weight step — so this rule sets spacing and nothing
+ * else. That is the property the state layer buys: there is no amber value written
+ * on this page for a design pass to soften.
+ */
+.lp-assumption {
+  margin-block-start: var(--space-4);
+}
+.lp-assumption .traced,
+.lp-costed .traced {
+  /* Not a control here. The engine's inline value opens a derivation panel; this one
+     is the derivation panel, so a pointer cursor would promise an interaction that
+     does not exist. */
+  cursor: default;
+}
+
+/*
+ * The verdict, TEMPLATED FROM THE FIXTURE and never asserted in prose.
+ *
+ * AMBER CAME OFF THIS RULE, AND A THIRD RAIL WIDTH WENT WITH IT. This is a
+ * governing-band statement drawn from DERIVED figures — an editorial conclusion
+ * about the run, not an uncertainty about a value — so amber here was decorative
+ * emphasis, and a decorative amber is how a reader learns that amber means nothing
+ * in particular. The 2px stripe went too: two rail widths exist in this system and
+ * no third one does.
+ */
+.lp-verdict {
+  margin-block-start: var(--rhythm-block);
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--rail-w) solid var(--border-strong);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-prose);
+}
+.lp-verdict strong {
+  color: var(--text-primary);
+}
+.lp-verdict__band {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  letter-spacing: var(--tracking-label);
+}
+
+/* ==========================================================================
+ * WHAT THE DRAWING COSTS THE ASSUMPTION
+ * ======================================================================= */
+
+/*
+ * Three labelled figures, never one. The factor the supply model used, the figure
+ * the placed level actually achieved, and the count that level holds. The gap
+ * between the first two is a finding about this plot and it is printed as one.
+ *
+ * `verified.totalBays` is deliberately absent: it is demand at the probe scheme, not
+ * supply, and printing it under placement copy would report one as the other.
+ *
+ * ---
+ *
+ * IT IS A SCHEDULE, SO IT SITS ON A GROUND.
+ *
+ * Three figures and their provenance classes, floating on the page ground with a
+ * hairline under each row — which is a table drawn as if it were a paragraph. A
+ * comparison is an object: it gets the plate's ground and the plate's edge, so the
+ * reader can see where it begins and ends, and so the three rules inside it are
+ * INTERIOR rules (`--border-subtle`, the token for exactly that) rather than the
+ * only structure present.
+ *
+ * IT ALSO MAKES THE AMBER LOUDER, WHICH IS WHY IT IS DONE HERE AND NOT ONLY FOR
+ * TIDINESS. The ASSUMED chip in the first row was painted on the page ground, where
+ * `--uncertain-surface` separates by 1.036:1. On the raised plate it separates by
+ * 1.100:1. The chip is the same chip, styled once in `provenance.css`; what changed
+ * is what is behind it — and this is the direction the change has to go in every
+ * time, because a layout decision is the one way §13.1 can be undone without any
+ * amber value being edited.
+ */
+.lp-costed {
+  margin-block-start: var(--rhythm-block);
+  max-inline-size: var(--measure-fine);
+  padding-inline: var(--space-5);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+.lp-costed > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding-block: var(--space-3);
+  border-block-end: var(--border-width) solid var(--border-subtle);
+}
+.lp-costed > div:last-child {
+  border-block-end: none;
+}
+.lp-costed dt {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  min-inline-size: 0;
+}
+.lp-costed dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+/* The provenance class, in words, beside the label it qualifies. Colour is never the
+   only channel: a reader who cannot see the amber still reads ASSUMED. */
+.lp-costed__class {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+@media (max-width: 30rem) {
+  .lp-costed > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-hair);
+  }
+}
+
+/* ==========================================================================
+ * WHAT HOLDS THE ANSWER UP
+ * ======================================================================= */
+
+/*
+ * TWO COLUMNS, NOT THREE.
+ *
+ * The chassis grid's 20rem minimum lands on three across at this page's column width
+ * and leaves the fourth card alone on its own row — an orphan that reads as "and one
+ * more thing we forgot", which is the opposite of what a section called "what holds
+ * the answer up" can afford to look like. A 24rem minimum lands on two-by-two at
+ * every width that fits two, and collapses to one below that. Same primitive, one
+ * track size, declared here because it is a fact about how many guarantees there are
+ * rather than about the grid.
+ */
+.lp-guarantees {
+  grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
+}
+
+.lp-guarantee h3 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  text-wrap: balance;
+}
+.lp-guarantee p {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  max-inline-size: var(--measure-fine);
+  text-wrap: pretty;
+}
+
+/*
+ * The diagrams.
+ *
+ * At most three elements each, drawn from `currentColor`, and carrying NO DIMENSION.
+ * A schematic that printed a figure would be a figure the engine did not produce,
+ * drawn convincingly — which is the defect the whole page argues against, committed
+ * in the one place a reader would never think to check.
+ *
+ * `--border-strong` is the informative-structure token and is measured at 3:1 on all
+ * nine grounds, which is the floor 1.4.11 sets for a graphic that carries meaning.
+ */
+.lp-guarantee__mark {
+  color: var(--border-strong);
+  min-inline-size: 0;
+}
+.lp-diagram {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 8rem;
+  block-size: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+.lp-diagram__inner {
+  stroke-dasharray: 3 2;
+}
+.lp-diagram__node {
+  fill: currentColor;
+  stroke: none;
+}
+.lp-diagram__bar {
+  stroke-width: 2.5;
+}
+.lp-guarantee__legend {
+  min-inline-size: 0;
+}
+
+/* ==========================================================================
+ * THE FIVE-WAY CLAIM STATEMENT
+ * ======================================================================= */
+
+.lp-claims {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+/*
+ * Two columns: the claim and its verdict on the left, the qualification on the
+ * right. Stacked, the prose ran to its measure and left half the panel empty, which
+ * made five short claims look like five afterthoughts. Side by side they read as a
+ * table of verdicts, which is what they are.
+ */
+.lp-claim {
+  display: grid;
+  grid-template-columns: minmax(0, 17rem) minmax(0, 1fr);
+  gap: var(--space-3) var(--space-5);
+  align-items: start;
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-raised);
+  /* The plate edge, for the reason `.lp-band` gives: `--border-subtle` is the rule
+     drawn INSIDE a plate, and using it as the boundary is what made five verdicts
+     read as five faint rectangles on one flat page. Floored in `HOUSE_PAIRS` at
+     1.48 against this section's ground. */
+  border: var(--border-width) solid var(--border-default);
+  border-inline-start: var(--rail-w) solid var(--border-strong);
+  border-radius: var(--radius-md);
+}
+.lp-claim dt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.lp-claim__title {
+  font-weight: var(--weight-medium);
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-tight);
+  text-wrap: balance;
+}
+.lp-claim dd {
+  margin: 0;
+  /* These five paragraphs are the most consequential prose on the site and they sit
+     in a wide column; a step down would have them wrap two thirds of the way across
+     and leave the panel looking padded. */
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-prose);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+.lp-claim dd em {
+  color: var(--text-primary);
+  font-style: italic;
+}
+@media (max-width: 48rem) {
+  .lp-claim { grid-template-columns: minmax(0, 1fr); }
+}
+
+/*
+ * The verdict on each claim, with a SHAPE as well as a colour: filled disc, half
+ * disc, hollow ring, crossed square. This is exactly the table a reader skims, and
+ * "supported" and "never claimed" must not differ only in hue — the set has to
+ * survive greyscale, a photocopier and a colour vision deficiency.
+ *
+ * The shapes are DRAWN, in the component, through the `.mark` chassis class. The
+ * three `.lp-status__glyph` rules that used to build them out of border-radius and
+ * two crossed linear-gradients are gone: a mark assembled from gradients is a mark
+ * that disappears when a print stylesheet drops backgrounds, which is the one medium
+ * this verdict has to survive.
+ */
+.lp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  white-space: nowrap;
+}
+.lp-status--supported { color: var(--derived); }
+.lp-status--partial { color: var(--uncertain-strong); }
+.lp-status--deferred { color: var(--deferred); }
+.lp-status--never { color: var(--variance); }
+
+.lp-claim--supported { border-inline-start-color: var(--derived); }
+.lp-claim--partial { border-inline-start-color: var(--uncertain); }
+.lp-claim--deferred { border-inline-start-color: var(--deferred); }
+/*
+ * The fifth claim is the loudest thing on the page, and that is the decision. It is
+ * the one a reader is most likely to assume the opposite of.
+ *
+ * IT GIVES UP ITS FILL AND GAINS A FRAME. §20.3 specifies "red border" and says
+ * nothing about a background, so dropping the fill is closer to the specification
+ * rather than a softening — and it leaves exactly one filled block on this page, the
+ * amber one, which on a page of ruled blocks is a shout. The channel removed is paid
+ * for in the same edit: the frame goes to 2px in a repaired `--variance-border`, and
+ * the drawn crossed square becomes mandatory rather than a dingbat the OS may
+ * repaint. Two channels in, one out.
+ *
+ * The rail is 3px, not 6px, for the reason `.lp-band.is-binding` gives above.
+ */
+.lp-claim--never {
+  border: var(--border-width-emphasis) solid var(--variance-border);
+  border-inline-start: var(--rail-w) solid var(--variance);
+}
+.lp-claim--never dd {
+  color: var(--text-primary);
+}
+
+/* ==========================================================================
+ * WHAT IT DOES NOT DO
+ * ======================================================================= */
+
+/*
+ * The rows sit on the shared rail rather than on a grid of their own, so the limit
+ * numeral, the section index above it and the claim titles below all begin on one
+ * invisible vertical the eye reads even though nothing draws it.
+ *
+ * The typography is the refusal pattern's; the CONTAINER is not. `.refusal` draws
+ * its own 2px datum and `.railed--rows` already draws the row rule, and two
+ * horizontals for one boundary is the double-start the section rhythm exists to
+ * remove. Composed rather than copied, and said here rather than discovered later.
+ */
+.lp-limits {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/*
+ * THE ROW RULES MOVE UP A TOKEN, BECAUSE THE CHAPTER MOVED DOWN A RUNG.
+ *
+ * `.railed--rows` draws its dividers in `--border-subtle`, which is correct on the
+ * page ground and is a measured house pair there. On the sunken chapter this
+ * section now sits on it is about 1.15:1 — a schedule whose rules have gone, which
+ * is a list. `--border-default` is the one that IS floored on this ground (1.40,
+ * "plate edge on a zoned section"), so the schedule keeps its structure without
+ * anything being raised to 3:1 — the temptation §2.6 names, which would turn every
+ * hairline on the page into a wireframe.
+ *
+ * It is scoped to this list rather than written against `.railed--rows`, because
+ * that class belongs to the chassis and four other pages use it on the page ground
+ * where the subtle rule is right.
+ */
+.lp-limits > .railed__row {
+  border-block-start-color: var(--border-default);
+}
+.lp-limits > .railed__row:last-child {
+  border-block-end-color: var(--border-default);
+}
+.lp-limit__title {
+  display: block;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+  text-wrap: balance;
+  margin-block-end: var(--space-2);
+}
+.lp-limit p {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  max-inline-size: var(--measure-fine);
+  text-wrap: pretty;
+}
+.lp-limit p em {
+  color: var(--text-primary);
+  font-style: italic;
+}
+
+/* ==========================================================================
+ * THE READINESS BAND
+ * ======================================================================= */
+
+/*
+ * One inversion, and it is this one.
+ *
+ * The page has exactly one and it is spent on the paragraph saying nothing here is
+ * approved. Spending it on a testimonial or a feature grid, and leaving this in body
+ * grey, is the whole failure mode in a single layout decision.
+ *
+ * `--surface-contrast` is the tenth surface and is deliberately excluded from the
+ * nine grounds `contrast.mjs` measures, because on it, in light, `--uncertain`
+ * measures below `--accent` and the amber-outranks-chrome assertion would fail
+ * there. That exclusion is only safe because it is ENFORCED: `assertNoChromeOnBand`
+ * fails the build if any state or chrome ink appears in a rule whose selector
+ * mentions this band. Hence the band's own three tokens below, and nothing else —
+ * including its focus ring, which cannot be `--accent-focus` here.
+ */
+/*
+ * IT REBINDS THE SEMANTIC TOKENS RATHER THAN ENUMERATING ITS INKS, which is the
+ * change `site.css`'s `.section--contrast` made and this band had not taken. A band
+ * that carries its colours by enumeration is a band that acquires a wrong one the
+ * first time something new is put inside it — and every rule below, plus every rule
+ * in a stylesheet this file does not own, now lands on the band's own three inks by
+ * construction rather than by somebody remembering to restate them.
+ *
+ * `--surface-*` is rebound as well as `--text-*` and `--border-*`, so anything with
+ * a ground — a plate, a chip, a meter track — comes out as the band rather than as
+ * a white rectangle punched through it.
+ */
+.lp-status-band {
+  --surface-base: var(--surface-contrast);
+  --surface-raised: var(--surface-contrast);
+  --surface-sunken: var(--surface-contrast);
+  --text-primary: var(--text-on-contrast);
+  --text-secondary: var(--text-on-contrast-dim);
+  --text-tertiary: var(--text-on-contrast-dim);
+  --border-subtle: var(--border-on-contrast);
+  --border-default: var(--border-on-contrast);
+  --border-control: var(--border-on-contrast);
+  --border-strong: var(--border-on-contrast);
+  background: var(--surface-contrast);
+  color: var(--text-on-contrast);
+  /*
+   * AN EDGE AT BOTH ENDS, and it is load-bearing three times over.
+   *
+   * (1) The band used to stop and hand over to 115px of page ground before the
+   * colophon's own rule, so the strongest device on the page ended by fading out
+   * into a gap — which reads as the page running out rather than as a block
+   * closing. A rule at each end says a band was here.
+   *
+   * (2) IT IS WHAT LETS THE CHAPTER ABOVE IT BE A ZONED ONE. `--surface-contrast`
+   * against `--surface-base` is 1.17:1 in dark and floored in `HOUSE_PAIRS`;
+   * against `--surface-sunken`, which is what 05 now sits on, it is 1.07:1 — a
+   * boundary the ground cannot draw on its own in that theme. (In light the same
+   * pair is 15.99:1 and the question does not arise; it is dark that has to be
+   * checked, and it is dark nobody would have checked.) So it is drawn by a
+   * rule instead, in `--border-on-contrast`, which is a declared WCAG row measured
+   * against this ground at 3.59 / 3.64 / 7.00. That is the same move `HOUSE_PAIRS`
+   * makes when a rung goes flat and names the row that discharges it, rather than
+   * leaving the claim resting on a ground comparison nobody ran.
+   *
+   * (3) It matters most on paper, where the ground inverts to white by design — a
+   * full-bleed black band costs a page of toner and photocopies to mud — and these
+   * two rules are the only thing left saying a band was ever here.
+   */
+  border-block: var(--border-width-emphasis) solid var(--border-on-contrast);
+}
+/*
+ * TWO COLUMNS, BECAUSE ONE LEFT 312,800px² OF THE PAGE'S STRONGEST DEVICE EMPTY.
+ *
+ * Everything sat in the left 45% and the right 55% held nothing — on the one block
+ * that is spent exactly once in 7,600px. The heading keeps the full column because
+ * it is the chapter title; the paragraph keeps its measure, which is what caps it
+ * at 45% in the first place; and the two calls to action move up beside it and sit
+ * on its last line. The band gets shorter and stops being half empty in the same
+ * edit.
+ *
+ * `align-items: end` puts the buttons on the paragraph's baseline rather than
+ * floating them in the middle of the space they now occupy. In print `.lp-cta` is
+ * `display: none`, the second track collapses to zero, and the paragraph is
+ * unaffected.
+ */
+.lp-status-band__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--rhythm-block);
+  align-items: end;
+  padding-block: var(--rhythm-minor);
+}
+.lp-status-band__inner > h2 {
+  grid-column: 1 / -1;
+}
+.lp-status-band__inner > p {
+  grid-column: 1;
+}
+.lp-status-band__inner > .lp-cta {
+  grid-column: 2;
+  justify-content: flex-end;
+  /* The row margin the CTA carries as a stacked block is wrong beside a paragraph
+     it is aligned to. */
+  margin-block-start: 0;
+}
+/* Below the fold of a small laptop the paragraph's measure and two buttons no
+   longer both fit on one line, so the band stacks and the CTA takes its own row and
+   its own rhythm back. 52rem is where the paragraph stops reaching its measure. */
+@media (max-width: 52rem) {
+  .lp-status-band__inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lp-status-band__inner > .lp-cta {
+    grid-column: 1;
+    justify-content: flex-start;
+    margin-block-start: var(--rhythm-block);
+  }
+}
+.lp-status-band h2 {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-head);
+  letter-spacing: var(--tracking-display);
+  text-wrap: balance;
+  margin-block-end: var(--space-4);
+}
+.lp-status-band p {
+  color: var(--text-on-contrast-dim);
+  max-inline-size: var(--measure-prose);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+/*
+ * The buttons on this band are drawn against it, not against the page.
+ *
+ * AND THEY NEED THEIR OWN PRESSED STATE, which is not a nicety here: these
+ * overrides are more specific than the control family's own, so a `:active` rule in
+ * the file that owns `.button` cannot reach a button standing on this band. Without
+ * these two rules the band's buttons would be the only controls on the site that
+ * acknowledge a pointer and not a press — and on touch, where `:hover` is absent or
+ * sticky, that is no acknowledgement at all.
+ */
+.lp-status-band .button {
+  background: transparent;
+  color: var(--text-on-contrast);
+  border-color: var(--border-on-contrast);
+}
+.lp-status-band .button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-on-contrast) 12%, transparent);
+  border-color: var(--text-on-contrast);
+}
+.lp-status-band .button:active:not(:disabled) {
+  background: color-mix(in srgb, var(--text-on-contrast) 24%, transparent);
+  border-color: var(--text-on-contrast);
+}
+.lp-status-band .button--primary {
+  background: var(--text-on-contrast);
+  border-color: var(--text-on-contrast);
+  color: var(--surface-contrast);
+}
+.lp-status-band .button--primary:hover:not(:disabled) {
+  background: var(--text-on-contrast-dim);
+  border-color: var(--text-on-contrast-dim);
+  color: var(--surface-contrast);
+}
+/* Pressed goes further in the SAME direction as hover, so the gesture reads as one
+   movement rather than as two unrelated colours. The label stays on the band's own
+   ground token, so the pair a reader actually reads is the one `contrast.mjs`
+   measures. */
+.lp-status-band .button--primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--text-on-contrast-dim) 82%, var(--surface-contrast));
+  border-color: var(--text-on-contrast-dim);
+  color: var(--surface-contrast);
+}
+/*
+ * Only the interpolation is guarded; the colours above are unconditional. Down in
+ * 80ms, back in 140ms.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-status-band .button {
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard);
+  }
+  .lp-status-band .button:active:not(:disabled) {
+    transition-duration: var(--duration-instant);
+  }
+}
+/* An outline, not a two-ring box-shadow whose inner halo hard-codes a ground. It
+   composites correctly over the band and needs no knowledge of what it sits on. */
+.lp-status-band :focus-visible {
+  outline: var(--focus-width) solid var(--text-on-contrast);
+  outline-offset: var(--focus-offset);
+}
+
+/* ==========================================================================
+ * THE BRAND MARK
+ * ======================================================================= */
+
+/*
+ * Rendered by `SiteChrome` on every route, and styled here because this is where the
+ * mark's ink has always lived. It is the one set of `.lp-` rules on this page that
+ * another page depends on.
+ *
+ * THE INNER SQUARE IS `--accent` AND MUST NEVER BE `--uncertain`. Amber is reserved
+ * exclusively for uncertainty, and a logo is the single most-repeated element on a
+ * site — so a logo in amber would be the fastest possible way to teach a reader that
+ * amber means nothing in particular, which is the one thing the reservation exists
+ * to prevent. The favicon in `index.html` follows the same rule.
+ */
+.lp-mark { display: block; flex: none; }
+.lp-mark__ground { fill: var(--text-primary); }
+.lp-mark__plot { fill: none; stroke: var(--surface-raised); stroke-width: 1.5; }
+.lp-mark__inner { fill: var(--accent); }
+
+/* ---------------------------------------------------------------------------
+ * Dashboard — the residue, and it is not this page's.
+ *
+ * `.band-split` and `.exposure-table` are emitted by `screens/Dashboard.tsx` and by
+ * nothing else. They belong in `dashboard.css`; they are kept here because deleting
+ * a rule another route depends on, in the same pass that rewrites this one, is a
+ * silent visual regression no gate can see — typecheck is clean, every test passes,
+ * and the dashboard simply loses its layout. Moving them is the `/dashboard` agent's
+ * work, and a half-finished move is worse than a recorded one.
+ * ------------------------------------------------------------------------ */
+
+.band-split { display: flex; flex-direction: column; gap: var(--space-2); }
+.band-split li {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+.band-split__bar {
+  display: block;
+  block-size: var(--meter-h);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+  overflow: hidden;
+}
+.band-split__bar > span {
+  display: block;
+  block-size: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+}
+.band-split__count { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.band-split li:not(.is-present) { color: var(--text-tertiary); }
+
+/*
+  The exposure table's basis column carries a paragraph, not a label.
+
+  `.data-table__basis` caps at 34ch, which is right where it was written — a register
+  beside a column of figures. Here the basis IS the content, and the cap squeezed it
+  into a third of the panel with two rows of empty space beside it. The cap is lifted
+  for this table only.
+*/
+.exposure-table .data-table__basis {
+  max-inline-size: none;
+  line-height: var(--leading-normal);
+}
+.exposure-table th[scope='col']:last-child { inline-size: 45%; }
+
+/* ---------------------------------------------------------------------------
+ * Print.
+ *
+ * `transform: none !important` IS DELIBERATELY ABSENT, and its absence is the
+ * substantive part. A CSS declaration beats an SVG presentation attribute, so a
+ * blanket transform reset snaps `transform="rotate(-90 …)"` on the plan's vertical
+ * dimension label horizontal — on paper, where the drawing is the whole artefact.
+ * `transform` is a layout property here as well as a motion one. The animation,
+ * transition, opacity and dash locks live in `site.css` §19 and cover every page.
+ * ------------------------------------------------------------------------ */
+@media print {
+  .lp-cta {
+    display: none;
+  }
+  /* On paper a disclosure that is closed is a derivation that was never printed, and
+     a report whose derivations are missing is the thing this product exists to
+     replace. */
+  .lp-band__why-panel {
+    display: block !important;
+  }
+  .lp-claim,
+  .lp-guarantee,
+  .lp-limit,
+  .lp-validity,
+  .lp-costed {
+    break-inside: avoid;
+  }
+}
+
+/* ==========================================================================
+ * THE RHYTHM REPAIR — three sections, three shapes
+ * ==========================================================================
+ *
+ * THE DEFECT WAS NOT IN ANY ONE SECTION. It was that six of them had the same
+ * shape: an index numeral, a heading, a three-line lede, and a run of identically
+ * sized items. Three consecutive sections were "five things in a row". Read as a
+ * page rather than as sections, that metronome is the single loudest signal that
+ * nobody laid this out — a designer varies the shape of an argument, and a
+ * generator does not.
+ *
+ * So the repair is not decoration on the items. It is that the three middle
+ * sections now have three shapes that cannot be mistaken for one another:
+ *
+ *   03  a connected horizontal chain, no boxes at all
+ *   04  a ruled ledger, wide, with the verdicts in a column of their own
+ *   05  a single narrow measure of prose, no rules, no boxes
+ *
+ * 04 GAINS RULES AND 05 LOSES THEM, and that swap is the point rather than a side
+ * effect: if both were ruled rows the page would still have two adjacent sections
+ * in one shape, which is the thing being fixed.
+ */
+
+/* --------------------------------------------------------------------------
+ * 03 — THE CHAIN
+ * ----------------------------------------------------------------------- */
+
+.lp-chain {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-chain__stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+/*
+ * THE CONNECTOR, DRAWN PER GAP.
+ *
+ * The obvious construction is one rule running the width of the row with the
+ * station marks sitting on top of it in a matching background. It is also the
+ * fragile one: every station then has to know the section's ground, and this
+ * section's ground has already changed twice. A segment that spans only the gap
+ * BETWEEN two stages needs no occlusion and no knowledge of anything.
+ *
+ * `inset-inline-end: 100%` places it on the start side of its own stage, so it
+ * mirrors under `dir="rtl"` with no second rule — the chain runs right to left in
+ * Arabic, which is the direction the argument is read in there.
+ *
+ * It is `--border-strong` and not `--border-subtle`: this line is the only thing
+ * that says these four are sequential rather than parallel, so it is structure and
+ * is measured as such.
+ */
+.lp-chain__stage::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 1.25rem;
+  inset-inline-end: 100%;
+  inline-size: var(--space-6);
+  border-block-start: var(--border-width) solid var(--border-strong);
+}
+.lp-chain__stage:first-child::before {
+  content: none;
+}
+
+/*
+ * THE MARK IS GIVEN AN EXPLICIT BOX, AND THE FIRST VERSION IS WHY.
+ *
+ * `.lp-diagram` is sized `inline-size: 100%; max-inline-size: 8rem` for the card it
+ * used to sit in. Inside a flex column with `align-items: start` the span shrinks to
+ * its content, so 100% resolved against nothing and the SVG took its 8rem maximum —
+ * 128px wide and, at the 64x40 viewBox aspect, 80px tall inside a 40px box. Every
+ * station drew straight through its own heading.
+ *
+ * 4rem x 2.5rem is 64 x 40 exactly, so the drawing is at its native aspect and the
+ * connector at 1.25rem is on its centre line by construction rather than by
+ * adjustment.
+ */
+.lp-chain__mark {
+  display: block;
+  inline-size: 4rem;
+  block-size: 2.5rem;
+  color: var(--border-strong);
+}
+.lp-chain__mark .lp-diagram {
+  inline-size: 4rem;
+  max-inline-size: none;
+  block-size: 2.5rem;
+}
+
+.lp-chain__stage h3 {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+  text-wrap: balance;
+  margin: 0;
+}
+
+.lp-chain__stage p {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+/*
+ * Below 60rem the chain stands up rather than breaking into a grid of two, and the
+ * connector stands up with it. A chain that loses its connector at a breakpoint is
+ * a card grid again at that breakpoint, which is the shape this section exists to
+ * stop being.
+ */
+@media (max-width: 60rem) {
+  .lp-chain {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lp-chain__stage::before {
+    inset-block-start: auto;
+    inset-block-end: 100%;
+    inset-inline-end: auto;
+    inset-inline-start: 1.25rem;
+    inline-size: 0;
+    block-size: var(--space-6);
+    border-block-start: none;
+    border-inline-start: var(--border-width) solid var(--border-strong);
+  }
+}
+
+/* The dotted underline a traced value carries, in the station mark that shows one. */
+.lp-diagram__trace {
+  stroke-dasharray: 2 2;
+}
+
+/*
+ * The key gets a strip, not a card. It is the engine's own component and the most
+ * substantive thing in the section; it was being rendered at the size of a line
+ * icon, in a row of three line icons.
+ */
+.lp-key {
+  margin: var(--rhythm-block) 0 0;
+  padding-block-start: var(--space-5);
+  border-block-start: var(--border-width) solid var(--border-default);
+}
+.lp-key figcaption {
+  margin-block-start: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-prose);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+/* --------------------------------------------------------------------------
+ * 04 — THE LEDGER
+ * ----------------------------------------------------------------------- */
+
+/*
+ * FIVE PLATES BECOME FIVE ROWS OF ONE INSTRUMENT.
+ *
+ * The content did not change and neither did the markup: this is the same `<dl>`,
+ * and the two-column argument the original rule makes — verdict left, qualification
+ * right — was right and is kept. What goes is the plate: the background, the
+ * radius, the full border and the gap between items. Five bordered rectangles read
+ * as five cards no matter what is inside them.
+ *
+ * What replaces them is a rule between rows and nothing else, which is how a
+ * schedule of verdicts is set on paper. It also costs less ink, and lowering the
+ * page's total ink weight raises amber's relative loudness — the one thing this
+ * palette may not trade away.
+ */
+.lp-claims {
+  gap: 0;
+  border-block-start: var(--border-width-emphasis) solid var(--border-strong);
+}
+
+.lp-claim {
+  background: none;
+  border: none;
+  border-radius: 0;
+  border-block-end: var(--border-width) solid var(--border-default);
+  padding-inline: 0;
+  padding-block: var(--space-5);
+}
+
+/*
+ * The status marker survives as a short rule under the verdict rather than as a
+ * rail down the row's edge. The colour still carries the class and the drawn glyph
+ * still carries the shape, so the non-colour cue 13.1 requires is untouched — only
+ * the geometry moved.
+ */
+.lp-claim dt::after {
+  content: '';
+  display: block;
+  inline-size: 2.5rem;
+  border-block-start: var(--rail-w) solid var(--border-strong);
+  margin-block-start: var(--space-2);
+}
+.lp-claim--supported dt::after { border-block-start-color: var(--derived); }
+.lp-claim--partial dt::after { border-block-start-color: var(--uncertain); }
+.lp-claim--deferred dt::after { border-block-start-color: var(--deferred); }
+.lp-claim--never dt::after { border-block-start-color: var(--variance); }
+
+/*
+ * THE FIFTH ROW KEEPS ITS FRAME, and this is deliberate rather than an oversight in
+ * the flattening above.
+ *
+ * The rule it replaces argued that the `never` claim gives up its fill and gains a
+ * frame so that exactly one filled block is left on the page and that block is the
+ * amber one. That argument survives the ledger unchanged — so the frame stays, and
+ * it is now the ONLY frame left, which makes it louder among bare rules than it was
+ * among plates.
+ */
+.lp-claim--never {
+  border: var(--border-width-emphasis) solid var(--variance-border);
+  border-inline-start: var(--rail-w) solid var(--variance);
+  padding-inline: var(--space-5);
+  margin-block-start: var(--space-4);
+}
+
+/* --------------------------------------------------------------------------
+ * 05 — THE EXCLUSIONS
+ * ----------------------------------------------------------------------- */
+
+/*
+ * THE QUIETEST AND NARROWEST THING ON THE PAGE, immediately after the widest.
+ *
+ * Its rules go for one reason: 04 above it just gained them. Two adjacent sections
+ * of ruled rows is the metronome with an extra step in it, not a rhythm.
+ *
+ * What is left is a specification's exclusions clause — a single measure of prose
+ * with the numerals hanging in the margin, no boxes, no rules, no ground. It is the
+ * most-read thing on the site by intent (`CLAUDE.md`: "what it does not do" is a
+ * section longer than the feature list), and prose set at a proper measure is how a
+ * long argument is actually read.
+ */
+.lp-limits > .railed__row {
+  border-block-start: none;
+  padding-block: 0;
+  margin-block-start: var(--rhythm-block);
+}
+.lp-limits > .railed__row:first-child {
+  margin-block-start: 0;
+}
+.lp-limits > .railed__row:last-child {
+  border-block-end: none;
+}
+
+/* The measure is the point of the section, so it is stated once, here. */
+.lp-limit__title {
+  max-inline-size: var(--measure-prose);
+}
+.lp-limits .lp-limit p {
+  font-size: var(--text-base);
+  max-inline-size: var(--measure-prose);
+  line-height: var(--leading-relaxed);
+}

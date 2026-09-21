@@ -1,0 +1,2015 @@
+/*
+ * Layout and components.
+ *
+ * The product is a document that computes, so it reads like a document: a
+ * single column of panels, generous measure, restrained chrome, and typography
+ * doing most of the work. No card shadows competing for attention, no colour
+ * used decoratively — the only loud thing on any screen is an assumption.
+ *
+ * ---
+ *
+ * THE FOUR GROUNDS, AND WHAT EACH ONE MEANS.
+ *
+ * Every engine screen used to be one tone: a white panel on a white page with a
+ * hairline round it, and every block inside it on the one sunken grey. That is
+ * the "reads like an old website" the client named, and the honest fix is not a
+ * second hue — the palette has exactly one accent and one alarm, and the alarm is
+ * spoken for. It is the surface ladder, spent so that each rung means something:
+ *
+ *   --surface-base      the page
+ *   --surface-raised    a PANEL — a plate, with a 2px --border-strong ink cap
+ *   --surface-sunken    a RECORD — a claim, a gate, a rule, an edge, a band, a
+ *                       drawing well; each carrying the 3px neutral status rail
+ *   --surface-inset     a READOUT — the governing answer, the comparison; the
+ *                       figure every record was computed to produce
+ *
+ * plus one ruled band with no fill at all (`.kv--grid`, the title block) and the
+ * stepper, which is the datum the whole screen hangs from.
+ *
+ * WHAT IS DELIBERATELY ABSENT IS THE INVERTED BAND. `--surface-contrast` is the
+ * strongest chapter break this language owns and it is refused here rather than
+ * overlooked. Two reasons, either sufficient. It is excluded from the nine
+ * measured grounds because amber LOSES its rank on it — 2.58 against the accent's
+ * 3.12 in light — and there is no surface in the engine that does not carry
+ * traced values, half of which can be ASSUMED. And `assertNoChromeOnBand` in
+ * `scripts/contrast.mjs` finds a band by SELECTOR TEXT: it scans rules whose
+ * selector says `contrast`. No class in the engine's markup is named that, and
+ * the markup is not this pass's to change — so a band here would set the ground
+ * on a selector the guarantee never scans, which the design language names by
+ * name as the way that guarantee stops covering something in silence.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  line-height: var(--leading-tight);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.011em;
+}
+
+p { margin: 0; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+
+/* Visible focus everywhere. Removing focus rings is the single most common
+   accessibility regression, so it is called out here rather than left implicit.
+
+   A plain `outline`, not a two-ring box-shadow whose inner halo hard-codes a
+   ground. --focus-ring baked --surface-base into that inner halo, so on a raised,
+   sunken, inset or amber ground it painted the wrong colour behind the ring — and
+   it was structurally unmeasurable as a pair, because no token pair can express
+   "a two-tone shadow over an unknown surface". An outline with an offset
+   composites correctly over ANY of the nine grounds and needs no knowledge of
+   what it sits on, so --accent-focus is measured as a single foreground against
+   each of them. */
+:focus-visible {
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-sm);
+}
+
+/*
+  Visually hidden, and — the part that is usually got wrong — not able to widen
+  the page.
+
+  The textbook recipe stops at `position: absolute`, which leaves the element at
+  its *static* position. Inside a horizontally scrolled region that position can
+  be hundreds of pixels to the right, and because the element's containing block
+  is some far-off positioned ancestor rather than the scroller, it is not
+  clipped: it silently extends `documentElement.scrollWidth` and the whole page
+  scrolls sideways. The symptom is unmistakable once seen — `html.scrollWidth`
+  500 against `body.scrollWidth` 390 — and invisible until measured, because
+  nothing is drawn there.
+
+  Pinning to `inset: 0 auto auto 0` puts every one of them at the origin of its
+  containing block instead. Reading order is DOM order, so screen readers are
+  unaffected.
+*/
+/*
+ * `margin: -1px` IS GONE, AND IT WIDENED THE DOCUMENT.
+ *
+ * It is a survivor of the old `clip: rect(0,0,0,0)` recipe, where a negative margin
+ * was needed to keep the 1px box from occupying a line. `clip-path: inset(50%)`
+ * needs nothing of the sort, so it did no work — while placing every hidden span's
+ * box one pixel outside its containing block's start edge.
+ *
+ * In a left-to-right page that pixel lands inside the shell's own gutter and
+ * nothing shows. Under `dir="rtl"` the containing block's start edge is the
+ * viewport's right edge, so the box lands at x = -1 in document coordinates and
+ * `documentElement.scrollWidth` reads 1441 at 1440 and 321 at 320. Two spans, two
+ * pixels of horizontal scroll on every Arabic page.
+ *
+ * `SiteChrome.tsx` names this exact class of defect in the comment above its skip
+ * link — "this repo has already shipped one visually-hidden span that widened the
+ * document" — and here it is again, in the one direction nobody had rendered.
+ *
+ * `smoke.mjs` tolerates 1px, so this was never going to be caught by a gate; it was
+ * caught by measuring the RTL page while building the language switch.
+ */
+.sr-only {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.muted { color: var(--text-tertiary); }
+.fine-print {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  max-width: var(--measure);
+}
+
+/* --- Shell --------------------------------------------------------------- */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+  `hidden` has to win.
+
+  The engine stays mounted behind the status page so a route change does not
+  throw away a run (see `Root.tsx`), and the UA's `display: none` for `[hidden]`
+  loses to any class that sets `display`. Without this the whole engine renders
+  underneath the dashboard.
+*/
+[hidden] { display: none !important; }
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  background: var(--surface-raised);
+  flex-wrap: wrap;
+}
+
+.app-header__brand { display: flex; align-items: center; gap: var(--space-3); }
+.app-header__mark { font-size: var(--text-xl); color: var(--accent); line-height: 1; }
+.app-header h1 { font-size: var(--text-md); letter-spacing: 0.06em; text-transform: uppercase; }
+.app-header p { font-size: var(--text-sm); color: var(--text-secondary); }
+/* Wraps, like the header it sits in. It holds a timing chip, the actor badge, a
+   theme toggle and a sign-out — four items that do not fit across 320px, and a
+   non-wrapping row of them pushed the whole page sideways. */
+.app-header__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+
+.app-footer {
+  margin-top: auto;
+  padding: var(--space-5);
+  border-top: var(--border-width) solid var(--border-subtle);
+  background: var(--surface-sunken);
+}
+.app-footer .fine-print { max-width: none; }
+
+/* --- Stepper ------------------------------------------------------------- */
+
+/*
+  THE STEPPER IS THE ENGINE'S DATUM, and it is now drawn as one.
+
+  It was --surface-raised under a hairline, sitting directly below a nav that is
+  also --surface-raised, above panels that are --surface-raised again: three
+  white bands stacked, so nothing on the screen said where the site stopped and
+  the instrument began. It rests one rung DOWN the ladder now and closes with the
+  2px --border-strong horizon `site.css` uses for a section rule, so the top of
+  every engine screen reads as a spine and each panel below it lifts off that
+  spine. The whole change is light and shade; not one hue is added.
+*/
+.stepper {
+  border-bottom: var(--border-width-emphasis) solid var(--border-strong);
+  background: var(--surface-sunken);
+  overflow-x: auto;
+  /*
+    `min-width: 0` is what makes the `overflow-x` above actually do anything.
+
+    `.app` is a flex container, and a flex item defaults to `min-width: auto` —
+    it refuses to shrink below its content. So the nine steps kept the stepper
+    1004px wide, the page scrolled sideways at 390px, and the `overflow-x: auto`
+    written here never engaged. WCAG 1.4.10, found by measuring the document
+    width on a phone viewport rather than by looking at it.
+  */
+  min-width: 0;
+  /*
+    And `position: relative`, which is the other half of the same bug.
+
+    An absolutely positioned descendant is clipped by an `overflow` ancestor only
+    when that ancestor is its containing block. The visually-hidden spans in here
+    — the "(not yet available)" note on every locked step, and the labels hidden
+    at narrow widths — are `position: absolute` with no positioned ancestor, so
+    they were laid out against the viewport at their static position: up to 553px
+    to the right, extending the document's scroll width even though the stepper
+    itself clipped. `html.scrollWidth` was 500 while `body.scrollWidth` was 390,
+    which is the signature of exactly this.
+  */
+  position: relative;
+}
+.stepper ol { display: flex; padding: 0 var(--space-4); min-width: max-content; }
+
+/*
+  On a narrow screen the nine labels do not fit, and a stepper the reader has to
+  drag is a stepper they will not read. Only the current step keeps its label;
+  the rest keep their number, which is what a stepper is for. The label is still
+  in the accessible name of every button, so nothing is lost to a screen reader.
+*/
+@media (max-width: 40rem) {
+  .stepper__step:not(.is-current) .stepper__label {
+    position: absolute;
+    inset: 0 auto auto 0; /* see `.sr-only` — an unpinned one widens the page */
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .stepper__step { padding: var(--space-3); }
+}
+
+.stepper__step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background-color: transparent;
+  border: none;
+  /* The token rather than a third literal width. Two rail widths exist in this
+     system and 6px is ASSUMED's alone; a marker written as `3px` is a width that
+     drifts the next time somebody nudges one of them. */
+  border-bottom: var(--rail-w) solid transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+/* The step rests on --surface-sunken, so its response moves DOWN to
+   --surface-inset — the same override `site.css` makes for anything inside a
+   zoned section. Moving up would read as a lift, and nothing in this language
+   lifts. `:focus-visible` answers exactly as `:hover` does, from the same
+   declaration, so the keyboard is not a second design. */
+.stepper__step:hover:not(:disabled),
+.stepper__step:focus-visible {
+  background-color: var(--response-ground-hover, var(--surface-inset));
+  color: var(--text-primary);
+}
+.stepper__step:active:not(:disabled) {
+  background-color: var(--response-ground-press, var(--surface-inset));
+}
+/* The current step lifts to the plane of the panels below it. A tab, drawn with
+   the surface ladder instead of with a shadow — which is the only version of it
+   that survives print. */
+.stepper__step.is-current {
+  background-color: var(--surface-raised);
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+/*
+  A step that cannot be reached yet, WITHOUT `opacity: 0.45`.
+
+  Opacity composites a foreground toward whatever happens to be behind it, which
+  makes the result structurally unmeasurable: `contrast.mjs` counts an
+  unresolvable pair as a failure rather than a skip, and "45% of
+  --text-secondary over --surface-sunken" is a pair nothing in this repository
+  can compute. --text-tertiary is the declared ink for a quiet label and it is
+  measured on all nine grounds in all three themes. It also takes one more
+  element out of the set that computes below full opacity, which is the property
+  `smoke.mjs` asserts and the defect this repository has shipped twice.
+*/
+.stepper__step.is-locked {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.stepper__num {
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: var(--radius-round);
+  /* The circle is part of a control, so its edge is held to 1.4.11 rather than
+     claiming the decorative exemption --border-default carries. It also needs a
+     ground of its own now that the rail beneath it is sunken. */
+  border: var(--border-width) solid var(--border-control);
+  background-color: var(--surface-raised);
+  /* Mono, because ten steps means a two-digit number in the same circle as a
+     one-digit one and a proportional "1" leaves it visibly off-centre. */
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.stepper__step.is-current .stepper__num {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+.stepper__step.is-locked .stepper__num {
+  border-color: var(--border-subtle);
+  background-color: transparent;
+  color: var(--text-tertiary);
+}
+
+/* --- Layout -------------------------------------------------------------- */
+
+/*
+  --rhythm-block, not --space-5, and the reason is recorded in the token file:
+  `app.css` used --space-7 ZERO times and --space-6 twice in a thousand lines,
+  "which is why every engine screen reads as one continuous 16px-spaced list from
+  header to footer while the landing page reads as designed". An interval is the
+  cheapest chapter break there is and it costs no ink at all.
+*/
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  padding: var(--rhythm-block) var(--space-5);
+  max-width: var(--page-max);
+  width: 100%;
+  margin: 0 auto;
+}
+.layout--with-panel { grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem); }
+
+@media (max-width: 60rem) {
+  .layout--with-panel { grid-template-columns: minmax(0, 1fr); }
+}
+
+.layout__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rhythm-block);
+  min-width: 0;
+}
+
+.centred {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+}
+
+/* --- Panels -------------------------------------------------------------- */
+
+/*
+  A PANEL IS A PLATE, AND ITS DEPTH IS A 2px INK CAP RATHER THAN A SHADOW.
+
+  Two changes, one argument. The edge moves from --border-subtle (the decorative
+  rung, 1.30:1) to --border-default, which is the plate edge `HOUSE_PAIRS`
+  measures and floors in all three themes — and the cap along the top is the
+  device `site.css` uses on every plate on the public pages, so the engine's
+  container and the site's container become one object instead of two.
+
+  Why a cap and not elevation: every shadow token resolves to `none` in print, so
+  hierarchy carried by a shadow is hierarchy the printed report never receives —
+  and the report is the artefact that goes into the room. The cap works
+  identically in light, in dark (where a black shadow on a near-black ground is
+  invisible) and on paper.
+
+  The pseudo-element is absolutely positioned, which is load-bearing rather than
+  incidental: `.panel` is a flex column with a gap, and an in-flow ::before would
+  become a flex ITEM and open a 16px hole at the top of every panel in the
+  product.
+*/
+.panel {
+  position: relative;
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.panel::before {
+  content: '';
+  position: absolute;
+  inset-block-start: calc(var(--border-width) * -1);
+  inset-inline: calc(var(--border-width) * -1);
+  block-size: var(--border-width-emphasis);
+  background-color: var(--border-strong);
+  border-start-start-radius: var(--radius-lg);
+  border-start-end-radius: var(--radius-lg);
+}
+.panel--narrow { max-width: 26rem; width: 100%; }
+.panel--emphasis { border-color: var(--border-strong); border-width: var(--border-width-emphasis); }
+
+/* `flex-wrap` because the header carries a heading *and* a row of count chips,
+   and at 320px the two do not fit on one line. Without it the chips pushed the
+   page 37px wide — WCAG 1.4.10, and invisible on any desktop. */
+.panel__header {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+/* Counts and status chips, right-aligned against the heading they summarise. */
+.panel__header-actions {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-width: 0;
+}
+/* The chips carry their own leading margin for inline use; in this row the gap
+   does that job, so the first one does not need to be pushed off the edge. */
+.panel__header-actions > .chip:first-child { margin-left: 0; }
+/* Tracked in a hair, like every other heading in the system. Plex Sans sets
+   loosely at display sizes and a panel title is the largest thing on most
+   screens. */
+.panel__title { font-size: var(--text-lg); letter-spacing: var(--tracking-tight); }
+.panel__subtitle {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  max-width: var(--measure);
+}
+/*
+  A CHAPTER INSIDE A PANEL, and it now draws the horizontal that says so.
+
+  A panel running eight hundred pixels with nothing in it but 16px gaps is the
+  same continuous sheet the client objected to, one level in. One datum rule per
+  section is this language's rhythm; this is that rule at panel scale.
+*/
+.panel__section {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+  margin-top: var(--space-3);
+  padding-block-start: var(--space-4);
+  border-block-start: var(--border-width) solid var(--border-default);
+}
+/* Except where it opens the panel — there the plate's own cap is the rule, and a
+   second one 24px under it is the pair of competing horizontals the section
+   rhythm removed from the public pages. */
+.panel__header + .panel__section,
+.panel > .panel__section:first-child {
+  border-block-start: none;
+  padding-block-start: 0;
+}
+.panel__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+.panel__footer--gate { justify-content: space-between; }
+
+/* --- Forms --------------------------------------------------------------- */
+
+.grid { display: grid; gap: var(--space-4); }
+/*
+  `min(18rem, 100%)` rather than a bare `18rem`.
+  With auto-fit, a bare minimum keeps its track wider than the container once the
+  viewport drops under it, and the page scrolls sideways — WCAG 1.4.10 asks for
+  reflow at 320px with no horizontal scrolling, and 320px minus the page gutters
+  is under 18rem.
+*/
+.grid--2 { grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); }
+
+/*
+  Fields grouped by what they are *about*, not laid out in one flat grid.
+
+  A single `auto-fit` grid sized every row to its tallest cell, so a field with
+  two lines of help text left a hole beside a field with none — three columns of
+  inputs that did not line up. Grouping also says something true: the first two
+  answer "which plot", the rest answer "how big", and those are different
+  questions a reader answers from different parts of the same document.
+*/
+.field-group { display: flex; flex-direction: column; gap: var(--space-3); }
+.field-group + .field-group { margin-top: var(--space-5); }
+.field-group__legend {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+  font-weight: var(--weight-medium);
+}
+
+.field { display: flex; flex-direction: column; gap: var(--space-1); }
+.field--compact { gap: var(--space-hair); }
+.field label { font-size: var(--text-sm); font-weight: var(--weight-medium); }
+.field__help { font-size: var(--text-xs); color: var(--text-tertiary); max-width: 34ch; }
+
+/*
+  A readout, not a panel.
+
+  This held one number in a box the height of a three-line form field, which put
+  a slab of grey next to the inputs and made the eye read it as another control.
+  It is a derived figure the user cannot type into, so it is styled as a figure:
+  a rule above it, the label small, the number in the same tabular face the
+  inputs use so the digits line up with what was entered.
+*/
+.field--readout {
+  /* Spans the group, because it is derived from every field in it — a rule that
+     underlines only the first column reads as belonging to that column. */
+  grid-column: 1 / -1;
+  justify-content: start;
+  gap: var(--space-1);
+  padding: var(--space-3) 0 0;
+  border-block-start: var(--border-width) solid var(--border-default);
+}
+.field__readout-label {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+}
+.field__readout-value {
+  font-size: var(--text-lg);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.input {
+  font: inherit;
+  padding: var(--space-2) var(--space-3);
+  /* The sizing token, not the literal it was written as in three places. */
+  min-block-size: var(--control-h);
+  /* 1.4.11 — the edge of a control is information, not decoration. */
+  border: var(--border-width) solid var(--border-control);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+}
+/*
+  A FIELD ANSWERS THE POINTER ON ITS EDGE AND NOT ON ITS GROUND.
+
+  A text field that repaints its fill under the pointer reads as a button, and
+  the one thing a reader has to know about this control is that it is typed into.
+  So the edge moves and the well does not — and `:focus-visible` keeps the accent
+  it already had, because a focused field is the one control on the screen that
+  is genuinely receiving input.
+*/
+.input:hover { border-color: var(--border-strong); }
+.input:focus-visible { border-color: var(--accent); }
+.input--num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+
+select.input { cursor: pointer; }
+
+/* --- Buttons ------------------------------------------------------------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-4);
+  min-block-size: var(--control-h);
+  border: var(--border-width) solid var(--border-control);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-raised);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+/*
+  REST, HOVER, FOCUS, PRESS — one rung, one rung, two rungs.
+
+  The vocabulary is `site.css`'s and the values are indirected through the same
+  --response-* custom properties, so a control inside a sunken block inherits the
+  right direction instead of restating it. The COLOUR CHANGE is unconditional; only
+  the interpolation is inside the motion guard, further down. A reader who asked for
+  reduced motion asked for less movement, not for a page that stops acknowledging
+  them.
+*/
+.button:hover:not(:disabled),
+.button:focus-visible:not(:disabled) {
+  background-color: var(--response-ground-hover, var(--surface-base));
+  border-color: var(--response-edge-active, var(--border-strong));
+}
+.button:active:not(:disabled) {
+  background-color: var(--response-ground-press, var(--surface-sunken));
+  border-color: var(--response-edge-active, var(--border-strong));
+}
+/*
+  A disabled button must not look like a button that is merely quiet.
+
+  `opacity: 0.5` over a saturated accent leaves something that still reads as
+  the primary action — the eye sees blue, goes there, and nothing happens. The
+  most common report of this screen was "the Continue button does nothing".
+  Disabled state drops the accent entirely and takes the border with it, so the
+  affordance is gone rather than dimmed. Contrast stays above 4.5:1 because a
+  disabled control still has to be readable — it is telling you what is missing.
+*/
+.button:disabled {
+  cursor: not-allowed;
+  background: var(--surface-inset);
+  border-color: transparent;
+  color: var(--text-tertiary);
+  box-shadow: none;
+}
+
+.button--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-inverse);
+}
+/*
+  A FILLED CONTROL HAS NO LADDER UNDER IT, so hover and press share one tone and
+  the PRESS IS EXPRESSED IN TIME instead: `:active` overrides the duration to
+  --duration-instant further down, so the button goes down in 80ms and comes back
+  in 140ms. That asymmetry is the whole of what makes a control feel attached to a
+  finger, and it is also the only channel available here — a second, darker blue
+  would be a token invented to solve a styling problem, and inventing an ink is how
+  a palette stops being a palette.
+
+  It matters most where there is no pointer at all: on touch `:hover` never fires,
+  so `:active` is the ONLY acknowledgement a tap gets before the DOM changes.
+*/
+.button--primary:hover:not(:disabled),
+.button--primary:focus-visible:not(:disabled),
+.button--primary:active:not(:disabled) {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.button--ghost { border-color: transparent; background-color: transparent; }
+.button--icon { padding: var(--space-2); min-inline-size: var(--control-h); }
+
+.link-button {
+  font: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+/* A link responds on its ink and its rule, never on a ground: it sits inside a
+   sentence, and a fill would box a word. */
+.link-button:hover,
+.link-button:focus-visible {
+  color: var(--accent-hover);
+  text-decoration-thickness: var(--border-width-emphasis);
+}
+
+.actions { display: flex; flex-direction: column; gap: var(--space-2); }
+/* Side by side, and wrapping, when the actions are peers rather than a
+   primary with its explanation underneath. */
+.actions--row { flex-direction: row; flex-wrap: wrap; }
+
+/* --- Chips, banners, callouts ------------------------------------------- */
+
+/*
+  ONE CHIP, five states, and the state comes from the layer in `site.css` rather
+  than from five near-duplicate rules here. Two of those five were byte-identical
+  and both live.
+
+  The fallbacks are not decoration: a chip with no state modifier has no
+  --state-surface, and `transparent` is never written as a state surface — a
+  foreground on a transparent ground is an unresolvable pair, and this repo counts
+  unresolvable as a failure and not a skip. So the neutral chip names the ground it
+  actually sits on and the checker can measure it.
+*/
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.1em 0.5em;
+  margin-left: var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  background: var(--state-surface, var(--surface-inset));
+  color: var(--state-strong, var(--text-secondary));
+  border: var(--border-width) solid var(--state-border, transparent);
+  white-space: nowrap;
+}
+.chip .mark { color: var(--state); }
+
+/*
+  Not assessed.
+
+  Grey, hatched, and never green. §20.3 gives every uncertainty state a cue that
+  survives greyscale and colour-blindness, and this one is the state most likely
+  to be mistaken for a pass: a reader skimming a table of ticks needs "we did
+  not check this" to look materially different from "this is fine", not merely
+  differently coloured.
+
+  **The hatch is a band, not a wash.** It used to run under the text, and once
+  `--deferred-hatch` was raised to meet 1.4.11's 3:1 the label became genuinely
+  hard to read — trading 1.4.3 for 1.4.11 is not a fix, it is a swap. So the
+  texture lives in a leading stripe where it is visible at full strength, and the
+  text keeps a solid ground at 5.35:1 behind it.
+*/
+.hatch-band {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--deferred-hatch) 0 3px,
+    transparent 3px 6px
+  );
+  background-repeat: no-repeat;
+}
+
+.chip--deferred {
+  background-color: var(--deferred-surface);
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--deferred-hatch) 0 3px,
+    transparent 3px 6px
+  );
+  background-repeat: no-repeat;
+  background-size: 10px 100%;
+  padding-left: calc(10px + 0.5em);
+  color: var(--deferred);
+  box-shadow: inset 0 0 0 1px var(--deferred-hatch);
+}
+
+/*
+  Two defects close here besides the colour.
+
+  `justify-content: space-between` treated a <strong> and the text node after it as
+  the two ends of a row, so on every engine screen the bold lead-in was squeezed
+  into a 185px column and wrapped onto two lines while the paragraph beside it ran
+  1130px. The lead-in is a lead-in, not a second column.
+
+  And the outer `margin: 0 var(--space-5)` is gone. PLACEMENT OWNS INSET; COMPONENTS
+  NEVER DO. This one was placed three ways — as a sibling of the layout it ran
+  full-bleed minus 48px, inside the main column it was 48px narrower than the panels
+  it stacked with, and inside a padded panel it was double-inset. That is what makes
+  the alert saying "these numbers are not an assessment" run visibly wider than
+  everything beneath it, and misalignment is read before any of the words are.
+
+  The rail drops from 4px to 3px: two widths exist in this system and 6px is
+  ASSUMED's alone.
+*/
+.banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border-inline-start: var(--rail-width, var(--rail-w)) solid
+    var(--rail-color, var(--border-strong));
+  /* The state's own edge on the other three sides, so a banner is a FRAMED band
+     rather than a fill with one stripe. On an ASSUMED banner that edge is
+     --uncertain-border, measured at 3.47 on the amber ground — a fourth channel
+     at page scale, and one that makes the amber louder rather than quieter. */
+  border-block: var(--border-width) solid var(--state-border, var(--border-default));
+  border-inline-end: var(--border-width) solid
+    var(--state-border, var(--border-default));
+  background: var(--state-surface, var(--surface-sunken));
+  margin: 0;
+}
+.banner p { font-size: var(--text-sm); margin-top: var(--space-1); }
+
+/*
+  A BANNER THAT IS A DIRECT CHILD OF THE ENGINE SHELL IS A BAND, not a card that
+  missed its column.
+
+  These three — the step hint, the error, and "these numbers are not an
+  assessment" — sit outside `.layout`, so they run the full width of the window
+  while every panel beneath them starts 120px in. The sentence that matters most
+  on the screen was the one sentence not aligned with the document, and
+  misalignment is read before any of the words are.
+
+  So the GROUND stays full-bleed (that is what makes it a chapter rule across the
+  screen) and the TEXT starts on the panels' own vertical. Placement owns the
+  inset and the component does not: this rule is the placement, scoped to the one
+  context where the banner is a child of the shell.
+
+  The rail stays out at the window edge deliberately. The page margin is where
+  this language puts a state mark, and it is the one gutter nothing else here
+  ever draws in.
+*/
+.app > .banner {
+  border-radius: 0;
+  border-block-start: none;
+  border-inline-end: none;
+  padding-inline: max(
+    var(--space-5),
+    calc((100% - var(--page-max)) / 2 + var(--space-5))
+  );
+}
+
+/*
+  `.callout` is DEFINED IN `site.css` and is not redefined here. It is one component
+  and the engine and the public pages must not hold two versions of it — that is the
+  `.chip--assumed` / `.chip--warn` defect with a bigger surface, and the loser is
+  decided by stylesheet load order rather than by anyone's intent.
+
+  The engine's markup puts a single text child inside `.callout` rather than the
+  `.callout__mark` / `.callout__body` pair, which is why the chassis rule declares a
+  ONE-COLUMN grid by default and only adds the mark track when a mark is present. A
+  single child in a one-column grid lays out exactly as it did as a block, so the
+  engine screens are unchanged by the move.
+
+  Its states come from the same layer as everything else: `--ok` is DERIVED and
+  `--warn` is BLOCKED. Amber comes off `--warn`, which was one class over four
+  meanings — a self-consistency notice, a plot with no usable frontage, a podium
+  that does not fit, and a rule stating a range. Three of the four are refusals.
+*/
+
+/* --- Key/value and tables ------------------------------------------------ */
+
+.kv { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; }
+/*
+  A GRID OF COMPUTED FIGURES IS A TITLE BLOCK, and it is ruled like one.
+
+  All four of these — the buildable envelope, the parking demand, the sheet's
+  printed values, the level's achieved figures — are the same object: labelled
+  quantities the engine produced, read across rather than down. They were set
+  loose on the panel with nothing around them, so the most quoted numbers on each
+  screen were the ones with the least structure holding them.
+
+  A pair of rules rather than a fill, and that is a §13.1 decision rather than a
+  taste: several of these figures are ASSUMED, and the amber ground separates
+  from white by 1.10 and from any deeper rung by less. Framing them in ink costs
+  the amber nothing; framing them in a fill would have taken something off the
+  one treatment that is not allowed to lose anything.
+*/
+.kv--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  gap: var(--space-4);
+  padding-block: var(--space-4);
+  border-block: var(--border-width) solid var(--border-default);
+}
+/* A heading already drew the opening rule; a second one 24px under it is the
+   pair of competing horizontals this rhythm exists to remove. */
+.panel__section + .kv--grid,
+.panel__subheading + .kv--grid {
+  border-block-start: none;
+  padding-block-start: 0;
+}
+/* `min-width: 0` is load-bearing. A grid item defaults to `min-width: auto`,
+   which refuses to shrink below its content — so a long text value in a
+   number-styled (nowrap) cell pushed straight over the column beside it, and
+   "Mixed Use (Residential with Retail)" sat on top of the plot area. */
+.kv > div { display: flex; flex-direction: column; gap: var(--space-hair); min-width: 0; }
+.kv dt {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+}
+.kv dd { margin: 0; }
+
+.data-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+/*
+  `anywhere`, not `break-word`, and the difference is the whole point: only
+  `anywhere` contributes to the MIN-CONTENT size, so a table holding a rule id
+  like `R-EGRESS-TRAVEL-DISTANCE` can always shrink to its container instead of
+  pushing the document sideways. A long word still breaks only when there is no
+  other way to fit it, so prose is untouched.
+*/
+.data-table th,
+.data-table td {
+  padding: var(--space-3);
+  text-align: start;
+  border-block-end: var(--border-width) solid var(--border-subtle);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+/*
+  A TOP, NOT A GRID — which is the table this instrument prints.
+
+  The header sits under an ink rule at the datum weight and the body rules stay
+  hairlines, so the eye is given ONE horizontal to start from instead of twelve
+  of equal strength; the header itself goes mono, because a column head is a
+  label and every other label in this system is set that way. This is the
+  schedule treatment `site.css` already defines for the public pages. The
+  engine's table is the same object and must not become a second design of it —
+  that is the `.chip--assumed` / `.chip--warn` defect with a bigger surface.
+*/
+.data-table thead th {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+  font-weight: var(--weight-medium);
+  border-block-end: var(--border-width-emphasis) solid var(--border-strong);
+  /* The cells opt into breaking mid-word so the table can always fit its
+     container; a COLUMN HEAD must not, because "TOLERANC / E" is not a label.
+     Short words, so the minimum this imposes is a few pixels. */
+  overflow-wrap: normal;
+}
+/* The last body row drew an interior rule against the panel's own padding, and a
+   footer terminates the table the way the header opens it. */
+.data-table tbody tr:last-child > * { border-block-end: none; }
+.data-table tfoot > tr > * {
+  border-block-start: var(--border-width-emphasis) solid var(--border-strong);
+  border-block-end: none;
+}
+.data-table__num { text-align: end; font-variant-numeric: tabular-nums; }
+.data-table__rank { width: 2rem; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.data-table__label { font-weight: var(--weight-normal); }
+.data-table__param { display: block; font-size: var(--text-xs); }
+.data-table__basis { max-width: 34ch; color: var(--text-secondary); }
+
+/*
+  A ROW HIGHLIGHT IS A READING AID, NOT AN AFFORDANCE — which is why it is a
+  change of ground and not a pointer, an underline or a lift. A ten-row check
+  table two hundred characters wide is read ACROSS and the eye loses the line;
+  every ruled ledger ever printed answered that with alternating ground, and a
+  hover is the same device on demand instead of permanently. It sits behind
+  `(hover: hover)` because on touch `:hover` is sticky and would leave one row
+  marked for no reason.
+
+  STATEFUL ROWS ARE EXCLUDED, and that is the load-bearing half: a NOT ASSESSED
+  row's own ground is one of its cues, and repainting it under the pointer would
+  take a provenance signal off the row a reader is being asked to trust least. A
+  reading aid may not overwrite a state.
+*/
+@media (hover: hover) {
+  .data-table tbody tr:not(.is-not-assessed):hover > * {
+    background-color: var(--surface-inset);
+  }
+}
+
+/*
+  Wide tables scroll inside themselves rather than the page — but only where they
+  need to.
+
+  `display: block` makes the element a block box whose INTERNAL table box
+  shrink-wraps, so `inline-size: 100%` applies to the block and not to the table:
+  the assumption register's table stopped four hundred pixels short of its
+  panel's inner edge with a full-width footer rule running underneath it. Above
+  48rem the table is a table and fills its plate. Below it the scroller comes
+  back, because a horizontal scrollbar at 320px is where every accessibility
+  defect in this project has been found, and the scroller is what prevents it.
+*/
+@media (max-width: 48rem) {
+  .panel > .data-table { display: block; overflow-x: auto; }
+  /* And where the scroller IS present, the aggressive break comes back off: it
+     exists to let a table fit a container it cannot escape, and inside a scroller
+     it only turns "UNSIGNED" into "UNSIGNE / D" for no gain. */
+  .panel > .data-table th,
+  .panel > .data-table td { overflow-wrap: normal; }
+}
+
+/*
+  A row for a check that did not run.
+
+  The hatch marks the row's leading edge and the ground stays solid, for the
+  reason given at `.chip--deferred`. It is dimmed, not hidden — §20.3: "an
+  invariant silently absent from the table reads as an invariant that passed",
+  and so does one styled into the background.
+*/
+.data-table tr.is-not-assessed > * {
+  background-color: var(--deferred-surface);
+  color: var(--text-secondary);
+}
+.data-table tr.is-not-assessed > *:first-child {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--deferred-hatch) 0 3px,
+    transparent 3px 6px
+  );
+  background-repeat: no-repeat;
+  background-size: 8px 100%;
+  padding-left: calc(var(--space-3) + 8px);
+}
+
+/* --- Sensitivity --------------------------------------------------------- */
+
+.sensitivity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-hair);
+}
+.sensitivity__figure { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/*
+  The meter primitive's own height, not a fifth one.
+
+  It was 4px — half the scale's smallest meter — on the ONE bar in the product
+  that is permitted to be amber, in the register that ranks how far an assumption
+  moves the answer. A whitelisted amber drawn at half size is the softening §13.1
+  forbids, arrived at through a literal rather than through a colour.
+*/
+.sensitivity__bar {
+  display: block;
+  inline-size: 6rem;
+  block-size: var(--meter-h);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+  position: relative;
+}
+.sensitivity__bar::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--w);
+  background: var(--uncertain);
+  border-radius: var(--radius-sm);
+}
+
+/* --- Capacity ------------------------------------------------------------ */
+
+/*
+  THE ANSWER SITS IN THE DEEPEST WELL ON THE PAGE, and it is opened by a datum
+  rule rather than closed by a box.
+
+  --surface-inset is the bottom rung of the ladder and this is the one block in
+  the product that has earned it: everything else on an engine screen is a
+  record, and this is the figure every record was computed to produce. The
+  2px --border-strong rule across its top is the same horizon a section takes on
+  the public pages, so the answer OPENS rather than merely being enclosed — and,
+  unlike a shadow, both the rung and the rule survive print.
+
+  It is deliberately NOT the inverted band. `--surface-contrast` is excluded from
+  the nine measured grounds because amber LOSES its rank there (2.58 against the
+  accent's 3.12 in light), and this block carries traced values that can be
+  ASSUMED. An inverted answer would be the one place in the product where an
+  assumption is quieter than a link.
+*/
+.governing {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: var(--space-6);
+  padding: var(--space-5);
+  background: var(--surface-inset);
+  border-block-start: var(--border-width-emphasis) solid var(--border-strong);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+@media (max-width: 48rem) { .governing { grid-template-columns: 1fr; gap: var(--space-4); } }
+
+.governing__figure { display: flex; flex-direction: column; gap: var(--space-1); }
+.governing__label {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+}
+.traced-display .value { font-size: var(--text-2xl); font-weight: var(--weight-semibold); letter-spacing: -0.02em; }
+.governing__band { font-size: var(--text-sm); color: var(--text-secondary); }
+/*
+  The assumption under the governing figure.
+
+  It inherits the whole `.callout[data-state="assumed"]` treatment — amber ground,
+  6px rail, chip and glyph — and adds only its position: hard against the figure,
+  above the prose explanation, so the number and the assumption it rests on are one
+  eyeful. `--measure` is deliberately NOT applied: this block is meant to run the
+  full width of the panel, because a narrower amber than the paragraph beneath it
+  would read as a footnote to the explanation rather than as a condition on the
+  figure.
+*/
+.governing__assumption {
+  margin-block: var(--space-4) var(--space-5);
+}
+.governing__assumption .callout__note {
+  margin-block-start: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.governing__explanation { font-size: var(--text-base); max-width: var(--measure); }
+
+.bands { display: flex; flex-direction: column; gap: var(--space-3); }
+/*
+  THREE ANSWERS, THREE RECORDS, ONE RAIL.
+
+  Two of the three had no ground and a 1px --border-subtle edge, which is the
+  decorative rung: on the screen that reports three separately computed limits,
+  two of them were drawn as absences. They are records now, on the record ground,
+  and their rail is --border-strong — the neutral case of the status rail, at
+  1.4.11's 3:1. A stripe that is informative when coloured is informative when
+  neutral, because "this one does not bind" is information.
+
+  THE GOVERNING BAND GOES DEEPER RATHER THAN BLUER. It keeps the accent on its
+  rail and its fill, where the accent is doing its one job — marking the limit
+  that binds — and takes --surface-inset for its ground. An --accent-subtle fill
+  was the obvious alternative and it is refused by measurement, not by taste: at
+  1056x100 it would put roughly 105,000px2 of accent ground on the capacity fold,
+  where amber currently leads the accent 29:1. That single fill would take the
+  ratio to about 1.3 and hand the loudest area on the product's most important
+  screen to a colour that is not the assumption.
+
+  The 4px rail drops to --rail-w. Two widths exist in this system and the 6px one
+  is ASSUMED's alone; a third width spent here is the channel §7.4(c) rests the
+  greyscale argument on, spent on something that is not an uncertainty.
+*/
+.band {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-sunken);
+  border-inline-start: var(--rail-width, var(--rail-w)) solid
+    var(--rail-color, var(--border-strong));
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.band--governing {
+  --rail-color: var(--accent);
+  background: var(--surface-inset);
+}
+/*
+  Wraps, and the middle column is allowed to shrink.
+
+  The row is a letter, a name-and-question block, and a figure pinned right. The
+  figure is `white-space: nowrap` — it is a quantity — so at 320px the row could
+  only fit by the middle block giving way, and a flex item's default
+  `min-width: auto` refused to. It overflowed the document by 2px, which is
+  invisible in a screenshot and is what `pnpm smoke` measures instead.
+*/
+.band__head { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+.band__head > div { flex: 1 1 12rem; min-width: 0; }
+.band__head > :last-child { flex: none; }
+.band__letter {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--text-tertiary);
+  width: 1.2rem;
+}
+.band--governing .band__letter { color: var(--text-primary); }
+.band__name { font-size: var(--text-base); display: flex; align-items: center; }
+.band__question { font-size: var(--text-sm); color: var(--text-secondary); }
+.band__head > :last-child { margin-left: auto; }
+/*
+  ONE TRACK COLOUR, AND IT RUNS THE OTHER WAY FROM THE ONE IN A PLATE.
+
+  A meter inside a plate is an --surface-inset well on a raised ground. A meter
+  inside a RECORD sits on sunken or on inset, where an inset well measures 1.06
+  and 1.00 and is therefore not a well at all. So the track goes UP a rung to
+  --surface-raised: 1.13 against a band's sunken ground and 1.20 against the
+  governing band's inset one, both better than the version this replaces, and one
+  value rather than two.
+
+  The fill is NEVER transitioned and never grows from zero. A magnitude that
+  animates up on first paint is a number being performed, and every figure in
+  this product is a number that was computed.
+*/
+.band__bar {
+  margin-top: var(--space-2);
+  block-size: var(--meter-h);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  position: relative;
+}
+.band__bar::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--w);
+  border-radius: var(--radius-sm);
+  background: var(--border-strong);
+}
+.band--governing .band__bar::after { background: var(--accent); }
+
+.realism { display: flex; flex-direction: column; gap: var(--space-2); }
+.realism__label {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+  margin-right: var(--space-2);
+}
+
+/* --- Claims -------------------------------------------------------------- */
+
+.claims { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; }
+.claim {
+  padding: var(--space-3) var(--space-4);
+  /* The neutral rail is --border-strong at 3:1, not --border-default at 1.5:1. A
+     stripe that is informative when coloured is informative when neutral, because
+     "no state" is information — and claiming the 1.4.11 decorative exemption for a
+     stripe that changes colour to signal state is the exemption claimed
+     dishonestly. */
+  border-inline-start: var(--rail-width, var(--rail-w)) solid
+    var(--rail-color, var(--border-strong));
+  background: var(--surface-sunken);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.claim dt { display: flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-medium); }
+.claim dd { margin: var(--space-1) 0 0; font-size: var(--text-sm); color: var(--text-secondary); max-width: var(--measure); }
+.claim__glyph { font-family: var(--font-mono); }
+.claim__status {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+}
+/* The four verdict colours come from the state layer; there are no per-modifier
+   colour rules left to drift. Regulatory validity keeps the strongest treatment on
+   the page after amber — it is the claim the product must never be read as making,
+   and it is the one place a variance fill is retained rather than traded for the
+   2px frame, because this block IS the refusal rather than a note beside one. */
+.claim--never { background: var(--variance-surface); }
+.claim--never dd { color: var(--text-primary); }
+
+/* --- Gates --------------------------------------------------------------- */
+
+.gate-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--state-strong, var(--text-secondary));
+}
+
+.gate-list { display: flex; flex-direction: column; gap: var(--space-3); }
+/* A gate is a record like any other, so it takes the record's rail. A SATISFIED
+   gate is the one place in the engine where --derived earns a full row: the
+   ground was already the derived surface and the rail now agrees with it, so the
+   green reads at page scale instead of only inside a glyph. */
+.gate-list li {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-sunken);
+  border-inline-start: var(--rail-width, var(--rail-w)) solid
+    var(--rail-color, var(--border-strong));
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.gate-list li.is-done {
+  --rail-color: var(--derived);
+  background: var(--derived-surface);
+}
+.gate-list__glyph { font-family: var(--font-mono); color: var(--text-tertiary); }
+.gate-list li.is-done .gate-list__glyph { color: var(--derived); }
+.gate-list p { font-size: var(--text-sm); color: var(--text-secondary); margin-top: var(--space-hair); }
+.gate-list .button { margin-top: var(--space-2); }
+
+/* --- Choices ------------------------------------------------------------- */
+
+.choice-set { display: flex; flex-direction: column; gap: var(--space-2); border: none; padding: 0; margin: 0; }
+.choice {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  /* A radio card is a control; its edge is what tells you it is one. */
+  border: var(--border-width) solid var(--border-control);
+  border-radius: var(--radius-md);
+  /* A ground at rest, so the response has a rung to move FROM. Without one the
+     card was transparent and its hover could only be a border, which is a
+     4,000px2 object acknowledging a pointer with one pixel. */
+  background-color: var(--surface-raised);
+  cursor: pointer;
+}
+/* The SELECTED card is excluded: its --accent-subtle ground is the answer the
+   reader gave, and a reading response may not repaint a recorded choice. */
+.choice:not(.is-selected):hover,
+.choice:not(.is-selected):focus-within {
+  background-color: var(--response-ground-hover, var(--surface-base));
+  border-color: var(--response-edge-active, var(--border-strong));
+}
+.choice:not(.is-selected):active {
+  background-color: var(--response-ground-press, var(--surface-sunken));
+  border-color: var(--response-edge-active, var(--border-strong));
+}
+.choice.is-selected { border-color: var(--accent); border-width: var(--border-width-emphasis); background: var(--accent-subtle); }
+.choice input { margin-top: 0.2rem; }
+.choice > span { display: flex; flex-direction: column; gap: var(--space-hair); }
+.choice__detail { font-size: var(--text-sm); color: var(--text-secondary); }
+
+/* A comparison is a readout rather than a record — two computed figures beside
+   each other — so it takes the same inset ground the governing answer does. */
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface-inset);
+  border-radius: var(--radius-md);
+}
+.comparison__side { display: flex; flex-direction: column; gap: var(--space-hair); }
+.comparison__label {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+}
+.comparison__value { font-size: var(--text-xl); }
+.comparison__verdict { grid-column: 1 / -1; font-size: var(--text-sm); border-top: var(--border-width) solid var(--border-subtle); padding-top: var(--space-3); }
+
+/* --- Rules --------------------------------------------------------------- */
+
+.rule-group { display: flex; flex-direction: column; gap: var(--space-2); }
+/*
+  A rule that applies and was not checked.
+
+  Same rule as everywhere else: the hatch is a leading band, the prose keeps a
+  readable ground. This one carried the wash across two full paragraphs of
+  explanation — the text that tells a reader *why* a life-safety rule went
+  unassessed — which is the last place to spend legibility on texture.
+*/
+.rule-group--deferred .rule-list li {
+  /* The rail agrees with the ground and the hatch: a rule that applies and was
+     not evaluated is DEFERRED in all three channels, not neutral in one of
+     them. */
+  --rail-color: var(--deferred);
+  background-color: var(--deferred-surface);
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--deferred-hatch) 0 3px,
+    transparent 3px 6px
+  );
+  background-repeat: no-repeat;
+  background-size: 10px 100%;
+  padding-left: calc(var(--space-3) + 10px);
+}
+.rule-list { display: flex; flex-direction: column; gap: var(--space-2); }
+/* A rule record, drawn like every other record in the engine: the record ground
+   and the neutral status rail. */
+.rule-list li {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-sunken);
+  border-inline-start: var(--rail-width, var(--rail-w)) solid
+    var(--rail-color, var(--border-strong));
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: var(--text-sm);
+}
+/* It WRAPS, and `min-width: 0` is the half that does the work.
+
+   A rule id and a `life safety` chip are both `nowrap` by design — an identifier
+   broken across two lines is not an identifier, and a chip that hyphenates is not a
+   chip. A non-wrapping row of two nowrap children therefore has a hard minimum
+   width, and at 320px that row pushed the whole document sideways by a few pixels.
+   The chip is the loudest thing in the list and it is the one a reader is meant to
+   see, so the row gives way rather than the chip. */
+.rule-list__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.rule-list__head > code { overflow-wrap: anywhere; min-width: 0; }
+.rule-list code { font-family: var(--font-mono); font-size: var(--text-xs); }
+.rule-list__note { margin-top: var(--space-2); color: var(--text-secondary); max-width: var(--measure); }
+
+/* --- Edges --------------------------------------------------------------- */
+
+.edge-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.edge-list__item {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: var(--rail-width, var(--rail-w)) solid
+    var(--rail-color, var(--border-strong));
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--surface-sunken);
+}
+/* An unclassified edge BLOCKS; it does not assume — the parameters step says so in
+   words: "rules cannot resolve until this is confirmed". Amber comes off. */
+/* The rail is on every edge row now, so an unclassified edge is marked by the
+   rail's COLOUR rather than by the rail's existence — which is what makes the
+   classified rows read as classified rather than as unstyled. The state layer
+   supplies --rail-color; nothing needs restating here. */
+.edge-list__num { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: var(--radius-round); background: var(--surface-inset); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+.edge-list__controls { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; }
+
+/* --- Plot drawing -------------------------------------------------------- */
+
+.plot-figure { display: flex; flex-direction: column; gap: var(--space-3); }
+/* A drawing sits in a frame. It had a ground and no edge, so on a white panel
+   the well had no boundary at all — the same 1.04:1 problem the surface ladder
+   repair was for, one level in. */
+.plot-svg {
+  width: 100%;
+  height: auto;
+  max-height: 22rem;
+  background: var(--surface-sunken);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+.plot-outline { fill: none; stroke: var(--text-primary); stroke-width: 1.5; }
+/* The plot before any setback is known: a boundary, and nothing claimed inside it. */
+.plot-empty { fill: var(--surface-raised); stroke: none; }
+.plot-footprint { fill: var(--accent-subtle); stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.plot-label { font-family: var(--font-mono); font-size: 2.2px; fill: var(--text-secondary); }
+.plot-edge__hit { cursor: pointer; }
+/* The focus token pair, like every other ring in the product. This was the one
+   focus indicator written as a literal width against a non-focus ink, on the one
+   drawing whose edges are classified from the keyboard. */
+.plot-edge__hit:focus-visible {
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: var(--focus-offset);
+}
+.plot-edge--selected line:first-child { filter: drop-shadow(0 0 3px var(--accent)); }
+
+.plot-legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-hair);
+  font-size: var(--text-sm);
+}
+/*
+  The 2.5.8 alternative to the thin line in the drawing. `min-height` is the
+  criterion's 24px with room to spare; the row is full-width, so it is a target
+  nobody has to aim at.
+*/
+.plot-legend__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  width: 100%;
+  min-block-size: var(--control-h-sm);
+  padding: var(--space-1) var(--space-2);
+  font: inherit;
+  text-align: start;
+  color: inherit;
+  background-color: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+}
+button.plot-legend__row { cursor: pointer; }
+/* A full-width row is the 2.5.8 alternative to a 1.5px line in the drawing, so
+   it answers the pointer, the keyboard and the finger from one declaration. */
+button.plot-legend__row:hover,
+button.plot-legend__row:focus-visible {
+  background-color: var(--response-ground-hover, var(--surface-inset));
+}
+button.plot-legend__row:active {
+  background-color: var(--response-ground-press, var(--surface-inset));
+}
+.plot-legend__row--static { cursor: default; }
+.plot-legend li.is-selected .plot-legend__row {
+  font-weight: var(--weight-medium);
+  background: var(--accent-subtle);
+}
+.plot-legend__swatch { width: 12px; height: 3px; border-radius: var(--radius-sm); }
+.plot-legend__label { flex: 1; }
+.plot-legend__setback { color: var(--text-secondary); }
+
+/* --- Provenance panel ---------------------------------------------------- */
+
+.provenance-panel {
+  position: sticky;
+  top: var(--space-5);
+  align-self: start;
+  max-height: calc(100vh - var(--space-8));
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+/*
+  The plate's ink cap, not --shadow-md.
+
+  This panel is in flow — it is sticky, not floating — so its depth is subject to
+  the same rule as every other container here: a shadow is `none` in print, and
+  the derivation of a number is exactly the thing a reader prints out to argue
+  with. The cap is inside the `overflow: hidden` box rather than hung one pixel
+  outside it, because the clip would eat it.
+*/
+.provenance-panel::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: var(--border-width-emphasis);
+  background-color: var(--border-strong);
+  z-index: var(--z-raised);
+}
+/* The panel's own title block: one rung down, so the header reads as chrome and
+   the derivation tree below it reads as the content. */
+.provenance-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  background: var(--surface-sunken);
+  border-bottom: var(--border-width) solid var(--border-default);
+}
+.provenance-panel__title { font-size: var(--text-base); }
+.provenance-panel__body { padding: var(--space-4); overflow-y: auto; font-size: var(--text-sm); }
+.provenance-panel__footer { padding: var(--space-3) var(--space-4); border-top: var(--border-width) solid var(--border-subtle); background: var(--surface-sunken); }
+
+.prov-branch { display: flex; flex-direction: column; }
+.prov-branch__row { display: flex; align-items: baseline; gap: var(--space-2); padding: var(--space-hair) 0; }
+.prov-branch__toggle {
+  font: inherit; background: none; border: none; cursor: pointer;
+  color: var(--text-tertiary); width: 1rem; padding: 0; flex-shrink: 0;
+}
+.prov-branch__toggle:hover:not(.prov-branch__toggle--leaf),
+.prov-branch__toggle:focus-visible { color: var(--text-primary); }
+.prov-branch__toggle--leaf { cursor: default; }
+.prov-branch__icon { font-family: var(--font-mono); color: var(--text-tertiary); width: 1rem; flex-shrink: 0; }
+.prov-branch__content { min-width: 0; }
+.prov-branch__relation { color: var(--text-tertiary); font-size: var(--text-xs); margin-right: var(--space-2); }
+.prov-branch__children { border-left: var(--border-width) solid var(--border-subtle); margin-left: 0.5rem; padding-left: var(--space-3); }
+.prov-formula { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-secondary); }
+.prov-assumption { color: var(--state-strong, var(--text-primary)); }
+.prov-basis { color: var(--text-secondary); font-style: italic; }
+/* A quoted clause is a record: the record ground, and the neutral rail written
+   as the rail token rather than as a third literal width. */
+.prov-clause {
+  margin: var(--space-2) 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-sunken);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-inline-start: var(--rail-width, var(--rail-w)) solid
+    var(--rail-color, var(--border-strong));
+}
+.prov-clause blockquote { margin: 0; font-size: var(--text-sm); }
+.prov-clause figcaption { margin-top: var(--space-2); font-size: var(--text-xs); color: var(--text-tertiary); }
+
+/* --- Misc ---------------------------------------------------------------- */
+
+.disclosure {
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--surface-raised);
+}
+/* The summary is the control, so the response is on the summary and not on the
+   box: shading the box would shade the content a reader has just opened. The
+   negative margin gives the row a hit area wider than its words without moving
+   the words. */
+.disclosure summary {
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  padding: var(--space-1) var(--space-2);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+  border-radius: var(--radius-sm);
+}
+.disclosure summary:hover,
+.disclosure summary:focus-visible {
+  background-color: var(--response-ground-hover, var(--surface-base));
+}
+.disclosure summary:active {
+  background-color: var(--response-ground-press, var(--surface-sunken));
+}
+.disclosure > *:not(summary) { margin-top: var(--space-3); }
+.iteration-log { display: flex; flex-direction: column; gap: var(--space-1); font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-secondary); counter-reset: it; }
+.iteration-log li::before { counter-increment: it; content: counter(it) '. '; color: var(--text-tertiary); }
+
+.evidence-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-5); }
+.evidence-group { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.inline-edit { display: inline-flex; }
+.inline-edit .input { width: 7rem; }
+
+/* --- Affection-plan intake ------------------------------------------------
+   The upload box the client reacted to. Its job is to look like a target and
+   then get out of the way: once a sheet is read, what matters is the reading,
+   not the control that produced it. */
+
+.dropzone {
+  border: var(--border-width-emphasis) dashed var(--border-control);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface-sunken);
+}
+/* It rests on sunken, so it answers downward — the same direction the stepper
+   takes, and for the same reason. */
+.dropzone:hover:not(.is-dragging),
+.dropzone:focus-within:not(.is-dragging) {
+  background-color: var(--response-ground-hover, var(--surface-inset));
+  border-color: var(--border-strong);
+}
+.dropzone:active:not(.is-dragging) {
+  background-color: var(--response-ground-press, var(--surface-inset));
+}
+.dropzone.is-dragging { border-color: var(--accent); background-color: var(--accent-subtle); }
+/* The label is the hit target, not the (visually hidden) input. Making the
+   whole box clickable matters more here than anywhere else in the app: this is
+   the first thing a new user touches. */
+.dropzone__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-5);
+  cursor: pointer;
+  min-block-size: var(--tap-min);
+}
+/* The ring belongs on the label, not on the invisible file input inside it. */
+.dropzone__label:focus-within {
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-lg);
+}
+.dropzone__glyph { font-size: 1.75rem; color: var(--text-tertiary); line-height: 1; }
+.dropzone__text { display: flex; flex-direction: column; gap: var(--space-1); }
+
+.reading { display: flex; flex-direction: column; gap: var(--space-5); margin-top: var(--space-5); }
+/* A field the sheet did not print. Deliberately not styled as an error — an
+   incomplete affection plan is a normal document, and the consequence is stated
+   in the list below rather than shouted here. */
+.value--absent {
+  color: var(--text-tertiary);
+  font-style: italic;
+  font-size: var(--text-sm);
+}
+
+/* A traced value whose content is prose rather than a quantity.
+   Tabular figures still must not break mid-number, so this relaxes the wrap
+   without touching the numeric styling everywhere else. */
+.kv__text .value { white-space: normal; overflow-wrap: anywhere; }
+
+.panel__subheading {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-secondary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reason-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  max-width: var(--measure);
+}
+.reason-list li {
+  padding-left: var(--space-4);
+  /* The rule this replaces said "amber for what was not assessed" IN ITS OWN
+     COMMENT, and painted --uncertain. It renders `levelPlan.notAssessed`. NOT
+     ASSESSED has its own ink, its own hatch and its own italic; wearing the
+     assumption's colour is exactly the dilution §13.1 exists to prevent, and the
+     comment was the confession. The cue still moves rather than weakens — the
+     border carries it, not the text colour, because state-coloured body text at
+     this size fails 1.4.3 against the page ground. */
+  border-inline-start: var(--border-width-emphasis) solid
+    var(--state, var(--border-subtle));
+}
+.reason-list li strong { color: var(--text-primary); }
+
+/* The assumed banner keeps every channel it had — the amber ground and the amber
+   rail — and gets them from the one place the amber is now written. §13.1 calls
+   this treatment the most important UI decision in the product; it is not toned
+   down here to make a 3D view look tidier, and it now cannot be toned down in one
+   place and left alone in another. */
+
+/* --- The parking level, drawn --------------------------------------------- */
+
+.parking-plan { display: flex; flex-direction: column; gap: var(--space-4); }
+.parking-plan__figure { margin: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.parking-plan__svg {
+  width: 100%;
+  height: auto;
+  max-height: 32rem;
+  background: var(--surface-sunken);
+  /* The plate edge, not the decorative rung. This is the drawing the client
+     came for; a frame at 1.30:1 is a frame nobody sees. */
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.parking-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  gap: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.parking-legend li { display: flex; align-items: baseline; gap: var(--space-2); }
+/*
+  THE KEY IS PART OF THE DRAWING, so it is drawn in the same frame.
+
+  Four swatches and their captions were floating loose on the panel under a
+  framed plan, which is why the plan read as finished and the key read as a
+  paragraph that happened to be nearby. A frame and a ground put them in one
+  figure — and the ground is the record rung rather than a fill of its own,
+  because nothing here is a state.
+
+  SCOPED TO THE ENGINE. `/parking` renders the same legend markup with
+  `pk-legend` alongside `parking-legend` and `parking-page.css` owns that
+  presentation; an unscoped rule here would put a second frame around it.
+*/
+.parking-plan .parking-legend {
+  padding: var(--space-4);
+  background: var(--surface-sunken);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+.parking-legend__swatch {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: var(--radius-sm);
+  border: var(--border-width) solid var(--border-strong);
+  transform: translateY(2px);
+}
+.parking-legend__swatch--bay { background: var(--accent-subtle); border-color: var(--accent); }
+.parking-legend__swatch--aisle { background: var(--surface-inset); border-color: var(--border-default); }
+/*
+  Hatched, and NOT ASSESSED rather than assumed.
+
+  The rule this replaces painted the ramp amber, and its own comment said why:
+  "only its plan area is reserved; gradient, transitions and headroom under B.7.2.2
+  are not assessed." That is a deferred fact wearing the assumption's colour, on the
+  one drawing the client cares most about. The comment's worry — that drawing it in
+  the same ink as a cited setback would claim it had been checked — is answered
+  better by the deferred treatment than by the amber one, and the stripe survives,
+  so no non-colour cue is lost. Removing an amber that was never an assumption is
+  what makes the remaining amber mean something.
+*/
+.parking-legend__swatch--ramp {
+  border-color: var(--deferred);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--deferred-surface) 0 3px,
+    var(--deferred) 3px 4px
+  );
+}
+.parking-legend__swatch--access { background: var(--derived); border-color: var(--derived); }
+
+/* --- Massing --------------------------------------------------------------- */
+
+.massing-viewer {
+  width: 100%;
+  height: clamp(18rem, 46vh, 30rem);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  min-block-size: var(--tap-min);
+}
+.toggle:hover,
+.toggle:focus-within { color: var(--text-primary); }
+
+@media (max-width: 40rem) {
+  .dropzone__label { flex-direction: column; text-align: center; padding: var(--space-5) var(--space-4); }
+  .parking-plan__svg { max-height: 22rem; }
+}
+
+/* ==========================================================================
+ * RESPONSE AND MOTION — the engine's half of one vocabulary
+ * ======================================================================= */
+
+/*
+ * WHY THIS IS RESTATED HERE INSTEAD OF TAKING `.interactive`.
+ *
+ * `site.css` owns the vocabulary and says so: rest, hover one rung down, press
+ * two, `:focus-visible` answering exactly as hover does. It applies it through an
+ * `.interactive` class — and adding a class to the engine's nine screens is a
+ * markup change, in files this pass does not own. So the ENGINE'S CONTROL FAMILY
+ * takes the same vocabulary by selector, from the same tokens, in the file that
+ * already owns `.button` and `.input`. Two definitions of one control in two
+ * stylesheets is the `.chip--assumed` / `.chip--warn` defect with a bigger
+ * surface; two files applying ONE definition to disjoint sets of elements is not.
+ *
+ * THE BUDGET. Nothing below invents a duration or a curve.
+ *
+ *   --duration-instant   80ms   press-down
+ *   --duration-fast     140ms   hover, focus ground, a colour, a border
+ *   --duration-base     200ms   an arriving step
+ *   --ease-standard             anything that ANSWERS a reader
+ *   --ease-out                  anything that ARRIVES
+ *
+ * There is no --duration-slow and no --ease-in: both were deleted for having no
+ * consumer, and a declaration written against an UNDECLARED custom property is
+ * invalid at computed-value time — the element silently gets no transition at
+ * all, and neither typecheck, test, contrast nor smoke can see that happen.
+ *
+ * THREE RULES THAT ARE NOT NEGOTIABLE, and all three are `site.css`'s.
+ *
+ *   1. NOTHING IS EVER AT AN OPACITY BELOW 1. No keyframe below touches opacity,
+ *      nothing fades, and no rule here uses `animation-fill-mode: both` with a
+ *      delay — which applies the `from` state THROUGH the delay and is the same
+ *      defect wearing a second face. This is also why `.stepper__step.is-locked`
+ *      stopped being `opacity: 0.45` further up the file.
+ *   2. THE COLOUR CHANGE IS OUTSIDE THE MOTION GUARD; ONLY THE TRANSITION IS
+ *      INSIDE IT. Every state above changes its ground and its edge
+ *      unconditionally. A reader who asked for reduced motion asked for less
+ *      movement, not for a nine-step form that stops acknowledging them.
+ *   3. A FOCUS RING NEVER ANIMATES. The global `:focus-visible` outline appears
+ *      in one frame and is not in any transition list below. What may move is the
+ *      element's GROUND, which is why `:focus-visible` sits beside `:hover` in
+ *      every rule above rather than in a second set somebody has to remember.
+ *
+ * AND WHAT MUST NOT BE ADDED: no count-up on a traced value; no growth on a meter
+ * fill (a magnitude that rises from zero on first paint is a number being
+ * performed); no skeleton shimmer, which is an opacity-and-gradient animation
+ * that fakes data in a product whose whole claim is that nothing is fabricated.
+ */
+
+/*
+ * WHICH WAY "DOWN" IS, DECLARED ONCE PER CONTAINER RATHER THAN PER CONTROL.
+ *
+ * A control resting on --surface-raised answers by going one rung down the
+ * ladder. A control resting on a RECORD — a sunken or inset block — cannot: on
+ * sunken, --surface-base is LIGHTER than the ground, so the same rule would read
+ * as a lift, and nothing in this language lifts. The direction is therefore a
+ * property of the container and is inherited, so every control inside a record
+ * gets it without restating anything. The fallbacks on each consumer are not
+ * decoration either: a control rendered outside `.app` would otherwise reference
+ * an undeclared property, and an invalid declaration means no response at all.
+ */
+.app {
+  --response-ground-hover: var(--surface-base);
+  --response-ground-press: var(--surface-sunken);
+  --response-edge-active: var(--border-strong);
+}
+.stepper,
+.governing,
+.comparison,
+.band,
+.claim,
+.gate-list li,
+.rule-list li,
+.edge-list__item,
+.dropzone,
+.prov-clause,
+.provenance-panel__header,
+.provenance-panel__footer {
+  --response-ground-hover: var(--surface-inset);
+  --response-ground-press: var(--surface-inset);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .button,
+  .input,
+  .choice,
+  .dropzone,
+  .stepper__step,
+  .link-button,
+  .toggle,
+  .prov-branch__toggle,
+  .disclosure summary,
+  .plot-legend__row {
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
+      text-decoration-thickness var(--duration-fast) var(--ease-standard);
+  }
+  /* The reading aid on a table row moves on its ground alone. */
+  .data-table tbody tr:not(.is-not-assessed) > * {
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+  /*
+    DOWN IN 80ms, BACK IN 140ms.
+
+    The press is faster than the release, and that asymmetry is the whole of what
+    makes a control feel attached to a finger. It is also the only channel a
+    filled control has: `.button--primary` has no ladder under it, so its press
+    and its hover share one tone and the timing is what separates them.
+  */
+  .button:active,
+  .choice:active,
+  .stepper__step:active,
+  .disclosure summary:active,
+  .plot-legend__row:active { transition-duration: var(--duration-instant); }
+}
+
+/*
+ * A STEP ARRIVES; IT DOES NOT APPEAR.
+ *
+ * Moving between the nine steps was a hard swap — the same defect a route change
+ * had before `site.css` gave `main`'s own child a settle — and it is worse here,
+ * because the chrome around the content is identical from step to step, so
+ * arriving somewhere new and arriving back where you already were looked the
+ * same. `.layout__main`'s children are what React replaces on a step change;
+ * `.layout__main` itself persists, so an animation on IT would run once on first
+ * mount and never again.
+ *
+ * `route-settle` is `site.css`'s keyframe, reused rather than copied: this
+ * language's "nothing is ever at zero opacity" is a property you can only assert
+ * if every animation in the product is in one place, and a second keyframe here
+ * would be the first hole in it. If it is ever renamed, this declaration becomes
+ * invalid and the element simply stays where it already is — the safe failure,
+ * and the one worth choosing.
+ *
+ * 200ms transform-only, no delay and therefore no fill-mode to get wrong, ending
+ * at `transform: none` — which is also the base state, so under reduced motion
+ * and on paper there is nothing to override and nothing to forget. The
+ * derivation panel is a SIBLING of `.layout__main` rather than a child, so its
+ * `position: sticky` never sits inside an animating transform.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .layout__main > * {
+    animation: route-settle var(--duration-base) var(--ease-out);
+  }
+}
+
+/*
+ * A SECOND LOCK, KEPT DELIBERATELY.
+ *
+ * Every transition and every animation THIS file declares is now inside
+ * `prefers-reduced-motion: no-preference`, so the base state is the final state
+ * and this block has nothing left of its own to switch off. It stays because it
+ * loads on every route and is the only reduced-motion guard covering the
+ * stylesheets that still write a bare `transition:` — the traced value's ground
+ * in `provenance.css` among them. It is a backstop for other files, not the
+ * mechanism for this one: nothing here may be written on the assumption that it
+ * will be caught.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .stepper, .app-header__meta, .button, .provenance-panel { display: none !important; }
+  .panel { break-inside: avoid; border: 1px solid var(--text-secondary); box-shadow: none; }
+  /* The plate's ink cap is the one piece of depth in this language that was
+     chosen BECAUSE it survives paper, so it is not switched off here — it is the
+     reason the shadow went. */
+  .layout { display: block; max-width: none; padding: 0; }
+  /* A band that is full-bleed on screen keeps its ground on paper but loses the
+     window-width inset, which has no meaning once there is no window. */
+  .app > .banner { padding-inline: 0; }
+  /* Nothing animates and nothing interpolates, independently of the guard above:
+     two locks on the same door, because print is the medium with the highest
+     stakes and the one nobody watches. */
+  .app *,
+  .app *::before,
+  .app *::after {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* ==========================================================================
+ * THE RECOVERED DRAFT
+ * ==========================================================================
+ *
+ * It uses `.callout` and NOT the amber `[data-state='assumed']` treatment, and that
+ * is the whole design decision in this block.
+ *
+ * A recovered draft is not an assumption. It is a fact about the browser — you had
+ * typed something and the tab closed — and it moves no number the engine will
+ * produce. §13.1 reserves amber "exclusively for uncertainty, and nothing else in
+ * the system is permitted to use it"; a save banner painted amber would be the most
+ * frequently seen amber on the site, and it would teach every reader that amber
+ * means "a notice", which is exactly what the reservation exists to prevent.
+ */
+
+.pf-draft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  margin-block-end: var(--space-5);
+}
+
+.pf-draft__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/*
+ * The save state is a live region, so it is in the flow and holds its own line
+ * whether or not it has anything to say. A status line that appears and disappears
+ * reflows the form under the reader's cursor every time a debounce fires — on the
+ * one screen where they are typing numbers off a document.
+ */
+.pf-draft__state {
+  min-block-size: 1.5em;
+  margin-block: 0 var(--space-4);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+}

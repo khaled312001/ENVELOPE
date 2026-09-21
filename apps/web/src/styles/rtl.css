@@ -1,0 +1,209 @@
+/*
+ * RIGHT TO LEFT, AND ARABIC TYPE.
+ *
+ * This file is SMALL ON PURPOSE, and its size is the finding rather than the
+ * design: the stylesheets were written in logical properties throughout —
+ * 235 uses of `inline-size`, `margin-inline`, `padding-inline`, `border-inline-
+ * start`, `inset-inline` and `text-align: start` against 23 physical ones — so
+ * `dir="rtl"` on `<html>` mirrors almost the entire site with no stylesheet at all.
+ *
+ * What is left is three things: the Arabic font stack, the handful of physical
+ * properties that predate the convention, and the marks that are DIRECTIONAL BY
+ * MEANING rather than by layout. The third is the interesting one.
+ */
+
+/* ==========================================================================
+ * 1. THE FACE
+ * ======================================================================= */
+
+/*
+ * Scoped to `[lang='ar']` and not to `[dir='rtl']`, and the distinction is real:
+ * an English basis string inside an Arabic paragraph is `dir="ltr" lang="en"` and
+ * must keep Plex Sans, while the Arabic around it takes Plex Arabic. Keying on
+ * direction would have given the Latin run an Arabic face — which renders, because
+ * Plex Arabic carries Latin glyphs, and renders WRONG, because they are the
+ * secondary Latin of an Arabic face rather than the Latin the rest of the site is
+ * set in.
+ *
+ * `--font-mono` is deliberately untouched. Figures, identifiers, formulas and basis
+ * strings stay Latin by the rule in `docs/05-design/arabic-glossary.md`, so Plex
+ * Mono keeps every job it had — and a traced value has to be byte-identical to what
+ * the engine produced, which Arabic-Indic digits would not be.
+ */
+:root[lang='ar'] {
+  --font-sans:
+    'IBM Plex Sans Arabic', 'IBM Plex Sans', 'Noto Sans Arabic', 'Segoe UI', system-ui,
+    -apple-system, sans-serif;
+}
+
+/*
+ * TRACKING IS RESET FOR THE WHOLE ARABIC PAGE, NOT FOR A LIST OF ELEMENTS.
+ *
+ * Arabic has no upper case, so `text-transform: uppercase` is a no-op on it. But
+ * `letter-spacing` is NOT a no-op, and it is the more damaging of the two: tracking
+ * applied to a joined script pulls the glyphs of a word apart AT THEIR CONNECTIONS.
+ * The result is not "wide", it is broken, in the way a cursive Latin word set at
+ * 0.08em would be.
+ *
+ * THIS WAS A LIST OF EIGHT SELECTORS AND THE LIST WAS ALREADY WRONG. It named
+ * `.masthead` — but the tracking is declared on `.masthead__validity`, a child,
+ * which re-declares `--tracking-label` and therefore beat the inherited reset. So
+ * the ONE Arabic sentence that appears on every page of the site, the permanent
+ * refusal of regulatory validity, was the one sentence rendered with its letters
+ * pulled apart. Measured at 1.08px.
+ *
+ * A list is the wrong instrument here for the same reason the drawings rule below
+ * records: it drifts from what it protects, and it reads as coverage while it does
+ * it. The property is not "these eight components have tracking", it is "Arabic
+ * takes none" — so the rule says that.
+ *
+ * `:not([lang='en'])` is what keeps the Latin runs whole. A basis string, a rule id
+ * and a formula are all `lang="en"` by `Verbatim`, they are set in the Latin face,
+ * and Latin small-caps labels DO want their tracking. The exception is written on
+ * the language rather than on a class list, so it holds for any English run anybody
+ * adds later without this file being edited again.
+ */
+:root[lang='ar'] *:not([lang='en']) {
+  letter-spacing: normal;
+}
+
+/*
+ * Arabic sits on a lower baseline and has a taller ascender-to-descender run than
+ * Latin at the same em size, so a line height tuned for Plex Latin crowds it. This
+ * is one number, applied where Arabic actually is — not to `:root`, which would
+ * also loosen every Latin figure column on the page.
+ */
+:root[lang='ar'] p,
+:root[lang='ar'] li,
+:root[lang='ar'] dd,
+:root[lang='ar'] td {
+  line-height: 1.85;
+}
+
+/* ==========================================================================
+ * 2. WHAT THE ENGINE SAID
+ * ======================================================================= */
+
+/*
+ * `isolate` IS THE LOAD-BEARING DECLARATION IN THIS FILE.
+ *
+ * `dir="ltr"` on the span sets the direction INSIDE it; it does not stop the
+ * bidirectional algorithm from reordering the run relative to the Arabic around it.
+ * Without isolation, a trailing full stop, a bracket or a comma at the boundary
+ * migrates to the wrong end — so `(FR-DEF-002)` renders as `(FR-DEF-002` with its
+ * closing bracket somewhere else in the sentence.
+ *
+ * A citation a reader cannot check is the same defect as a citation that is not
+ * there, and this one looks like a typo rather than a bug.
+ */
+.verbatim {
+  unicode-bidi: isolate;
+  font-family: var(--font-sans);
+}
+:root[lang='ar'] .verbatim {
+  /* The Latin the rest of the site is set in, not Plex Arabic's secondary Latin. */
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+}
+
+/*
+ * Every figure, identifier and formula is a Latin run inside Arabic prose and needs
+ * the same isolation for the same reason. `.value` is the traced-figure class and
+ * `code` carries identifiers; both are already mono, so only the bidi behaviour is
+ * being added.
+ */
+:root[lang='ar'] .value,
+:root[lang='ar'] code,
+:root[lang='ar'] .rf-ident {
+  unicode-bidi: isolate;
+  direction: ltr;
+}
+
+/* ==========================================================================
+ * 3. MARKS THAT ARE DIRECTIONAL BY MEANING
+ * ======================================================================= */
+
+/*
+ * A DRAWING IS NOT MIRRORED. Nothing in this section is a preference.
+ *
+ * The plot canvas, the parking level and the massing view are drawn from the
+ * kernel's own coordinates, and north is up because `packages/core/src/domain.ts`
+ * defines an edge bearing as "degrees clockwise from grid north". Flipping the SVG
+ * for an Arabic reader would put east on the left — a plot drawn as its own mirror
+ * image, with a north arrow pointing at the wrong half of the world, on the screen
+ * where an architect checks the shape against the sheet in their hand.
+ *
+ * The scale bar reads left to right for the same reason: it is a measuring rule.
+ */
+/*
+ * THE SELECTOR LIST WAS SHORTER THAN THE SENTENCE ABOVE IT, and that is the defect
+ * worth recording rather than quietly widening.
+ *
+ * `.massing` matched NOTHING: the massing view carries `.massing-viewer`, and has
+ * since it was written. `.parking-plan__svg` — the engine's own parking level, the
+ * drawing this product is actually being bought for — was not listed at all, so it
+ * inherited `direction: rtl` from `<html>` on every Arabic page. So did the landing
+ * page's plot figure, its four explanatory diagrams and the ramp section on
+ * `/parking`.
+ *
+ * MEASURED BEFORE IT WAS FIXED, because the honest description of the state matters:
+ * nothing was drawn mirrored. SVG geometry is not flipped by `direction`, every
+ * label in these figures is `text-anchor: middle`, and a rect-by-rect and
+ * text-by-text comparison of both locales came back identical. What was true is
+ * that the guarantee this block states was not enforced for four of the six
+ * drawings — `text-anchor: start` resolves to the RIGHT edge under `rtl`, and a
+ * label carrying one unit and one Arabic word reorders — so the next dimension line
+ * anybody adds would have been mirrored with nothing to catch it.
+ *
+ * A rule whose selector list has drifted from the thing it protects is worse than no
+ * rule, because it reads as coverage.
+ */
+.plot-svg,
+.pk-plan,
+.pk-ramp,
+.parking-plan__svg,
+.lp-plan,
+.lp-diagram,
+.massing-viewer,
+.dwg-frame {
+  direction: ltr;
+}
+
+/*
+ * The 23 physical properties that predate the logical-property convention, all in
+ * `app.css` and `provenance.css`, mirrored here rather than edited there.
+ *
+ * Editing them in place would be the better repair and it is deliberately not being
+ * made in this pass: `app.css` is 1,300 lines of engine chrome that no Arabic
+ * screen has been reviewed against yet, and a blind sweep of `margin-left` to
+ * `margin-inline-start` across it would be a change nobody has looked at on either
+ * side. This file corrects the ones that carry meaning — the provenance rail, the
+ * band's binding edge, the tree's indent — and the sweep is left as a named piece
+ * of work rather than a silent one.
+ */
+:root[dir='rtl'] .prov-branch__children {
+  border-left: none;
+  border-right: var(--border-width) solid var(--border-subtle);
+  margin-left: 0;
+  margin-right: 0.5rem;
+  padding-left: 0;
+  padding-right: var(--space-3);
+}
+:root[dir='rtl'] .prov-clause {
+  border-left: none;
+  border-right: 3px solid var(--border-default);
+}
+:root[dir='rtl'] .band--governing {
+  border-left: none;
+  border-right: 4px solid var(--accent);
+}
+
+/*
+ * A number field stays right-aligned in Arabic — which is to say, it stays aligned
+ * to the same physical edge, because `text-align: right` on a `dir="ltr"` numeric
+ * input is about the DIGITS' least-significant end, not about the reading
+ * direction. Decimal points line up in a column or they do not.
+ */
+:root[dir='rtl'] .input--num {
+  direction: ltr;
+  text-align: right;
+}

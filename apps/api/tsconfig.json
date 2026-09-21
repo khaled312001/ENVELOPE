@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "outDir": "dist", "rootDir": "src", "types": ["node"] },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../../packages/core" },
+    { "path": "../../packages/intake" },
+    { "path": "../../packages/geometry" },
+    { "path": "../../packages/rules" },
+    { "path": "../../packages/capacity" },
+    { "path": "../../packages/invariants" },
+    { "path": "../../packages/validation" },
+    { "path": "../../packages/report" },
+    { "path": "../../packages/exports" }
+  ]
+}

@@ -1,0 +1,46 @@
+/*
+  The tests, typechecked.
+
+  Every package's `tsconfig.json` sets `rootDir: src` so that `dist` mirrors
+  `src` — which means no package can include its own `test` directory, and for a
+  long time none of them did. The consequence was not theoretical. The plot
+  fixture in `apps/web/test/screens.test.tsx` was missing `start`, `end` and
+  `bearingDeg` on every edge; it was structurally not a `Plot`, it had been
+  wrong for as long as it had existed, and nothing said so until the vehicle
+  access placement read `edge.start.x` and got `undefined` at runtime.
+
+  A fixture that has drifted from the type it claims to be is worse than no
+  fixture: it goes on proving the screens work against a shape the API never
+  sends. So this project exists purely to check them — `noEmit`, no `rootDir`,
+  every test directory in one pass.
+
+  It is not a composite project and it is not referenced by the solution file,
+  because it depends on the built `dist` of everything it imports. `pnpm
+  typecheck` runs `tsc -b` first and then this, in that order.
+*/
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "incremental": false,
+    "declaration": false,
+    "declarationMap": false,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    /*
+      The workspace packages, mapped to their built types.
+
+      `apps/web` does not declare `@envelope/core` as a dependency — it has no
+      reason to, since the browser bundle never imports it — so pnpm never links
+      it there and bare resolution fails. Vitest finds it at the workspace root;
+      this makes the compiler agree, against the same `dist` the runtime loads.
+    */
+    "baseUrl": ".",
+    "paths": {
+      "@envelope/*": ["packages/*/dist/index.d.ts"]
+    }
+  },
+  "include": ["packages/*/test/**/*.ts", "packages/*/test/**/*.tsx", "apps/*/test/**/*.ts", "apps/*/test/**/*.tsx"]
+}

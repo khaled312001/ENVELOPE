@@ -1,0 +1,838 @@
+/*
+ * `/refusals` — what it refuses.
+ *
+ * OWNER: the `/refusals` page agent.  CLASS PREFIX: `.rf-`.
+ *
+ * This page is longer than any other and must not look like an errata sheet:
+ * length reads as thoroughness only when the layout treats it as content. It uses
+ * the same section grid, the same index numerals and the same type scale as the
+ * feature pages, which is why almost nothing needs to be declared here.
+ *
+ * A refusal is never amber, never red and never a warning graphic. It is a
+ * decision the product made on purpose, set in ink, and typographic weight is the
+ * whole treatment — `.refusal` in `site.css` already carries it. Painting one as a
+ * state would make a deliberate choice read as a fault.
+ *
+ * No selector outside that prefix may be declared here, and no rule in this file may
+ * write a hex value or reach for `var(--uncertain*)`. Amber reaches a page only
+ * through `[data-state="assumed"]`, `.traced--assumed` or `.margin-tally`, which is
+ * what keeps `assertAmberExclusive` stable while six page stylesheets are written in
+ * parallel — a whitelist widened once per page is not a whitelist.
+ *
+ * The chassis classes come from `styles/site.css`: `.shell`, `.section`, `.railed`,
+ * `.plate`, `.figure`, `.schedule`, `.callout`, `.meter`, `.empty`, `.cta`,
+ * `.eyebrow`, `.index`, `.grid`, `.refusal`, `.reveal`, `[data-state]`. This file
+ * adds nothing structural; if a page needs a chassis rule, the chassis is wrong.
+ *
+ * ---
+ *
+ * WHY THIS PAGE GAINS NO HUE, AND THAT IS THE ANSWER RATHER THAN THE COMPROMISE.
+ *
+ * The brief was "the colours are all black and white, like an old website", and it
+ * is right about this page: measured before this pass, `/refusals` painted 0px² of
+ * amber, 0px² of derived, 0px² of variance and 0px² of accent inside `<main>` over
+ * 11,933px of document. Fourteen sections on one flat ground, separated by nothing
+ * but a 2px rule in 200px of white.
+ *
+ * The fix is NOT four provenance hues sprinkled onto it. There is no ASSUMED value
+ * on this page and no DERIVED one — §13.1's amber and the citation green have
+ * nothing here to attach to, and attaching them anyway would be exactly the
+ * "colour looking for an excuse" that `assertAmberExclusive` exists to refuse. A
+ * page whose subject is what the product will not claim is the last place to
+ * invent a claim in paint.
+ *
+ * So the colour on this page is LIGHT AND SHADE, and every one of the four devices
+ * below is achromatic or already-declared:
+ *
+ *   1. CHAPTERS. The three `.section--major` sections take `--surface-sunken`,
+ *      full bleed. The tier already exists in the markup and is assigned by
+ *      argument weight, so the ground says "this is one of the three you must not
+ *      skim" and re-tiering a section moves its ground with it.
+ *   2. THE BAND. §13, the page's own refusal, is set on `--surface-contrast`. It is
+ *      the strongest chapter break the language owns and it is the only one that
+ *      costs the amber nothing, because nothing state-coloured is ever painted on
+ *      it.
+ *   3. THE FRAME. The three schedules — 1,632px of table between them, the largest
+ *      objects on the page — get a ground, an edge and a header block, so a table
+ *      reads as a data object rather than as text with rules through it.
+ *   4. RESPONSE. Links, the scroll regions and the band's one control answer the
+ *      pointer, the keyboard and the press. A response has no area until somebody
+ *      causes it, so the amber-to-accent filled-area ratio is unchanged by all of
+ *      it — which is the only lane a colour pass has on a page that must not gain
+ *      chroma.
+ *
+ * The one blue that does land at rest is the inline prose link in §05, which
+ * rendered `rgb(0, 0, 238)` — the USER-AGENT default, the only hard-coded colour
+ * reaching this page and one no theme follows and no checker measures. Naming it
+ * `--accent` is a token replacing a browser constant, not a new hue.
+ *
+ * ---
+ *
+ * EVERY RULE IS SCOPED UNDER `.rf`, AND THAT IS A DEPARTURE FROM ITS SIBLINGS.
+ * `parking-page.css` and `not-found.css` rely on the prefix alone, which cannot leak
+ * either. The descendant selector is here because this sheet has to reach two
+ * ELEMENT selectors it does not own — `h1` and the section-body paragraph — and an
+ * unscoped `h1` rule in a page stylesheet would restyle the heading on every route
+ * in the product. Scoping the whole file rather than only those two keeps one rule
+ * instead of two conventions in one file, and it puts every declaration here at
+ * (0,2,0) against the chassis's (0,1,0), which is the direction the cascade should
+ * run: the page is the specific case.
+ *
+ * ONE SECTION IS REACHED BY ID, and the reason is that this agent does not own
+ * `Refusals.tsx`. `.section--zoned` and `.section--contrast` are written and
+ * measured in `site.css` and neither is in the markup; adding a class is a
+ * component change. The chapters need no id — they are `.section--major`, a class
+ * the markup already carries — but the band has no tier to bind to, so §13 is
+ * selected by `#unproven`. An id is stable (it is the anchor a reader forwards)
+ * and it cannot leak, but it also cannot inherit a class's declarations, so the
+ * band's token rebinding is restated rather than reused. That duplication is the
+ * price of not owning the markup, and it is recorded here rather than discovered.
+ *
+ * FOUR GAPS IN THE CHASSIS ARE WORKED AROUND HERE RATHER THAN FIXED HERE, because
+ * `site.css` is not this agent's file. All four are reported rather than patched at
+ * source. (a) There is no page `h1` rule anywhere in `site.css`, so each page hero
+ * styles its own; the values below are the design language's own hero specimen,
+ * not new ones. (b) `content/shared.tsx` marks identifiers with `.ident` and no
+ * stylesheet declares it, so those idents render in whatever mono the UA supplies.
+ * This page uses `.rf-ident` for the identifiers it writes itself; it deliberately
+ * does NOT declare `.ident`, because a chassis class defined in a page sheet is a
+ * chassis rule in the wrong file and would win the cascade over the real one the
+ * day somebody adds it. (c) `.section__head h2` sets no bottom margin and nothing
+ * sets a top margin on what follows it, so on eleven of the fourteen sections the
+ * lede sat ON the heading's baseline — see `.rf__lede` below. (d) `.schedule
+ * th:not(.schedule__fill):not(.schedule__rank) { inline-size: 1% }` is (0,3,1) and
+ * outranks the `inline-size: 100%` the stacked view sets at (0,1,2), so below
+ * 40rem every non-fill cell computed 3px wide and painted its label over its own
+ * value — see the 40rem block at the end of this file, which is the only place
+ * where this sheet is repairing the chassis rather than extending it.
+ */
+
+/* --- The hero ------------------------------------------------------------
+ * The design language's hero specimen, verbatim: two rungs above H2 rather than
+ * one, Light rather than Semibold (Plex's display move, and lowering the page's
+ * total ink weight is what keeps the amber elsewhere in the product loud), and
+ * capped in characters. The character cap is NOT what holds the line at 320px —
+ * 15ch at the 36px floor computes wider than a 288px column — the grid track and
+ * normal wrapping are, and `overflow-wrap` is the backstop for a pathological
+ * token rather than the mechanism.
+ */
+.rf h1 {
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-banner);
+  max-inline-size: var(--measure-banner);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  margin-block-end: var(--rhythm-block);
+}
+
+/* --- The lede -------------------------------------------------------------
+ * PRIMARY INK, not secondary, and that is a ruling rather than an oversight.
+ * Every section's lede on this page is one of the shared refusal paragraphs from
+ * `content/shared.tsx` — the canonical statement of the thing the product will not
+ * do, and the sentence a reader forwards. The page's own argument sits underneath
+ * it in secondary, which is the `.plate__title` / `.plate__subtitle` relationship
+ * the chassis already uses. Setting the strongest sentence in the section in the
+ * quieter ink would be the softening this product refuses everywhere else.
+ */
+.rf .rf__lede {
+  font-size: var(--text-lg);
+  line-height: var(--leading-relaxed);
+  max-inline-size: var(--measure-lede);
+  color: var(--text-primary);
+  text-wrap: pretty;
+}
+
+/*
+ * THE GAP THAT WAS NOT THERE, and it was the first thing the eye caught on eleven
+ * of fourteen sections.
+ *
+ * `.section__head h2` carries no `margin-block-end` and the reset zeroes every
+ * heading margin, so a 39px heading and a 20px lede shared one baseline interval:
+ * "The refusal contract" and "Before any of the prose…" collided, and so did the
+ * other ten. It reads as a rendering fault rather than as a typographic decision,
+ * which on the page that argues for care is the most expensive kind of defect.
+ *
+ * IT IS SCOPED TO `.section__head` AND NOT TO `.rf__lede`, because the hero's lede
+ * is a SIBLING of the h1 rather than a child of a head, and the h1 already sets
+ * `--rhythm-block` beneath itself. A margin on the class would have added a second
+ * interval there and opened the hero by 16px for no reason. `--space-4` rather than
+ * `--space-5`: the lede is the second half of the heading, not the paragraph after
+ * it, and the interval has to say so.
+ */
+.rf .section__head > .rf__lede {
+  margin-block-start: var(--space-4);
+}
+
+/* The hero's second paragraph: what the page is made of, at body weight. */
+.rf .rf__hero-note {
+  margin-block-start: var(--space-4);
+  max-inline-size: var(--measure-prose);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+/* --- Section prose --------------------------------------------------------
+ * A measure, and one ink. Without a max-inline-size these paragraphs run the full
+ * 78rem column, and a 78rem line of 16px prose is roughly 150 characters — twice
+ * a readable measure, on the longest page on the site.
+ */
+.rf .section__body > p {
+  max-inline-size: var(--measure-prose);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+/* The second sentence of a two-sentence heading, on its own line and in the
+   quieter ink. It is a heading and not a lede: the reviewer section's whole point
+   is that the two halves are one statement, and splitting them into a heading and
+   a paragraph would let a reader take the first and skip the second. */
+.rf .rf-title__and {
+  display: block;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+ * CHAPTERS — the ground carries the tier
+ * ======================================================================= */
+
+/*
+ * Fourteen sections, 11,933px, and before this pass every one of them computed
+ * `background: rgba(0,0,0,0)`. The whole page was one field of `--surface-base`
+ * from the masthead to the colophon, and the only thing announcing a new argument
+ * was a 2px rule with a hundred pixels of nothing on either side of it, thirteen
+ * times. That is the literal content of the client's sentence, and it is a
+ * SHADE problem rather than a hue one: the page needs chapters.
+ *
+ * THE TIER IS THE RULE, AND IT IS NOT AN ALTERNATION. Zoning every other section
+ * gives a stripe pattern that says nothing — a reader learns within two screens
+ * that the ground means "even-numbered". `.section--major` is already assigned by
+ * ARGUMENT WEIGHT in `Refusals.tsx` (the refusal contract, the reviewer gate, and
+ * what is not on this site), so binding the ground to that tier makes the shade
+ * mean something a reader can name: this is one of the three you must not skim.
+ * It also survives editing — a section re-tiered in the component takes its
+ * ground with it, and nothing here needs to know.
+ *
+ * The chapters land at 4%, 40% and 69% of the document, so the light runs between
+ * them are three, four and two sections long. That is a rhythm rather than a
+ * texture.
+ *
+ * WHY IT IS NOT `.section--zoned`. That class is written and measured in
+ * `site.css` and it is the right one; putting it on the markup is a change to
+ * `Refusals.tsx`, which this agent does not own. The declaration below is the same
+ * declaration, and the day the component can carry the class this block reduces to
+ * the two structural rules under it.
+ *
+ * THE GROUND BLEEDS AND THE RULE DOES NOT, which is the whole of the structural
+ * work here. Every section on this page is `.shell section` — the ground box and
+ * the measure box are one element — so painting the section paints a 1,248px
+ * panel with 96px of page showing on either side at 1440, which reads as an
+ * enormous card rather than as a chapter. The section therefore gives up the
+ * shell (`max-inline-size`, `padding-inline`, its own block rhythm and its datum
+ * rule) and `.railed` takes all four back. `.railed` is a `border-box` grid with
+ * the same max and the same gutter, so the rule it now draws is pixel-identical
+ * to the one every other section draws — a chapter opens with the SAME horizon on
+ * a DIFFERENT ground, which is the difference a reader should be asked to see.
+ *
+ * NO VIEWPORT UNITS, and that is deliberate. The `inset-inline: calc(50% - 50vw)`
+ * full-bleed trick is one line shorter and it counts the scrollbar: on a document
+ * 11,933px tall the vertical scrollbar is permanent, so `100vw` exceeds the
+ * client width by its thickness and the page scrolls sideways — the one defect
+ * class this project has found every accessibility bug in.
+ *
+ * ON PAPER IT DISAPPEARS, correctly. `--surface-sunken` is `#ffffff` in the print
+ * theme, so a chapter prints as a chapter break carried by its rule alone; a
+ * tinted band across a printed page is a grey smudge and a page of toner.
+ */
+.rf .section--major {
+  background-color: var(--surface-sunken);
+  max-inline-size: none;
+  padding-inline: 0;
+  padding-block: 0;
+  border-block-start: none;
+}
+.rf .section--major > .railed {
+  inline-size: 100%;
+  max-inline-size: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+  padding-block: var(--rhythm-major) var(--rhythm-minor);
+  border-block-start: var(--border-width-emphasis) solid var(--border-strong);
+}
+
+/* The chapter numeral takes one step up the ink ladder — tertiary to secondary —
+   so the margin says "chapter" in the same column and at the same size rather
+   than by growing. Both inks are measured on all nine grounds. */
+.rf .section--major .index {
+  color: var(--text-secondary);
+}
+
+/*
+ * A NOTE FOR WHOEVER ADDS A STATE TO A CHAPTER, because the chassis's own guard
+ * cannot see these sections.
+ *
+ * `site.css` re-points `--state-surface` to `--surface-sunken` for the three
+ * FILL-LESS states — variance, blocked, neutral — but it keys that override on
+ * `.section--zoned`, which is not the class in this markup. It matters not at all
+ * today, because this page carries no fill-less state: the only `[data-state]` on
+ * it is `deferred`, which brings `--deferred-surface` with it and is therefore
+ * correct on any ground. It would matter the moment a VARIANCE callout landed in
+ * §01, §06 or §11, where `--state-surface` would name a white that is not there.
+ * The fix at that point is the class in the component, not a fourth copy here.
+ */
+
+/* ==========================================================================
+ * THE INVERTED BAND — §13, the page's own refusal
+ * ======================================================================= */
+
+/*
+ * "What this page did not prove: that the refusals above are the complete set."
+ *
+ * Thirteen sections argue that the product does not overclaim; this one turns the
+ * instrument on the page itself, and it is the paragraph a reader is most likely
+ * to skim because it arrives last. An inversion is the strongest chapter break the
+ * language owns and it is the ONLY one that costs the amber nothing — it is
+ * achromatic, `--surface-contrast` is excluded from the nine measured grounds by
+ * name, and `assertNoChromeOnBand` is what keeps that exclusion honest. Spending
+ * it here, once, on the page's own refusal, is on-thesis rather than decorative.
+ *
+ * THE SELECTOR CARRIES BOTH NAMES ON PURPOSE. `#unproven` is what matches today.
+ * `.section--contrast` is in the list for two reasons: `assertNoChromeOnBand`
+ * finds a band by matching `contrast` in the SELECTOR TEXT, so a band declared
+ * under an id alone is never scanned and §3.3's guarantee stops covering it in
+ * silence — `site.css` says as much where it names the class ("A band class named
+ * anything else sets the same ground and is never scanned"). And the day
+ * `Refusals.tsx` can carry the chassis class, this rule needs no edit.
+ *
+ * IT REBINDS THE SEMANTIC TOKENS RATHER THAN OVERRIDING EACH INK, which is
+ * `site.css`'s own argument restated: a band that carries its inks by enumeration
+ * acquires a wrong one the first time somebody puts something new inside it. Every
+ * descendant — the heading, the lede, both paragraphs, the CTA note and the button
+ * — lands on the band's three measured inks by construction, and the pairs the
+ * checker already holds (16.42 / 8.98 / 3.59 in light) become the pairs actually
+ * painted.
+ *
+ * THE RESPONSE VOCABULARY IS REBOUND AS WELL, and its absence was a real defect
+ * rather than a cosmetic one. `site.css` §18 indirects every hover, focus and
+ * press ground through `--response-ground-hover` / `--response-ground-press` /
+ * `--response-edge-active`, and `app.css`'s `.button` reads them with
+ * `--surface-base` and `--surface-sunken` as fallbacks. Both of those are rebound
+ * to `--surface-contrast` above — so on the band the button's hover, focus and
+ * press all resolved to the ground it already had, and the one control on this
+ * section answered nothing. Measured: `rgb(20,22,28)` at rest and `rgb(20,22,28)`
+ * under the pointer.
+ *
+ * Rebinding the three response properties on the SECTION rather than restating
+ * `.button` is what keeps this a use of the vocabulary instead of a second copy of
+ * a control: `app.css` owns the button, this rule owns the surface it is drawn on,
+ * and anything else placed here inherits the same two tones. `--border-on-contrast`
+ * is the only mid-tone the band declares, and it measures 4.58 in light and 5.00 in
+ * dark against the band's text.
+ *
+ * HOVER AND PRESS SHARE ONE TONE AND THE PRESS IS EXPRESSED IN TIME, which is
+ * `app.css`'s own argument for `.button--primary` applied to a surface in the same
+ * position: an inverted band has no ladder under it, a third tone would have to be
+ * invented, and `app.css` already drops `:active` to `--duration-instant` so the
+ * control goes down in 80ms and comes back in 140ms. Inverting the press here
+ * instead — white ground, dark label — was written and deleted: the label colour is
+ * not part of the response vocabulary, so expressing it would have meant restating
+ * `.button`'s ink in a page stylesheet, which is the one thing `site.css` names as
+ * a defect with a bigger surface than the bug it fixes.
+ *
+ * `--surface-inset` IS REBOUND TOO, for the same reason one rung further out: it is
+ * the fallback ground for a pressed prose link below, and near-white under
+ * `--text-on-contrast` is 1.06:1.
+ *
+ * `--accent-focus` IS REBOUND AND `--accent` IS NOT. The blue measures 3.12:1 on
+ * this ground, so a focus ring drawn in it is a ring on the one indicator 2.4.11
+ * exists for — the landing band overrides exactly this, and doing it as a token
+ * rather than as an outline rule means every focusable descendant inherits the
+ * correction instead of the ones somebody remembered. `--accent` itself is left
+ * alone: rebinding it to `--text-on-contrast` would give `.button--primary` a
+ * white ground under a `--text-inverse` white label, which is a worse defect than
+ * the one it fixes. The one thing that needs the ink — a prose link — is named
+ * below, and there is none on this section today.
+ *
+ * ON PAPER IT INVERTS BACK with no print rule of its own: `--surface-contrast` is
+ * `#ffffff` in the print theme and `--text-on-contrast` is `#000000`. The two 2px
+ * rules are what is left saying a band was here, which is why they are drawn in a
+ * token rather than left to the ground.
+ */
+.rf #unproven,
+.rf .section--contrast {
+  --surface-base: var(--surface-contrast);
+  --surface-raised: var(--surface-contrast);
+  --surface-sunken: var(--surface-contrast);
+  --surface-inset: var(--border-on-contrast);
+  --bleed-ground: var(--surface-contrast);
+  --text-primary: var(--text-on-contrast);
+  --text-secondary: var(--text-on-contrast-dim);
+  --text-tertiary: var(--text-on-contrast-dim);
+  --border-subtle: var(--border-on-contrast);
+  --border-default: var(--border-on-contrast);
+  --border-control: var(--border-on-contrast);
+  --border-strong: var(--border-on-contrast);
+  --accent-focus: var(--text-on-contrast);
+  --response-ground-hover: var(--border-on-contrast);
+  --response-ground-press: var(--border-on-contrast);
+  --response-edge-active: var(--text-on-contrast);
+  max-inline-size: none;
+  padding-inline: 0;
+  background-color: var(--surface-contrast);
+  color: var(--text-on-contrast);
+  /* An edge at BOTH ends. A section rule OPENS a section; a band is a block, and a
+     block that stops without a rule reads as a page that ran out. Full bleed
+     rather than shell width, because unlike a chapter opening these two rules are
+     the band's FRAME and a frame that stops short of the ground it frames is a
+     drawing error. */
+  border-block: var(--border-width-emphasis) solid var(--border-on-contrast);
+}
+.rf #unproven > .railed,
+.rf .section--contrast > .railed {
+  inline-size: 100%;
+  max-inline-size: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+}
+
+/* A prose link on the band, in the band's own ink. There is none today; the rule
+   is here because `--accent` is deliberately NOT rebound above, so the ink a link
+   would otherwise take is the one that measures 3.12 on this ground. */
+.rf #unproven a:not(.button),
+.rf .section--contrast a:not(.button) {
+  color: var(--text-on-contrast);
+}
+
+/*
+ * The one control on the band needs exactly one declaration, and the rest is the
+ * rebinding above doing its job: rest ground, hover, focus, press, edge and
+ * timing all arrive from `app.css` reading tokens this section re-pointed.
+ *
+ * The underline is what is left. `Link` renders an `<a>`, the UA underlines it,
+ * and an underline inside a bordered control reads as a rendering fault rather
+ * than as an affordance — `.nav` drops it on the same element for the same
+ * reason. It is not a colour decision and it changes nothing a checker measures.
+ */
+.rf #unproven .button,
+.rf .section--contrast .button {
+  text-decoration: none;
+}
+
+/* ==========================================================================
+ * LINKS — the one blue this page paints, and the response vocabulary
+ * ======================================================================= */
+
+/*
+ * MEASURED BEFORE THIS PASS: the inline link to the parking page in §05 computed
+ * `rgb(0, 0, 238)`. That is the user-agent's default, the only hard-coded colour
+ * reaching this page, and it is worse than a hex in a stylesheet — no theme
+ * follows it, `contrast.mjs` cannot see it, and in dark mode it is a navy link on
+ * a near-black ground. Naming it `--accent` replaces a browser constant with the
+ * token whose declared job this is: one blue, interactive affordance and nothing
+ * else.
+ *
+ * THE UNDERLINE IS AT REST AND IS NOT NEGOTIABLE. `.colophon__group a` earns the
+ * right to withhold the blue until hover because it is a list of thirty links
+ * where position already says "link". An inline link inside a sentence has no
+ * such context, and 1.4.1 requires a cue that is not colour, so the underline
+ * stays and hover thickens it instead of adding it.
+ *
+ * FOUR STATES FROM ONE VOCABULARY, matching `site.css` §18 rather than inventing a
+ * per-file dialect: rest, hover (the underline doubles), `:focus-visible` (the
+ * same response a pointer gets, plus the global ring, so the keyboard is not a
+ * second design), and press (one ground step, and it arrives faster than it
+ * leaves). The colour and ground changes are unconditional; only the
+ * interpolation is inside the motion guard.
+ *
+ * `:not(.button)` excludes the CTA, which is a control and takes the control
+ * family's treatment. `.rf` contains no nav and no colophon, so this reaches
+ * exactly the prose links on this page.
+ */
+.rf a:not(.button) {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: var(--border-width);
+}
+@media (hover: hover) {
+  .rf a:not(.button):hover {
+    text-decoration-thickness: var(--border-width-emphasis);
+  }
+}
+.rf a:not(.button):focus-visible {
+  text-decoration-thickness: var(--border-width-emphasis);
+}
+/* The press ground is read through the shared vocabulary with a fallback rather
+   than written directly, so a link inside the inverted band takes the band's own
+   press tone from the same declaration that gives its button one. */
+.rf a:not(.button):active {
+  background-color: var(--response-ground-press, var(--surface-inset));
+  text-decoration-thickness: var(--border-width-emphasis);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .rf a:not(.button) {
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      text-decoration-thickness var(--duration-fast) var(--ease-standard);
+  }
+  .rf a:not(.button):active {
+    transition-duration: var(--duration-instant);
+  }
+}
+
+/* --- Identifiers ----------------------------------------------------------
+ * A file path, a status code or a type name, set as a specimen rather than as
+ * prose. NO GROUND AND NO INK OF ITS OWN: `color: inherit` means this introduces
+ * no colour pair at all, so there is nothing here for `contrast.mjs` to be unable
+ * to resolve, and an identifier inside a secondary paragraph stays secondary
+ * instead of shouting over the sentence carrying it.
+ *
+ * `overflow-wrap: anywhere` is load-bearing rather than tidy. `packages/capacity/
+ * src/pipeline.ts` is wider than the value track of a stacked schedule record at
+ * 320px, and an unbreakable token there would push its own row instead of
+ * wrapping. The schedule's own scroll container would contain it; a reader would
+ * still have to pan a table cell to read a file name.
+ */
+.rf .rf-ident {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  font-variant-numeric: slashed-zero lining-nums tabular-nums;
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+
+/* --- One element per schedule cell ---------------------------------------
+ * Below 40rem the chassis turns every schedule cell into a two-column grid — the
+ * re-emitted label, then the value — and grid blockifies each inline-level ELEMENT
+ * child into its own item while wrapping the loose text around it into another. A
+ * cell holding a `<code>` followed by a clause is therefore three items in two
+ * columns, and the clause drops into the LABEL column on a second row. This is the
+ * single element every such cell needs so that the grid sees one value, and it is
+ * `display: block` with `min-inline-size: 0` because a grid item defaults to
+ * `min-width: auto` and refuses to shrink below its content — the one declaration
+ * whose absence causes almost all horizontal overflow in this product.
+ */
+.rf .rf-cell {
+  display: block;
+  min-inline-size: 0;
+}
+
+/* --- Chips beside a rule id ----------------------------------------------
+ * R9 puts the state of a citation in the same cell as the id it qualifies, so the
+ * two stay in one eyeful in the stacked view at 320px as well as in the table.
+ *
+ * PLACEMENT OWNS INSET. `.chip` carries `margin-left` for the case where it
+ * follows a title inline; in a flex row that margin doubles the gap on every chip
+ * but the first, which is the asymmetry the chassis note about placement was
+ * written for. The container sets the gap and clears the margin.
+ */
+.rf .rf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+.rf .rf-chips > .chip {
+  margin-inline-start: 0;
+}
+
+/* ==========================================================================
+ * THE SCHEDULES — a table sits on a ground, not on the page
+ * ======================================================================= */
+
+/*
+ * Three tables, 1,632px of them, and the largest — §11's thirteen refusals — is
+ * 1,056 x 1,015px on its own. The chassis gives `.schedule` an `overflow-x` and
+ * nothing else: no ground on the table, the header, the body or any row that is
+ * not `deferred`. So the page's densest object floated on the page ground with
+ * hairlines through it, and in dark it floated on `#16181d` with nothing under it
+ * at all. This is the single highest-value edit available on this page and it
+ * costs no hue: `--surface-raised` on `--surface-base` is the card lift the token
+ * ladder was just repaired to make legible (1.06 light, 1.13 dark), and on a
+ * chapter's `--surface-sunken` it opens to 1.13 light and 1.24 dark.
+ *
+ * THE HEADER IS A BLOCK, NOT A LINE. `--surface-sunken` under the column names
+ * turns the 2px header rule from a rule floating above text into the bottom edge
+ * of a header. On paper both grounds go white and the rule carries it alone,
+ * which is the same treatment the chassis already ships.
+ *
+ * THE CELLS TAKE THE INLINE PADDING, AND THE CONTAINER TAKES NONE. The chassis
+ * makes the first and last cells flush so an unframed table sits on the page rail
+ * that the prose above it uses. Framed, the FRAME is what sits on that rail, and
+ * the cells sit inside it — so the padding has to move to the cells. Put on the
+ * container instead, the header ground, the deferred row's ground and the hover
+ * highlight would each stop 24px short of an edge on both sides and read as a bar
+ * floating inside a box. Below 40rem the record's inset moves to the row, where
+ * the chassis has already blockified everything, and the cells go flush again.
+ *
+ * THE ROW-HEADER COLUMN GETS A FLOOR. `inline-size: 1%` shrink-wraps every column
+ * that is not `.schedule__fill`, so "A run with the parking-in-FAR treatment
+ * undeclared" — a sentence — was setting four lines in 145px while the column
+ * beside it held 490px of slack. A minimum lets short row headers stay compact
+ * and stops a sentence being set as a stack of two-word lines. It is reset in the
+ * stacked view, where the cell is a block and a minimum would be a floor under
+ * the viewport.
+ */
+.rf .schedule {
+  background-color: var(--surface-raised);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+.rf .schedule thead th {
+  background-color: var(--surface-sunken);
+  padding-block: var(--space-4) var(--space-3);
+}
+.rf .schedule th:first-child,
+.rf .schedule td:first-child {
+  padding-inline-start: var(--space-5);
+}
+.rf .schedule th:last-child,
+.rf .schedule td:last-child {
+  padding-inline-end: var(--space-5);
+}
+/* The chassis removes the last row's rule so a table does not draw an interior
+   line against its container's padding. Framed, there is no padding to draw
+   against — so the row takes the interval instead, and the last line of a table
+   stops looking pressed against its own edge. */
+.rf .schedule tbody tr:last-child > * {
+  padding-block-end: var(--space-4);
+}
+.rf .schedule tbody th[scope='row'] {
+  min-inline-size: 14rem;
+}
+
+/*
+ * THE SCROLL REGION ANSWERS THE KEYBOARD.
+ *
+ * `.schedule` carries `tabIndex={0}` and `role="region"` because 2.1.1 applies to
+ * a scroll container the same way it applies to a control, and the chassis gives
+ * it the global ring. A ring alone on a 1,015px-tall object tells a keyboard
+ * reader where focus is but not what has it — so the frame darkens by the same
+ * step the response vocabulary gives every other edge (`--border-default` to
+ * `--border-strong`, which is `--response-edge-active`). The ring itself never
+ * animates; only the edge does.
+ */
+.rf .schedule:focus-visible {
+  border-color: var(--border-strong);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .rf .schedule {
+    transition: border-color var(--duration-fast) var(--ease-standard);
+  }
+}
+
+/* --- The owner lists ------------------------------------------------------
+ * Three plates, each a group of gaps with the same kind of owner. The rules are
+ * `--border-subtle` on a plate's `--surface-raised`, which is a recorded house
+ * pair: they separate records and carry no information, so nothing is read off
+ * them. The owner itself is read off the `<strong>`, in primary ink.
+ */
+.rf .rf-owners {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rf .rf-owners > li {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-fine);
+  text-wrap: pretty;
+}
+.rf .rf-owners > li + li {
+  padding-block-start: var(--space-4);
+  border-block-start: var(--border-width) solid var(--border-subtle);
+}
+.rf .rf-owners > li > strong {
+  display: block;
+  margin-block-end: var(--space-1);
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* --- The plates in section bodies ----------------------------------------
+ * `.plate` is a flex column with its own gap, so a title followed by a paragraph
+ * needs no margin — only a measure and the secondary ink, matching
+ * `.plate__subtitle` which the chassis already sets for the same relationship.
+ */
+.rf .plate > p {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-fine);
+  text-wrap: pretty;
+}
+
+/* ==========================================================================
+ * MOTION — the reveal is re-aimed, not increased
+ * ======================================================================= */
+
+/*
+ * `Refusals.tsx` puts `.reveal` on `.section__body`, once per section. The chassis
+ * reveal is a 12px transform-only settle — and thirteen of those blocks are
+ * between 400 and 1,950px tall, so what actually happens is that a rigid slab the
+ * height of a viewport slides 12px. It is imperceptible, which is the worst
+ * outcome available: the cost of an animation with none of the effect.
+ *
+ * The granularity is the fix, not the amount. The block reveal is switched off and
+ * re-aimed at the OBJECTS inside it — the three schedules, the seven plates, the
+ * three callouts, the empty state and the closing CTA. Each is short enough that
+ * 12px reads, each enters on its own, and the stagger comes from where they sit on
+ * the page rather than from a delay that would have to be timed.
+ *
+ * PROSE IS DELIBERATELY EXCLUDED. Every paragraph on this page is an argument, and
+ * a page whose sentences arrive one at a time is a page that decides when you may
+ * read them. The objects move; the argument does not.
+ *
+ * IT REUSES `@keyframes settle` RATHER THAN DECLARING ONE. The name is global, it
+ * is the chassis's own, and a second keyframe with the same body is the
+ * `.chip--assumed` / `.chip--warn` defect in a fourth form — two definitions of
+ * one motion, of which an edit changes the one you happened to find. `settle` is
+ * declared inside `prefers-reduced-motion: no-preference`, so under `reduce` the
+ * name resolves to no keyframes at all and every element below sits at its base
+ * state, which is also its final state. There is nothing to override and nothing
+ * to forget.
+ *
+ * NOTHING HERE IS EVER AT AN OPACITY BELOW 1, and the fill mode cannot smuggle one
+ * in: `settle` animates `transform` and only `transform`. A scroll-driven
+ * animation holds its start state for anything that has never entered a viewport,
+ * and "has never entered a viewport" is the permanent condition of a printed page
+ * and of the full-page screenshot this repo runs design review from. That defect
+ * has shipped here twice; the reason it cannot ship a third time from this file is
+ * that there is no opacity in it.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .rf .section__body.reveal {
+      animation: none;
+    }
+    .rf .section__body > .schedule,
+    .rf .section__body > .plate,
+    .rf .section__body > .callout,
+    .rf .section__body > .empty,
+    .rf .section__body > .cta,
+    .rf .section__body > .grid > * {
+      animation: settle linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 65%;
+    }
+  }
+}
+
+/* --- 320px ---------------------------------------------------------------
+ * TWO RULES SURVIVED HERE AND THE REST WERE DELETED, and the absences are the
+ * record of the reasoning.
+ *
+ * The rail folds at 48rem in the chassis, the schedule becomes a stack of ruled
+ * records at 40rem, every measure above is a max rather than a width, and every
+ * long token that could push a row wraps. The chapter and band grounds add
+ * nothing here either: they hand the shell to `.railed`, which takes the same
+ * `--page-gutter`, so at 320px the ground is full bleed and the text is inset 16px
+ * exactly as it was.
+ *
+ * A media query stepping `.rf-title__and` down to `--text-3xl` was written first
+ * and does nothing: the sentence is inside an `<h2>`, which is already at that
+ * rung, so the declaration resolves to the size it inherits. A rule with no effect
+ * in a stylesheet is worse than no rule, because it reads as a decision somebody
+ * made and stops the next person asking the question. Stepping it down by a
+ * relative ratio was the other version, and it inverts below about 356px: the H2
+ * clamp falls to 24px while a fixed rung does not, so the second half of the
+ * heading would end up LARGER than the first on a phone. Equal size, quieter ink,
+ * own line — which is also the argument the section makes, that the two halves are
+ * one statement.
+ *
+ * THE FIRST SURVIVOR IS R9's. At the stacked width a schedule cell's value track
+ * is roughly 128px, and `Draft · not sourced` set `nowrap` — which `.chip` is,
+ * correctly, everywhere else — is wider than that. The schedule's own `overflow-x`
+ * container would contain it rather than pushing the document sideways, so no gate
+ * would report anything; what a reader would get is a table cell they have to pan
+ * sideways to read the state of a citation, which is exactly the "same eyeful" R9
+ * exists to guarantee. A wrapped pill is an ugly shape and a legible one, and
+ * legible wins.
+ *
+ * THE SECOND IS THE FRAME'S. Above 40rem the framed table pays its inset with the
+ * first and last CELLS, because the header ground and the row highlight have to
+ * reach both edges. Below it there are no columns — the chassis has blockified
+ * every cell into a labelled record — so the inset moves to the RECORD and the
+ * cells go flush inside it, which is also what keeps the re-emitted label and its
+ * value on one left edge. The row-header minimum goes with them: 14rem is 224px
+ * against a 288px column that has just spent 32px on the record inset, and a
+ * minimum wider than the space left is a horizontal scrollbar waiting for a long
+ * word.
+ */
+@media (max-width: 40rem) {
+  .rf .rf-chips > .chip {
+    white-space: normal;
+  }
+
+  /*
+   * A CHASSIS DEFECT, WORKED AROUND HERE AND REPORTED AT SOURCE, because
+   * `site.css` is not this agent's file.
+   *
+   * The stacked view opens with `.schedule > table, tbody, tr, tbody th, td {
+   * display: block; inline-size: 100% }` — (0,1,2) at its strongest. Sitting
+   * above it in the same sheet is `.schedule th:not(.schedule__fill):not
+   * (.schedule__rank) { inline-size: 1% }`, which is (0,3,1) and therefore WINS
+   * inside the media query it was never meant to reach. Measured at 320px on this
+   * page: the row header and the response cell are 3px wide, their two grid
+   * tracks compute `0px 0px`, and the re-emitted label paints on top of the value.
+   * `422` sets as three lines of one digit. It survives every gate because the
+   * schedule's own `overflow-x` contains it — `documentElement.scrollWidth` is
+   * exactly 320 — so nothing reports a defect over a table nobody can read.
+   *
+   * The fix is one selector in `site.css`, not four here; these two restore the
+   * declaration the chassis already intends, at (0,3,2) so they clear the shrink
+   * rule, and they come out the day it is fixed at source.
+   */
+  .rf .schedule tbody th:not(.schedule__rank),
+  .rf .schedule tbody td:not(.schedule__rank) {
+    inline-size: 100%;
+  }
+
+  .rf .schedule tbody tr {
+    padding-inline: var(--space-4);
+  }
+  .rf .schedule tbody th:first-child,
+  .rf .schedule tbody th:last-child,
+  .rf .schedule td:first-child,
+  .rf .schedule td:last-child {
+    padding-inline: 0;
+  }
+  .rf .schedule tbody th[scope='row'] {
+    min-inline-size: 0;
+  }
+}
+
+/* --- 30rem ---------------------------------------------------------------
+ * THE RECORD'S LABEL MOVES ABOVE ITS VALUE, and this is the chassis's own move
+ * rather than a new one.
+ *
+ * A stacked record is a two-column grid — `minmax(0, var(--label-col))` at 9rem,
+ * then the value. At 320px that is 144px of a 256px record spent on a label that
+ * repeats on every row, and it leaves 94px for the value: `An export while the
+ * assumption gate or the reviewer gate is unsatisfied` sets five lines of three
+ * words, and `packages/capacity/src/pipeline.ts` breaks mid-token across three.
+ * A label/value pair narrow enough to hyphenate its own value is no longer a
+ * pair; it is two columns of debris.
+ *
+ * `site.css` already answers this for the other label/value grid in the language:
+ * `.figure__spec` collapses to `minmax(0, 1fr)` below its own narrow width, and
+ * the row-gap the stacked cell already carries — `--space-hair` — is what keeps
+ * the label attached to the value it names once they are stacked. Same device,
+ * same tokens.
+ *
+ * 30rem AND NOT 26rem: `.figure__spec` collapses at 26rem, but it does so in a
+ * CONTAINER query against its own frame, and 26rem is not on this product's
+ * media scale. 30rem is, it is the width at which two columns still leave a
+ * 256px value track, and inventing a sixth breakpoint to match a number from a
+ * container query would be a third answer nobody could later reconcile.
+ */
+@media (max-width: 30rem) {
+  .rf .schedule tbody th,
+  .rf .schedule td {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

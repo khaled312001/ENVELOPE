@@ -1,0 +1,510 @@
+/* ---------------------------------------------------------------------------
+ * TOP.ai proposal — one stylesheet, two languages, two media.
+ *
+ * The previous version of this document had no print stylesheet at all and no
+ * break rules anywhere, so the PDF renderer cut wherever the paper ran out —
+ * through the middle of a card, through a table, once through a heading. That
+ * is the defect this file exists to fix, and it is fixed structurally rather
+ * than by nudging margins: every section is a `.sheet`, and a `.sheet` starts a
+ * page. Nothing else can decide where the paper ends.
+ *
+ * Direction is never written as `left` or `right`. Every offset is a logical
+ * property (`margin-inline-start`, `border-inline-start`, `padding-inline`), so
+ * the Arabic RTL document and the English LTR one are the same stylesheet with
+ * `dir` changed on <html> — not two stylesheets that drift apart.
+ * ------------------------------------------------------------------------ */
+
+:root {
+  --navy: #0b1e3f;
+  --navy-2: #12294d;
+  --navy-3: #29416b;
+  --ink: #14161c;
+  --muted: #4d5a72;
+  --faint: #6f7c93;
+  --line: #dfe4ec;
+  --line-2: #c3ccdb;
+  --paper: #ffffff;
+  --tint: #f5f7fa;
+  --accent: #b8791a;
+  --accent-bg: #fdf5e7;
+  --good: #16704b;
+  --good-bg: #ecf6f1;
+  --stop: #a8271f;
+  --stop-bg: #fdeceb;
+
+  --sans: "IBM Plex Sans", "IBM Plex Sans Arabic", system-ui, -apple-system,
+    "Segoe UI", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+html[dir="rtl"] {
+  --sans: "IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, "Segoe UI", Tahoma,
+    Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #e9ecf1;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 9.9pt;
+  line-height: 1.56;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Latin runs inside Arabic prose — DXF, GFA, B.11 — keep their own face so the
+   Arabic font's Latin fallback does not make every acronym look pasted in. */
+/*
+  A Latin run inside Arabic prose is its own bidi context.
+
+  Without `unicode-bidi: isolate` the paragraph direction reaches into the run
+  and reorders whatever sits beside it: an em dash after "RFP" jumped to the
+  wrong side of the acronym, and a "٥٠٪ … · ٥٠٪" pair merged into "٥٠٠٪". The
+  isolate makes each run atomic, so the surrounding Arabic reorders around it
+  rather than through it.
+*/
+.lat {
+  font-family: "IBM Plex Sans", sans-serif;
+  font-feature-settings: "tnum";
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.95em; }
+
+p { margin: 0 0 8pt; }
+ul, ol { margin: 0 0 8pt; padding: 0; list-style: none; }
+strong { font-weight: 600; color: var(--navy); }
+em { font-style: italic; }
+a { color: var(--navy-3); }
+
+/* ---------------------------------------------------------------------------
+ * The sheet. One section, one page — on screen and on paper alike.
+ * ------------------------------------------------------------------------ */
+
+.doc { max-width: 210mm; margin: 0 auto; }
+
+.sheet {
+  background: var(--paper);
+  padding: 15mm 16mm 10mm;
+  /*
+    A flex column, so the footer strip is *in flow* and pushed down by
+    `margin-top: auto` rather than positioned absolutely over the content.
+
+    Absolute positioning is why the last block on two pages sat underneath the
+    footer rule: an out-of-flow element reserves no space, so the text had no
+    idea it had run out of page. In flow, an overfilled sheet grows past 297mm
+    and the build's own measurement catches it — which is the only reason this
+    was found at all.
+  */
+  display: flex;
+  flex-direction: column;
+  /*
+    Every section begins a page. This is the whole answer to "the cut should
+    land at the end of a section": if a section cannot start mid-page, no
+    section can be cut mid-way either. Sections are written short enough to fit
+    one page, and the `avoid` rules below catch anything that grows past it.
+  */
+  break-before: page;
+  break-after: auto;
+}
+.sheet:first-child { break-before: auto; }
+
+/*
+  Nothing on a sheet is allowed to shrink.
+
+  A flex column shrinks its items to fit the container by default, so an
+  over-full page reported itself as exactly 297mm while the price box quietly
+  lost the bottom line of its own table. A measurement that a layout can satisfy
+  by compressing content is not a measurement. With `flex: none` an overfull
+  sheet grows past the page and says so.
+*/
+.sheet > * { flex: 0 0 auto; }
+.sheet__foot { flex: 0 0 auto; }
+
+/* On screen the pages are drawn as pages, so what you scroll is what prints.
+   A preview that does not show the breaks is how the breaks got shipped
+   broken. */
+@media screen {
+  .doc { padding: 18px 0 40px; }
+  .sheet {
+    min-height: 297mm;
+    margin: 0 auto 18px;
+    box-shadow: 0 1px 4px rgba(11, 30, 63, 0.14);
+  }
+}
+
+/* Nothing atomic may be cut. Each of these is a unit a reader takes in whole —
+   splitting one across a page turns it into two half-thoughts. */
+.card,
+.note,
+.step,
+.stat,
+.price,
+.deliver li,
+.exclude li,
+.who,
+figure,
+blockquote,
+tr {
+  break-inside: avoid;
+}
+/* A heading at the foot of a page is a heading with nothing under it. */
+h1, h2, h3, h4 { break-after: avoid; }
+p { orphans: 3; widows: 3; }
+table { break-inside: auto; }
+thead { display: table-header-group; }
+
+/* ---------------------------------------------------------------------------
+ * Cover
+ * ------------------------------------------------------------------------ */
+
+.sheet--cover {
+  background: var(--navy);
+  color: #fff;
+  padding-top: 30mm;
+  display: flex;
+  flex-direction: column;
+}
+.cover__kicker {
+  font-family: var(--mono);
+  font-size: 8pt;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8fa6cc;
+}
+.cover__title {
+  font-size: 33pt;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 8mm 0 0;
+}
+.cover__title span { color: #f0b45c; }
+.cover__sub {
+  font-size: 12.5pt;
+  line-height: 1.6;
+  color: #ccd7e9;
+  max-width: 42em;
+  margin-top: 6mm;
+}
+.cover__rule { height: 2px; background: #f0b45c; width: 46mm; margin: 9mm 0; }
+.cover__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4mm 8mm;
+  font-size: 9.5pt;
+  color: #b9c6dd;
+  margin-top: auto;
+  padding-top: 8mm;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+.cover__meta b { display: block; color: #fff; font-weight: 600; font-size: 10.5pt; }
+.cover__meta span {
+  font-family: var(--mono);
+  font-size: 7.5pt;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8fa6cc;
+}
+
+/* ---------------------------------------------------------------------------
+ * Section furniture
+ * ------------------------------------------------------------------------ */
+
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  gap: 5mm;
+  padding-bottom: 2.6mm;
+  margin-bottom: 5mm;
+  border-bottom: 2px solid var(--navy);
+}
+.sec-head .n {
+  font-family: var(--mono);
+  font-size: 11pt;
+  font-weight: 600;
+  color: var(--accent);
+}
+.sec-head h2 {
+  margin: 0;
+  font-size: 17pt;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--navy);
+  line-height: 1.2;
+}
+.lede {
+  color: var(--muted);
+  font-size: 11pt;
+  line-height: 1.6;
+  max-width: 60em;
+  margin: 0 0 5.5mm;
+}
+h3 {
+  font-size: 11.5pt;
+  font-weight: 600;
+  color: var(--navy-2);
+  margin: 5.5mm 0 2.5mm;
+}
+h4 { font-size: 10.4pt; font-weight: 600; color: var(--navy-2); margin: 0 0 2mm; }
+
+/* ---------------------------------------------------------------------------
+ * Blocks
+ * ------------------------------------------------------------------------ */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4mm;
+  margin-bottom: 6mm;
+}
+.stat {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 4mm;
+  background: var(--tint);
+}
+.stat b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 19pt;
+  font-weight: 600;
+  color: var(--navy);
+  line-height: 1.1;
+}
+.stat i {
+  display: block;
+  font-style: normal;
+  font-size: 8.4pt;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 1.5mm 0 2mm;
+}
+.stat span { display: block; font-size: 9pt; color: var(--muted); line-height: 1.5; }
+
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; }
+.card {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 4.5mm;
+  background: var(--paper);
+}
+.card p { font-size: 9.4pt; color: var(--muted); margin: 0; line-height: 1.6; }
+
+.note {
+  border-inline-start: 3px solid var(--line-2);
+  background: var(--tint);
+  padding: 4mm 5mm;
+  border-radius: 0 3px 3px 0;
+  margin: 5mm 0;
+}
+html[dir="rtl"] .note { border-radius: 3px 0 0 3px; }
+.note p { font-size: 9.8pt; color: var(--muted); margin: 0; }
+.note--warn { border-inline-start-color: var(--accent); background: var(--accent-bg); }
+.note--warn h4 { color: #7a4400; }
+.note--stop { border-inline-start-color: var(--stop); background: var(--stop-bg); }
+.note--stop h4 { color: var(--stop); }
+.note--good { border-inline-start-color: var(--good); background: var(--good-bg); }
+.note--good h4 { color: var(--good); }
+
+/* The delivery list: a tick column that cannot wrap under its own text. */
+.deliver, .exclude { display: flex; flex-direction: column; }
+.deliver li, .exclude li {
+  display: grid;
+  grid-template-columns: 6mm minmax(0, 1fr);
+  gap: 3mm;
+  padding: 2.6mm 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 9.7pt;
+  line-height: 1.55;
+}
+.deliver li:last-child, .exclude li:last-child { border-bottom: 0; }
+.deliver li::before {
+  content: "✓";
+  color: var(--good);
+  font-weight: 700;
+  font-size: 10pt;
+  line-height: 1.5;
+}
+.exclude li::before {
+  content: "✕";
+  color: var(--stop);
+  font-weight: 700;
+  font-size: 9.4pt;
+  line-height: 1.6;
+}
+.deliver b, .exclude b { color: var(--navy); }
+.deliver small, .exclude small {
+  display: block;
+  color: var(--faint);
+  font-size: 8.8pt;
+  line-height: 1.5;
+}
+
+/* Who-we-are cards */
+.who {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3.8mm;
+  margin-bottom: 2.8mm;
+  background: var(--paper);
+}
+.who__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4mm;
+  flex-wrap: wrap;
+  padding-bottom: 2.5mm;
+  margin-bottom: 3mm;
+  border-bottom: 1px solid var(--line);
+}
+.who__name { font-size: 12pt; font-weight: 700; color: var(--navy); }
+.who__url {
+  font-family: var(--mono);
+  font-size: 8.6pt;
+  color: var(--navy-3);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.who p { font-size: 9.6pt; color: var(--muted); margin: 0 0 3mm; }
+.who ul { display: flex; flex-wrap: wrap; gap: 2mm; }
+.who ul li {
+  font-family: var(--mono);
+  font-size: 8pt;
+  padding: 1mm 2.4mm;
+  border: 1px solid var(--line-2);
+  border-radius: 2px;
+  color: var(--muted);
+  background: var(--tint);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 9.4pt; }
+th, td {
+  text-align: start;
+  padding: 2.3mm 3mm;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+thead th {
+  font-size: 8.2pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 600;
+  border-bottom: 1px solid var(--line-2);
+}
+tbody td:first-child { font-weight: 600; color: var(--navy); white-space: nowrap; }
+
+/* Timeline */
+.days { display: flex; flex-direction: column; }
+.step {
+  display: grid;
+  grid-template-columns: 14mm minmax(0, 1fr);
+  gap: 4mm;
+  padding: 2.3mm 0;
+  border-bottom: 1px solid var(--line);
+}
+.step:last-child { border-bottom: 0; }
+.step .d {
+  font-family: var(--mono);
+  font-size: 8.6pt;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+.step p { font-size: 9.6pt; color: var(--muted); margin: 0; }
+.step b { color: var(--navy); }
+
+/* Price */
+.price {
+  border: 2px solid var(--navy);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4mm;
+}
+.price__top {
+  background: var(--navy);
+  color: #fff;
+  padding: 4mm 6mm;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4mm;
+  flex-wrap: wrap;
+}
+.price__what { font-size: 11pt; font-weight: 600; }
+.price__what small { display: block; font-size: 8.6pt; color: #b9c6dd; font-weight: 400; }
+.price__amount {
+  font-family: var(--mono);
+  font-size: 22pt;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.price__amount small { font-size: 10pt; color: #f0b45c; }
+.price__body { padding: 4mm 6mm; }
+.price__body dl { margin: 0; display: grid; grid-template-columns: 32mm minmax(0, 1fr); gap: 2.5mm 4mm; }
+.price__body dt {
+  font-size: 8.4pt;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-top: 0.6mm;
+}
+.price__body dd { margin: 0; font-size: 9.6pt; color: var(--muted); }
+
+/* Footer strip on every sheet except the cover */
+.sheet__foot {
+  margin-top: auto;
+  padding-top: 2.5mm;
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+  font-size: 7.6pt;
+  color: var(--faint);
+  border-top: 1px solid var(--line);
+}
+.sheet__foot span { font-family: var(--mono); letter-spacing: 0.08em; }
+
+/* The extensions, as a run-in list rather than a table.
+
+   A three-row table spent nine lines of a full page saying three short things.
+   The run-in form says the same in four and leaves the price block room to
+   print its own last line, which the table had been stealing. */
+.ext { font-size: 9.5pt; color: var(--muted); line-height: 1.6; margin: 0; }
+.ext b { color: var(--navy); }
+.ext span { color: var(--line-2); padding: 0 1mm; }
+
+.sign { margin-top: 5mm; padding-top: 4mm; border-top: 2px solid var(--navy); }
+.sign p { font-size: 9.4pt; color: var(--muted); }
+.sign b { display: block; font-size: 12pt; color: var(--navy); margin-bottom: 1mm; }
+
+/* ---------------------------------------------------------------------------
+ * Print
+ * ------------------------------------------------------------------------ */
+
+@page {
+  size: A4;
+  margin: 0; /* the sheet carries its own padding, so one box owns the margin */
+}
+
+@media print {
+  body { background: #fff; }
+  .sheet {
+    margin: 0;
+    box-shadow: none;
+    /* Exactly one page, always. `min-height` alone lets a sheet grow to 297.4mm
+       and emit a blank second page; the height is fixed and content is written
+       to fit it. */
+    height: 297mm;
+    overflow: hidden;
+  }
+  .sheet--cover { padding-top: 32mm; }
+}

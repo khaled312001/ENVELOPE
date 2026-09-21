@@ -1,0 +1,5487 @@
+[
+ {
+  "level": 1,
+  "title": "UAE FIRE AND LIFE SAFETY CODE OF PRACTICE_FINAL_14.03.11.pdf",
+  "page": 1
+ },
+ {
+  "level": 2,
+  "title": "COVERPAGE",
+  "page": 1
+ },
+ {
+  "level": 2,
+  "title": "UAE FIRE AND LIFE SAFETY CODE OF PRACTICE_29.02.11",
+  "page": 5
+ },
+ {
+  "level": 3,
+  "title": "CHAPTERS",
+  "page": 5
+ },
+ {
+  "level": 3,
+  "title": "UAE FIRE AND LIFE SAFETY CODE OF PRACTICE_FINAL1",
+  "page": 6
+ },
+ {
+  "level": 4,
+  "title": "0. OVERALL CONTENTS",
+  "page": 6
+ },
+ {
+  "level": 4,
+  "title": "1. PREFACE",
+  "page": 28
+ },
+ {
+  "level": 4,
+  "title": "2. ACKNOWLEDGEMENT",
+  "page": 29
+ },
+ {
+  "level": 4,
+  "title": "3. INTENTION",
+  "page": 31
+ },
+ {
+  "level": 4,
+  "title": "4. APPLICATION",
+  "page": 32
+ },
+ {
+  "level": 4,
+  "title": "5. COMMITMENT TO BEST PRACTICE",
+  "page": 33
+ },
+ {
+  "level": 4,
+  "title": "6. FIRE CODE COUNCIL",
+  "page": 35
+ },
+ {
+  "level": 4,
+  "title": "7. ROLE OF FIRE CODE COUNCIL",
+  "page": 36
+ },
+ {
+  "level": 4,
+  "title": "8. CODE REVIEW AND AMMENDMENT",
+  "page": 37
+ },
+ {
+  "level": 4,
+  "title": "9. REGISTER OF CODE SIGNATORIES",
+  "page": 38
+ },
+ {
+  "level": 4,
+  "title": "10. LICENSING AND ACCREDITATION",
+  "page": 39
+ },
+ {
+  "level": 4,
+  "title": "11. APPROVED DCD LABS",
+  "page": 40
+ },
+ {
+  "level": 4,
+  "title": "12. QUALIFIED AND COMPETENT PERSON",
+  "page": 42
+ },
+ {
+  "level": 4,
+  "title": "13. CLASSIFICATION OF OCCUPANCIES AND BUILDINGS",
+  "page": 43
+ },
+ {
+  "level": 5,
+  "title": "Underground Buildings and Structures",
+  "page": 43
+ },
+ {
+  "level": 5,
+  "title": "Low depth Underground building",
+  "page": 43
+ },
+ {
+  "level": 5,
+  "title": "Highdepth Underground BUildings and Structures",
+  "page": 43
+ },
+ {
+  "level": 5,
+  "title": "Lowrise Buildings",
+  "page": 43
+ },
+ {
+  "level": 5,
+  "title": "Midrise Buildings",
+  "page": 43
+ },
+ {
+  "level": 5,
+  "title": "Highrise Buildings",
+  "page": 43
+ },
+ {
+  "level": 5,
+  "title": "Multiple or Mixed Occupancies",
+  "page": 43
+ },
+ {
+  "level": 5,
+  "title": "Separated Multiple Occupancies",
+  "page": 44
+ },
+ {
+  "level": 5,
+  "title": "Business, Offices",
+  "page": 44
+ },
+ {
+  "level": 5,
+  "title": "Educational",
+  "page": 44
+ },
+ {
+  "level": 5,
+  "title": "Assembly",
+  "page": 44
+ },
+ {
+  "level": 5,
+  "title": "Mercantile",
+  "page": 45
+ },
+ {
+  "level": 5,
+  "title": "Healthcare, Hospitals, Clinics",
+  "page": 45
+ },
+ {
+  "level": 5,
+  "title": "Day-care",
+  "page": 45
+ },
+ {
+  "level": 5,
+  "title": "Detention and Correctional",
+  "page": 45
+ },
+ {
+  "level": 5,
+  "title": "Labor and Staff accommodation",
+  "page": 45
+ },
+ {
+  "level": 5,
+  "title": "Industrial, Workshops, Factories",
+  "page": 45
+ },
+ {
+  "level": 5,
+  "title": "Storage, Warehouse",
+  "page": 45
+ },
+ {
+  "level": 5,
+  "title": "Residential",
+  "page": 46
+ },
+ {
+  "level": 5,
+  "title": "Hotel",
+  "page": 46
+ },
+ {
+  "level": 5,
+  "title": "Animal Housing",
+  "page": 46
+ },
+ {
+  "level": 4,
+  "title": "14. HAZARD EVALUATION",
+  "page": 47
+ },
+ {
+  "level": 4,
+  "title": "15. ACKNOWLEDGEMENT OF CODES AND STANDRADS",
+  "page": 48
+ },
+ {
+  "level": 4,
+  "title": "CH1. CONSTRUCTION AND FIRE COMPARTMENTALIZATION",
+  "page": 49
+ },
+ {
+  "level": 5,
+  "title": "General",
+  "page": 49
+ },
+ {
+  "level": 5,
+  "title": "Table1.1:  Required Fire Resistance–Rated Separations for Separated Occupancies",
+  "page": 50
+ },
+ {
+  "level": 5,
+  "title": "Space Beneath Platforms (Raised platforms).",
+  "page": 52
+ },
+ {
+  "level": 5,
+  "title": "Fire Resistance Rating Requirements for Structural Elements",
+  "page": 52
+ },
+ {
+  "level": 5,
+  "title": "Exterior Walls",
+  "page": 52
+ },
+ {
+  "level": 5,
+  "title": "Table 1.2: Fire Rating for Exterior Walls (hr)",
+  "page": 53
+ },
+ {
+  "level": 5,
+  "title": "Horizontal Separation",
+  "page": 53
+ },
+ {
+  "level": 5,
+  "title": "Imaginary Line",
+  "page": 53
+ },
+ {
+  "level": 5,
+  "title": "Openings",
+  "page": 55
+ },
+ {
+  "level": 5,
+  "title": "Table 1.3:  Minimum Fire Protection Ratings for Exterior Opening Protection",
+  "page": 55
+ },
+ {
+  "level": 5,
+  "title": "Table 1.4:",
+  "page": 56
+ },
+ {
+  "level": 5,
+  "title": "Maximum allowable area of unprotected openings (percentage of exterior walls) for Assembly, Educational, Day-care, Health care, Ambulatory Health Care, Detention and correctional, Residential, Residential board and care, Business, Industrial and Low H...",
+  "page": 56
+ },
+ {
+  "level": 5,
+  "title": "Table 1.5:",
+  "page": 57
+ },
+ {
+  "level": 5,
+  "title": "Maximum Allowable Area of Unprotected Openings (percentage of exterior wall) for Mercantile, Industrial and Storage with Ordinary Hazard and Industrial and Storage with High Hazard.",
+  "page": 57
+ },
+ {
+  "level": 5,
+  "title": "Height and Area Requirements",
+  "page": 58
+ },
+ {
+  "level": 5,
+  "title": "Table 1.6: Allowable Building Height and Area",
+  "page": 58
+ },
+ {
+  "level": 5,
+  "title": "Table 1.7: Occupancy, Area, Height and Occupant Load limitation for provision of automatic sprinklers",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "Mixed Occupancies.",
+  "page": 62
+ },
+ {
+  "level": 5,
+  "title": "Underground Buildings.",
+  "page": 62
+ },
+ {
+  "level": 5,
+  "title": "Fire Separation and Protection of Various Rooms",
+  "page": 62
+ },
+ {
+  "level": 5,
+  "title": "Rooms requiring External wall",
+  "page": 68
+ },
+ {
+  "level": 5,
+  "title": "Separation between tenancy for terraced units",
+  "page": 68
+ },
+ {
+  "level": 5,
+  "title": "Fire-Resistive Materials and Construction",
+  "page": 68
+ },
+ {
+  "level": 5,
+  "title": "Minimum Fire Protection Ratings for Opening Protection in Fire Resistance–Rated Assemblies (reference shall also be made to clause 3.14 of Chapter 3)",
+  "page": 71
+ },
+ {
+  "level": 5,
+  "title": "Fire Stopping",
+  "page": 73
+ },
+ {
+  "level": 5,
+  "title": "Ducts and Air-Transfer Openings",
+  "page": 83
+ },
+ {
+  "level": 5,
+  "title": "Smoke Barriers",
+  "page": 86
+ },
+ {
+  "level": 5,
+  "title": "Smoke barrier Penetrations",
+  "page": 87
+ },
+ {
+  "level": 5,
+  "title": "Smoke Damper Exceptions",
+  "page": 88
+ },
+ {
+  "level": 5,
+  "title": "Vertical Openings",
+  "page": 89
+ },
+ {
+  "level": 5,
+  "title": "Communicating Space",
+  "page": 90
+ },
+ {
+  "level": 5,
+  "title": "Atrium",
+  "page": 91
+ },
+ {
+  "level": 5,
+  "title": "Convenience Openings",
+  "page": 93
+ },
+ {
+  "level": 5,
+  "title": "Service Openings",
+  "page": 94
+ },
+ {
+  "level": 5,
+  "title": "Elevator Hoist way",
+  "page": 95
+ },
+ {
+  "level": 5,
+  "title": "Mezzanine",
+  "page": 95
+ },
+ {
+  "level": 5,
+  "title": "Concealed Spaces",
+  "page": 98
+ },
+ {
+  "level": 5,
+  "title": "Interior Wall and Ceiling Finish Requirements",
+  "page": 98
+ },
+ {
+  "level": 5,
+  "title": "Interior Wall or Ceiling Finish Testing and Classification",
+  "page": 100
+ },
+ {
+  "level": 5,
+  "title": "Specific Materials",
+  "page": 101
+ },
+ {
+  "level": 5,
+  "title": "Interior Floor Finish Testing and Classification",
+  "page": 103
+ },
+ {
+  "level": 5,
+  "title": "Interior Finish in relation to Automatic Sprinklers",
+  "page": 104
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 104
+ },
+ {
+  "level": 5,
+  "title": "Further References",
+  "page": 104
+ },
+ {
+  "level": 4,
+  "title": "CH2. FIRESERVICE OPERATIONAL REQUIREMENTS",
+  "page": 108
+ },
+ {
+  "level": 5,
+  "title": "Definitions",
+  "page": 108
+ },
+ {
+  "level": 5,
+  "title": "General",
+  "page": 109
+ },
+ {
+  "level": 5,
+  "title": "Access Level",
+  "page": 109
+ },
+ {
+  "level": 5,
+  "title": "Access to Buildings with Standpipes or Risers",
+  "page": 109
+ },
+ {
+  "level": 5,
+  "title": "Public Fire Hydrants (By UAE Municipality)",
+  "page": 109
+ },
+ {
+  "level": 5,
+  "title": "Private Fire Hydrants",
+  "page": 110
+ },
+ {
+  "level": 5,
+  "title": "Pipe for Hydrant water supply",
+  "page": 113
+ },
+ {
+  "level": 5,
+  "title": "Steel Pipe",
+  "page": 116
+ },
+ {
+  "level": 5,
+  "title": "Pipe Type and Class",
+  "page": 116
+ },
+ {
+  "level": 5,
+  "title": "Working Pressure",
+  "page": 116
+ },
+ {
+  "level": 5,
+  "title": "Master Streams",
+  "page": 116
+ },
+ {
+  "level": 5,
+  "title": "Protection against damage",
+  "page": 117
+ },
+ {
+  "level": 5,
+  "title": "Accessway for fire fighting appliances",
+  "page": 120
+ },
+ {
+  "level": 5,
+  "title": "Fire Access roadways",
+  "page": 129
+ },
+ {
+  "level": 5,
+  "title": "Fire fighter access within buildings",
+  "page": 129
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 133
+ },
+ {
+  "level": 5,
+  "title": "Further Refrences",
+  "page": 134
+ },
+ {
+  "level": 4,
+  "title": "CH3. MEANS OF EGRESS",
+  "page": 135
+ },
+ {
+  "level": 5,
+  "title": "Definition",
+  "page": 135
+ },
+ {
+  "level": 5,
+  "title": "Figure 3.21- Handrails location",
+  "page": 157
+ },
+ {
+  "level": 5,
+  "title": "General",
+  "page": 135
+ },
+ {
+  "level": 5,
+  "title": "The Exit Access",
+  "page": 135
+ },
+ {
+  "level": 6,
+  "title": "Doors",
+  "page": 135
+ },
+ {
+  "level": 6,
+  "title": "Measurement of Door width",
+  "page": 136
+ },
+ {
+  "level": 6,
+  "title": "Measurement of Clear width",
+  "page": 137
+ },
+ {
+  "level": 6,
+  "title": "Minimum Door Width",
+  "page": 138
+ },
+ {
+  "level": 6,
+  "title": "Floor Level at Door",
+  "page": 139
+ },
+ {
+  "level": 6,
+  "title": "Swing and Force",
+  "page": 139
+ },
+ {
+  "level": 6,
+  "title": "Locks, Latches and Alarm Devices",
+  "page": 139
+ },
+ {
+  "level": 6,
+  "title": "Access Controlled Doors",
+  "page": 141
+ },
+ {
+  "level": 6,
+  "title": "Self-Closing Devices",
+  "page": 141
+ },
+ {
+  "level": 6,
+  "title": "Powered Doors",
+  "page": 142
+ },
+ {
+  "level": 6,
+  "title": "Revolving Doors",
+  "page": 142
+ },
+ {
+  "level": 6,
+  "title": "Doors in Folding Partitions",
+  "page": 142
+ },
+ {
+  "level": 6,
+  "title": "Fire Rating Requirements for Doors",
+  "page": 142
+ },
+ {
+  "level": 6,
+  "title": "Fire rating of doors at different locations",
+  "page": 143
+ },
+ {
+  "level": 5,
+  "title": "Exit Access Corridors",
+  "page": 143
+ },
+ {
+  "level": 6,
+  "title": "Separation and protection of Exit Access Corridors",
+  "page": 143
+ },
+ {
+  "level": 6,
+  "title": "Ramps",
+  "page": 145
+ },
+ {
+  "level": 5,
+  "title": "Exits",
+  "page": 146
+ },
+ {
+  "level": 6,
+  "title": "Exit Stairs",
+  "page": 146
+ },
+ {
+  "level": 6,
+  "title": "Measurement of Headroom",
+  "page": 147
+ },
+ {
+  "level": 6,
+  "title": "Minimum Stair Width measurement",
+  "page": 148
+ },
+ {
+  "level": 6,
+  "title": "Landings",
+  "page": 148
+ },
+ {
+  "level": 6,
+  "title": "Tread and Landing Surfaces",
+  "page": 148
+ },
+ {
+  "level": 6,
+  "title": "Separation and Protection of Inside Stairs",
+  "page": 150
+ },
+ {
+  "level": 6,
+  "title": "Separation and Protection of Outside Stairs",
+  "page": 152
+ },
+ {
+  "level": 6,
+  "title": "Protection of Openings",
+  "page": 154
+ },
+ {
+  "level": 6,
+  "title": "Special Provisions for Outside Stairs",
+  "page": 155
+ },
+ {
+  "level": 6,
+  "title": "Scissor or Interlocked Stairs",
+  "page": 155
+ },
+ {
+  "level": 6,
+  "title": "Spiral Stairs",
+  "page": 156
+ },
+ {
+  "level": 6,
+  "title": "Fire Escape Ladders",
+  "page": 156
+ },
+ {
+  "level": 6,
+  "title": "Handrails",
+  "page": 157
+ },
+ {
+  "level": 6,
+  "title": "Handrail Details",
+  "page": 157
+ },
+ {
+  "level": 6,
+  "title": "Guards",
+  "page": 159
+ },
+ {
+  "level": 6,
+  "title": "Marking of Stairs",
+  "page": 159
+ },
+ {
+  "level": 6,
+  "title": "Floor Diagrams",
+  "page": 160
+ },
+ {
+  "level": 6,
+  "title": "Stair Pressurization",
+  "page": 160
+ },
+ {
+  "level": 6,
+  "title": "Smoke Proof Enclosure",
+  "page": 163
+ },
+ {
+  "level": 6,
+  "title": "Horizontal Exit",
+  "page": 165
+ },
+ {
+  "level": 6,
+  "title": "Bridges and Balconies",
+  "page": 166
+ },
+ {
+  "level": 6,
+  "title": "Elevators",
+  "page": 166
+ },
+ {
+  "level": 6,
+  "title": "Elevator Lobby",
+  "page": 167
+ },
+ {
+  "level": 5,
+  "title": "Exit Discharge",
+  "page": 167
+ },
+ {
+  "level": 6,
+  "title": "Exit Passageway",
+  "page": 167
+ },
+ {
+  "level": 6,
+  "title": "Construction",
+  "page": 168
+ },
+ {
+  "level": 6,
+  "title": "Area of Refuge",
+  "page": 168
+ },
+ {
+  "level": 6,
+  "title": "Discharge through Areas on Level of Exit Discharge",
+  "page": 169
+ },
+ {
+  "level": 6,
+  "title": "Arrangement and Marking of Exit Discharge",
+  "page": 169
+ },
+ {
+  "level": 5,
+  "title": "Number of Exits",
+  "page": 170
+ },
+ {
+  "level": 6,
+  "title": "Remoteness between two exits",
+  "page": 171
+ },
+ {
+  "level": 5,
+  "title": "Walking Surfaces",
+  "page": 173
+ },
+ {
+  "level": 5,
+  "title": "Interior Finish in Means of Egress",
+  "page": 173
+ },
+ {
+  "level": 5,
+  "title": "Measurement of Means of Egress",
+  "page": 173
+ },
+ {
+  "level": 5,
+  "title": "Arrangement of Means of Egress",
+  "page": 174
+ },
+ {
+  "level": 6,
+  "title": "Travel Distance to Exits",
+  "page": 174
+ },
+ {
+  "level": 5,
+  "title": "Measurement of Travel Distance to Exits",
+  "page": 174
+ },
+ {
+  "level": 5,
+  "title": "Capacity of Exit Discharge",
+  "page": 175
+ },
+ {
+  "level": 5,
+  "title": "Exits Serving More than One Story",
+  "page": 175
+ },
+ {
+  "level": 5,
+  "title": "Egress Capacity from a Point of Convergence",
+  "page": 175
+ },
+ {
+  "level": 5,
+  "title": "Egress Capacity from Balconies and Mezzanines",
+  "page": 176
+ },
+ {
+  "level": 5,
+  "title": "Egress Capacity for Corridor",
+  "page": 177
+ },
+ {
+  "level": 5,
+  "title": "Egress Capacity for single exit access",
+  "page": 178
+ },
+ {
+  "level": 5,
+  "title": "Egress Capacity for more than one exit access",
+  "page": 178
+ },
+ {
+  "level": 5,
+  "title": "Egress Capacity for street floor exit",
+  "page": 178
+ },
+ {
+  "level": 5,
+  "title": "Obstructions at the exit or Impediments to Egress",
+  "page": 178
+ },
+ {
+  "level": 5,
+  "title": "Commonpath, Deadend, Travel Distances for various occupancies",
+  "page": 180
+ },
+ {
+  "level": 5,
+  "title": "Room sizes, Corridor width, Intervening spaces",
+  "page": 185
+ },
+ {
+  "level": 5,
+  "title": "Single Exit Staircases",
+  "page": 193
+ },
+ {
+  "level": 6,
+  "title": "Apartment Building",
+  "page": 193
+ },
+ {
+  "level": 6,
+  "title": "Business",
+  "page": 199
+ },
+ {
+  "level": 5,
+  "title": "Requirements for Assembly Occupancies",
+  "page": 202
+ },
+ {
+  "level": 6,
+  "title": "Occupant load",
+  "page": 202
+ },
+ {
+  "level": 6,
+  "title": "Waiting Spaces.",
+  "page": 202
+ },
+ {
+  "level": 6,
+  "title": "Outdoor Facilities.",
+  "page": 202
+ },
+ {
+  "level": 6,
+  "title": "Means of Egress.",
+  "page": 203
+ },
+ {
+  "level": 6,
+  "title": "Number and width of exit facilities",
+  "page": 203
+ },
+ {
+  "level": 6,
+  "title": "Assembly Occupancy with Fixed Seating",
+  "page": 204
+ },
+ {
+  "level": 6,
+  "title": "Exit Component",
+  "page": 206
+ },
+ {
+  "level": 6,
+  "title": "Exits from a theatre, cinema or a concert hall",
+  "page": 208
+ },
+ {
+  "level": 6,
+  "title": "Seats Requirements",
+  "page": 208
+ },
+ {
+  "level": 6,
+  "title": "Internal Furnishings",
+  "page": 209
+ },
+ {
+  "level": 6,
+  "title": "Standard for Interior wall and ceiling finishing.",
+  "page": 209
+ },
+ {
+  "level": 6,
+  "title": "Standards for Floor Finishing",
+  "page": 209
+ },
+ {
+  "level": 6,
+  "title": "Standard for Decoration and Scenery",
+  "page": 210
+ },
+ {
+  "level": 5,
+  "title": "Labour Accommodations",
+  "page": 210
+ },
+ {
+  "level": 6,
+  "title": "Size",
+  "page": 210
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 213
+ },
+ {
+  "level": 5,
+  "title": "Further References",
+  "page": 213
+ },
+ {
+  "level": 4,
+  "title": "CH4. FIRE EXTINGUISHERS",
+  "page": 214
+ },
+ {
+  "level": 5,
+  "title": "Definition",
+  "page": 214
+ },
+ {
+  "level": 5,
+  "title": "Portable Extinguisher",
+  "page": 214
+ },
+ {
+  "level": 5,
+  "title": "Classes of Fires",
+  "page": 214
+ },
+ {
+  "level": 5,
+  "title": "Application",
+  "page": 214
+ },
+ {
+  "level": 5,
+  "title": "Selection and Location of Fire Extinguishers",
+  "page": 216
+ },
+ {
+  "level": 5,
+  "title": "Installation",
+  "page": 217
+ },
+ {
+  "level": 5,
+  "title": "Inspection and Maintenance",
+  "page": 217
+ },
+ {
+  "level": 5,
+  "title": "Training",
+  "page": 217
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 217
+ },
+ {
+  "level": 5,
+  "title": "Further References",
+  "page": 218
+ },
+ {
+  "level": 4,
+  "title": "CH5. EXIT SIGNS",
+  "page": 219
+ },
+ {
+  "level": 5,
+  "title": "Exit and Directional Signs",
+  "page": 219
+ },
+ {
+  "level": 5,
+  "title": "Exit Access",
+  "page": 220
+ },
+ {
+  "level": 5,
+  "title": "Floor proximity Exit Signs",
+  "page": 220
+ },
+ {
+  "level": 5,
+  "title": "Floor proximity Egress path marking",
+  "page": 220
+ },
+ {
+  "level": 5,
+  "title": "Visibility",
+  "page": 221
+ },
+ {
+  "level": 5,
+  "title": "Mounting location",
+  "page": 221
+ },
+ {
+  "level": 5,
+  "title": "Directional Signs",
+  "page": 221
+ },
+ {
+  "level": 5,
+  "title": "Sign Legend",
+  "page": 221
+ },
+ {
+  "level": 5,
+  "title": "Power Source",
+  "page": 222
+ },
+ {
+  "level": 5,
+  "title": "Externally illuminated Signs",
+  "page": 222
+ },
+ {
+  "level": 5,
+  "title": "Size and Location of Directional indicator",
+  "page": 222
+ },
+ {
+  "level": 5,
+  "title": "Level of Illumination",
+  "page": 223
+ },
+ {
+  "level": 5,
+  "title": "Internally illuminated Signs",
+  "page": 223
+ },
+ {
+  "level": 5,
+  "title": "Photoluminescent Signs",
+  "page": 223
+ },
+ {
+  "level": 5,
+  "title": "No Exit Sign",
+  "page": 223
+ },
+ {
+  "level": 5,
+  "title": "Elevator Signs",
+  "page": 224
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 224
+ },
+ {
+  "level": 5,
+  "title": "Further refernces",
+  "page": 224
+ },
+ {
+  "level": 4,
+  "title": "CH6. EMERGENCY AND EXIT LIGHTING",
+  "page": 225
+ },
+ {
+  "level": 5,
+  "title": "General",
+  "page": 225
+ },
+ {
+  "level": 5,
+  "title": "Corridors and Lobbies",
+  "page": 225
+ },
+ {
+  "level": 5,
+  "title": "Occupied areas",
+  "page": 225
+ },
+ {
+  "level": 5,
+  "title": "Performance of System",
+  "page": 226
+ },
+ {
+  "level": 5,
+  "title": "Emergency lighting for firefighting",
+  "page": 227
+ },
+ {
+  "level": 5,
+  "title": "Secondary source of power supply",
+  "page": 227
+ },
+ {
+  "level": 5,
+  "title": "Locating emergency lights at mandatory points",
+  "page": 229
+ },
+ {
+  "level": 5,
+  "title": "Format of Exit Signs",
+  "page": 230
+ },
+ {
+  "level": 5,
+  "title": "Locating luminaires at essential areas in the buildings",
+  "page": 230
+ },
+ {
+  "level": 5,
+  "title": "Open areas",
+  "page": 230
+ },
+ {
+  "level": 5,
+  "title": "High risk areas",
+  "page": 230
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 231
+ },
+ {
+  "level": 5,
+  "title": "Further References",
+  "page": 231
+ },
+ {
+  "level": 4,
+  "title": "CH7. EMERGENCY VOICE EVACUATION AND ALARM SYSTEM",
+  "page": 232
+ },
+ {
+  "level": 5,
+  "title": "General",
+  "page": 232
+ },
+ {
+  "level": 5,
+  "title": "Definition",
+  "page": 232
+ },
+ {
+  "level": 5,
+  "title": "Requirements",
+  "page": 232
+ },
+ {
+  "level": 5,
+  "title": "Automatic response",
+  "page": 233
+ },
+ {
+  "level": 5,
+  "title": "Voice evacuation messages",
+  "page": 233
+ },
+ {
+  "level": 5,
+  "title": "Tones",
+  "page": 234
+ },
+ {
+  "level": 5,
+  "title": "Controls",
+  "page": 234
+ },
+ {
+  "level": 5,
+  "title": "Relocation and Partial evacuation",
+  "page": 234
+ },
+ {
+  "level": 5,
+  "title": "Circuits",
+  "page": 235
+ },
+ {
+  "level": 5,
+  "title": "Evacuation signal zoning",
+  "page": 235
+ },
+ {
+  "level": 5,
+  "title": "Two-way communication services",
+  "page": 236
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 236
+ },
+ {
+  "level": 5,
+  "title": "Further References",
+  "page": 237
+ },
+ {
+  "level": 4,
+  "title": "CH8. FIRE DETECTION AND ALARM SYSTEM",
+  "page": 238
+ },
+ {
+  "level": 5,
+  "title": "General",
+  "page": 238
+ },
+ {
+  "level": 5,
+  "title": "Definitions",
+  "page": 238
+ },
+ {
+  "level": 6,
+  "title": "Addressable System",
+  "page": 238
+ },
+ {
+  "level": 6,
+  "title": "Air-Sampling Type Smoke Detector or Aspirating Smoke Detector (ASD)",
+  "page": 238
+ },
+ {
+  "level": 6,
+  "title": "Alarm Signal",
+  "page": 238
+ },
+ {
+  "level": 6,
+  "title": "Alarm Warning",
+  "page": 238
+ },
+ {
+  "level": 6,
+  "title": "Alarm Zone",
+  "page": 238
+ },
+ {
+  "level": 6,
+  "title": "Analogue Detector",
+  "page": 238
+ },
+ {
+  "level": 6,
+  "title": "Analogue Addressable System",
+  "page": 239
+ },
+ {
+  "level": 6,
+  "title": "Annunciator",
+  "page": 239
+ },
+ {
+  "level": 6,
+  "title": "Area of voice coverage",
+  "page": 239
+ },
+ {
+  "level": 6,
+  "title": "Bell",
+  "page": 239
+ },
+ {
+  "level": 6,
+  "title": "Buzzer",
+  "page": 239
+ },
+ {
+  "level": 6,
+  "title": "Combination Detector",
+  "page": 239
+ },
+ {
+  "level": 6,
+  "title": "Combined System",
+  "page": 239
+ },
+ {
+  "level": 6,
+  "title": "Control Panel",
+  "page": 239
+ },
+ {
+  "level": 6,
+  "title": "Decibel",
+  "page": 240
+ },
+ {
+  "level": 6,
+  "title": "Emergency Voice Communications (EVC)",
+  "page": 240
+ },
+ {
+  "level": 6,
+  "title": "Evacuation system",
+  "page": 240
+ },
+ {
+  "level": 6,
+  "title": "Flame Detector",
+  "page": 240
+ },
+ {
+  "level": 6,
+  "title": "Final Voltage of a Battery",
+  "page": 240
+ },
+ {
+  "level": 6,
+  "title": "Fixed Temperature Detector",
+  "page": 240
+ },
+ {
+  "level": 6,
+  "title": "Heat Detector",
+  "page": 240
+ },
+ {
+  "level": 6,
+  "title": "Horn",
+  "page": 240
+ },
+ {
+  "level": 6,
+  "title": "Line-Type Heat Detector",
+  "page": 240
+ },
+ {
+  "level": 6,
+  "title": "Manual Call Point",
+  "page": 240
+ },
+ {
+  "level": 6,
+  "title": "Manual System",
+  "page": 241
+ },
+ {
+  "level": 6,
+  "title": "Mimic Diagram",
+  "page": 241
+ },
+ {
+  "level": 6,
+  "title": "Multi-State Detector",
+  "page": 241
+ },
+ {
+  "level": 6,
+  "title": "Optical Beam-Type Smoke Detector",
+  "page": 241
+ },
+ {
+  "level": 6,
+  "title": "Phased evacuation",
+  "page": 241
+ },
+ {
+  "level": 6,
+  "title": "Rate-of-Rise Detector",
+  "page": 241
+ },
+ {
+  "level": 6,
+  "title": "Smoke Detector",
+  "page": 241
+ },
+ {
+  "level": 6,
+  "title": "Spot-Type Smoke Detector",
+  "page": 241
+ },
+ {
+  "level": 6,
+  "title": "Staged Alarm",
+  "page": 242
+ },
+ {
+  "level": 6,
+  "title": "Standby Supply",
+  "page": 242
+ },
+ {
+  "level": 6,
+  "title": "Voice Alarm system",
+  "page": 242
+ },
+ {
+  "level": 6,
+  "title": "Zone",
+  "page": 242
+ },
+ {
+  "level": 5,
+  "title": "System Design",
+  "page": 242
+ },
+ {
+  "level": 6,
+  "title": "General",
+  "page": 242
+ },
+ {
+  "level": 6,
+  "title": "Detection Zones",
+  "page": 242
+ },
+ {
+  "level": 6,
+  "title": "Alarm Zones",
+  "page": 243
+ },
+ {
+  "level": 6,
+  "title": "Manufacturer Specifications",
+  "page": 244
+ },
+ {
+  "level": 6,
+  "title": "Manual Call Points",
+  "page": 244
+ },
+ {
+  "level": 5,
+  "title": "General Requirements for smoke and Heat detectors",
+  "page": 245
+ },
+ {
+  "level": 6,
+  "title": "Detector Provision.",
+  "page": 245
+ },
+ {
+  "level": 6,
+  "title": "Recessed Mounting",
+  "page": 245
+ },
+ {
+  "level": 5,
+  "title": "Heat Detectors",
+  "page": 246
+ },
+ {
+  "level": 6,
+  "title": "General",
+  "page": 246
+ },
+ {
+  "level": 6,
+  "title": "Color Coding for Heat detectors",
+  "page": 247
+ },
+ {
+  "level": 6,
+  "title": "Location.",
+  "page": 247
+ },
+ {
+  "level": 6,
+  "title": "Temperature",
+  "page": 247
+ },
+ {
+  "level": 6,
+  "title": "Spacing.",
+  "page": 248
+ },
+ {
+  "level": 6,
+  "title": "Smooth Ceiling Spacing",
+  "page": 248
+ },
+ {
+  "level": 6,
+  "title": "Solid Joist Construction",
+  "page": 250
+ },
+ {
+  "level": 6,
+  "title": "Beam Construction",
+  "page": 250
+ },
+ {
+  "level": 6,
+  "title": "Sloping Ceilings",
+  "page": 250
+ },
+ {
+  "level": 6,
+  "title": "High Ceilings",
+  "page": 252
+ },
+ {
+  "level": 5,
+  "title": "Spot type Smoke Detectors",
+  "page": 252
+ },
+ {
+  "level": 6,
+  "title": "General",
+  "page": 252
+ },
+ {
+  "level": 6,
+  "title": "Location and Spacing",
+  "page": 253
+ },
+ {
+  "level": 5,
+  "title": "Air Sampling type smoke detector",
+  "page": 256
+ },
+ {
+  "level": 6,
+  "title": "General",
+  "page": 256
+ },
+ {
+  "level": 6,
+  "title": "Location and Spacing",
+  "page": 257
+ },
+ {
+  "level": 6,
+  "title": "Labeling requirements",
+  "page": 258
+ },
+ {
+  "level": 5,
+  "title": "Beam type detectors",
+  "page": 258
+ },
+ {
+  "level": 6,
+  "title": "General",
+  "page": 258
+ },
+ {
+  "level": 5,
+  "title": "Raised floors and suspended ceilings",
+  "page": 260
+ },
+ {
+  "level": 5,
+  "title": "Partitions",
+  "page": 260
+ },
+ {
+  "level": 5,
+  "title": "HVAC",
+  "page": 260
+ },
+ {
+  "level": 5,
+  "title": "High rack storage",
+  "page": 261
+ },
+ {
+  "level": 5,
+  "title": "High air movement areas",
+  "page": 261
+ },
+ {
+  "level": 5,
+  "title": "Video image smoke detectors",
+  "page": 264
+ },
+ {
+  "level": 5,
+  "title": "Other detectors",
+  "page": 264
+ },
+ {
+  "level": 5,
+  "title": "Sprinkler waterflow alarm initiating devices",
+  "page": 265
+ },
+ {
+  "level": 5,
+  "title": "Detection of the operation of other extinguishing systems",
+  "page": 265
+ },
+ {
+  "level": 5,
+  "title": "Supervisory signal initiating devices",
+  "page": 265
+ },
+ {
+  "level": 5,
+  "title": "Pressure supervisory signal initiating devices",
+  "page": 266
+ },
+ {
+  "level": 5,
+  "title": "Water level supervisory initiating devices",
+  "page": 266
+ },
+ {
+  "level": 5,
+  "title": "Smoke detectors for control of smoke spread",
+  "page": 267
+ },
+ {
+  "level": 5,
+  "title": "Smoke detection for the air duct system",
+  "page": 267
+ },
+ {
+  "level": 5,
+  "title": "Location and installation of detectors in air duct systems",
+  "page": 268
+ },
+ {
+  "level": 5,
+  "title": "Smoke detectors for door release service",
+  "page": 270
+ },
+ {
+  "level": 5,
+  "title": "Building Fire Alarm systems",
+  "page": 274
+ },
+ {
+  "level": 6,
+  "title": "System Requirements",
+  "page": 274
+ },
+ {
+  "level": 6,
+  "title": "Actuation Time.",
+  "page": 274
+ },
+ {
+  "level": 6,
+  "title": "Combination Systems",
+  "page": 275
+ },
+ {
+  "level": 6,
+  "title": "Alarm Signal Initiation — Detection Devices",
+  "page": 276
+ },
+ {
+  "level": 6,
+  "title": "Alarm Signal Initiation — Sprinkler Systems",
+  "page": 276
+ },
+ {
+  "level": 6,
+  "title": "Supervisory Signal Initiation — Sprinkler Systems",
+  "page": 277
+ },
+ {
+  "level": 6,
+  "title": "Alarm Signal Initiation — Fire Suppression Systems Other Than Sprinklers",
+  "page": 277
+ },
+ {
+  "level": 6,
+  "title": "Supervisory Signal Initiation — Fire Suppression Systems Other Than Sprinklers",
+  "page": 277
+ },
+ {
+  "level": 6,
+  "title": "Signal Initiation — Fire Pump",
+  "page": 277
+ },
+ {
+  "level": 6,
+  "title": "Fire Alarm and Supervisory Signal Initiation — Releasing Service Control Units",
+  "page": 277
+ },
+ {
+  "level": 6,
+  "title": "Trouble Signal Initiation",
+  "page": 278
+ },
+ {
+  "level": 6,
+  "title": "Fire Alarm and Mass Notification System Notification Outputs",
+  "page": 278
+ },
+ {
+  "level": 6,
+  "title": "Notification Appliances in Exit Stair Enclosures, Exit Passageways, and Elevator Cars.",
+  "page": 278
+ },
+ {
+  "level": 6,
+  "title": "Notification Zones.",
+  "page": 278
+ },
+ {
+  "level": 6,
+  "title": "Circuits for Addressable Notification Appliances",
+  "page": 278
+ },
+ {
+  "level": 5,
+  "title": "Suppression system actuation",
+  "page": 279
+ },
+ {
+  "level": 5,
+  "title": "Elevator recall for fire fighters' service",
+  "page": 279
+ },
+ {
+  "level": 5,
+  "title": "Visual warning for elevators",
+  "page": 280
+ },
+ {
+  "level": 5,
+  "title": "Elevator shutdown",
+  "page": 280
+ },
+ {
+  "level": 5,
+  "title": "HVAC Systems",
+  "page": 281
+ },
+ {
+  "level": 5,
+  "title": "Door Release service",
+  "page": 281
+ },
+ {
+  "level": 5,
+  "title": "Door unlocking devices",
+  "page": 281
+ },
+ {
+  "level": 5,
+  "title": "Public mode audible requirements",
+  "page": 282
+ },
+ {
+  "level": 5,
+  "title": "Private mode audible requirements",
+  "page": 282
+ },
+ {
+  "level": 5,
+  "title": "Sleeping area requirements",
+  "page": 282
+ },
+ {
+  "level": 5,
+  "title": "Location of audible notification appliances",
+  "page": 283
+ },
+ {
+  "level": 5,
+  "title": "Wide area signalling",
+  "page": 283
+ },
+ {
+  "level": 5,
+  "title": "Average ambient sound level",
+  "page": 284
+ },
+ {
+  "level": 5,
+  "title": "Visible characteristics- public mode",
+  "page": 285
+ },
+ {
+  "level": 5,
+  "title": "Room spacing for wall mounted visible appliances",
+  "page": 286
+ },
+ {
+  "level": 5,
+  "title": "Room spacing for ceiling mounted visible appliances",
+  "page": 288
+ },
+ {
+  "level": 5,
+  "title": "Spacing in Corridors.",
+  "page": 289
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 290
+ },
+ {
+  "level": 5,
+  "title": "Further references",
+  "page": 290
+ },
+ {
+  "level": 4,
+  "title": "CH9.FIRE PROTECTION SYSTEMS",
+  "page": 291
+ },
+ {
+  "level": 5,
+  "title": "General",
+  "page": 291
+ },
+ {
+  "level": 5,
+  "title": "Definitions",
+  "page": 291
+ },
+ {
+  "level": 6,
+  "title": "Water Based Fire Protection Systems",
+  "page": 291
+ },
+ {
+  "level": 6,
+  "title": "Gas and Chemical Based Fire Protection Systems",
+  "page": 291
+ },
+ {
+  "level": 6,
+  "title": "Standpipe Systems",
+  "page": 291
+ },
+ {
+  "level": 6,
+  "title": "Dry Standpipe Systems or Dry Riser System",
+  "page": 292
+ },
+ {
+  "level": 6,
+  "title": "Wet Standpipe Systems or Wet Riser System",
+  "page": 292
+ },
+ {
+  "level": 6,
+  "title": "Fire Hose Reel System",
+  "page": 293
+ },
+ {
+  "level": 6,
+  "title": "Fire Hose Rack System",
+  "page": 293
+ },
+ {
+  "level": 6,
+  "title": "Class I System",
+  "page": 293
+ },
+ {
+  "level": 6,
+  "title": "Class II System",
+  "page": 293
+ },
+ {
+  "level": 6,
+  "title": "Class III System",
+  "page": 293
+ },
+ {
+  "level": 6,
+  "title": "Automatic Sprinkler System",
+  "page": 293
+ },
+ {
+  "level": 6,
+  "title": "Water Spray System",
+  "page": 294
+ },
+ {
+  "level": 6,
+  "title": "Water Mist System",
+  "page": 294
+ },
+ {
+  "level": 6,
+  "title": "Fire Hydrant System",
+  "page": 294
+ },
+ {
+  "level": 6,
+  "title": "Foam System",
+  "page": 294
+ },
+ {
+  "level": 6,
+  "title": "Clean Agent System",
+  "page": 295
+ },
+ {
+  "level": 6,
+  "title": "Carbon Dioxide (CO2) System",
+  "page": 295
+ },
+ {
+  "level": 6,
+  "title": "Dry Chemical System",
+  "page": 295
+ },
+ {
+  "level": 6,
+  "title": "Wet Chemical System",
+  "page": 295
+ },
+ {
+  "level": 5,
+  "title": "Application",
+  "page": 296
+ },
+ {
+  "level": 6,
+  "title": "Building Classification and Application of Fire Protection Systems",
+  "page": 296
+ },
+ {
+  "level": 6,
+  "title": "Non-industrial and Non-storage occupancies",
+  "page": 296
+ },
+ {
+  "level": 6,
+  "title": "Industrial occupancies",
+  "page": 296
+ },
+ {
+  "level": 6,
+  "title": "Storage occupancies",
+  "page": 297
+ },
+ {
+  "level": 6,
+  "title": "Table:9.1. Building classification and Applicable Fire protection systems",
+  "page": 298
+ },
+ {
+  "level": 6,
+  "title": "Table:9.2. Auxiliary rooms and Acceptable fire protection systems",
+  "page": 301
+ },
+ {
+  "level": 6,
+  "title": "Table 9.3: Location and selection of fire protection systems for industrial occupancies",
+  "page": 302
+ },
+ {
+  "level": 5,
+  "title": "Design Requirements",
+  "page": 310
+ },
+ {
+  "level": 6,
+  "title": "Dry Riser Systems",
+  "page": 310
+ },
+ {
+  "level": 7,
+  "title": "Fire Hose Station locations",
+  "page": 310
+ },
+ {
+  "level": 7,
+  "title": "Flow & Pressure Requirements",
+  "page": 310
+ },
+ {
+  "level": 7,
+  "title": "Fire water demand & Hydraulic Calculations",
+  "page": 310
+ },
+ {
+  "level": 7,
+  "title": "Pipe Sizes",
+  "page": 311
+ },
+ {
+  "level": 7,
+  "title": "Fire Pump set",
+  "page": 311
+ },
+ {
+  "level": 7,
+  "title": "Fire Water tanks",
+  "page": 311
+ },
+ {
+  "level": 7,
+  "title": "Civil Defence Breeching Inlets",
+  "page": 311
+ },
+ {
+  "level": 6,
+  "title": "Wet Riser Systems",
+  "page": 312
+ },
+ {
+  "level": 7,
+  "title": "Flow & Pressure Requirements",
+  "page": 316
+ },
+ {
+  "level": 7,
+  "title": "Zoning of Wet riser system",
+  "page": 318
+ },
+ {
+  "level": 7,
+  "title": "Fire Water Demand",
+  "page": 318
+ },
+ {
+  "level": 7,
+  "title": "Combined System Water Demand",
+  "page": 322
+ },
+ {
+  "level": 7,
+  "title": "Hydraulic Calculations",
+  "page": 322
+ },
+ {
+  "level": 7,
+  "title": "Pipe Sizes",
+  "page": 322
+ },
+ {
+  "level": 7,
+  "title": "Fire Pump Sets",
+  "page": 323
+ },
+ {
+  "level": 7,
+  "title": "Fire Water tanks",
+  "page": 323
+ },
+ {
+  "level": 7,
+  "title": "Test Risers and Drains",
+  "page": 324
+ },
+ {
+  "level": 7,
+  "title": "Civil Defence Breeching Inlets",
+  "page": 324
+ },
+ {
+  "level": 7,
+  "title": "Location & Protection of Wet riser Pipe",
+  "page": 325
+ },
+ {
+  "level": 6,
+  "title": "Sprinkler System",
+  "page": 325
+ },
+ {
+  "level": 7,
+  "title": "General",
+  "page": 325
+ },
+ {
+  "level": 7,
+  "title": "Types of Sprinkler Systems",
+  "page": 326
+ },
+ {
+  "level": 7,
+  "title": "Wet Sprinkler System",
+  "page": 326
+ },
+ {
+  "level": 7,
+  "title": "Dry Pipe Sprinkler System",
+  "page": 327
+ },
+ {
+  "level": 7,
+  "title": "Pre-Action Sprinkler system",
+  "page": 328
+ },
+ {
+  "level": 7,
+  "title": "Types of Sprinkler Heads",
+  "page": 329
+ },
+ {
+  "level": 7,
+  "title": "Types of Sprinkler Heads based on Discharge pattern",
+  "page": 329
+ },
+ {
+  "level": 7,
+  "title": "Types of Sprinkler Heads based on coverage",
+  "page": 329
+ },
+ {
+  "level": 7,
+  "title": "Types of Sprinkler Heads based on Sensing Element",
+  "page": 329
+ },
+ {
+  "level": 7,
+  "title": "Sprinklers Operating Temperature",
+  "page": 330
+ },
+ {
+  "level": 7,
+  "title": "Sprinkler color coding",
+  "page": 330
+ },
+ {
+  "level": 7,
+  "title": "Sprinkler Operating Response",
+  "page": 330
+ },
+ {
+  "level": 7,
+  "title": "Sprinkler Thread, Orifice & K-Factor",
+  "page": 331
+ },
+ {
+  "level": 7,
+  "title": "Sprinkler Zone Limitations",
+  "page": 331
+ },
+ {
+  "level": 7,
+  "title": "Sprinkler Operating Pressure",
+  "page": 331
+ },
+ {
+  "level": 7,
+  "title": "Sprinkler Design Density & Water Supply Requirements",
+  "page": 332
+ },
+ {
+  "level": 7,
+  "title": "Density / AMAO Method",
+  "page": 332
+ },
+ {
+  "level": 7,
+  "title": "Room Design Method",
+  "page": 332
+ },
+ {
+  "level": 7,
+  "title": "Combined Sprinkler & Wet Riser system Water Demand",
+  "page": 332
+ },
+ {
+  "level": 7,
+  "title": "Hydraulic Calculations",
+  "page": 333
+ },
+ {
+  "level": 7,
+  "title": "Pipe Sizes",
+  "page": 333
+ },
+ {
+  "level": 7,
+  "title": "Number of Sprinkler heads per pipe size",
+  "page": 334
+ },
+ {
+  "level": 7,
+  "title": "Certification of fire pumps",
+  "page": 334
+ },
+ {
+  "level": 7,
+  "title": "Fire pump location and arrangement",
+  "page": 335
+ },
+ {
+  "level": 7,
+  "title": "Inspectors test and drains",
+  "page": 336
+ },
+ {
+  "level": 6,
+  "title": "Classification of Fire Hazards for Sprinkler design",
+  "page": 338
+ },
+ {
+  "level": 7,
+  "title": "Light Hazard",
+  "page": 338
+ },
+ {
+  "level": 7,
+  "title": "Ordinary Hazard",
+  "page": 338
+ },
+ {
+  "level": 7,
+  "title": "Ordinary Hazard, Group-1",
+  "page": 338
+ },
+ {
+  "level": 7,
+  "title": "Ordinary Hazard, Group-2",
+  "page": 338
+ },
+ {
+  "level": 7,
+  "title": "Extra High Hazard",
+  "page": 338
+ },
+ {
+  "level": 7,
+  "title": "Extra High Hazard, Group-1",
+  "page": 338
+ },
+ {
+  "level": 7,
+  "title": "Extra High Hazard, Group-2",
+  "page": 339
+ },
+ {
+  "level": 7,
+  "title": "Special / Storage Hazard",
+  "page": 339
+ },
+ {
+  "level": 7,
+  "title": "Commodity Class -1",
+  "page": 339
+ },
+ {
+  "level": 7,
+  "title": "Commodity Class-2",
+  "page": 339
+ },
+ {
+  "level": 7,
+  "title": "Commodity Class-3",
+  "page": 339
+ },
+ {
+  "level": 7,
+  "title": "Commodity Class-4",
+  "page": 339
+ },
+ {
+  "level": 7,
+  "title": "Group –A Plastics",
+  "page": 340
+ },
+ {
+  "level": 7,
+  "title": "Group –B Plastics",
+  "page": 340
+ },
+ {
+  "level": 7,
+  "title": "Group –C Plastics",
+  "page": 340
+ },
+ {
+  "level": 7,
+  "title": "Rolled paper Store",
+  "page": 340
+ },
+ {
+  "level": 6,
+  "title": "Sprinkler Design Requirements",
+  "page": 340
+ },
+ {
+  "level": 7,
+  "title": "Hose Demand",
+  "page": 341
+ },
+ {
+  "level": 7,
+  "title": "Sprinkler design for occupancies other than storage",
+  "page": 342
+ },
+ {
+  "level": 7,
+  "title": "Special design criteria for Atrium",
+  "page": 353
+ },
+ {
+  "level": 7,
+  "title": "Sprinkler design for storage occupancies",
+  "page": 353
+ },
+ {
+  "level": 8,
+  "title": "Preferred K-factors of Sprinkler Heads for Storage Occupancies",
+  "page": 353
+ },
+ {
+  "level": 8,
+  "title": "Idle Wooden Pallets",
+  "page": 354
+ },
+ {
+  "level": 8,
+  "title": "Idle Plastic Pallets",
+  "page": 356
+ },
+ {
+  "level": 8,
+  "title": "Class I, II, III and IV Commodities, Stored Palletized, solid piled or on shelves",
+  "page": 356
+ },
+ {
+  "level": 8,
+  "title": "Large drop and Nominal K-factor Design for palletized or solid piled commodities",
+  "page": 365
+ },
+ {
+  "level": 8,
+  "title": "ESFR Sprinkler System for palletized or solid piled commodities",
+  "page": 365
+ },
+ {
+  "level": 8,
+  "title": "Class I, II, III & IV Commodities Stored in Single, Double or Multiple Racks",
+  "page": 366
+ },
+ {
+  "level": 8,
+  "title": "In-Rack Sprinkler Location for Rack Storages of Class I Through Class IV Commodities Stored Up to 7.6 m in Height.",
+  "page": 366
+ },
+ {
+  "level": 8,
+  "title": "Group A Plastic",
+  "page": 373
+ },
+ {
+  "level": 8,
+  "title": "Rolled Paper",
+  "page": 374
+ },
+ {
+  "level": 7,
+  "title": "Reffrigerated spaces",
+  "page": 386
+ },
+ {
+  "level": 7,
+  "title": "Piping requirements",
+  "page": 388
+ },
+ {
+  "level": 8,
+  "title": "Above Ground Piping",
+  "page": 388
+ },
+ {
+  "level": 8,
+  "title": "Above Ground Pipe Fittings",
+  "page": 388
+ },
+ {
+  "level": 8,
+  "title": "Under Ground Pipes & Fittings",
+  "page": 388
+ },
+ {
+  "level": 7,
+  "title": "Isolation/ section or floor control valves",
+  "page": 389
+ },
+ {
+  "level": 7,
+  "title": "Check valves",
+  "page": 389
+ },
+ {
+  "level": 7,
+  "title": "Alarm check valve assembly",
+  "page": 391
+ },
+ {
+  "level": 7,
+  "title": "Water Motor Alarm Gong",
+  "page": 392
+ },
+ {
+  "level": 7,
+  "title": "Electric Alarm Pressure Switch",
+  "page": 392
+ },
+ {
+  "level": 7,
+  "title": "Control Valves",
+  "page": 393
+ },
+ {
+  "level": 7,
+  "title": "Supervision",
+  "page": 394
+ },
+ {
+  "level": 7,
+  "title": "Pressure gauges",
+  "page": 394
+ },
+ {
+  "level": 7,
+  "title": "Pressure reducing valves",
+  "page": 394
+ },
+ {
+  "level": 7,
+  "title": "Zone control valve assembly",
+  "page": 395
+ },
+ {
+  "level": 7,
+  "title": "Sprinkler head installation",
+  "page": 396
+ },
+ {
+  "level": 8,
+  "title": "General",
+  "page": 396
+ },
+ {
+  "level": 8,
+  "title": "Upright Sprinkler Heads",
+  "page": 397
+ },
+ {
+  "level": 8,
+  "title": "Pendent Sprinkler Heads",
+  "page": 399
+ },
+ {
+  "level": 8,
+  "title": "Recessed / Concealed Pendent Sprinkler Heads",
+  "page": 401
+ },
+ {
+  "level": 8,
+  "title": "Sidewall Sprinkler Heads",
+  "page": 404
+ },
+ {
+  "level": 8,
+  "title": "Obstructions for upright and pendant sprinklers",
+  "page": 408
+ },
+ {
+  "level": 8,
+  "title": "distance below ceilings",
+  "page": 411
+ },
+ {
+  "level": 8,
+  "title": "Location and protection of sprinkler riser pipe",
+  "page": 413
+ },
+ {
+  "level": 8,
+  "title": "Spare sprinkler stock",
+  "page": 414
+ },
+ {
+  "level": 8,
+  "title": "Civil defence breeching inlets for sprinkler system",
+  "page": 414
+ },
+ {
+  "level": 8,
+  "title": "Support of piping",
+  "page": 415
+ },
+ {
+  "level": 8,
+  "title": "Expansion joints",
+  "page": 416
+ },
+ {
+  "level": 8,
+  "title": "Water hammering arrestors",
+  "page": 416
+ },
+ {
+  "level": 8,
+  "title": "Installation of sign boards",
+  "page": 416
+ },
+ {
+  "level": 8,
+  "title": "Workmanship",
+  "page": 416
+ },
+ {
+  "level": 7,
+  "title": "Inspection, Testing and Commissioning",
+  "page": 416
+ },
+ {
+  "level": 8,
+  "title": "Inspection",
+  "page": 416
+ },
+ {
+  "level": 8,
+  "title": "Testing & Commissioning",
+  "page": 417
+ },
+ {
+  "level": 8,
+  "title": "Flushing",
+  "page": 417
+ },
+ {
+  "level": 8,
+  "title": "Hydrostatic Test",
+  "page": 417
+ },
+ {
+  "level": 8,
+  "title": "Pressure Settings",
+  "page": 418
+ },
+ {
+  "level": 8,
+  "title": "Flow Test",
+  "page": 418
+ },
+ {
+  "level": 8,
+  "title": "Physical Test",
+  "page": 419
+ },
+ {
+  "level": 8,
+  "title": "Maintenance",
+  "page": 419
+ },
+ {
+  "level": 6,
+  "title": "Water Spray System",
+  "page": 419
+ },
+ {
+  "level": 7,
+  "title": "Introduction",
+  "page": 419
+ },
+ {
+  "level": 7,
+  "title": "Characteristics of Water Spray System",
+  "page": 420
+ },
+ {
+  "level": 7,
+  "title": "Applications of Water Spray System",
+  "page": 420
+ },
+ {
+  "level": 7,
+  "title": "General Design Requirements and Procedures",
+  "page": 421
+ },
+ {
+  "level": 7,
+  "title": "Water Demand",
+  "page": 422
+ },
+ {
+  "level": 7,
+  "title": "Water Spray System for Horizontal Tank",
+  "page": 423
+ },
+ {
+  "level": 7,
+  "title": "Piping and Installation",
+  "page": 424
+ },
+ {
+  "level": 6,
+  "title": "Water Mist System",
+  "page": 426
+ },
+ {
+  "level": 7,
+  "title": "Introduction",
+  "page": 426
+ },
+ {
+  "level": 7,
+  "title": "How Does Water Mist Function",
+  "page": 426
+ },
+ {
+  "level": 7,
+  "title": "Advantages & Benefits",
+  "page": 426
+ },
+ {
+  "level": 7,
+  "title": "System Types",
+  "page": 427
+ },
+ {
+  "level": 7,
+  "title": "Nozzle Types",
+  "page": 428
+ },
+ {
+  "level": 7,
+  "title": "Pumps & Pressure Skid Modules",
+  "page": 428
+ },
+ {
+  "level": 7,
+  "title": "Filters & Strainers",
+  "page": 431
+ },
+ {
+  "level": 7,
+  "title": "Pressure Gauges",
+  "page": 431
+ },
+ {
+  "level": 7,
+  "title": "Section Valves",
+  "page": 431
+ },
+ {
+  "level": 7,
+  "title": "Manual Ball Valves",
+  "page": 432
+ },
+ {
+  "level": 7,
+  "title": "Pressure Switches",
+  "page": 432
+ },
+ {
+  "level": 7,
+  "title": "Fire Detection Systems",
+  "page": 432
+ },
+ {
+  "level": 7,
+  "title": "Project Designs & Hydraulics",
+  "page": 432
+ },
+ {
+  "level": 7,
+  "title": "Design and O&M Manuals",
+  "page": 432
+ },
+ {
+  "level": 7,
+  "title": "Commissioning Certificates",
+  "page": 432
+ },
+ {
+  "level": 7,
+  "title": "Water Mist Applications",
+  "page": 433
+ },
+ {
+  "level": 7,
+  "title": "Design Considerations",
+  "page": 433
+ },
+ {
+  "level": 7,
+  "title": "Standards",
+  "page": 434
+ },
+ {
+  "level": 6,
+  "title": "Foam extinguishing systems",
+  "page": 434
+ },
+ {
+  "level": 7,
+  "title": "Introduction",
+  "page": 434
+ },
+ {
+  "level": 7,
+  "title": "Different types of Foams and their Applications",
+  "page": 435
+ },
+ {
+  "level": 7,
+  "title": "Foam Proportioning",
+  "page": 436
+ },
+ {
+  "level": 7,
+  "title": "Characteristics and Limitations",
+  "page": 439
+ },
+ {
+  "level": 7,
+  "title": "Design Criteria",
+  "page": 440
+ },
+ {
+  "level": 7,
+  "title": "Piping and Installation",
+  "page": 441
+ },
+ {
+  "level": 7,
+  "title": "Table :9.44. Design criteria foam outlets",
+  "page": 442
+ },
+ {
+  "level": 7,
+  "title": "Table:9.45. Design criteria for foam sprinkler system",
+  "page": 443
+ },
+ {
+  "level": 6,
+  "title": "Gas Suppression systems",
+  "page": 444
+ },
+ {
+  "level": 7,
+  "title": "Introduction",
+  "page": 444
+ },
+ {
+  "level": 7,
+  "title": "Definitions",
+  "page": 444
+ },
+ {
+  "level": 8,
+  "title": "Clean Agent.",
+  "page": 444
+ },
+ {
+  "level": 8,
+  "title": "Design Factor",
+  "page": 444
+ },
+ {
+  "level": 8,
+  "title": "Final Design Quantity",
+  "page": 444
+ },
+ {
+  "level": 8,
+  "title": "Local Application System",
+  "page": 444
+ },
+ {
+  "level": 8,
+  "title": "Pre-Engineered System",
+  "page": 444
+ },
+ {
+  "level": 8,
+  "title": "Total Flooding System",
+  "page": 444
+ },
+ {
+  "level": 7,
+  "title": "Gas Extinguishing Systems",
+  "page": 444
+ },
+ {
+  "level": 7,
+  "title": "Advantages of gas extinguishing technology",
+  "page": 445
+ },
+ {
+  "level": 7,
+  "title": "Ideal Applications",
+  "page": 445
+ },
+ {
+  "level": 7,
+  "title": "Agent Storage Bank",
+  "page": 446
+ },
+ {
+  "level": 7,
+  "title": "Cylinder valves",
+  "page": 447
+ },
+ {
+  "level": 7,
+  "title": "Nozzles",
+  "page": 447
+ },
+ {
+  "level": 7,
+  "title": "Area valves",
+  "page": 448
+ },
+ {
+  "level": 7,
+  "title": "Pipe and fittings",
+  "page": 448
+ },
+ {
+  "level": 7,
+  "title": "Room Integrity and Air tightness Requirements",
+  "page": 449
+ },
+ {
+  "level": 7,
+  "title": "Walls",
+  "page": 451
+ },
+ {
+  "level": 7,
+  "title": "Doors and Windows",
+  "page": 451
+ },
+ {
+  "level": 7,
+  "title": "Sealed Penetrations",
+  "page": 451
+ },
+ {
+  "level": 7,
+  "title": "Pressure Relief",
+  "page": 451
+ },
+ {
+  "level": 7,
+  "title": "Design Criteria for Applications",
+  "page": 451
+ },
+ {
+  "level": 7,
+  "title": "Special requirements for closed cabinets",
+  "page": 452
+ },
+ {
+  "level": 7,
+  "title": "Inert Gases",
+  "page": 452
+ },
+ {
+  "level": 8,
+  "title": "Inert gas comparisons",
+  "page": 454
+ },
+ {
+  "level": 7,
+  "title": "CO2 in detail",
+  "page": 456
+ },
+ {
+  "level": 8,
+  "title": "Location",
+  "page": 456
+ },
+ {
+  "level": 8,
+  "title": "Equipment",
+  "page": 456
+ },
+ {
+  "level": 8,
+  "title": "CO2 supply containers and selector valves",
+  "page": 457
+ },
+ {
+  "level": 8,
+  "title": "Pipes",
+  "page": 458
+ },
+ {
+  "level": 8,
+  "title": "Nozzles:",
+  "page": 459
+ },
+ {
+  "level": 8,
+  "title": "KB factors",
+  "page": 460
+ },
+ {
+  "level": 7,
+  "title": "Chemical gases",
+  "page": 461
+ },
+ {
+  "level": 8,
+  "title": "Chemical gas comparisons",
+  "page": 462
+ },
+ {
+  "level": 7,
+  "title": "Fire Prevention System",
+  "page": 463
+ },
+ {
+  "level": 8,
+  "title": "Fire prevention through extraction of oxygen",
+  "page": 463
+ },
+ {
+  "level": 8,
+  "title": "Accessibility of protected area",
+  "page": 464
+ },
+ {
+  "level": 8,
+  "title": "Production of nitrogen on-site",
+  "page": 464
+ },
+ {
+  "level": 8,
+  "title": "Advantages of using nitrogen to reduce oxygen content",
+  "page": 464
+ },
+ {
+  "level": 8,
+  "title": "Ideal Applications",
+  "page": 465
+ },
+ {
+  "level": 8,
+  "title": "Fire prevention with fast oxygen reduction",
+  "page": 465
+ },
+ {
+  "level": 8,
+  "title": "Special requirements for fire prevention systems",
+  "page": 466
+ },
+ {
+  "level": 8,
+  "title": "Safety for Gas Extinguishing Systems",
+  "page": 467
+ },
+ {
+  "level": 8,
+  "title": "Safety for Fire Prevention Systems",
+  "page": 468
+ },
+ {
+  "level": 7,
+  "title": "Dry chemical systems",
+  "page": 469
+ },
+ {
+  "level": 8,
+  "title": "Introduction",
+  "page": 469
+ },
+ {
+  "level": 8,
+  "title": "Application",
+  "page": 469
+ },
+ {
+  "level": 8,
+  "title": "Limitations",
+  "page": 469
+ },
+ {
+  "level": 8,
+  "title": "Design criteria",
+  "page": 470
+ },
+ {
+  "level": 7,
+  "title": "Wet chemical systems",
+  "page": 471
+ },
+ {
+  "level": 8,
+  "title": "Introduction",
+  "page": 471
+ },
+ {
+  "level": 8,
+  "title": "Application",
+  "page": 471
+ },
+ {
+  "level": 8,
+  "title": "Limitation",
+  "page": 472
+ },
+ {
+  "level": 8,
+  "title": "Design criteria",
+  "page": 472
+ },
+ {
+  "level": 8,
+  "title": "Inspection and Maintenance",
+  "page": 473
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 474
+ },
+ {
+  "level": 5,
+  "title": "Further References",
+  "page": 474
+ },
+ {
+  "level": 4,
+  "title": "CH10. MECHANICAL VENTILATION AND SMOKE CONTROL SYSTEM",
+  "page": 475
+ },
+ {
+  "level": 5,
+  "title": "Definitions",
+  "page": 475
+ },
+ {
+  "level": 6,
+  "title": "Air Connector",
+  "page": 475
+ },
+ {
+  "level": 6,
+  "title": "Air Duct.",
+  "page": 475
+ },
+ {
+  "level": 6,
+  "title": "Air-Handling Unit Room Plenum",
+  "page": 475
+ },
+ {
+  "level": 6,
+  "title": "Atrium",
+  "page": 475
+ },
+ {
+  "level": 6,
+  "title": "Fire Damper",
+  "page": 475
+ },
+ {
+  "level": 6,
+  "title": "Fire Wall.",
+  "page": 475
+ },
+ {
+  "level": 6,
+  "title": "Legitimate Stage",
+  "page": 475
+ },
+ {
+  "level": 6,
+  "title": "Mall.",
+  "page": 476
+ },
+ {
+  "level": 6,
+  "title": "Plenum",
+  "page": 476
+ },
+ {
+  "level": 6,
+  "title": "Regular Stage",
+  "page": 476
+ },
+ {
+  "level": 6,
+  "title": "Smoke.",
+  "page": 476
+ },
+ {
+  "level": 6,
+  "title": "Smoke Control",
+  "page": 476
+ },
+ {
+  "level": 6,
+  "title": "Smoke Damper",
+  "page": 476
+ },
+ {
+  "level": 5,
+  "title": "Air-conditioning and ventilation systems",
+  "page": 476
+ },
+ {
+  "level": 6,
+  "title": "General Requirements for Equipment",
+  "page": 476
+ },
+ {
+  "level": 5,
+  "title": "Air handling rooms",
+  "page": 477
+ },
+ {
+  "level": 6,
+  "title": "Air-Handling Unit Rooms Used as Plenum Space",
+  "page": 477
+ },
+ {
+  "level": 6,
+  "title": "Air-Handling Unit Rooms That Have Air Ducts That Open Directly into a Shaft",
+  "page": 477
+ },
+ {
+  "level": 5,
+  "title": "Outside air intakes",
+  "page": 477
+ },
+ {
+  "level": 5,
+  "title": "Air cleaners and air filters",
+  "page": 478
+ },
+ {
+  "level": 5,
+  "title": "Fans",
+  "page": 478
+ },
+ {
+  "level": 5,
+  "title": "Air ducts",
+  "page": 478
+ },
+ {
+  "level": 5,
+  "title": "Ventilation ducts",
+  "page": 480
+ },
+ {
+  "level": 5,
+  "title": "Plenum",
+  "page": 483
+ },
+ {
+  "level": 5,
+  "title": "Fire dampers",
+  "page": 484
+ },
+ {
+  "level": 5,
+  "title": "Smoke dampers",
+  "page": 485
+ },
+ {
+  "level": 5,
+  "title": "Smoke detection for automatic control",
+  "page": 486
+ },
+ {
+  "level": 5,
+  "title": "Plenum Material",
+  "page": 487
+ },
+ {
+  "level": 5,
+  "title": "Corridor air systems",
+  "page": 487
+ },
+ {
+  "level": 5,
+  "title": "Exits",
+  "page": 487
+ },
+ {
+  "level": 5,
+  "title": "Smoke free enclosure and fire fighting lobbies",
+  "page": 488
+ },
+ {
+  "level": 5,
+  "title": "Engine driven fire pump, generator room and emergency command center",
+  "page": 489
+ },
+ {
+  "level": 5,
+  "title": "Rooms with flammable and explosive substances",
+  "page": 492
+ },
+ {
+  "level": 5,
+  "title": "Acceptance testing",
+  "page": 493
+ },
+ {
+  "level": 5,
+  "title": "Building smoke ventilation system",
+  "page": 493
+ },
+ {
+  "level": 6,
+  "title": "Smoke ventilationof commercial cooking",
+  "page": 493
+ },
+ {
+  "level": 5,
+  "title": "Industrial and Storage smoke ventilation",
+  "page": 496
+ },
+ {
+  "level": 6,
+  "title": "Sprinklered Buildings",
+  "page": 496
+ },
+ {
+  "level": 6,
+  "title": "Nonsprinklered Buildings",
+  "page": 496
+ },
+ {
+  "level": 5,
+  "title": "Assembly occupancy smoke ventilation",
+  "page": 497
+ },
+ {
+  "level": 5,
+  "title": "Smoke control system",
+  "page": 497
+ },
+ {
+  "level": 6,
+  "title": "Exit Stair Enclosures",
+  "page": 497
+ },
+ {
+  "level": 6,
+  "title": "Flow velocity",
+  "page": 497
+ },
+ {
+  "level": 6,
+  "title": "Leakage and relief",
+  "page": 498
+ },
+ {
+  "level": 6,
+  "title": "Pressure Distribution",
+  "page": 498
+ },
+ {
+  "level": 5,
+  "title": "Elevators",
+  "page": 511
+ },
+ {
+  "level": 5,
+  "title": "Ventilation requirements for internal corridors and exit stairs",
+  "page": 512
+ },
+ {
+  "level": 5,
+  "title": "Table 10.1. Various occupancies and buildings requirments",
+  "page": 513
+ },
+ {
+  "level": 5,
+  "title": "Malls and Atriums",
+  "page": 521
+ },
+ {
+  "level": 5,
+  "title": "Fire engineering analysis",
+  "page": 521
+ },
+ {
+  "level": 5,
+  "title": "Underground buildings",
+  "page": 523
+ },
+ {
+  "level": 6,
+  "title": "Basement Smoke Control System",
+  "page": 523
+ },
+ {
+  "level": 6,
+  "title": "Smoke Vents",
+  "page": 524
+ },
+ {
+  "level": 6,
+  "title": "Smoke Purging System",
+  "page": 524
+ },
+ {
+  "level": 5,
+  "title": "Engineered smoke control system",
+  "page": 525
+ },
+ {
+  "level": 6,
+  "title": "Sprinkler System",
+  "page": 525
+ },
+ {
+  "level": 6,
+  "title": "Fire Size",
+  "page": 525
+ },
+ {
+  "level": 6,
+  "title": "Capacity of Smoke Ventilation System",
+  "page": 525
+ },
+ {
+  "level": 6,
+  "title": "Clear Layer",
+  "page": 527
+ },
+ {
+  "level": 6,
+  "title": "Smoke reservoir",
+  "page": 527
+ },
+ {
+  "level": 6,
+  "title": "Removal of smoke from circulation or atrium space",
+  "page": 528
+ },
+ {
+  "level": 6,
+  "title": "Discharge of smoke into circulation or atrium spaces",
+  "page": 530
+ },
+ {
+  "level": 6,
+  "title": "Stagnant Regions",
+  "page": 531
+ },
+ {
+  "level": 6,
+  "title": "Maximum mass flow/smoke layer temperature",
+  "page": 532
+ },
+ {
+  "level": 6,
+  "title": "Perforated Ceiling",
+  "page": 533
+ },
+ {
+  "level": 6,
+  "title": "Emergency power supply",
+  "page": 533
+ },
+ {
+  "level": 6,
+  "title": "Mode of Activation",
+  "page": 533
+ },
+ {
+  "level": 6,
+  "title": "Manual activation",
+  "page": 534
+ },
+ {
+  "level": 6,
+  "title": "Shut down of all other air-conditioning and ventilation systems",
+  "page": 534
+ },
+ {
+  "level": 6,
+  "title": "Stand fans or multiple fans",
+  "page": 534
+ },
+ {
+  "level": 6,
+  "title": "Protected circuits",
+  "page": 535
+ },
+ {
+  "level": 6,
+  "title": "Fire rating of Ducts",
+  "page": 535
+ },
+ {
+  "level": 6,
+  "title": "Fire Damper",
+  "page": 535
+ },
+ {
+  "level": 6,
+  "title": "Activation of system",
+  "page": 536
+ },
+ {
+  "level": 6,
+  "title": "Fail safe system",
+  "page": 536
+ },
+ {
+  "level": 6,
+  "title": "Natural/Power exhaust ventilation",
+  "page": 536
+ },
+ {
+  "level": 6,
+  "title": "Smoke curtains",
+  "page": 536
+ },
+ {
+  "level": 6,
+  "title": "Obstruction to means of egress",
+  "page": 536
+ },
+ {
+  "level": 6,
+  "title": "Smoke or channeling Screens",
+  "page": 537
+ },
+ {
+  "level": 5,
+  "title": "Smoke control system for auditorium",
+  "page": 538
+ },
+ {
+  "level": 5,
+  "title": "Enclosed car parking",
+  "page": 538
+ },
+ {
+  "level": 5,
+  "title": "Open car park",
+  "page": 540
+ },
+ {
+  "level": 5,
+  "title": "Ductless Jet fan system in car park",
+  "page": 541
+ },
+ {
+  "level": 6,
+  "title": "Objectives",
+  "page": 541
+ },
+ {
+  "level": 6,
+  "title": "Scope",
+  "page": 541
+ },
+ {
+  "level": 6,
+  "title": "Design Considerations",
+  "page": 541
+ },
+ {
+  "level": 6,
+  "title": "Zoning of car park",
+  "page": 541
+ },
+ {
+  "level": 6,
+  "title": "Jet fans system",
+  "page": 541
+ },
+ {
+  "level": 6,
+  "title": "Wiring arrangement of jet fans",
+  "page": 543
+ },
+ {
+  "level": 6,
+  "title": "Provision of supply air for jet fan systems",
+  "page": 544
+ },
+ {
+  "level": 6,
+  "title": "Exhaust fan design for jet fan system",
+  "page": 544
+ },
+ {
+  "level": 6,
+  "title": "Fire resistance of jet fan system",
+  "page": 545
+ },
+ {
+  "level": 6,
+  "title": "Verification of jet fan system designs",
+  "page": 545
+ },
+ {
+  "level": 7,
+  "title": "Hot smoke test / CFD fire modeling",
+  "page": 545
+ },
+ {
+  "level": 5,
+  "title": "Acceptance criteria for jet fan system",
+  "page": 546
+ },
+ {
+  "level": 5,
+  "title": "CFD Modelling input parameters for jet fan system",
+  "page": 546
+ },
+ {
+  "level": 6,
+  "title": "Fire Size",
+  "page": 546
+ },
+ {
+  "level": 6,
+  "title": "Type of fire",
+  "page": 546
+ },
+ {
+  "level": 6,
+  "title": "Location of fire",
+  "page": 546
+ },
+ {
+  "level": 6,
+  "title": "Down-stand beams and other obstruction",
+  "page": 547
+ },
+ {
+  "level": 5,
+  "title": "Jet fan velocity profile",
+  "page": 547
+ },
+ {
+  "level": 6,
+  "title": "Duration of fire simulation",
+  "page": 547
+ },
+ {
+  "level": 6,
+  "title": "Sprinkler activation",
+  "page": 547
+ },
+ {
+  "level": 6,
+  "title": "Grid resolution",
+  "page": 547
+ },
+ {
+  "level": 6,
+  "title": "Sensitivity study",
+  "page": 547
+ },
+ {
+  "level": 5,
+  "title": "Operation and maintenance",
+  "page": 548
+ },
+ {
+  "level": 5,
+  "title": "Commissioning test of jet fan system",
+  "page": 548
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 549
+ },
+ {
+  "level": 5,
+  "title": "Further Approval",
+  "page": 549
+ },
+ {
+  "level": 4,
+  "title": "CH11. LPG INSTALLATIONS",
+  "page": 551
+ },
+ {
+  "level": 5,
+  "title": "Scope",
+  "page": 551
+ },
+ {
+  "level": 5,
+  "title": "General requirements for LPG cylinders",
+  "page": 551
+ },
+ {
+  "level": 5,
+  "title": "LPG cylinder installation requirements",
+  "page": 552
+ },
+ {
+  "level": 6,
+  "title": "Main Considerations for Use of LPG",
+  "page": 552
+ },
+ {
+  "level": 6,
+  "title": "Codes of Practice & Standards",
+  "page": 552
+ },
+ {
+  "level": 6,
+  "title": "Fire Stopping",
+  "page": 552
+ },
+ {
+  "level": 6,
+  "title": "Pressure",
+  "page": 553
+ },
+ {
+  "level": 6,
+  "title": "Fire Extinguisher",
+  "page": 553
+ },
+ {
+  "level": 6,
+  "title": "Warning Sign / Notice",
+  "page": 553
+ },
+ {
+  "level": 5,
+  "title": "Requirement for outdoor LPG cylinder installation",
+  "page": 553
+ },
+ {
+  "level": 6,
+  "title": "Locating of LPG Cylinders",
+  "page": 553
+ },
+ {
+  "level": 6,
+  "title": "Protection to LPG Cylinder Installation",
+  "page": 554
+ },
+ {
+  "level": 6,
+  "title": "Safety Provisions",
+  "page": 554
+ },
+ {
+  "level": 6,
+  "title": "Allowable Quantities",
+  "page": 555
+ },
+ {
+  "level": 5,
+  "title": "Requirement for indoor LPG cylinder installation",
+  "page": 555
+ },
+ {
+  "level": 6,
+  "title": "General",
+  "page": 555
+ },
+ {
+  "level": 6,
+  "title": "Safety Provisions",
+  "page": 556
+ },
+ {
+  "level": 6,
+  "title": "LPG Cylinder installation in separate compartment",
+  "page": 556
+ },
+ {
+  "level": 6,
+  "title": "Allowable Quantity",
+  "page": 556
+ },
+ {
+  "level": 6,
+  "title": "Compartment",
+  "page": 557
+ },
+ {
+  "level": 6,
+  "title": "Ventilation",
+  "page": 557
+ },
+ {
+  "level": 6,
+  "title": "Location",
+  "page": 558
+ },
+ {
+  "level": 6,
+  "title": "Safety",
+  "page": 558
+ },
+ {
+  "level": 5,
+  "title": "Fire safety guidelines for rooftop installation of central LPG Tank",
+  "page": 559
+ },
+ {
+  "level": 6,
+  "title": "General Description",
+  "page": 559
+ },
+ {
+  "level": 6,
+  "title": "System Design Requirements",
+  "page": 559
+ },
+ {
+  "level": 6,
+  "title": "Safe Distances and Allowable Quantities",
+  "page": 560
+ },
+ {
+  "level": 6,
+  "title": "Table:11.1 Rooftop LPG Tank separation distances",
+  "page": 560
+ },
+ {
+  "level": 6,
+  "title": "Piping and Connections",
+  "page": 561
+ },
+ {
+  "level": 6,
+  "title": "Pipe Material",
+  "page": 561
+ },
+ {
+  "level": 6,
+  "title": "System Shut- Off Configuration",
+  "page": 561
+ },
+ {
+  "level": 6,
+  "title": "Protection and Fire Fighting Requirement",
+  "page": 562
+ },
+ {
+  "level": 6,
+  "title": "LPG Storage Tank",
+  "page": 562
+ },
+ {
+  "level": 5,
+  "title": "Fire safety guidelines for Aboveground central LPG tank",
+  "page": 563
+ },
+ {
+  "level": 6,
+  "title": "Table:11.2. Aboveground LPG Tank separation distances",
+  "page": 563
+ },
+ {
+  "level": 5,
+  "title": "Fire safety guidelines for Underground central LPG Tank",
+  "page": 564
+ },
+ {
+  "level": 5,
+  "title": "Table 11.3. Underground LPG Tank separation distances",
+  "page": 564
+ },
+ {
+  "level": 5,
+  "title": "Annexure A: Standard specification for LPG installation",
+  "page": 565
+ },
+ {
+  "level": 6,
+  "title": "Standards",
+  "page": 565
+ },
+ {
+  "level": 6,
+  "title": "LPG Cylinder Fittings",
+  "page": 565
+ },
+ {
+  "level": 6,
+  "title": "Regulators",
+  "page": 565
+ },
+ {
+  "level": 6,
+  "title": "Over Pressure Protection Device",
+  "page": 565
+ },
+ {
+  "level": 6,
+  "title": "Valves",
+  "page": 565
+ },
+ {
+  "level": 6,
+  "title": "Cylinder Valves",
+  "page": 565
+ },
+ {
+  "level": 6,
+  "title": "Safety Valves",
+  "page": 565
+ },
+ {
+  "level": 6,
+  "title": "Piping",
+  "page": 566
+ },
+ {
+  "level": 6,
+  "title": "Pigtail",
+  "page": 567
+ },
+ {
+  "level": 6,
+  "title": "Pressure Gauge",
+  "page": 567
+ },
+ {
+  "level": 6,
+  "title": "Vaporizer",
+  "page": 567
+ },
+ {
+  "level": 6,
+  "title": "Knock-out pot",
+  "page": 568
+ },
+ {
+  "level": 6,
+  "title": "Gas Meters",
+  "page": 568
+ },
+ {
+  "level": 6,
+  "title": "Strainers",
+  "page": 569
+ },
+ {
+  "level": 6,
+  "title": "Electrical Bonding and Grounding",
+  "page": 569
+ },
+ {
+  "level": 6,
+  "title": "Gas Leak Detection",
+  "page": 569
+ },
+ {
+  "level": 6,
+  "title": "Prohibited places",
+  "page": 570
+ },
+ {
+  "level": 6,
+  "title": "Plan submission",
+  "page": 570
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 571
+ },
+ {
+  "level": 5,
+  "title": "Further refernces",
+  "page": 571
+ },
+ {
+  "level": 5,
+  "title": "Annexure B: Outdoor LPG cylinders",
+  "page": 572
+ },
+ {
+  "level": 5,
+  "title": "Various distances for Outdoor LPG cylinders",
+  "page": 574
+ },
+ {
+  "level": 5,
+  "title": "Annexure C: Indoor LPG cylinders",
+  "page": 575
+ },
+ {
+  "level": 5,
+  "title": "Technical details for indoor LPG cylinders",
+  "page": 576
+ },
+ {
+  "level": 5,
+  "title": "Warning signs",
+  "page": 577
+ },
+ {
+  "level": 5,
+  "title": "Annexure E: Rooftop central LPG Tanks",
+  "page": 578
+ },
+ {
+  "level": 4,
+  "title": "CH12. FIRE SAFETY DURING CONSTRUCTION",
+  "page": 581
+ },
+ {
+  "level": 5,
+  "title": "Policy",
+  "page": 581
+ },
+ {
+  "level": 5,
+  "title": "General",
+  "page": 581
+ },
+ {
+  "level": 5,
+  "title": "Fire protection plan",
+  "page": 581
+ },
+ {
+  "level": 5,
+  "title": "Fire safety program",
+  "page": 582
+ },
+ {
+  "level": 5,
+  "title": "Owner's responsibility for fire protection",
+  "page": 582
+ },
+ {
+  "level": 6,
+  "title": "Premises identification",
+  "page": 582
+ },
+ {
+  "level": 6,
+  "title": "Program Manager Responsibilities",
+  "page": 582
+ },
+ {
+  "level": 6,
+  "title": "Site Security",
+  "page": 583
+ },
+ {
+  "level": 6,
+  "title": "Smoking",
+  "page": 583
+ },
+ {
+  "level": 6,
+  "title": "Waste Disposal.",
+  "page": 584
+ },
+ {
+  "level": 5,
+  "title": "Temporary construction, equipment and storage",
+  "page": 584
+ },
+ {
+  "level": 6,
+  "title": "Temporary Offices and Sheds.",
+  "page": 584
+ },
+ {
+  "level": 6,
+  "title": "Separation distances between buildings  in construction site",
+  "page": 584
+ },
+ {
+  "level": 6,
+  "title": "Temporary Enclosures",
+  "page": 585
+ },
+ {
+  "level": 6,
+  "title": "Equipment.",
+  "page": 585
+ },
+ {
+  "level": 6,
+  "title": "Construction Materials",
+  "page": 585
+ },
+ {
+  "level": 5,
+  "title": "Processes and hazards",
+  "page": 586
+ },
+ {
+  "level": 6,
+  "title": "Hot Work.",
+  "page": 586
+ },
+ {
+  "level": 6,
+  "title": "Welding, Cutting, Brazing and other Hot work & open flame or smoke producing operations",
+  "page": 586
+ },
+ {
+  "level": 6,
+  "title": "Thermit Welding.",
+  "page": 586
+ },
+ {
+  "level": 6,
+  "title": "Pre-Site Inspection",
+  "page": 587
+ },
+ {
+  "level": 6,
+  "title": "Fire Watch",
+  "page": 587
+ },
+ {
+  "level": 6,
+  "title": "Post-work Inspection",
+  "page": 587
+ },
+ {
+  "level": 5,
+  "title": "Flammable and combustible liquids and gases",
+  "page": 587
+ },
+ {
+  "level": 6,
+  "title": "Storage",
+  "page": 587
+ },
+ {
+  "level": 6,
+  "title": "Handling of Flammable and Combustible Liquids at Point of Final Use",
+  "page": 588
+ },
+ {
+  "level": 5,
+  "title": "Explosive materials",
+  "page": 589
+ },
+ {
+  "level": 5,
+  "title": "Other combsutible materials",
+  "page": 589
+ },
+ {
+  "level": 6,
+  "title": "Storage",
+  "page": 589
+ },
+ {
+  "level": 6,
+  "title": "Combustible Debris",
+  "page": 589
+ },
+ {
+  "level": 6,
+  "title": "Oily Rags",
+  "page": 589
+ },
+ {
+  "level": 5,
+  "title": "Compressed gases",
+  "page": 589
+ },
+ {
+  "level": 6,
+  "title": "Protection of Gas Containers",
+  "page": 589
+ },
+ {
+  "level": 6,
+  "title": "Separation",
+  "page": 590
+ },
+ {
+  "level": 6,
+  "title": "Marking",
+  "page": 590
+ },
+ {
+  "level": 5,
+  "title": "Liquified petroleum gas (LPG)",
+  "page": 590
+ },
+ {
+  "level": 6,
+  "title": "Occupied Buildings",
+  "page": 591
+ },
+ {
+  "level": 5,
+  "title": "Specialized equipment",
+  "page": 591
+ },
+ {
+  "level": 6,
+  "title": "Motorized Equipment",
+  "page": 591
+ },
+ {
+  "level": 6,
+  "title": "Temporary Heating Equipment.",
+  "page": 591
+ },
+ {
+  "level": 6,
+  "title": "Asphalt and Tar Kettles",
+  "page": 592
+ },
+ {
+  "level": 5,
+  "title": "Electrical devices",
+  "page": 592
+ },
+ {
+  "level": 6,
+  "title": "Temporary Wiring.",
+  "page": 593
+ },
+ {
+  "level": 6,
+  "title": "Lighting",
+  "page": 593
+ },
+ {
+  "level": 5,
+  "title": "Fire protection",
+  "page": 594
+ },
+ {
+  "level": 6,
+  "title": "Installation, Testing, and Maintenance",
+  "page": 594
+ },
+ {
+  "level": 6,
+  "title": "Hydrants.",
+  "page": 594
+ },
+ {
+  "level": 6,
+  "title": "Standpipes.",
+  "page": 594
+ },
+ {
+  "level": 6,
+  "title": "Standpipe Installations in Buildings Under Construction",
+  "page": 595
+ },
+ {
+  "level": 6,
+  "title": "Fire Extinguishers",
+  "page": 596
+ },
+ {
+  "level": 6,
+  "title": "Area Separation Walls",
+  "page": 596
+ },
+ {
+  "level": 6,
+  "title": "Fire Sprinkler Systems",
+  "page": 596
+ },
+ {
+  "level": 6,
+  "title": "Water Supply.",
+  "page": 597
+ },
+ {
+  "level": 6,
+  "title": "Fire Alarm System",
+  "page": 597
+ },
+ {
+  "level": 5,
+  "title": "Telephone and communication",
+  "page": 598
+ },
+ {
+  "level": 5,
+  "title": "Civil defence access and parking",
+  "page": 598
+ },
+ {
+  "level": 5,
+  "title": "Means of egress components",
+  "page": 599
+ },
+ {
+  "level": 6,
+  "title": "Means of Egress",
+  "page": 599
+ },
+ {
+  "level": 6,
+  "title": "Minimum number of exits",
+  "page": 599
+ },
+ {
+  "level": 6,
+  "title": "Multi-Story Buildings",
+  "page": 599
+ },
+ {
+  "level": 6,
+  "title": "Stairs.",
+  "page": 600
+ },
+ {
+  "level": 6,
+  "title": "Hoists and Elevators",
+  "page": 600
+ },
+ {
+  "level": 5,
+  "title": "Assembly points",
+  "page": 600
+ },
+ {
+  "level": 5,
+  "title": "Vehicle parking",
+  "page": 600
+ },
+ {
+  "level": 5,
+  "title": "Safeguarding construction and alteration operations",
+  "page": 600
+ },
+ {
+  "level": 6,
+  "title": "Scaffolding, Shoring, and Forms.",
+  "page": 600
+ },
+ {
+  "level": 6,
+  "title": "Construction Material and Equipment Storage",
+  "page": 601
+ },
+ {
+  "level": 6,
+  "title": "Permanent Heating Equipment",
+  "page": 601
+ },
+ {
+  "level": 6,
+  "title": "Building Separation Walls",
+  "page": 601
+ },
+ {
+  "level": 6,
+  "title": "Fire Protection During Construction",
+  "page": 602
+ },
+ {
+  "level": 5,
+  "title": "Safeguarding roofing operations",
+  "page": 602
+ },
+ {
+  "level": 6,
+  "title": "Asphalt and Tar Kettles",
+  "page": 602
+ },
+ {
+  "level": 6,
+  "title": "Single-Ply and Torch-Applied Roofing Systems",
+  "page": 603
+ },
+ {
+  "level": 6,
+  "title": "Openings, Penetrations, and Flashings.",
+  "page": 603
+ },
+ {
+  "level": 6,
+  "title": "Flame Contact Protection.",
+  "page": 604
+ },
+ {
+  "level": 6,
+  "title": "Personal Protection",
+  "page": 604
+ },
+ {
+  "level": 6,
+  "title": "Equipment.",
+  "page": 604
+ },
+ {
+  "level": 6,
+  "title": "Equipment Inspection",
+  "page": 604
+ },
+ {
+  "level": 6,
+  "title": "Fuel Gas Cylinders",
+  "page": 604
+ },
+ {
+  "level": 6,
+  "title": "Frost Buildup.",
+  "page": 605
+ },
+ {
+  "level": 6,
+  "title": "Fire Extinguishers for Roofing Operations",
+  "page": 605
+ },
+ {
+  "level": 6,
+  "title": "Fuel for Roofing Operations.",
+  "page": 605
+ },
+ {
+  "level": 5,
+  "title": "Safeguarding demolition operations",
+  "page": 606
+ },
+ {
+  "level": 6,
+  "title": "General.",
+  "page": 606
+ },
+ {
+  "level": 6,
+  "title": "Special Precautions",
+  "page": 606
+ },
+ {
+  "level": 6,
+  "title": "Smoking.",
+  "page": 606
+ },
+ {
+  "level": 6,
+  "title": "Demolition Using Explosives",
+  "page": 606
+ },
+ {
+  "level": 6,
+  "title": "Gas.",
+  "page": 607
+ },
+ {
+  "level": 6,
+  "title": "Fire Cutoffs",
+  "page": 607
+ },
+ {
+  "level": 6,
+  "title": "Fire Protection During Demolition",
+  "page": 607
+ },
+ {
+  "level": 6,
+  "title": "Sprinkler Control Valves.",
+  "page": 607
+ },
+ {
+  "level": 6,
+  "title": "Standpipes",
+  "page": 607
+ },
+ {
+  "level": 6,
+  "title": "Fire Extinguisher",
+  "page": 607
+ },
+ {
+  "level": 5,
+  "title": "Safeguarding underground operations",
+  "page": 608
+ },
+ {
+  "level": 6,
+  "title": "General.",
+  "page": 608
+ },
+ {
+  "level": 6,
+  "title": "Security.",
+  "page": 608
+ },
+ {
+  "level": 6,
+  "title": "Water Supply.",
+  "page": 608
+ },
+ {
+  "level": 6,
+  "title": "Emergency Procedures.",
+  "page": 609
+ },
+ {
+  "level": 6,
+  "title": "Drills.",
+  "page": 609
+ },
+ {
+  "level": 6,
+  "title": "Fire Detection and Protection Systems",
+  "page": 609
+ },
+ {
+  "level": 6,
+  "title": "Fire Communications Systems",
+  "page": 610
+ },
+ {
+  "level": 6,
+  "title": "Electrical.",
+  "page": 611
+ },
+ {
+  "level": 6,
+  "title": "Hazardous Operations and Procedures",
+  "page": 611
+ },
+ {
+  "level": 6,
+  "title": "Flammable and Combustible Liquids.",
+  "page": 612
+ },
+ {
+  "level": 6,
+  "title": "Storage.",
+  "page": 612
+ },
+ {
+  "level": 6,
+  "title": "Equipment.",
+  "page": 612
+ },
+ {
+  "level": 6,
+  "title": "Ventilation.",
+  "page": 613
+ },
+ {
+  "level": 5,
+  "title": "Requirement for site offices (Manufactured homes/offices)",
+  "page": 613
+ },
+ {
+  "level": 6,
+  "title": "Manufactured Home Site Fire Safety Requirements.",
+  "page": 613
+ },
+ {
+  "level": 6,
+  "title": "Marking of Underground Utility Lines.",
+  "page": 613
+ },
+ {
+  "level": 6,
+  "title": "Manufactured Home Installations.",
+  "page": 614
+ },
+ {
+  "level": 6,
+  "title": "Fire Detection and Protection Systems.",
+  "page": 614
+ },
+ {
+  "level": 5,
+  "title": "Fire safety and evacuation plans",
+  "page": 614
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 615
+ },
+ {
+  "level": 5,
+  "title": "Further reference",
+  "page": 615
+ },
+ {
+  "level": 4,
+  "title": "CH13. FIRE SAFETY REQUIREMENT FOR MULTI-TENANT (TERRACE TYP)",
+  "page": 616
+ },
+ {
+  "level": 5,
+  "title": "Scope",
+  "page": 616
+ },
+ {
+  "level": 5,
+  "title": "Definitions",
+  "page": 616
+ },
+ {
+  "level": 5,
+  "title": "Compartment",
+  "page": 616
+ },
+ {
+  "level": 5,
+  "title": "Sprinkler protection and fire fighting systems",
+  "page": 617
+ },
+ {
+  "level": 5,
+  "title": "Storage height control",
+  "page": 617
+ },
+ {
+  "level": 5,
+  "title": "Smoke control",
+  "page": 618
+ },
+ {
+  "level": 6,
+  "title": "Smoke Vents",
+  "page": 618
+ },
+ {
+  "level": 6,
+  "title": "Smoke Purging System",
+  "page": 618
+ },
+ {
+  "level": 6,
+  "title": "Engineered Smoke Control",
+  "page": 618
+ },
+ {
+  "level": 5,
+  "title": "List A: Low hazard storage materials and activities",
+  "page": 619
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 620
+ },
+ {
+  "level": 5,
+  "title": "Further references",
+  "page": 620
+ },
+ {
+  "level": 5,
+  "title": "Table 13A.1. Sprinkler requirement for single and multistory warehouses and factories",
+  "page": 621
+ },
+ {
+  "level": 5,
+  "title": "Table 13A.2. Smoke management",
+  "page": 621
+ },
+ {
+  "level": 5,
+  "title": "Table 13A.3. Distance from smoke vent",
+  "page": 621
+ },
+ {
+  "level": 5,
+  "title": "Figure 13A.1. Multi-tenant warehouse and factory not requiring sprinklers",
+  "page": 622
+ },
+ {
+  "level": 5,
+  "title": "Figure 13A.2. Multi-tenant warehouse and factories requiring sprinklers",
+  "page": 622
+ },
+ {
+  "level": 5,
+  "title": "Figure 13A.3. Multi-tenant warehouse and factories for rent with unconfirmed storage materials",
+  "page": 624
+ },
+ {
+  "level": 4,
+  "title": "CH14. SUBSTATION REQUIREMENTS",
+  "page": 625
+ },
+ {
+  "level": 5,
+  "title": "General",
+  "page": 625
+ },
+ {
+  "level": 5,
+  "title": "Construction",
+  "page": 625
+ },
+ {
+  "level": 5,
+  "title": "Outdoor Oil insulated transformer and Equipment",
+  "page": 626
+ },
+ {
+  "level": 5,
+  "title": "Table 14.1. Separation distances for outdoor transformers",
+  "page": 626
+ },
+ {
+  "level": 5,
+  "title": "Indoor Oil insulated transformer or Equipment",
+  "page": 628
+ },
+ {
+  "level": 5,
+  "title": "Fire access",
+  "page": 628
+ },
+ {
+  "level": 5,
+  "title": "Means of egress",
+  "page": 628
+ },
+ {
+  "level": 5,
+  "title": "Doors",
+  "page": 629
+ },
+ {
+  "level": 5,
+  "title": "Portable Fire extinguishers",
+  "page": 629
+ },
+ {
+  "level": 5,
+  "title": "Exit signs",
+  "page": 629
+ },
+ {
+  "level": 5,
+  "title": "Emergency lighting",
+  "page": 630
+ },
+ {
+  "level": 5,
+  "title": "Fire detection and protection systems",
+  "page": 630
+ },
+ {
+  "level": 5,
+  "title": "Table 14.3. Acceptable fire detection and protection systems",
+  "page": 630
+ },
+ {
+  "level": 5,
+  "title": "Ventilation and smoke control systems",
+  "page": 632
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 633
+ },
+ {
+  "level": 5,
+  "title": "Further refernces",
+  "page": 633
+ },
+ {
+  "level": 4,
+  "title": "CH15. ACCESSIBILITY GUIDELINES FOR DISABLED",
+  "page": 634
+ },
+ {
+  "level": 5,
+  "title": "Purpose",
+  "page": 634
+ },
+ {
+  "level": 5,
+  "title": "Scope",
+  "page": 634
+ },
+ {
+  "level": 5,
+  "title": "Applicability and Adoption",
+  "page": 634
+ },
+ {
+  "level": 5,
+  "title": "Referenced Codes and Standards",
+  "page": 634
+ },
+ {
+  "level": 5,
+  "title": "Permitting and Inspection",
+  "page": 635
+ },
+ {
+  "level": 5,
+  "title": "General Exceptions",
+  "page": 635
+ },
+ {
+  "level": 5,
+  "title": "Minimum Requirements and Provisions",
+  "page": 636
+ },
+ {
+  "level": 4,
+  "title": "CH16. 24X7 SPECIFICATION FOR LIFE SAFETY ALARM MONITORING",
+  "page": 638
+ },
+ {
+  "level": 5,
+  "title": "Category-1",
+  "page": 638
+ },
+ {
+  "level": 5,
+  "title": "Category-2",
+  "page": 640
+ },
+ {
+  "level": 5,
+  "title": "Category-3",
+  "page": 642
+ },
+ {
+  "level": 5,
+  "title": "Category-4",
+  "page": 645
+ },
+ {
+  "level": 5,
+  "title": "Category-5",
+  "page": 648
+ },
+ {
+  "level": 5,
+  "title": "Material Approval",
+  "page": 652
+ },
+ {
+  "level": 4,
+  "title": "CH17. RISK ASSESSMENT",
+  "page": 653
+ },
+ {
+  "level": 5,
+  "title": "General requirements",
+  "page": 653
+ },
+ {
+  "level": 5,
+  "title": "Outline of risk assessment study report",
+  "page": 654
+ },
+ {
+  "level": 5,
+  "title": "Table 17.1. Working methods for hazard assessment",
+  "page": 655
+ },
+ {
+  "level": 5,
+  "title": "Specific fire protection requirements to be addressed",
+  "page": 655
+ },
+ {
+  "level": 5,
+  "title": "Guideline notes",
+  "page": 656
+ },
+ {
+  "level": 5,
+  "title": "Table 17.2. Fire and explosion index",
+  "page": 657
+ },
+ {
+  "level": 5,
+  "title": "General Hazards (GH)",
+  "page": 657
+ },
+ {
+  "level": 5,
+  "title": "Specific Hazards (SH)",
+  "page": 657
+ },
+ {
+  "level": 5,
+  "title": "Fire and Explosion Index (F&EI)",
+  "page": 658
+ },
+ {
+  "level": 5,
+  "title": "Toxicity Number",
+  "page": 658
+ },
+ {
+  "level": 5,
+  "title": "Penalty Factor",
+  "page": 658
+ },
+ {
+  "level": 5,
+  "title": "Toxicity Index (TI)",
+  "page": 659
+ },
+ {
+  "level": 4,
+  "title": "CH18. REQUIREMENTS FOR DRAWING SUBMISSION",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "Policy",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "Requirements for consultants",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "Consultant's standard plans",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "Requirements for Decor companies",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "Decor company's standard plans",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "Requirements for contracting companies",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "Contracting company's standard drawings",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "Requirements for LPG and Gas suppression system contractors",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "LPG and Gas suppression standard drawings",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "Standard legends",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Architecture",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Fire detection and alarm system",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Voice evacuation system",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Emergency lighting and exit signs",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Smoke control and pressurization",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Water based fire fighting systems",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Portable fire extinguishers",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Gas based extinguishing systems",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "LPG systems",
+  "page": -1
+ },
+ {
+  "level": 4,
+  "title": "FREQUENTLY ASKED QUESTIONS",
+  "page": -1
+ },
+ {
+  "level": 2,
+  "title": "CH18. SPECIAL STRUCTURES AND OCCUPANCIES.pdf",
+  "page": -1
+ },
+ {
+  "level": 3,
+  "title": "CH18. CONTENTS.pdf",
+  "page": -1
+ },
+ {
+  "level": 3,
+  "title": "CH18. SPECIAL STRUCTURES AND OCCUPANCIES",
+  "page": 660
+ },
+ {
+  "level": 4,
+  "title": "CHAPTER 18",
+  "page": 660
+ },
+ {
+  "level": 4,
+  "title": "SPECIAL STRUCTURES AND OCCUPANCIES",
+  "page": 660
+ },
+ {
+  "level": 2,
+  "title": "PAGES 58_59.pdf",
+  "page": -1
+ },
+ {
+  "level": 3,
+  "title": "CH1. CONSTRUCTION AND FIRE COMPARTMENTALIZATION",
+  "page": -1
+ },
+ {
+  "level": 4,
+  "title": "CH1. CONTENTS",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "1. General           47",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "2. Table1.1:  Required Fire Resistance–Rated Separations for Separated Occupancies  48",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "3. Space Beneath Platforms (Raised platforms).       50",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "4. Fire Resistance Rating Requirements for Structural Elements    50",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "5. Exterior Walls          50",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "6. Table 1.2: Fire Rating for Exterior Walls (hr)      51",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "7. Horizontal Separation         51",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "8. Imaginary Line          51",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "9. Openings           53",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "10. Table 1.3:  Minimum Fire Protection Ratings for Exterior Opening Protection  53",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "11. Table 1.4:            54",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "12. Table 1.5:            55",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "13. Height and Area Requirements        56",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "14. Table 1.7:            58",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "Occupancy, Area, Height and Occupant Load limitation for provision",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "of automatic sprinklers",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "15. Mixed Occupancies.          60",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "16. Underground Buildings.         60",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "17. Fire Separation and Protection of Various Rooms      60",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "18. Rooms requiring External wall        66",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "19. Separation between tenancy for terraced units      66",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "20. Fire-Resistive Materials and Construction       66",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "21. Fire Stopping 71",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "22. Ducts and Air-Transfer Openings        81",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "23. Smoke Barriers          84",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "24. Smoke barrier Penetrations        85",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "25. Smoke Damper Exceptions         86",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "26. Vertical Openings          87",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "27. Communicating Space          88",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "28. Atrium            89",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "29. Convenience Openings         91",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "30. Service Openings          92",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "31. Elevator Hoistway          93",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "32. Mezzanine           93",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "33. Concealed Spaces          96",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "34. Interior Wall and Ceiling Finish Requirements      96",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "35. Interior Wall or Ceiling Finish Testing and Classification     98",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "36. Specific Materials          99",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "37. Interior Floor Finish Testing and Classification      101",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "38. Interior Finish in relation to Automatic Sprinklers      102",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "39. Material Approval          102",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "40. Further Reference          102",
+  "page": -1
+ },
+ {
+  "level": 4,
+  "title": "CH1. CONSTRUCTION AND FIRE COMPARTMENTALIZATION",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "CHAPTER 1.",
+  "page": -1
+ },
+ {
+  "level": 5,
+  "title": "CONSTRUCTION AND FIRE COMPARTMENTALIZATION",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "1. General",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "2. Table1.1:  Required Fire Resistance–Rated Separations for Separated Occupancies",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "3. Space Beneath Platforms (Raised platforms).",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "4. Fire Resistance Rating Requirements for Structural Elements",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "5. Exterior Walls",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "6. Table 1.2: Fire Rating for Exterior Walls (hr)",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "7. Horizontal Separation",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "8. Imaginary Line",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "9. Openings",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "10. Table 1.3:  Minimum Fire Protection Ratings for Exterior Opening Protection",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "11. Table 1.4:",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Maximum allowable area of unprotected openings (percentage of exterior walls) for Assembly, Educational, Day-care, Health care, Ambulatory Health Care, Detention and correctional, Residential, Residential board and care, Business, Industrial and Low H...",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "12. Table 1.5:",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Maximum Allowable Area of Unprotected Openings (percentage of exterior wall) for Mercantile, Industrial and Storage with Ordinary Hazard and Industrial and Storage with High Hazard.",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "13. Height and Area Requirements",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Table 1.6: Allowable Building Height and Area",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "14. Table 1.7: Occupancy, Area, Height and Occupant Load limitation for provision of automatic sprinklers",
+  "page": 60
+ },
+ {
+  "level": 6,
+  "title": "15. Mixed Occupancies.",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "16. Underground Buildings.",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "17. Fire Separation and Protection of Various Rooms",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "18. Rooms requiring External wall",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "19. Separation between tenancy for terraced units",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "20. Fire-Resistive Materials and Construction",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "Minimum Fire Protection Ratings for Opening Protection in Fire Resistance–Rated Assemblies (reference shall also be made to clause 3.14 of Chapter 3)",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "21. Fire Stopping",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "22. Ducts and Air-Transfer Openings",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "23. Smoke Barriers",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "24. Smoke barrier Penetrations",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "25. Smoke Damper Exceptions",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "26. Vertical Openings",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "27. Communicating Space",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "28. Atrium",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "29. Convenience Openings",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "30. Service Openings",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "31. Elevator Hoist way",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "32. Mezzanine",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "33. Concealed Spaces",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "34. Interior Wall and Ceiling Finish Requirements",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "35. Interior Wall or Ceiling Finish Testing and Classification",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "36. Specific Materials",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "37. Interior Floor Finish Testing and Classification",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "38. Interior Finish in relation to Automatic Sprinklers",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "39. Material Approval",
+  "page": -1
+ },
+ {
+  "level": 6,
+  "title": "40. Further References",
+  "page": -1
+ },
+ {
+  "level": 3,
+  "title": "INTENTIONALY BLANK",
+  "page": -1
+ },
+ {
+  "level": 1,
+  "title": "FREQUENTLY ASKED QUESTIONS",
+  "page": -1
+ },
+ {
+  "level": 1,
+  "title": "CH19. REQUIREMENTS FOR DRAWING SUBMISSION.pdf",
+  "page": -1
+ },
+ {
+  "level": 2,
+  "title": "CH19. CONTENTS (Page 678) (Repaired)",
+  "page": -1
+ },
+ {
+  "level": 2,
+  "title": "CH19.REQUIREMENTS FOR DRAWING SUBMISSION (Pages 672 to 686",
+  "page": 671
+ },
+ {
+  "level": 1,
+  "title": "Untitled",
+  "page": 52
+ }
+]

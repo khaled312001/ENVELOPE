@@ -1,0 +1,232 @@
+/*
+ * THE DRAWING SHEET.
+ *
+ * A separate stylesheet, and not a section of `app.css`, because what is in here
+ * is a different discipline from the rest of the interface: it is drafting
+ * convention — witness lines, tick terminators, a graphic scale, a title strip —
+ * and those have rules of their own that have nothing to say about a stepper or a
+ * banner. `app.css` keeps `.plot-figure`, `.plot-svg`, `.plot-outline` and the
+ * legend; this file owns everything the drawing gained when it stopped being a
+ * polygon and became a sheet.
+ *
+ * THE SPLIT BETWEEN HERE AND THE COMPONENT IS DELIBERATE AND IS NOT ARBITRARY:
+ * every colour is here, and every dimension is in the component. A stroke width or
+ * a text size in this file would be in CSS pixels, which are viewBox units, which
+ * means it would render at a different apparent weight for every plot — a 1.5px
+ * line is a hairline on an 80 m plot and a kerb on a 12 m one. So the component
+ * computes all of those from the plot's own span and passes them as attributes,
+ * and this file says only what colour a thing is.
+ *
+ * Nothing here paints `--uncertain`. Amber is reserved for ASSUMED and a drawing
+ * that used it as a drafting ink would teach a reader that it means "annotation".
+ * The setback figures the drawing quotes carry their provenance in the register
+ * and in the legend beside it, which is where a class belongs.
+ */
+
+/* ==========================================================================
+ * THE SHEET
+ * ======================================================================= */
+
+/* The frame. A drawing has an edge; without one the annotations look like they
+   have escaped from something rather than belonging to it. */
+.dwg-frame {
+  fill: none;
+  stroke: var(--border-default);
+}
+
+/*
+ * THE PANEL IS TALLER THAN IT WAS, AND THE REASON IS TYPOGRAPHIC RATHER THAN
+ * COMPOSITIONAL.
+ *
+ * `app.css` caps the figure at 22rem, which was right for a bare polygon. SVG text
+ * scales with the viewBox, so for a squarish plot — where height, not width, is
+ * what binds — 22rem put every dimension figure at about 8.6px. 30rem lifts the
+ * same text over the 12px floor without changing a single size in the drawing.
+ *
+ * Two classes deep so it wins on specificity rather than on the order of the
+ * imports in `main.tsx`.
+ */
+.plot-figure .plot-svg { max-block-size: 30rem; }
+
+/*
+ * The grid is graph paper, not information: it is there so the eye can judge a
+ * proportion without reading a number, and it is deliberately at the very bottom
+ * of the ink hierarchy. `--border-subtle` in both themes. It carries no 1.4.11
+ * obligation precisely BECAUSE it is not required to identify anything — the
+ * moment it were load-bearing it would need 3:1 and would then compete with the
+ * boundary, which is the line that actually matters.
+ */
+.dwg-grid-minor { stroke: var(--border-subtle); }
+.dwg-grid-major { stroke: var(--border-default); }
+
+/* ==========================================================================
+ * DIMENSIONS
+ * ======================================================================= */
+
+.dwg-dim__witness,
+.dwg-dim__line,
+.dwg-dim__tick {
+  stroke: var(--text-tertiary);
+  fill: none;
+}
+.dwg-dim__text {
+  font-family: var(--font-mono);
+  fill: var(--text-secondary);
+  /* A figure is read, not selected. Dragging across the drawing should not leave
+     half a dimension highlighted. */
+  user-select: none;
+}
+
+/*
+ * The setback dimension is the one measurement in the drawing that is an OUTPUT
+ * rather than an input, so it is drawn in the ink of the thing it measures — the
+ * footprint — instead of in the neutral dimension grey. It appears only once every
+ * edge has resolved; a partial set would be the drawing answering a question the
+ * engine has not.
+ */
+.dwg-setback__line,
+.dwg-setback__arrow { stroke: var(--accent); fill: var(--accent); }
+.dwg-setback__text {
+  font-family: var(--font-mono);
+  fill: var(--accent-strong, var(--accent));
+  user-select: none;
+}
+
+/* ==========================================================================
+ * VERTICES AND EDGE TAGS
+ * ======================================================================= */
+
+/* A surveyed corner, drawn as a station rather than as a join. Filled with the
+   sheet ground so the boundary line does not show through it. */
+.dwg-vertex {
+  fill: var(--surface-raised);
+  stroke: var(--text-primary);
+}
+
+/* The tag ties a line in the drawing to a row in the legend. Same numeral, same
+   order, and it is the reason the legend can be the primary control on a phone
+   without the drawing becoming unreadable. */
+.dwg-tag { fill: var(--surface-raised); stroke: var(--border-strong); }
+.dwg-tag__text {
+  font-family: var(--font-mono);
+  fill: var(--text-secondary);
+  user-select: none;
+}
+
+/* ==========================================================================
+ * NORTH, SCALE, TITLE
+ * ======================================================================= */
+
+/*
+ * NORTH IS DRAWN BECAUSE IT IS KNOWN, and it is qualified because of what is
+ * actually known. `packages/core/src/domain.ts` defines an edge bearing as "degrees
+ * clockwise from grid north", so the coordinate frame the kernel works in IS
+ * grid-north-aligned and up is north by construction. What the affection plan does
+ * not give is the difference between grid north and true or magnetic north, so an
+ * unqualified arrow would be claiming a precision the input never carried.
+ *
+ * The qualification is in the scale caption rather than under the arrow, and the
+ * arithmetic that forced it is recorded in `PlotCanvas.tsx` beside the arrow: the
+ * corner the arrow sits in is 0.058 span wide and four mono capitals at the size
+ * the 12px floor demands need 0.094. The choice was between saying it somewhere
+ * legible and saying it under the arrow at 9px, and a caveat nobody can read is
+ * not a caveat.
+ */
+.dwg-north__needle { fill: var(--text-primary); stroke: none; }
+.dwg-north__text {
+  font-family: var(--font-mono);
+  fill: var(--text-secondary);
+  user-select: none;
+}
+
+/* A graphic scale rather than a ratio. "1:500" is true only at one print size and
+   is a lie at every other, and this drawing is looked at in a browser at whatever
+   width the window happens to be. A bar is true at all of them. */
+.dwg-scale__solid { fill: var(--text-primary); stroke: var(--text-primary); }
+.dwg-scale__void { fill: var(--surface-raised); stroke: var(--text-primary); }
+.dwg-scale__text {
+  font-family: var(--font-mono);
+  fill: var(--text-secondary);
+  user-select: none;
+}
+
+.dwg-title__rule { stroke: var(--border-strong); }
+.dwg-title__text {
+  font-family: var(--font-mono);
+  fill: var(--text-secondary);
+  user-select: none;
+}
+/* The one phrase on the sheet that is a refusal rather than a label. It is not
+   amber — see the head of this file — but it is not quiet either. */
+.dwg-title__caveat { font-family: var(--font-mono); fill: var(--text-tertiary); }
+
+/* ==========================================================================
+ * THE LEGEND SWATCH — a line, because the drawing draws lines
+ * ======================================================================= */
+
+/*
+ * WCAG 2.2 §1.4.1: the drawing used to distinguish a road edge from an
+ * unclassified one BY COLOUR ALONE — accent against `--text-tertiary`. Both are
+ * measured and both pass 1.4.11, and neither fact helps a reader who cannot tell
+ * them apart. Each classification now also carries a dash pattern, and the swatch
+ * shows that pattern rather than a solid bar, so the key and the drawing agree.
+ *
+ * A solid `background` on a 12x3 span cannot show a dash, which is why this is an
+ * inline SVG now and not a coloured rectangle.
+ */
+/* Both classes, so this beats `app.css`'s `.plot-legend__swatch` on specificity
+   rather than on import order. Order is a real dependency and an invisible one:
+   this file would silently lose the box size the day someone reordered the imports
+   in `main.tsx`. */
+.plot-legend__swatch.plot-legend__swatch--line {
+  display: block;
+  flex: none;
+  /* A little wider than the old solid bar, because a dash needs room to be a dash:
+     at 12px a "6 2 1 2" pattern shows one dash and half a gap. */
+  inline-size: 18px;
+  block-size: 8px;
+  border-radius: 0;
+}
+
+/* ==========================================================================
+ * NARROW VIEWPORTS
+ * ======================================================================= */
+
+/*
+ * BELOW 40rem THE DIMENSION APPARATUS IS HIDDEN, AND ONLY IT.
+ *
+ * SVG text scales with the viewBox, so a 3.2-unit figure that reads at 14px in a
+ * 568px panel reads at about 7px in a 288px one — under the 12px floor, and under
+ * any floor. The choice is between shrinking it below legibility and removing it.
+ *
+ * Removing it is safe HERE and would not be safe generally: every number in the
+ * dimension set — each edge length, each applied setback — is also a row in the
+ * legend directly beneath the drawing, which is a real control at a real target
+ * size. That is the same argument 2.5.8 "Equivalent" already made in
+ * `PlotCanvas.tsx` for the edge hit lines, applied to the annotation.
+ *
+ * The grid, the boundary, the classification dashes, the north arrow, the scale
+ * bar and the title strip all stay: none of them is text at risk, and they are
+ * what makes the small drawing still read as a drawing.
+ */
+@media (max-width: 40rem) {
+  .dwg-dim,
+  .dwg-setback,
+  .dwg-tag,
+  .dwg-tag__text {
+    display: none;
+  }
+}
+
+/*
+ * Print keeps everything. A drawing on paper is the one place the dimension set is
+ * most wanted, and paper is wide.
+ */
+@media print {
+  .dwg-dim,
+  .dwg-setback,
+  .dwg-tag,
+  .dwg-tag__text {
+    display: initial;
+  }
+}

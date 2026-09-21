@@ -1,0 +1,789 @@
+/*
+ * `/dashboard` — deployment readiness.
+ *
+ * OWNER: the `/dashboard` page agent.  CLASS PREFIX: `.db-`, plus the sole-owned
+ * `.stat*` family below.
+ *
+ * No selector outside those two may be declared here, and no rule in this file may
+ * write a hex value or reach for `var(--uncertain*)` — amber arrives on a page only
+ * through `[data-state="assumed"]`, `.traced--assumed` or `.margin-tally`, which is
+ * what keeps `assertAmberExclusive` stable while six page stylesheets are written in
+ * parallel. Chassis classes come from `site.css`; this file adds nothing structural.
+ *
+ * TWO EXCEPTIONS, DECLARED RATHER THAN DISCOVERED. Section 7 below stands two
+ * sections on `--surface-sunken` and inverts a third onto `--surface-contrast` —
+ * which are `site.css`'s `.section--zoned` and `.section--contrast`, chassis rules
+ * the markup cannot ask for, because this pass owns three stylesheets and no `.tsx`.
+ * Both are written against the section's `aria-labelledby`, both carry the chassis
+ * class alongside so they keep working the day it lands, and the band's selector
+ * names `contrast` on purpose so `assertNoChromeOnBand` scans it. Nothing else here
+ * is a chassis rule in disguise.
+ *
+ * The `.db-` rules are scoped under the page root `.db` so nothing here can reach a
+ * sibling page's markup. The `.stat*` family is deliberately NOT scoped: it keeps the
+ * names it arrived with, it is rendered on no other route, and `landing.css`'s print
+ * block still names `.stat` for `break-inside`. Re-scoping it would have been a
+ * rename in everything but appearance.
+ *
+ * ---
+ *
+ * THE `.stat*` FAMILY WAS MOVED HERE OUT OF `landing.css`, unchanged except for one
+ * deletion. It is Dashboard's, and while it sat in the landing page's stylesheet two
+ * page agents owned one file — which is a merge conflict waiting for the first
+ * parallel edit, and worse, an invitation for a landing-page change to restyle a
+ * readiness tile.
+ *
+ * `.stat--ok` was deleted in transit rather than moved: it painted a readiness tile
+ * in `--derived` on `--derived-surface`, a green tile on the site's most-forwarded
+ * page of numbers, one `className` away from shipping and detectable only by a
+ * string assertion. No figure on this page earns a green bar, and inventing one to
+ * balance the row would be decoration arguing with the data. `'ok'` is now gone from
+ * `Stat`'s state union as well, so the class cannot be reached at all.
+ *
+ * `.stat--partial` HAS NOW BEEN RENAMED WITH ITS EMITTER. It came across still amber
+ * and the foundation recoloured it in place, correctly refusing to rename a selector
+ * whose emitter it did not own — a renamed selector with an unrenamed emitter is a
+ * silent visual regression no gate can see. `Dashboard.tsx` now emits `dormant`, so
+ * the name lands here in the same pass: the tile does not mean "assumed", it means
+ * the rest of the checks had nothing to read, which is NOT ASSESSED, and a class
+ * called `partial` invites the next amber.
+ */
+
+/* ==========================================================================
+ * 1. THE READINESS TILE
+ * ======================================================================= */
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  gap: var(--space-4);
+}
+.stat-row--compact {
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+}
+
+/*
+ * THE TILE IS A RAISED OBJECT, NOT A RECESS, AND THAT IS A DARK-MODE REPAIR AS
+ * MUCH AS A COLOUR ONE.
+ *
+ * It was `--surface-sunken` with a rail and no edge. In light that put a tile one
+ * rung BELOW a page it sits on top of; in dark `--surface-sunken` is #0c0e11
+ * against a #16181d page, so the four readiness figures — the first numbers on the
+ * site's most-forwarded page — read as holes punched through it, held by nothing
+ * but their own left rail. The ladder now lifts: `--surface-raised` is the card
+ * rung, floored in HOUSE_PAIRS at 1.06 light and 1.13 dark so it cannot go flat
+ * again, and the hairline is what makes the rung legible rather than the fill
+ * alone (§2.6 — nothing here is ever carried by a ground on its own).
+ *
+ * The two state tiles keep their own grounds and take the edge in the state's own
+ * border token, so the ground, the edge, the rail and the drawn mark are four
+ * channels saying one thing — and three of the four survive a photocopy.
+ */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: var(--border-width) solid var(--border-default);
+  border-inline-start: var(--rail-w) solid var(--border-strong);
+  background: var(--surface-raised);
+  break-inside: avoid;
+}
+/* The figure. Mono, tabular, and the drawn mark sits on its baseline rather than
+   above the label — the mark belongs to the NUMBER, because it is the number whose
+   state is in question. */
+.stat__value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-xl);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+.stat__mark {
+  flex: none;
+  color: var(--state, var(--text-secondary));
+}
+.stat__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.stat__note {
+  margin-block-start: var(--space-1);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-fine);
+  text-wrap: pretty;
+}
+
+/*
+  `blocked` is red because it is: nothing here may be relied upon while it holds.
+
+  There is deliberately no `--ok`, no `--good` and no `--met`. A figure that has
+  reached its total falls to `--plain`, which is the neutral rail — a readiness
+  count that has been met is stated, not celebrated, and a green tile on this page
+  would be read before the count beside it.
+*/
+.stat--blocked {
+  --state: var(--variance);
+  /* The shorthand first, the rail second: `border-color` resets all four sides,
+     so the order is what keeps the rail its own ink rather than the edge's. */
+  border-color: var(--variance-border);
+  border-inline-start-color: var(--variance);
+  background: var(--variance-surface);
+}
+/*
+  DORMANT, and this is the R6 ruling rather than a preference.
+
+  This tile is emitted for the invariants count. It does not mean "assumed" —
+  nothing on this page is an assumed value. It means the rest of the checks had
+  nothing to read, which is NOT ASSESSED. Making `/dashboard` public shipped this
+  tile as a READINESS STATUS on the site's most-forwarded page of numbers, and amber
+  on a readiness status is the one thing the amber rule forbids.
+
+  So it takes the deferred pair, and it carries the hollow ring in the markup — the
+  one mark in the set with nothing inside it, because the state IS an absence.
+*/
+.stat--dormant {
+  --state: var(--deferred);
+  /* `--deferred-surface` is a 1.01:1 ground against the page in light — it is a
+     tint, not a lift, and it never carried this tile on its own. The dashed
+     control edge is the cue that does: it is the same dashed boundary
+     `.not-assessed` uses, at 1.4.11's 3:1 on every ground, and it reads on a
+     photocopy where the tint has gone. */
+  border-color: var(--border-control);
+  border-style: dashed;
+  border-inline-start-style: solid;
+  border-inline-start-color: var(--deferred);
+  background: var(--deferred-surface);
+}
+.stat--plain {
+  --state: var(--border-strong);
+  border-inline-start-color: var(--border-strong);
+}
+
+/* 40rem. The row collapses to one column rather than shrinking: three 15rem tracks
+   inside a 288px column is three tiles nobody can read, and `auto-fit` alone will
+   keep trying. */
+@media (max-width: 40rem) {
+  .stat-row,
+  .stat-row--compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ==========================================================================
+ * 2. THE PAGE
+ * ======================================================================= */
+
+/*
+ * An identifier — a rule id, a parameter id, a clause, a version. Mono at the
+ * surrounding size, never a code block, and it wraps: `R-EGRESS-TRAVEL-DISTANCE`
+ * beside a chip in a 288px column is exactly where this page would push the
+ * document sideways.
+ *
+ * IT IS DECLARED HERE AND IT SHOULD NOT BE. `content/shared.tsx` emits
+ * `<code className="ident">` in two paragraphs that render on this route, on
+ * `/parking` and on `/refusals`, and no stylesheet defines it — so the class is a
+ * shared contract with no owner. Scoping it under `.db` fixes this page without
+ * claiming the others; the honest fix is one rule in `site.css`, which this pass
+ * does not own. Recorded rather than quietly generalised.
+ */
+.db .ident,
+.db code.ident {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  letter-spacing: var(--tracking-normal);
+  overflow-wrap: anywhere;
+}
+
+/* The dateline. It is the first thing on the page after the title, and it is set
+   quiet: it says where the numbers came from, which is a provenance note rather
+   than a claim. */
+.db-dateline {
+  margin-block: var(--space-3) var(--rhythm-block);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-fine);
+  text-wrap: pretty;
+}
+.db-ver {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+  letter-spacing: var(--tracking-normal);
+  overflow-wrap: anywhere;
+}
+
+/* The blocking callout carries the section rhythm below it rather than a margin of
+   its own: the chassis rule is that placement owns inset and a component never does,
+   so the inset lives on this wrapper and not on `.callout`. */
+.db-blocking {
+  margin-block-end: var(--space-2);
+}
+
+/* A section lede. `.section__head h2` is styled by the chassis; the paragraph under
+   it is not, because the chassis leaves lede width to the page that knows its
+   measure. */
+.db-lede {
+  margin-block-start: var(--space-4);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-prose);
+  text-wrap: pretty;
+}
+.db-subhead {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+}
+.db-fine,
+.db-note {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-fine);
+  text-wrap: pretty;
+}
+/* The serialiser note sits under the table it qualifies, on the datum rule, because
+   a caveat set loose beneath a table reads as a footnote and a footnote is where a
+   reader stops looking. */
+.db-note {
+  padding-block-start: var(--space-4);
+  border-block-start: var(--border-width) solid var(--border-strong);
+}
+
+/* ==========================================================================
+ * 3. WHAT WOULD CHANGE THESE NUMBERS
+ * ======================================================================= */
+
+/* A list, laid out on the chassis feature grid. `list-style: none` on an `<ol>`
+   removes the list semantics in Safari's VoiceOver, so the count is restored with
+   `role="list"`… which would be a markup change. It is not made: these are three
+   plates with headings, and the heading level is what a reader navigates by here,
+   not the list marker. The `<ol>` is kept because the order is the order of the
+   tiles above it. */
+.db .db-plan {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+/* The owner label. Uppercase mono micro-label, one tracking token, `--text-tertiary`
+   — the eyebrow's register without the eyebrow's hairline, because the plate's own
+   ink cap already draws the horizontal. */
+.db-owner {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+}
+/* A plate in this grid is read top to bottom in one movement, so the internal gap
+   closes between the owner and the title it belongs to. */
+.db .db-plan > .plate {
+  gap: var(--space-2);
+}
+
+/* ==========================================================================
+ * 4. THE GOVERNING-BAND SPLIT
+ * ======================================================================= */
+
+/*
+ * Label, magnitude, count. The bars are NEUTRAL — the chassis meter's default fill,
+ * `--border-strong` — and that is a ruling rather than a shortage of colour: the
+ * meter has a `binding` state in the interactive blue, and painting the governing
+ * band with it would assert in colour which limit governs. No page may make that
+ * claim in anything but a value read from the data, because a rule edit that made a
+ * different band bind would leave a coloured bar false with every gate still green.
+ */
+.db-split {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.db-split__row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+}
+.db-split__label {
+  font-weight: var(--weight-medium);
+}
+.db-split__count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+  white-space: nowrap;
+}
+
+/* 40rem. The label goes above its own bar rather than fighting it for a 288px
+   column. The count stays on the label's line, where the two figures a reader is
+   comparing sit side by side. */
+@media (max-width: 40rem) {
+  .db-split__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2) var(--space-3);
+  }
+  .db-split__label {
+    grid-column: 1;
+  }
+  .db-split__count {
+    grid-column: 2;
+  }
+  .db-split__row > .meter {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ==========================================================================
+ * 5. THE EXPOSURE COLUMN
+ * ======================================================================= */
+
+/*
+ * The figure is ALWAYS printed as text beside the bar, so the graphic is redundant
+ * rather than load-bearing and the `aria-hidden` on the meter costs a reader
+ * nothing. Where the payload carries no figure, the text is an em dash and the bar
+ * is absent — an empty track would read as a measured zero, which is the exact
+ * conflation this column was corrected for.
+ */
+.db-swing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-hair);
+}
+.db-swing__figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+  white-space: nowrap;
+}
+.db-swing__bar {
+  inline-size: 6rem;
+  max-inline-size: 100%;
+}
+
+/*
+ * The parameter column, and it needs a floor rather than the schedule's default.
+ *
+ * `.schedule th:not(.schedule__fill):not(.schedule__rank)` sets `inline-size: 1%`,
+ * which shrink-wraps a column to its MIN-CONTENT — and `overflow-wrap: anywhere` on
+ * an identifier makes that one character wide. `parking.usable_fraction` came out
+ * broken across four lines beside a basis column with room to spare.
+ *
+ * The floor is a length rather than `ch`: `ch` on this cell resolves against the
+ * SANS the cell inherits, while what has to fit is set in the mono one rung down,
+ * so the two units would disagree by about a fifth and the column would be tuned
+ * against the wrong face. The wrap stays as the fallback for anything longer, and
+ * the floor is dropped below the fold where the record is a stack rather than a
+ * table.
+ *
+ * THE FLOOR WAS 12rem AND THE ARITHMETIC BEHIND IT WAS WRONG. It read "12rem holds
+ * a twenty-five-character identifier", which forgot the cell's own 16px of inline
+ * padding on each side: 192 − 32 leaves 160px of content, and the mono advance at
+ * `--text-sm` is about 8.4px, so the column held nineteen characters and broke
+ * `parking.usable_fraction` after "fract". Twenty-five characters need 210px of
+ * content and 242px of column, so the floor is 15.5rem — measured against the same
+ * face rather than restated.
+ */
+.db .db-param {
+  inline-size: auto;
+  min-inline-size: 15.5rem;
+}
+/* The identifier and its state, as one grid item. `.chip`'s own leading margin is
+   cancelled here because the row supplies a real gap — the same correction the
+   deferred list makes, for the same reason. */
+.db-param__id {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+.db-param__id > .chip {
+  margin-inline-start: 0;
+}
+
+/* Below the fold the schedule becomes a stack of records, so the cell is a labelled
+   row and the figure belongs at the start of it with everything else. */
+@media (max-width: 40rem) {
+  .db-swing {
+    align-items: flex-start;
+  }
+  .db-swing__bar {
+    inline-size: 100%;
+  }
+  /* The stacked record is a two-track grid whose first track is the re-emitted
+     header, so a minimum meant for a table column would push the label out of it. */
+  .db .db-param {
+    min-inline-size: 0;
+  }
+
+  /*
+   * A CHASSIS DEFECT, CORRECTED HERE UNDER THIS PAGE'S ROOT AND REPORTED RATHER
+   * THAN FIXED IN PLACE — `site.css` is not this pass's to edit.
+   *
+   * The stacked-schedule block sets `.schedule tbody th, .schedule td {
+   * inline-size: 100% }` at (0,1,2), and the wide-table rule
+   * `.schedule th:not(.schedule__fill):not(.schedule__rank) { inline-size: 1% }`
+   * at (0,2,1) outranks it and is never switched off below the fold. So every
+   * cell that is neither the fill nor the rank computes to 1% of the record — 3.6px
+   * at 390 — and its two-track grid resolves to `0px 0px`. Measured: the re-emitted
+   * label and the value are painted over each other, and a parameter identifier
+   * breaks one character to a line.
+   *
+   * Nothing caught it because no page had rendered a `.schedule` below 40rem before
+   * this one: `documentElement.scrollWidth` is unchanged (the cells are too NARROW,
+   * not too wide), so the 320px gate passes over a table nobody can read.
+   *
+   * The chassis fix is one selector — move the 1% rule inside a `min-width: 40rem`
+   * query, where it was always meant to live. Until that lands, this restores the
+   * intended width for this page's tables only.
+   *
+   * IT MIRRORS THE CHASSIS SELECTOR RATHER THAN SIMPLIFYING IT, and that is the
+   * point: `:not()` takes the specificity of its argument, so the rule being
+   * corrected is (0,3,1) — two classes inside the negations and one outside — and a
+   * clean `.db .schedule tbody th` at (0,2,2) loses to it silently. Carrying the
+   * same negations forward puts this at (0,4,2), which wins on specificity rather
+   * than on the order two stylesheets happen to load in.
+   */
+  .db .schedule tbody th:not(.schedule__fill):not(.schedule__rank),
+  .db .schedule tbody td:not(.schedule__fill):not(.schedule__rank) {
+    inline-size: 100%;
+  }
+}
+
+/* ==========================================================================
+ * 6. THE DEFERRED RULE LIST
+ * ======================================================================= */
+
+/*
+ * A ruled list rather than a table: each record is an identifier, its chips and one
+ * line of provenance, and a four-column table of two-word cells is a table pretending
+ * to have columns.
+ */
+.db-rules {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.db-rule {
+  padding-block: var(--space-4);
+  border-block-start: var(--border-width) solid var(--border-subtle);
+  break-inside: avoid;
+}
+.db-rule:last-child {
+  border-block-end: var(--border-width) solid var(--border-subtle);
+}
+/* Wrapping is the whole point of this rule. R9 puts the `draft · not sourced` chip
+   in the same eyeful as the identifier, which means three chips beside a
+   twenty-four-character id — and at 320px that is where this page would push the
+   document sideways if the row refused to wrap. */
+.db-rule__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+/* `.chip` sets its own leading margin for the engine's INLINE call sites, where it
+   follows a value in running text and the margin is the only space it gets. In a
+   flex row with a real gap that same margin is a second gap, so it is cancelled
+   here and nowhere else — the chips inside the schedule cells are inline, keep the
+   margin, and would collide with the identifier beside them without it. */
+.db-rule__head > .chip {
+  margin-inline-start: 0;
+}
+.db-rule__meta {
+  display: block;
+  margin-block-start: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================================================
+ * 7. CHAPTERS — the page in light and shade
+ * ======================================================================= */
+
+/*
+ * The page was one continuous ground from the masthead to the colophon, broken by
+ * nothing but six identical hairlines, and that is the literal content of the
+ * client's sentence. §5.1 gives this language exactly three honest ways to break a
+ * page — a datum rule, a CHANGE OF GROUND, and an INVERSION — and only the first was
+ * being spent. None of the three costs a hue, which is the whole reason this product
+ * can afford them: `--uncertain-surface` has to stay the loudest thing on every
+ * surface it appears on, and a neutral ground competes with it for nothing.
+ *
+ * WHY THESE SECTIONS AND NOT AN ALTERNATION. The tier is assigned by argument, the
+ * way `.section--major` is:
+ *
+ *   02 "What would change these numbers"  — the ACTION half of the page. It is the
+ *      only section that is about people rather than counts, and its three plates
+ *      read as objects on a zoned ground instead of as outlines on the page.
+ *   04 "Where the answers are least anchored" — the page's one large TABLE. The
+ *      brief for this pass says a table should sit on a ground that frames it
+ *      rather than float on the page, and a zoned section is that ground; it needs
+ *      no second frame of its own.
+ *   06 "No score, and nothing here monitors availability" — the page's REFUSAL, and
+ *      the section a reader must not skim. Set in reverse.
+ *
+ * 01, 03 and 05 stay on the page ground. That gives base / zoned / base / zoned /
+ * base / BAND, and the last of those intervals is the one being bought: in dark the
+ * page is #16181d, a zoned section is #0c0e11 and the band is #010204, so a band
+ * placed directly after a zoned section separates from it by 1.1:1 and the strongest
+ * device in the language arrives as a slightly darker rectangle. It lands on the
+ * page ground instead, where it is a real inversion in both themes.
+ *
+ * THE GROUND BLEEDS AND THE COLUMN DOES NOT. Every section on this site carries
+ * `.shell`, so a background painted on one stops at 78rem and reads as a very wide
+ * card. `max-inline-size: none` plus a padding that reconstructs the same column is
+ * the same geometry `.shell` produces — the percentage resolves against `<main>`,
+ * which is full width — with the ground running edge to edge behind it. It is
+ * written with `max()` and a PERCENTAGE rather than `100vw`, deliberately: `vw`
+ * includes the classic scrollbar, and a `calc(50% - 50vw)` bleed is the single most
+ * common way a page acquires a horizontal scrollbar at 320px, which is where every
+ * accessibility defect in this repository has been found.
+ *
+ * ONE CONSEQUENCE, RECORDED RATHER THAN DISCOVERED: `.section`'s datum rule is a
+ * `border-block-start` on the section itself, so on a bled section it bleeds too —
+ * the three chapters below open on a full-width horizon while the three that keep
+ * the page ground open on a column-width one. That is the right way round rather
+ * than an artefact: the rule marks the top edge of the ground it opens, and §5.1
+ * asks for the ground to be used ALONGSIDE the datum rather than instead of it.
+ *
+ * THE HONEST FIX IS ONE `className`. These sections want `.section--zoned` and
+ * `.section--contrast`, which `site.css` already owns and already measures; they are
+ * selected by their `aria-labelledby` here because this pass owns three stylesheets
+ * and no markup. `.db > .section--contrast` is carried in the band's own selector so
+ * that (a) the rule keeps working the moment the class lands, and (b)
+ * `assertNoChromeOnBand` — which scans by SELECTOR TEXT for `contrast` — scans this
+ * rule today rather than a year after somebody puts an accent on the band.
+ */
+.db > .section[aria-labelledby='db-change'],
+.db > .section[aria-labelledby='db-exposure'],
+.db > .section--contrast,
+.db > .section[aria-labelledby='db-no-score'] {
+  max-inline-size: none;
+  padding-inline: max(
+    var(--page-gutter),
+    calc(50% - var(--page-max) / 2 + var(--page-gutter))
+  );
+}
+
+.db > .section[aria-labelledby='db-change'],
+.db > .section[aria-labelledby='db-exposure'] {
+  background: var(--surface-sunken);
+}
+
+/*
+ * The response vocabulary re-points itself on a zoned ground — a hover that moves
+ * TOWARDS `--surface-base` is a lift rather than a press once the rest is one rung
+ * down — and `site.css` keys that override off `.section--zoned`, which this markup
+ * does not carry yet. The schedule's row highlight is the one consumer on this page,
+ * and it is a READING AID rather than an affordance, so it is re-pointed by hand
+ * here for as long as the class is missing: `--surface-inset` on `--surface-sunken`
+ * is 1.05:1 in light, which is a highlight nobody can see.
+ */
+@media (hover: hover) {
+  .db > .section[aria-labelledby='db-exposure'] .schedule tbody tr:not([data-state]):hover > * {
+    background-color: var(--surface-raised);
+  }
+}
+
+/*
+ * THE INVERTED BAND, and it REBINDS the semantic tokens rather than restating every
+ * ink. `site.css` makes that argument in full: a band that carries its colours by
+ * enumeration acquires a wrong one the first time somebody puts something new inside
+ * it, and rebinding makes the three measured on-band pairs the pairs actually
+ * painted rather than the pairs somebody remembered to declare. This is that block,
+ * scoped, and it is a duplicate that should be deleted the moment `db-no-score` can
+ * say `.section--contrast` for itself.
+ *
+ * On paper it inverts back with no print rule of its own: `--surface-contrast` is
+ * white in the print theme and `--text-on-contrast` is black, because a full-bleed
+ * black band costs a page of toner and photocopies to mud. The two 2px rules are
+ * then the only thing left saying a band was ever here, which is why they are drawn
+ * in a token instead of being left to the ground.
+ */
+.db > .section--contrast,
+.db > .section[aria-labelledby='db-no-score'] {
+  --surface-base: var(--surface-contrast);
+  --surface-raised: var(--surface-contrast);
+  --surface-sunken: var(--surface-contrast);
+  --bleed-ground: var(--surface-contrast);
+  --text-primary: var(--text-on-contrast);
+  --text-secondary: var(--text-on-contrast-dim);
+  --text-tertiary: var(--text-on-contrast-dim);
+  --border-subtle: var(--border-on-contrast);
+  --border-default: var(--border-on-contrast);
+  --border-control: var(--border-on-contrast);
+  --border-strong: var(--border-on-contrast);
+  background: var(--surface-contrast);
+  color: var(--text-on-contrast);
+  border-block: var(--border-width-emphasis) solid var(--border-on-contrast);
+}
+
+/*
+ * The control family is `app.css`'s and is not redefined here — what IS redefined is
+ * the one thing that file cannot know, which is that this control is standing on the
+ * tenth surface. `.button` rests on `--surface-raised` and hovers to
+ * `--surface-inset`, and `--surface-inset` is deliberately NOT rebound above (the
+ * chassis band does not rebind it either): rebinding it would make a meter track and
+ * a chip vanish on any band that ever carries one, in order to fix a button. So the
+ * button is answered directly, the way `.lp-status-band` answers its own.
+ *
+ * The hover and the press are washes of the band's own ink rather than second ground
+ * tokens, so nothing here can paint a colour the band is not measured for.
+ */
+.db > .section--contrast .button,
+.db > .section[aria-labelledby='db-no-score'] .button {
+  background: transparent;
+  color: var(--text-on-contrast);
+  border-color: var(--border-on-contrast);
+}
+.db > .section--contrast .button:hover:not(:disabled),
+.db > .section[aria-labelledby='db-no-score'] .button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-on-contrast) 12%, transparent);
+  border-color: var(--text-on-contrast);
+}
+/* THE PRESS IS NOT INSIDE A MOTION GUARD. A press has to be acknowledged whether or
+   not the reader asked for reduced motion, and on touch — where `:hover` is absent
+   or sticky — it is the only acknowledgement a tap gets before the route changes.
+   Only the interpolation between the two grounds is guarded, and `app.css` guards
+   it. Down two washes rather than up one: a press is deeper than a hover, which is
+   the whole of what makes a control feel attached to a finger. */
+.db > .section--contrast .button:active:not(:disabled),
+.db > .section[aria-labelledby='db-no-score'] .button:active:not(:disabled) {
+  background: color-mix(in srgb, var(--text-on-contrast) 22%, transparent);
+  border-color: var(--text-on-contrast);
+}
+/* The global focus ring is `--accent-focus`, which is chrome, and §3.3 keeps chrome
+   off this surface. An outline composites correctly over any ground and needs no
+   knowledge of what it sits on, so this is a colour swap and not a second ring. */
+.db > .section--contrast :focus-visible,
+.db > .section[aria-labelledby='db-no-score'] :focus-visible {
+  outline: var(--focus-width) solid var(--text-on-contrast);
+  outline-offset: var(--focus-offset);
+}
+
+/*
+ * The opening. `.section--opening` drops its top rule and keeps the section's 96px
+ * BOTTOM, so the page began with a title, then a screen-third of nothing, then the
+ * sentence that says whether these numbers are live. The interval that belongs
+ * between a title and its dateline is the block interval, not the one that separates
+ * two arguments.
+ */
+.db > .section--opening {
+  padding-block-end: var(--rhythm-block);
+}
+
+/* ==========================================================================
+ * 8. THE SCHEDULE'S EDGES, AND THE MOTION
+ * ======================================================================= */
+
+/*
+ * A TABLE NEEDS A TOP AND A BOTTOM. The chassis gives a schedule an ink rule under
+ * its header and hairlines between its rows, then explicitly removes the rule under
+ * the last one — so a table dissolved into the page at the bottom and had no edge at
+ * all on the side a reader leaves it from. The terminator is the same 2px
+ * `--border-strong` the header carries and the same one `tfoot` already draws when a
+ * table has one; neither table on this page does.
+ *
+ * And the header band is a GROUND rather than a heavier rule, because the rule is
+ * already spent: `--surface-inset` is the fourth rung of the ladder, 1.18:1 against
+ * the page in light and 1.40:1 in dark, measured on all nine grounds in three
+ * themes, and on paper it is a 7% tint a laser dithers without banding. It runs
+ * flush to the rail at both ends, like the cells it heads.
+ */
+.db .schedule thead th {
+  background: var(--surface-inset);
+}
+/* A control is not a link, however it is marked up. `app.css` does not reset the UA
+   underline on `.button` because every button it styles is a `<button>`; the two on
+   this page are `<a>`s, because middle-click and "copy link address" have to work on
+   them. `.nav` and `antechamber.css` each answer this for their own context, and
+   this is the third — the honest fix is one rule in the file that owns the family. */
+.db a.button {
+  text-decoration: none;
+}
+/* ON THE ROW, NOT ON ITS CELLS, and the difference is a real defect rather than a
+   preference. Below 40rem a schedule becomes a stack of records and every cell
+   becomes a block, so a terminator written as `tr:last-child > *` draws a 2px rule
+   under each of the six cells of the last record instead of one under the record.
+   On the row it is one rule at both widths — and in the collapsed border model the
+   wider border wins, so it also beats the chassis's `> * { border-block-end: none }`
+   on the wide layout without having to restate that selector. */
+.db .schedule tbody tr:last-child {
+  border-block-end: var(--border-width-emphasis) solid var(--border-strong);
+}
+
+/*
+ * MOTION, AND WHAT IT IS FOR.
+ *
+ * This page had none: zero reveals and zero animations of any kind, against fourteen
+ * on the landing page — on the second-most-linked page in the colophon. What it gets
+ * is the chassis reveal and nothing invented. `settle` is `site.css`'s own keyframe,
+ * it moves 12px of TRANSFORM and touches no opacity, and it is declared inside the
+ * same `prefers-reduced-motion: no-preference` block the keyframe itself is declared
+ * in — so under `reduce` the rule and the animation it names both simply do not
+ * exist. The base state is the final state, so there is nothing to override on paper
+ * either, and `site.css`'s print block locks animation off a second time regardless.
+ *
+ * IT IS APPLIED TO ROWS AND TILES, NEVER TO A SECTION. `animation-range: entry` on an
+ * element taller than the viewport does not complete until the reader has scrolled
+ * past the whole of it, so a 12px rise on a 1,200px section is an element displaced
+ * for a thousand pixels of scrolling and imperceptible for every one of them. A 200px
+ * tile settles inside its own first screen.
+ *
+ * NO STAGGER. `animation-delay` is ignored on a `view()` timeline, so a stagger here
+ * would have to be an `animation-range` offset bound to `:nth-child` — and `site.css`
+ * records why a stagger bound to DOM POSITION is refused: it silently re-times the
+ * whole row the moment somebody inserts an element. Three tiles rising together is
+ * the honest reading of three tiles that entered together.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .db .stat,
+    .db .db-plan > .plate,
+    .db .db-rule,
+    .db .db-split__row {
+      animation: settle linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 65%;
+    }
+  }
+}
+
+/* ==========================================================================
+ * 9. PRINT
+ * ======================================================================= */
+
+/*
+ * This page gets printed and taken into meetings, which is the reason the readiness
+ * tiles carry a drawn mark as well as a ground: on a photocopy the ground is the
+ * first channel to go, and the mark is the one that survives. Nothing is hidden on
+ * paper except the exit, which is not a link a reader can follow off a page.
+ */
+@media print {
+  .db .cta {
+    display: none;
+  }
+  .db .section {
+    padding-block: var(--space-5) var(--space-4);
+  }
+  .db-rule,
+  .db-split__row {
+    break-inside: avoid;
+  }
+}

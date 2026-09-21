@@ -1,0 +1,40 @@
+{
+  "name": "envelope",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.tests.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "boundaries": "node scripts/check-boundaries.mjs",
+    "contrast": "node scripts/contrast.mjs",
+    "check": "pnpm boundaries && pnpm contrast && pnpm typecheck && pnpm test && pnpm example",
+    "smoke": "node scripts/smoke.mjs",
+    "shots": "node scripts/shoot.mjs",
+    "dev": "pnpm build && pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:engine": "tsc -b --watch --preserveWatchOutput",
+    "start": "node apps/api/dist/server.js",
+    "example": "node scripts/verify-worked-example.mjs && node scripts/verify-readiness.mjs",
+    "amber": "node scripts/amber.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

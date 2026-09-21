@@ -1,0 +1,8357 @@
+[
+ {
+  "level": 1,
+  "title": "Contents",
+  "page": 2
+ },
+ {
+  "level": 1,
+  "title": "Part A General",
+  "page": 3
+ },
+ {
+  "level": 2,
+  "title": "A.1\tIntroduction",
+  "page": 4
+ },
+ {
+  "level": 2,
+  "title": "A.2\tDefinitions",
+  "page": 5
+ },
+ {
+  "level": 3,
+  "title": "A.2.1\tTerms",
+  "page": 5
+ },
+ {
+  "level": 2,
+  "title": "A.3\tReferences",
+  "page": 7
+ },
+ {
+  "level": 3,
+  "title": "A.3.1\tAcronyms and abbreviations",
+  "page": 8
+ },
+ {
+  "level": 3,
+  "title": "A.3.2\tVerbal forms used within the DBC",
+  "page": 8
+ },
+ {
+  "level": 2,
+  "title": "A.4\tRelationship of DBC to other local and international regulations",
+  "page": 9
+ },
+ {
+  "level": 3,
+  "title": "A.4.1\tLocal regulations",
+  "page": 9
+ },
+ {
+  "level": 3,
+  "title": "A.4.2\tInternational codes and standards",
+  "page": 9
+ },
+ {
+  "level": 3,
+  "title": "A.4.3\tHierarchy of codes and standards",
+  "page": 10
+ },
+ {
+  "level": 3,
+  "title": "A.4.4\tSafe by design",
+  "page": 10
+ },
+ {
+  "level": 2,
+  "title": "A.5\tScope and application of the DBC",
+  "page": 11
+ },
+ {
+  "level": 3,
+  "title": "A.5.1\tGeneral",
+  "page": 11
+ },
+ {
+  "level": 3,
+  "title": "A.5.2\tFloor area and building height definitions in DBC",
+  "page": 12
+ },
+ {
+  "level": 4,
+  "title": "A.5.2.1\tGross floor area (GFA)",
+  "page": 12
+ },
+ {
+  "level": 4,
+  "title": "A.5.2.2\tBuilt-up area ",
+  "page": 14
+ },
+ {
+  "level": 4,
+  "title": "A.5.2.3\tGross area and net area",
+  "page": 15
+ },
+ {
+  "level": 4,
+  "title": "A.5.2.4\tBuilding height",
+  "page": 15
+ },
+ {
+  "level": 2,
+  "title": "A.6\tNavigating the DBC",
+  "page": 16
+ },
+ {
+  "level": 3,
+  "title": "A.6.1\tDivision into Parts",
+  "page": 16
+ },
+ {
+  "level": 3,
+  "title": "A.6.2\tPerformance statements",
+  "page": 17
+ },
+ {
+  "level": 3,
+  "title": "A.6.3\tReferences",
+  "page": 17
+ },
+ {
+  "level": 3,
+  "title": "A.6.4\tDefinitions",
+  "page": 17
+ },
+ {
+  "level": 3,
+  "title": "A.6.5\tAnnexes",
+  "page": 17
+ },
+ {
+  "level": 2,
+  "title": "A.7\tAdoption of DBC",
+  "page": 18
+ },
+ {
+  "level": 2,
+  "title": "A.8\tAlternative solutions",
+  "page": 18
+ },
+ {
+  "level": 2,
+  "title": "A.9\tMaintenance of DBC",
+  "page": 19
+ },
+ {
+  "level": 3,
+  "title": "A.9.1\tGeneral",
+  "page": 19
+ },
+ {
+  "level": 3,
+  "title": "A.9.2\tLatest changes to DBC",
+  "page": 19
+ },
+ {
+  "level": 2,
+  "title": "A.10\tCopyright",
+  "page": 19
+ },
+ {
+  "level": 2,
+  "title": "A.11\tCoordinate system",
+  "page": 19
+ },
+ {
+  "level": 2,
+  "title": "A.12\tDimensions, units and calculations",
+  "page": 20
+ },
+ {
+  "level": 3,
+  "title": "A.12.1\tDimensions",
+  "page": 20
+ },
+ {
+  "level": 3,
+  "title": "A.12.2\tUnits",
+  "page": 20
+ },
+ {
+  "level": 3,
+  "title": "A.12.3\tCalculations",
+  "page": 20
+ },
+ {
+  "level": 1,
+  "title": "Part B Architecture",
+  "page": 21
+ },
+ {
+  "level": 2,
+  "title": "B.1\tPerformance statements",
+  "page": 22
+ },
+ {
+  "level": 2,
+  "title": "B.2\tDefinitions",
+  "page": 23
+ },
+ {
+  "level": 3,
+  "title": "B.2.1\tTerms",
+  "page": 23
+ },
+ {
+  "level": 3,
+  "title": "B.2.2\tAcronyms and abbreviations",
+  "page": 33
+ },
+ {
+  "level": 2,
+  "title": "B.3\tReferences",
+  "page": 34
+ },
+ {
+  "level": 3,
+  "title": "B.3.1\tEssential references",
+  "page": 34
+ },
+ {
+  "level": 3,
+  "title": "B.3.2\tFurther reading",
+  "page": 37
+ },
+ {
+  "level": 2,
+  "title": "B.4\tGeneral architectural provisions",
+  "page": 38
+ },
+ {
+  "level": 3,
+  "title": "B.4.1\tGeneral requirements",
+  "page": 38
+ },
+ {
+  "level": 3,
+  "title": "B.4.2\tDevelopment limitation",
+  "page": 38
+ },
+ {
+  "level": 4,
+  "title": "B.4.2.1\tGate level",
+  "page": 38
+ },
+ {
+  "level": 4,
+  "title": "B.4.2.2\tBuilding height",
+  "page": 39
+ },
+ {
+  "level": 4,
+  "title": "B.4.2.3\tBuilding setbacks ",
+  "page": 41
+ },
+ {
+  "level": 4,
+  "title": "B.4.2.4\tBuilding areas ",
+  "page": 45
+ },
+ {
+  "level": 5,
+  "title": "B.4.2.4.1 \tGross area (GA)",
+  "page": 45
+ },
+ {
+  "level": 5,
+  "title": "B.4.2.4.2 \tNet area (NA)",
+  "page": 46
+ },
+ {
+  "level": 4,
+  "title": "B.4.2.5\tBalconies, building projections and terraces",
+  "page": 47
+ },
+ {
+  "level": 5,
+  "title": "B.4.2.5.1 \tLimitations",
+  "page": 47
+ },
+ {
+  "level": 5,
+  "title": "B.4.2.5.2 \tGuardrails for fall protection",
+  "page": 49
+ },
+ {
+  "level": 5,
+  "title": "B.4.2.5.3 \tAccess doors",
+  "page": 51
+ },
+ {
+  "level": 4,
+  "title": "B.4.2.6\tPlot coverage",
+  "page": 51
+ },
+ {
+  "level": 3,
+  "title": "B.4.3\tBuilding floors general requirements",
+  "page": 52
+ },
+ {
+  "level": 4,
+  "title": "B.4.3.1\tGround floor",
+  "page": 52
+ },
+ {
+  "level": 4,
+  "title": "B.4.3.2\tBasements",
+  "page": 53
+ },
+ {
+  "level": 4,
+  "title": "B.4.3.3\tPodium",
+  "page": 53
+ },
+ {
+  "level": 4,
+  "title": "B.4.3.4\tRoof ",
+  "page": 54
+ },
+ {
+  "level": 2,
+  "title": "B.5\tMinimum space requirements",
+  "page": 55
+ },
+ {
+  "level": 3,
+  "title": "B.5.1\tOccupant loads",
+  "page": 55
+ },
+ {
+  "level": 3,
+  "title": "B.5.2\tMinimum room sizes",
+  "page": 57
+ },
+ {
+  "level": 3,
+  "title": "B.5.3\tMinimum clear heights",
+  "page": 58
+ },
+ {
+  "level": 2,
+  "title": "B.6\tCirculation requirements and openings",
+  "page": 60
+ },
+ {
+  "level": 3,
+  "title": "B.6.1\tWalking surfaces ",
+  "page": 60
+ },
+ {
+  "level": 3,
+  "title": "B.6.2\tCorridors",
+  "page": 60
+ },
+ {
+  "level": 4,
+  "title": "B.6.2.1\tMinimum clear widths",
+  "page": 60
+ },
+ {
+  "level": 4,
+  "title": "B.6.2.2\tFire resistance rating",
+  "page": 62
+ },
+ {
+  "level": 4,
+  "title": "B.6.2.3\tKiosks in mall pedestrian ways",
+  "page": 62
+ },
+ {
+  "level": 3,
+  "title": "B.6.3\tElevator lobbies",
+  "page": 62
+ },
+ {
+  "level": 3,
+  "title": "B.6.4\tVertical circulation in buildings ",
+  "page": 63
+ },
+ {
+  "level": 4,
+  "title": "B.6.4.1\tStairways",
+  "page": 63
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.1 \tGeneral",
+  "page": 63
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.2 \tExit staircase construction",
+  "page": 63
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.3\tStairway width",
+  "page": 63
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.4 \tStair risers and treads",
+  "page": 64
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.5 \tLandings",
+  "page": 65
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.6 \tRegular use and external stairs",
+  "page": 66
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.7 \tHandrails",
+  "page": 67
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.8 \tGuardrails",
+  "page": 68
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.10\tExterior stairways",
+  "page": 69
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.11\tScissor or interlocking stairs",
+  "page": 69
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.12\tWinders, spiral or curved stairs",
+  "page": 70
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.13\tEquipment access",
+  "page": 71
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.14\tSurfaces and floor markings",
+  "page": 71
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.15\tMinimum headroom",
+  "page": 71
+ },
+ {
+  "level": 5,
+  "title": "B.6.4.1.16\tExamples of compliant stair arrangements",
+  "page": 72
+ },
+ {
+  "level": 4,
+  "title": "B.6.4.2\tRamps",
+  "page": 72
+ },
+ {
+  "level": 4,
+  "title": "B.6.4.3\tElevators ",
+  "page": 72
+ },
+ {
+  "level": 3,
+  "title": "B.6.5\tBuilding openings ",
+  "page": 73
+ },
+ {
+  "level": 4,
+  "title": "B.6.5.1\tDoors ",
+  "page": 73
+ },
+ {
+  "level": 4,
+  "title": "B.6.5.2\tWindows and daylighting",
+  "page": 74
+ },
+ {
+  "level": 5,
+  "title": "B.6.5.2.1 \tMinimum area of windows",
+  "page": 74
+ },
+ {
+  "level": 5,
+  "title": "B.6.5.2.2 \tDaylighting ",
+  "page": 75
+ },
+ {
+  "level": 5,
+  "title": "B.6.5.2.3 \tAccess to views",
+  "page": 75
+ },
+ {
+  "level": 5,
+  "title": "B.6.5.2.4 \tSafety of windows",
+  "page": 75
+ },
+ {
+  "level": 3,
+  "title": "B.6.6\tOpenings between floors",
+  "page": 76
+ },
+ {
+  "level": 4,
+  "title": "B.6.6.1\tConvenience openings and communicating spaces",
+  "page": 76
+ },
+ {
+  "level": 4,
+  "title": "B.6.6.2\tAtria",
+  "page": 76
+ },
+ {
+  "level": 4,
+  "title": "B.6.6.3\tCourtyards",
+  "page": 76
+ },
+ {
+  "level": 4,
+  "title": "B.6.6.4\tShafts",
+  "page": 77
+ },
+ {
+  "level": 2,
+  "title": "B.7\tBuilding access and vehicular requirements",
+  "page": 78
+ },
+ {
+  "level": 3,
+  "title": "B.7.1\tBuilding access",
+  "page": 78
+ },
+ {
+  "level": 3,
+  "title": "B.7.2\tVehicle access and movement",
+  "page": 78
+ },
+ {
+  "level": 4,
+  "title": "B.7.2.1\tGeneral requirements",
+  "page": 78
+ },
+ {
+  "level": 4,
+  "title": "B.7.2.2\tVehicular ramps",
+  "page": 80
+ },
+ {
+  "level": 4,
+  "title": "B.7.2.3\tParking floors and structures",
+  "page": 83
+ },
+ {
+  "level": 5,
+  "title": "B.7.2.3.1 \tGeneral",
+  "page": 83
+ },
+ {
+  "level": 5,
+  "title": "B.7.2.3.2 \tOpen versus enclosed parking",
+  "page": 83
+ },
+ {
+  "level": 5,
+  "title": "B.7.2.3.3 \tParking areas technical requirements ",
+  "page": 84
+ },
+ {
+  "level": 4,
+  "title": "B.7.2.4\tCar parking bay dimensions",
+  "page": 86
+ },
+ {
+  "level": 4,
+  "title": "B.7.2.5\tBus parking bays",
+  "page": 88
+ },
+ {
+  "level": 4,
+  "title": "B.7.2.6\tParking provisions in buildings ",
+  "page": 89
+ },
+ {
+  "level": 5,
+  "title": "B.7.2.6.1 \tParking ratios ",
+  "page": 89
+ },
+ {
+  "level": 5,
+  "title": "B.7.2.6.2 \tPreferred parking ",
+  "page": 90
+ },
+ {
+  "level": 5,
+  "title": "B.7.2.6.3 \tCharging equipment for electrical vehicles in malls ",
+  "page": 90
+ },
+ {
+  "level": 4,
+  "title": "B.7.2.7\tBicycle parking provision in building ",
+  "page": 91
+ },
+ {
+  "level": 3,
+  "title": "B.7.3\tService and maintenance access to buildings ",
+  "page": 92
+ },
+ {
+  "level": 4,
+  "title": "B.7.3.1\tLoading and unloading areas ",
+  "page": 92
+ },
+ {
+  "level": 5,
+  "title": "B.7.3.1.1 \tGeneral",
+  "page": 92
+ },
+ {
+  "level": 5,
+  "title": "B.7.3.1.2 \tMinimum bays and areas clearances ",
+  "page": 92
+ },
+ {
+  "level": 5,
+  "title": "B.7.3.1.3 \tBuilding types requirements",
+  "page": 93
+ },
+ {
+  "level": 5,
+  "title": "B.7.3.1.4 \tTruck turning radii and clearances",
+  "page": 93
+ },
+ {
+  "level": 4,
+  "title": "B.7.3.2\tService ramps ",
+  "page": 96
+ },
+ {
+  "level": 4,
+  "title": "B.7.3.3\tMaintenance ladders",
+  "page": 97
+ },
+ {
+  "level": 4,
+  "title": "B.7.3.4\tAccess to utilities",
+  "page": 98
+ },
+ {
+  "level": 2,
+  "title": "B.8\tCommunal provisions in buildings",
+  "page": 99
+ },
+ {
+  "level": 3,
+  "title": "B.8.1\tSanitary facilities",
+  "page": 99
+ },
+ {
+  "level": 4,
+  "title": "B.8.1.1\tGeneral",
+  "page": 99
+ },
+ {
+  "level": 4,
+  "title": "B.8.1.2\tSanitary finishes",
+  "page": 99
+ },
+ {
+  "level": 4,
+  "title": "B.8.1.3\tSanitary provisions and fixture calculations",
+  "page": 99
+ },
+ {
+  "level": 5,
+  "title": "B.8.1.3.1 \tOccupancy requirements",
+  "page": 99
+ },
+ {
+  "level": 5,
+  "title": "B.8.1.3.2 \tMosques and prayer rooms",
+  "page": 102
+ },
+ {
+  "level": 5,
+  "title": "B.8.1.3.3 \tSwimming pools",
+  "page": 102
+ },
+ {
+  "level": 4,
+  "title": "B.8.1.4\tPublic toilets requirements ",
+  "page": 103
+ },
+ {
+  "level": 5,
+  "title": "B.8.1.4.1 \tMinimum space dimensions for toilet stalls ",
+  "page": 103
+ },
+ {
+  "level": 5,
+  "title": "B.8.1.4.2 \tPrivacy requirements for public toilets",
+  "page": 103
+ },
+ {
+  "level": 4,
+  "title": "B.8.1.5\tFixture clearances",
+  "page": 104
+ },
+ {
+  "level": 4,
+  "title": "B.8.1.6\tCleaner’s room",
+  "page": 104
+ },
+ {
+  "level": 3,
+  "title": "B.8.2\tFacilities for building occupants",
+  "page": 105
+ },
+ {
+  "level": 4,
+  "title": "B.8.2.1\tDrinking fountains ",
+  "page": 105
+ },
+ {
+  "level": 4,
+  "title": "B.8.2.2\tFeeding rooms (lactation rooms)",
+  "page": 105
+ },
+ {
+  "level": 4,
+  "title": "B.8.2.3\tFirst aid facilities ",
+  "page": 105
+ },
+ {
+  "level": 3,
+  "title": "B.8.3\tBuilding amenities ",
+  "page": 107
+ },
+ {
+  "level": 4,
+  "title": "B.8.3.1\tGymnasiums, exercise rooms and fitness centres ",
+  "page": 107
+ },
+ {
+  "level": 4,
+  "title": "B.8.3.2\tSwimming pools",
+  "page": 107
+ },
+ {
+  "level": 5,
+  "title": "B.8.3.2.1 \tGeneral requirements",
+  "page": 107
+ },
+ {
+  "level": 5,
+  "title": "B.8.3.2.2 \tSafety requirements",
+  "page": 107
+ },
+ {
+  "level": 5,
+  "title": "B.8.3.2.3 \tSwimming pool fences",
+  "page": 108
+ },
+ {
+  "level": 5,
+  "title": "B.8.3.2.4 \tDecks and walkways",
+  "page": 109
+ },
+ {
+  "level": 5,
+  "title": "B.8.3.2.5 \tLadders and steps",
+  "page": 110
+ },
+ {
+  "level": 5,
+  "title": "B.8.3.2.6 \tDiving boards",
+  "page": 111
+ },
+ {
+  "level": 4,
+  "title": "B.8.3.3\tPrayer rooms ",
+  "page": 112
+ },
+ {
+  "level": 4,
+  "title": "B.8.3.4\tOpen spaces ",
+  "page": 113
+ },
+ {
+  "level": 3,
+  "title": "B.8.4\tService facilities",
+  "page": 113
+ },
+ {
+  "level": 3,
+  "title": "B.8.5\tWaste management",
+  "page": 114
+ },
+ {
+  "level": 4,
+  "title": "B.8.5.1\tWaste management hierarchy",
+  "page": 114
+ },
+ {
+  "level": 4,
+  "title": "B.8.5.2\tWaste storage rooms",
+  "page": 114
+ },
+ {
+  "level": 5,
+  "title": "B.8.5.2.1 \tGeneral",
+  "page": 114
+ },
+ {
+  "level": 5,
+  "title": "B.8.5.2.2 \tSpecification of waste storage rooms",
+  "page": 115
+ },
+ {
+  "level": 5,
+  "title": "B.8.5.2.3\tDimensions of waste storage rooms",
+  "page": 116
+ },
+ {
+  "level": 4,
+  "title": "B.8.5.3\tRecycling and segregation",
+  "page": 118
+ },
+ {
+  "level": 4,
+  "title": "B.8.5.4\tSpecial and bulky waste",
+  "page": 118
+ },
+ {
+  "level": 4,
+  "title": "B.8.5.5\tChemical and toxic waste",
+  "page": 118
+ },
+ {
+  "level": 4,
+  "title": "B.8.5.6\tHydraulic skip compactors",
+  "page": 118
+ },
+ {
+  "level": 4,
+  "title": "B.8.5.7\tRefuse chutes",
+  "page": 119
+ },
+ {
+  "level": 2,
+  "title": "B.9\tArchitectural requirements for specific building types and spaces",
+  "page": 120
+ },
+ {
+  "level": 3,
+  "title": "B.9.1\tGeneral applicable requirements",
+  "page": 120
+ },
+ {
+  "level": 3,
+  "title": "B.9.2\tFire separating construction",
+  "page": 120
+ },
+ {
+  "level": 3,
+  "title": "B.9.3\tCinemas, theatres and auditoria",
+  "page": 120
+ },
+ {
+  "level": 3,
+  "title": "B.9.4\tMosques",
+  "page": 120
+ },
+ {
+  "level": 4,
+  "title": "B.9.4.1\tGeneral requirements",
+  "page": 120
+ },
+ {
+  "level": 4,
+  "title": "B.9.4.2\tMosque architecture ",
+  "page": 121
+ },
+ {
+  "level": 4,
+  "title": "B.9.4.3\tMosque access strategy ",
+  "page": 122
+ },
+ {
+  "level": 4,
+  "title": "B.9.4.4\tMosque prayer hall arrangement ",
+  "page": 123
+ },
+ {
+  "level": 4,
+  "title": "B.9.4.5\tWomen’s prayer halls in mosques ",
+  "page": 124
+ },
+ {
+  "level": 4,
+  "title": "B.9.4.6\tSpecific requirements for mosque types ",
+  "page": 126
+ },
+ {
+  "level": 5,
+  "title": "B.9.4.6.1 \tAwqat mosques (daily prayers mosque)",
+  "page": 126
+ },
+ {
+  "level": 5,
+  "title": "B.9.4.6.2 \tJumaa mosque (Friday prayer) ",
+  "page": 127
+ },
+ {
+  "level": 5,
+  "title": "B.9.4.6.3 \tEid Mussalla",
+  "page": 127
+ },
+ {
+  "level": 4,
+  "title": "B.9.4.7\tAblution spaces",
+  "page": 128
+ },
+ {
+  "level": 4,
+  "title": "B.9.4.8\tMosque accommodation ",
+  "page": 130
+ },
+ {
+  "level": 4,
+  "title": "B.9.4.9\tMosque-specific sanitary requirements ",
+  "page": 130
+ },
+ {
+  "level": 3,
+  "title": "B.9.5\tRestaurants and food facilities ",
+  "page": 131
+ },
+ {
+  "level": 4,
+  "title": "B.9.5.1.1 \tGeneral",
+  "page": 131
+ },
+ {
+  "level": 5,
+  "title": "B.9.5.1.2 \tFood preparation",
+  "page": 131
+ },
+ {
+  "level": 5,
+  "title": "B.9.5.1.3 \tKitchen requirements",
+  "page": 131
+ },
+ {
+  "level": 3,
+  "title": "B.9.6\tEducational facilities",
+  "page": 132
+ },
+ {
+  "level": 4,
+  "title": "B.9.6.1\tGeneral requirements",
+  "page": 132
+ },
+ {
+  "level": 4,
+  "title": "B.9.6.2\tSchools",
+  "page": 132
+ },
+ {
+  "level": 4,
+  "title": "B.9.6.3\tKindergartens ",
+  "page": 133
+ },
+ {
+  "level": 4,
+  "title": "B.9.6.4\tNurseries",
+  "page": 133
+ },
+ {
+  "level": 3,
+  "title": "B.9.7\tResidential buildings",
+  "page": 133
+ },
+ {
+  "level": 4,
+  "title": "B.9.7.1\tApartment buildings",
+  "page": 133
+ },
+ {
+  "level": 4,
+  "title": "B.9.7.2\tLabour accommodation",
+  "page": 133
+ },
+ {
+  "level": 5,
+  "title": "B.9.7.2.1 \tGeneral building requirements",
+  "page": 133
+ },
+ {
+  "level": 5,
+  "title": "B.9.7.2.2 \tLabour accommodation rooms",
+  "page": 134
+ },
+ {
+  "level": 5,
+  "title": "B.9.7.2.3 \tLabour accommodation amenities ",
+  "page": 134
+ },
+ {
+  "level": 4,
+  "title": "B.9.7.3\tStaff accommodation ",
+  "page": 134
+ },
+ {
+  "level": 4,
+  "title": "B.9.7.4\tStudent accommodation",
+  "page": 135
+ },
+ {
+  "level": 3,
+  "title": "B.9.8\tIndustrial and warehouse facilities",
+  "page": 135
+ },
+ {
+  "level": 3,
+  "title": "B.9.9\tMotor fuel dispensing facilities",
+  "page": 137
+ },
+ {
+  "level": 3,
+  "title": "B.9.10\tHealthcare facilities",
+  "page": 139
+ },
+ {
+  "level": 3,
+  "title": "B.9.11\tHotel establishments",
+  "page": 139
+ },
+ {
+  "level": 3,
+  "title": "B.9.12\tUtility buildings",
+  "page": 139
+ },
+ {
+  "level": 2,
+  "title": "B.10\tBuildings interaction with outdoor environment ",
+  "page": 140
+ },
+ {
+  "level": 3,
+  "title": "B.10.1\tHealthy entrances ",
+  "page": 140
+ },
+ {
+  "level": 3,
+  "title": "B.10.2\tScreening of building equipment ",
+  "page": 141
+ },
+ {
+  "level": 3,
+  "title": "B.10.3\tBuilding fences and boundary walls",
+  "page": 141
+ },
+ {
+  "level": 3,
+  "title": "B.10.4\tSmoking areas",
+  "page": 141
+ },
+ {
+  "level": 3,
+  "title": "B.10.5\tLandscape and shading ",
+  "page": 142
+ },
+ {
+  "level": 4,
+  "title": "B.10.5.1\tLocal species ",
+  "page": 142
+ },
+ {
+  "level": 4,
+  "title": "B.10.5.2\tShading of public access",
+  "page": 142
+ },
+ {
+  "level": 4,
+  "title": "B.10.5.3\tHeat island effect reduction - surfaces shading",
+  "page": 142
+ },
+ {
+  "level": 3,
+  "title": "B.10.6\tSustainable materials",
+  "page": 143
+ },
+ {
+  "level": 4,
+  "title": "B.10.6.1\tRecycled materials",
+  "page": 143
+ },
+ {
+  "level": 4,
+  "title": "B.10.6.2\tRegional materials",
+  "page": 143
+ },
+ {
+  "level": 4,
+  "title": "B.10.6.3\tAsbestos-containing materials",
+  "page": 144
+ },
+ {
+  "level": 4,
+  "title": "B.10.6.4\tLead or heavy metals containing material",
+  "page": 144
+ },
+ {
+  "level": 4,
+  "title": "B.10.6.5\tComposite timber products ",
+  "page": 144
+ },
+ {
+  "level": 4,
+  "title": "B.10.6.6\tCertified/accredited timber",
+  "page": 144
+ },
+ {
+  "level": 3,
+  "title": "B.10.7\tEnvironmental impact assessment",
+  "page": 144
+ },
+ {
+  "level": 2,
+  "title": "B.11\tWayfinding in buildings",
+  "page": 145
+ },
+ {
+  "level": 3,
+  "title": "B.11.1\tGeneral ",
+  "page": 145
+ },
+ {
+  "level": 3,
+  "title": "B.11.2\tGeneral requirements ",
+  "page": 145
+ },
+ {
+  "level": 3,
+  "title": "B.11.3\tPosition",
+  "page": 146
+ },
+ {
+  "level": 3,
+  "title": "B.11.4\tSignage types",
+  "page": 147
+ },
+ {
+  "level": 4,
+  "title": "B.11.4.1\tTypes",
+  "page": 147
+ },
+ {
+  "level": 4,
+  "title": "B.11.4.2\tInformation signs",
+  "page": 147
+ },
+ {
+  "level": 4,
+  "title": "B.11.4.3\tDirectional signs",
+  "page": 147
+ },
+ {
+  "level": 4,
+  "title": "B.11.4.4\tIdentity signs",
+  "page": 149
+ },
+ {
+  "level": 4,
+  "title": "B.11.4.5\tAdvisory signs",
+  "page": 149
+ },
+ {
+  "level": 4,
+  "title": "B.11.4.6\tDigital screens",
+  "page": 149
+ },
+ {
+  "level": 3,
+  "title": "B.11.5\tTypography",
+  "page": 150
+ },
+ {
+  "level": 3,
+  "title": "B.11.6\tSymbols ",
+  "page": 150
+ },
+ {
+  "level": 1,
+  "title": "Part C Accessibility",
+  "page": 151
+ },
+ {
+  "level": 2,
+  "title": "C.1\tPerformance statements",
+  "page": 152
+ },
+ {
+  "level": 2,
+  "title": "C.2\tDefinitions",
+  "page": 153
+ },
+ {
+  "level": 3,
+  "title": "C.2.1\tTerms",
+  "page": 153
+ },
+ {
+  "level": 3,
+  "title": "C.2.2\tAcronyms and abbreviations",
+  "page": 156
+ },
+ {
+  "level": 2,
+  "title": "C.3\tReferences",
+  "page": 157
+ },
+ {
+  "level": 3,
+  "title": "C.3.1\tEssential references",
+  "page": 157
+ },
+ {
+  "level": 3,
+  "title": "C.3.2\tFurther reading ",
+  "page": 157
+ },
+ {
+  "level": 2,
+  "title": "C.4\tAccessibility general requirements",
+  "page": 158
+ },
+ {
+  "level": 3,
+  "title": "C.4.1\tGeneral ",
+  "page": 158
+ },
+ {
+  "level": 3,
+  "title": "C.4.2\tAccessible emergency provisions",
+  "page": 158
+ },
+ {
+  "level": 3,
+  "title": "C.4.3\tGender equality",
+  "page": 158
+ },
+ {
+  "level": 2,
+  "title": "C.5\tAccessible routes and circulation",
+  "page": 158
+ },
+ {
+  "level": 3,
+  "title": "C.5.1\tGeneral principles",
+  "page": 158
+ },
+ {
+  "level": 3,
+  "title": "C.5.2\tGeneral requirements for accessible routes",
+  "page": 159
+ },
+ {
+  "level": 3,
+  "title": "C.5.3\tExternal accessible routes ",
+  "page": 161
+ },
+ {
+  "level": 3,
+  "title": "C.5.4\tBuilding entrances",
+  "page": 162
+ },
+ {
+  "level": 4,
+  "title": "C.5.4.1\tAccessible entrances",
+  "page": 162
+ },
+ {
+  "level": 4,
+  "title": "C.5.4.2\tEntrance doors",
+  "page": 163
+ },
+ {
+  "level": 4,
+  "title": "C.5.4.3\tAccess control barriers",
+  "page": 163
+ },
+ {
+  "level": 3,
+  "title": "C.5.5\tInternal accessible routes ",
+  "page": 164
+ },
+ {
+  "level": 3,
+  "title": "C.5.6\tMinimum clearances",
+  "page": 165
+ },
+ {
+  "level": 4,
+  "title": "C.5.6.1\tInteraction space",
+  "page": 165
+ },
+ {
+  "level": 4,
+  "title": "C.5.6.2\tToe and knee clearance",
+  "page": 166
+ },
+ {
+  "level": 4,
+  "title": "C.5.6.3\tProtruding objects",
+  "page": 167
+ },
+ {
+  "level": 3,
+  "title": "C.5.7\tReach ranges",
+  "page": 168
+ },
+ {
+  "level": 4,
+  "title": "C.5.7.1\tForward reach",
+  "page": 168
+ },
+ {
+  "level": 5,
+  "title": "C.5.7.1.1\tUnobstructed forward reach",
+  "page": 168
+ },
+ {
+  "level": 5,
+  "title": "C.5.7.1.2\tObstructed forward reach",
+  "page": 168
+ },
+ {
+  "level": 4,
+  "title": "C.5.7.2\tSide reach",
+  "page": 169
+ },
+ {
+  "level": 5,
+  "title": "C.5.7.2.1\tUnobstructed side reach",
+  "page": 169
+ },
+ {
+  "level": 5,
+  "title": "C.5.7.2.2\tObstructed side reach",
+  "page": 169
+ },
+ {
+  "level": 4,
+  "title": "C.5.7.3\tChildren’s reach ranges",
+  "page": 170
+ },
+ {
+  "level": 4,
+  "title": "C.5.7.4\tSwitches, controls and socket outlets ",
+  "page": 170
+ },
+ {
+  "level": 3,
+  "title": "C.5.8\tAccessible doors",
+  "page": 171
+ },
+ {
+  "level": 4,
+  "title": "C.5.8.1\tMinimum accessible door requirements",
+  "page": 171
+ },
+ {
+  "level": 4,
+  "title": "C.5.8.2\tHardware requirements",
+  "page": 172
+ },
+ {
+  "level": 5,
+  "title": "C.5.8.2.1\tDoor opening hardware",
+  "page": 172
+ },
+ {
+  "level": 5,
+  "title": "C.5.8.2.2\tVision panels",
+  "page": 172
+ },
+ {
+  "level": 4,
+  "title": "C.5.8.3\tManoeuvring spaces at manual doors and doorways without doors",
+  "page": 173
+ },
+ {
+  "level": 5,
+  "title": "C.5.8.3.1\tManoeuvring spaces for swinging and sliding doors",
+  "page": 173
+ },
+ {
+  "level": 5,
+  "title": "C.5.8.3.2\tManoeuvring spaces for doorways without doors",
+  "page": 175
+ },
+ {
+  "level": 5,
+  "title": "C.5.8.3.3\tManoeuvring spaces for two doors in series",
+  "page": 175
+ },
+ {
+  "level": 4,
+  "title": "C.5.8.4\tPower-assisted and automatic accessible doors",
+  "page": 176
+ },
+ {
+  "level": 3,
+  "title": "C.5.9\tVertical circulation",
+  "page": 178
+ },
+ {
+  "level": 4,
+  "title": "C.5.9.1\tRamps",
+  "page": 178
+ },
+ {
+  "level": 5,
+  "title": "C.5.9.1.1\tAccessible and pedestrian ramp requirements",
+  "page": 178
+ },
+ {
+  "level": 5,
+  "title": "C.5.9.1.2\tRamp runs",
+  "page": 178
+ },
+ {
+  "level": 5,
+  "title": "C.5.9.1.3\tRamp landings",
+  "page": 180
+ },
+ {
+  "level": 5,
+  "title": "C.5.9.1.4\tRamp edge protection",
+  "page": 181
+ },
+ {
+  "level": 5,
+  "title": "C.5.9.1.5\tCurved ramps",
+  "page": 182
+ },
+ {
+  "level": 5,
+  "title": "C.5.9.1.6\tRamp handrails ",
+  "page": 183
+ },
+ {
+  "level": 4,
+  "title": "C.5.9.2\tStairs",
+  "page": 184
+ },
+ {
+  "level": 4,
+  "title": "C.5.9.3\tElevators",
+  "page": 184
+ },
+ {
+  "level": 5,
+  "title": "C.5.9.3.1\tGeneral",
+  "page": 184
+ },
+ {
+  "level": 5,
+  "title": "C.5.9.3.2\tAccessible elevator requirements",
+  "page": 184
+ },
+ {
+  "level": 4,
+  "title": "C.5.9.4\tLift platforms",
+  "page": 187
+ },
+ {
+  "level": 4,
+  "title": "C.5.9.5\tEscalators and moving walks",
+  "page": 188
+ },
+ {
+  "level": 5,
+  "title": "C.5.9.5.1\tGeneral",
+  "page": 188
+ },
+ {
+  "level": 5,
+  "title": "C.5.9.5.2\tEscalators",
+  "page": 188
+ },
+ {
+  "level": 5,
+  "title": "C.5.9.5.3\tMoving walks",
+  "page": 188
+ },
+ {
+  "level": 3,
+  "title": "C.5.10\tTemporary facilities in outdoor spaces",
+  "page": 188
+ },
+ {
+  "level": 2,
+  "title": "C.6\tBuilding access and vehicular requirements",
+  "page": 190
+ },
+ {
+  "level": 3,
+  "title": "C.6.1\tVehicular entries and accessible routes",
+  "page": 190
+ },
+ {
+  "level": 3,
+  "title": "C.6.2\tCurb ramps",
+  "page": 191
+ },
+ {
+  "level": 4,
+  "title": "C.6.2.1\tGeneral",
+  "page": 191
+ },
+ {
+  "level": 4,
+  "title": "C.6.2.2\tTypes of curb ramps",
+  "page": 192
+ },
+ {
+  "level": 5,
+  "title": "C.6.2.2.1\tCurb ramps with flared sides",
+  "page": 192
+ },
+ {
+  "level": 5,
+  "title": "C.6.2.2.2\tReturned curb ramps",
+  "page": 192
+ },
+ {
+  "level": 5,
+  "title": "C.6.2.2.3\tCurb ramps in curb extensions",
+  "page": 193
+ },
+ {
+  "level": 5,
+  "title": "C.6.2.2.4\tLowered sidewalk curb ramps",
+  "page": 193
+ },
+ {
+  "level": 3,
+  "title": "C.6.3\tPickup and drop-off areas",
+  "page": 194
+ },
+ {
+  "level": 3,
+  "title": "C.6.4\tAccessible parking ",
+  "page": 194
+ },
+ {
+  "level": 4,
+  "title": "C.6.4.1\tAccessible parking provision",
+  "page": 194
+ },
+ {
+  "level": 4,
+  "title": "C.6.4.2\tLocation of accessible parking spaces",
+  "page": 195
+ },
+ {
+  "level": 2,
+  "title": "C.7\tAccessible building elements ",
+  "page": 197
+ },
+ {
+  "level": 3,
+  "title": "C.7.1\tWindows and window hardware",
+  "page": 197
+ },
+ {
+  "level": 3,
+  "title": "C.7.2\tSurfaces",
+  "page": 198
+ },
+ {
+  "level": 4,
+  "title": "C.7.2.1\tFloor surfaces",
+  "page": 198
+ },
+ {
+  "level": 5,
+  "title": "C.7.2.1.1\tLevel change",
+  "page": 198
+ },
+ {
+  "level": 5,
+  "title": "C.7.2.1.2\tSlip resistance",
+  "page": 198
+ },
+ {
+  "level": 5,
+  "title": "C.7.2.1.3\tOther requirements",
+  "page": 199
+ },
+ {
+  "level": 4,
+  "title": "C.7.2.2\tTactile systems",
+  "page": 200
+ },
+ {
+  "level": 5,
+  "title": "C.7.2.2.1\tGeneral",
+  "page": 200
+ },
+ {
+  "level": 5,
+  "title": "C.7.2.2.2\tDetectable warning surface",
+  "page": 201
+ },
+ {
+  "level": 5,
+  "title": "C.7.2.2.3\tTactile guiding surfaces",
+  "page": 201
+ },
+ {
+  "level": 4,
+  "title": "C.7.2.3\tGlass surfaces",
+  "page": 203
+ },
+ {
+  "level": 4,
+  "title": "C.7.2.4\tWall surfaces ",
+  "page": 203
+ },
+ {
+  "level": 3,
+  "title": "C.7.3\tFurniture and equipment ",
+  "page": 204
+ },
+ {
+  "level": 4,
+  "title": "C.7.3.1\tGeneral",
+  "page": 204
+ },
+ {
+  "level": 4,
+  "title": "C.7.3.2\tStorage facilities",
+  "page": 204
+ },
+ {
+  "level": 4,
+  "title": "C.7.3.3\tTables",
+  "page": 205
+ },
+ {
+  "level": 4,
+  "title": "C.7.3.4\tChairs and benches",
+  "page": 205
+ },
+ {
+  "level": 4,
+  "title": "C.7.3.5\tCounters and checkout aisles",
+  "page": 207
+ },
+ {
+  "level": 3,
+  "title": "C.7.4\tReception and waiting areas",
+  "page": 208
+ },
+ {
+  "level": 3,
+  "title": "C.7.5\tBalconies",
+  "page": 209
+ },
+ {
+  "level": 3,
+  "title": "C.7.6\tAccessible dressing or change rooms",
+  "page": 210
+ },
+ {
+  "level": 3,
+  "title": "C.7.7\tFirst aid facilities",
+  "page": 210
+ },
+ {
+  "level": 3,
+  "title": "C.7.8\tKiosks",
+  "page": 210
+ },
+ {
+  "level": 2,
+  "title": "C.8\tAccessible sanitary ",
+  "page": 211
+ },
+ {
+  "level": 3,
+  "title": "C.8.1\tMinimum requirements",
+  "page": 211
+ },
+ {
+  "level": 3,
+  "title": "C.8.2\tToilet rooms doors",
+  "page": 212
+ },
+ {
+  "level": 3,
+  "title": "C.8.3\tAccessible toilet arrangements",
+  "page": 213
+ },
+ {
+  "level": 4,
+  "title": "C.8.3.1\tGeneral",
+  "page": 213
+ },
+ {
+  "level": 4,
+  "title": "C.8.3.2\tBaby changing stations",
+  "page": 214
+ },
+ {
+  "level": 4,
+  "title": "C.8.3.3\tApproach and toe clearance",
+  "page": 214
+ },
+ {
+  "level": 4,
+  "title": "C.8.3.4\tWater closets",
+  "page": 215
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.4.1\tPosition and arrangement of toilets",
+  "page": 215
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.4.2\tWheelchair accessible water closets",
+  "page": 216
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.4.3\tGrab bars for water closets",
+  "page": 216
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.4.4\tChildren’s water closets",
+  "page": 218
+ },
+ {
+  "level": 4,
+  "title": "C.8.3.5\tUrinals",
+  "page": 218
+ },
+ {
+  "level": 4,
+  "title": "C.8.3.6\tSinks and washbasins",
+  "page": 219
+ },
+ {
+  "level": 4,
+  "title": "C.8.3.7\tShowers",
+  "page": 219
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.7.1\tAccessible showers",
+  "page": 219
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.7.2\tTransfer type shower compartments",
+  "page": 220
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.7.3\tRoll-in type shower compartment",
+  "page": 220
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.7.4\tShower seats",
+  "page": 220
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.7.5\tGrab bars for showers",
+  "page": 221
+ },
+ {
+  "level": 4,
+  "title": "C.8.3.8\tBathtubs",
+  "page": 221
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.8.1\tPosition and clearances",
+  "page": 221
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.8.2\tGrab bars for bathtubs with permanent seats",
+  "page": 222
+ },
+ {
+  "level": 5,
+  "title": "C.8.3.8.3\tGrab bars for bathtubs without permanent seats ",
+  "page": 222
+ },
+ {
+  "level": 4,
+  "title": "C.8.3.9\tGrab bars",
+  "page": 223
+ },
+ {
+  "level": 3,
+  "title": "C.8.4\tFamily toilets",
+  "page": 224
+ },
+ {
+  "level": 3,
+  "title": "C.8.5\tControls and accessories",
+  "page": 225
+ },
+ {
+  "level": 3,
+  "title": "C.8.6\tAblution areas",
+  "page": 226
+ },
+ {
+  "level": 3,
+  "title": "C.8.7\tDrinking fountains",
+  "page": 228
+ },
+ {
+  "level": 2,
+  "title": "C.9\tAccessibility features in buildings",
+  "page": 229
+ },
+ {
+  "level": 3,
+  "title": "C.9.1\tHearing enhancement systems",
+  "page": 229
+ },
+ {
+  "level": 3,
+  "title": "C.9.2\tProvisions for service animals",
+  "page": 229
+ },
+ {
+  "level": 2,
+  "title": "C.10\tAccessibility requirements for specific building types and occupancies",
+  "page": 230
+ },
+ {
+  "level": 3,
+  "title": "C.10.1\tGeneral",
+  "page": 230
+ },
+ {
+  "level": 3,
+  "title": "C.10.2\tAssembly buildings and spaces",
+  "page": 230
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.1\tCultural buildings, libraries, museums and exhibition rooms",
+  "page": 230
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.2\tTheatres, cinemas, conference rooms and auditoriums",
+  "page": 230
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.3\tAccessible auditorium seating spaces",
+  "page": 230
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.3.1\tGeneral",
+  "page": 230
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.3.2\tLines of sight over seated spectators",
+  "page": 232
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.3.3\tLines of sight over standing spectators",
+  "page": 233
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.4\tStages and backstage",
+  "page": 233
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.5\tLibraries and reading areas ",
+  "page": 233
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.6\tMosques and prayer rooms",
+  "page": 234
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.7\tPublic spaces",
+  "page": 234
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.7.1\tGeneral",
+  "page": 234
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.7.2\tParks, beaches and natural spaces",
+  "page": 235
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.7.3\tAccess to lakes and seas",
+  "page": 236
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.7.4\tOutdoor showers",
+  "page": 236
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.7.5\tPlaygrounds",
+  "page": 237
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.8\tSwimming pools",
+  "page": 237
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.8.1\tGeneral",
+  "page": 237
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.8.2\tSloped entries",
+  "page": 238
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.8.3\tPool chair lifts",
+  "page": 238
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.9\tRecreational buildings and amusement parks",
+  "page": 239
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.10\tDining spaces",
+  "page": 239
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.11\tKitchen and kitchenettes",
+  "page": 240
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.11.1\tGeneral",
+  "page": 240
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.11.2\tPass-through kitchen",
+  "page": 240
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.11.3\tU-shaped kitchen",
+  "page": 240
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.12\tTransport buildings, stations and terminals",
+  "page": 241
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.12.1\tGeneral",
+  "page": 241
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.12.2\tBus shelters",
+  "page": 241
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.12.3\tGangways",
+  "page": 241
+ },
+ {
+  "level": 4,
+  "title": "C.10.2.13\tSport buildings and exercise rooms ",
+  "page": 243
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.13.1\tExercise rooms",
+  "page": 243
+ },
+ {
+  "level": 5,
+  "title": "C.10.2.13.2\tSport buildings",
+  "page": 243
+ },
+ {
+  "level": 3,
+  "title": "C.10.3\tResidential buildings ",
+  "page": 243
+ },
+ {
+  "level": 4,
+  "title": "C.10.3.1\tGeneral",
+  "page": 243
+ },
+ {
+  "level": 4,
+  "title": "C.10.3.2\tAdaptable units in residential buildings",
+  "page": 243
+ },
+ {
+  "level": 3,
+  "title": "C.10.4\tHotel buildings",
+  "page": 245
+ },
+ {
+  "level": 4,
+  "title": "C.10.4.1\tGeneral",
+  "page": 245
+ },
+ {
+  "level": 4,
+  "title": "C.10.4.2\tAccessible guest room with mobility features",
+  "page": 245
+ },
+ {
+  "level": 4,
+  "title": "C.10.4.3\tAccessible guest rooms with communication features",
+  "page": 248
+ },
+ {
+  "level": 3,
+  "title": "C.10.5\tEducation buildings",
+  "page": 248
+ },
+ {
+  "level": 3,
+  "title": "C.10.6\tHealthcare buildings",
+  "page": 249
+ },
+ {
+  "level": 3,
+  "title": "C.10.7\tBusiness and industrial buildings",
+  "page": 249
+ },
+ {
+  "level": 2,
+  "title": "C.11\tSignage and wayfinding accessibility requirement",
+  "page": 250
+ },
+ {
+  "level": 3,
+  "title": "C.11.1\tWayfinding guidance for accessibility",
+  "page": 250
+ },
+ {
+  "level": 3,
+  "title": "C.11.2\tGeneral requirements ",
+  "page": 250
+ },
+ {
+  "level": 3,
+  "title": "C.11.3\tTactile maps and signage",
+  "page": 250
+ },
+ {
+  "level": 4,
+  "title": "C.11.3.1\tGeneral features",
+  "page": 250
+ },
+ {
+  "level": 4,
+  "title": "C.11.3.2\tLocation of tactile maps",
+  "page": 251
+ },
+ {
+  "level": 4,
+  "title": "C.11.3.3\tRaised characters for tactile signage",
+  "page": 251
+ },
+ {
+  "level": 3,
+  "title": "C.11.4\tBraille",
+  "page": 251
+ },
+ {
+  "level": 3,
+  "title": "C.11.5\tPosition of signage",
+  "page": 252
+ },
+ {
+  "level": 3,
+  "title": "C.11.6\tAccessibility signs and symbols",
+  "page": 253
+ },
+ {
+  "level": 3,
+  "title": "C.11.7\tCombination of communication processes",
+  "page": 253
+ },
+ {
+  "level": 1,
+  "title": "Part D Vertical Transportation",
+  "page": 254
+ },
+ {
+  "level": 2,
+  "title": "D.1\tPerformance statements",
+  "page": 255
+ },
+ {
+  "level": 2,
+  "title": "D.2\tDefinitions",
+  "page": 256
+ },
+ {
+  "level": 3,
+  "title": "D.2.1\tTerms",
+  "page": 256
+ },
+ {
+  "level": 3,
+  "title": "D.2.2\tAcronyms and abbreviations",
+  "page": 257
+ },
+ {
+  "level": 2,
+  "title": "D.3\tReferences",
+  "page": 258
+ },
+ {
+  "level": 2,
+  "title": "D.4\tGeneral",
+  "page": 260
+ },
+ {
+  "level": 2,
+  "title": "D.5\tSafety and reliability",
+  "page": 260
+ },
+ {
+  "level": 2,
+  "title": "D.6\tEnergy conservation ",
+  "page": 261
+ },
+ {
+  "level": 3,
+  "title": "D.6.1\tElevators",
+  "page": 261
+ },
+ {
+  "level": 3,
+  "title": "D.6.2\tEscalators and moving walks",
+  "page": 261
+ },
+ {
+  "level": 2,
+  "title": "D.7\tLocation and arrangement of passenger elevators",
+  "page": 262
+ },
+ {
+  "level": 3,
+  "title": "D.7.1\tGeneral",
+  "page": 262
+ },
+ {
+  "level": 3,
+  "title": "D.7.2\tLocation of passenger elevators",
+  "page": 262
+ },
+ {
+  "level": 4,
+  "title": "D.7.2.1\tGeneral",
+  "page": 262
+ },
+ {
+  "level": 4,
+  "title": "D.7.2.2\tHorizontal distances",
+  "page": 263
+ },
+ {
+  "level": 3,
+  "title": "D.7.3\tArrangement of passenger elevators",
+  "page": 264
+ },
+ {
+  "level": 4,
+  "title": "D.7.3.1\tGeneral",
+  "page": 264
+ },
+ {
+  "level": 4,
+  "title": "D.7.3.2\tElevators in-line ",
+  "page": 264
+ },
+ {
+  "level": 4,
+  "title": "D.7.3.3\tElevators facing each other",
+  "page": 265
+ },
+ {
+  "level": 2,
+  "title": "D.8\tDesign method 1: prescriptive design using predefined numbers of passenger elevators",
+  "page": 266
+ },
+ {
+  "level": 3,
+  "title": "D.8.1\tGeneral",
+  "page": 266
+ },
+ {
+  "level": 3,
+  "title": "D.8.2\tService elevators",
+  "page": 266
+ },
+ {
+  "level": 4,
+  "title": "D.8.2.1\tNumber of service elevators",
+  "page": 266
+ },
+ {
+  "level": 4,
+  "title": "D.8.2.2\tRated speed",
+  "page": 267
+ },
+ {
+  "level": 3,
+  "title": "D.8.3\tFirefighting elevators",
+  "page": 267
+ },
+ {
+  "level": 4,
+  "title": "D.8.3.1\tFirefighting elevators ",
+  "page": 267
+ },
+ {
+  "level": 4,
+  "title": "D.8.3.2\tRated speed of firefighting elevators",
+  "page": 267
+ },
+ {
+  "level": 4,
+  "title": "D.8.3.3\tFirefighting elevators in super high-rise buildings",
+  "page": 267
+ },
+ {
+  "level": 3,
+  "title": "D.8.4\tMinimum number of passenger elevators",
+  "page": 268
+ },
+ {
+  "level": 3,
+  "title": "D.8.5\tGrouping of passenger elevators and population estimation ",
+  "page": 268
+ },
+ {
+  "level": 4,
+  "title": "D.8.5.1\tSingle grouping and one floor zone",
+  "page": 268
+ },
+ {
+  "level": 4,
+  "title": "D.8.5.2\tMultiple lobbies serving one zone ",
+  "page": 269
+ },
+ {
+  "level": 4,
+  "title": "D.8.5.3\tMultiple groupings serving different floor zones",
+  "page": 270
+ },
+ {
+  "level": 3,
+  "title": "D.8.6\tRated speed of passenger elevators",
+  "page": 270
+ },
+ {
+  "level": 3,
+  "title": "D.8.7\tPassenger elevators serving as multipurpose or swing mode \n\televators",
+  "page": 271
+ },
+ {
+  "level": 3,
+  "title": "D.8.8\tPassenger elevators in residential \t\n\tapartments",
+  "page": 272
+ },
+ {
+  "level": 4,
+  "title": "D.8.8.1\tPopulation estimation",
+  "page": 272
+ },
+ {
+  "level": 4,
+  "title": "D.8.8.2\tPassenger elevator selection charts",
+  "page": 272
+ },
+ {
+  "level": 4,
+  "title": "D.8.8.3\tMinimum elevator specifications",
+  "page": 273
+ },
+ {
+  "level": 3,
+  "title": "D.8.9\tPassenger elevators in staff \n\taccommodation",
+  "page": 274
+ },
+ {
+  "level": 4,
+  "title": "D.8.9.1\tPopulation estimation",
+  "page": 274
+ },
+ {
+  "level": 4,
+  "title": "D.8.9.2\tPassenger elevator selection chart",
+  "page": 274
+ },
+ {
+  "level": 4,
+  "title": "D.8.9.3\tMinimum elevator specifications",
+  "page": 274
+ },
+ {
+  "level": 3,
+  "title": "D.8.10\tPassenger elevators in labour accommodation",
+  "page": 275
+ },
+ {
+  "level": 4,
+  "title": "D.8.10.1\tPopulation estimation and passenger elevator selection",
+  "page": 275
+ },
+ {
+  "level": 4,
+  "title": "D.8.10.2\tMinimum elevator specifications",
+  "page": 275
+ },
+ {
+  "level": 3,
+  "title": "D.8.11\tPassenger elevators in student accommodation",
+  "page": 275
+ },
+ {
+  "level": 4,
+  "title": "D.8.11.1\tPopulation estimation",
+  "page": 275
+ },
+ {
+  "level": 4,
+  "title": "D.8.11.2\tPassenger elevator selection chart",
+  "page": 275
+ },
+ {
+  "level": 4,
+  "title": "D.8.11.3\tMinimum elevator specifications",
+  "page": 276
+ },
+ {
+  "level": 3,
+  "title": "D.8.12\tPassenger elevators and escalators in hotels",
+  "page": 276
+ },
+ {
+  "level": 4,
+  "title": "D.8.12.1\tPopulation estimation",
+  "page": 276
+ },
+ {
+  "level": 4,
+  "title": "D.8.12.2\tPassenger elevator selection chart",
+  "page": 277
+ },
+ {
+  "level": 4,
+  "title": "D.8.12.3\tMinimum elevator specifications",
+  "page": 278
+ },
+ {
+  "level": 4,
+  "title": "D.8.12.4\tMinimum escalator specifications",
+  "page": 278
+ },
+ {
+  "level": 3,
+  "title": "D.8.13\tPassenger elevators in hotel apartments",
+  "page": 279
+ },
+ {
+  "level": 4,
+  "title": "D.8.13.1\tPopulation estimation",
+  "page": 279
+ },
+ {
+  "level": 4,
+  "title": "D.8.13.2\tPassenger elevator selection charts",
+  "page": 279
+ },
+ {
+  "level": 4,
+  "title": "D.8.13.3\tMinimum elevator specifications",
+  "page": 280
+ },
+ {
+  "level": 3,
+  "title": "D.8.14\tPassenger elevators and escalators in office buildings",
+  "page": 281
+ },
+ {
+  "level": 4,
+  "title": "D.8.14.1\tPassenger elevator selection",
+  "page": 281
+ },
+ {
+  "level": 4,
+  "title": "D.8.14.2\tMinimum elevator specifications",
+  "page": 282
+ },
+ {
+  "level": 4,
+  "title": "D.8.14.3\tMinimum escalator specifications",
+  "page": 282
+ },
+ {
+  "level": 3,
+  "title": "D.8.15\tCirculation in retail, shopping centres and malls",
+  "page": 282
+ },
+ {
+  "level": 4,
+  "title": "D.8.15.1\tPrimary and secondary modes of circulation",
+  "page": 282
+ },
+ {
+  "level": 4,
+  "title": "D.8.15.2\tPopulation estimation",
+  "page": 283
+ },
+ {
+  "level": 4,
+  "title": "D.8.15.3\tSelection tables",
+  "page": 283
+ },
+ {
+  "level": 4,
+  "title": "D.8.15.4\tMinimum specifications ",
+  "page": 283
+ },
+ {
+  "level": 3,
+  "title": "D.8.16\tPassenger elevators in car parking buildings",
+  "page": 285
+ },
+ {
+  "level": 4,
+  "title": "D.8.16.1\tPopulation estimation",
+  "page": 285
+ },
+ {
+  "level": 4,
+  "title": "D.8.16.2\tPassenger elevator selection chart",
+  "page": 285
+ },
+ {
+  "level": 4,
+  "title": "D.8.16.3\tMinimum elevator specifications",
+  "page": 285
+ },
+ {
+  "level": 3,
+  "title": "D.8.17\tPassenger elevators in schools",
+  "page": 286
+ },
+ {
+  "level": 3,
+  "title": "D.8.18\tPassenger elevators in universities",
+  "page": 286
+ },
+ {
+  "level": 2,
+  "title": "D.9\tDesign method 2: design parameters for use in performance-based vertical transportation design",
+  "page": 287
+ },
+ {
+  "level": 3,
+  "title": "D.9.1\tGeneral",
+  "page": 287
+ },
+ {
+  "level": 3,
+  "title": "D.9.2\tPopulation estimation",
+  "page": 287
+ },
+ {
+  "level": 4,
+  "title": "D.9.2.1\tGeneral",
+  "page": 287
+ },
+ {
+  "level": 3,
+  "title": "D.9.3\tHandling capacity and traffic pattern",
+  "page": 287
+ },
+ {
+  "level": 4,
+  "title": "D.9.3.1\tHandling capacity",
+  "page": 287
+ },
+ {
+  "level": 4,
+  "title": "D.9.3.2\tTraffic pattern",
+  "page": 288
+ },
+ {
+  "level": 3,
+  "title": "D.9.4\tAverage waiting time",
+  "page": 288
+ },
+ {
+  "level": 3,
+  "title": "D.9.5\tCapacity factor",
+  "page": 289
+ },
+ {
+  "level": 3,
+  "title": "D.9.6\tBoarding floors",
+  "page": 290
+ },
+ {
+  "level": 3,
+  "title": "D.9.7\tMagnet floors",
+  "page": 290
+ },
+ {
+  "level": 3,
+  "title": "D.9.8\tFactors influencing VT system efficiency",
+  "page": 290
+ },
+ {
+  "level": 4,
+  "title": "D.9.8.1\tDoor timing",
+  "page": 290
+ },
+ {
+  "level": 4,
+  "title": "D.9.8.2\tAcceleration and jerk",
+  "page": 291
+ },
+ {
+  "level": 4,
+  "title": "D.9.8.3\tDestination control systems",
+  "page": 291
+ },
+ {
+  "level": 4,
+  "title": "D.9.8.4\tHybrid systems",
+  "page": 292
+ },
+ {
+  "level": 2,
+  "title": "D.10\tAnnex: Vertical transportation design summaries and report template",
+  "page": 293
+ },
+ {
+  "level": 3,
+  "title": "D.10.1\tVertical transportation selection summary – Design method 1",
+  "page": 293
+ },
+ {
+  "level": 3,
+  "title": "D.10.2\tVertical transportation design summary – Design method 2",
+  "page": 294
+ },
+ {
+  "level": 3,
+  "title": "D.10.3\tVertical transportation report template for VT Consultants",
+  "page": 295
+ },
+ {
+  "level": 1,
+  "title": "Part E Building Envelope",
+  "page": 296
+ },
+ {
+  "level": 2,
+  "title": "E.1\tPerformance statements",
+  "page": 297
+ },
+ {
+  "level": 2,
+  "title": "E.2\tDefinitions",
+  "page": 298
+ },
+ {
+  "level": 3,
+  "title": "E.2.1\tTerms",
+  "page": 298
+ },
+ {
+  "level": 3,
+  "title": "E.2.2\tAcronyms and abbreviations",
+  "page": 300
+ },
+ {
+  "level": 2,
+  "title": "E.3\tReferences",
+  "page": 301
+ },
+ {
+  "level": 3,
+  "title": "E.3.1\tEssential references",
+  "page": 301
+ },
+ {
+  "level": 3,
+  "title": "E.3.2\tFurther reading",
+  "page": 302
+ },
+ {
+  "level": 2,
+  "title": "E.4\tStructural",
+  "page": 303
+ },
+ {
+  "level": 3,
+  "title": "E.4.1\tStrength and stability",
+  "page": 303
+ },
+ {
+  "level": 4,
+  "title": "E.4.1.1\tGeneral ",
+  "page": 303
+ },
+ {
+  "level": 4,
+  "title": "E.4.1.2\tWind loadings",
+  "page": 303
+ },
+ {
+  "level": 4,
+  "title": "E.4.1.3\tPermanent fixture loading",
+  "page": 303
+ },
+ {
+  "level": 4,
+  "title": "E.4.1.4\tOperational forces",
+  "page": 303
+ },
+ {
+  "level": 4,
+  "title": "E.4.1.5\tThermal movements",
+  "page": 303
+ },
+ {
+  "level": 4,
+  "title": "E.4.1.6\tDeflection",
+  "page": 304
+ },
+ {
+  "level": 4,
+  "title": "E.4.1.7\tFixings",
+  "page": 304
+ },
+ {
+  "level": 3,
+  "title": "E.4.2\tStructural use of glass",
+  "page": 304
+ },
+ {
+  "level": 3,
+  "title": "E.4.3\tStructural use of silicone",
+  "page": 304
+ },
+ {
+  "level": 3,
+  "title": "E.4.4\tMaterials ",
+  "page": 305
+ },
+ {
+  "level": 3,
+  "title": "E.4.5\tImpact resistance",
+  "page": 305
+ },
+ {
+  "level": 3,
+  "title": "E.4.6\tLoad combination ",
+  "page": 306
+ },
+ {
+  "level": 2,
+  "title": "E.5\tEnergy conservation ",
+  "page": 307
+ },
+ {
+  "level": 3,
+  "title": "E.5.1\tEnergy compliance method",
+  "page": 307
+ },
+ {
+  "level": 3,
+  "title": "E.5.2\tElemental method requirements",
+  "page": 308
+ },
+ {
+  "level": 4,
+  "title": "E.5.2.1\tMaximum glazed area",
+  "page": 308
+ },
+ {
+  "level": 4,
+  "title": "E.5.2.2\tOrientation of glazed facades  ",
+  "page": 308
+ },
+ {
+  "level": 4,
+  "title": "E.5.2.3\tBuilding envelope performance ",
+  "page": 309
+ },
+ {
+  "level": 5,
+  "title": "E.5.2.3.1\tNon-glazed elements",
+  "page": 309
+ },
+ {
+  "level": 5,
+  "title": "E.5.2.3.2\tGlazed elements ",
+  "page": 310
+ },
+ {
+  "level": 3,
+  "title": "E.5.3\tShade effect calculation ",
+  "page": 311
+ },
+ {
+  "level": 3,
+  "title": "E.5.4\tThermal bridges",
+  "page": 311
+ },
+ {
+  "level": 3,
+  "title": "E.5.5\tDurability ",
+  "page": 312
+ },
+ {
+  "level": 3,
+  "title": "E.5.6\tSealing of windows and doors",
+  "page": 312
+ },
+ {
+  "level": 3,
+  "title": "E.5.7\tHeat island effect reduction",
+  "page": 312
+ },
+ {
+  "level": 3,
+  "title": "E.5.8\tExterior light power, pollution and controls ",
+  "page": 313
+ },
+ {
+  "level": 2,
+  "title": "E.6\tSustainable materials",
+  "page": 314
+ },
+ {
+  "level": 2,
+  "title": "E.7\tMoisture",
+  "page": 314
+ },
+ {
+  "level": 3,
+  "title": "E.7.1\tGeneral",
+  "page": 314
+ },
+ {
+  "level": 3,
+  "title": "E.7.2\tGround moisture",
+  "page": 314
+ },
+ {
+  "level": 3,
+  "title": "E.7.3\tPrecipitation including windblown spray",
+  "page": 315
+ },
+ {
+  "level": 4,
+  "title": "E.7.3.1\tGeneral",
+  "page": 315
+ },
+ {
+  "level": 4,
+  "title": "E.7.3.2\tHorizontal and inclined surfaces",
+  "page": 315
+ },
+ {
+  "level": 4,
+  "title": "E.7.3.3\tVertical surfaces",
+  "page": 316
+ },
+ {
+  "level": 4,
+  "title": "E.7.3.4\tFlashing",
+  "page": 317
+ },
+ {
+  "level": 3,
+  "title": "E.7.4\tRisk of interstitial or surface condensation",
+  "page": 317
+ },
+ {
+  "level": 2,
+  "title": "E.8\tAcoustics ",
+  "page": 317
+ },
+ {
+  "level": 2,
+  "title": "E.9\tProtection from falling, collision and impact",
+  "page": 318
+ },
+ {
+  "level": 3,
+  "title": "E.9.1\tProtection against impact with glazing",
+  "page": 318
+ },
+ {
+  "level": 3,
+  "title": "E.9.2\tContainment",
+  "page": 319
+ },
+ {
+  "level": 3,
+  "title": "E.9.3\tManifestation",
+  "page": 319
+ },
+ {
+  "level": 3,
+  "title": "E.9.4\tSafe opening and closing of windows",
+  "page": 320
+ },
+ {
+  "level": 3,
+  "title": "E.9.5\tOverhead glazing",
+  "page": 320
+ },
+ {
+  "level": 2,
+  "title": "E.10\tFire safety",
+  "page": 321
+ },
+ {
+  "level": 3,
+  "title": "E.10.1\tGeneral",
+  "page": 321
+ },
+ {
+  "level": 3,
+  "title": "E.10.2\tSprinklers",
+  "page": 321
+ },
+ {
+  "level": 3,
+  "title": "E.10.3\tSpandrels",
+  "page": 321
+ },
+ {
+  "level": 3,
+  "title": "E.10.4\tFire testing of non-fire resistance rated, non-loadbearing \n\tfaçades and aesthetic features/mashrabiya",
+  "page": 321
+ },
+ {
+  "level": 3,
+  "title": "E.10.5\tSolid metal panels",
+  "page": 322
+ },
+ {
+  "level": 3,
+  "title": "E.10.6\tFire resistance rated glazing assemblies",
+  "page": 323
+ },
+ {
+  "level": 3,
+  "title": "E.10.7\tRoof assemblies",
+  "page": 323
+ },
+ {
+  "level": 3,
+  "title": "E.10.8\tRoof and façade assemblies",
+  "page": 323
+ },
+ {
+  "level": 2,
+  "title": "E.11\tScreening of building equipment",
+  "page": 324
+ },
+ {
+  "level": 3,
+  "title": "E.10.9\tSignboards and billboards",
+  "page": 324
+ },
+ {
+  "level": 3,
+  "title": "E.10.10\tSolar panels",
+  "page": 324
+ },
+ {
+  "level": 2,
+  "title": "E.12\tMaintenance",
+  "page": 325
+ },
+ {
+  "level": 3,
+  "title": "E.12.1\tGeneral",
+  "page": 325
+ },
+ {
+  "level": 3,
+  "title": "E.12.2\tRope access",
+  "page": 325
+ },
+ {
+  "level": 3,
+  "title": "E.12.3\tImposed loading",
+  "page": 325
+ },
+ {
+  "level": 3,
+  "title": "E.12.4\tCable stabilization and anchors",
+  "page": 325
+ },
+ {
+  "level": 3,
+  "title": "E.12.5\tPower circuit and operation",
+  "page": 325
+ },
+ {
+  "level": 3,
+  "title": "E.12.6\tProtection from impact on building envelope",
+  "page": 326
+ },
+ {
+  "level": 3,
+  "title": "E.12.7\tHealth and safety",
+  "page": 326
+ },
+ {
+  "level": 4,
+  "title": "E.12.7.1\tRope access",
+  "page": 326
+ },
+ {
+  "level": 4,
+  "title": "E.12.7.2\tPower-operated systems",
+  "page": 326
+ },
+ {
+  "level": 1,
+  "title": "Part F Structure",
+  "page": 327
+ },
+ {
+  "level": 2,
+  "title": "F.1\tPerformance statements",
+  "page": 328
+ },
+ {
+  "level": 2,
+  "title": "F.2\tDefinitions",
+  "page": 329
+ },
+ {
+  "level": 3,
+  "title": "F.2.1\tTerms",
+  "page": 329
+ },
+ {
+  "level": 3,
+  "title": "F.2.2\tAcronyms and abbreviations",
+  "page": 330
+ },
+ {
+  "level": 3,
+  "title": "F.2.3\tNotation",
+  "page": 331
+ },
+ {
+  "level": 2,
+  "title": "F.3\tReferences",
+  "page": 332
+ },
+ {
+  "level": 3,
+  "title": "F.3.1\tEssential references ",
+  "page": 332
+ },
+ {
+  "level": 4,
+  "title": "F.3.1.1\tGeneral",
+  "page": 332
+ },
+ {
+  "level": 4,
+  "title": "F.3.1.2\tConcrete",
+  "page": 332
+ },
+ {
+  "level": 4,
+  "title": "F.3.1.3\tSteel",
+  "page": 333
+ },
+ {
+  "level": 4,
+  "title": "F.3.1.4\tMasonry",
+  "page": 333
+ },
+ {
+  "level": 4,
+  "title": "F.3.1.5\tGeotechnics",
+  "page": 333
+ },
+ {
+  "level": 5,
+  "title": "F.3.1.5.1\tGeotechnics investigation and testing",
+  "page": 333
+ },
+ {
+  "level": 5,
+  "title": "F.3.1.5.2\tGeotechnical design",
+  "page": 334
+ },
+ {
+  "level": 5,
+  "title": "F.3.1.5.3\tExecution of geotechnical works",
+  "page": 334
+ },
+ {
+  "level": 3,
+  "title": "F.3.2\tFurther reading",
+  "page": 335
+ },
+ {
+  "level": 4,
+  "title": "F.3.2.1\tConcrete",
+  "page": 335
+ },
+ {
+  "level": 4,
+  "title": "F.3.2.2\tGeotechnics",
+  "page": 335
+ },
+ {
+  "level": 4,
+  "title": "F.3.2.3\tSeismic",
+  "page": 335
+ },
+ {
+  "level": 2,
+  "title": "F.4\tFramework",
+  "page": 337
+ },
+ {
+  "level": 3,
+  "title": "F.4.1\tApplication",
+  "page": 337
+ },
+ {
+  "level": 3,
+  "title": "F.4.2\tUnits",
+  "page": 337
+ },
+ {
+  "level": 2,
+  "title": "F.5\tStructural system requirements",
+  "page": 338
+ },
+ {
+  "level": 3,
+  "title": "F.5.1\tGeneral conditions",
+  "page": 338
+ },
+ {
+  "level": 3,
+  "title": "F.5.2\tDesign life",
+  "page": 339
+ },
+ {
+  "level": 3,
+  "title": "F.5.3\tDesign acceptance criteria",
+  "page": 339
+ },
+ {
+  "level": 3,
+  "title": "F.5.4\tStructural stability ",
+  "page": 339
+ },
+ {
+  "level": 3,
+  "title": "F.5.5\tRobustness against disproportionate collapse",
+  "page": 341
+ },
+ {
+  "level": 3,
+  "title": "F.5.6\tDurability",
+  "page": 342
+ },
+ {
+  "level": 4,
+  "title": "F.5.6.1\tGeneral",
+  "page": 342
+ },
+ {
+  "level": 4,
+  "title": "F.5.6.2\tConcrete structures",
+  "page": 342
+ },
+ {
+  "level": 4,
+  "title": "F.5.6.3\tSteelwork structures",
+  "page": 342
+ },
+ {
+  "level": 3,
+  "title": "F.5.7\tFire resistance",
+  "page": 343
+ },
+ {
+  "level": 3,
+  "title": "F.5.8\tSustainability",
+  "page": 343
+ },
+ {
+  "level": 2,
+  "title": "F.6\tMaterials",
+  "page": 343
+ },
+ {
+  "level": 3,
+  "title": "F.6.1\tGeneral",
+  "page": 343
+ },
+ {
+  "level": 3,
+  "title": "F.6.2\tStructural concrete",
+  "page": 343
+ },
+ {
+  "level": 4,
+  "title": "F.6.2.1\tDesign basis",
+  "page": 343
+ },
+ {
+  "level": 4,
+  "title": "F.6.2.2\tConcrete strength",
+  "page": 343
+ },
+ {
+  "level": 4,
+  "title": "F.6.2.3\tConcrete mixes",
+  "page": 344
+ },
+ {
+  "level": 4,
+  "title": "F.6.2.4\tModulus of elasticity ",
+  "page": 345
+ },
+ {
+  "level": 4,
+  "title": "F.6.2.5\tSection properties",
+  "page": 345
+ },
+ {
+  "level": 4,
+  "title": "F.6.2.6\tDetailing of reinforcement",
+  "page": 345
+ },
+ {
+  "level": 3,
+  "title": "F.6.3\tPost-tensioned concrete",
+  "page": 346
+ },
+ {
+  "level": 4,
+  "title": "F.6.3.1\tDesign basis",
+  "page": 346
+ },
+ {
+  "level": 4,
+  "title": "F.6.3.2\tAdditional design requirements for post-tensioned concrete",
+  "page": 347
+ },
+ {
+  "level": 4,
+  "title": "F.6.3.3\tConcrete",
+  "page": 347
+ },
+ {
+  "level": 4,
+  "title": "F.6.3.4\tConcrete mixes ",
+  "page": 347
+ },
+ {
+  "level": 4,
+  "title": "F.6.3.5\tTendons",
+  "page": 347
+ },
+ {
+  "level": 4,
+  "title": "F.6.3.6\tDucts",
+  "page": 347
+ },
+ {
+  "level": 4,
+  "title": "F.6.3.7\tGrout",
+  "page": 347
+ },
+ {
+  "level": 4,
+  "title": "F.6.3.8\tPermissible stresses in post-tensioning steel",
+  "page": 348
+ },
+ {
+  "level": 4,
+  "title": "F.6.3.9\tMinimum bonded reinforcement for post-tensioned concrete ",
+  "page": 348
+ },
+ {
+  "level": 4,
+  "title": "F.6.3.10\tPost-tensioned concrete reinforcement \n\tdetailing",
+  "page": 350
+ },
+ {
+  "level": 3,
+  "title": "F.6.4\tPrecast concrete",
+  "page": 353
+ },
+ {
+  "level": 4,
+  "title": "F.6.4.1\tDesign basis",
+  "page": 353
+ },
+ {
+  "level": 4,
+  "title": "F.6.4.2\tConcrete",
+  "page": 353
+ },
+ {
+  "level": 4,
+  "title": "F.6.4.3\tConcrete mixes ",
+  "page": 353
+ },
+ {
+  "level": 4,
+  "title": "F.6.4.4\tReinforcement and strands",
+  "page": 353
+ },
+ {
+  "level": 4,
+  "title": "F.6.4.5\tStorage, transportation, handling and erection",
+  "page": 354
+ },
+ {
+  "level": 4,
+  "title": "F.6.4.6\tConnections",
+  "page": 354
+ },
+ {
+  "level": 4,
+  "title": "F.6.4.7\tPrecast staircase",
+  "page": 355
+ },
+ {
+  "level": 3,
+  "title": "F.6.5\tStructural steel",
+  "page": 355
+ },
+ {
+  "level": 4,
+  "title": "F.6.5.1\tDesign basis",
+  "page": 355
+ },
+ {
+  "level": 4,
+  "title": "F.6.5.2\tSteel grades",
+  "page": 355
+ },
+ {
+  "level": 4,
+  "title": "F.6.5.3\tPlate thickness",
+  "page": 356
+ },
+ {
+  "level": 4,
+  "title": "F.6.5.4\tStructural connections",
+  "page": 357
+ },
+ {
+  "level": 5,
+  "title": "F.6.5.4.1\tBolted connections",
+  "page": 357
+ },
+ {
+  "level": 5,
+  "title": "F.6.5.4.2\tWelded connections",
+  "page": 357
+ },
+ {
+  "level": 5,
+  "title": "F.6.5.4.3\tPost-installed anchors",
+  "page": 357
+ },
+ {
+  "level": 3,
+  "title": "F.6.6\tMasonry",
+  "page": 358
+ },
+ {
+  "level": 4,
+  "title": "F.6.6.1\tDesign basis",
+  "page": 358
+ },
+ {
+  "level": 4,
+  "title": "F.6.6.2\tWall panels",
+  "page": 358
+ },
+ {
+  "level": 4,
+  "title": "F.6.6.3\tBrick and block strengths",
+  "page": 358
+ },
+ {
+  "level": 2,
+  "title": "F.7\tLoads",
+  "page": 359
+ },
+ {
+  "level": 3,
+  "title": "F.7.1\tGeneral",
+  "page": 359
+ },
+ {
+  "level": 3,
+  "title": "F.7.2\tLoad combinations ",
+  "page": 359
+ },
+ {
+  "level": 3,
+  "title": "F.7.3\tDead loads",
+  "page": 359
+ },
+ {
+  "level": 3,
+  "title": "F.7.4\tSuperimposed dead loads",
+  "page": 359
+ },
+ {
+  "level": 3,
+  "title": "F.7.5\tLive loads",
+  "page": 360
+ },
+ {
+  "level": 3,
+  "title": "F.7.6\tSoil loads and hydrostatic pressure",
+  "page": 360
+ },
+ {
+  "level": 3,
+  "title": "F.7.7\tConstruction load",
+  "page": 361
+ },
+ {
+  "level": 3,
+  "title": "F.7.8\tAccidental impact load",
+  "page": 361
+ },
+ {
+  "level": 3,
+  "title": "F.7.9\tHelipad and heliport loads",
+  "page": 361
+ },
+ {
+  "level": 3,
+  "title": "F.7.10\tSelf-straining forces",
+  "page": 361
+ },
+ {
+  "level": 3,
+  "title": "F.7.11\tThermally induced forces",
+  "page": 361
+ },
+ {
+  "level": 3,
+  "title": "F.7.12\tDesign for wind loading effects",
+  "page": 363
+ },
+ {
+  "level": 4,
+  "title": "F.7.12.1\tDesign basis",
+  "page": 363
+ },
+ {
+  "level": 4,
+  "title": "F.7.12.2\tWind pressures",
+  "page": 363
+ },
+ {
+  "level": 4,
+  "title": "F.7.12.3\tWind tunnel testing",
+  "page": 364
+ },
+ {
+  "level": 5,
+  "title": "F.7.12.3.1\tRequirements for testing",
+  "page": 364
+ },
+ {
+  "level": 5,
+  "title": "F.7.12.3.2\tWind direction factors",
+  "page": 364
+ },
+ {
+  "level": 5,
+  "title": "F.7.12.3.3\tPeer review of wind tunnel testing",
+  "page": 364
+ },
+ {
+  "level": 4,
+  "title": "F.7.12.4\tAllowable building movements for wind",
+  "page": 364
+ },
+ {
+  "level": 5,
+  "title": "F.7.12.4.1\tAllowable displacement",
+  "page": 364
+ },
+ {
+  "level": 5,
+  "title": "F.7.12.4.2\tMotions affecting occupant comfort",
+  "page": 365
+ },
+ {
+  "level": 4,
+  "title": "F.7.12.5\tStructural damping for assessment of wind responses",
+  "page": 365
+ },
+ {
+  "level": 3,
+  "title": "F.7.13\tDesign for earthquake effects",
+  "page": 366
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.1\tScope",
+  "page": 366
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.2\tSeismic performance criteria",
+  "page": 366
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.3\tSeismic ground motion values",
+  "page": 366
+ },
+ {
+  "level": 5,
+  "title": "F.7.13.3.1\tNear-fault sites",
+  "page": 366
+ },
+ {
+  "level": 5,
+  "title": "F.7.13.3.2\tDubai acceleration parameters",
+  "page": 366
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.4\tSite class",
+  "page": 367
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.5\tSite coefficients and risk-targeted maximum considered earthquake (MCER) spectral response acceleration parameters",
+  "page": 367
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.6\tDesign spectral acceleration parameters",
+  "page": 367
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.7\tDesign response spectrum",
+  "page": 367
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.8\tRisk-targeted maximum considered earthquake (MCER) response spectrum",
+  "page": 367
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.9\tSite-specific ground motion procedures",
+  "page": 368
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.10\tSeismic design category",
+  "page": 368
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.11\tGeological hazards and geotechnical investigation",
+  "page": 368
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.12\tDamping ",
+  "page": 368
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.13\tCracked section stiffness ",
+  "page": 369
+ },
+ {
+  "level": 4,
+  "title": "F.7.13.14\tSeismic assessment of existing buildings",
+  "page": 369
+ },
+ {
+  "level": 2,
+  "title": "F.8\tPerformance and serviceability requirements",
+  "page": 370
+ },
+ {
+  "level": 3,
+  "title": "F.8.1\tDesign basis",
+  "page": 370
+ },
+ {
+  "level": 3,
+  "title": "F.8.2\tStrength",
+  "page": 370
+ },
+ {
+  "level": 3,
+  "title": "F.8.3\tDeflection control",
+  "page": 370
+ },
+ {
+  "level": 4,
+  "title": "F.8.3.1\tGeneral",
+  "page": 370
+ },
+ {
+  "level": 4,
+  "title": "F.8.3.2\tConcrete beam and slab deflection",
+  "page": 370
+ },
+ {
+  "level": 4,
+  "title": "F.8.3.3\tSteelwork deflection limits",
+  "page": 371
+ },
+ {
+  "level": 4,
+  "title": "F.8.3.4\tPost-tensioned concrete deflection control",
+  "page": 371
+ },
+ {
+  "level": 3,
+  "title": "F.8.4\tCrack control in concrete structure",
+  "page": 371
+ },
+ {
+  "level": 3,
+  "title": "F.8.5\tCrack control in restrained members",
+  "page": 372
+ },
+ {
+  "level": 3,
+  "title": "F.8.6\tDrift and deformation of buildings ",
+  "page": 372
+ },
+ {
+  "level": 4,
+  "title": "F.8.6.1\tGeneral",
+  "page": 372
+ },
+ {
+  "level": 4,
+  "title": "F.8.6.2\tDrift due to permanent gravity load",
+  "page": 372
+ },
+ {
+  "level": 4,
+  "title": "F.8.6.3\tDrift and deformation due to differential vertical shortening",
+  "page": 372
+ },
+ {
+  "level": 4,
+  "title": "F.8.6.4\tDrift and deformation due to wind ",
+  "page": 372
+ },
+ {
+  "level": 4,
+  "title": "F.8.6.5\tDrift and deformation due to seismic",
+  "page": 372
+ },
+ {
+  "level": 3,
+  "title": "F.8.7\tMovement joints and building separation",
+  "page": 373
+ },
+ {
+  "level": 3,
+  "title": "F.8.8\tVibration",
+  "page": 373
+ },
+ {
+  "level": 4,
+  "title": "F.8.8.1\tSteelwork",
+  "page": 373
+ },
+ {
+  "level": 4,
+  "title": "F.8.8.2\tConcrete",
+  "page": 373
+ },
+ {
+  "level": 3,
+  "title": "F.8.9\tFatigue",
+  "page": 374
+ },
+ {
+  "level": 3,
+  "title": "F.8.10\tTransfer elements",
+  "page": 374
+ },
+ {
+  "level": 2,
+  "title": "F.9\tGeotechnics",
+  "page": 375
+ },
+ {
+  "level": 3,
+  "title": "F.9.1\tIntroduction",
+  "page": 375
+ },
+ {
+  "level": 3,
+  "title": "F.9.2\tStandards",
+  "page": 376
+ },
+ {
+  "level": 3,
+  "title": "F.9.3\tGeotechnical site investigation",
+  "page": 376
+ },
+ {
+  "level": 4,
+  "title": "F.9.3.1\tGeneral",
+  "page": 376
+ },
+ {
+  "level": 4,
+  "title": "F.9.3.2\tGeotechnical desk study",
+  "page": 377
+ },
+ {
+  "level": 4,
+  "title": "F.9.3.3\tPlanning geotechnical investigation",
+  "page": 377
+ },
+ {
+  "level": 4,
+  "title": "F.9.3.4\tGeotechnical on-site investigations",
+  "page": 377
+ },
+ {
+  "level": 4,
+  "title": "F.9.3.5\tGeotechnical laboratory testing",
+  "page": 378
+ },
+ {
+  "level": 4,
+  "title": "F.9.3.6\tGeotechnical reporting",
+  "page": 378
+ },
+ {
+  "level": 3,
+  "title": "F.9.4\tGeotechnical design",
+  "page": 380
+ },
+ {
+  "level": 4,
+  "title": "F.9.4.1\tEarthworks (excavation and filling)",
+  "page": 380
+ },
+ {
+  "level": 4,
+  "title": "F.9.4.2\tFoundations design",
+  "page": 382
+ },
+ {
+  "level": 5,
+  "title": "F.9.4.2.1\tGeneral",
+  "page": 382
+ },
+ {
+  "level": 5,
+  "title": "F.9.4.2.2\tShallow and raft foundations",
+  "page": 383
+ },
+ {
+  "level": 5,
+  "title": "F.9.4.2.3\tDeep and piled foundations",
+  "page": 383
+ },
+ {
+  "level": 4,
+  "title": "F.9.4.3\tShoring and earth retaining system ",
+  "page": 385
+ },
+ {
+  "level": 5,
+  "title": "F.9.4.3.1\tGeneral",
+  "page": 385
+ },
+ {
+  "level": 5,
+  "title": "F.9.4.3.2\tRequired shoring systems ",
+  "page": 386
+ },
+ {
+  "level": 5,
+  "title": "F.9.4.3.3\tPermanent earth retaining system ",
+  "page": 387
+ },
+ {
+  "level": 5,
+  "title": "F.9.4.3.4\tBasement walls",
+  "page": 387
+ },
+ {
+  "level": 4,
+  "title": "F.9.4.4\tGroundwater control and dewatering",
+  "page": 387
+ },
+ {
+  "level": 4,
+  "title": "F.9.4.5\tLiquefaction",
+  "page": 389
+ },
+ {
+  "level": 4,
+  "title": "F.9.4.6\tGround improvement",
+  "page": 390
+ },
+ {
+  "level": 3,
+  "title": "F.9.5\tExecution of geotechnical works",
+  "page": 392
+ },
+ {
+  "level": 4,
+  "title": "F.9.5.1\tGeneral",
+  "page": 392
+ },
+ {
+  "level": 4,
+  "title": "F.9.5.2\tEarthworks (excavation and filling)",
+  "page": 392
+ },
+ {
+  "level": 4,
+  "title": "F.9.5.3\tShoring retaining systems",
+  "page": 392
+ },
+ {
+  "level": 4,
+  "title": "F.9.5.4\tFoundations",
+  "page": 392
+ },
+ {
+  "level": 4,
+  "title": "F.9.5.5\tGroundwater control and dewatering",
+  "page": 393
+ },
+ {
+  "level": 4,
+  "title": "F.9.5.6\tGround improvement",
+  "page": 394
+ },
+ {
+  "level": 2,
+  "title": "F.10\tAnnex: Seismic acceleration and damping parameters",
+  "page": 395
+ },
+ {
+  "level": 3,
+  "title": "F.10.1\tSeismic hazard in Dubai",
+  "page": 395
+ },
+ {
+  "level": 3,
+  "title": "F.10.2\tSeismic parameters for ASCE/SEI 7-16",
+  "page": 396
+ },
+ {
+  "level": 4,
+  "title": "F.10.2.1\tComponent of ground motion",
+  "page": 396
+ },
+ {
+  "level": 4,
+  "title": "F.10.2.2\tReturn period",
+  "page": 396
+ },
+ {
+  "level": 3,
+  "title": "F.10.3\tWest Coast Fault",
+  "page": 397
+ },
+ {
+  "level": 2,
+  "title": "F.11\tAnnex: Dubai sustainable concrete baseline (DSCB)",
+  "page": 398
+ },
+ {
+  "level": 3,
+  "title": "F.11.1\tGeneral",
+  "page": 398
+ },
+ {
+  "level": 3,
+  "title": "F.11.2\tDM concrete calculator",
+  "page": 398
+ },
+ {
+  "level": 3,
+  "title": "F.11.3\tStandard concrete mixes",
+  "page": 398
+ },
+ {
+  "level": 3,
+  "title": "F.11.4\tNew sustainable materials",
+  "page": 399
+ },
+ {
+  "level": 3,
+  "title": "F.11.5\tConcrete mixes for a specific project",
+  "page": 399
+ },
+ {
+  "level": 2,
+  "title": "F.12\tAnnex: Precast stairs",
+  "page": 400
+ },
+ {
+  "level": 1,
+  "title": "Part G Utilities",
+  "page": 403
+ },
+ {
+  "level": 2,
+  "title": "G.1\tPerformance statements",
+  "page": 404
+ },
+ {
+  "level": 2,
+  "title": "G.2\tDefinitions",
+  "page": 405
+ },
+ {
+  "level": 3,
+  "title": "G.2.1\tTerms",
+  "page": 405
+ },
+ {
+  "level": 4,
+  "title": "G.2.1.1\tElectrical",
+  "page": 405
+ },
+ {
+  "level": 4,
+  "title": "G.2.1.2\tDistrict cooling",
+  "page": 410
+ },
+ {
+  "level": 4,
+  "title": "G.2.1.3\tTelecommunications",
+  "page": 410
+ },
+ {
+  "level": 3,
+  "title": "G.2.2\tAcronyms and abbreviations",
+  "page": 412
+ },
+ {
+  "level": 2,
+  "title": "G.3\tReferences",
+  "page": 414
+ },
+ {
+  "level": 3,
+  "title": "G.3.1\tGeneral",
+  "page": 414
+ },
+ {
+  "level": 3,
+  "title": "G.3.2\tElectrical",
+  "page": 414
+ },
+ {
+  "level": 3,
+  "title": "G.3.3\tWater",
+  "page": 416
+ },
+ {
+  "level": 3,
+  "title": "G.3.4\tDistrict cooling",
+  "page": 416
+ },
+ {
+  "level": 3,
+  "title": "G.3.5\tTelecommunications",
+  "page": 416
+ },
+ {
+  "level": 4,
+  "title": "G.3.5.1\tEssential reading",
+  "page": 416
+ },
+ {
+  "level": 4,
+  "title": "G.3.5.2\tFurther reading",
+  "page": 417
+ },
+ {
+  "level": 2,
+  "title": "G.4\tDesign, erection and installation of electrical systems",
+  "page": 418
+ },
+ {
+  "level": 3,
+  "title": "G.4.1\tGeneral",
+  "page": 418
+ },
+ {
+  "level": 3,
+  "title": "G.4.2\tElectrical supply",
+  "page": 418
+ },
+ {
+  "level": 3,
+  "title": "G.4.3\tIncoming supply and metering",
+  "page": 418
+ },
+ {
+  "level": 3,
+  "title": "G.4.4\tPoint of Supply",
+  "page": 419
+ },
+ {
+  "level": 4,
+  "title": "G.4.4.1\tGeneral",
+  "page": 419
+ },
+ {
+  "level": 4,
+  "title": "G.4.4.2\tSwitchgear locations",
+  "page": 420
+ },
+ {
+  "level": 4,
+  "title": "G.4.4.3\tMain electrical switchroom ",
+  "page": 421
+ },
+ {
+  "level": 3,
+  "title": "G.4.5\tTariff metering",
+  "page": 423
+ },
+ {
+  "level": 4,
+  "title": "G.4.5.1\tIndividual consumer premises",
+  "page": 423
+ },
+ {
+  "level": 4,
+  "title": "G.4.5.2\tMultiple consumer premises",
+  "page": 424
+ },
+ {
+  "level": 4,
+  "title": "G.4.5.3\tMetering cabinet arrangement",
+  "page": 424
+ },
+ {
+  "level": 4,
+  "title": "G.4.5.4\tCT metering requirements",
+  "page": 426
+ },
+ {
+  "level": 3,
+  "title": "G.4.6\tAmbient design conditions",
+  "page": 428
+ },
+ {
+  "level": 3,
+  "title": "G.4.7\tCables and conductors",
+  "page": 428
+ },
+ {
+  "level": 4,
+  "title": "G.4.7.1\tGeneral",
+  "page": 428
+ },
+ {
+  "level": 4,
+  "title": "G.4.7.2\tMinimum size of conductors",
+  "page": 428
+ },
+ {
+  "level": 4,
+  "title": "G.4.7.3\tCurrent rating, size and voltage drop",
+  "page": 429
+ },
+ {
+  "level": 4,
+  "title": "G.4.7.4\tCable colour identification",
+  "page": 430
+ },
+ {
+  "level": 3,
+  "title": "G.4.8\tWiring installations exposed to high temperatures",
+  "page": 430
+ },
+ {
+  "level": 3,
+  "title": "G.4.9\tWiring installations in hazardous areas",
+  "page": 430
+ },
+ {
+  "level": 3,
+  "title": "G.4.10\tLoad balancing",
+  "page": 430
+ },
+ {
+  "level": 3,
+  "title": "G.4.11\tWiring accessories",
+  "page": 430
+ },
+ {
+  "level": 4,
+  "title": "G.4.11.1\tConduits and fittings",
+  "page": 430
+ },
+ {
+  "level": 4,
+  "title": "G.4.11.2\tTrunking",
+  "page": 431
+ },
+ {
+  "level": 4,
+  "title": "G.4.11.3\tCable trays and supports",
+  "page": 431
+ },
+ {
+  "level": 3,
+  "title": "G.4.12\tLow-voltage switchgear and control gear assemblies",
+  "page": 431
+ },
+ {
+  "level": 4,
+  "title": "G.4.12.1\tMain and sub main distribution boards",
+  "page": 431
+ },
+ {
+  "level": 4,
+  "title": "G.4.12.2\tFinal distribution boards",
+  "page": 434
+ },
+ {
+  "level": 3,
+  "title": "G.4.13\tApparatus and accessories",
+  "page": 437
+ },
+ {
+  "level": 4,
+  "title": "G.4.13.1\tSwitches",
+  "page": 437
+ },
+ {
+  "level": 4,
+  "title": "G.4.13.3\tArc fault detection devices (AFDDs)",
+  "page": 438
+ },
+ {
+  "level": 4,
+  "title": "G.4.13.2\tPlugs and socket outlets",
+  "page": 438
+ },
+ {
+  "level": 4,
+  "title": "G.4.13.4\tSurge protection devices (SPDs)",
+  "page": 439
+ },
+ {
+  "level": 4,
+  "title": "G.4.13.5\tCooker control units",
+  "page": 439
+ },
+ {
+  "level": 4,
+  "title": "G.4.13.6\tKitchen appliances",
+  "page": 440
+ },
+ {
+  "level": 4,
+  "title": "G.4.13.7\tControl of water heaters, saunas, Jacuzzis and washing machines",
+  "page": 441
+ },
+ {
+  "level": 4,
+  "title": "G.4.13.8\tControl of air conditioning unit/equipment",
+  "page": 441
+ },
+ {
+  "level": 4,
+  "title": "G.4.13.9\tExtra LV safety apparatus",
+  "page": 441
+ },
+ {
+  "level": 4,
+  "title": "G.4.13.10\tHV discharge lighting equipment",
+  "page": 441
+ },
+ {
+  "level": 4,
+  "title": "G.4.13.11\tElectric motors and starters",
+  "page": 441
+ },
+ {
+  "level": 3,
+  "title": "G.4.14\tStandby generators",
+  "page": 442
+ },
+ {
+  "level": 3,
+  "title": "G.4.15\tPower to fire pumps",
+  "page": 443
+ },
+ {
+  "level": 3,
+  "title": "G.4.16\tAssessment of connected load and maximum demand",
+  "page": 446
+ },
+ {
+  "level": 4,
+  "title": "G.4.16.1\tLighting and small power circuits",
+  "page": 446
+ },
+ {
+  "level": 4,
+  "title": "G.4.16.2\tMaximum demand",
+  "page": 447
+ },
+ {
+  "level": 3,
+  "title": "G.4.17\tDesign criteria for the installation of conduits, trunking, trays and accessories",
+  "page": 452
+ },
+ {
+  "level": 4,
+  "title": "G.4.17.1\tTrunking and conduits",
+  "page": 452
+ },
+ {
+  "level": 4,
+  "title": "G.4.17.2\tFlexible conduits",
+  "page": 455
+ },
+ {
+  "level": 4,
+  "title": "G.4.17.3\tCable trays",
+  "page": 455
+ },
+ {
+  "level": 3,
+  "title": "G.4.18\tDesign criteria for the installation of cables, equipment, accessories and wiring systems",
+  "page": 456
+ },
+ {
+  "level": 4,
+  "title": "G.4.18.1\tArmoured cables",
+  "page": 456
+ },
+ {
+  "level": 4,
+  "title": "G.4.18.2\tDistribution boards",
+  "page": 458
+ },
+ {
+  "level": 4,
+  "title": "G.4.18.3\tBusbar trunking systems (busways/bus risers)",
+  "page": 459
+ },
+ {
+  "level": 4,
+  "title": "G.4.18.4\tSegregation of circuits, phases and wiring systems",
+  "page": 460
+ },
+ {
+  "level": 4,
+  "title": "G.4.18.5\tMounting heights of accessories",
+  "page": 461
+ },
+ {
+  "level": 4,
+  "title": "G.4.18.6\tIdentification labels and notices",
+  "page": 461
+ },
+ {
+  "level": 3,
+  "title": "G.4.19\tEarthing and earth leakage protection",
+  "page": 462
+ },
+ {
+  "level": 4,
+  "title": "G.4.19.1\tGeneral",
+  "page": 462
+ },
+ {
+  "level": 4,
+  "title": "G.4.19.2\tConsumer’s main earth electrode",
+  "page": 463
+ },
+ {
+  "level": 4,
+  "title": "G.4.19.3\tEarth continuity conductor (ECC)",
+  "page": 464
+ },
+ {
+  "level": 4,
+  "title": "G.4.19.4\tEarth leakage protection",
+  "page": 465
+ },
+ {
+  "level": 4,
+  "title": "G.4.19.5\tEquipotential bonding",
+  "page": 466
+ },
+ {
+  "level": 3,
+  "title": "G.4.20\tPower factor correction, harmonic and undervoltage (UV) relays",
+  "page": 467
+ },
+ {
+  "level": 4,
+  "title": "G.4.20.1\tPF correction",
+  "page": 467
+ },
+ {
+  "level": 4,
+  "title": "G.4.20.2\tHarmonics and rapid voltage changes",
+  "page": 468
+ },
+ {
+  "level": 4,
+  "title": "G.4.20.3\tUndervoltage (UV) relays with auto reset timer",
+  "page": 468
+ },
+ {
+  "level": 3,
+  "title": "G.4.21\tConstruction sites",
+  "page": 469
+ },
+ {
+  "level": 4,
+  "title": "G.4.21.1\tGeneral",
+  "page": 469
+ },
+ {
+  "level": 4,
+  "title": "G.4.21.2\tWiring systems and distribution boards",
+  "page": 469
+ },
+ {
+  "level": 4,
+  "title": "G.4.21.3\tEarth leakage protection",
+  "page": 470
+ },
+ {
+  "level": 2,
+  "title": "G.5\tElectric vehicle (EV) charging points",
+  "page": 471
+ },
+ {
+  "level": 3,
+  "title": "G.5.1\tCharging modes",
+  "page": 471
+ },
+ {
+  "level": 4,
+  "title": "G.5.1.1\tGeneral ",
+  "page": 471
+ },
+ {
+  "level": 4,
+  "title": "G.5.1.2\tMode 1 charging",
+  "page": 471
+ },
+ {
+  "level": 4,
+  "title": "G.5.1.3\tMode 2 charging",
+  "page": 471
+ },
+ {
+  "level": 4,
+  "title": "G.5.1.4\tMode 3 charging",
+  "page": 472
+ },
+ {
+  "level": 4,
+  "title": "G.5.1.5\tMode 4 charging",
+  "page": 472
+ },
+ {
+  "level": 3,
+  "title": "G.5.2\tEVSE design requirements",
+  "page": 473
+ },
+ {
+  "level": 2,
+  "title": "G.6\tRenewable energy",
+  "page": 475
+ },
+ {
+  "level": 3,
+  "title": "G.6.1\tGeneral",
+  "page": 475
+ },
+ {
+  "level": 3,
+  "title": "G.6.2\tSystem documentation requirements",
+  "page": 475
+ },
+ {
+  "level": 3,
+  "title": "G.6.3\tWiring diagram datasheets ",
+  "page": 475
+ },
+ {
+  "level": 3,
+  "title": "G.6.4\tLabelling and identification",
+  "page": 476
+ },
+ {
+  "level": 3,
+  "title": "G.6.5\tMetering and metering provision",
+  "page": 476
+ },
+ {
+  "level": 2,
+  "title": "G.7\tSubstation and MV installations",
+  "page": 477
+ },
+ {
+  "level": 3,
+  "title": "G.7.1\tMV network design requirements \n\tand guidelines (11 kV)",
+  "page": 477
+ },
+ {
+  "level": 4,
+  "title": "G.7.1.1\tGeneral",
+  "page": 477
+ },
+ {
+  "level": 4,
+  "title": "G.7.1.2\tReliability of supply",
+  "page": 477
+ },
+ {
+  "level": 4,
+  "title": "G.7.1.3\tStandard cable sizes",
+  "page": 477
+ },
+ {
+  "level": 4,
+  "title": "G.7.1.4\tCable loads",
+  "page": 477
+ },
+ {
+  "level": 4,
+  "title": "G.7.1.5\tParallel operation",
+  "page": 477
+ },
+ {
+  "level": 4,
+  "title": "G.7.1.6\tHarmonics",
+  "page": 478
+ },
+ {
+  "level": 4,
+  "title": "G.7.1.7\tCable trenches",
+  "page": 478
+ },
+ {
+  "level": 3,
+  "title": "G.7.2\tSubstation construction within private plots",
+  "page": 479
+ },
+ {
+  "level": 4,
+  "title": "G.7.2.1\tGeneral",
+  "page": 479
+ },
+ {
+  "level": 4,
+  "title": "G.7.2.2\tSubstation location",
+  "page": 479
+ },
+ {
+  "level": 4,
+  "title": "G.7.2.3\tSubstation parameters",
+  "page": 479
+ },
+ {
+  "level": 4,
+  "title": "G.7.2.4\tEarthing",
+  "page": 482
+ },
+ {
+  "level": 3,
+  "title": "G.7.3\tSubstation location and access",
+  "page": 483
+ },
+ {
+  "level": 3,
+  "title": "G.7.4\tRequirements for provision of attic slabs above substations and LV electrical rooms",
+  "page": 483
+ },
+ {
+  "level": 3,
+  "title": "G.7.5\tSubstation types and areas",
+  "page": 484
+ },
+ {
+  "level": 4,
+  "title": "G.7.5.1\tSingle room substation (RMU and transformer in same room on \n\tground floor)",
+  "page": 484
+ },
+ {
+  "level": 4,
+  "title": "G.7.5.2\tSplit room substation (RMU and transformer in separate rooms on \n\tground floor)",
+  "page": 487
+ },
+ {
+  "level": 4,
+  "title": "G.7.5.3\tBasement substation (RMU room in ground floor and transformer \n\troom at basement level)",
+  "page": 489
+ },
+ {
+  "level": 4,
+  "title": "G.7.5.4\tOpen to sky dedicated substation with private panel",
+  "page": 490
+ },
+ {
+  "level": 4,
+  "title": "G.7.5.5\tOpen to sky pocket substation",
+  "page": 491
+ },
+ {
+  "level": 4,
+  "title": "G.7.5.6\tDEWA control room requirements for direct 11 kV supply",
+  "page": 493
+ },
+ {
+  "level": 3,
+  "title": "G.7.6\tSubstation ventilation and fire \n\tsafety provisions",
+  "page": 495
+ },
+ {
+  "level": 4,
+  "title": "G.7.6.1\tGeneral",
+  "page": 495
+ },
+ {
+  "level": 4,
+  "title": "G.7.6.2\tNatural ventilation via two exterior walls",
+  "page": 495
+ },
+ {
+  "level": 4,
+  "title": "G.7.6.3\tForced ventilation with no exterior walls",
+  "page": 495
+ },
+ {
+  "level": 3,
+  "title": "G.7.7\tTransporting equipment to basement transformer rooms",
+  "page": 500
+ },
+ {
+  "level": 3,
+  "title": "G.7.8\tSubstation cable arrangement",
+  "page": 500
+ },
+ {
+  "level": 3,
+  "title": "G.7.9\tDirect 11 kV supply for super high-\n\trise towers above 200 m",
+  "page": 502
+ },
+ {
+  "level": 4,
+  "title": "G.7.9.1\tIntake arrangement",
+  "page": 502
+ },
+ {
+  "level": 4,
+  "title": "G.7.9.2\tProtection requirements",
+  "page": 502
+ },
+ {
+  "level": 2,
+  "title": "G.8\tLiquefied petroleum gas (LPG)",
+  "page": 503
+ },
+ {
+  "level": 3,
+  "title": "G.8.1\tGeneral",
+  "page": 503
+ },
+ {
+  "level": 2,
+  "title": "G.9\tWater",
+  "page": 504
+ },
+ {
+  "level": 3,
+  "title": "G.9.1\tWater metering ",
+  "page": 504
+ },
+ {
+  "level": 3,
+  "title": "G.9.2\tDesign and installation of water \n\tmeters",
+  "page": 504
+ },
+ {
+  "level": 2,
+  "title": "G.10\tDistrict cooling",
+  "page": 505
+ },
+ {
+  "level": 3,
+  "title": "G.10.1\tGeneral",
+  "page": 505
+ },
+ {
+  "level": 3,
+  "title": "G.10.2\tCoordination with district cooling \n\tProviders",
+  "page": 505
+ },
+ {
+  "level": 3,
+  "title": "G.10.3\tCommon technical requirements",
+  "page": 505
+ },
+ {
+  "level": 2,
+  "title": "G.11\tTelecommunications",
+  "page": 508
+ },
+ {
+  "level": 3,
+  "title": "G.11.1\tDesign and installation of telecommunications infrastructure",
+  "page": 508
+ },
+ {
+  "level": 4,
+  "title": "G.11.1.1\tGeneral requirements",
+  "page": 508
+ },
+ {
+  "level": 4,
+  "title": "G.11.1.2\tTelecoms service",
+  "page": 509
+ },
+ {
+  "level": 4,
+  "title": "G.11.1.3\tReference architecture",
+  "page": 510
+ },
+ {
+  "level": 3,
+  "title": "G.11.2\tResponsibility matrix",
+  "page": 513
+ },
+ {
+  "level": 3,
+  "title": "G.11.3\tOutside plant (OSP) common infrastructure specifications ",
+  "page": 515
+ },
+ {
+  "level": 4,
+  "title": "G.11.3.1\tLead-in ducts",
+  "page": 515
+ },
+ {
+  "level": 5,
+  "title": "G.11.3.1.1\tGeneral",
+  "page": 515
+ },
+ {
+  "level": 5,
+  "title": "G.11.3.1.2\tScenario 1 – Connection to existing SP duct infrastructure",
+  "page": 517
+ },
+ {
+  "level": 5,
+  "title": "G.11.3.1.3\tScenario 2 – SP duct network is still to be built",
+  "page": 518
+ },
+ {
+  "level": 5,
+  "title": "G.11.3.1.4\tEntry boxes",
+  "page": 518
+ },
+ {
+  "level": 5,
+  "title": "G.11.3.1.5\tBEP",
+  "page": 518
+ },
+ {
+  "level": 4,
+  "title": "G.11.3.2\tMeet-me-room (MMR)",
+  "page": 519
+ },
+ {
+  "level": 3,
+  "title": "G.11.4\tInside plant common infrastructure specifications (ISP)",
+  "page": 520
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.1\tTelecom rooms",
+  "page": 520
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.1.1\tGeneral",
+  "page": 520
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.1.2\tLocation",
+  "page": 520
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.1.3\tMaintenance",
+  "page": 520
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.2\tMain telecom rooms (MTRs)",
+  "page": 520
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.3\tFloor telecom rooms (FTRs)",
+  "page": 525
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.4\tMobile network services",
+  "page": 526
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.4.1\tGeneral",
+  "page": 526
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.4.2\tRooftop mobile rooms (RTMRs)",
+  "page": 526
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.4.3\tMobile service rooms (MSRs)",
+  "page": 529
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.5\tApartment/office/retail consolidation cabinets",
+  "page": 529
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.6\tLabour accommodation consolidation cabinet",
+  "page": 531
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.6.1\tGeneral",
+  "page": 531
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.6.2\tScenario 1: Low-density occupation/single occupier tenant organizations",
+  "page": 532
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.6.3\tScenario 2: High density occupation/multiple occupier tenant organizations",
+  "page": 532
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.7\tBusiness consolidation cabinet – Commercial shell and core",
+  "page": 533
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.8\tCable pathways",
+  "page": 534
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.8.1\tGeneral",
+  "page": 534
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.8.2\tMicroduct",
+  "page": 536
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.9\tFibre termination components and GPON splitters",
+  "page": 536
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.9.1\tApproved optical fibre components",
+  "page": 536
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.9.2\tGPON splitter calculation per building",
+  "page": 536
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.9.3\tGPON optical splitter requirements",
+  "page": 536
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.9.4\tHigh density connectorized modular splitter specification",
+  "page": 537
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.9.5\tLow-density connectorized splitter specification",
+  "page": 537
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.9.6\tMulticore fibre cable termination",
+  "page": 537
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.10\tFibre and copper cables",
+  "page": 538
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.10.1\tGeneral",
+  "page": 538
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.10.2\tVilla complexes and warehouses",
+  "page": 538
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.10.3\tMTR to consolidation cabinet (direct fibre)",
+  "page": 538
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.10.4\tMTR to FTR mini ODF (multicore fibre)",
+  "page": 538
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.10.5\tFTR mini ODF to consolidation cabinet",
+  "page": 541
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.10.6\tMTR to each MSR and the RTMR",
+  "page": 541
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.10.7\tCategory 6 copper cabling",
+  "page": 542
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.11\tBulk service",
+  "page": 543
+ },
+ {
+  "level": 4,
+  "title": "G.11.4.12\tLabelling scheme",
+  "page": 544
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.12.1\tGeneral",
+  "page": 544
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.12.2\tSP GAID and EID identification plate for each unit/tenant",
+  "page": 544
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.12.3\tComponent and location labelling",
+  "page": 545
+ },
+ {
+  "level": 5,
+  "title": "G.11.4.12.4\tSLD and connectivity/wiring detail",
+  "page": 546
+ },
+ {
+  "level": 1,
+  "title": "Part H Indoor Environment",
+  "page": 548
+ },
+ {
+  "level": 2,
+  "title": "H.1\tPerformance statements",
+  "page": 549
+ },
+ {
+  "level": 2,
+  "title": "H.2\tDefinitions",
+  "page": 550
+ },
+ {
+  "level": 3,
+  "title": "H.2.1\tTerms",
+  "page": 550
+ },
+ {
+  "level": 4,
+  "title": "H.2.1.1\tHVAC and occupant comfort",
+  "page": 550
+ },
+ {
+  "level": 4,
+  "title": "H.2.1.2\tWater supplies",
+  "page": 552
+ },
+ {
+  "level": 4,
+  "title": "H.2.1.3\tDrainage",
+  "page": 552
+ },
+ {
+  "level": 4,
+  "title": "H.2.1.4\tAcoustics",
+  "page": 553
+ },
+ {
+  "level": 4,
+  "title": "H.2.1.5\tFire safety ",
+  "page": 553
+ },
+ {
+  "level": 4,
+  "title": "H.2.1.6\tLighting",
+  "page": 553
+ },
+ {
+  "level": 4,
+  "title": "H.2.1.7\tDigital services enablement and ICT",
+  "page": 554
+ },
+ {
+  "level": 3,
+  "title": "H.2.2\tAcronyms and abbreviations",
+  "page": 556
+ },
+ {
+  "level": 2,
+  "title": "H.3\tReferences",
+  "page": 558
+ },
+ {
+  "level": 3,
+  "title": "H.3.1\tEssential references",
+  "page": 558
+ },
+ {
+  "level": 4,
+  "title": "H.3.1.1\tGeneral ",
+  "page": 558
+ },
+ {
+  "level": 4,
+  "title": "H.3.1.2\tHVAC and occupant comfort ",
+  "page": 558
+ },
+ {
+  "level": 4,
+  "title": "H.3.1.3\tWater supplies",
+  "page": 561
+ },
+ {
+  "level": 4,
+  "title": "H.3.1.4\tDrainage",
+  "page": 561
+ },
+ {
+  "level": 4,
+  "title": "H.3.1.5\tLighting",
+  "page": 562
+ },
+ {
+  "level": 4,
+  "title": "H.3.1.6\tCommissioning",
+  "page": 562
+ },
+ {
+  "level": 4,
+  "title": "H.3.1.7\tAcoustics",
+  "page": 562
+ },
+ {
+  "level": 4,
+  "title": "H.3.1.8\tDigital services enablement and ICT",
+  "page": 562
+ },
+ {
+  "level": 3,
+  "title": "H.3.2\tFurther reading",
+  "page": 564
+ },
+ {
+  "level": 4,
+  "title": "H.3.2.1\tWater supplies and drainage",
+  "page": 564
+ },
+ {
+  "level": 4,
+  "title": "H.3.2.2\tAcoustics",
+  "page": 564
+ },
+ {
+  "level": 4,
+  "title": "H.3.2.3\tDigital services enablement and ICT",
+  "page": 564
+ },
+ {
+  "level": 2,
+  "title": "H.4\tHVAC systems and occupant comfort ",
+  "page": 565
+ },
+ {
+  "level": 3,
+  "title": "H.4.1\tGeneral ",
+  "page": 565
+ },
+ {
+  "level": 3,
+  "title": "H.4.2\tProtection of structure ",
+  "page": 565
+ },
+ {
+  "level": 3,
+  "title": "H.4.3\tEquipment and appliance location ",
+  "page": 565
+ },
+ {
+  "level": 3,
+  "title": "H.4.4\tAccess and service space",
+  "page": 566
+ },
+ {
+  "level": 3,
+  "title": "H.4.5\tAcoustic requirements and noise criteria",
+  "page": 566
+ },
+ {
+  "level": 3,
+  "title": "H.4.6\tBuilding HVAC energy load",
+  "page": 567
+ },
+ {
+  "level": 4,
+  "title": "H.4.6.1\tGeneral",
+  "page": 567
+ },
+ {
+  "level": 4,
+  "title": "H.4.6.2\tOutdoor design conditions ",
+  "page": 567
+ },
+ {
+  "level": 4,
+  "title": "H.4.6.3\tIndoor design conditions",
+  "page": 567
+ },
+ {
+  "level": 4,
+  "title": "H.4.6.4\tOutdoor air design conditions ",
+  "page": 568
+ },
+ {
+  "level": 4,
+  "title": "H.4.6.5\tHeat gain and loss calculations",
+  "page": 568
+ },
+ {
+  "level": 4,
+  "title": "H.4.6.6\tExternal load criteria",
+  "page": 568
+ },
+ {
+  "level": 4,
+  "title": "H.4.6.7\tInternal load criteria",
+  "page": 568
+ },
+ {
+  "level": 5,
+  "title": "H.4.6.7.1\tOccupancy",
+  "page": 568
+ },
+ {
+  "level": 5,
+  "title": "H.4.6.7.2\tLighting",
+  "page": 568
+ },
+ {
+  "level": 5,
+  "title": "H.4.6.7.3\tElectrical equipment loads",
+  "page": 568
+ },
+ {
+  "level": 3,
+  "title": "H.4.7\tThermal comfort criteria",
+  "page": 569
+ },
+ {
+  "level": 3,
+  "title": "H.4.8\tEnergy conservation and efficiency: building systems",
+  "page": 569
+ },
+ {
+  "level": 4,
+  "title": "H.4.8.1\tMinimum efficiency of HVAC systems",
+  "page": 569
+ },
+ {
+  "level": 4,
+  "title": "H.4.8.2\tExhaust air energy recovery",
+  "page": 569
+ },
+ {
+  "level": 4,
+  "title": "H.4.8.3\tDemand controlled ventilation ",
+  "page": 570
+ },
+ {
+  "level": 4,
+  "title": "H.4.8.4\tPipe and duct insulation ",
+  "page": 570
+ },
+ {
+  "level": 3,
+  "title": "H.4.9\tInfiltration/air leakage ",
+  "page": 570
+ },
+ {
+  "level": 4,
+  "title": "H.4.9.1\tPerformance",
+  "page": 570
+ },
+ {
+  "level": 4,
+  "title": "H.4.9.2\tAir loss from entrances/exits ",
+  "page": 570
+ },
+ {
+  "level": 3,
+  "title": "H.4.10\tVentilation and air quality",
+  "page": 570
+ },
+ {
+  "level": 4,
+  "title": "H.4.10.1\tGeneral",
+  "page": 570
+ },
+ {
+  "level": 4,
+  "title": "H.4.10.2\tMinimum ventilation requirements for adequate indoor air quality",
+  "page": 571
+ },
+ {
+  "level": 4,
+  "title": "H.4.10.3\tIndoor air quality ",
+  "page": 571
+ },
+ {
+  "level": 4,
+  "title": "H.4.10.4\tAir inlets and exhausts ",
+  "page": 572
+ },
+ {
+  "level": 4,
+  "title": "H.4.10.5\tIsolation of pollutant sources ",
+  "page": 572
+ },
+ {
+  "level": 4,
+  "title": "H.4.10.6\tPandemic air quality measures",
+  "page": 572
+ },
+ {
+  "level": 3,
+  "title": "H.4.11\tNatural ventilation",
+  "page": 572
+ },
+ {
+  "level": 3,
+  "title": "H.4.12\tMechanical ventilation ",
+  "page": 573
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.1\tGeneral",
+  "page": 573
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.2\tDucts and duct connectors",
+  "page": 574
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.3\tShafts as air ducts",
+  "page": 574
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.4\tPlenums",
+  "page": 575
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.5\tAir filters",
+  "page": 575
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.6\tDuctwork air leakage",
+  "page": 575
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.7\tExhaust ventilation systems",
+  "page": 576
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.8\tMechanical ventilation in fire mode ",
+  "page": 576
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.9\tFire and smoke dampers",
+  "page": 576
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.10\tSmoke control and pressurization systems",
+  "page": 576
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.11\tVentilation for vehicle parking areas  ",
+  "page": 577
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.12\tMotors and fans",
+  "page": 577
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.13\tClothes dryer exhausts",
+  "page": 578
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.14\tDomestic kitchen exhaust equipment",
+  "page": 578
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.15\tCommercial kitchens",
+  "page": 578
+ },
+ {
+  "level": 5,
+  "title": "H.4.12.15.1\tKitchen hood ventilation systems",
+  "page": 578
+ },
+ {
+  "level": 5,
+  "title": "H.4.12.15.2\tCommercial kitchen hoods",
+  "page": 579
+ },
+ {
+  "level": 5,
+  "title": "H.4.12.15.3\tCommercial kitchen make-up air",
+  "page": 579
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.16\tDust, stock and refuse conveying systems ",
+  "page": 580
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.17\tCombustion air",
+  "page": 580
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.18\tChimneys and vents",
+  "page": 581
+ },
+ {
+  "level": 5,
+  "title": "H.4.12.18.1\tGeneral ",
+  "page": 581
+ },
+ {
+  "level": 5,
+  "title": "H.4.12.18.2\tVents",
+  "page": 581
+ },
+ {
+  "level": 5,
+  "title": "H.4.12.18.3\tConnectors",
+  "page": 581
+ },
+ {
+  "level": 5,
+  "title": "H.4.12.18.4\tFactory-built chimneys",
+  "page": 581
+ },
+ {
+  "level": 5,
+  "title": "H.4.12.18.5\tMetal chimneys",
+  "page": 581
+ },
+ {
+  "level": 4,
+  "title": "H.4.12.19\tExplosion control",
+  "page": 581
+ },
+ {
+  "level": 3,
+  "title": "H.4.13\tHydronic systems ",
+  "page": 582
+ },
+ {
+  "level": 4,
+  "title": "H.4.13.1\tGeneral",
+  "page": 582
+ },
+ {
+  "level": 4,
+  "title": "H.4.13.2\tMaterials",
+  "page": 582
+ },
+ {
+  "level": 4,
+  "title": "H.4.13.3\tPipe joints and connections",
+  "page": 582
+ },
+ {
+  "level": 4,
+  "title": "H.4.13.4\tValves",
+  "page": 582
+ },
+ {
+  "level": 4,
+  "title": "H.4.13.5\tPipe installation",
+  "page": 582
+ },
+ {
+  "level": 4,
+  "title": "H.4.13.6\tPipe design",
+  "page": 583
+ },
+ {
+  "level": 4,
+  "title": "H.4.13.7\tPumped hydronic systems",
+  "page": 583
+ },
+ {
+  "level": 4,
+  "title": "H.4.13.8\tPressure vessels",
+  "page": 583
+ },
+ {
+  "level": 4,
+  "title": "H.4.13.9\tBoilers",
+  "page": 584
+ },
+ {
+  "level": 5,
+  "title": "H.4.13.9.1\tGeneral",
+  "page": 584
+ },
+ {
+  "level": 5,
+  "title": "H.4.13.9.2\tBoiler connections",
+  "page": 584
+ },
+ {
+  "level": 5,
+  "title": "H.4.13.9.3\tSafety and pressure relief valves and controls ",
+  "page": 584
+ },
+ {
+  "level": 5,
+  "title": "H.4.13.9.4\tBoiler low-water cut-off",
+  "page": 584
+ },
+ {
+  "level": 5,
+  "title": "H.4.13.9.5\tSteam boiler blow-off",
+  "page": 584
+ },
+ {
+  "level": 5,
+  "title": "H.4.13.9.6\tHot water boiler expansion tank",
+  "page": 584
+ },
+ {
+  "level": 5,
+  "title": "H.4.13.9.7\tGauges",
+  "page": 585
+ },
+ {
+  "level": 5,
+  "title": "H.4.13.9.8\tTesting",
+  "page": 585
+ },
+ {
+  "level": 5,
+  "title": "H.4.13.9.9\tFlushing, cleaning and water treatment",
+  "page": 585
+ },
+ {
+  "level": 4,
+  "title": "H.4.13.10\tRefrigeration",
+  "page": 585
+ },
+ {
+  "level": 5,
+  "title": "H.4.13.10.1\tGeneral ",
+  "page": 585
+ },
+ {
+  "level": 5,
+  "title": "H.4.13.10.2\tRefrigerant and ozone depletion management ",
+  "page": 585
+ },
+ {
+  "level": 3,
+  "title": "H.4.14\tHVAC systems controls and metering",
+  "page": 586
+ },
+ {
+  "level": 4,
+  "title": "H.4.14.1\tControls for HVAC systems ",
+  "page": 586
+ },
+ {
+  "level": 4,
+  "title": "H.4.14.2\tBuilding management system (BMS)",
+  "page": 586
+ },
+ {
+  "level": 4,
+  "title": "H.4.14.3\tH.4.14.3 Control systems for hotel rooms ",
+  "page": 586
+ },
+ {
+  "level": 4,
+  "title": "H.4.14.4\tAir-conditioning metering ",
+  "page": 586
+ },
+ {
+  "level": 3,
+  "title": "H.4.15\tFuel oil piping and storage",
+  "page": 587
+ },
+ {
+  "level": 4,
+  "title": "H.4.15.1\tGeneral ",
+  "page": 587
+ },
+ {
+  "level": 4,
+  "title": "H.4.15.2\tMaterials",
+  "page": 587
+ },
+ {
+  "level": 4,
+  "title": "H.4.15.3\tJoints and connections",
+  "page": 587
+ },
+ {
+  "level": 4,
+  "title": "H.4.15.4\tPiping support",
+  "page": 587
+ },
+ {
+  "level": 3,
+  "title": "H.4.16\tSpecific appliances and equipment",
+  "page": 588
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.1\tGas-fired appliances",
+  "page": 588
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.2\tFireplace stoves and room heaters",
+  "page": 588
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.3\tCooling towers, evaporative condensers and fluid coolers",
+  "page": 588
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.4\tInfrared radiant heaters",
+  "page": 588
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.5\tSauna heaters",
+  "page": 588
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.6\tEngine and gas turbine-powered equipment and appliances",
+  "page": 588
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.7\tPool and spa heaters",
+  "page": 589
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.8\tCooking appliances",
+  "page": 589
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.9\tConversion burners",
+  "page": 589
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.10\tUnit heaters",
+  "page": 589
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.11\tStationary fuel cell power systems",
+  "page": 589
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.12\tGaseous hydrogen systems",
+  "page": 589
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.13\tRadiant heating systems",
+  "page": 589
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.14\tEvaporative cooling equipment",
+  "page": 589
+ },
+ {
+  "level": 4,
+  "title": "H.4.16.15\tHigh volume large diameter fans",
+  "page": 589
+ },
+ {
+  "level": 2,
+  "title": "H.5\tWater supplies",
+  "page": 590
+ },
+ {
+  "level": 3,
+  "title": "H.5.1\tGeneral",
+  "page": 590
+ },
+ {
+  "level": 3,
+  "title": "H.5.2\tWater conservation and reuse ",
+  "page": 590
+ },
+ {
+  "level": 4,
+  "title": "H.5.2.1\tCompliance methods ",
+  "page": 590
+ },
+ {
+  "level": 4,
+  "title": "H.5.2.2\tWater-efficient fittings ",
+  "page": 590
+ },
+ {
+  "level": 4,
+  "title": "H.5.2.3\tCondensate drainage ",
+  "page": 591
+ },
+ {
+  "level": 4,
+  "title": "H.5.2.4\tCondensate reuse ",
+  "page": 591
+ },
+ {
+  "level": 4,
+  "title": "H.5.2.5\tWater-efficient irrigation ",
+  "page": 591
+ },
+ {
+  "level": 4,
+  "title": "H.5.2.6\tWater metering",
+  "page": 591
+ },
+ {
+  "level": 5,
+  "title": "H.5.2.6.1\tMain meters",
+  "page": 591
+ },
+ {
+  "level": 5,
+  "title": "H.5.2.6.2\tSub-meters",
+  "page": 591
+ },
+ {
+  "level": 4,
+  "title": "H.5.2.7\tWastewater reuse ",
+  "page": 592
+ },
+ {
+  "level": 4,
+  "title": "H.5.2.8\tCooling tower water supply ",
+  "page": 592
+ },
+ {
+  "level": 3,
+  "title": "H.5.3\tSustainable water heating system",
+  "page": 593
+ },
+ {
+  "level": 3,
+  "title": "H.5.4\tCold water services ",
+  "page": 593
+ },
+ {
+  "level": 4,
+  "title": "H.5.4.1\tCold water distribution",
+  "page": 593
+ },
+ {
+  "level": 4,
+  "title": "H.5.4.2\tCooled water systems",
+  "page": 594
+ },
+ {
+  "level": 4,
+  "title": "H.5.4.3\tWater recycling systems",
+  "page": 595
+ },
+ {
+  "level": 4,
+  "title": "H.5.4.4\tLaboratory buildings",
+  "page": 595
+ },
+ {
+  "level": 4,
+  "title": "H.5.4.5\tSwimming pool cold water supply",
+  "page": 595
+ },
+ {
+  "level": 4,
+  "title": "H.5.4.6\tIrrigation water supply",
+  "page": 596
+ },
+ {
+  "level": 3,
+  "title": "H.5.5\tPotable water storage tanks ",
+  "page": 597
+ },
+ {
+  "level": 4,
+  "title": "H.5.5.1\tGeneral",
+  "page": 597
+ },
+ {
+  "level": 4,
+  "title": "H.5.5.2\tWater tank locations",
+  "page": 597
+ },
+ {
+  "level": 4,
+  "title": "H.5.5.3\tWater storage tank sizing",
+  "page": 598
+ },
+ {
+  "level": 4,
+  "title": "H.5.5.4\tWater tank construction",
+  "page": 599
+ },
+ {
+  "level": 4,
+  "title": "H.5.5.5\tTank pump room ",
+  "page": 600
+ },
+ {
+  "level": 4,
+  "title": "H.5.5.6\tFirefighting water tanks",
+  "page": 600
+ },
+ {
+  "level": 4,
+  "title": "H.5.5.7\tCombined firefighting and water storage",
+  "page": 601
+ },
+ {
+  "level": 3,
+  "title": "H.5.6\tWater treatment",
+  "page": 601
+ },
+ {
+  "level": 4,
+  "title": "H.5.6.1\tTreatment against microbiological bacteria growth",
+  "page": 601
+ },
+ {
+  "level": 4,
+  "title": "H.5.6.2\tWater softening",
+  "page": 602
+ },
+ {
+  "level": 3,
+  "title": "H.5.7\tServicing and isolation valves",
+  "page": 602
+ },
+ {
+  "level": 3,
+  "title": "H.5.8\tBackflow protection",
+  "page": 602
+ },
+ {
+  "level": 3,
+  "title": "H.5.9\tControls and monitoring",
+  "page": 603
+ },
+ {
+  "level": 3,
+  "title": "H.5.10\tHot water services",
+  "page": 603
+ },
+ {
+  "level": 3,
+  "title": "H.5.11\tWater services system installation requirements",
+  "page": 605
+ },
+ {
+  "level": 3,
+  "title": "H.5.12\tProvisions for future connection",
+  "page": 605
+ },
+ {
+  "level": 3,
+  "title": "H.5.13\tInterfaces for BMS and automatic controls",
+  "page": 605
+ },
+ {
+  "level": 2,
+  "title": "H.6\tDrainage",
+  "page": 606
+ },
+ {
+  "level": 3,
+  "title": "H.6.1\tGeneral",
+  "page": 606
+ },
+ {
+  "level": 3,
+  "title": "H.6.2\tSanitary plumbing system",
+  "page": 606
+ },
+ {
+  "level": 4,
+  "title": "H.6.2.1\tGeneral",
+  "page": 606
+ },
+ {
+  "level": 4,
+  "title": "H.6.2.2\tSanitation system disposal",
+  "page": 607
+ },
+ {
+  "level": 4,
+  "title": "H.6.2.3\tDrainage from mechanical plant",
+  "page": 608
+ },
+ {
+  "level": 4,
+  "title": "H.6.2.4\tFloor drains",
+  "page": 608
+ },
+ {
+  "level": 4,
+  "title": "H.6.2.5\tVentilation pipework",
+  "page": 610
+ },
+ {
+  "level": 4,
+  "title": "H.6.2.6\tSanitary plumbing acoustic requirements",
+  "page": 611
+ },
+ {
+  "level": 4,
+  "title": "H.6.2.7\tRodding eyes",
+  "page": 611
+ },
+ {
+  "level": 4,
+  "title": "H.6.2.8\tSanitation pipework",
+  "page": 612
+ },
+ {
+  "level": 4,
+  "title": "H.6.2.9\tLeak detection systems",
+  "page": 613
+ },
+ {
+  "level": 3,
+  "title": "H.6.3\tBelow-ground drainage",
+  "page": 613
+ },
+ {
+  "level": 4,
+  "title": "H.6.3.1\tDrainage systems",
+  "page": 613
+ },
+ {
+  "level": 4,
+  "title": "H.6.3.2\tAccess to drainage systems",
+  "page": 614
+ },
+ {
+  "level": 4,
+  "title": "H.6.3.3\tSump pits",
+  "page": 615
+ },
+ {
+  "level": 4,
+  "title": "H.6.3.4\tFoul pumping stations",
+  "page": 616
+ },
+ {
+  "level": 4,
+  "title": "H.6.3.5\tManholes",
+  "page": 617
+ },
+ {
+  "level": 4,
+  "title": "H.6.3.6\tManhole construction",
+  "page": 618
+ },
+ {
+  "level": 4,
+  "title": "H.6.3.7\tFinal inspection chamber and provision for future connection ",
+  "page": 618
+ },
+ {
+  "level": 3,
+  "title": "H.6.4\tRainwater disposal",
+  "page": 619
+ },
+ {
+  "level": 4,
+  "title": "H.6.4.1\tGeneral",
+  "page": 619
+ },
+ {
+  "level": 4,
+  "title": "H.6.4.2\tSiphonic rainwater disposal systems",
+  "page": 620
+ },
+ {
+  "level": 4,
+  "title": "H.6.4.3\tRainwater disposal system acoustic requirements",
+  "page": 620
+ },
+ {
+  "level": 4,
+  "title": "H.6.4.4\tDrainage of hardstanding paved areas",
+  "page": 620
+ },
+ {
+  "level": 4,
+  "title": "H.6.4.5\tMiscellaneous rainwater drainage",
+  "page": 620
+ },
+ {
+  "level": 3,
+  "title": "H.6.5\tGrease traps",
+  "page": 621
+ },
+ {
+  "level": 3,
+  "title": "H.6.6\tOil interceptors",
+  "page": 622
+ },
+ {
+  "level": 3,
+  "title": "H.6.7\tSwimming pools ",
+  "page": 623
+ },
+ {
+  "level": 3,
+  "title": "H.6.8\tProvisions for future connection ",
+  "page": 623
+ },
+ {
+  "level": 3,
+  "title": "H.6.9\tAbove- and below-ground drainage testing ",
+  "page": 623
+ },
+ {
+  "level": 3,
+  "title": "H.6.10\tSeptic tank and sewage holding tanks",
+  "page": 624
+ },
+ {
+  "level": 3,
+  "title": "H.6.11\tSoakaways",
+  "page": 627
+ },
+ {
+  "level": 2,
+  "title": "H.7\tLighting",
+  "page": 628
+ },
+ {
+  "level": 3,
+  "title": "H.7.1\tLighting in the workplace",
+  "page": 628
+ },
+ {
+  "level": 3,
+  "title": "H.7.2\tLighting power densities – interior",
+  "page": 628
+ },
+ {
+  "level": 3,
+  "title": "H.7.3\tLighting power densities – exterior",
+  "page": 628
+ },
+ {
+  "level": 3,
+  "title": "H.7.4\tLighting controls",
+  "page": 629
+ },
+ {
+  "level": 3,
+  "title": "H.7.5\tElectronic ballasts ",
+  "page": 629
+ },
+ {
+  "level": 3,
+  "title": "H.7.6\tLight levels on means of egress",
+  "page": 629
+ },
+ {
+  "level": 2,
+  "title": "H.8\tCommissioning ",
+  "page": 630
+ },
+ {
+  "level": 2,
+  "title": "H.9\tFire safety systems",
+  "page": 630
+ },
+ {
+  "level": 3,
+  "title": "H.9.1\tGeneral",
+  "page": 630
+ },
+ {
+  "level": 3,
+  "title": "H.9.2\tEmergency voice evacuation systems",
+  "page": 630
+ },
+ {
+  "level": 3,
+  "title": "H.9.3\tTwo-way communications systems",
+  "page": 631
+ },
+ {
+  "level": 3,
+  "title": "H.9.4\tFire detection and alarm systems",
+  "page": 631
+ },
+ {
+  "level": 3,
+  "title": "H.9.5\tFire protections systems",
+  "page": 631
+ },
+ {
+  "level": 2,
+  "title": "H.10\tAcoustics",
+  "page": 632
+ },
+ {
+  "level": 3,
+  "title": "H.10.1\tSite planning requirements",
+  "page": 632
+ },
+ {
+  "level": 3,
+  "title": "H.10.2\tHealth and safety",
+  "page": 632
+ },
+ {
+  "level": 3,
+  "title": "H.10.3\tAcoustic comfort",
+  "page": 632
+ },
+ {
+  "level": 4,
+  "title": "H.10.3.1\tGeneral",
+  "page": 632
+ },
+ {
+  "level": 4,
+  "title": "H.10.3.2\tBuilding services noise",
+  "page": 632
+ },
+ {
+  "level": 4,
+  "title": "H.10.3.3\tSound insulation",
+  "page": 633
+ },
+ {
+  "level": 4,
+  "title": "H.10.3.4\tControl of reverberation",
+  "page": 634
+ },
+ {
+  "level": 3,
+  "title": "H.10.4\tAdditional requirements for different occupancies ",
+  "page": 635
+ },
+ {
+  "level": 4,
+  "title": "H.10.4.1\tMosques",
+  "page": 635
+ },
+ {
+  "level": 4,
+  "title": "H.10.4.2\tHealthcare ",
+  "page": 635
+ },
+ {
+  "level": 4,
+  "title": "H.10.4.3\tEducational ",
+  "page": 635
+ },
+ {
+  "level": 4,
+  "title": "H.10.4.4\tHotels",
+  "page": 635
+ },
+ {
+  "level": 4,
+  "title": "H.10.4.5\tPerforming arts venues",
+  "page": 635
+ },
+ {
+  "level": 3,
+  "title": "H.10.5\tVibration and ground-borne noise",
+  "page": 635
+ },
+ {
+  "level": 2,
+  "title": "H.11\tDigital services enablement and ICT",
+  "page": 636
+ },
+ {
+  "level": 3,
+  "title": "H.11.1\tScope",
+  "page": 636
+ },
+ {
+  "level": 3,
+  "title": "H.11.2\tMinimum requirements for digital services enablement",
+  "page": 636
+ },
+ {
+  "level": 4,
+  "title": "H.11.2.1\tDigital building technology model",
+  "page": 636
+ },
+ {
+  "level": 4,
+  "title": "H.11.2.2\tImplementation requirements",
+  "page": 637
+ },
+ {
+  "level": 4,
+  "title": "H.11.2.3\tIoT protocols for digital services enablement",
+  "page": 638
+ },
+ {
+  "level": 4,
+  "title": "H.11.2.4\tBuilding control and operation communication protocols",
+  "page": 638
+ },
+ {
+  "level": 4,
+  "title": "H.11.2.5\tDevice and data naming",
+  "page": 640
+ },
+ {
+  "level": 4,
+  "title": "H.11.2.6\tData governance and privacy ",
+  "page": 641
+ },
+ {
+  "level": 4,
+  "title": "H.11.2.7\tHome automation in residential buildings",
+  "page": 641
+ },
+ {
+  "level": 4,
+  "title": "H.11.2.8\tDevice requirements and security",
+  "page": 641
+ },
+ {
+  "level": 4,
+  "title": "H.11.2.9\tData validation",
+  "page": 641
+ },
+ {
+  "level": 3,
+  "title": "H.11.3\tICT ",
+  "page": 642
+ },
+ {
+  "level": 4,
+  "title": "H.11.3.1\tOverview",
+  "page": 642
+ },
+ {
+  "level": 4,
+  "title": "H.11.3.2\tEquipment rooms and cabling pathways",
+  "page": 642
+ },
+ {
+  "level": 4,
+  "title": "H.11.3.3\tLandlord and tenant cabling infrastructure",
+  "page": 643
+ },
+ {
+  "level": 4,
+  "title": "H.11.3.4\tDistribution techniques",
+  "page": 644
+ },
+ {
+  "level": 4,
+  "title": "H.11.3.5\tConnection topologies for digital services in buildings",
+  "page": 646
+ },
+ {
+  "level": 4,
+  "title": "H.11.3.6\tLandlord data network infrastructure",
+  "page": 646
+ },
+ {
+  "level": 4,
+  "title": "H.11.3.7\tSpecial safety monitoring requirements",
+  "page": 648
+ },
+ {
+  "level": 4,
+  "title": "H.11.3.8\tWireless technology",
+  "page": 648
+ },
+ {
+  "level": 5,
+  "title": "H.11.3.8.1\tWireless technology bands",
+  "page": 648
+ },
+ {
+  "level": 5,
+  "title": "H.11.3.8.2\tPublic cellular (licensed)",
+  "page": 648
+ },
+ {
+  "level": 5,
+  "title": "H.11.3.8.3\tPrivate wireless (unlicensed)",
+  "page": 649
+ },
+ {
+  "level": 5,
+  "title": "H.11.3.8.4\tHealth and safety ",
+  "page": 649
+ },
+ {
+  "level": 3,
+  "title": "H.11.4\tInformation management and asset data management",
+  "page": 649
+ },
+ {
+  "level": 3,
+  "title": "H.11.5\tRecommended data collection for assets",
+  "page": 649
+ },
+ {
+  "level": 3,
+  "title": "H.11.6\tDigital services and smart technology in operation",
+  "page": 650
+ },
+ {
+  "level": 3,
+  "title": "H.11.7\tAnnex – Digital services and smart buildings background",
+  "page": 651
+ },
+ {
+  "level": 4,
+  "title": "H.11.7.1\tContext",
+  "page": 651
+ },
+ {
+  "level": 4,
+  "title": "H.11.7.2\tConventional approach to digital services and smart functionality in \n\tbuildings",
+  "page": 651
+ },
+ {
+  "level": 4,
+  "title": "H.11.7.3\tDigital services enabled approach",
+  "page": 651
+ },
+ {
+  "level": 3,
+  "title": "H.11.8\tAnnex – Connection topologies for digital services in buildings",
+  "page": 654
+ },
+ {
+  "level": 4,
+  "title": "H.11.8.1\tGeneral",
+  "page": 654
+ },
+ {
+  "level": 4,
+  "title": "H.11.8.2\tStar topology",
+  "page": 654
+ },
+ {
+  "level": 4,
+  "title": "H.11.8.3\tRing topology",
+  "page": 655
+ },
+ {
+  "level": 4,
+  "title": "H.11.8.4\tBus topology",
+  "page": 655
+ },
+ {
+  "level": 4,
+  "title": "H.11.8.5\tMesh topology",
+  "page": 656
+ },
+ {
+  "level": 1,
+  "title": "Part J Security",
+  "page": 657
+ },
+ {
+  "level": 2,
+  "title": "J.1\tPerformance statements",
+  "page": 658
+ },
+ {
+  "level": 2,
+  "title": "J.2\tDefinitions",
+  "page": 659
+ },
+ {
+  "level": 3,
+  "title": "J.2.1\tTerms",
+  "page": 659
+ },
+ {
+  "level": 3,
+  "title": "J.2.2\tAcronyms and abbreviations",
+  "page": 659
+ },
+ {
+  "level": 2,
+  "title": "J.3\tReferences",
+  "page": 660
+ },
+ {
+  "level": 2,
+  "title": "J.4\tLegal context and mandatory requirements",
+  "page": 661
+ },
+ {
+  "level": 2,
+  "title": "J.5\tSecurity requirements by building type",
+  "page": 662
+ },
+ {
+  "level": 2,
+  "title": "J.6\tVSS requirements by building type",
+  "page": 664
+ },
+ {
+  "level": 2,
+  "title": "J.7\tFire and life safety",
+  "page": 670
+ },
+ {
+  "level": 1,
+  "title": "Part K Villas",
+  "page": 671
+ },
+ {
+  "level": 2,
+  "title": "K.1\tPerformance statements",
+  "page": 672
+ },
+ {
+  "level": 2,
+  "title": "K.2\tDefinitions",
+  "page": 674
+ },
+ {
+  "level": 3,
+  "title": "K.2.1\tGeneral",
+  "page": 674
+ },
+ {
+  "level": 3,
+  "title": "K.2.2\tArchitecture",
+  "page": 674
+ },
+ {
+  "level": 3,
+  "title": "K.2.3\tAccessibility",
+  "page": 677
+ },
+ {
+  "level": 3,
+  "title": "K.2.4\tBuilding envelope",
+  "page": 677
+ },
+ {
+  "level": 3,
+  "title": "K.2.5\tStructure",
+  "page": 679
+ },
+ {
+  "level": 3,
+  "title": "K.2.6\tIncoming utilities",
+  "page": 679
+ },
+ {
+  "level": 4,
+  "title": "K.2.6.1\tElectrical",
+  "page": 679
+ },
+ {
+  "level": 4,
+  "title": "K.2.6.2\tTelecommunications",
+  "page": 683
+ },
+ {
+  "level": 3,
+  "title": "K.2.7\tIndoor environment",
+  "page": 683
+ },
+ {
+  "level": 4,
+  "title": "K.2.7.1\tHVAC systems and occupant comfort",
+  "page": 683
+ },
+ {
+  "level": 4,
+  "title": "K.2.7.2\tWater",
+  "page": 685
+ },
+ {
+  "level": 4,
+  "title": "K.2.7.3\tDrainage",
+  "page": 685
+ },
+ {
+  "level": 3,
+  "title": "K.2.8\tAcronyms and abbreviations",
+  "page": 687
+ },
+ {
+  "level": 3,
+  "title": "K.2.9\tNotation",
+  "page": 688
+ },
+ {
+  "level": 2,
+  "title": "K.3\tReferences",
+  "page": 689
+ },
+ {
+  "level": 3,
+  "title": "K.3.1\tGeneral",
+  "page": 689
+ },
+ {
+  "level": 3,
+  "title": "K.3.2\tArchitecture",
+  "page": 689
+ },
+ {
+  "level": 3,
+  "title": "K.3.3\tAccessibility",
+  "page": 689
+ },
+ {
+  "level": 3,
+  "title": "K.3.4\tBuilding envelope",
+  "page": 689
+ },
+ {
+  "level": 3,
+  "title": "K.3.5\tStructure",
+  "page": 690
+ },
+ {
+  "level": 4,
+  "title": "K.3.5.1\tGeneral",
+  "page": 690
+ },
+ {
+  "level": 4,
+  "title": "K.3.5.2\tConcrete",
+  "page": 690
+ },
+ {
+  "level": 4,
+  "title": "K.3.5.3\tSteel",
+  "page": 691
+ },
+ {
+  "level": 4,
+  "title": "K.3.5.4\tMasonry",
+  "page": 691
+ },
+ {
+  "level": 4,
+  "title": "K.3.5.5\tGeotechnics",
+  "page": 691
+ },
+ {
+  "level": 5,
+  "title": "K.3.5.5.1\tGeotechnical investigation and testing",
+  "page": 691
+ },
+ {
+  "level": 5,
+  "title": "K.3.5.5.2\tGeotechnical design",
+  "page": 691
+ },
+ {
+  "level": 5,
+  "title": "K.3.5.5.3\tExecution of geotechnical works",
+  "page": 692
+ },
+ {
+  "level": 3,
+  "title": "K.3.6\tIncoming utilities",
+  "page": 692
+ },
+ {
+  "level": 4,
+  "title": "K.3.6.1\tElectrical",
+  "page": 692
+ },
+ {
+  "level": 4,
+  "title": "K.3.6.2\tTelecommunications",
+  "page": 694
+ },
+ {
+  "level": 3,
+  "title": "K.3.7\tIndoor environment",
+  "page": 694
+ },
+ {
+  "level": 4,
+  "title": "K.3.7.1\tHVAC systems and occupant comfort",
+  "page": 694
+ },
+ {
+  "level": 4,
+  "title": "K.3.7.2\tWater",
+  "page": 695
+ },
+ {
+  "level": 4,
+  "title": "K.3.7.3\tDrainage",
+  "page": 695
+ },
+ {
+  "level": 4,
+  "title": "K.3.7.4\tAcoustics",
+  "page": 695
+ },
+ {
+  "level": 2,
+  "title": "K.4\tScope",
+  "page": 696
+ },
+ {
+  "level": 2,
+  "title": "K.5\tArchitecture",
+  "page": 696
+ },
+ {
+  "level": 3,
+  "title": "K.5.1\tGeneral architectural requirements",
+  "page": 696
+ },
+ {
+  "level": 3,
+  "title": "K.5.2\tDevelopment limitations",
+  "page": 697
+ },
+ {
+  "level": 4,
+  "title": "K.5.2.1\tGate level",
+  "page": 697
+ },
+ {
+  "level": 4,
+  "title": "K.5.2.2\tBuilding height",
+  "page": 697
+ },
+ {
+  "level": 4,
+  "title": "K.5.2.3\tAnnexes",
+  "page": 698
+ },
+ {
+  "level": 4,
+  "title": "K.5.2.4\tBuilding setbacks",
+  "page": 698
+ },
+ {
+  "level": 4,
+  "title": "K.5.2.5\tBalconies, building projections and terraces",
+  "page": 700
+ },
+ {
+  "level": 5,
+  "title": "K.5.2.5.1\tLimitations",
+  "page": 700
+ },
+ {
+  "level": 5,
+  "title": "K.5.2.5.2\tGuardrails for fall protection",
+  "page": 701
+ },
+ {
+  "level": 4,
+  "title": "K.5.2.6\tGross area (GA)",
+  "page": 702
+ },
+ {
+  "level": 4,
+  "title": "K.5.2.7\tPlot coverage",
+  "page": 703
+ },
+ {
+  "level": 4,
+  "title": "K.5.2.8\tFloors general requirements ",
+  "page": 704
+ },
+ {
+  "level": 5,
+  "title": "K.5.2.8.1\tGround floor",
+  "page": 704
+ },
+ {
+  "level": 5,
+  "title": "K.5.2.8.2\tBasements",
+  "page": 704
+ },
+ {
+  "level": 5,
+  "title": "K.5.2.8.3\tRoof",
+  "page": 705
+ },
+ {
+  "level": 3,
+  "title": "K.5.3\tMinimum space requirements",
+  "page": 706
+ },
+ {
+  "level": 4,
+  "title": "K.5.3.1\tMinimum room sizes",
+  "page": 706
+ },
+ {
+  "level": 4,
+  "title": "K.5.3.2\tMinimum clear heights",
+  "page": 707
+ },
+ {
+  "level": 3,
+  "title": "K.5.4\tOpenings",
+  "page": 708
+ },
+ {
+  "level": 4,
+  "title": "K.5.4.1\tDoors",
+  "page": 708
+ },
+ {
+  "level": 4,
+  "title": "K.5.4.2\tWindows and daylighting",
+  "page": 708
+ },
+ {
+  "level": 5,
+  "title": "K.5.4.2.1\tMinimum area of windows",
+  "page": 708
+ },
+ {
+  "level": 5,
+  "title": "K.5.4.2.2\tHabitable room conditions for natural lighting",
+  "page": 709
+ },
+ {
+  "level": 5,
+  "title": "K.5.4.2.3\tAccess to views",
+  "page": 709
+ },
+ {
+  "level": 3,
+  "title": "K.5.5\tCirculation and egress",
+  "page": 710
+ },
+ {
+  "level": 4,
+  "title": "K.5.5.1\tHallways and corridors",
+  "page": 710
+ },
+ {
+  "level": 4,
+  "title": "K.5.5.2\tStairs",
+  "page": 710
+ },
+ {
+  "level": 5,
+  "title": "K.5.5.2.1\tGeneral",
+  "page": 710
+ },
+ {
+  "level": 5,
+  "title": "K.5.5.2.2\tStairway width",
+  "page": 710
+ },
+ {
+  "level": 5,
+  "title": "K.5.5.2.3\tStair risers and treads",
+  "page": 711
+ },
+ {
+  "level": 5,
+  "title": "K.5.5.2.4\tLandings",
+  "page": 712
+ },
+ {
+  "level": 5,
+  "title": "K.5.5.2.5\tHandrails",
+  "page": 713
+ },
+ {
+  "level": 5,
+  "title": "K.5.5.2.6\tGuardrails",
+  "page": 714
+ },
+ {
+  "level": 5,
+  "title": "K.5.5.2.7\tExterior stairways",
+  "page": 715
+ },
+ {
+  "level": 5,
+  "title": "K.5.5.2.8\tSpiral or curved stairs and winders",
+  "page": 715
+ },
+ {
+  "level": 5,
+  "title": "K.5.5.2.9\tSurfaces",
+  "page": 716
+ },
+ {
+  "level": 5,
+  "title": "K.5.5.2.10\tMinimum headroom",
+  "page": 716
+ },
+ {
+  "level": 4,
+  "title": "K.5.5.3\tRamps",
+  "page": 717
+ },
+ {
+  "level": 4,
+  "title": "K.5.5.4\tElevators",
+  "page": 717
+ },
+ {
+  "level": 4,
+  "title": "K.5.5.5\tMeans of egress",
+  "page": 717
+ },
+ {
+  "level": 3,
+  "title": "K.5.6\tAccess and vehicular requirements",
+  "page": 717
+ },
+ {
+  "level": 4,
+  "title": "K.5.6.1\tBuilding access",
+  "page": 717
+ },
+ {
+  "level": 4,
+  "title": "K.5.6.2\tFirefighting vehicle access",
+  "page": 717
+ },
+ {
+  "level": 4,
+  "title": "K.5.6.3\tVehicle access and movement",
+  "page": 717
+ },
+ {
+  "level": 5,
+  "title": "K.5.6.3.1\tGeneral requirements",
+  "page": 717
+ },
+ {
+  "level": 5,
+  "title": "K.5.6.3.2\tVehicular ramps",
+  "page": 719
+ },
+ {
+  "level": 4,
+  "title": "K.5.6.4\tParking areas and garage ",
+  "page": 720
+ },
+ {
+  "level": 4,
+  "title": "K.5.6.5\tMaintenance ladders",
+  "page": 721
+ },
+ {
+  "level": 3,
+  "title": "K.5.7\tSanitary requirements",
+  "page": 721
+ },
+ {
+  "level": 4,
+  "title": "K.5.7.1\tGeneral requirements",
+  "page": 721
+ },
+ {
+  "level": 4,
+  "title": "K.5.7.2\tFixture clearances",
+  "page": 722
+ },
+ {
+  "level": 3,
+  "title": "K.5.8\tAmenities",
+  "page": 722
+ },
+ {
+  "level": 4,
+  "title": "K.5.8.1\tGymnasiums, exercise rooms",
+  "page": 722
+ },
+ {
+  "level": 4,
+  "title": "K.5.8.2\tSwimming pools",
+  "page": 722
+ },
+ {
+  "level": 5,
+  "title": "K.5.8.2.1\tGeneral requirements",
+  "page": 722
+ },
+ {
+  "level": 5,
+  "title": "K.5.8.2.2\tSwimming pool floors",
+  "page": 722
+ },
+ {
+  "level": 5,
+  "title": "K.5.8.2.3\tSwimming pool fences",
+  "page": 723
+ },
+ {
+  "level": 5,
+  "title": "K.5.8.2.4\tDecks and walkways",
+  "page": 723
+ },
+ {
+  "level": 3,
+  "title": "K.5.9\tWaste storage",
+  "page": 724
+ },
+ {
+  "level": 4,
+  "title": "K.5.9.1\tGeneral",
+  "page": 724
+ },
+ {
+  "level": 4,
+  "title": "K.5.9.2\tSpecification of waste storage areas",
+  "page": 724
+ },
+ {
+  "level": 4,
+  "title": "K.5.9.3\tDimensions of waste storage areas",
+  "page": 725
+ },
+ {
+  "level": 3,
+  "title": "K.5.10\tMaterials of construction",
+  "page": 725
+ },
+ {
+  "level": 4,
+  "title": "K.5.10.1\tAsbestos-containing materials",
+  "page": 725
+ },
+ {
+  "level": 4,
+  "title": "K.5.10.2\tLead or heavy metals containing material",
+  "page": 725
+ },
+ {
+  "level": 4,
+  "title": "K.5.10.3\tInterior finishes",
+  "page": 726
+ },
+ {
+  "level": 3,
+  "title": "K.5.11\tFire separation",
+  "page": 726
+ },
+ {
+  "level": 3,
+  "title": "K.5.12\tExterior environment",
+  "page": 726
+ },
+ {
+  "level": 4,
+  "title": "K.5.12.1\tSurfaces shading",
+  "page": 726
+ },
+ {
+  "level": 4,
+  "title": "K.5.12.2\tExterior light pollution and controls ",
+  "page": 726
+ },
+ {
+  "level": 3,
+  "title": "K.5.13\tScreening of building equipment ",
+  "page": 726
+ },
+ {
+  "level": 2,
+  "title": "K.6\tAccessibility",
+  "page": 727
+ },
+ {
+  "level": 2,
+  "title": "K.7\tBuilding envelope",
+  "page": 728
+ },
+ {
+  "level": 3,
+  "title": "K.7.1\tStructural",
+  "page": 728
+ },
+ {
+  "level": 4,
+  "title": "K.7.1.1\tStrength and stability",
+  "page": 728
+ },
+ {
+  "level": 5,
+  "title": "K.7.1.1.1\tGeneral",
+  "page": 728
+ },
+ {
+  "level": 5,
+  "title": "K.7.1.1.2\tWind loads",
+  "page": 728
+ },
+ {
+  "level": 5,
+  "title": "K.7.1.1.3\tLoad resistance and transmission",
+  "page": 728
+ },
+ {
+  "level": 5,
+  "title": "K.7.1.1.4\tPermanent fixture loading",
+  "page": 728
+ },
+ {
+  "level": 5,
+  "title": "K.7.1.1.5\tOperational forces",
+  "page": 728
+ },
+ {
+  "level": 5,
+  "title": "K.7.1.1.6\tThermal movements",
+  "page": 728
+ },
+ {
+  "level": 5,
+  "title": "K.7.1.1.7\tDeflection",
+  "page": 729
+ },
+ {
+  "level": 5,
+  "title": "K.7.1.1.8\tFixings",
+  "page": 729
+ },
+ {
+  "level": 4,
+  "title": "K.7.1.2\tStructural use of glass",
+  "page": 729
+ },
+ {
+  "level": 4,
+  "title": "K.7.1.3\tStructural use of silicone",
+  "page": 729
+ },
+ {
+  "level": 4,
+  "title": "K.7.1.4\tMaterials",
+  "page": 730
+ },
+ {
+  "level": 4,
+  "title": "K.7.1.5\tImpact resistance",
+  "page": 730
+ },
+ {
+  "level": 4,
+  "title": "K.7.1.6\tLoad combination",
+  "page": 731
+ },
+ {
+  "level": 3,
+  "title": "K.7.2\tEnergy conservation",
+  "page": 731
+ },
+ {
+  "level": 4,
+  "title": "K.7.2.1\tEnergy compliance method",
+  "page": 731
+ },
+ {
+  "level": 4,
+  "title": "K.7.2.2\tBuilding envelope performance",
+  "page": 731
+ },
+ {
+  "level": 5,
+  "title": "K.7.2.2.1\tNon-glazed elements",
+  "page": 731
+ },
+ {
+  "level": 5,
+  "title": "K.7.2.2.2\tGlazed elements – Fenestration ",
+  "page": 732
+ },
+ {
+  "level": 4,
+  "title": "K.7.2.3\tShade effect calculation",
+  "page": 733
+ },
+ {
+  "level": 4,
+  "title": "K.7.2.4\tThermal bridges",
+  "page": 734
+ },
+ {
+  "level": 4,
+  "title": "K.7.2.5\tDurability",
+  "page": 734
+ },
+ {
+  "level": 4,
+  "title": "K.7.2.6\tSealing of windows and doors",
+  "page": 734
+ },
+ {
+  "level": 4,
+  "title": "K.7.2.7\tHeat island effect reduction",
+  "page": 734
+ },
+ {
+  "level": 3,
+  "title": "K.7.3\tExterior lighting pollution ",
+  "page": 735
+ },
+ {
+  "level": 3,
+  "title": "K.7.4\tMoisture",
+  "page": 735
+ },
+ {
+  "level": 4,
+  "title": "K.7.4.1\tGeneral",
+  "page": 735
+ },
+ {
+  "level": 4,
+  "title": "K.7.4.2\tGround moisture",
+  "page": 735
+ },
+ {
+  "level": 4,
+  "title": "K.7.4.3\tPrecipitation including windblown spray ",
+  "page": 736
+ },
+ {
+  "level": 5,
+  "title": "K.7.4.3.1\tGeneral",
+  "page": 736
+ },
+ {
+  "level": 5,
+  "title": "K.7.4.3.2\tHorizontal and inclined surfaces",
+  "page": 736
+ },
+ {
+  "level": 5,
+  "title": "K.7.4.3.3\tVertical surfaces",
+  "page": 737
+ },
+ {
+  "level": 5,
+  "title": "K.7.4.3.4\tFlashing",
+  "page": 738
+ },
+ {
+  "level": 4,
+  "title": "K.7.4.4\tRisk of interstitial or surface condensation",
+  "page": 738
+ },
+ {
+  "level": 3,
+  "title": "K.7.5\tAcoustics",
+  "page": 738
+ },
+ {
+  "level": 3,
+  "title": "K.7.6\tProtection from falling, collision and impact",
+  "page": 738
+ },
+ {
+  "level": 4,
+  "title": "K.7.6.1\tProtection against impact with glazing",
+  "page": 738
+ },
+ {
+  "level": 4,
+  "title": "K.7.6.2\tContainment",
+  "page": 739
+ },
+ {
+  "level": 4,
+  "title": "K.7.6.3\tOverhead glazing",
+  "page": 740
+ },
+ {
+  "level": 3,
+  "title": "K.7.7\tFire safety ",
+  "page": 740
+ },
+ {
+  "level": 4,
+  "title": "K.7.7.1\tGeneral",
+  "page": 740
+ },
+ {
+  "level": 4,
+  "title": "K.7.7.2\tFire testing of non-fire-rated, non-load-bearing façades and aesthetic features/mashrabiya",
+  "page": 740
+ },
+ {
+  "level": 4,
+  "title": "K.7.7.3\tSolid metal panels",
+  "page": 740
+ },
+ {
+  "level": 4,
+  "title": "K.7.7.4\tRoof assemblies",
+  "page": 741
+ },
+ {
+  "level": 3,
+  "title": "K.7.8\tSolar panels",
+  "page": 741
+ },
+ {
+  "level": 3,
+  "title": "K.7.9\tMaintenance",
+  "page": 741
+ },
+ {
+  "level": 2,
+  "title": "K.8\tStructure",
+  "page": 742
+ },
+ {
+  "level": 3,
+  "title": "K.8.1\tStructural system requirements",
+  "page": 742
+ },
+ {
+  "level": 4,
+  "title": "K.8.1.1\tGeneral conditions",
+  "page": 742
+ },
+ {
+  "level": 4,
+  "title": "K.8.1.2\tDesign life",
+  "page": 742
+ },
+ {
+  "level": 4,
+  "title": "K.8.1.3\tDesign acceptance criteria",
+  "page": 743
+ },
+ {
+  "level": 4,
+  "title": "K.8.1.4\tStructural system and robustness",
+  "page": 743
+ },
+ {
+  "level": 4,
+  "title": "K.8.1.5\tDurability",
+  "page": 743
+ },
+ {
+  "level": 3,
+  "title": "K.8.2\tFire resistance",
+  "page": 743
+ },
+ {
+  "level": 3,
+  "title": "K.8.3\tMaterials",
+  "page": 744
+ },
+ {
+  "level": 3,
+  "title": "K.8.4\tLoads",
+  "page": 744
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.1\tGeneral",
+  "page": 744
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.2\tLoad combinations",
+  "page": 744
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.3\tDead loads ",
+  "page": 744
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.4\tSuperimposed dead loads",
+  "page": 745
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.5\tLive loads",
+  "page": 745
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.6\tSoil loads and hydrostatic pressure",
+  "page": 745
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.7\tConstruction load",
+  "page": 746
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.8\tAccidental impact load",
+  "page": 746
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.9\tSelf-straining forces",
+  "page": 746
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.10\tThermally induced forces",
+  "page": 747
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.11\tDesign for wind loading effects",
+  "page": 747
+ },
+ {
+  "level": 5,
+  "title": "K.8.4.11.1\tGeneral",
+  "page": 747
+ },
+ {
+  "level": 5,
+  "title": "K.8.4.11.2\tWind pressures",
+  "page": 747
+ },
+ {
+  "level": 4,
+  "title": "K.8.4.12\tDesign for earthquake effects",
+  "page": 747
+ },
+ {
+  "level": 3,
+  "title": "K.8.5\tStructural performance and serviceability requirements",
+  "page": 748
+ },
+ {
+  "level": 4,
+  "title": "K.8.5.1\tDesign basis",
+  "page": 748
+ },
+ {
+  "level": 4,
+  "title": "K.8.5.2\tStrength",
+  "page": 748
+ },
+ {
+  "level": 4,
+  "title": "K.8.5.3\tDeflection control",
+  "page": 748
+ },
+ {
+  "level": 4,
+  "title": "K.8.5.4\tCrack control in concrete structure",
+  "page": 748
+ },
+ {
+  "level": 4,
+  "title": "K.8.5.5\tDrift and deformation",
+  "page": 749
+ },
+ {
+  "level": 5,
+  "title": "K.8.5.5.1\tGeneral",
+  "page": 749
+ },
+ {
+  "level": 5,
+  "title": "K.8.5.5.2\tDrift and deformation due to wind",
+  "page": 749
+ },
+ {
+  "level": 5,
+  "title": "K.8.5.5.3\tDrift and deformation due to seismic",
+  "page": 749
+ },
+ {
+  "level": 4,
+  "title": "K.8.5.6\tMovement joints and building separation",
+  "page": 749
+ },
+ {
+  "level": 4,
+  "title": "K.8.5.7\tVibration",
+  "page": 749
+ },
+ {
+  "level": 4,
+  "title": "K.8.5.8\tFatigue",
+  "page": 750
+ },
+ {
+  "level": 4,
+  "title": "K.8.5.9\tTransfer elements",
+  "page": 750
+ },
+ {
+  "level": 3,
+  "title": "K.8.6\tGeotechnics",
+  "page": 751
+ },
+ {
+  "level": 4,
+  "title": "K.8.6.1\tGeneral",
+  "page": 751
+ },
+ {
+  "level": 4,
+  "title": "K.8.6.2\tStandards",
+  "page": 752
+ },
+ {
+  "level": 4,
+  "title": "K.8.6.3\tGeotechnical site investigation",
+  "page": 752
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.3.1\tGeneral",
+  "page": 752
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.3.2\tGeotechnical desk study",
+  "page": 753
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.3.3\tPlanning geotechnical investigation",
+  "page": 753
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.3.4\tGeotechnical on-site investigations",
+  "page": 753
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.3.5\tGeotechnical laboratory testing",
+  "page": 754
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.3.6\tGeotechnical reporting",
+  "page": 754
+ },
+ {
+  "level": 4,
+  "title": "K.8.6.4\tGeotechnical design",
+  "page": 756
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.4.1\tEarthworks (excavation and fill)",
+  "page": 756
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.4.2\tFoundations design",
+  "page": 758
+ },
+ {
+  "level": 6,
+  "title": "K.8.6.4.2.1\tGeneral",
+  "page": 758
+ },
+ {
+  "level": 6,
+  "title": "K.8.6.4.2.2\tShallow and raft foundations",
+  "page": 759
+ },
+ {
+  "level": 6,
+  "title": "K.8.6.4.2.3\tDeep and piled foundations",
+  "page": 759
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.4.3\tShoring and retaining systems",
+  "page": 761
+ },
+ {
+  "level": 6,
+  "title": "K.8.6.4.3.1\tGeneral",
+  "page": 761
+ },
+ {
+  "level": 6,
+  "title": "K.8.6.4.3.2\tRequired shoring systems ",
+  "page": 761
+ },
+ {
+  "level": 6,
+  "title": "K.8.6.4.3.3\tPermanent earth retaining system ",
+  "page": 762
+ },
+ {
+  "level": 6,
+  "title": "K.8.6.4.3.4\tBasement walls",
+  "page": 762
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.4.4\tGroundwater control and dewatering",
+  "page": 762
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.4.5\tLiquefaction",
+  "page": 764
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.4.6\tGround improvement",
+  "page": 765
+ },
+ {
+  "level": 4,
+  "title": "K.8.6.5\tExecution of geotechnical works",
+  "page": 766
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.5.1\tGeneral",
+  "page": 766
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.5.2\tEarthworks (excavation and filling)",
+  "page": 766
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.5.3\tShoring retaining systems",
+  "page": 767
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.5.4\tFoundations",
+  "page": 767
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.5.5\tGroundwater control and dewatering",
+  "page": 768
+ },
+ {
+  "level": 5,
+  "title": "K.8.6.5.6\tGround improvement",
+  "page": 768
+ },
+ {
+  "level": 2,
+  "title": "K.9\tIncoming utilities",
+  "page": 769
+ },
+ {
+  "level": 3,
+  "title": "K.9.1\tDesign, erection and installation of electrical systems",
+  "page": 769
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.1\tGeneral",
+  "page": 769
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.2\tElectrical supply",
+  "page": 769
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.3\tIncoming and metering",
+  "page": 769
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.4\tPoint of supply",
+  "page": 770
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.4.1\tGeneral",
+  "page": 770
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.4.2\tSwitchgear locations",
+  "page": 770
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.5\tTariff metering",
+  "page": 770
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.5.1\tIndividual consumers premises",
+  "page": 770
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.5.2\tCT metering requirements",
+  "page": 771
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.6\tAmbient design conditions",
+  "page": 772
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.7\tCables and conductors",
+  "page": 772
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.7.1\tGeneral",
+  "page": 772
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.7.2\tMinimum size of conductors ",
+  "page": 773
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.7.3\tCurrent rating, size and voltage drop",
+  "page": 773
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.7.4\tCable colour identification ",
+  "page": 774
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.8\tWiring installation exposed to high temperatures",
+  "page": 775
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.9\tWiring installations in hazardous areas",
+  "page": 775
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.10\tLoad balancing ",
+  "page": 775
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.11\tWiring accessories",
+  "page": 775
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.11.1\tConduits and fittings",
+  "page": 775
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.11.2\tTrunking ",
+  "page": 775
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.11.3\tCable trays and supports",
+  "page": 776
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.12\tDistribution boards and consumer units ",
+  "page": 776
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.13\tApparatus and accessories",
+  "page": 779
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.13.1\tSwitches",
+  "page": 779
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.13.2\tPlugs and socket outlets",
+  "page": 779
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.13.3\tArc fault detection devices (AFDDs)",
+  "page": 780
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.13.4\tCooker control units",
+  "page": 780
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.13.5\tKitchen appliances ",
+  "page": 781
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.13.6\tControl of water heaters, saunas, Jacuzzis and washing machines",
+  "page": 782
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.13.7\tControl of air-conditioning unit/equipment ",
+  "page": 782
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.13.8\tExtra LV safety apparatus",
+  "page": 782
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.13.9\tElectric motors and starters",
+  "page": 782
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.14\tStandby generators",
+  "page": 783
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.15\tAssessment of connected load and maximum demand ",
+  "page": 783
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.15.1\tLighting and small power circuits",
+  "page": 783
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.15.2\tMaximum demand",
+  "page": 784
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.16\tDesign criteria for the installation of conduits, trunking, trays and accessories",
+  "page": 789
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.16.1\tTrunking and conduits",
+  "page": 789
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.16.2\tFlexible conduits",
+  "page": 791
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.16.3\tCable trays",
+  "page": 792
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.17\tDesign criteria for the installation of cables, equipment, accessories and wiring systems",
+  "page": 792
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.17.1\tArmoured cables ",
+  "page": 792
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.17.2\tDistribution boards",
+  "page": 795
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.17.3\tSegregation of circuits, phases and wiring systems",
+  "page": 795
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.17.4\tMounting heights of accessories",
+  "page": 796
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.17.5\tIdentification labels and notices",
+  "page": 797
+ },
+ {
+  "level": 4,
+  "title": "K.9.1.18\tEarthing and earth leakage protection",
+  "page": 797
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.18.1\tGeneral",
+  "page": 797
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.18.2\tConsumer’s main earth electrode",
+  "page": 799
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.18.3\tEarth continuity conductor (ECC)",
+  "page": 799
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.18.4\tEarth leakage protection",
+  "page": 800
+ },
+ {
+  "level": 5,
+  "title": "K.9.1.18.5\tEquipotential bonding",
+  "page": 801
+ },
+ {
+  "level": 3,
+  "title": "K.9.2\tElectrical vehicle charging points ",
+  "page": 802
+ },
+ {
+  "level": 3,
+  "title": "K.9.3\tRenewable energy",
+  "page": 802
+ },
+ {
+  "level": 4,
+  "title": "K.9.3.1\tGeneral",
+  "page": 802
+ },
+ {
+  "level": 4,
+  "title": "K.9.3.2\tSystem documentation requirements",
+  "page": 802
+ },
+ {
+  "level": 4,
+  "title": "K.9.3.3\tWiring diagram datasheets",
+  "page": 803
+ },
+ {
+  "level": 4,
+  "title": "K.9.3.4\tLabelling and identification",
+  "page": 803
+ },
+ {
+  "level": 4,
+  "title": "K.9.3.5\tMetering and metering provision",
+  "page": 803
+ },
+ {
+  "level": 3,
+  "title": "K.9.4\tLPG ",
+  "page": 803
+ },
+ {
+  "level": 3,
+  "title": "K.9.5\tWater supplies",
+  "page": 804
+ },
+ {
+  "level": 4,
+  "title": "K.9.5.1\tWater metering and water conservation",
+  "page": 804
+ },
+ {
+  "level": 4,
+  "title": "K.9.5.2\tDesign and installation of water meters",
+  "page": 804
+ },
+ {
+  "level": 3,
+  "title": "K.9.6\tDistrict cooling",
+  "page": 804
+ },
+ {
+  "level": 3,
+  "title": "K.9.7\tTelecommunications",
+  "page": 804
+ },
+ {
+  "level": 4,
+  "title": "K.9.7.1\tDesign and installation of telecom infrastructure",
+  "page": 804
+ },
+ {
+  "level": 5,
+  "title": "K.9.7.1.1\tGeneral requirements",
+  "page": 804
+ },
+ {
+  "level": 5,
+  "title": "K.9.7.1.2\tTelecoms service",
+  "page": 805
+ },
+ {
+  "level": 5,
+  "title": "K.9.7.1.3\tReference architecture",
+  "page": 805
+ },
+ {
+  "level": 4,
+  "title": "K.9.7.2\tResponsibility matrix",
+  "page": 806
+ },
+ {
+  "level": 4,
+  "title": "K.9.7.3\tOutside plant (OSP) common infrastructure specifications",
+  "page": 807
+ },
+ {
+  "level": 4,
+  "title": "K.9.7.4\tInside plant common infrastructure specifications (ISP)",
+  "page": 809
+ },
+ {
+  "level": 5,
+  "title": "K.9.7.4.1\tTelecom spaces",
+  "page": 809
+ },
+ {
+  "level": 5,
+  "title": "K.9.7.4.2\tConsolidation cabinets",
+  "page": 809
+ },
+ {
+  "level": 5,
+  "title": "K.9.7.4.3\tCable pathways",
+  "page": 811
+ },
+ {
+  "level": 5,
+  "title": "K.9.7.4.4\tCables and termination equipment",
+  "page": 812
+ },
+ {
+  "level": 5,
+  "title": "K.9.7.4.5\tLabelling scheme",
+  "page": 813
+ },
+ {
+  "level": 6,
+  "title": "K.9.7.4.5.1\tGeneral",
+  "page": 813
+ },
+ {
+  "level": 6,
+  "title": "K.9.7.4.5.2\tSP GAID and EID identification plate for each villa/townhouse",
+  "page": 813
+ },
+ {
+  "level": 6,
+  "title": "K.9.7.4.5.3\tComponent and location labelling",
+  "page": 814
+ },
+ {
+  "level": 2,
+  "title": "K.10\tIndoor environment",
+  "page": 815
+ },
+ {
+  "level": 3,
+  "title": "K.10.1\tHVAC systems and occupant comfort ",
+  "page": 815
+ },
+ {
+  "level": 4,
+  "title": "K.10.1.1\tGeneral",
+  "page": 815
+ },
+ {
+  "level": 4,
+  "title": "K.10.1.2\tAcoustic requirements and noise criteria",
+  "page": 815
+ },
+ {
+  "level": 4,
+  "title": "K.10.1.3\tBuilding HVAC energy load",
+  "page": 815
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.3.1\tOutdoor design conditions",
+  "page": 815
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.3.2\tIndoor design conditions",
+  "page": 815
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.3.3\tOutdoor air design conditions",
+  "page": 816
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.3.4\tHeat gain and loss calculations",
+  "page": 816
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.3.5\tExternal load criteria",
+  "page": 816
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.3.6\tInternal load criteria",
+  "page": 816
+ },
+ {
+  "level": 6,
+  "title": "K.10.1.3.6.1\tOccupancy",
+  "page": 816
+ },
+ {
+  "level": 6,
+  "title": "K.10.1.3.6.2\tLighting",
+  "page": 816
+ },
+ {
+  "level": 6,
+  "title": "K.10.1.3.6.3\tElectrical equipment loads",
+  "page": 816
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.3.7\tBuilding energy simulation and modelling ",
+  "page": 817
+ },
+ {
+  "level": 4,
+  "title": "K.10.1.4\tThermal comfort criteria",
+  "page": 817
+ },
+ {
+  "level": 4,
+  "title": "K.10.1.5\tEnergy conservation and efficiency: building systems",
+  "page": 817
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.5.1\tMinimum efficiency of HVAC systems ",
+  "page": 817
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.5.2\tEfficient sizing of HVAC systems ",
+  "page": 817
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.5.3\tCentral air-conditioning units equipped with Energy Recovery Units and regulated air intake system",
+  "page": 817
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.5.4\tPipe and duct insulation ",
+  "page": 818
+ },
+ {
+  "level": 4,
+  "title": "K.10.1.6\tVentilation and air quality",
+  "page": 818
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.6.1\tGeneral",
+  "page": 818
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.6.2\tMinimum ventilation requirements for adequate indoor air quality",
+  "page": 818
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.6.3\tIndoor air quality ",
+  "page": 818
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.6.4\tAir inlets and exhausts",
+  "page": 819
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.6.5\tChlorofluorocarbon (CFC) free and ozone friendly materials",
+  "page": 819
+ },
+ {
+  "level": 4,
+  "title": "K.10.1.7\tNatural ventilation",
+  "page": 819
+ },
+ {
+  "level": 4,
+  "title": "K.10.1.8\tMechanical ventilation ",
+  "page": 819
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.8.1\tGeneral",
+  "page": 819
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.8.2\tDucts and duct connectors",
+  "page": 820
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.8.3\tAir filters",
+  "page": 820
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.8.4\tDomestic kitchen exhaust equipment ",
+  "page": 820
+ },
+ {
+  "level": 4,
+  "title": "K.10.1.9\tHydronic systems",
+  "page": 821
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.9.1\tGeneral",
+  "page": 821
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.9.2\tMaterials ",
+  "page": 821
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.9.3\tPipe joints and connections  ",
+  "page": 821
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.9.4\tValves",
+  "page": 821
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.9.5\tPipe installation ",
+  "page": 821
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.9.6\tPipe design ",
+  "page": 821
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.9.7\tTesting ",
+  "page": 822
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.9.8\tFlushing, cleaning and water treatment ",
+  "page": 822
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.9.9\tRefrigeration",
+  "page": 822
+ },
+ {
+  "level": 6,
+  "title": "K.10.1.9.9.1\tGeneral",
+  "page": 822
+ },
+ {
+  "level": 6,
+  "title": "K.10.1.9.9.2\tRefrigerant and ozone depletion management ",
+  "page": 822
+ },
+ {
+  "level": 4,
+  "title": "K.10.1.10\tHVAC systems controls ",
+  "page": 822
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.10.1\tUse of programmable controllers for HVAC system",
+  "page": 822
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.10.2\tInterlock of toilet/bathroom fans",
+  "page": 823
+ },
+ {
+  "level": 5,
+  "title": "K.10.1.10.3\tOccupancy/motion sensors for internal lighting devices",
+  "page": 823
+ },
+ {
+  "level": 3,
+  "title": "K.10.2\tWater supplies",
+  "page": 823
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.1\tGeneral",
+  "page": 823
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.2\tWater conservation and reuse ",
+  "page": 823
+ },
+ {
+  "level": 5,
+  "title": "K.10.2.2.1\tCompliance method",
+  "page": 823
+ },
+ {
+  "level": 5,
+  "title": "K.10.2.2.2\tWater efficient fittings ",
+  "page": 823
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.3\tCold water services",
+  "page": 824
+ },
+ {
+  "level": 5,
+  "title": "K.10.2.3.1\tGeneral",
+  "page": 824
+ },
+ {
+  "level": 5,
+  "title": "K.10.2.3.2\tSwimming pools",
+  "page": 824
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.4\tTank pump-set installation",
+  "page": 824
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.5\tCold water storage tanks",
+  "page": 825
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.6\tCombined firefighting and water storage ",
+  "page": 826
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.7\tServicing and isolation valves",
+  "page": 826
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.8\tBackflow protection",
+  "page": 826
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.9\tHot water services",
+  "page": 826
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.10\tUse of renewable sources of energy for domestic heating",
+  "page": 827
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.11\tWater services installation requirements",
+  "page": 828
+ },
+ {
+  "level": 4,
+  "title": "K.10.2.12\tWater treatment against microbiological bacteria growth",
+  "page": 828
+ },
+ {
+  "level": 3,
+  "title": "K.10.3\tDrainage ",
+  "page": 828
+ },
+ {
+  "level": 4,
+  "title": "K.10.3.1\tGeneral",
+  "page": 828
+ },
+ {
+  "level": 4,
+  "title": "K.10.3.2\tSanitary plumbing systems",
+  "page": 828
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.2.1\tGeneral",
+  "page": 828
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.2.2\tSanitation system disposal",
+  "page": 829
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.2.3\tFloor drains",
+  "page": 830
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.2.4\tVentilation pipework",
+  "page": 831
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.2.5\tAccess provisions",
+  "page": 831
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.2.6\tSanitation piping",
+  "page": 831
+ },
+ {
+  "level": 4,
+  "title": "K.10.3.3\tBelow ground drainage systems",
+  "page": 832
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.3.1\tGeneral",
+  "page": 832
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.3.2\tAccess to drainage systems",
+  "page": 832
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.3.3\tSump pits",
+  "page": 834
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.3.4\tManholes",
+  "page": 834
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.3.5\tManhole construction",
+  "page": 835
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.3.6\tFinal inspection chamber and provision for future connection ",
+  "page": 836
+ },
+ {
+  "level": 4,
+  "title": "K.10.3.4\tRainwater disposal",
+  "page": 836
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.4.1\tGeneral",
+  "page": 836
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.4.2\tDrainage of hardstanding or paved areas",
+  "page": 837
+ },
+ {
+  "level": 5,
+  "title": "K.10.3.4.3\tMiscellaneous rainwater drainage",
+  "page": 837
+ },
+ {
+  "level": 4,
+  "title": "K.10.3.5\tSwimming pools",
+  "page": 837
+ },
+ {
+  "level": 4,
+  "title": "K.10.3.6\tSeptic tanks and sewage holding tanks",
+  "page": 837
+ },
+ {
+  "level": 4,
+  "title": "K.10.3.7\tSoakaways",
+  "page": 840
+ },
+ {
+  "level": 3,
+  "title": "K.10.4\tLighting",
+  "page": 841
+ },
+ {
+  "level": 4,
+  "title": "K.10.4.1\tGeneral ",
+  "page": 841
+ },
+ {
+  "level": 4,
+  "title": "K.10.4.2\tLighting controls",
+  "page": 841
+ },
+ {
+  "level": 3,
+  "title": "K.10.5\tFire safety systems",
+  "page": 841
+ },
+ {
+  "level": 4,
+  "title": "K.10.5.1\tEmergency lighting",
+  "page": 841
+ },
+ {
+  "level": 4,
+  "title": "K.10.5.2\tFire detection and alarm",
+  "page": 841
+ },
+ {
+  "level": 4,
+  "title": "K.10.5.3\tSprinklers and hose reels",
+  "page": 841
+ },
+ {
+  "level": 4,
+  "title": "K.10.5.4\tSmart monitoring",
+  "page": 841
+ },
+ {
+  "level": 3,
+  "title": "K.10.6\tAcoustics",
+  "page": 841
+ },
+ {
+  "level": 2,
+  "title": "K.11\tSecurity",
+  "page": 842
+ }
+]

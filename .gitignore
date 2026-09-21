@@ -1,0 +1,51 @@
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# node
+node_modules/
+dist/
+build/
+.vite/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# os / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# run artifacts
+*.log
+/tmp/
+/out/
+*.tsbuildinfo
+# Screenshots from `pnpm shots`. Evidence for a design review, regenerated on
+# demand — checking them in would make every palette change a binary diff.
+/.shots/
+
+# Large client source binaries — kept on disk under docs/00-source, never in git.
+# The extracted text in docs/01-extracted is what the repo actually reasons over.
+docs/00-source/client/meeting-*/*.mp4
+docs/00-source/regulations/*.pdf
+docs/00-source/developer-standards/**
+docs/01-extracted/meeting-*/screens/
+
+# The same rule, for the two large sources the patterns above did not reach:
+# a 66 MB RFP and a guide marked confidential. Both stay on disk, never in git.
+docs/00-source/reference/
+docs/00-source/samples/rfp/D1005*.pdf
+
+# Throwaway probes written while debugging a screen. Not tools; not kept.
+scripts/.*.tmp.mjs

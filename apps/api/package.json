@@ -1,0 +1,27 @@
+{
+  "name": "@envelope/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch dist/server.js",
+    "start": "node dist/server.js",
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@envelope/capacity": "workspace:*",
+    "@envelope/core": "workspace:*",
+    "@envelope/geometry": "workspace:*",
+    "@envelope/invariants": "workspace:*",
+    "@envelope/report": "workspace:*",
+    "@envelope/rules": "workspace:*",
+    "@envelope/validation": "workspace:*",
+    "@fastify/cors": "^10.0.1",
+    "decimal.js": "^10.6.0",
+    "fastify": "^5.2.0",
+    "mysql2": "^3.24.2",
+    "zod": "^3.24.1",
+    "@envelope/intake": "workspace:*",
+    "@envelope/exports": "workspace:*"
+  }
+}

@@ -1,0 +1,528 @@
+/**
+ * Affection-plan intake.
+ *
+ * The affection plan is where a Dubai project actually starts: the consultant
+ * receives it from the client or the master developer, and every number that
+ * bounds the scheme — plot area, FAR, GFA, permitted height, setbacks, coverage
+ * — is printed on that one sheet. In the 30 Aug 2026 walkthrough the client read
+ * a plot's whole envelope off it in under four minutes and then asked the only
+ * question that matters here: *can software take this sheet and derive the same
+ * numbers?*
+ *
+ * Three properties make that answerable rather than aspirational:
+ *
+ * 1. **The sheet is an instrument, not a hint.** Dubai Building Code B.7.2.6.1
+ *    says parking "set out in the affection plan or DCR shall take precedent
+ *    over Table B.13". So a value read off the plan is `DERIVED` from a cited
+ *    instrument, and the citation points at the box on the sheet it was read
+ *    from. It is not `OBSERVED` — that class means a precedent distribution and
+ *    is not emittable in Phase 0 anyway.
+ *
+ * 2. **A field that is not printed is missing, never defaulted.** Of the three
+ *    real plans in `docs/00-source`, `DJAZ1MED12RES011` prints `G+11` and no
+ *    FAR, no GFA, no setback and no coverage at all. Inventing 3.5 there because
+ *    the neighbouring plot had 3.5 would be the exact failure this product
+ *    exists to prevent. Missing fields come back in `missing[]` and the caller
+ *    must obtain a `USER_SET` value or refuse to compute.
+ *
+ * 3. **What is printed is cross-checked.** FAR × plot area must reproduce the
+ *    printed GFA. On all three samples it does, to the rounding the sheet shows.
+ *    When it does not, that is a finding about the document, surfaced — not an
+ *    averaging opportunity.
+ */
+
+import {
+  Decimal,
+  ProvenanceClass,
+  qArea,
+  qRatio,
+  type Citation,
+  type Traced,
+  type TracedDecimal,
+  type Tracer,
+} from '@envelope/core';
+import {
+  locate,
+  pageLines,
+  pageText,
+  readPdfText,
+  valueLeftOf,
+  type PdfPageText,
+} from './pdf-text.js';
+
+// ---------------------------------------------------------------------------
+// Shapes
+// ---------------------------------------------------------------------------
+
+/** `G+2P+8` decomposed. */
+export interface HeightAllowance {
+  /** Storeys above ground excluding podium and ground. `8` in `G+2P+8`. */
+  readonly typicalFloors: number;
+  /** Podium levels. `2` in `G+2P+8`; `0` in `G+11`. */
+  readonly podiumLevels: number;
+  /** Total built levels including ground: `1 + podium + typical`. */
+  readonly totalLevels: number;
+  readonly raw: string;
+}
+
+/**
+ * A setback distance, or the reason it is not a single distance.
+ *
+ * `DJAZ1TRE10RES022` prints "Side and rear setback is 0m to solid wall and 4.0m
+ * to window wall" — the setback depends on whether the façade being set back has
+ * openings, which is a design decision, not a datum. Collapsing that to one
+ * number would silently pick the applicant's answer for them, so the conditional
+ * case is preserved and marked as needing a decision.
+ */
+export type SetbackValue =
+  | { readonly kind: 'FIXED'; readonly metres: Decimal }
+  | {
+      readonly kind: 'CONDITIONAL';
+      readonly options: readonly { readonly condition: string; readonly metres: Decimal }[];
+    };
+
+export interface SetbackFace {
+  readonly front?: SetbackValue;
+  readonly side?: SetbackValue;
+  readonly rear?: SetbackValue;
+}
+
+/** Setbacks differ between the podium mass and the tower above it. */
+export interface SetbackSchedule {
+  readonly podium: SetbackFace;
+  readonly tower: SetbackFace;
+  readonly raw: string;
+  /** True when any face came back `CONDITIONAL` and needs a user decision. */
+  readonly requiresDecision: boolean;
+}
+
+export interface CoverageSchedule {
+  /** Fraction of plot area, e.g. `1.00` for "100% of plot area". */
+  readonly podium?: Decimal;
+  readonly tower?: Decimal;
+  readonly raw: string;
+}
+
+/** A field the sheet does not print. Never filled in by this module. */
+export interface MissingField {
+  readonly field: string;
+  readonly label: string;
+  /** What the caller must do — obtain it, or refuse to compute. */
+  readonly consequence: string;
+}
+
+export interface CrossCheck {
+  readonly name: string;
+  readonly passed: boolean;
+  readonly detail: string;
+}
+
+export interface AffectionPlanFacts {
+  readonly parcelId?: Traced<string>;
+  readonly community?: Traced<string>;
+  readonly developer?: Traced<string>;
+  readonly developerPlotNo?: Traced<string>;
+  readonly landUse?: Traced<string>;
+  readonly totalAreaSqm?: TracedDecimal;
+  readonly far?: TracedDecimal;
+  readonly gfaSqm?: TracedDecimal;
+  readonly height?: Traced<HeightAllowance>;
+  readonly setbacks?: Traced<SetbackSchedule>;
+  readonly coverage?: Traced<CoverageSchedule>;
+  readonly issueDate?: Traced<string>;
+  readonly drawingRef?: Traced<string>;
+  /** Fields the sheet does not print. The caller must resolve these. */
+  readonly missing: readonly MissingField[];
+  /** Arithmetic the sheet asserts about itself, re-checked. */
+  readonly crossChecks: readonly CrossCheck[];
+  /** Whether the sheet defers parking to another instrument. */
+  readonly parkingDeferredTo?: Traced<string>;
+}
+
+// ---------------------------------------------------------------------------
+// Extraction
+// ---------------------------------------------------------------------------
+
+const NUM = String.raw`[\d,]+(?:\.\d+)?`;
+
+function toDecimal(raw: string): Decimal {
+  return new Decimal(raw.replace(/,/g, ''));
+}
+
+/**
+ * Build a citation pointing at the box the value was read from.
+ *
+ * `instrumentVersion` is the sheet's issue date: affection plans are reissued
+ * and are valid for two years, so "which affection plan" is a question with a
+ * date in the answer.
+ */
+function cite(
+  documentUri: string,
+  issueDate: string,
+  field: string,
+  item: { readonly page: number; readonly bbox: readonly [number, number, number, number]; readonly text: string },
+): Citation {
+  return {
+    instrumentId: 'AFFECTION_PLAN',
+    instrumentVersion: issueDate,
+    clauseReference: field,
+    documentUri,
+    sourcePage: item.page,
+    sourceBbox: [item.bbox[0], item.bbox[1], item.bbox[2], item.bbox[3]],
+    sourceTextVerbatim: item.text.replace(/\s+/g, ' ').trim(),
+  };
+}
+
+/** `G+2P+8`, `G+3P+6`, `G+11`. */
+export function parseHeight(raw: string): HeightAllowance | undefined {
+  const withPodium = /\bG\s*\+\s*(\d+)\s*P\s*\+\s*(\d+)\b/i.exec(raw);
+  if (withPodium?.[1] !== undefined && withPodium[2] !== undefined) {
+    const podiumLevels = Number(withPodium[1]);
+    const typicalFloors = Number(withPodium[2]);
+    return {
+      podiumLevels,
+      typicalFloors,
+      totalLevels: 1 + podiumLevels + typicalFloors,
+      raw: withPodium[0],
+    };
+  }
+  const plain = /\bG\s*\+\s*(\d+)\b(?!\s*P)/i.exec(raw);
+  if (plain?.[1] !== undefined) {
+    const typicalFloors = Number(plain[1]);
+    return { podiumLevels: 0, typicalFloors, totalLevels: 1 + typicalFloors, raw: plain[0] };
+  }
+  return undefined;
+}
+
+/** One face's distance, or the conditional pair when the sheet gives two. */
+function parseSetbackValue(clause: string): SetbackValue | undefined {
+  // "0m to solid wall and 4.0m to window wall" — two answers, both correct,
+  // selected by a façade decision nobody has made yet.
+  const conditional = [...clause.matchAll(/(\d+(?:\.\d+)?)\s*m\s+to\s+([a-z ]+?wall)/gi)];
+  if (conditional.length > 1) {
+    return {
+      kind: 'CONDITIONAL',
+      options: conditional.map((m) => ({
+        condition: (m[2] ?? '').trim(),
+        metres: new Decimal(m[1] ?? '0'),
+      })),
+    };
+  }
+  const fixed = /(\d+(?:\.\d+)?)\s*m\b/i.exec(clause);
+  return fixed?.[1] === undefined ? undefined : { kind: 'FIXED', metres: new Decimal(fixed[1]) };
+}
+
+/**
+ * Split a setback line into faces.
+ *
+ * The two sample grammars are genuinely different — "Front = 0m, Sides & Rear =
+ * 3m" versus "0m to street front, Side and rear setback is 0m to solid wall and
+ * 4.0m to window wall" — so this recognises phrases rather than positions, and
+ * leaves a face `undefined` when it recognises nothing. An unrecognised face is
+ * a missing field, not a zero.
+ */
+export function parseSetbackFace(line: string): SetbackFace {
+  const face: { front?: SetbackValue; side?: SetbackValue; rear?: SetbackValue } = {};
+
+  const all = /(\d+(?:\.\d+)?)\s*m\s+from\s+all\s+sides/i.exec(line);
+  if (all?.[1] !== undefined) {
+    const v: SetbackValue = { kind: 'FIXED', metres: new Decimal(all[1]) };
+    return { front: v, side: v, rear: v };
+  }
+
+  // Split on commas only. Splitting on "and" as well looks tempting but breaks
+  // the one grammar that matters most: "Side and rear setback is 0m to solid
+  // wall and 4.0m to window wall" would lose the word "Side" from the clause
+  // holding the numbers, and the side face would silently come back unset.
+  for (const clause of line.split(',')) {
+    const c = clause.trim();
+    if (c === '') continue;
+    const value = parseSetbackValue(c);
+    if (!value) continue;
+    if (/front|street/i.test(c)) face.front = value;
+    if (/side/i.test(c)) face.side = value;
+    if (/rear|back/i.test(c)) face.rear = value;
+    // "6m to adjacent plot" names every face that is not the street: a plot
+    // boundary is a side or a rear, and the sheet does not distinguish them.
+    if (/adjacent\s+plot/i.test(c)) {
+      face.side ??= value;
+      face.rear ??= value;
+    }
+  }
+  return face;
+}
+
+function parseSetbacks(text: string): SetbackSchedule | undefined {
+  const podiumLine = /(?:GF\s*[&/]\s*Podium|GF\s*and\s*Podium)\s*:?\s*([^\n]*)/i.exec(text);
+  const towerLine = /\bTower\s*:?\s*([^\n]*)/i.exec(text);
+  if (!podiumLine && !towerLine) return undefined;
+
+  const podium = parseSetbackFace(podiumLine?.[1] ?? '');
+  const tower = parseSetbackFace(towerLine?.[1] ?? '');
+  const faces = [podium.front, podium.side, podium.rear, tower.front, tower.side, tower.rear];
+  return {
+    podium,
+    tower,
+    raw: [podiumLine?.[0], towerLine?.[0]].filter(Boolean).join(' | ').replace(/\s+/g, ' ').trim(),
+    requiresDecision: faces.some((f) => f?.kind === 'CONDITIONAL'),
+  };
+}
+
+function parseCoverage(text: string): CoverageSchedule | undefined {
+  const hits = [
+    ...text.matchAll(/(GF\s*[&/]\s*Podium|Tower)\s*:?\s*(?:Maximum\s+)?(\d+(?:\.\d+)?)\s*%/gi),
+  ];
+  if (hits.length === 0) return undefined;
+  const out: { podium?: Decimal; tower?: Decimal } = {};
+  for (const h of hits) {
+    const pct = new Decimal(h[2] ?? '0').div(100);
+    if (/tower/i.test(h[1] ?? '')) out.tower = pct;
+    else out.podium = pct;
+  }
+  return {
+    ...out,
+    raw: hits.map((h) => h[0].replace(/\s+/g, ' ')).join(' | '),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+
+export interface ParseAffectionPlanOptions {
+  readonly documentUri: string;
+  readonly tracer: Tracer;
+}
+
+/**
+ * Read an affection plan into traced facts.
+ *
+ * Deliberately total: it never throws on a field it cannot find. A sheet that
+ * prints nothing useful yields a `AffectionPlanFacts` whose every optional is
+ * absent and whose `missing[]` names all of them — which is a correct and
+ * actionable answer, where an exception would just be a crash.
+ */
+export async function parseAffectionPlan(
+  bytes: Uint8Array,
+  opts: ParseAffectionPlanOptions,
+): Promise<AffectionPlanFacts> {
+  const [page] = await readPdfText(bytes, { pages: [1] });
+  if (!page) throw new Error('affection plan has no first page');
+  return readFacts(page, opts);
+}
+
+/** The pure half, so tests can drive it from fixture text without a PDF. */
+export function readFacts(
+  page: PdfPageText,
+  opts: ParseAffectionPlanOptions,
+): AffectionPlanFacts {
+  const { tracer, documentUri } = opts;
+  const text = pageText(page);
+  const missing: MissingField[] = [];
+  const crossChecks: CrossCheck[] = [];
+
+  const issueDate =
+    /(\d{1,2}-\d{1,2}-\d{4})/.exec(text)?.[1] ?? 'UNDATED';
+
+  /** Emit a `DERIVED` value citing the box it was read from. */
+  const fromSheet = <T>(
+    field: string,
+    value: T,
+    verbatim: string,
+    unit?: string,
+  ): Traced<T> | undefined => {
+    const item = locate(page, verbatim) ?? locate(page, verbatim.split(/\s/)[0] ?? verbatim);
+    if (!item) return undefined;
+    return tracer.derived(`affection_plan.${field}`, value, {
+      rule: {
+        ruleId: `AFFECTION_PLAN.${field}`,
+        citation: cite(documentUri, issueDate, field, item),
+      },
+      formula: `read from affection plan field "${field}"`,
+      ...(unit !== undefined ? { unit } : {}),
+      detail: { verbatim: item.text.replace(/\s+/g, ' ').trim() },
+    });
+  };
+
+  const absent = (field: string, label: string, consequence: string): undefined => {
+    missing.push({ field, label, consequence });
+    return undefined;
+  };
+
+  // --- self-describing numeric fields ------------------------------------
+  // Scanned line by line, skipping the GFA line. Both figures are written in
+  // square metres, and a case-insensitive match for "<n> SQ. M." over the whole
+  // sheet hits "GFA=4778.31 Sq. m" first — which silently reports the permitted
+  // floor area as the plot area, an error that then propagates into every
+  // downstream number while looking entirely plausible.
+  const areaLine = pageLines(page)
+    .map((l) => l.text)
+    .find((l) => /GFA\s*=/i.test(l) === false && new RegExp(String.raw`${NUM}\s*SQ\.?\s*M\.?`, 'i').test(l));
+  const areaMatch =
+    areaLine === undefined
+      ? null
+      : new RegExp(String.raw`(${NUM})\s*SQ\.?\s*M\.?`, 'i').exec(areaLine);
+  const totalAreaSqm =
+    areaMatch?.[1] !== undefined
+      ? fromSheet('total_area_sqm', qArea(toDecimal(areaMatch[1])), areaMatch[0], 'm²')
+      : absent(
+          'total_area_sqm',
+          'Total Area',
+          'Plot area is the denominator of every capacity number; computation is blocked without it.',
+        );
+
+  const gfaFar = new RegExp(
+    String.raw`GFA\s*=\s*(${NUM})\s*Sq\.?\s*m[^A-Za-z]*,?\s*FAR\s*=\s*(${NUM})`,
+    'i',
+  ).exec(text);
+
+  const gfaSqm =
+    gfaFar?.[1] !== undefined
+      ? fromSheet('gfa_permitted_sqm', qArea(toDecimal(gfaFar[1])), gfaFar[0], 'm²')
+      : absent(
+          'gfa_permitted_sqm',
+          'GFA',
+          'Permitted GFA is not printed on this sheet. It must be obtained from the DCR or set by a named user; it must not be inferred from a neighbouring plot.',
+        );
+
+  const far =
+    gfaFar?.[2] !== undefined
+      ? fromSheet('far', qRatio(toDecimal(gfaFar[2])), gfaFar[0])
+      : absent(
+          'far',
+          'FAR',
+          'Floor area ratio is not printed on this sheet. Required before any capacity figure may be produced.',
+        );
+
+  // --- height -------------------------------------------------------------
+  const heightRaw = /\bG\s*\+\s*\d+(?:\s*P\s*\+\s*\d+)?\b/i.exec(text)?.[0];
+  const parsedHeight = heightRaw === undefined ? undefined : parseHeight(heightRaw);
+  const height =
+    parsedHeight !== undefined && heightRaw !== undefined
+      ? fromSheet('height_allowance', parsedHeight, heightRaw)
+      : absent(
+          'height_allowance',
+          'Height',
+          'Permitted storey count is not printed; the envelope has no vertical bound.',
+        );
+
+  // --- setbacks and coverage ---------------------------------------------
+  const parsedSetbacks = parseSetbacks(text);
+  const setbacks =
+    parsedSetbacks !== undefined
+      ? fromSheet('setbacks', parsedSetbacks, parsedSetbacks.raw.split(' | ')[0] ?? '')
+      : absent(
+          'setbacks',
+          'Setback',
+          'No setback schedule on the sheet. Trakhees regulations and the master developer DCR govern instead and must be supplied.',
+        );
+
+  const parsedCoverage = parseCoverage(text);
+  const coverage =
+    parsedCoverage !== undefined
+      ? fromSheet('plot_coverage', parsedCoverage, parsedCoverage.raw.split(' | ')[0] ?? '')
+      : absent(
+          'plot_coverage',
+          'Plot Coverage',
+          'No coverage cap on the sheet; the footprint has no horizontal bound from this instrument.',
+        );
+
+  // --- label/value fields -------------------------------------------------
+  const labelled = <T extends string>(
+    field: string,
+    label: string,
+    transform: (s: string) => T = (s) => s as T,
+  ): Traced<T> | undefined => {
+    const item = valueLeftOf(page, label);
+    if (!item) return undefined;
+    const value = transform(item.text.replace(/\s+/g, ' ').trim());
+    if (value === '') return undefined;
+    return tracer.derived(`affection_plan.${field}`, value, {
+      rule: {
+        ruleId: `AFFECTION_PLAN.${field}`,
+        citation: cite(documentUri, issueDate, label, item),
+      },
+      formula: `read from affection plan field "${label}"`,
+      detail: { verbatim: value },
+    });
+  };
+
+  const landUseRaw = /Mixed Use \([^)]*\)|(?:^|\n)(Residential|Commercial|Industrial)(?:\n|$)/i.exec(
+    text,
+  )?.[0];
+  const landUse =
+    landUseRaw !== undefined
+      ? fromSheet('land_use', landUseRaw.trim(), landUseRaw.trim())
+      : absent('land_use', 'Usage', 'Land use selects the applicable rule set; none can be chosen.');
+
+  const parkingNote = /\(Refer to [^)]*\)/i.exec(text)?.[0];
+  const parkingDeferredTo =
+    parkingNote === undefined ? undefined : fromSheet('parking_authority', parkingNote, parkingNote);
+  if (parkingDeferredTo === undefined) {
+    missing.push({
+      field: 'parking_authority',
+      label: 'Parking',
+      consequence:
+        'The sheet does not say which instrument governs parking. Dubai Building Code B.7.2.6.1 gives precedence to the affection plan or DCR over Table B.13, so the governing instrument must be established before a bay count is produced.',
+    });
+  }
+
+  // --- cross-checks -------------------------------------------------------
+  if (totalAreaSqm && far && gfaSqm) {
+    const recomputed = totalAreaSqm.value.mul(far.value);
+    // The sheet rounds FAR to two decimals, so the reconstruction can only be
+    // as tight as that rounding allows: 0.005 of FAR across the plot area.
+    const tolerance = totalAreaSqm.value.mul('0.005').abs();
+    const delta = recomputed.minus(gfaSqm.value).abs();
+    crossChecks.push({
+      name: 'gfa = far × plot_area',
+      passed: delta.lte(tolerance),
+      detail:
+        `${far.value.toString()} × ${totalAreaSqm.value.toString()} m² = ` +
+        `${qArea(recomputed).toString()} m² vs printed ${gfaSqm.value.toString()} m² ` +
+        `(Δ ${qArea(delta).toString()} m², tolerance ${qArea(tolerance).toString()} m²)`,
+    });
+  }
+
+  const facts: {
+    -readonly [K in keyof AffectionPlanFacts]: AffectionPlanFacts[K];
+  } = { missing, crossChecks };
+
+  if (totalAreaSqm) facts.totalAreaSqm = totalAreaSqm;
+  if (far) facts.far = far;
+  if (gfaSqm) facts.gfaSqm = gfaSqm;
+  if (height) facts.height = height;
+  if (setbacks) facts.setbacks = setbacks;
+  if (coverage) facts.coverage = coverage;
+  if (landUse) facts.landUse = landUse;
+  if (parkingDeferredTo) facts.parkingDeferredTo = parkingDeferredTo;
+
+  const parcelId = labelled('parcel_id', 'Parcel ID');
+  if (parcelId) facts.parcelId = parcelId;
+  const community = labelled('community', 'Community');
+  if (community) facts.community = community;
+  const developer = labelled('developer', 'Developer');
+  if (developer) facts.developer = developer;
+  const drgRef = /Drg\.\s*Ref\.?\s*:\s*(\S+)/i.exec(text)?.[1];
+  const drawingRef = drgRef === undefined ? undefined : fromSheet('drawing_ref', drgRef, drgRef);
+  if (drawingRef) facts.drawingRef = drawingRef;
+  if (issueDate !== 'UNDATED') {
+    const issued = fromSheet('issue_date', issueDate, issueDate);
+    if (issued) facts.issueDate = issued;
+  }
+
+  return facts;
+}
+
+/** Everything the caller must resolve before the engine may run. */
+export function blockingGaps(facts: AffectionPlanFacts): readonly MissingField[] {
+  const blocking = new Set(['total_area_sqm', 'far', 'gfa_permitted_sqm', 'height_allowance']);
+  return facts.missing.filter((m) => blocking.has(m.field));
+}
+
+/** True when the sheet is internally consistent on every check that ran. */
+export function crossChecksPassed(facts: AffectionPlanFacts): boolean {
+  return facts.crossChecks.every((c) => c.passed);
+}
+
+export const PROVENANCE_CLASS_FOR_SHEET_VALUES = ProvenanceClass.DERIVED;

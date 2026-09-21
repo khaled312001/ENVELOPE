@@ -76,11 +76,13 @@ export interface Refusal {
 export const LIMITS: readonly Refusal[] = [
   {
     id: 'draw',
-    heading: 'It does not draw a building.',
+    heading: 'It does not design a building.',
     body: (
       <>
-        Phase 0 produces a buildable envelope and a capacity, not a floor plan, a core, a
-        unit layout or a massing. Nothing here is a design.
+        Phase 0 lays out what the rules permit and draws that: the envelope, the parking
+        level by level with a car in every bay, and the building stood up in three
+        dimensions. It does not choose a façade, place a core or plan a unit. Nothing it
+        draws is a design.
       </>
     ),
   },
@@ -145,9 +147,10 @@ export const IFC_GLTF = {
   body: (
     <>
       Exports travel as files. There is no live link, no round trip and no model-server
-      connection, and a change made downstream does not come back. IFC and glTF are not
-      produced by this engine — if you have seen them listed against this product they
-      were scope in an older document and they do not exist in the software.
+      connection, and a change made downstream does not come back. The 3D model is
+      written as a glTF file, and it is a file like the others. IFC is not produced by
+      this engine — if you have seen it listed against this product it was scope in an
+      older document and it does not exist in the software.
     </>
   ),
 } as const;

@@ -1011,8 +1011,8 @@ function ExportPanel({
           </p>
           {run.building ? (
             <p className="fine-print">
-              The 3D model is the massing view as a <code>.glb</code> file, which opens in
-              Blender and in any glTF 2.0 viewer. It is in metres,
+              The 3D model is the capacity step&rsquo;s 3D view as a <code>.glb</code> file: binary glTF
+              2.0, with no extension a reader is required to support. It is in metres,
               measured from the middle of the plot, with a node for each level and its
               cars. It carries the same two sentences in its metadata, because a 3D file
               has no title block to print them in.

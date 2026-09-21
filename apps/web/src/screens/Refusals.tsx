@@ -337,11 +337,18 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
         lede={limit('draw').body}
       >
         <p>
-          The massing view is volumes the engine computed, and each volume is coloured by
-          the provenance class of its own height rather than by a palette the renderer
-          chose. A massing assembled in the viewer would be a building nobody computed,
-          drawn convincingly, on the most persuasive surface in the product — so it is
-          built in the engine and the picture is downstream of the arithmetic.
+          The 3D view is the engine&rsquo;s own model of the building — each level at its
+          floor, each car in its bay, the ramp between the levels it joins — and every
+          object in it is coloured by the provenance class of the value it stands for
+          rather than by a palette the renderer chose. A building assembled in the viewer
+          would be a building nobody computed, drawn convincingly, on the most persuasive
+          surface in the product — so it is built in the engine and the picture is
+          downstream of the arithmetic.
+        </p>
+        <p>
+          What the model does not contain is listed under the picture: slab thickness,
+          cores, façades. A view with no cores reads as a building with no cores unless it
+          says why.
         </p>
         <p>
           Where the podium stops and the tower starts is not derivable from a run. The

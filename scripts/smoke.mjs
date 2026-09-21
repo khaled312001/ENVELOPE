@@ -277,7 +277,7 @@ await step('the landing page quotes no number the engine did not produce', async
 await step('the landing page says what the product will not do', async () => {
   const t = await page.textContent('body');
   for (const phrase of [
-    'does not draw a building',
+    'does not design a building',
     'does not check life safety',
     'does not replace a professional',
   ]) {

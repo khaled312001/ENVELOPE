@@ -156,7 +156,7 @@ describe.each(CASES)('$name', ({ ring, podiumLevels }) => {
     scene.dispose();
   });
 
-  it('writes the same cars into the .glb, as plain meshes any glTF viewer can open', async () => {
+  it('writes the same cars into the .glb, as plain meshes with no extension a reader must support', async () => {
     const model = out().building;
     const glb = await buildingGlb(model, META);
 

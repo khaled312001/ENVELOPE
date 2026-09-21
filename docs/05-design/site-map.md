@@ -472,7 +472,7 @@ the page reads as behaviour rather than as caveats.
 |---|---|---|---|
 | 1 | Hero | *"Refusals here are things the software does, not things it lacks. If you are looking for the overclaim, start on this page."* | none |
 | 2 | **The refusal contract** | First, before any prose. Three rows: a run with no declared parking-in-FAR treatment returns **422** and no guess; an export with the assumption gate or the reviewer gate unsatisfied returns **409**; a run that fails an invariant or a hard constraint returns **422 and is never persisted** — never a warning, never a configurable severity, no override flag. Each row names the file that enforces it. **The second row said "gates G1–G4" in the first draft and that is wrong** (R11): `EXPORT_GATES` is `[G3, G4]` (`gates.ts:117-118`), the handler's own docblock says *"blocked until G3 and G4"* (`server.ts:903`), and the G1/G2 subject hashes it computes at `server.ts:917-918` are never read. G1 gates rule resolution and G2 gates capacity computation, which is where they belong and where the page places them; there is no transitive prerequisite chain in the file, so a page implying one would be describing a control by inference. Note that `README.md:167-170` carries the same error — take the status codes from it, take the gate list from `gates.ts`. | `gates.ts`, `apps/api/src/server.ts`; status codes from `README.md:167-170` |
-| 3 | It does not draw a building | The item verbatim, plus: the massing is volumes computed by the engine and coloured by the provenance class of each volume's own height, so an unentered podium level count is `ASSUMED`, amber, and said in words as well as in colour. | none |
+| 3 | It does not design a building | The item verbatim, plus: the 3D view is the engine's own `BuildingModel` — each level at its floor, each car in its bay, the ramp between the levels it joins — coloured by the provenance class of the value each object stands for, and what the model does not contain (slab thickness, cores, façades) is listed under it. An unentered podium level count is `ASSUMED`, amber, and said in words as well as in colour. *(Renamed from "It does not draw a building" when Phase 4 shipped the 3D view and the .glb: from then on it did draw one, and the refusal that stayed true was the design.)* | none |
 | 4 | It does not check life safety | Verbatim, plus the deferred rule list with life-safety chips: a missing check reads as a check that passed, so every deferred constraint is named in every output. | `SNAPSHOT.deferred[]` |
 | 5 | It does not tell you what is realistically achievable | Verbatim, plus: there is no realistic/expected/likely band and **the field does not exist in the schema**, so one cannot be configured in. The honest substitute is a user-set realism discount defaulting to no discount, attributed to whoever changed it. | `input.run.realismDiscount` |
 | 6 | It does not decide the parking-in-FAR question | Verbatim, plus: no default; `DERIVED` from a citation, or `USER_SET` by a named user, or the run is refused. **No range is quoted** — the link goes to `/parking` §10, which shows the measured spread for this plot. | none here |
@@ -480,7 +480,7 @@ the page reads as behaviour rather than as caveats.
 | 8 | It does not search for the optimal ramp and core position | A `TRADEOFF` value; the Phase 0 class set does not contain that class and the traced-value constructor throws on one outside it. Absent as a structural consequence, not as a backlog item. No attribution. | none |
 | 9 | A developer standard could not cut your envelope, however many it held | `DeveloperStandard` and `ProjectBrief` are deliberately not `RuleRecord`s, are served from `/api/standards` and are never merged into `/api/rules`. A commercial preference that bound the envelope would be reporting a client's brief as a legal limit. **No brief's contents, caps, targets or figures appear.** | none |
 | 10 | It is not the whole code | Parking, setback, dimension and access clauses only. The fire code is not read at all. The four encoded clause families are named; no page count is typed (R8) — a corpus figure comes from a generated inventory or does not appear. | none |
-| 11 | A file is not an integration | Exports travel as files. No live link, no round trip, no Revit connection, and a change made downstream does not come back. **IFC and glTF are not produced by this engine** — if you have seen them listed against this product they were scope in an older document and they do not exist in the software. | none |
+| 11 | A file is not an integration | Exports travel as files. No live link, no round trip, no Revit connection, and a change made downstream does not come back. The 3D model is written as a glTF file, and it is a file like the others. **IFC is not produced by this engine** — if you have seen it listed against this product it was scope in an older document and it does not exist in the software. | none |
 | 12 | **What is not on this site, and why** | The highest belief-per-word section on the site. No accuracy percentage — the variance study has not been run. No customer count or logo wall — there are no customers. No case study — every real plot in the corpus belongs to someone else. No comparison table — we have evaluated no competitor. No price — nothing about the current engagement generalises. No certification badge — there is no certification. Closes on the rule that produced the list: no figure on this site is typed by a human, and a page that cannot cite a number does not print one. | none, by construction |
 | 13 | Which of these could change, and who changes them | Three groups, permanent first: permanent by design (the compliance claim, the realism band, the optimiser class); awaiting a named human (rule approval, annex signature, the variance study); outside Phase 0 (unit layouts, further code coverage). Nothing in the first group carries a date; nothing anywhere carries a promise. | none |
 | 14 | *(R5)* What this page did not prove | That the refusals above are the complete set. → `/dashboard`, `/rules`. | none |
@@ -886,12 +886,14 @@ the two formats it does not produce.
    same page by §7's *"'works with AutoCAD' would be a claim about a tool, and it is not made"*.
    Two sentences, one page, and the weaker one was the marketing one. (`dxf.ts`'s own header
    comment names four CAD programs; a source comment is not public copy, and the distinction is
-   the point.) Then the layer list, generated from `packages/exports/src/dxf.ts`'s `LAYER` object
-   into the fixture, and
+   the point.) Then the layer scheme, generated from `packages/exports/src/dxf.ts`'s
+   `layerName(prefix, role)` into the fixture — one layer per level per role, `ENV-B1-BAY`,
+   `ENV-L00-AISLE`, `ENV-SITE-SETBACK` — and
    the design reason: a reviewer's first move is to switch things off — bays off to check the
-   aisle runs, ramp off to see what it costs, access off to argue with the placement — and one
-   `ENV-PARKING` layer would make all four arguments happen at once. Anything resting on an
-   assumption is drawn on `ENV-ASSUMED`, so provenance survives the export.
+   aisle runs, ramp off to see what it costs, every level but one off to read it alone — and one
+   `ENV-PARKING` layer would make all of those arguments happen at once. Anything resting on an
+   assumption is inked amber (ACI 30, `CLASS_ACI`) on the layer of the element it is, so
+   provenance survives the export as colour and no separate layer can be switched off to hide it.
 3. **The workbook.** It writes XLSX. Sheet names and each sheet's own note string, generated from
    `apps/api/src/workbook.ts` — including the Capacity note stating there is no *realistic* or
    *expected* figure in the file because the engine does not produce one, and the Parking
@@ -925,10 +927,12 @@ the two formats it does not produce.
    built is not evidence that a different control exists.
 
    Editing an assumption resets G3 and creates a new run rather than mutating the old one.
-7. **Formats that are not built.** IFC and glTF are not produced by this engine. If you
-   have seen them listed against this product, they were scope in an older document and they
-   do not exist in the software. First person, no hedge. *"Writes DXF R12"* is a fact about a
-   file; *"works with AutoCAD"* would be a claim about a tool, and it is not made.
+7. **Formats that are not built.** IFC is not produced by this engine. If you have seen it
+   listed against this product, it was scope in an older document and it does not exist in the
+   software. First person, no hedge. The 3D model *is* built, as binary glTF 2.0 with no
+   required extension — and that sentence is the whole claim. *"Writes DXF R12"* and *"writes
+   binary glTF 2.0"* are facts about a file; *"works with AutoCAD"* or *"opens in Blender"*
+   would be claims about a tool, and they are not made.
 8. *(R5)* **What this page did not prove.** That any of these artefacts may be relied on — the
    stamp on each one says why.
 
@@ -948,7 +952,8 @@ what is stamped on all four artefacts is prose and is unaffected.
 the repository is named after a real client plot and may not be published; a sample would have
 to be regenerated from the synthetic worked example first, and that is not scoped here.
 
-**Never says.** Six export formats. IFC. glTF. Any integration claim.
+**Never says.** A count of export formats. IFC. The name of any program a file opens in. Any
+integration claim.
 
 ---
 
@@ -1314,7 +1319,7 @@ edited apart. This module is also the file R1's hand-written-copy scan runs over
 | Rules approved, definitions signed, invariants ran, annex version, blocking sentence, assumption exposure, deferred rules, volume, governing-band split | `readiness.json` ← `scripts/verify-readiness.mjs` (`GET /api/dashboard` in-process, against a store seeded **only** with the synthetic worked example, `recentRuns` written as `[]`, output scanned for the deletion list below and the build failed on a hit — §4.4) | figure |
 | Invariant catalogue: id, statement, tolerance, dormancy reason, ran state | `invariant-catalogue.json` ← `packages/invariants/src/catalogue.ts` | figure |
 | Rule library rows, citation-absentia fields, approval status | `rule-library.json` ← `packages/rules/src/seed/dubai-residential.ts` | figure |
-| DXF layer names | `verified.exports.dxfLayers[]` ← `packages/exports/src/dxf.ts` `LAYER` | figure |
+| DXF layer names | `verified.exports.dxfLayers[]` ← `packages/exports/src/dxf.ts` `layerName` | figure |
 | XLSX sheet names and note strings | `verified.exports.workbookSheets[]` ← `apps/api/src/workbook.ts` | figure |
 | Run parameter table on `/inputs` | `input-schema.json` ← `scripts/generate-input-schema.mjs`, walking `runRequest` out of `apps/api/dist/schemas.js` | figure |
 | Metric definitions and annex version | `definitions.json` ← `GET /api/definitions` | figure |

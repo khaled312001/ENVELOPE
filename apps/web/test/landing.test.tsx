@@ -289,7 +289,7 @@ describe('the landing page', () => {
     // And the substrings the site map calls load-bearing, asserted independently of
     // the module in case an item is ever renamed out from under them.
     for (const substring of [
-      'does not draw a building',
+      'does not design a building',
       'does not check life safety',
       'does not tell you what is realistically achievable',
       'does not decide the parking-in-far question',

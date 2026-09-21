@@ -39,7 +39,7 @@ import type { RunRepository, StoredPlot, StoredRun } from './store.js';
 interface MysqlRow {
   readonly [column: string]: unknown;
 }
-interface MysqlPool {
+export interface MysqlPool {
   query(sql: string, values?: readonly unknown[]): Promise<[MysqlRow[], unknown]>;
   execute(sql: string, values?: readonly unknown[]): Promise<[MysqlRow[], unknown]>;
   end(): Promise<void>;
@@ -81,7 +81,8 @@ export const MYSQL_SCHEMA: readonly string[] = [
      plot                  LONGTEXT     NOT NULL,
      PRIMARY KEY (plot_id),
      KEY plots_by_created (created_at DESC),
-     KEY plots_by_community (community)
+     KEY plots_by_community (community),
+     KEY plots_by_actor (created_by_actor_id, created_at DESC)
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
 
   `CREATE TABLE IF NOT EXISTS runs (
@@ -105,6 +106,7 @@ export const MYSQL_SCHEMA: readonly string[] = [
      KEY runs_by_plot (plot_id, created_at DESC),
      KEY runs_by_fingerprint (fingerprint),
      KEY runs_by_created (created_at DESC),
+     KEY runs_by_actor (created_by_actor_id, created_at DESC),
      CONSTRAINT runs_plot_fk FOREIGN KEY (plot_id) REFERENCES plots (plot_id)
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
 ];
@@ -163,6 +165,60 @@ function toPlot(row: MysqlRow): StoredPlot {
   };
 }
 
+/**
+ * STRICT MODE ON EVERY CONNECTION, BECAUSE THE SERVER'S DEFAULT IS NOT.
+ *
+ * The production server answers `@@sql_mode` with
+ * `IGNORE_SPACE,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION` — no `STRICT_*`. In that
+ * mode a value too long for its column is truncated with a warning and the INSERT
+ * succeeds, which is the silent-corruption case the `LONGTEXT` note above guards
+ * against by column type alone. Strict mode turns it into an error at write time,
+ * where it belongs. Set per session because a shared host's global mode is not
+ * ours to change.
+ */
+export function strictSessions(pool: unknown): void {
+  const emitter = pool as {
+    on?(event: 'connection', cb: (c: { query(sql: string): unknown }) => void): void;
+  };
+  emitter.on?.('connection', (connection) => {
+    // Queued on the connection before anything the pool hands it out for.
+    connection.query(
+      "SET SESSION sql_mode = 'STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'",
+    );
+  });
+}
+
+/**
+ * One pool, configured once.
+ *
+ * Asynchronous because the driver is loaded on demand: a deployment on SQLite never
+ * pays for `mysql2`, and the test suite never loads it.
+ */
+export async function createMysqlPool(options: MysqlConnectionOptions): Promise<MysqlPool> {
+  const mysql = (await import('mysql2/promise')) as unknown as {
+    createPool(o: Record<string, unknown>): MysqlPool;
+  };
+  const pool = mysql.createPool({
+    host: options.host,
+    port: options.port ?? 3306,
+    user: options.user,
+    password: options.password,
+    database: options.database,
+    connectionLimit: options.connectionLimit ?? 8,
+    waitForConnections: true,
+    // Payloads are JSON strings the engine already serialised. Letting the
+    // driver parse and re-serialise them would not round-trip byte-identically,
+    // and §13.4 requires exactly that.
+    typeCast: true,
+    dateStrings: true,
+    // Defence in depth against a query built by concatenation ever reaching
+    // the server: without this, one statement per call is a protocol rule.
+    multipleStatements: false,
+  });
+  strictSessions(pool);
+  return pool;
+}
+
 export class MysqlRunRepository implements RunRepository {
   readonly #pool: MysqlPool;
 
@@ -178,26 +234,17 @@ export class MysqlRunRepository implements RunRepository {
    * first query race the `CREATE TABLE`.
    */
   static async connect(options: MysqlConnectionOptions): Promise<MysqlRunRepository> {
-    const mysql = (await import('mysql2/promise')) as unknown as {
-      createPool(o: Record<string, unknown>): MysqlPool;
-    };
-    const pool = mysql.createPool({
-      host: options.host,
-      port: options.port ?? 3306,
-      user: options.user,
-      password: options.password,
-      database: options.database,
-      connectionLimit: options.connectionLimit ?? 8,
-      waitForConnections: true,
-      // Payloads are JSON strings the engine already serialised. Letting the
-      // driver parse and re-serialise them would not round-trip byte-identically,
-      // and §13.4 requires exactly that.
-      typeCast: true,
-      dateStrings: true,
-      // Defence in depth against a query built by concatenation ever reaching
-      // the server: without this, one statement per call is a protocol rule.
-      multipleStatements: false,
-    });
+    return MysqlRunRepository.open(await createMysqlPool(options));
+  }
+
+  /**
+   * Apply the schema to a pool somebody else created and hand back a repository.
+   *
+   * The production entry creates ONE pool and gives it to this and to
+   * `MysqlAccountRepository`: a shared host caps connections per database user, and
+   * two pools of eight would spend sixteen of them on one idle process.
+   */
+  static async open(pool: MysqlPool): Promise<MysqlRunRepository> {
     for (const ddl of MYSQL_SCHEMA) await pool.query(ddl);
     return new MysqlRunRepository(pool);
   }
@@ -322,6 +369,15 @@ export class MysqlRunRepository implements RunRepository {
     const n = Math.max(1, Math.min(1000, Math.trunc(limit) || 100));
     const [rows] = await this.#pool.query(
       `SELECT ${PLOT_COLUMNS} FROM plots ORDER BY created_at DESC LIMIT ${n}`,
+    );
+    return rows.map(toPlot);
+  }
+
+  async listPlotsByActor(actorId: string, limit = 100): Promise<readonly StoredPlot[]> {
+    const n = Math.max(1, Math.min(1000, Math.trunc(limit) || 100));
+    const [rows] = await this.#pool.query(
+      `SELECT ${PLOT_COLUMNS} FROM plots WHERE created_by_actor_id = ? ORDER BY created_at DESC LIMIT ${n}`,
+      [actorId],
     );
     return rows.map(toPlot);
   }

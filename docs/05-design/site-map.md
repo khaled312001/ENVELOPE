@@ -32,8 +32,8 @@ developer, so the material to build one is confidential rather than merely absen
 competitor comparison — the only competitor material we hold is a machine transcript of a
 private call. No accuracy figure, no time-saved figure, no "N% faster" — PRD §22.2's
 inter-architect variance study has not been run. No security or trust page with badges —
-there is no authentication and no authorization in the built API, so every badge would be
-false. No uptime page — nothing monitors availability, and `/dashboard` must never be
+accounts and per-run access are recent and nothing has audited them — no security review,
+no penetration test, no certification — so every badge would be false. No uptime page — nothing monitors availability, and `/dashboard` must never be
 renamed in a way that implies it does. No team or about page and no terms or privacy policy
 — there is no legal entity, and drafting a legal instrument in-house is not a design task.
 No blog, no newsletter, no integrations page. Not one of these is declined for taste.

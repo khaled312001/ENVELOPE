@@ -12,6 +12,8 @@
  * Mozilla ships for exactly this case.
  */
 
+import { ensureDOMMatrix } from './dom-matrix.js';
+
 /** One positioned run of text as the PDF's content stream laid it out. */
 export interface TextItem {
   readonly text: string;
@@ -72,6 +74,9 @@ const CONTROL_CHARS = new RegExp('[\u0000-\u001F\u007F]', 'g');
 let cached: PdfJsModule | undefined;
 
 async function pdfjs(): Promise<PdfJsModule> {
+  // Before the import, because pdfjs constructs a DOMMatrix at module level. See
+  // `dom-matrix.ts` for why this is not the native canvas package.
+  ensureDOMMatrix();
   cached ??= (await import('pdfjs-dist/legacy/build/pdf.mjs')) as unknown as PdfJsModule;
   return cached;
 }

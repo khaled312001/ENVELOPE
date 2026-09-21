@@ -519,6 +519,11 @@ export interface StandardsView {
     readonly notMechanized: readonly string[];
   } | null;
   readonly disclaimer: string;
+  /**
+   * Present when the deployment does not offer developer standards, with the
+   * reason. The list is then empty, and must not read as "there are none".
+   */
+  readonly withheld?: string;
 }
 
 export interface RunRequestBody {

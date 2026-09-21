@@ -65,7 +65,11 @@ import {
 } from '@envelope/report';
 import { writeWorkbook } from '@envelope/exports';
 import cors from '@fastify/cors';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, {
+  type FastifyInstance,
+  type FastifyRequest,
+  type FastifyServerOptions,
+} from 'fastify';
 
 import {
   emissionBlockers,
@@ -76,14 +80,16 @@ import {
 import { Gate, requireExportGates, subjectHash, type GateRecord } from './gates.js';
 import { ENGINE_VERSION, presentRun } from './present.js';
 import { buildRunReport } from './report.js';
-import { actorFrom, canReview, type Actor } from './identity.js';
+import { canReview, type Actor } from './identity.js';
 import { gateAck, plotInput, runRequest, shareRequest, type RunRequest } from './schemas.js';
 import { registerIntakeRoutes } from './intake-route.js';
 import { runDrawing, type DrawableRun } from './drawing.js';
 import { runWorkbookSpec, type ExportableRun } from './workbook.js';
 import { SqliteAccountRepository, type AccountRepository } from './account-store.js';
 import { normaliseEmail } from './accounts.js';
-import { registerAuthRoutes, sessionFrom } from './auth-routes.js';
+import { registerAuthRoutes, resolveActor, sessionFrom, type GuestPolicy } from './auth-routes.js';
+import { ANY_ROLE, requirePlotFor, requireRunFor, visibleRuns } from './access.js';
+import { createThrottle } from './throttle.js';
 import { SqliteRunRepository, type RunRepository, type StoredRun } from './store.js';
 
 const DEV_ACK = 'I understand these rules are not approved';
@@ -102,17 +108,88 @@ const DEV_ACK = 'I understand these rules are not approved';
  * an account is a mutable fact about a person, and a route that only needs to read a
  * session has no business being able to reach the run store.
  */
+/**
+ * How a deployment differs from the test suite. Every field defaults to the
+ * behaviour the tests and `scripts/smoke.mjs` were written against, so a caller
+ * that passes nothing gets the development server — and the production entry,
+ * `main.ts`, has to ask for each difference by name.
+ */
+export interface BuildOptions {
+  /** See `GuestPolicy` in `auth-routes.ts`. Default `open`. */
+  readonly guests?: GuestPolicy;
+  /**
+   * Whether `/api/standards` serves the developer standards on file. Default true.
+   * They are a developer's confidential brief; a public deployment passes false
+   * unless its operator has decided otherwise.
+   */
+  readonly developerStandards?: boolean;
+  /** Engine computations per client address per minute. Default: no limit. */
+  readonly computationsPerMinute?: number | null;
+  /**
+   * How many proxies in front of this process append to `X-Forwarded-For`, or false.
+   * Never `true`: that believes the left-most entry, which the visitor writes.
+   */
+  readonly trustProxy?: number | false;
+  /**
+   * The path the web server mounts this application under, e.g. `/api`.
+   *
+   * Every route is registered with its `/api` prefix. An app server configured
+   * with a base URI may hand the application the path with that prefix removed;
+   * this puts it back, and leaves a path that already carries it alone, so the
+   * routes answer the same whichever the app server does.
+   */
+  readonly mountedAt?: string;
+}
+
+/**
+ * Trust the socket peer and the `hops - 1` entries nearest it; `request.ip` is the
+ * next one out. Hop 0 is the socket, hop 1 the right-most `X-Forwarded-For` entry.
+ */
+function trustHops(hops: number): (address: string, hop: number) => boolean {
+  return (_address, hop) => hop < hops;
+}
+
 export async function build(
   repo: RunRepository = new SqliteRunRepository(),
   accounts: AccountRepository | null = new SqliteAccountRepository(),
+  options: BuildOptions = {},
 ): Promise<FastifyInstance> {
   await initGeometry();
 
-  const app = Fastify({
+  const guests: GuestPolicy = options.guests ?? 'open';
+  const standardsOffered = options.developerStandards ?? true;
+
+  const base = options.mountedAt;
+  const serverOptions: FastifyServerOptions = {
     logger: { level: process.env['LOG_LEVEL'] ?? 'info' },
     // A plot with many vertices plus a full provenance graph is not small.
     bodyLimit: 4 * 1024 * 1024,
-  });
+    // Behind a proxy the socket peer is the proxy. Without this every visitor
+    // shares one address, and the throttle below limits the site, not a client.
+    //
+    // As a function, not a number: Fastify fails a bare hop count closed, because it
+    // cannot know the immediate peer is a proxy at all. That is the deployment's to
+    // assert, not the framework's — under Passenger this process has no public port,
+    // only the web server's socket — and `main.ts` makes the operator state the count.
+    trustProxy: options.trustProxy ? trustHops(options.trustProxy) : false,
+  };
+  if (base) {
+    serverOptions.rewriteUrl = (req) => {
+      const url = req.url ?? '/';
+      if (url === base || url.startsWith(base + '/') || url.startsWith(base + '?')) return url;
+      return base + (url.startsWith('/') ? url : '/' + url);
+    };
+  }
+  const app = Fastify(serverOptions);
+
+  /** The actor for a request, under this deployment's guest policy. See `access.ts`. */
+  const who = (request: FastifyRequest): Promise<Actor> => resolveActor(accounts, request, guests);
+
+  /** Applied to the routes that start engine work. Off unless configured. */
+  const costly =
+    options.computationsPerMinute != null
+      ? { preHandler: createThrottle(options.computationsPerMinute) }
+      : {};
 
   /**
    * CORS — an allowlist, not a mirror.
@@ -228,7 +305,7 @@ export async function build(
     annexSigned: pendingApproval().length === 0,
   }));
 
-  registerIntakeRoutes(app);
+  registerIntakeRoutes(app, costly);
   if (accounts) registerAuthRoutes(app, accounts);
 
   /**
@@ -289,7 +366,26 @@ export async function build(
    * beside it would let someone run a mix the brief excludes.
    */
   app.get('/api/standards', async (request) => {
-    actorFrom(request);
+    await who(request);
+    if (!standardsOffered) {
+      /*
+        WITHHELD, AND SAID SO. A developer's brief is that developer's confidential
+        commercial expectation; a deployment the public can reach does not serve it
+        unless whoever runs the deployment decides to (`DEVELOPER_STANDARDS=on`).
+        An empty list with no reason would read as "there are none".
+      */
+      return {
+        standards: [],
+        brief: null,
+        withheld:
+          'Developer standards are not offered on this deployment. They are a ' +
+          "developer's commercial brief, shared with us in confidence; enter the unit " +
+          'mix and the saleable efficiency yourself.',
+        disclaimer:
+          'A developer standard is a commercial brief, not a regulation. REGULATORY ' +
+          'VALIDITY: NOT ASSESSED.',
+      };
+    }
     const plotNumber = (request.query as { plotNumber?: string }).plotNumber ?? '';
     const brief = plotNumber ? briefFor(PROJECT_BRIEFS, plotNumber) : undefined;
 
@@ -366,8 +462,8 @@ export async function build(
     };
   });
 
-  app.post('/api/plots', async (request, reply) => {
-    const actor = actorFrom(request);
+  app.post('/api/plots', costly, async (request, reply) => {
+    const actor = await who(request);
     const body = plotInput.parse(request.body);
 
     const ring: Ring = body.vertices.map((v) => ({ x: toMm(v.x) as Mm, y: toMm(v.y) as Mm }));
@@ -455,17 +551,18 @@ export async function build(
   });
 
   /**
-   * Every plot, newest first.
+   * The reader's plots, newest first.
    *
-   * No tenant filter, for the reason given at `requireRun` — there is no tenancy
-   * model and inventing one here would break `G4`. Disclosed, not patched.
+   * This said "no tenant filter … disclosed, not patched" for as long as the API
+   * had no identity to filter by. The filter is `created_by_actor_id`, applied in
+   * the query — see `access.ts` for the rule and why it breaks nothing `G4` needs.
    */
   app.get('/api/plots', async (request) => {
-    actorFrom(request);
+    const actor = await who(request);
     const limit = Math.min(Number((request.query as { limit?: string }).limit ?? 100), 500);
-    const plots = await repo.listPlots(limit);
+    const plots = await repo.listPlotsByActor(actor.id, limit);
     return {
-      total: await repo.countPlots(),
+      total: plots.length,
       plots: await Promise.all(
         plots.map(async (p) => ({
         plotId: p.plotId,
@@ -486,6 +583,7 @@ export async function build(
 
   app.get('/api/plots/:plotId', async (request) => {
     const { plotId } = request.params as { plotId: string };
+    await requirePlotFor(repo, accounts, plotId, await who(request), 'read');
     const plot = await loadPlot(repo, plotId);
     return {
       plotId: plot.plotId,
@@ -513,10 +611,11 @@ export async function build(
   // Runs — steps 5–8
   // ---------------------------------------------------------------------
 
-  app.post('/api/runs', async (request, reply) => {
-    const actor = actorFrom(request);
+  app.post('/api/runs', costly, async (request, reply) => {
+    const actor = await who(request);
     const body = runRequest.parse(request.body);
 
+    await requirePlotFor(repo, accounts, body.plotId, actor, 'write');
     const plot = await loadPlot(repo, body.plotId);
 
     const store = new RuleStore().add(
@@ -628,20 +727,21 @@ export async function build(
    * proposition is that a number and its derivation travel together.
    */
   app.get('/api/runs', async (request) => {
-    actorFrom(request);
+    const actor = await who(request);
     const limit = Math.min(Number((request.query as { limit?: string }).limit ?? 50), 200);
+    const visible = await visibleRuns(repo, accounts, actor, limit);
     return {
-      total: await repo.countRuns(),
-      runs: (await repo.listRuns(limit)).map((r) => summariseRun(r)),
+      total: visible.length,
+      runs: visible.map(({ run }) => summariseRun(run)),
     };
   });
 
   /**
    * WHAT THIS ACCOUNT HAS DONE — authored, and shared with them.
    *
-   * THE AUTHORIZATION IS THE POINT OF THIS ROUTE, and it is the first one in the
-   * product to have any. `CLAUDE.md` discloses the gap plainly: "no authorization at
-   * all: any identified actor can read, gate and export any run", and records that
+   * THE AUTHORIZATION IS THE POINT OF THIS ROUTE, and it was the first one in the
+   * product to have any. `CLAUDE.md` disclosed the gap plainly: "no authorization at
+   * all: any identified actor can read, gate and export any run", and recorded that
    * per-author scoping was CONSIDERED AND REJECTED, because G4 is signed by a reviewer
    * who is deliberately not the author and an ownership check would break the one flow
    * the gate exists for.
@@ -653,9 +753,9 @@ export async function build(
    * under isolation — the author names who will sign, that person can see the run, and
    * "the signer is not the author" stops being a hope and becomes a row.
    *
-   * `/api/runs` is untouched and still lists everything to any identified actor. This
-   * route does not close that hole; it is the first surface that does not open it, and
-   * the disclosure stands until every route is behind the same check.
+   * It was the first route with that rule. Every run and plot route now applies the
+   * same one, from `access.ts`, and this route differs only in requiring a session:
+   * drafts and shares are kept against accounts, which a guest does not have.
    */
   app.get('/api/work', async (request, reply) => {
     if (!accounts) return reply.code(501).send({ error: 'this deployment has no account store' });
@@ -706,10 +806,9 @@ export async function build(
     const session = await sessionFrom(accounts, request);
     if (!session) return reply.code(401).send({ error: 'sign in to share a run' });
 
-    const run = await requireRun(repo, request.params);
-    if (run.createdByActorId !== session.accountId) {
-      return reply.code(403).send({ error: 'only the account that authored a run may share it' });
-    }
+    // 404 to anyone the run was not shared with, 403 to a reviewer or reader —
+    // the same rule as every other run route, from `access.ts`.
+    const { run } = await requireRunFor(repo, accounts, request.params.runId, session, ['author']);
 
     const body = shareRequest.parse(request.body);
     const target = await accounts.getAccountByEmail(normaliseEmail(body.email));
@@ -735,8 +834,10 @@ export async function build(
    * Burying them is how a demonstration becomes a claim.
    */
   app.get('/api/dashboard', async (request) => {
-    actorFrom(request);
-    const runs = await repo.listRuns(200);
+    // The deployment's own figures — rules, definitions, checks — are the same for
+    // everyone. Run-derived ones are the reader's runs: an exposure ranking built
+    // from other people's runs would publish the basis strings they typed.
+    const runs = (await visibleRuns(repo, accounts, await who(request), 200)).map((v) => v.run);
     const summaries = runs.map(summariseRun);
 
     const governing = { REGULATORY: 0, GEOMETRIC: 0, PARKING: 0 } as Record<string, number>;
@@ -862,8 +963,11 @@ export async function build(
   });
 
   app.get('/api/runs/:runId', async (request) => {
-    const run = await requireRun(repo, request.params as { runId: string });
-    return { ...JSON.parse(run.output), gates: JSON.parse(run.gates) };
+    const { runId } = request.params as { runId: string };
+    const { run, role } = await requireRunFor(repo, accounts, runId, await who(request), ANY_ROLE);
+    // `access` tells the screen which actions to offer. The server enforces them
+    // regardless; this only stops it offering a button that would answer 403.
+    return { ...JSON.parse(run.output), gates: JSON.parse(run.gates), access: role };
   });
 
   /**
@@ -871,8 +975,8 @@ export async function build(
    * converts a skeptical architect". Every number in the UI links here.
    */
   app.get('/api/runs/:runId/provenance/:nodeId', async (request) => {
-    const { nodeId } = request.params as { runId: string; nodeId: string };
-    const run = await requireRun(repo, request.params as { runId: string });
+    const { runId, nodeId } = request.params as { runId: string; nodeId: string };
+    const { run } = await requireRunFor(repo, accounts, runId, await who(request), ANY_ROLE);
     const payload = JSON.parse(run.output) as { provenance: { nodes: unknown[]; edges: unknown[] } };
     const tree = buildTree(payload.provenance, nodeId);
     if (!tree) throw Object.assign(new Error('node not found in this run'), { statusCode: 404 });
@@ -880,9 +984,10 @@ export async function build(
   });
 
   /** `FR-DEF-002 AC4` — one click, both treatments, side by side. */
-  app.post('/api/runs/parking-in-far-comparison', async (request) => {
-    const actor = actorFrom(request);
+  app.post('/api/runs/parking-in-far-comparison', costly, async (request) => {
+    const actor = await who(request);
     const body = runRequest.parse(request.body);
+    await requirePlotFor(repo, accounts, body.plotId, actor, 'write');
     const plot = await loadPlot(repo, body.plotId);
 
     const store = new RuleStore().add(
@@ -919,9 +1024,19 @@ export async function build(
   // ---------------------------------------------------------------------
 
   app.post('/api/runs/:runId/gates', async (request) => {
-    const actor = actorFrom(request);
-    const run = await requireRun(repo, request.params as { runId: string });
+    const actor = await who(request);
     const body = gateAck.parse(request.body);
+    /*
+      G1–G3 acknowledge the author's own inputs, so only the author gives them.
+      G4 is the reviewer's signature — the one act a `reviewer` share exists for.
+    */
+    const { run } = await requireRunFor(
+      repo,
+      accounts,
+      (request.params as { runId: string }).runId,
+      actor,
+      body.gate === Gate.G4_REVIEWER_NAMED ? ['author', 'reviewer'] : ['author'],
+    );
 
     if (body.gate === Gate.G4_REVIEWER_NAMED && !canReview(actor)) {
       throw Object.assign(
@@ -955,9 +1070,9 @@ export async function build(
    * because a gate acknowledged against different content is not an
    * acknowledgement of this one.
    */
-  app.post('/api/runs/:runId/export', async (request, reply) => {
-    actorFrom(request);
-    const run = await requireRun(repo, request.params as { runId: string });
+  app.post('/api/runs/:runId/export', costly, async (request, reply) => {
+    const { runId } = request.params as { runId: string };
+    const { run } = await requireRunFor(repo, accounts, runId, await who(request), ANY_ROLE);
     const payload = JSON.parse(run.output) as Record<string, unknown>;
     const gates: GateRecord = JSON.parse(run.gates);
 
@@ -1092,26 +1207,6 @@ class EmissionBlockedError extends Error {
   }
 }
 
-/**
- * Fetch a run, or 404.
- *
- * **There is no authorization check here, and that is a disclosed gap rather
- * than an oversight.** Any identified actor can read, acknowledge and export any
- * run. `StoredRun.tenantId` exists and is written; nothing reads it.
- *
- * Scoping runs to their author was considered and rejected, because the product
- * requires the opposite: `G4` is signed by a *named reviewer*, who is a
- * different person from whoever computed the run — §21.1's whole point is that
- * someone other than the author puts their name to the output. Enforcing
- * per-actor ownership would break the one flow the gate exists for.
- *
- * The correct fix is a tenancy and role model, and the PRD contains neither —
- * `tenant_id` appears once in 3,587 lines and no functional requirement covers
- * users, organisations or permissions. See `identity.ts` and
- * `docs/03-analysis/open-questions.md`. Until that is scoped and quoted, this
- * deployment is single-tenant behind a network boundary and must be described
- * that way in writing, not left to be discovered.
- */
 /**
  * A `Plot` on its way to and from the database.
  *
@@ -1337,12 +1432,6 @@ function summariseRun(run: StoredRun) {
   };
 }
 
-async function requireRun(repo: RunRepository, params: { runId: string }) {
-  const run = await repo.get(params.runId);
-  if (!run) throw Object.assign(new Error('run not found'), { statusCode: 404 });
-  return run;
-}
-
 interface WireGraph {
   nodes: { id: string; [k: string]: unknown }[];
   edges: { from: string; to: string; kind: string; attrs?: unknown }[];
@@ -1362,12 +1451,3 @@ function buildTree(graph: unknown, rootId: string, seen = new Set<string>()): un
   };
 }
 
-// -------------------------------------------------------------------------
-
-const isMain = process.argv[1]?.endsWith('server.ts') || process.argv[1]?.endsWith('server.js');
-if (isMain) {
-  const port = Number(process.env['PORT'] ?? 4000);
-  const dbPath = process.env['DB_PATH'] ?? ':memory:';
-  const app = await build(new SqliteRunRepository(dbPath));
-  await app.listen({ port, host: '0.0.0.0' });
-}

@@ -17,7 +17,7 @@
     "shots": "node scripts/shoot.mjs",
     "dev": "pnpm build && pnpm --parallel --filter \"./apps/*\" dev",
     "dev:engine": "tsc -b --watch --preserveWatchOutput",
-    "start": "node apps/api/dist/server.js",
+    "start": "node apps/api/dist/main.js",
     "example": "node scripts/verify-worked-example.mjs && node scripts/verify-readiness.mjs",
     "amber": "node scripts/amber.mjs"
   },
@@ -27,6 +27,7 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "esbuild": "0.25.12",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "typescript": "^5.7.2",

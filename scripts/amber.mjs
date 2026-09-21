@@ -107,7 +107,13 @@ const fail = (m) => {
   console.log(`  FAIL ${m}`);
 };
 
-const browser = await chromium.launch({ channel: 'msedge' });
+// SMOKE_HOST_RULES points a hostname at an address, e.g.
+// "MAP tob.khaledahmed.net 84.32.84.123": a release can be checked on the real host
+// before its DNS record exists, rather than after a reader has already met it.
+const browser = await chromium.launch({
+  channel: 'msedge',
+  args: process.env.SMOKE_HOST_RULES ? [`--host-resolver-rules=${process.env.SMOKE_HOST_RULES}`] : [],
+});
 
 /**
  * Resolve the token values in the page, then sum the filled area of every element

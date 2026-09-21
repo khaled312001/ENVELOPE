@@ -153,6 +153,8 @@ export interface RunRepository {
   insertPlot(plot: StoredPlot): Promise<void>;
   getPlot(plotId: string): Promise<StoredPlot | undefined>;
   listPlots(limit?: number): Promise<readonly StoredPlot[]>;
+  /** The plots one actor entered, newest first — for the reason `listRunsByActor` gives. */
+  listPlotsByActor(actorId: string, limit?: number): Promise<readonly StoredPlot[]>;
   countPlots(): Promise<number>;
 
   close(): Promise<void>;
@@ -180,6 +182,7 @@ CREATE TABLE IF NOT EXISTS runs (
 CREATE INDEX IF NOT EXISTS runs_by_plot ON runs (plot_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS runs_by_fingerprint ON runs (fingerprint);
 CREATE INDEX IF NOT EXISTS runs_by_created ON runs (created_at DESC);
+CREATE INDEX IF NOT EXISTS runs_by_actor ON runs (created_by_actor_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS plots (
   plot_id               TEXT PRIMARY KEY,
@@ -198,6 +201,7 @@ CREATE TABLE IF NOT EXISTS plots (
 );
 CREATE INDEX IF NOT EXISTS plots_by_created ON plots (created_at DESC);
 CREATE INDEX IF NOT EXISTS plots_by_community ON plots (community);
+CREATE INDEX IF NOT EXISTS plots_by_actor ON plots (created_by_actor_id, created_at DESC);
 `;
 
 export class SqliteRunRepository implements RunRepository {
@@ -319,6 +323,13 @@ export class SqliteRunRepository implements RunRepository {
     const rows = this.#db
       .prepare('SELECT * FROM plots ORDER BY created_at DESC LIMIT ?')
       .all(limit);
+    return (rows as Record<string, unknown>[]).map(toPlot);
+  }
+
+  async listPlotsByActor(actorId: string, limit = 100): Promise<readonly StoredPlot[]> {
+    const rows = this.#db
+      .prepare('SELECT * FROM plots WHERE created_by_actor_id = ? ORDER BY created_at DESC LIMIT ?')
+      .all(actorId, limit);
     return (rows as Record<string, unknown>[]).map(toPlot);
   }
 

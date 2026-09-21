@@ -166,20 +166,21 @@ keys and a stored seed. **Not achievable for the PDF** — WeasyPrint embeds cre
 object IDs. Scope it explicitly, or fail a release blocker on a metadata field.
 
 ### Q25 · What is the tenancy and permission model?
-Not a variant of Q16. The built API has **no authorization**: any identified actor can read,
-acknowledge gates on, and export any run. `StoredRun.tenantId` is written and nothing reads it.
+Not a variant of Q16. The built API first had **no authorization**: any identified actor could
+read, acknowledge gates on, and export any run.
 
-Scoping runs to their author was considered and rejected on product grounds — `G4` requires a
-*named reviewer*, who is by design someone other than whoever computed the run (§21.1). An
-ownership check would break the one flow the gate exists for. So the honest answer is that the
-model does not exist, not that it was skipped.
+Scoping runs to their author *alone* was rejected on product grounds — `G4` requires a *named
+reviewer*, who is by design someone other than whoever computed the run (§21.1), and an
+ownership check would break the one flow the gate exists for. What is built instead
+(2026-09-21, `apps/api/src/access.ts`) is ownership **plus an explicit grant**: a run is reachable
+by its author and by each account the author shared it with, as `reviewer` (may sign `G4`) or
+`reader`. Anyone else gets 404, so a run's existence does not leak. A guest is a random
+`guest-<uuid>` key held in one browser, and a request header may never claim an account's id.
 
-Until it is scoped, the deployment is **single-tenant, behind a network boundary, with identity
-taken from a request header and verified by nothing**. That sentence has to reach the client in
-writing. Answering this question decides: who is a tenant (a firm? a project?), who may read
-another person's run, whether a reviewer is a role or an assertion, and whether the licence number
-on `G4` is ever verified against a registry — it is currently recorded, never checked, and the
-product says so on screen.
+Still unanswered, and still to reach the client in writing: who is a tenant (a firm? a
+project?) — `StoredRun.tenantId` is written and nothing reads it; whether the licence number on
+`G4` is ever verified against a registry — it is recorded, never checked, and the product says so
+on screen; and whether an author may sign their own `G4`, which nothing currently prevents.
 
 ### Q26 · Does the client accept eight dormant invariants in Phase 0?
 Q19 asks whether the number is 18 or 13. The built engine gives the empirical answer for the deck's

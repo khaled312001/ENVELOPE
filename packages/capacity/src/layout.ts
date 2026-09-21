@@ -454,9 +454,16 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     uses: { bays: bayCountTraced },
     unit: 'm²/bay',
     detail: {
+      /*
+        No developer and no target figure in this string. It is emitted into every
+        run's provenance graph and read by whoever opens the derivation, and a
+        developer's brief is that developer's confidential commercial expectation —
+        the same reason `saleable_efficiency` basis strings name no brief. The
+        comparison, where a brief applies, is made on the standards screen.
+      */
       note:
-        'Comparable to the developer brief target. Azizi Annexure A asks for a ' +
-        'basement efficiency of 37.5 m² per car; this is the figure that answers it.',
+        'Comparable to a parking-efficiency target in a developer brief, where one ' +
+        'applies: the gross level area each placed bay costs, in the same unit.',
     },
   });
 

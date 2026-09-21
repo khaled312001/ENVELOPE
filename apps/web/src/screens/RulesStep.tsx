@@ -525,6 +525,15 @@ export function RulesStep({
             ))}
           </ul>
         </section>
+      ) : standards?.withheld ? (
+        /* Withheld by the deployment, and said so where the picker would be. An
+           absent section would let the reader assume there was nothing to pick. */
+        <section className="panel" aria-labelledby="standard-heading">
+          <h2 id="standard-heading" className="panel__title">
+            Build to a developer&rsquo;s standard
+          </h2>
+          <p>{standards.withheld}</p>
+        </section>
       ) : null}
 
       {/* --- Saleable efficiency, which has no default ------------------- */}

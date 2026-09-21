@@ -1,10 +1,9 @@
 /**
- * `/api/work` — the first route in this product with any authorization at all.
+ * `/api/work` — the first route in this product that had any authorization.
  *
- * `CLAUDE.md` discloses the state of the rest: *"no authorization at all: any
- * identified actor can read, gate and export any run"*, and records that per-author
- * scoping was **considered and rejected**, because G4 is signed by a reviewer who is
- * deliberately not the author.
+ * Every run and plot route now applies the same rule (`src/access.ts`, tested in
+ * `access.test.ts`). `CLAUDE.md` records why ownership ALONE was rejected: G4 is
+ * signed by a reviewer who is deliberately not the author.
  *
  * These tests exist to hold both halves of the resolution at once. The isolation has
  * to be real — an account must not see another account's run — AND the reviewer flow
@@ -113,9 +112,7 @@ describe('/api/work', () => {
   });
 
   it('does not list another account’s run', async () => {
-    // The whole point. `/api/runs` still lists everything to any identified actor —
-    // that hole is disclosed and open — and this route is the first surface that
-    // does not open it.
+    // The whole point, and now the rule on every route — see `access.test.ts`.
     const a = await signUp('author@example.com');
     const b = await signUp('other@example.com');
     await runs.insert(storedRun('r1', a.accountId, 'Author'));
@@ -167,13 +164,21 @@ describe('/api/work', () => {
     const author = await signUp('author@example.com');
     const other = await signUp('other@example.com');
     await runs.insert(storedRun('r1', author.accountId, 'Author'));
-    const res = await app.inject({
-      method: 'POST',
-      url: '/api/runs/r1/share',
-      headers: { cookie: other.cookie },
-      payload: { email: 'other@example.com', role: 'reader' },
-    });
-    expect(res.statusCode).toBe(403);
+    const share = (cookie: string) =>
+      app.inject({
+        method: 'POST',
+        url: '/api/runs/r1/share',
+        headers: { cookie },
+        payload: { email: 'other@example.com', role: 'reader' },
+      });
+
+    // A stranger is told the run does not exist — a 403 would confirm that it does.
+    expect((await share(other.cookie)).statusCode).toBe(404);
+
+    // Once it is shared with them they can see it, and are told what their role
+    // does not include.
+    expect((await share(author.cookie)).statusCode).toBe(200);
+    expect((await share(other.cookie)).statusCode).toBe(403);
   });
 
   it('answers the same whether or not the email is an account', async () => {

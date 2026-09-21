@@ -32,8 +32,8 @@
  *   to show.
  *
  * THE THREE REFUSALS THIS SCREEN EXISTS TO MAKE — the licence is recorded and NOT
- * verified, separation of duties is NOT enforced, and running without an account
- * keeps nothing — are `hero.lede.licence`, `hero.lede.account` and the sentences
+ * verified, separation of duties is NOT enforced, and without an account nothing is
+ * saved as you type and your runs open only from this browser — are `hero.lede.licence`, `hero.lede.account` and the sentences
  * that restate them at the field and in the panel. A translation that carries the
  * meaning of one of those and drops a qualifier has weakened the product's whole
  * position in a language nobody who wrote the English can read.
@@ -76,7 +76,9 @@ export const EN = {
         'the tab does not lose it. It changes nothing about the licence — still recorded, ' +
         'still not verified with anybody — and nothing about separation of duties, which ' +
         'this software still does not enforce. You may also continue with a name alone: ' +
-        'the engine behaves identically and nothing is kept.',
+        'the engine behaves identically, nothing is saved as you type, and the runs you ' +
+        'make open only from this browser — clear it, or use another, and they are out of ' +
+        'reach.',
     },
   },
 
@@ -85,7 +87,8 @@ export const EN = {
     checking: 'Checking whether you are signed in…',
     offline:
       'The accounts service could not be reached, so whether you are signed in is ' +
-      'unknown. Entering a name below still opens the engine; nothing will be kept.',
+      'unknown. Entering a name below still opens the engine; nothing is saved as you ' +
+      'type, and your runs open only from this browser.',
 
     signedIn: {
       heading: 'Signed in',
@@ -112,7 +115,8 @@ export const EN = {
 
     terms:
       'An account keeps your runs and saves what you type as you type it. Without one the ' +
-      'engine behaves identically and nothing is kept.',
+      'engine behaves identically, nothing is saved as you type, and your runs open only ' +
+      'from this browser.',
 
     fields: {
       name: {

@@ -11,7 +11,7 @@
  * ---------------------------------------------------------------------------
  * THE DESIGN DECISION THIS FILE EXISTS TO RESOLVE.
  *
- * `CLAUDE.md` records that per-author scoping was *considered and rejected*:
+ * `CLAUDE.md` recorded that per-author scoping was *considered and rejected*:
  *
  *   > "Per-author scoping was considered and rejected — `G4` is signed by a
  *   > reviewer who is deliberately *not* the author, so ownership checks would

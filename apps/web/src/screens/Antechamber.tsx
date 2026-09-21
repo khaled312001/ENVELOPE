@@ -53,6 +53,7 @@
 import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 
 import type { Actor } from '../api/client.js';
+import { guestKey } from '../api/guest-key.js';
 import type { PageProps } from '../Root.js';
 import { AccountPanel } from '../components/AccountPanel.js';
 import { AR } from '../i18n/antechamber.ar.js';
@@ -172,7 +173,16 @@ export default function Antechamber({ setActor, navigate, search }: PageProps): 
     }
     const trimmedLicence = licence.trim();
     const actor: Actor = {
-      id: person.toLowerCase().replace(/\s+/g, '-'),
+      /*
+        A KEY, NOT THE NAME.
+
+        The id was the name, lower-cased — so two people who typed "Khaled Ahmed"
+        were one actor, and each could open the other's runs. The server now gives a
+        guest exactly the runs its id authored (`apps/api/src/access.ts`), which
+        makes the id the only thing between one guest's work and another's. It has
+        to be unguessable, and a name is the most guessable string there is.
+      */
+      id: guestKey(),
       name: person,
       ...(trimmedLicence ? { licence: trimmedLicence } : {}),
     };

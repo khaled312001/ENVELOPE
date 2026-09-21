@@ -290,8 +290,12 @@ Do not "fix" these silently in code; they are open questions with the client. Fu
 - "18 invariants" but Appendix A.7 tabulates 16, and five (INV-02/04/05/06/07) need a unit
   schedule Phase 0 does not generate.
 - No identity system anywhere (`tenant_id` appears once in 3,587 lines) while four gates require
-  a named reviewer or approver. In the built API this surfaces as **no authorization at all**:
-  any identified actor can read, gate and export any run. Per-author scoping was considered
-  and rejected — `G4` is signed by a reviewer who is deliberately *not* the author, so
-  ownership checks would break the one flow the gate exists for. It is disclosed in
-  `apps/api/src/server.ts` and must be disclosed to the client in writing, not discovered.
+  a named reviewer or approver. The built API used to have **no authorization at all**. It now
+  has ownership *plus an explicit grant* ([`apps/api/src/access.ts`](apps/api/src/access.ts)):
+  a run is reachable by its author and by accounts it was shared with, as `reviewer` (may
+  sign `G4`) or `reader`; anyone else gets **404, not 403**, so a run's existence does not
+  leak. Ownership alone was rejected because `G4` is signed by someone who is not the author —
+  the share is what lets that person in. **Still open, and still to be disclosed in writing:**
+  there is no tenancy (firm or project), the licence on `G4` is recorded and never verified,
+  nothing stops an author signing their own `G4`, and a guest's identity is a random key held
+  in one browser — whoever holds the key holds the runs, and clearing the browser loses them.

@@ -30,9 +30,23 @@ const ROUTE_DATA = JSON.parse(
 );
 
 const errors = [];
-const browser = await chromium.launch({ channel: 'msedge' });
+// SMOKE_HOST_RULES points a hostname at an address, e.g.
+// "MAP tob.khaledahmed.net 84.32.84.123": a release can be checked on the real host
+// before its DNS record exists, rather than after a reader has already met it.
+const browser = await chromium.launch({
+  channel: 'msedge',
+  args: process.env.SMOKE_HOST_RULES ? [`--host-resolver-rules=${process.env.SMOKE_HOST_RULES}`] : [],
+});
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
+page.on('console', (m) => {
+  if (m.type() !== 'error') return;
+  const at = m.location()?.url ?? '';
+  // The one 404 this walk asks for. A deployment answers an unknown path with a real
+  // 404 status (a dev server answers 200), and the browser logs that document load
+  // as an error; it is asserted on below rather than counted here.
+  if (/status of 404/.test(m.text()) && at.endsWith('/no-such-page')) return;
+  errors.push(`console: ${m.text()}${at ? ` (${at})` : ''}`);
+});
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 
 const step = async (label, fn) => {
@@ -41,6 +55,18 @@ const step = async (label, fn) => {
 };
 
 const BASE = process.env.SMOKE_URL ?? 'http://localhost:5173/';
+
+/**
+ * Every wait below was sized against a dev server on this machine. Pointed at a
+ * deployment, the same page crosses a CDN and a real uplink: a 1.3 MB affection plan
+ * posts as 1.7 MB of base64 and took 23 s from a site-office connection to a host
+ * that answered in 0.13 s. The assertions stay exactly as strict; only the patience
+ * scales — a smoke test that fails on the uploader's bandwidth reports nothing about
+ * the release.
+ */
+const REMOTE = !['localhost', '127.0.0.1'].includes(new URL(BASE).hostname);
+const wait = (ms) => (REMOTE ? ms * 6 : ms);
+if (REMOTE) page.setDefaultTimeout(wait(30000));
 
 /**
  * WCAG 1.4.10 — reflow, measured on the document rather than eyeballed.
@@ -192,7 +218,12 @@ await step('every route in the route table renders, cold, at phone widths', asyn
       substitution on a product whose whole proposition is that nothing is silently
       substituted.
     */
-    await page.goto(new URL('/no-such-page', BASE).href, { waitUntil: 'networkidle' });
+    const missing = await page.goto(new URL('/no-such-page', BASE).href, { waitUntil: 'networkidle' });
+    // Deployed, the status must say it too: a 404 page served as 200 is indexed as
+    // content. Vite's dev server answers every path 200, so that half is remote-only.
+    if (REMOTE && missing?.status() !== 404) {
+      throw new Error(`an unknown path answered ${missing?.status()}, not 404`);
+    }
     if (!/\/no-such-page/.test(page.url())) {
       throw new Error(`the 404 changed the address to ${page.url()}`);
     }
@@ -208,7 +239,7 @@ await step('every route in the route table renders, cold, at phone widths', asyn
 await page.goto(BASE, { waitUntil: 'networkidle' });
 
 await step('the landing page states all five claims, not the flattering ones', async () => {
-  await page.getByRole('heading', { level: 1 }).waitFor({ timeout: 8000 });
+  await page.getByRole('heading', { level: 1 }).waitFor({ timeout: wait(8000) });
   const t = await page.textContent('body');
   for (const phrase of [
     'Self-consistency',
@@ -268,11 +299,11 @@ await step('the landing page reflows on a phone', async () => {
 
 await step('the landing page leads into the engine', async () => {
   await page.getByRole('link', { name: /run a plot/i }).first().click();
-  await page.waitForURL('**/app', { timeout: 8000 });
+  await page.waitForURL('**/app', { timeout: wait(8000) });
 });
 
 await step('the antechamber explains itself before it asks for anything', async () => {
-  await page.getByRole('heading', { name: /before the engine opens/i }).waitFor({ timeout: 5000 });
+  await page.getByRole('heading', { name: /before the engine opens/i }).waitFor({ timeout: wait(5000) });
   const t = await page.textContent('body');
   // It is the first screen behind every public call to action, so it is the worst
   // place on the site to assert a control the software does not have.
@@ -297,7 +328,9 @@ await step('the antechamber explains itself before it asks for anything', async 
   if (!/separation of duties/i.test(t)) {
     throw new Error('the antechamber no longer says separation of duties is not enforced');
   }
-  if (!/nothing is kept|nothing will be kept/i.test(t)) {
+  // It used to say "nothing is kept", which was false: a guest's runs were always
+  // stored. What a guest lacks is a way back from another browser.
+  if (!/open only from this browser/i.test(t)) {
     throw new Error('the antechamber does not say what running without an account costs');
   }
   // And the account may never be described as making anything secure or verified.
@@ -310,7 +343,7 @@ await step('signing in reaches the affection-plan intake', async () => {
   await page.getByLabel('Your name').fill('Khaled Haggagy');
   await page.getByLabel(/licence number/i).fill('DM-12345');
   await page.getByRole('button', { name: /open the engine/i }).first().click();
-  await page.getByRole('heading', { name: /read an affection plan/i }).waitFor({ timeout: 5000 });
+  await page.getByRole('heading', { name: /read an affection plan/i }).waitFor({ timeout: wait(5000) });
 });
 
 /**
@@ -327,7 +360,7 @@ await step('reading a real affection plan reports its printed values', async () 
     '#affection-plan-file',
     'docs/00-source/samples/affection-plan/IC1-CTYL-16_011-warsan1-621.pdf',
   );
-  await page.getByRole('heading', { name: /IC1-CTYL-16_011/i }).waitFor({ timeout: 20000 });
+  await page.getByRole('heading', { name: /IC1-CTYL-16_011/i }).waitFor({ timeout: wait(20000) });
   const t = await page.textContent('.reading');
   for (const printed of ['1365.23', '3.5', '4778.31']) {
     if (!t.includes(printed)) throw new Error(`the sheet's ${printed} was not read`);
@@ -341,7 +374,7 @@ await step('reading a real affection plan reports its printed values', async () 
 
 await step('the sheet carries into the plot form without inventing a shape', async () => {
   await page.getByRole('button', { name: /use these values/i }).click();
-  await page.getByRole('heading', { name: /^the plot$/i }).waitFor({ timeout: 5000 });
+  await page.getByRole('heading', { name: /^the plot$/i }).waitFor({ timeout: wait(5000) });
   const t = await page.textContent('body');
   if (!/Carried over from the sheet/i.test(t)) throw new Error('no prefill notice');
   // The area came across; the dimensions did not. A rectangle inferred from an
@@ -370,7 +403,7 @@ await step('classifying every edge and submitting the plot', async () => {
   await page.getByLabel('Road type').last().selectOption('COLLECTOR');
   await page.getByLabel('Edge 4 faces').selectOption('ADJACENT_PLOT');
   await page.getByRole('button', { name: /^Continue$/ }).click();
-  await page.getByRole('heading', { name: /confirm the plot/i }).waitFor({ timeout: 8000 });
+  await page.getByRole('heading', { name: /confirm the plot/i }).waitFor({ timeout: wait(8000) });
 });
 
 await step('the computed area agrees with the sheet inside 2%', async () => {
@@ -383,7 +416,7 @@ await step('the computed area agrees with the sheet inside 2%', async () => {
 
 await step('confirming the plot (G1)', async () => {
   await page.getByRole('button', { name: /this is the plot/i }).click();
-  await page.getByRole('heading', { name: /does parking count toward far/i }).waitFor({ timeout: 5000 });
+  await page.getByRole('heading', { name: /does parking count toward far/i }).waitFor({ timeout: wait(5000) });
 });
 
 await step('the sheet\'s podium count waits on the rules step to be confirmed', async () => {
@@ -403,9 +436,24 @@ await step('the parking question has no pre-selected answer', async () => {
   if (!(await compute.isDisabled())) throw new Error('Compute was enabled before the question was answered');
 });
 
-await step('a developer standard is offered, and marked as not a regulation', async () => {
+/**
+ * A deployment may withhold the developer standards — `DEVELOPER_STANDARDS=off`, the
+ * production default, because they are a client's brief given in confidence. Then
+ * the panel must still be there and say why, and must not leak the developer's name
+ * anywhere on the page. Both states are checked; neither is skipped.
+ */
+let standardsOffered = true;
+await step('a developer standard is offered and marked as not a regulation, or withheld and said so', async () => {
+  // Both states render this heading, and only once `/api/standards` has answered.
+  // Reading the page before it did passed on localhost and failed across a CDN.
+  await page.locator('#standard-heading').waitFor({ timeout: wait(8000) });
   const t = await page.textContent('body');
-  if (!/Azizi Developments/.test(t)) throw new Error('no developer standard offered');
+  if (!/Azizi Developments/.test(t)) {
+    standardsOffered = false;
+    if (!/in confidence/i.test(t)) throw new Error('no developer standard offered, and no word on why');
+    if (/azizi/i.test(t)) throw new Error('a withheld standard still names its developer');
+    return;
+  }
   // The distinction the whole panel exists to preserve.
   if (!/This is not a regulation/i.test(t)) {
     throw new Error('the standard is not marked as a commercial brief');
@@ -415,6 +463,11 @@ await step('a developer standard is offered, and marked as not a regulation', as
 });
 
 await step('selecting a scenario fills the mix and the efficiency from the document', async () => {
+  if (!standardsOffered) {
+    // Nothing to select. The efficiency is typed, as a user without the brief would.
+    await page.getByLabel(/Saleable area/i).fill('0.93');
+    return;
+  }
   await page.getByRole('radio', { name: /Best case/i }).first().check();
   const value = await page.getByLabel(/Saleable area/i).inputValue();
   // 0.93 — the conservative end of the range the document states.
@@ -436,7 +489,7 @@ await step('the efficiency has no default and blocks the run until answered', as
 
 await step('the comparison shows what each answer is worth', async () => {
   await page.getByRole('button', { name: /what each answer is worth/i }).click();
-  await page.locator('.comparison__verdict').waitFor({ timeout: 8000 });
+  await page.locator('.comparison__verdict').waitFor({ timeout: wait(8000) });
 });
 
 await step('computing the capacity lands on the assumption register first', async () => {
@@ -444,7 +497,7 @@ await step('computing the capacity lands on the assumption register first', asyn
   await page.getByRole('button', { name: /compute capacity/i }).click();
   // §20.2: the register is not a screen you can skip past to the number. The
   // run completes and the *first* thing shown is what it had to assume.
-  await page.locator('.data-table').first().waitFor({ timeout: 10000 });
+  await page.locator('.data-table').first().waitFor({ timeout: wait(10000) });
 });
 
 const NAV = async (name) => {
@@ -458,7 +511,7 @@ await step('the assumption register lists a basis for each assumption', async ()
 
 await step('the governing band is named, and the binding one is marked', async () => {
   await NAV(/^Capacity$/);
-  await page.locator('.governing__figure').waitFor({ timeout: 8000 });
+  await page.locator('.governing__figure').waitFor({ timeout: wait(8000) });
   const t = await page.textContent('body');
   if (!/Governing capacity/.test(t)) throw new Error('no governing capacity on screen');
   if (!/binds/.test(t)) throw new Error('the binding band is not marked');
@@ -471,7 +524,7 @@ await step('the massing view stands the envelope up, and says what it assumed', 
   // stated in the table beside it, and announcing it would make a screen reader
   // read geometry. So the assertion is on the table and the amber notice, which
   // are the parts that carry meaning.
-  await page.locator('.massing-viewer canvas').waitFor({ timeout: 10000 });
+  await page.locator('.massing-viewer canvas').waitFor({ timeout: wait(10000) });
   const t = await page.textContent('body');
   if (!/Podium/.test(t)) throw new Error('no podium volume listed');
   // The podium count came from the sheet and was confirmed on the rules step, so
@@ -496,7 +549,7 @@ await step('the massing view stands the envelope up, and says what it assumed', 
 
 await step('the parking level is drawn, not summarised', async () => {
   await NAV(/^Parking$/);
-  await page.locator('.parking-plan__svg').waitFor({ timeout: 8000 });
+  await page.locator('.parking-plan__svg').waitFor({ timeout: wait(8000) });
   const bays = await page.locator('.parking-plan__svg polygon').count();
   if (bays < 10) throw new Error(`only ${bays} shapes drawn — this is a summary, not a layout`);
 
@@ -518,7 +571,7 @@ await step('the entrance is recommended with its alternatives and refusals', asy
 
 await step('the checks screen carries the five-way claim statement', async () => {
   await NAV(/checks/i);
-  await page.locator('.claim--never').waitFor({ timeout: 5000 });
+  await page.locator('.claim--never').waitFor({ timeout: wait(5000) });
   const t = await page.textContent('body');
   for (const s of ['Regulatory validity', 'Never claimed', 'Conservation checks', 'not counted as passes']) {
     if (!t.includes(s)) throw new Error(`missing: ${s}`);
@@ -527,7 +580,7 @@ await step('the checks screen carries the five-way claim statement', async () =>
 
 await step('the not-assessed checks can be revealed, not just hidden', async () => {
   await page.getByRole('button', { name: /checks that had nothing to check/i }).click();
-  await page.locator('tr.is-not-assessed').first().waitFor({ timeout: 5000 });
+  await page.locator('tr.is-not-assessed').first().waitFor({ timeout: wait(5000) });
 });
 
 await step('a number opens its derivation (P0-S6)', async () => {
@@ -535,7 +588,7 @@ await step('a number opens its derivation (P0-S6)', async () => {
   // `button.traced`, not `.traced` — the legend renders inert samples with the
   // same class, and clicking one of those proves nothing.
   await page.locator('button.traced').first().click();
-  await page.locator('[role="dialog"]').waitFor({ timeout: 5000 });
+  await page.locator('[role="dialog"]').waitFor({ timeout: wait(5000) });
   const t = await page.textContent('[role="dialog"]');
   if (!/PLACEHOLDER|clause|rule/i.test(t)) throw new Error('derivation reached no clause');
   await page.keyboard.press('Escape');
@@ -547,7 +600,7 @@ await step('the export refuses until both gates are satisfied', async () => {
   if (!(await go.isDisabled())) throw new Error('Export was enabled with gates outstanding');
   // And the unmet gate has to lead somewhere. An unactionable checklist item is
   // a dead end, which is what this row was before it had this link.
-  await page.getByRole('button', { name: /assumption register/i }).waitFor({ timeout: 5000 });
+  await page.getByRole('button', { name: /assumption register/i }).waitFor({ timeout: wait(5000) });
 });
 
 await step('acknowledging the register and signing unlocks the export', async () => {
@@ -556,12 +609,12 @@ await step('acknowledging the register and signing unlocks the export', async ()
   // Wait for the gate to actually land — the acknowledgement is a round trip to
   // the server, and clicking on to the next screen before it returns is a race
   // this test lost roughly half the time.
-  await page.getByText(/You acknowledged these assumptions/i).waitFor({ timeout: 8000 });
+  await page.getByText(/You acknowledged these assumptions/i).waitFor({ timeout: wait(8000) });
 
   await NAV(/^Export$/);
   await page.getByRole('button', { name: /sign this export/i }).click();
   const go = page.getByRole('button', { name: /export report/i });
-  await go.waitFor({ timeout: 8000 });
+  await go.waitFor({ timeout: wait(8000) });
   await page.waitForFunction(
     () =>
       !document.querySelector('button.button--primary[disabled]') ||
@@ -569,15 +622,15 @@ await step('acknowledging the register and signing unlocks the export', async ()
         (b) => /export report/i.test(b.textContent ?? '') && b.disabled,
       ),
     undefined,
-    { timeout: 8000 },
+    { timeout: wait(8000) },
   );
   if (await go.isDisabled()) throw new Error('Export still blocked after both gates');
 });
 
 await step('the export hands over a report and a JSON document', async () => {
   await page.getByRole('button', { name: /export report/i }).click();
-  await page.getByRole('button', { name: /open the report/i }).waitFor({ timeout: 15000 });
-  await page.getByRole('button', { name: /open the json export/i }).waitFor({ timeout: 5000 });
+  await page.getByRole('button', { name: /open the report/i }).waitFor({ timeout: wait(15000) });
+  await page.getByRole('button', { name: /open the json export/i }).waitFor({ timeout: wait(5000) });
   const body = await page.textContent('body');
   // §13.4 — both fingerprints on screen, because a reproducibility guarantee a
   // reader cannot check is a claim, not a guarantee.
@@ -594,7 +647,7 @@ await step('the drawing and the workbook download, behind the same gates', async
     [/download the workbook/i, 'xlsx'],
   ]) {
     const [dl] = await Promise.all([
-      page.waitForEvent('download', { timeout: 20000 }),
+      page.waitForEvent('download', { timeout: wait(20000) }),
       page.getByRole('button', { name: label }).click(),
     ]);
     const name = dl.suggestedFilename();
@@ -621,8 +674,8 @@ await step('the readiness page leads with what is not ready', async () => {
   // changed on purpose: `status` reads as uptime, and nothing here monitors
   // availability.
   await page.getByRole('link', { name: /^readiness$/i }).click();
-  await page.waitForURL('**/dashboard', { timeout: 8000 });
-  await page.getByRole('heading', { name: /what is not ready/i }).waitFor({ timeout: 8000 });
+  await page.waitForURL('**/dashboard', { timeout: wait(8000) });
+  await page.getByRole('heading', { name: /what is not ready/i }).waitFor({ timeout: wait(8000) });
 
   const t = await page.textContent('body');
   // Zero approved rules and an unsigned annex, stated rather than scored.
@@ -655,12 +708,12 @@ await step('the status page ranks assumption exposure by measured effect', async
 
 await step('back returns to the engine with the run still there', async () => {
   await page.goBack();
-  await page.waitForURL('**/app', { timeout: 8000 });
+  await page.waitForURL('**/app', { timeout: wait(8000) });
   // Assert on something only a *completed* run puts on screen. The first
   // version of this checked for the word "Export", which the stepper prints
   // whether or not a run exists — so it passed while the run was being
   // destroyed on every visit to the status page.
-  await page.getByRole('button', { name: /open the report/i }).waitFor({ timeout: 8000 });
+  await page.getByRole('button', { name: /open the report/i }).waitFor({ timeout: wait(8000) });
   const stillReachable = await page
     .getByRole('button', { name: /^Capacity$/ })
     .first()
@@ -727,13 +780,13 @@ await step('no screen scrolls sideways on a phone', async () => {
 
     await openNav();
     await page.getByRole('link', { name: /^readiness$/i }).click();
-    await page.waitForURL('**/dashboard', { timeout: 8000 });
+    await page.waitForURL('**/dashboard', { timeout: wait(8000) });
     await page.waitForTimeout(300);
     await noSidewaysScroll(`readiness at ${width}px`);
     await nothingIsInvisible(`readiness at ${width}px`);
 
     await page.getByRole('link', { name: /run a plot/i }).first().click();
-    await page.waitForURL('**/app', { timeout: 8000 });
+    await page.waitForURL('**/app', { timeout: wait(8000) });
     await page.waitForTimeout(300);
   }
 });

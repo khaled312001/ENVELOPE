@@ -12,6 +12,11 @@ export default defineConfig({
     include: ['packages/*/test/**/*.test.ts', 'apps/*/test/**/*.test.{ts,tsx}'],
     environment: 'node',
     globals: false,
+    // Several suites build a whole run, or load pdfjs, once in `beforeAll`. Alone
+    // that takes 2–4 s; with 35 files collecting in parallel it passed 10 s, and the
+    // suite failed on how busy the laptop was rather than on anything it tests.
+    // Per-test timeouts stay at the default — only the one-off setup is allowed longer.
+    hookTimeout: 60_000,
     server: {
       deps: {
         // `node:sqlite` shipped in Node 22.5 and is not yet in Vite's builtin

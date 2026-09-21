@@ -88,10 +88,11 @@ Fine if the pipeline is pure. A rewrite if that is discovered in week 8.
 
 Plus: **there is no identity system anywhere in the PRD** (`tenant_id` appears once in 3,587 lines)
 while four gates require a named reviewer/approver — a 1.5–2 person-week workstream missing from the
-schedule. In the built API this is visible as no authorization at all: any identified actor can read
-and export any run. Scoping runs to their author would break `G4`, which deliberately requires a
-reviewer who is *not* the author, so the gap is disclosed rather than patched. See
-`open-questions.md` **Q25**.
+schedule. The built API first had no authorization at all. It now scopes every run to its author
+*plus the accounts the author shared it with*, as reviewer or reader — ownership alone would have
+broken `G4`, which deliberately requires a reviewer who is *not* the author. Anyone else gets a 404.
+Tenancy, licence verification and separation of duties are still open. See `open-questions.md`
+**Q25**.
 
 ---
 

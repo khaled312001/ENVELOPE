@@ -10,7 +10,10 @@
  *
  *   1. the licence is RECORDED and NOT VERIFIED — «تُسجَّل ولا يُتحقَّق منها»;
  *   2. separation of duties is NOT ENFORCED — «الفصل بين المهامّ ضابط لا تملكه»;
- *   3. running without an account KEEPS NOTHING — «لا يُحفَظ شيء».
+ *   3. without an account nothing is saved as you type, and runs open ONLY FROM
+ *      THIS BROWSER — «لا تُفتَح تشغيلاتك إلا من هذا المتصفّح». The exception is
+ *      spelled «إلا»: a restriction stated as a restriction, not «من هذا المتصفّح»
+ *      alone, which reads as a convenience.
  *
  * Each is stated with the same force as the English and with no hedge: no «قد», no
  * «ربما», no «عادةً». A hedge in a refusal is a claim, and a refusal that reads
@@ -91,7 +94,9 @@ export const AR: AntechamberDictionary = {
            the same words on every screen. The flourish it replaces («يسلك المسلك
            نفسه») was ornate where the English is flat, and the register section of
            the glossary exists to keep Arabic elaboration out of a refusal. */
-        'البرمجية لا تفرضه. ولك أن تمضي باسم وحده: يعمل المحرّك بالطريقة نفسها ولا يُحفَظ شيء.',
+        'البرمجية لا تفرضه. ولك أن تمضي باسم وحده: يعمل المحرّك بالطريقة نفسها، ولا يُحفَظ ما ' +
+        'تكتبه أوّلًا بأوّل، ولا تُفتَح تشغيلاتك إلا من هذا المتصفّح — فإن مسحتَ بياناته أو ' +
+        'انتقلتَ إلى غيره تعذّر الوصول إليها.',
     },
   },
 
@@ -102,7 +107,7 @@ export const AR: AntechamberDictionary = {
     checking: 'يجري فحص ما إذا كنت مُسجّل الدخول…',
     offline:
       'تعذّر الوصول إلى خدمة الحسابات، فحالة دخولك غير معروفة. وإدخال اسم أدناه يفتح المحرّك ' +
-      'على أيّ حال؛ ولا يُحفَظ شيء.',
+      'على أيّ حال؛ ولا يُحفَظ ما تكتبه أوّلًا بأوّل، ولا تُفتَح تشغيلاتك إلا من هذا المتصفّح.',
 
     signedIn: {
       heading: 'مُسجّل الدخول',
@@ -124,8 +129,8 @@ export const AR: AntechamberDictionary = {
     },
 
     terms:
-      'يحفظ الحساب تشغيلاتك ويحفظ ما تكتبه أوّلًا بأوّل. وبدونه يعمل المحرّك بالطريقة نفسها ولا ' +
-      'يُحفَظ شيء.',
+      'يحفظ الحساب تشغيلاتك ويحفظ ما تكتبه أوّلًا بأوّل. وبدونه يعمل المحرّك بالطريقة نفسها، ولا ' +
+      'يُحفَظ ما تكتبه أوّلًا بأوّل، ولا تُفتَح تشغيلاتك إلا من هذا المتصفّح.',
 
     fields: {
       name: {

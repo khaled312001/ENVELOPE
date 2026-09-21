@@ -30,7 +30,7 @@ import {
   type AffectionPlanFacts,
 } from '@envelope/intake';
 import { ProvenanceGraph, toWire, Tracer, type Traced } from '@envelope/core';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, preHandlerAsyncHookHandler } from 'fastify';
 import { z } from 'zod';
 
 /**
@@ -101,7 +101,11 @@ function present(facts: AffectionPlanFacts): unknown {
   };
 }
 
-export function registerIntakeRoutes(app: FastifyInstance): void {
+export function registerIntakeRoutes(
+  app: FastifyInstance,
+  /** The throttle, when the deployment has one. A PDF parse is engine-grade work. */
+  costly: { readonly preHandler?: preHandlerAsyncHookHandler } = {},
+): void {
   /**
    * Read an affection plan and report what it says.
    *
@@ -109,7 +113,7 @@ export function registerIntakeRoutes(app: FastifyInstance): void {
    * valid document and a normal answer. It 4xx's only when the upload is not a
    * PDF at all, which is a caller error rather than a finding.
    */
-  app.post('/api/intake/affection-plan', async (request, reply) => {
+  app.post('/api/intake/affection-plan', costly, async (request, reply) => {
     const body = affectionPlanUpload.parse(request.body);
 
     let bytes: Uint8Array;

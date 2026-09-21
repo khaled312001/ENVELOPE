@@ -159,12 +159,75 @@ export async function sessionFrom(
 export async function resolveActor(
   repo: AccountRepository | null,
   request: FastifyRequest,
+  guests: GuestPolicy = 'open',
 ): Promise<Actor> {
   if (repo) {
     const session = await sessionFrom(repo, request);
     if (session) return session;
   }
-  return actorFrom(request);
+  if (guests === 'off') throw new SignInRequiredError();
+
+  const actor = actorFrom(request);
+  if (guests === 'keyed' && !GUEST_KEY.test(actor.id)) throw new GuestKeyError();
+
+  /*
+    A HEADER MAY NOT NAME AN ACCOUNT.
+
+    Account ids are not secrets: a reviewer reads the author's in the gate record of
+    every run shared with them. Without this check, `X-Actor-Id: <that id>` would be
+    the author, with no password, on every route — the header path would become an
+    impersonation route for exactly the people a run was shared with.
+  */
+  if (repo && (await repo.getAccountById(actor.id))) throw new AccountIdentityError();
+  return actor;
+}
+
+/**
+ * HOW A DEPLOYMENT TREATS A PERSON WITHOUT AN ACCOUNT.
+ *
+ *   open   any `X-Actor-Id`. The test suite, `scripts/smoke.mjs`, and a deployment
+ *          already behind a network boundary. Access to a run is then only as
+ *          private as a name is hard to guess, which is to say not at all.
+ *   keyed  the id must be a guest key — `guest-` and a random UUID, minted by the
+ *          antechamber and kept in that browser. A deployment the public can reach
+ *          runs this way: the key is what makes "only the author may see a run"
+ *          mean something for somebody who never made an account.
+ *   off    a session or nothing.
+ *
+ * `keyed` is not authentication and does not claim to be. A key is a bearer
+ * credential held in one browser's storage; clearing it loses the runs, and
+ * anyone holding it is the guest. What it removes is the case that mattered:
+ * two people who typed the same name reading each other's work.
+ */
+export type GuestPolicy = 'open' | 'keyed' | 'off';
+
+export const GUEST_KEY = /^guest-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+export class SignInRequiredError extends Error {
+  override readonly name = 'SignInRequiredError';
+  readonly statusCode = 401;
+  constructor() {
+    super('this deployment keeps work against accounts. Sign in, or create an account, to continue.');
+  }
+}
+
+export class GuestKeyError extends Error {
+  override readonly name = 'GuestKeyError';
+  readonly statusCode = 401;
+  constructor() {
+    super(
+      'this browser has no guest key. Enter your name again on the start screen — a new ' +
+        'key is made for you — or sign in to keep your work against an account.',
+    );
+  }
+}
+
+export class AccountIdentityError extends Error {
+  override readonly name = 'AccountIdentityError';
+  readonly statusCode = 401;
+  constructor() {
+    super('that identity belongs to an account. Sign in to act as it.');
+  }
 }
 
 const registerBody = z.object({

@@ -103,6 +103,31 @@ export function LocaleProvider({ children }: { readonly children: ReactNode }): 
   );
 }
 
+/**
+ * A SUBTREE IN ONE FIXED LOCALE, with no storage and no effect on `<html>`.
+ *
+ * For render tests. `renderToStaticMarkup` runs no effects and has no
+ * `localStorage`, so `LocaleProvider` can only ever render English there — which
+ * left every Arabic dictionary on the site rendered by nothing until a browser
+ * opened it. This is how a test asks for the Arabic page and scans what a reader
+ * would read.
+ */
+export function StaticLocale({
+  locale,
+  children,
+}: {
+  readonly locale: Locale;
+  readonly children: ReactNode;
+}): JSX.Element {
+  return (
+    <LocaleContext.Provider
+      value={{ locale, dir: DIRECTION[locale], t: DICTIONARIES[locale], setLocale: () => {} }}
+    >
+      {children}
+    </LocaleContext.Provider>
+  );
+}
+
 export function useLocale(): LocaleValue {
   return useContext(LocaleContext);
 }

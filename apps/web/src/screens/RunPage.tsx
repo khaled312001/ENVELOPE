@@ -454,11 +454,13 @@ export function ReviewPanel({
                   {signing ? (
                     t.review.signing
                   ) : (
-                    <>
+                    /* One span: `.button` is a flex row with a gap, and three loose
+                       children read "( G4 )" with the gap on both sides of the id. */
+                    <span>
                       {t.review.signBefore}
                       <Ltr>{REVIEW_GATE}</Ltr>
                       {t.review.signAfter}
-                    </>
+                    </span>
                   )}
                 </button>
               </>

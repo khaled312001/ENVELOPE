@@ -35,6 +35,14 @@ import { build } from '../apps/api/dist/server.js';
 import { SqliteRunRepository } from '../apps/api/dist/store.js';
 
 const FIXTURE = new URL('../apps/web/src/screens/worked-example.json', import.meta.url);
+/**
+ * The worked example's building model, which the landing page and /parking stand up
+ * in 3D. A file of its own so the page's first chunk does not carry it: it is loaded
+ * with the viewer, and only by a browser that can draw it. It is the API's `building`
+ * for the recorded run, whole — a model rebuilt or trimmed here would be a second
+ * engine, and the 3D figure would be of a building nobody computed.
+ */
+const MODEL = new URL('../apps/web/src/screens/worked-example.building.json', import.meta.url);
 const WRITE = process.argv.includes('--write');
 
 const published = JSON.parse(readFileSync(FIXTURE, 'utf8'));
@@ -202,13 +210,20 @@ actual.parkingInFar = {
 await app.close();
 repo.close();
 
+if (!run.building) {
+  console.error('the run carries no building model, so the 3D figure has nothing to draw.');
+  process.exit(1);
+}
+const model = `${JSON.stringify(run.building)}\n`;
+
 if (WRITE) {
   writeFileSync(
     FIXTURE,
     `${JSON.stringify({ ...published, verified: actual }, null, 2)}\n`,
     'utf8',
   );
-  console.log('worked-example.json rewritten from the engine.');
+  writeFileSync(MODEL, model, 'utf8');
+  console.log('worked-example.json and worked-example.building.json rewritten from the engine.');
   process.exit(0);
 }
 
@@ -224,6 +239,18 @@ const problems = [];
   }
   problems.push(`${path}: page says ${JSON.stringify(a)}, engine says ${JSON.stringify(b)}`);
 })(published.verified, actual, '');
+
+// The model is compared whole. A figure on the page that moved is named above; a
+// model that moved is one fact — the 3D figure is no longer the engine's building.
+let stored = '';
+try {
+  stored = readFileSync(MODEL, 'utf8');
+} catch {
+  problems.push('worked-example.building.json: missing — the 3D figure has no model to draw');
+}
+if (stored && stored.replace(/\r\n/g, '\n') !== model) {
+  problems.push('worked-example.building.json: the 3D figure is not the model the engine returns for this run');
+}
 
 if (problems.length > 0) {
   console.error('The landing page quotes figures the engine no longer returns:\n');

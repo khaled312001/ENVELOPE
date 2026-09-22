@@ -136,8 +136,16 @@ describe('the building, in three dimensions', () => {
     const out = runPipeline(runInput(RECT_80x40, { podiumLevels: 2 }));
     const dxf = parse(buildingDxf(out.building, composeSheets(out.building, META), META));
     const faces = dxf.entities.filter((e) => e.type === '3DFACE') as unknown as { layer: string; vertices: { z: number }[] }[];
-    const top = out.building.levels.at(-1)!;
-    expect(faces.some((f) => f.layer === layerName(top.id, 'MASS'))).toBe(true);
+    // Mass up to the answer's top level, and none above it: a level the answer does
+    // not place is an outline on a context layer, never a face.
+    const placed = out.building.levels.filter((l) => l.placed);
+    const unplaced = out.building.levels.filter((l) => !l.placed);
+    expect(unplaced.length).toBeGreaterThan(0);
+    expect(faces.some((f) => f.layer === layerName(placed.at(-1)!.id, 'MASS'))).toBe(true);
+    for (const level of unplaced) {
+      expect(faces.some((f) => f.layer.startsWith(`ENV-${level.id}-`)), level.id).toBe(false);
+      expect(dxf.entities.some((e) => e.layer === layerName(level.id, 'context')), level.id).toBe(true);
+    }
     const ramp = faces.find((f) => f.layer === layerName('R1', 'ramp'))!;
     // dxf-parser 1.1.2 loops `i <= 4` and appends an empty fifth vertex to every
     // 3DFACE; a face has four corners, so the fifth is the reader's, not the file's.

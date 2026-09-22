@@ -108,6 +108,21 @@ export interface ModelLevel {
   /** The slab edge. */
   readonly outline: ModelRing;
   readonly outlineSource: ElementSource;
+  /**
+   * Whether the governing answer places this level.
+   *
+   * The stack stands to the height ceiling, because that is the envelope the rules
+   * permit and the sections and the glass are drawn against it. The answer usually
+   * uses less: `capacity.levels` whole levels of floor area. On the worked example
+   * the ceiling permits 14 levels above ground and the parking band governs at 5,
+   * so a stack that drew all 14 alike was a building the answer does not contain —
+   * on the most persuasive surface in the product, beside the figure that says 5.
+   *
+   * Parking levels are always placed: the answer rests on the bays they hold. The
+   * answer's levels are the lowest above the parking, because a building stands on
+   * the ground; every level above them is permitted and not placed.
+   */
+  readonly placed: boolean;
   /** Present on parking levels only. Identical on every one: see `parking.ts`. */
   readonly parking: {
     readonly bays: readonly ModelBay[];
@@ -226,6 +241,11 @@ export interface BuildingModel {
   readonly heightCeilingM: TracedWire;
   /** Bottom to top. */
   readonly levels: readonly ModelLevel[];
+  /**
+   * The answer's own level count — `capacity.levels`, traced — which `placed` is
+   * counted from. A caption quotes this, never a count of the placed levels.
+   */
+  readonly placedLevels: TracedWire;
   readonly ramps: readonly ModelRamp[];
   readonly access: ModelAccess | null;
   /**

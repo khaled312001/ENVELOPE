@@ -495,6 +495,7 @@ export function runPipeline(input: RunInput): RunOutput {
     parkingLevels: parking.levelsAvailable,
     levelPlan,
     levelPlanRefusal,
+    answerLevels: capacity.levels,
   });
 
   return {

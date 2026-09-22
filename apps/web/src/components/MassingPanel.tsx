@@ -78,6 +78,9 @@ export function MassingPanel({
   const model = run.building;
   const assumedHeights = run.massing.masses.filter((m) => m.heightM.provenanceClass === 'ASSUMED');
   const assumedPlacements = model?.placements.filter((p) => p.source.provenanceClass === 'ASSUMED') ?? [];
+  // Absent on a run stored before the model said how much of the stack the answer uses.
+  const answerPlacement = model?.placements.find((p) => p.subject === 'answer');
+  const unplaced = model?.levels.filter((l) => l.placed === false).length ?? 0;
 
   return (
     <section className="panel" aria-labelledby="massing-heading">
@@ -107,6 +110,22 @@ export function MassingPanel({
           stood up.
         </p>
       )}
+
+      {model && answerPlacement ? (
+        <div className="callout" role="note">
+          <p>
+            <strong>
+              {unplaced > 0
+                ? 'The solid levels are the answer. The outlines above them are room the rules leave unused.'
+                : 'Every level drawn is one the answer places.'}
+            </strong>
+          </p>
+          <p>
+            {answerPlacement.statement} Levels this answer places:{' '}
+            <TracedValue traced={model.placedLevels} onInspect={onInspect} />.
+          </p>
+        </div>
+      ) : null}
 
       {/*
         Amber in the picture, amber in the words. A reader who cannot see the colour,
@@ -165,7 +184,10 @@ export function MassingPanel({
             {model.levels.map((l) => (
               <tr key={l.id}>
                 <th scope="row">
-                  {l.id} <span className="muted">· {l.name}</span>
+                  {l.id}{' '}
+                  <span className="muted">
+                    {`· ${l.name}${l.placed === false ? ' · permitted, not placed' : ''}`}
+                  </span>
                 </th>
                 <td>
                   <TracedValue traced={l.elevationM} onInspect={onInspect} />

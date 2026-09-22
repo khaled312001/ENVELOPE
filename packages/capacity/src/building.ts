@@ -68,6 +68,11 @@ export interface BuildingModelInput {
   readonly parkingLevels: Traced<number>;
   readonly levelPlan: LevelPlan | undefined;
   readonly levelPlanRefusal: string | undefined;
+  /**
+   * The answer's own level count — `capacity.levels`. The stack stands to the height
+   * ceiling; this says how much of it the answer places.
+   */
+  readonly answerLevels: Traced<number>;
 }
 
 const source = (t: Traced<unknown>): ElementSource => ({
@@ -128,6 +133,12 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   const parkingCount = Math.max(0, input.parkingLevels.value);
   const parkingInPodium = Math.min(parkingCount, podiumLevels.value);
   const parkingBelow = parkingCount - parkingInPodium;
+  // The answer's levels stand on the parking. Where the podium parking and the
+  // answer together need more levels than the ceiling permits, the shortfall is said
+  // in words below rather than drawn above the ceiling.
+  const answerCount = Math.max(0, input.answerLevels.value);
+  const placedAboveParking = Math.min(answerCount, Math.max(0, totalAbove - parkingInPodium));
+  const unplacedAnswer = answerCount - placedAboveParking;
 
   const placements: BuildingModel['placements'][number][] = [];
   const notModelled: string[] = [...NOT_MODELLED];
@@ -208,6 +219,7 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       elevationM: toWire(elevation),
       outline: envelope.podiumRing.map(pt),
       outlineSource: podiumSource,
+      placed: true,
       parking: parkingContent,
     });
   }
@@ -237,9 +249,37 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       elevationM: toWire(elevation),
       outline: (inPodium ? envelope.podiumRing : envelope.plateRing).map(pt),
       outlineSource: inPodium ? podiumSource : towerSource,
+      placed: isParking || i - parkingInPodium < placedAboveParking,
       parking: isParking ? parkingContent : null,
     });
   }
+
+  // --- how much of the stack the answer uses -----------------------------------------
+  const permittedAbove = totalAbove - parkingInPodium - placedAboveParking;
+  placements.push({
+    subject: 'answer',
+    source: source(input.answerLevels),
+    statement:
+      `The answer places ${answerCount} level${answerCount === 1 ? '' : 's'} of floor area` +
+      (placedAboveParking > 0
+        ? `, drawn as the lowest ${placedAboveParking} above ` +
+          (parkingInPodium > 0 ? 'the podium parking' : 'the ground')
+        : '') +
+      '.' +
+      (permittedAbove > 0
+        ? ` The ${permittedAbove} above ${permittedAbove === 1 ? 'it is' : 'them are'} ` +
+          'what the height ceiling permits and this answer does not use.'
+        : '') +
+      (unplacedAnswer > 0
+        ? ` ${unplacedAnswer} of the answer's levels ` +
+          (unplacedAnswer === 1 ? 'does' : 'do') +
+          ' not fit under the height ceiling ' +
+          `above ${parkingInPodium} level${parkingInPodium === 1 ? '' : 's'} of podium ` +
+          `parking, and ${unplacedAnswer === 1 ? 'is' : 'are'} not drawn. The capacity figure does not count parking ` +
+          'levels against the height ceiling, so with the parking placed in the podium ' +
+          'the answer and its parking do not both fit under it.'
+        : ''),
+  });
 
   // --- ramps between consecutive parking levels ------------------------------------
   const parkingStack = levels.filter((l) => l.parking !== null);
@@ -343,6 +383,7 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     setbackSource: source(envelope.setbackPermittedFootprint),
     heightCeilingM: toWire(envelope.heightCeilingM),
     levels,
+    placedLevels: toWire(input.answerLevels),
     ramps,
     access: recommended
       ? {

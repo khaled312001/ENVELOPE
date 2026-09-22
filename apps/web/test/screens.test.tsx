@@ -469,7 +469,8 @@ describe('MassingPanel', () => {
     // The table is the canvas's equivalent: every level, its traced floor level and,
     // on a parking level, the engine's own bay count.
     for (const level of model.levels) {
-      expect(out).toContain(`${level.id} <span class="muted">· ${level.name}</span>`);
+      const unplaced = level.placed ? '' : ' · permitted, not placed';
+      expect(out).toContain(`${level.id} <span class="muted">· ${level.name}${unplaced}</span>`);
     }
     expect(out).toContain(model.drawnBays.value);
     expect(out).toContain('Every level and ramp in the 3D view');
@@ -485,6 +486,15 @@ describe('MassingPanel', () => {
     }
     expect(out).toContain('Not in this model');
     for (const n of model.notModelled) expect(out).toContain(n.replace(/'/g, '&#x27;'));
+  });
+
+  it("says how much of the stack is the answer's, and does not draw the rest as if it were", () => {
+    const model = run.building!;
+    const out = html(<MassingPanel run={run} onInspect={() => {}} />);
+    const answer = model.placements.find((p) => p.subject === 'answer')!;
+    expect(out).toContain(answer.statement.replace(/'/g, '&#x27;'));
+    expect(model.levels.some((l) => !l.placed)).toBe(true);
+    expect(out).toContain('The solid levels are the answer.');
   });
 
   it('refuses to stand up a run stored before the building model existed', () => {

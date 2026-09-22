@@ -538,6 +538,14 @@ export function buildingDxf(model: BuildingModel, sheets: readonly Sheet[], meta
   }
 
   for (const level of model.levels) {
+    if (level.placed === false) {
+      // Permitted and not placed: the outline alone, on a context layer in grey, and
+      // no mass. Stacked solid, the file held a building the answer does not contain.
+      const context = layerName(level.id, 'context');
+      layers.set(context, Aci.GREY);
+      entities.push({ kind: 'polyline', layer: context, points: level.outline, closed: true, z: level.elevationMm });
+      continue;
+    }
     const slab = layerName(level.id, 'slab');
     const mass = layerName(level.id, 'MASS');
     const color = CLASS_ACI[level.outlineSource.provenanceClass];

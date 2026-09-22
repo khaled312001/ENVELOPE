@@ -505,8 +505,16 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
     const e0 = level.elevationMm;
     const e1 = level.elevationMm + level.heightMm;
     const [b0, b1] = cut.beyond;
-    items.push(shape(Role.SECTION_BEYOND, [P(b0, e0), P(b1, e0), P(b1, e1), P(b0, e1)], true));
-    for (const [a, b] of cut.cut) {
+    if (level.placed === false) {
+      // Permitted and not placed: dashed context, in no class's ink — the same reading
+      // the 3D view gives it. Cut solid, it drew a building the answer does not contain.
+      for (const [a, b] of cut.cut) {
+        items.push(shape(Role.CONTEXT, [P(a, e0), P(b, e0), P(b, e1), P(a, e1)], true, { name: `${level.id}, permitted, not placed` }));
+      }
+    } else {
+      items.push(shape(Role.SECTION_BEYOND, [P(b0, e0), P(b1, e0), P(b1, e1), P(b0, e1)], true));
+    }
+    for (const [a, b] of level.placed === false ? [] : cut.cut) {
       items.push(
         shape(Role.SECTION_CUT, [P(a, e0), P(b, e0), P(b, e1), P(a, e1)], true, {
           source: level.outlineSource,
@@ -571,14 +579,19 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
     );
   }
 
+  const unplaced = model.levels.filter((l) => l.placed === false);
   const facts: StripFact[] = [
     fact('Height ceiling', model.heightCeilingM, `${model.heightCeilingM.value} M`),
     { label: 'Levels', value: levelRange(model.levels) },
+    ...(unplaced.length > 0 && model.placedLevels
+      ? [fact('Levels the answer places', model.placedLevels, model.placedLevels.value)]
+      : []),
     ...(firstRamp ? [fact('Ramp gradient (not assessed)', firstRamp.gradientPct, `${firstRamp.gradientPct.value}%`)] : []),
   ];
   const legend: LegendEntry[] = [
     { role: Role.SECTION_CUT, label: 'Level, cut' },
     { role: Role.SECTION_BEYOND, label: 'Level, seen beyond the cut' },
+    ...(unplaced.length > 0 ? [{ role: Role.CONTEXT, label: 'Level permitted, not placed by the answer' }] : []),
     { role: Role.SETBACK, provenanceClass: model.setbackSource.provenanceClass, label: 'Setback line' },
     { role: Role.CEILING, provenanceClass: model.heightCeilingM.provenanceClass, label: 'Height ceiling' },
     ...(section.ramps.length > 0 ? [{ role: Role.RAMP, label: 'Ramp - gradient NOT ASSESSED' }] : []),
@@ -598,6 +611,7 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
     facts,
     notes: [
       `${title}: ${section.taken}`,
+      ...model.placements.filter((p) => p.subject === 'answer').map((p) => p.statement),
       ...model.notModelled.filter((n) => /Slab thickness|Ramp transitions/.test(n)),
     ],
   };

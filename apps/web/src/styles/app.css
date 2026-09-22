@@ -137,6 +137,13 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   border: 0;
 }
 
+/* Paper's stand-in for something only a screen can draw — a 3D model's plan. Out of
+   the accessibility tree on screen (`display: none`), so it is never read twice. */
+.print-only { display: none; }
+@media print {
+  .print-only { display: block; }
+}
+
 .muted { color: var(--text-tertiary); }
 .fine-print {
   font-size: var(--text-sm);

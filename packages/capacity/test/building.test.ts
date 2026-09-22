@@ -15,13 +15,14 @@ import {
   type Mm,
   type NodeId,
   type Plot,
+  Tracer,
   type UnitTypeMix,
 } from '@envelope/core';
 import { analysePlot, area, initGeometry, type Ring } from '@envelope/geometry';
 import { asOfNow, loadSeedRulesForDevelopment, RuleStore } from '@envelope/rules';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { runPipeline, type RunInput, type RunOutput } from '../src/index.js';
+import { buildBuildingModel, runPipeline, type RunInput, type RunOutput } from '../src/index.js';
 
 const ACK = 'I understand these rules are not approved';
 const m = (v: number): Mm => asMm(Math.round(v * 1000));
@@ -178,6 +179,58 @@ describe('the stack', () => {
     expect(out.building.levels.find((l) => l.id === 'L02')!.use).toBe('TYPICAL');
     const placement = out.building.placements.find((p) => p.subject === 'parking levels');
     expect(placement?.source.provenanceClass).toBe('ASSUMED');
+  });
+
+  it("places the answer's own levels and no more: capacity.levels above the parking", () => {
+    const above = out.building.levels.filter((l) => l.parking === null && l.elevationMm >= 0);
+    const answer = out.capacity.levels.value;
+    // The case this exists for: the ceiling permits more than the answer uses.
+    expect(above.length).toBeGreaterThan(answer);
+    expect(above.filter((l) => l.placed).length).toBe(answer);
+    expect(out.building.placedLevels.node).toBe(out.capacity.levels.node);
+    expect(out.building.placedLevels.value).toBe(String(answer));
+  });
+
+  it('places every parking level, and never a level above one it leaves out', () => {
+    const levels = out.building.levels;
+    expect(levels.filter((l) => l.parking).every((l) => l.placed)).toBe(true);
+    const firstGap = levels.findIndex((l) => !l.placed);
+    expect(firstGap).toBeGreaterThan(0);
+    expect(levels.slice(firstGap).some((l) => l.placed)).toBe(false);
+  });
+
+  it('says so in words, citing the answer rather than an assumption', () => {
+    const answer = out.building.placements.find((p) => p.subject === 'answer')!;
+    expect(answer.source.node).toBe(out.capacity.levels.node);
+    expect(answer.source.provenanceClass).not.toBe('ASSUMED');
+    const unused = out.building.levels.filter((l) => !l.placed).length;
+    expect(answer.statement).toContain(`places ${out.capacity.levels.value} level`);
+    expect(answer.statement).toContain(`The ${unused} above them`);
+  });
+
+  it('says, rather than draws, an answer that the ceiling cannot hold above its parking', () => {
+    // Asked of the builder directly: no seed-rule plot reaches it, and the sentence
+    // is the one a reader would most need if one did.
+    // A run of its own: the builder adds nodes to the run's graph.
+    const run = runPipeline(input(RECT_80x40, { podiumLevels: 2 }));
+    const tracer = new Tracer(run.graph);
+    const actor = { id: 'u1', name: 'Test Architect' };
+    const ceiling = run.envelope.maxLevelsByHeight.value;
+    const model = buildBuildingModel({
+      tracer,
+      plot: plotOf(RECT_80x40),
+      envelope: run.envelope,
+      massing: run.massing,
+      parkingLevels: tracer.userSet('test.parking_levels', 2, { actor, unit: 'levels' }),
+      levelPlan: run.levelPlan,
+      levelPlanRefusal: run.levelPlanRefusal,
+      answerLevels: tracer.userSet('test.answer_levels', ceiling, { actor, unit: 'levels' }),
+    });
+    const above = model.levels.filter((l) => l.elevationMm >= 0);
+    expect(above.every((l) => l.placed)).toBe(true);
+    expect(above).toHaveLength(ceiling);
+    const answer = model.placements.find((p) => p.subject === 'answer')!;
+    expect(answer.statement).toContain('2 of the answer\'s levels do not fit under the height ceiling');
   });
 
   it('sends parking the podium cannot hold below grade', () => {

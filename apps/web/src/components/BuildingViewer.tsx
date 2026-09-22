@@ -23,6 +23,13 @@
  *
  * Colours are read from the design tokens at mount and again when the theme
  * changes, so there is no second palette here to drift from the CSS.
+ *
+ * **As a figure on a page** (`variant="figure"`) it is still until the reader asks to
+ * turn it. Until then the wheel and the finger belong to the page: a model that
+ * catches the scroll of someone reading past it has taken the page from them. It
+ * has no tools but that and a reset, nothing in it is selectable unless the page
+ * can show a derivation, and where WebGL is missing the page's own drawing stands
+ * in its place.
  */
 
 import type { BuildingModel } from '@envelope/core';
@@ -35,7 +42,7 @@ import {
   type SceneLabel,
   type ScenePalette,
 } from '@envelope/massing';
-import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
@@ -52,6 +59,7 @@ interface Handle {
   isolate(levelId: string | null): void;
   spread(on: boolean): void;
   cut(heightM: number | null): void;
+  live(on: boolean): void;
   reset(): void;
   key(key: string, shift: boolean): boolean;
 }
@@ -74,12 +82,37 @@ function readPalette(el: HTMLElement): ScenePalette {
   };
 }
 
-export interface BuildingViewerProps {
-  readonly model: BuildingModel;
-  readonly onInspect: (nodeId: string) => void;
+function isInside(o: THREE.Object3D, ancestor: THREE.Object3D): boolean {
+  for (let p: THREE.Object3D | null = o; p; p = p.parent) if (p === ancestor) return true;
+  return false;
 }
 
-export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.Element {
+export interface BuildingViewerProps {
+  readonly model: BuildingModel;
+  /** Opens a value's derivation. Without it nothing in the model is selectable. */
+  readonly onInspect?: (nodeId: string) => void;
+  /** `figure`: still until the reader chooses to turn it, with no tools but that. */
+  readonly variant?: 'full' | 'figure';
+  /**
+   * One level alone, framed to itself and to the plot, without the envelope's glass:
+   * a parking level is lost at the foot of a case drawn to the height ceiling.
+   */
+  readonly focusLevelId?: string;
+  /** The model's accessible name. It says where the same content is in words. */
+  readonly label?: string;
+  /** Drawn in the canvas's place where WebGL is unavailable. */
+  readonly fallback?: ReactNode;
+}
+
+export function BuildingViewer({
+  model,
+  onInspect,
+  variant = 'full',
+  focusLevelId,
+  label = 'The building in 3D. Every level in it is listed in the table below.',
+  fallback,
+}: BuildingViewerProps): JSX.Element {
+  const figure = variant === 'figure';
   const stageRef = useRef<HTMLDivElement>(null);
   const scaleBarRef = useRef<HTMLSpanElement>(null);
   const scaleLabelRef = useRef<HTMLSpanElement>(null);
@@ -87,7 +120,8 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
   const hintId = useId();
 
   const [view, setView] = useState<View>('axon');
-  const [levelId, setLevelId] = useState<string | null>(null);
+  const [levelId, setLevelId] = useState<string | null>(focusLevelId ?? null);
+  const [live, setLive] = useState(!figure);
   const [spread, setSpread] = useState(false);
   const [cutM, setCutM] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
@@ -95,8 +129,8 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
 
   // The world is rebuilt when the model or the theme changes; the controls below are
   // re-applied to it from here, so a rebuild never resets what the reader chose.
-  const chosen = useRef({ view, levelId, spread, cutM });
-  chosen.current = { view, levelId, spread, cutM };
+  const chosen = useRef({ view, levelId, spread, cutM, live });
+  chosen.current = { view, levelId, spread, cutM, live };
   const inspect = useRef(onInspect);
   inspect.current = onInspect;
 
@@ -175,10 +209,35 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
 
     // --- framing --------------------------------------------------------------------
     built.root.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(built.root);
+    // Focused on one level, the frame is that level and the plot it stands on, and the
+    // glass goes: it runs to the height ceiling, and framed with it a parking level is
+    // a strip at the foot of the picture.
+    const focusGroup = focusLevelId ? levelGroup.get(focusLevelId) : undefined;
+    const envelopeGroup = built.root.getObjectByName('envelope');
+    if (focusGroup && envelopeGroup) envelopeGroup.visible = false;
+    const siteGroup = built.root.getObjectByName('site');
+    const box =
+      focusGroup && siteGroup
+        ? new THREE.Box3().setFromObject(focusGroup).union(new THREE.Box3().setFromObject(siteGroup))
+        : new THREE.Box3().setFromObject(built.root);
     const size = box.getSize(new THREE.Vector3());
     const centre = box.getCenter(new THREE.Vector3());
     const radius = Math.max(box.getBoundingSphere(new THREE.Sphere()).radius, 10);
+    // Every vertex the figure frames, in world space. Cars are left out: each is inside
+    // its level's slab, and one level holds hundreds.
+    const silhouette: THREE.Vector3[] = [];
+    if (figure) {
+      for (const framed of focusGroup && siteGroup ? [focusGroup, siteGroup] : [built.root]) {
+        framed.traverse((o) => {
+          if (o instanceof THREE.InstancedMesh || !(o instanceof THREE.Mesh || o instanceof THREE.Line)) return;
+          if (focusGroup && envelopeGroup && isInside(o, envelopeGroup)) return;
+          const position = o.geometry.getAttribute('position');
+          for (let i = 0; i < position.count; i += 1) {
+            silhouette.push(new THREE.Vector3().fromBufferAttribute(position, i).applyMatrix4(o.matrixWorld));
+          }
+        });
+      }
+    }
 
     sun.position.copy(centre).add(new THREE.Vector3(-0.55, 1, 0.75).multiplyScalar(radius * 2));
     sun.target.position.copy(centre);
@@ -214,14 +273,44 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
     const home = (): void => {
       // A fixed camera — from the south-east, above — so the same run always opens on
       // the same picture, and a screenshot of it can be compared with the last one.
-      const from = new THREE.Vector3(1, 0.85, 1.25).normalize();
+      // One level alone is looked down on more steeply, so its rows of bays read as rows.
+      const from = (focusGroup ? new THREE.Vector3(0.9, 1.6, 1.25) : new THREE.Vector3(1, 0.85, 1.25)).normalize();
       // Fitted to whichever of the two angles is narrower: on a phone held upright it
       // is the width, and a fit to the height alone crops the building's sides.
       const vertical = THREE.MathUtils.degToRad(persp.fov);
       const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * persp.aspect);
-      const distance = (radius / Math.sin(Math.min(vertical, horizontal) / 2)) * 0.92;
+      let distance = (radius / Math.sin(Math.min(vertical, horizontal) / 2)) * 0.92;
       orbit.target.copy(centre);
       persp.position.copy(centre).addScaledVector(from, distance);
+      if (figure) {
+        // A figure has no tools to zoom with until the reader turns it on, so it is
+        // fitted to what is drawn — every vertex, projected — rather than to a sphere
+        // round the box, which leaves two thirds of a plate empty round a tall stack.
+        const target = centre.clone();
+        for (let pass = 0; pass < 4; pass += 1) {
+          persp.position.copy(target).addScaledVector(from, distance);
+          persp.lookAt(target);
+          persp.updateMatrixWorld(true);
+          let x0 = Infinity;
+          let x1 = -Infinity;
+          let y0 = Infinity;
+          let y1 = -Infinity;
+          const p = new THREE.Vector3();
+          for (const v of silhouette) {
+            p.copy(v).project(persp);
+            x0 = Math.min(x0, p.x);
+            x1 = Math.max(x1, p.x);
+            y0 = Math.min(y0, p.y);
+            y1 = Math.max(y1, p.y);
+          }
+          // Centre what is drawn, then size it to 86% of the plate's narrower span.
+          const depth = target.clone().project(persp).z;
+          target.copy(new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, depth).unproject(persp));
+          distance *= Math.max(x1 - x0, y1 - y0) / 2 / 0.86;
+        }
+        orbit.target.copy(target);
+        persp.position.copy(target).addScaledVector(from, distance);
+      }
       orbit.update();
       plan.target.set(centre.x, 0, centre.z);
       ortho.position.set(centre.x, box.max.y + radius, centre.z);
@@ -302,15 +391,27 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
     // Which words show: the always-on few in the whole-building view, a level's own
     // name when it is shown alone, nothing the cut has taken away, and no ceiling
     // label on a plan, where it would sit on top of whichever level is shown.
+    // The figure names the bottom of the stack and the top of the answer — the two
+    // ends of what the answer places — and leaves the levels between to the caption.
+    const lowestId = model.levels[0]?.id;
+    const answerTopId = [...model.levels].reverse().find((l) => l.placed !== false)?.id;
     const syncTags = (): void => {
       built.root.updateMatrixWorld(true);
       const p = new THREE.Vector3();
       const { levelId: only, view: v } = chosen.current;
-      for (const { tag, label } of tags) {
-        const own = label.kind === 'level' && label.levelId === only;
-        const wanted = own || (label.always && (only === null || label.kind !== 'level'));
-        const planHides = v === 'top' && label.kind === 'ceiling';
-        tag.visible = wanted && !planHides && tag.getWorldPosition(p).y <= built.cut.constant + 0.01;
+      for (const { tag, label: word } of tags) {
+        const own = word.kind === 'level' && word.levelId === only;
+        // A figure is small and still, so it names less: its levels and the ceiling,
+        // or — shown one level alone — that level and the plot round it. The rest is
+        // in the caption beside it.
+        const figureAllows =
+          !figure ||
+          (focusGroup
+            ? word.kind !== 'ceiling'
+            : word.kind === 'ceiling' || (word.kind === 'level' && (word.levelId === lowestId || word.levelId === answerTopId)));
+        const wanted = figureAllows && (own || (word.always && (only === null || word.kind !== 'level')));
+        const hidden = (v === 'top' || envelopeGroup?.visible === false) && word.kind === 'ceiling';
+        tag.visible = wanted && !hidden && tag.getWorldPosition(p).y <= built.cut.constant + 0.01;
       }
     };
 
@@ -336,15 +437,25 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
         // What the cut has taken away cannot be selected.
         .filter((h) => h.point.y <= built.cut.constant + 1e-3);
       const pick = choosePick(hits);
-      if (pick) inspect.current(pick.pick.node);
+      if (pick) inspect.current?.(pick.pick.node);
     };
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointerup', onUp);
 
+    // Still, the canvas gives the wheel and the finger back to the page. OrbitControls
+    // ignores both while disabled but sets `touch-action: none` when it connects, so
+    // that is undone here too — or a phone could not scroll past the figure.
+    const applyLive = (): void => {
+      const { live: on, view: v } = chosen.current;
+      orbit.enabled = on && v === 'axon';
+      plan.enabled = on && v === 'top';
+      canvas.style.touchAction = on ? 'none' : 'auto';
+      host.dataset['live'] = String(on);
+    };
+
     handle.current = {
       setView(v) {
-        orbit.enabled = v === 'axon';
-        plan.enabled = v === 'top';
+        applyLive();
         built.setPlan(v === 'top');
         host.dataset['view'] = v;
         syncTags();
@@ -357,6 +468,9 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
       },
       spread(on) {
         built.setSpread(on ? SPREAD_GAP_M : 0);
+        // The scene shows the glass again whenever the levels close up; a focused
+        // figure keeps it hidden.
+        if (focusGroup && envelopeGroup) envelopeGroup.visible = false;
         syncTags();
         request();
       },
@@ -365,11 +479,15 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
         syncTags();
         request();
       },
+      live() {
+        applyLive();
+      },
       reset() {
         home();
         request();
       },
       key(key, shift) {
+        if (!chosen.current.live) return false;
         const top = chosen.current.view === 'top';
         const { controls } = active();
         const pan = top || shift;
@@ -416,6 +534,7 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
     handle.current.isolate(now.levelId);
     handle.current.spread(now.spread);
     handle.current.cut(now.cutM);
+    handle.current.live(now.live);
     const observer = new ResizeObserver(() => {
       fit();
       request();
@@ -435,12 +554,13 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
       stage.removeChild(canvas);
       stage.removeChild(words.domElement);
     };
-  }, [model, themeKey]);
+  }, [model, themeKey, focusLevelId]);
 
   useEffect(() => handle.current?.setView(view), [view]);
   useEffect(() => handle.current?.isolate(levelId), [levelId]);
   useEffect(() => handle.current?.spread(spread), [spread]);
   useEffect(() => handle.current?.cut(cutM), [cutM]);
+  useEffect(() => handle.current?.live(live), [live]);
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey) return;
@@ -449,63 +569,89 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
 
   const cutLabel = cutM === null ? 'no cut' : `+${cutM.toFixed(1)} m`;
 
-  return (
-    <div className="massing">
-      <div className="massing-tools">
-        <div className="segmented" role="group" aria-label="View">
-          <button type="button" className="segmented__option" aria-pressed={view === 'axon'} onClick={() => setView('axon')}>
-            3D
-          </button>
-          <button type="button" className="segmented__option" aria-pressed={view === 'top'} onClick={() => setView('top')}>
-            From above
-          </button>
-        </div>
-        <label className="massing-tools__field">
-          <span>Show</span>
-          <select className="input" value={levelId ?? ''} onChange={(e) => setLevelId(e.target.value === '' ? null : e.target.value)}>
-            <option value="">Every level</option>
-            {model.levels.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.id} · {l.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="toggle">
-          <input type="checkbox" checked={spread} onChange={(e) => setSpread(e.target.checked)} />
-          Pull the levels apart
-        </label>
-        <label className="massing-tools__field massing-tools__cut">
-          <span>Cut through at</span>
-          <input
-            type="range"
-            min={0}
-            max={cutMax}
-            step={0.1}
-            value={cutM ?? cutMax}
-            aria-valuetext={cutLabel}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setCutM(v >= topM ? null : v);
-            }}
-          />
-          <output aria-hidden="true">{cutLabel}</output>
-        </label>
-        <button
-          type="button"
-          className="link-button"
-          onClick={() => handle.current?.reset()}
-        >
+  const tools = figure ? (
+    <div className="massing-tools">
+      <label className="toggle">
+        <input type="checkbox" checked={live} onChange={(e) => setLive(e.target.checked)} />
+        Turn and zoom the model
+      </label>
+      {live ? (
+        <button type="button" className="link-button" onClick={() => handle.current?.reset()}>
           Reset the view
         </button>
+      ) : null}
+    </div>
+  ) : (
+    <div className="massing-tools">
+      <div className="segmented" role="group" aria-label="View">
+        <button type="button" className="segmented__option" aria-pressed={view === 'axon'} onClick={() => setView('axon')}>
+          3D
+        </button>
+        <button type="button" className="segmented__option" aria-pressed={view === 'top'} onClick={() => setView('top')}>
+          From above
+        </button>
       </div>
+      <label className="massing-tools__field">
+        <span>Show</span>
+        <select className="input" value={levelId ?? ''} onChange={(e) => setLevelId(e.target.value === '' ? null : e.target.value)}>
+          <option value="">Every level</option>
+          {model.levels.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.id} · {l.name}
+              {l.placed === false ? ' · permitted, not placed' : ''}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="toggle">
+        <input type="checkbox" checked={spread} onChange={(e) => setSpread(e.target.checked)} />
+        Pull the levels apart
+      </label>
+      <label className="massing-tools__field massing-tools__cut">
+        <span>Cut through at</span>
+        <input
+          type="range"
+          min={0}
+          max={cutMax}
+          step={0.1}
+          value={cutM ?? cutMax}
+          aria-valuetext={cutLabel}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            setCutM(v >= topM ? null : v);
+          }}
+        />
+        <output aria-hidden="true">{cutLabel}</output>
+      </label>
+      <button
+        type="button"
+        className="link-button"
+        onClick={() => handle.current?.reset()}
+      >
+        Reset the view
+      </button>
+    </div>
+  );
+
+  // What the pointer does, said once. Selection is only promised where it opens something.
+  const hint = figure
+    ? live
+      ? 'Drag to turn it, and scroll or pinch to zoom. With it focused, the arrow keys turn it and Home starts again.'
+      : 'It stays still until you turn it on, so scrolling over it moves the page.'
+    : 'Drag to turn it and scroll to zoom — or, once it has focus, use the arrow keys (Shift ' +
+      'to pan), + and − to zoom and Home to start again.' +
+      (onInspect ? ' Select a car, a slab, the ramp or the envelope to see where it came from.' : '');
+
+  return (
+    <div className={`massing${figure ? ' massing--figure' : ''}`} data-focus={focusLevelId ? 'level' : undefined}>
+      {tools}
 
       <div
         className="massing-viewer"
-        tabIndex={0}
+        tabIndex={live ? 0 : undefined}
         role="group"
         aria-roledescription="3D view"
-        aria-label="The building in 3D. Every level in it is listed in the table below."
+        aria-label={label}
         aria-describedby={hintId}
         data-view={view}
         onKeyDown={onKeyDown}
@@ -522,18 +668,18 @@ export function BuildingViewer({ model, onInspect }: BuildingViewerProps): JSX.E
             </span>
           </>
         ) : null}
-        {failed ? (
-          <p className="massing-viewer__failed">
-            This browser could not start 3D drawing — WebGL is switched off or unavailable.
-            Every level is listed in the table below, and each parking level is drawn on the
-            Parking step.
-          </p>
-        ) : null}
+        {failed
+          ? (fallback ?? (
+              <p className="massing-viewer__failed">
+                This browser could not start 3D drawing — WebGL is switched off or unavailable.
+                Every level is listed in the table below, and each parking level is drawn on the
+                Parking step.
+              </p>
+            ))
+          : null}
       </div>
       <p id={hintId} className="fine-print">
-        Drag to turn it and scroll to zoom — or, once it has focus, use the arrow keys (Shift
-        to pan), + and − to zoom and Home to start again. Select a car, a slab, the ramp or the
-        envelope to see where it came from.
+        {hint}
       </p>
     </div>
   );

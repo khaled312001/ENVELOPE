@@ -87,6 +87,7 @@ import { useCallback, useState } from 'react';
 // one meaning for amber and the engine showing them another.
 import { Glyph } from '../components/SiteChrome.js';
 import { ProvenanceLegend } from '../components/TracedValue.js';
+import { WorkedExampleModel } from '../components/WorkedExampleModel.js';
 import { LIMITS } from '../content/shared.js';
 // `Href`, not `Route`. Every CTA on this site carries a query — `/app?demo=…` — and a
 // `Route`-only signature rejects all of them.
@@ -213,7 +214,11 @@ const tower = {
   h: Number(V.towerOutline[0]?.y ?? 0) - Number(V.towerOutline[2]?.y ?? 0),
 };
 
-function PlotPlan(): JSX.Element {
+/**
+ * The plan. On screen it stands in for the 3D model where WebGL is missing; on paper
+ * it always does. Rendered twice in that case, so the hatch's id is the caller's.
+ */
+function PlotPlan({ hatchId = 'lp-hatch' }: { readonly hatchId?: string }): JSX.Element {
   return (
     <svg
       className="lp-plan"
@@ -231,7 +236,7 @@ function PlotPlan(): JSX.Element {
             hatched, not filled. Colour alone would not survive a greyscale print,
             and this page gets printed. */}
         <pattern
-          id="lp-hatch"
+          id={hatchId}
           width="3"
           height="3"
           patternTransform="rotate(45)"
@@ -241,7 +246,7 @@ function PlotPlan(): JSX.Element {
         </pattern>
       </defs>
 
-      <rect x="0" y="0" width={PLOT_W} height={PLOT_D} fill="url(#lp-hatch)" />
+      <rect x="0" y="0" width={PLOT_W} height={PLOT_D} fill={`url(#${hatchId})`} />
       <rect
         x={podium.x}
         y={podium.y}
@@ -711,11 +716,23 @@ export function Landing({
 
         <figure className="figure lp-hero__figure">
           <div className="figure__plate">
-            <PlotPlan />
+            {/* The run's own building model, from the same run as every figure on
+                this page. The plan is its stand-in on paper and without WebGL. */}
+            <WorkedExampleModel
+              label={
+                `This run's building in 3D: ${V.levels} levels of floor area above the ` +
+                `parking, inside the envelope the rules permit to ${V.maxLevelsByHeight} ` +
+                'levels. The figures beside it state the same in words.'
+              }
+              fallback={<PlotPlan hatchId="lp-hatch-fallback" />}
+            />
+            <div className="print-only">
+              <PlotPlan />
+            </div>
           </div>
           <figcaption className="figure__caption">
             <p className="figure__label">
-              <span className="figure__no">Plan</span>
+              <span className="figure__no">Model</span>
               <span>
                 {PLOT_W} × {PLOT_D} m · {I.plot.landUse.replace(/_/g, ' ').toLowerCase()}
               </span>
@@ -749,15 +766,17 @@ export function Landing({
                 </dd>
               </div>
               <div>
-                <dt>Levels</dt>
+                <dt>Levels the answer places</dt>
                 <dd>
-                  <span className="value">{V.levels}</span>
+                  <span className="value">{V.levels}</span> of{' '}
+                  <span className="value">{V.maxLevelsByHeight}</span> the height permits
                 </dd>
               </div>
             </dl>
             <p className="figure__source">
-              This run, to scale, in the coordinates the geometry kernel used · hatched area
-              is what the setback rules take away · regulatory validity — not assessed
+              This run, to scale, as the engine stacked it · solid levels are the answer,
+              outlines are height the answer leaves unused · amber marks what the engine
+              assumed where no rule decides · regulatory validity — not assessed
             </p>
           </figcaption>
         </figure>

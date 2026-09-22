@@ -212,6 +212,21 @@ describe('the landing page', () => {
     );
   });
 
+  it("quotes the answer's levels beside the 3D model, never the ceiling's as if they were built", () => {
+    /*
+      The model stands to the height ceiling and the answer uses less of it — 5 of 14
+      on this plot. A caption that printed only the ceiling's count beside a picture of
+      the whole stack would be the most persuasive wrong statement on the site.
+    */
+    const html = landing();
+    const figure = html.slice(html.indexOf('lp-hero__figure'), html.indexOf('</figure>'));
+    const t = stripTags(figure).replace(/\s+/g, ' ');
+    expect(t).toContain(`Levels the answer places ${V.levels} of ${V.maxLevelsByHeight} the height permits`);
+    expect(t).toMatch(/solid levels are the answer/i);
+    // Paper gets the plan: a canvas prints as whatever the GPU last left in it.
+    expect(figure).toMatch(/class="print-only"><svg class="lp-plan"/);
+  });
+
   /* ---------------------------------------------------------------------
    * WHAT MAY NOT REACH A PUBLIC PAGE AT ALL.
    * ------------------------------------------------------------------ */

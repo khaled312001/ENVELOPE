@@ -197,6 +197,20 @@ total derived from the numbers it is meant to be checking. The second is the vac
 This must be agreed before `P0-S3` is written down, because "the invariant layer passes" and "the
 invariant layer ran" are different claims and only one of them is true.
 
+### Q27 · Does podium parking count against the height ceiling?
+Found when the 3D model was made to draw only the levels the answer places (2026-09-22).
+`capacity.levels` is `floor(min(height-ceiling levels, governing GFA ÷ tower plate))` — it caps the
+answer's floor-area levels at the ceiling and never subtracts the parking levels standing in the
+podium. On the 120 × 80 test plot the answer places 14 levels, the ceiling permits 14, and one
+level of podium parking takes the ground: the building model draws 13 of the answer's levels and
+says in words that the 14th does not fit.
+
+Either reading is defensible and they give different capacities. If podium parking counts against
+the height (the usual reading of "G+2P+8"), the answer on that plot is one level too tall and the
+cap belongs in `bands.ts`. If the ceiling limits only habitable levels, the model's placement is the
+thing to change. The engine does not choose: the model reports the shortfall where it occurs, and
+nothing moves the capacity figure until the client says which.
+
 ---
 
 ## What we must never accept as a contractual acceptance criterion

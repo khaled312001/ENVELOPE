@@ -156,6 +156,27 @@ describe.each(CASES)('$name', ({ ring, podiumLevels }) => {
     scene.dispose();
   });
 
+  it("draws solid only the levels the answer places, and the rest as an outline nobody can click", () => {
+    const model = out().building;
+    const scene = buildBuildingScene(model, PALETTE);
+    // 120 x 80 uses every level the ceiling permits, so it has no outline to check;
+    // the other three do.
+    for (const { level, group } of scene.levels) {
+      const meshes: string[] = [];
+      let pickable = false;
+      group.traverse((o) => {
+        if ((o as Mesh).isMesh) meshes.push(o.name);
+        if (o.userData['pick']) pickable = true;
+      });
+      if (level.placed) {
+        expect(meshes, level.id).toContain(`${level.id} storey`);
+      } else {
+        expect({ id: level.id, meshes, pickable }).toEqual({ id: level.id, meshes: [], pickable: false });
+      }
+    }
+    scene.dispose();
+  });
+
   it('writes the same cars into the .glb, as plain meshes with no extension a reader must support', async () => {
     const model = out().building;
     const glb = await buildingGlb(model, META);

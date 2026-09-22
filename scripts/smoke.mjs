@@ -307,6 +307,44 @@ await step('the landing page says what the product will not do', async () => {
   }
 });
 
+await step('the landing page stands its worked example up in 3D, and leaves the scroll to the page', async () => {
+  // The hero's figure is the run's own model, loaded after the page paints. It has
+  // to have drawn — frames, not an element that exists and may be blank — and its
+  // caption has to quote the answer's levels against the ceiling's, never the
+  // ceiling's alone beside a picture of the whole stack.
+  const figure = page.locator('.lp-hero__figure');
+  await page.waitForFunction(
+    () => Number(document.querySelector('.lp-hero__figure .massing-viewer')?.dataset.frames ?? 0) > 0,
+    null,
+    { timeout: wait(20000) },
+  );
+  const caption = await figure.locator('figcaption').innerText();
+  if (!/Levels the answer places\s*\d+ of \d+ the height permits/i.test(caption)) {
+    throw new Error('the 3D figure is not captioned with the levels the answer places');
+  }
+  // It says scrolling over it moves the page, so a wheel over it must. A figure that
+  // takes the scroll from someone reading past it has taken the page.
+  const viewer = figure.locator('.massing-viewer');
+  const wheelOver = async () => {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await viewer.scrollIntoViewIfNeeded();
+    const start = await page.evaluate(() => window.scrollY);
+    const box = await viewer.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.wheel(0, 300);
+    await page.waitForTimeout(350);
+    return (await page.evaluate(() => window.scrollY)) - start;
+  };
+  if (!((await wheelOver()) > 0)) throw new Error('a wheel over the still 3D figure did not scroll the page');
+  // Turned on, the wheel is the model's zoom and the page stays put.
+  const toggle = figure.getByLabel('Turn and zoom the model');
+  await toggle.check();
+  const moved = await wheelOver();
+  await toggle.uncheck();
+  if (moved !== 0) throw new Error(`with the model turned on, a wheel over it still scrolled the page ${moved}px`);
+  await page.evaluate(() => window.scrollTo(0, 0));
+});
+
 await step('the landing page reflows on a phone', async () => {
   for (const [width, height] of [
     [320, 800],
@@ -595,7 +633,12 @@ await step('the 3D view holds the engine’s bays, and paints its assumptions am
   // not expected to show — which is why this reads the table's Outline-or-slope
   // column rather than counting every amber value on the panel.
   const levels = section.locator('table', { has: page.locator('caption', { hasText: /Every level and ramp/ }) });
-  const outlines = await levels.locator('button[aria-label*=" outline: Assumed"]').count();
+  // A level the answer does not place is drawn as a neutral outline, not in its
+  // outline's class, so its row is left out of the count.
+  const outlines = await levels
+    .locator('tbody tr', { hasNot: page.locator('th', { hasText: /permitted, not placed/ }) })
+    .locator('button[aria-label*=" outline: Assumed"]')
+    .count();
   const ramps = await levels
     .locator('tbody tr', { has: page.locator('th', { hasText: /^\s*Ramp/ }) })
     .locator('.traced--assumed')

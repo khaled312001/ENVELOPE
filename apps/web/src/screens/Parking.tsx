@@ -53,12 +53,19 @@
 import { useCallback, useState } from 'react';
 
 import { Glyph } from '../components/SiteChrome.js';
+import { WorkedExampleModel } from '../components/WorkedExampleModel.js';
 import { OPTIMISER_REFUSAL } from '../content/shared.js';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
 import example from './worked-example.json' with { type: 'json' };
 
 const IN = example.input;
+/**
+ * The worked example's parking level at grade, in the building model. Checked in
+ * `parking-page.test.tsx` against the model file, so a change to how the engine
+ * stacks the parking cannot leave this figure framing a level that is not there.
+ */
+export const MODEL_LEVEL = 'L00';
 const V = example.verified;
 
 /* -------------------------------------------------------------------------
@@ -933,6 +940,40 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
                 </ul>
 
                 <p className="figure__source">Regulatory validity — not assessed</p>
+              </figcaption>
+            </figure>
+
+            {/* The same level from the engine's building model, where the drawing
+                above is from its level plan: two readings of one run, and the bays are
+                the same node. The model puts this level at grade, with the ramp going
+                down to the level below it. */}
+            <figure className="figure reveal pk-model">
+              <div className="figure__plate">
+                <WorkedExampleModel
+                  focusLevelId={MODEL_LEVEL}
+                  label={
+                    `The ground parking level in 3D, with a car in each of its ` +
+                    `${plan.bayCount.value} bays and the ramp down to the level below. ` +
+                    'The plan above draws the same bays.'
+                  }
+                  fallback={
+                    <p className="massing-viewer__failed">
+                      This browser cannot draw in 3D, because WebGL is switched off or
+                      unavailable. The plan above draws the same bays.
+                    </p>
+                  }
+                />
+              </div>
+              <figcaption className="figure__caption">
+                <p className="figure__label">
+                  <span className="figure__no">{IN.plot.plotNumber}</span>
+                  <span>The same level, stood up</span>
+                </p>
+                <p className="figure__source">
+                  {plan.bayCount.value} cars, one in each bay the plan draws · a car is the
+                  sheet&rsquo;s drafting symbol, not a vehicle the engine sized · the ramp&rsquo;s
+                  gradient is not assessed · regulatory validity — not assessed
+                </p>
               </figcaption>
             </figure>
           </Section>

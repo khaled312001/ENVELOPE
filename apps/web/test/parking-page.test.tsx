@@ -20,6 +20,7 @@
  * which makes this file the only thing standing in front of it.
  */
 
+import type { BuildingModel } from '@envelope/core';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
@@ -29,7 +30,8 @@ import { describe, expect, it } from 'vitest';
 // `SiteChrome` while `PAGES` was still undefined. `page-meta.ts` ended the cycle, so this
 // is now only the division of labour: `route-coverage.test.ts` asserts that this route
 // dispatches to this component, and this file asserts what the component says.
-import Parking from '../src/screens/Parking.js';
+import Parking, { MODEL_LEVEL } from '../src/screens/Parking.js';
+import MODEL from '../src/screens/worked-example.building.json' with { type: 'json' };
 import WORKED from '../src/screens/worked-example.json' with { type: 'json' };
 import {
   expectAssumedTreatmentPresent,
@@ -346,5 +348,15 @@ describe('/parking', () => {
     // a figure did not arrive this page renders prose and names the owner of the
     // gap; it never renders a placeholder that looks like a value.
     expect(markup()).not.toMatch(/<span class="value">\s*[—–-]\s*<\/span>/);
+  });
+
+  it('frames, in 3D, a parking level the model holds, with the bays the plan draws', () => {
+    // The figure names its level by id; the model is the engine's, rewritten by
+    // `pnpm example`. If the engine ever stacks the parking differently, this is
+    // where the figure would silently fall back to the whole building.
+    const level = (MODEL as unknown as BuildingModel).levels.find((l) => l.id === MODEL_LEVEL);
+    expect(level?.parking, `${MODEL_LEVEL} is not a parking level in the model`).toBeTruthy();
+    expect(level!.parking!.bayCount).toEqual(V.levelPlan.bayCount);
+    expect(level!.placed).toBe(true);
   });
 });

@@ -22,6 +22,10 @@
  *   faces the aisle on paper faces it here. The car's shape is the sheet's drafting
  *   symbol, stood up; it is a convention, not a vehicle the engine sized, and it is
  *   drawn in neutral ink for that reason.
+ * - **The solid building is the answer's.** The stack stands to the height ceiling;
+ *   the levels the answer does not place (`ModelLevel.placed`) are outlines only, in
+ *   neutral ink. Drawn solid, the worked example was fourteen storeys beside a figure
+ *   that says five.
  * - **No cores, stairs, façades or columns.** The model does not place them, so
  *   neither does this. The caption lists `notModelled` beside the canvas.
  *
@@ -249,6 +253,28 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
     root.add(group);
     levels.push({ level, group });
 
+    // `=== false`, not `!`: a run stored before the model carried the flag is drawn whole.
+    if (level.placed === false) {
+      // Permitted and not placed: the ceiling allows the level and the answer does not
+      // use it. An outline in neutral ink — no fill, no storey, nothing to click — so
+      // the solid building is the answer's and the rest reads as room above it. Inked
+      // in its outline's class it would put a column of amber over levels nobody
+      // assumed anything about.
+      group.add(named(new THREE.LineLoop(track(ringLine(level.outline, at, 0)), ink(palette.neutral, 0.45)), `${level.id} permitted, not placed`));
+      const corner = southWest(level.outline, at);
+      labels.push({
+        key: `level-${level.id}`,
+        text: `${level.name} · ${signedLevel(level.elevationM.value)} m · permitted, not placed`,
+        at: [corner.x, corner.y, 0],
+        levelId: level.id,
+        kind: 'level',
+        provenanceClass: null,
+        always: false,
+      });
+      previousParking = false;
+      return;
+    }
+
     const slabColour = colourOf(level.outlineSource.provenanceClass, palette);
     const slab = new THREE.Mesh(track(fill([level.outline], at, 0).geometry), surface(slabColour, 0.28, false));
     slab.name = `${level.id} slab`;
@@ -268,7 +294,7 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
 
     // Every level is named; three are named in the whole-building view — the lowest,
     // the first above the parking, and the top — and the rest when shown on their own.
-    const top = index === model.levels.length - 1;
+    const top = index === model.levels.length - 1 || model.levels[index + 1]?.placed === false;
     const towerStarts = previousParking && !level.parking;
     const corner = southWest(level.outline, at);
     labels.push({

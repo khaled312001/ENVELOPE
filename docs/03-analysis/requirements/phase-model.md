@@ -57,6 +57,18 @@ Cumulative to full vision: **~18–24 months**. Explicitly longer than V1's 11-m
 
 **Out of Phase 0 (§3.2):** LLM anything · optimization · multiple configurations · floor plans · precedent · similarity · jurisdiction overlays · DXF · realistic capacity band.
 
+> **As built, this list no longer describes the software.** DXF, a drawing set (parking
+> levels bay by bay, site plan, typical floor, sections — no unit plans), XLSX, a 3D view
+> and a `.glb`, a deterministic affection-plan reader, accounts with sharing, and an
+> Arabic interface were all brought into Phase 0 after the 30 Aug 2026 meeting — items
+> the PRD places in Phase 1, Phase 3 or Phase 4, or does not mention at all. LLM,
+> optimization and the realistic band stay Out; the ramp-and-core optimiser the client
+> asked for is refused by construction. The departures, the reasons, and what in §3.2's
+> "In" list is still unmet are in
+> [`phase-0-scope.md` §17](phase-0-scope.md#17-as-built--where-the-delivered-phase-0-departs-from-this-scope-22-sep-2026).
+> Every later phase below is still the PRD's text: where it says a phase *introduces*
+> DXF, XLSX or three.js, that work is already done.
+
 **Why no LLM in Phase 0 (§3.3)** — four stated reasons: (1) extraction is a known bounded problem, capacity computation with defensible provenance is not; (2) AI extraction has nothing to extract *into* until the rule model exists — Phase 3 depends on Phase 0's schema, "building extraction first means building it twice"; (3) a form takes 90 seconds — for 10 plots manual entry costs less than debugging the pipeline; (4) it isolates the variable — "If Phase 0 fails, we need to know it failed on geometry and rules, not on OCR."
 
 **Phase 0 success criteria (§3.5):**

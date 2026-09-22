@@ -528,3 +528,58 @@ Four Phase 0 inputs: **10 land packs, one community** — design partner, Low di
 - Hosting, environment, tenancy and auth are absent from §19.1 (tenant_id appears on PLOT but no auth/identity requirement exists anywhere in §9.1); 'named reviewer on export' (G4) and 'user badge' provenance both imply identity that is never specified as a requirement.
 - Q13: whether customers accept a set of options or demand a single answer is open (Phase 1) but shapes the Phase 0 report's presentation of three bands.
 - Extraction glyph loss: the source text renders arrows, inequality signs, m2 and Greek letters as blanks, and §15.1, §22.1, §26 and §28.1 tables are column-misaligned. Any contractor quoting from this .txt should work from the original PDF/DOCX to confirm tolerances and threshold directions (>= vs <=).
+
+---
+
+## 17. AS BUILT — where the delivered Phase 0 departs from this scope (22 Sep 2026)
+
+Everything above is an extract of the PRD and stays one. This section is the only part
+that is not. It records, against §2 and §3, what the build did differently and why, so
+that the extract is never read as a description of the software. Every departure below
+was made for a stated reason, and none of them should reach the client for the first
+time in a demo.
+
+### 17.1 Built, although §3.2 puts it Out or the PRD does not mention it
+
+| The PRD says | As built | Why |
+|---|---|---|
+| DXF is Out of Phase 0; §19.4 schedules it for Phase 1 | DXF R12 — the whole building in 3D, or any one sheet — behind the same G3/G4 gates as every other file | The 30 Aug 2026 meeting: laying out parking is what costs the client three to four months, and he lays it out in AutoCAD. A bay count that cannot be opened as a drawing is not the thing he is paying for |
+| Floor plans are Out | A drawing set composed from the engine's one `BuildingModel`: a site plan, one sheet per parking level with every bay numbered and a car in each, the typical floor's outline, two sections. **No unit plans.** | Same meeting. The parking level is placed as rectangles to DBC Table B.11, not divided by an area factor, so the count on the sheet is a count that can be laid out |
+| Output is JSON + PDF; §19.4 puts XLSX in Phase 1 and three.js in Phase 4 | Also XLSX, a 3D view on screen, and the 3D model as binary glTF (`.glb`), written by the API behind the same gates | The model is an extrusion of the levels the answer places — no slab, core or façade — so it stays inside §14.5's "no 3D massing beyond extrusion", and every file carries a list of what it does not draw |
+| Plot entry is a form plus polygon drawing on a basemap (FR-PLT-001) | A dimensions-first form, and a **deterministic** affection-plan reader (positioned PDF text → cited facts). No basemap | Q23: tracing on a basemap routinely trips AC2's 2% block. The reader uses no model of any kind, so "LLM anything" stays Out; it is not Phase 3's document understanding. A limit the sheet omits is reported as a gap and blocks the run |
+| — | A vehicle-access recommendation to DBC B.7.2.1, with its alternatives and what it could not assess | The same sentence of the meeting names the parking *and the entrances* |
+| — | Developer standards and project briefs, as a type that cannot be resolved as a rule | The client's fourth input. Reading them found the `saleable_efficiency` defect (units 3–7% high on every run) |
+| — (no identity requirement anywhere; Q25) | Accounts and sessions; a run is reachable by its author and by accounts it was shared with, as reviewer (may sign G4) or reader; anyone else gets 404; drafts are saved as they are typed | G4 needs a named reviewer who can see the run. What is still open is in Q25 |
+| — | A public site in English and Arabic: the landing page, parking, what comes out, what it refuses, readiness, and each account's runs | The client is presenting this to a funder. The pages are held to the same "no claim the engine did not produce" rule as a report |
+| §19.4: Python 3.12, FastAPI, Shapely/GEOS, PostgreSQL 16 + PostGIS | A TypeScript monorepo; Clipper on a 1 mm integer grid; Fastify; SQLite or MySQL behind one repository seam | `CLAUDE.md`, "Architecture, and why": exact predicates by construction, and a validator that cannot import the engine |
+| Hosting is absent from §19.1 | Deployed at `tob.khaledahmed.net`, built off the host and served by Passenger, with MySQL | — |
+
+### 17.2 Kept Out, although the client asked for it
+
+The optimiser that searches ramp and core positions for the most units (34:37, the
+largest ask in the meeting). It is a `TRADEOFF` value, and `PHASE_0_CLASSES` refuses to
+emit one by construction. It is wanted and it is out of scope; the refusal is on the
+public site, in the product's own words.
+
+### 17.3 In §2's list and not yet met
+
+Measured from the deployment's own readiness figures, not estimated:
+
+- **Rules.** §2 says ~40 mechanized rules. 13 are encoded, and **0** are approved by a
+  named approver. The development loader marks every rule approved by
+  `DEVELOPMENT-ONLY-NOT-A-REAL-APPROVER` so that a demo can run; nothing counts that as
+  an approval.
+- **Metric definitions annex.** 14 definitions, **0** signed. The annex is
+  `0.1.0-UNSIGNED`.
+- **Invariants.** On the worked example **10 of 18 run**; 8 are dormant because Phase 0
+  produces no unit schedule and no per-level schedule (Q19, Q26).
+- **One community, one land use.** The PRD never names them (open item above).
+- **§24.3's measurement deliverables.** The variance study has not been run, so no
+  accuracy figure exists and none is printed anywhere.
+
+### 17.4 Open, and it moves a figure
+
+**Q27 — does podium parking count against the height ceiling?** On the 120 × 80 m test
+plot the answer places 14 levels and the ceiling permits 14; with one level of podium
+parking the model draws 13 and says the fourteenth does not fit. Either reading is
+defensible and they give different capacities. The engine does not choose.

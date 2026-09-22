@@ -200,6 +200,157 @@ describe('somebody else’s run, on every route that takes one', () => {
   });
 });
 
+/**
+ * "FROM ANY ROUTE" — THE ROUTER'S LIST, NOT THIS FILE'S.
+ *
+ * Every test above names its URLs by hand, and a hand-written list is complete only on
+ * the day it is written: a route added next month passes all of them by not being in
+ * them. The acceptance line for accounts is that no account sees another's run *from
+ * any route*, so the routes are read out of the server itself, each one must be
+ * classified here, and then every route is attacked according to its class. A new
+ * route fails this file until its author has said which kind it is — which is the
+ * moment that question should be asked, and the only moment anyone reliably asks it.
+ *
+ * HEAD is left out because Fastify answers it with the GET handler, and the one
+ * OPTIONS route is the CORS preflight, which reads nothing.
+ */
+type Reach =
+  /** Names a run in its path. A stranger gets the answer a missing id gets. */
+  | 'run'
+  /** Names a run and needs a session. A signed-in stranger gets the same. */
+  | 'run-session'
+  /** Names a plot, in its path or its body. A stranger gets 404. */
+  | 'plot'
+  /** Answers about the caller. Must carry nobody else's run or plot. */
+  | 'own'
+  /** Carries no run and no plot, for anybody. */
+  | 'open';
+
+const ROUTES: Readonly<Record<string, Reach>> = {
+  'GET /api/health': 'open',
+  'GET /api/definitions': 'open',
+  'GET /api/rules': 'open',
+  'GET /api/standards': 'open',
+  'POST /api/intake/affection-plan': 'open',
+  'POST /api/auth/register': 'open',
+  'POST /api/auth/login': 'open',
+  'POST /api/auth/logout': 'open',
+  'POST /api/auth/logout-everywhere': 'open',
+  'POST /api/plots': 'open',
+  'GET /api/auth/me': 'own',
+  'GET /api/drafts': 'own',
+  'GET /api/drafts/:key': 'own',
+  'PUT /api/drafts/:key': 'own',
+  'DELETE /api/drafts/:key': 'own',
+  'GET /api/dashboard': 'own',
+  'GET /api/runs': 'own',
+  'GET /api/plots': 'own',
+  'GET /api/work': 'own',
+  'GET /api/plots/:plotId': 'plot',
+  'POST /api/runs': 'plot',
+  'POST /api/runs/parking-in-far-comparison': 'plot',
+  'GET /api/runs/:runId': 'run',
+  'GET /api/runs/:runId/provenance/:nodeId': 'run',
+  'POST /api/runs/:runId/gates': 'run',
+  'POST /api/runs/:runId/export': 'run',
+  'POST /api/runs/:runId/share': 'run-session',
+};
+
+/** "METHOD /path" for every route the server registered, from its own route tree. */
+async function registeredRoutes(): Promise<string[]> {
+  await app.ready();
+  const out: string[] = [];
+  const stack: string[] = [];
+  for (const line of app.printRoutes({ commonPrefix: false }).split('\n')) {
+    const m = /^((?:[│ ] {3})*)[├└]── (\S+)(?: \(([^)]+)\))?/.exec(line);
+    if (!m) continue;
+    stack.length = (m[1] ?? '').length / 4;
+    stack.push(m[2] ?? '');
+    for (const method of (m[3] ?? '').split(', ').filter(Boolean)) {
+      if (method === 'HEAD' || method === 'OPTIONS') continue;
+      out.push(`${method} ${stack.join('')}`);
+    }
+  }
+  return out;
+}
+
+describe('"from any route" — the router’s list, not this file’s', () => {
+  beforeEach(() => start());
+
+  it('classifies every route the server registers, and none it does not', async () => {
+    const registered = await registeredRoutes();
+    // A parser that found nothing would make the next assertion compare two lists
+    // this file wrote. It must find the routes it is checking.
+    expect(registered.length).toBeGreaterThan(20);
+    expect([...registered].sort()).toEqual(Object.keys(ROUTES).sort());
+  });
+
+  it('answers a stranger 404 on every route that names somebody else’s run or plot', async () => {
+    const author = await signUp('author@example.com');
+    const stranger = await signUp('stranger@example.com', 'DM-7');
+    const { plotId, runId, run } = await plotAndRun({ cookie: author.cookie });
+    const nodeId = (run['capacity'] as { governingGfa: { node: string } }).governingGfa.node;
+
+    const request = (route: string): { method: 'GET' | 'POST'; url: string; payload?: object } => {
+      const [method, path] = route.split(' ') as ['GET' | 'POST', string];
+      const url = path.replace(':runId', runId).replace(':plotId', plotId).replace(':nodeId', nodeId);
+      if (route.endsWith('/export')) return { method, url: `${url}?format=json` };
+      if (route.endsWith('/gates')) {
+        return { method, url, payload: { gate: 'G4_REVIEWER_NAMED', subjectHash: subjectHash(run['capacity']) } };
+      }
+      // The stranger trying to share the author's run with themselves.
+      if (route.endsWith('/share')) return { method, url, payload: { email: 'stranger@example.com', role: 'reviewer' } };
+      if (method === 'POST') return { method, url, payload: { ...RUN_BODY, plotId } };
+      return { method, url };
+    };
+
+    const attacked = Object.entries(ROUTES).filter(([, r]) => r === 'run' || r === 'run-session' || r === 'plot');
+    expect(attacked.length).toBeGreaterThan(0);
+
+    // Strangers first: the author's own calls below include a share, and after it
+    // the stranger would no longer be one.
+    for (const [route, reach] of attacked) {
+      const as = reach === 'run-session' ? [{ cookie: stranger.cookie }] : [MALLORY, { cookie: stranger.cookie }];
+      for (const headers of as) {
+        const res = await app.inject({ ...request(route), headers });
+        expect({ route, status: res.statusCode }).toEqual({ route, status: 404 });
+      }
+    }
+
+    // The same requests from the author are not 404, so each 404 above is about who
+    // asked, and not a route that answers 404 to everybody.
+    for (const [route] of attacked) {
+      const res = await app.inject({ ...request(route), headers: { cookie: author.cookie } });
+      expect({ route, notFound: res.statusCode === 404 }).toEqual({ route, notFound: false });
+    }
+  });
+
+  it('carries nobody else’s run or plot in any answer a stranger can read', async () => {
+    const author = await signUp('author@example.com');
+    const stranger = await signUp('stranger@example.com');
+    const { plotId, runId } = await plotAndRun({ cookie: author.cookie });
+
+    // The search can find what it looks for: the author's own list carries the id.
+    const own = await app.inject({ method: 'GET', url: '/api/runs', headers: { cookie: author.cookie } });
+    expect(own.body).toContain(runId);
+
+    const readable = Object.entries(ROUTES).filter(
+      ([route, r]) => route.startsWith('GET ') && (r === 'own' || r === 'open'),
+    );
+    for (const [route] of readable) {
+      const url = route.slice(4).replace(':key', 'plot-form');
+      for (const headers of [MALLORY, { cookie: stranger.cookie }]) {
+        const res = await app.inject({ method: 'GET', url, headers });
+        expect({ route, run: res.body.includes(runId), plot: res.body.includes(plotId) }).toEqual({
+          route,
+          run: false,
+          plot: false,
+        });
+      }
+    }
+  });
+});
+
 describe('a share bounds what its holder may do', () => {
   beforeEach(() => start());
 

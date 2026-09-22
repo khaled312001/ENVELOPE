@@ -934,6 +934,89 @@ await step('no screen scrolls sideways on a phone', async () => {
   }
 });
 
+/**
+ * THE ARABIC SITE, WALKED THE WAY THE ENGLISH ONE IS.
+ *
+ * Every render test that holds an Arabic page to the glossary runs over static
+ * markup, and static markup has no width. A right-to-left layout fails in the ways
+ * only a browser can show: a `margin-left` that survived the logical-property pass
+ * pushes a column off the start edge, a Latin identifier inside an Arabic sentence
+ * widens a phone's line, a table that fit in English does not fit in a language
+ * whose words are longer. So every route is visited cold in Arabic at both phone
+ * widths and on a desktop, and held to what the English walk is held to.
+ *
+ * AND WHAT A READER HEARS, NOT ONLY WHAT THEY SEE. On a route the route table
+ * marks `translated`, no run of four Latin words may stand outside an element
+ * marked `lang="en"` — in the text, or in an `aria-label`, `alt`, `title` or
+ * `placeholder`. An English label on an Arabic page is read aloud in an Arabic
+ * voice, which is a page that cannot be understood by the one reader it was
+ * translated for. It is the browser twin of `expectNoEnglishProse`, and it sees
+ * what that cannot: attributes, and text a component writes only once mounted.
+ *
+ * Failures are collected across the whole walk and reported together: stopping at
+ * the first route would report one defect and hide the rest behind it.
+ */
+await step('every route renders in Arabic, right to left, and says nothing in English it should not', async () => {
+  const found = [];
+  await page.evaluate(() => localStorage.setItem('envelope.locale', 'ar'));
+  for (const [width, height] of [
+    [320, 800],
+    [390, 844],
+    [1440, 900],
+  ]) {
+    await page.setViewportSize({ width, height });
+    for (const r of ROUTE_DATA) {
+      const label = `${r.path} in Arabic at ${width}px`;
+      await page.goto(new URL(r.path, BASE).href, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(200);
+      const root = await page.evaluate(() => ({
+        dir: document.documentElement.getAttribute('dir'),
+        lang: document.documentElement.getAttribute('lang'),
+      }));
+      if (root.dir !== 'rtl' || root.lang !== 'ar') {
+        found.push(`${label}: <html dir="${root.dir}" lang="${root.lang}">, not rtl/ar`);
+      }
+      for (const check of [noSidewaysScroll, nothingIsInvisible]) {
+        try {
+          await check(label);
+        } catch (e) {
+          found.push(String(e.message ?? e));
+        }
+      }
+      if (r.arabic !== 'translated' || width !== 1440) continue;
+      const prose = await page.evaluate(() => {
+        const NOT_COPY = 'code, svg, pre, kbd, samp, script, style, math, canvas, [lang="en"]';
+        const PROSE = /[A-Za-z][A-Za-z’'-]*(?:[ ,;:]+[A-Za-z][A-Za-z’'-]*){3,}/g;
+        const main = document.body;
+        const parts = [];
+        const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT, {
+          acceptNode: (n) =>
+            n.parentElement && n.parentElement.closest(NOT_COPY)
+              ? NodeFilter.FILTER_REJECT
+              : NodeFilter.FILTER_ACCEPT,
+        });
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) parts.push(n.nodeValue ?? '');
+        const hits = [...parts.join(' ').replace(/\s+/g, ' ').matchAll(PROSE)].map((m) => m[0]);
+        for (const el of main.querySelectorAll('[aria-label], [alt], [title], [placeholder]')) {
+          if (el.closest('[lang="en"]')) continue;
+          for (const a of ['aria-label', 'alt', 'title', 'placeholder']) {
+            const v = el.getAttribute(a);
+            if (v && PROSE.test(v)) hits.push(`${a}="${v}"`);
+            PROSE.lastIndex = 0;
+          }
+        }
+        return hits;
+      });
+      if (prose.length > 0) {
+        found.push(`${label} leaves English outside lang="en": «${prose.slice(0, 4).join('» «')}»`);
+      }
+    }
+  }
+  await page.evaluate(() => localStorage.setItem('envelope.locale', 'en'));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  if (found.length > 0) throw new Error(`${found.length} problem(s): ${found.join(' | ')}`);
+});
+
 await browser.close();
 
 console.log(`\n${errors.length === 0 ? 'SMOKE PASSED' : `SMOKE FAILED — ${errors.length} problem(s)`}`);

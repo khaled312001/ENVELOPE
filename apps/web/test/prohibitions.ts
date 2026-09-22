@@ -231,3 +231,66 @@ export function expectSitewideProhibitions(markup: string, label: string): void 
   expectNoBannedVocabulary(markup, label);
   expectNoCountInHeadings(markup, label);
 }
+
+/* -------------------------------------------------------------------------
+ * THE ARABIC PAGE, READ AS AN ARABIC READER READS IT.
+ * ---------------------------------------------------------------------- */
+
+/** Elements whose content is never Arabic copy: code, drawings, and markup. */
+const NOT_COPY = new Set(['code', 'svg', 'pre', 'kbd', 'samp', 'script', 'style', 'math']);
+const VOID_ELEMENTS = new Set([
+  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr',
+]);
+
+/**
+ * The text of a page minus everything that is SUPPOSED to stay English.
+ *
+ * `Verbatim` marks an engine string with `lang="en"` — a basis, a formula, a rule
+ * id, a placement statement — and the glossary forbids translating those. Code and
+ * drawings are not copy either. Everything else on an Arabic page is Arabic copy,
+ * and this returns it. A tag-balancing walk rather than a regex over whole
+ * elements, because an engine string nests spans and a regex cannot count.
+ */
+export function arabicReadingText(markup: string): string {
+  let out = '';
+  let skipping = 0;
+  const stack: boolean[] = [];
+  for (const m of markup.matchAll(/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)([^>]*?)(\/?)>|([^<]+)/g)) {
+    if (m[5] !== undefined) {
+      if (skipping === 0) out += m[5];
+      continue;
+    }
+    const closing = m[1] === '/';
+    const name = (m[2] ?? '').toLowerCase();
+    out += ' ';
+    if (closing) {
+      if (stack.pop()) skipping -= 1;
+      continue;
+    }
+    if (m[4] === '/' || VOID_ELEMENTS.has(name)) continue;
+    const skip = NOT_COPY.has(name) || /\blang="en"/.test(m[3] ?? '');
+    stack.push(skip);
+    if (skip) skipping += 1;
+  }
+  return out
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * No English sentence on an Arabic page, outside what is marked to stay English.
+ *
+ * Four Latin words in a row is prose: an identifier, a unit or a format name is one
+ * or two. A page that passes every other check with a paragraph left in English is
+ * the i18n form of a hidden default — it looks finished in two languages at once —
+ * so this is the check each translated screen answers to.
+ */
+export function expectNoEnglishProse(markup: string, label: string): void {
+  const text = arabicReadingText(markup);
+  const hits = [...text.matchAll(/[A-Za-z][A-Za-z’'-]*(?:[ ,;:]+[A-Za-z][A-Za-z’'-]*){3,}/g)].map((h) => h[0]);
+  expect(hits, `${label} leaves English prose outside Verbatim`).toEqual([]);
+}

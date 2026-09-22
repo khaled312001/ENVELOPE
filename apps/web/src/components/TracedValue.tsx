@@ -125,8 +125,26 @@ export function formatTraced(raw: string, unit?: string): string {
   // Counts — levels, bays, units, and a bare figure with no unit — are integers and
   // take no decimals. A bay count with a decimal point is a bay count nobody can
   // lay out.
-  const decimals = DECIMALS[key] ?? 0;
+  const decimals = DECIMALS[key];
   const grouped = GROUPED.has(key);
+
+  /*
+    A FIGURE WITH NO KNOWN UNIT IS NEVER ROUNDED TO A WHOLE NUMBER IT IS NOT.
+
+    Treating every unlisted unit as a count was right for bays and levels and wrong
+    for anything else that arrived without a unit: the affection plan's FAR did, and
+    the sheet's 3.5 was printed as "4" on the screen that exists to show what the
+    sheet says. A count the engine emits is already whole and loses nothing here; a
+    fraction keeps up to three places, and a count that arrives fractional shows its
+    fraction instead of hiding a defect behind a rounded integer.
+  */
+  if (decimals === undefined) {
+    return n.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: Number.isInteger(n) ? 0 : 3,
+      useGrouping: grouped,
+    });
+  }
 
   return n.toLocaleString('en-US', {
     minimumFractionDigits: decimals,

@@ -107,6 +107,12 @@ describe('IC1-CTYL-16_011 — Warsan 1, Nakheel', () => {
     expect(facts.gfaSqm?.value.toString()).toBe('4778.31');
   });
 
+  it('gives the FAR the unit the engine gives every FAR', () => {
+    // Without one the screen formatted it as a count and printed 3.5 as "4".
+    expect(facts.far?.unit).toBe('ratio');
+    expect(facts.totalAreaSqm?.unit).toBe('m²');
+  });
+
   it("reproduces the sheet's own GFA arithmetic", () => {
     const check = facts.crossChecks.find((c) => c.name === 'gfa = far × plot_area');
     expect(check?.passed, check?.detail).toBe(true);

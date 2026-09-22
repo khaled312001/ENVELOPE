@@ -37,6 +37,7 @@ import type { PlotView, RunView } from '../src/api/client.js';
 import { CapacityBands } from '../src/components/CapacityBands.js';
 import { DrawingSet, SheetView } from '../src/components/DrawingSet.js';
 import { AssumptionRegister } from '../src/components/AssumptionRegister.js';
+import { formatTraced } from '../src/components/TracedValue.js';
 import { MassingPanel } from '../src/components/MassingPanel.js';
 import { ParkingPlan, VehicleAccessPanel } from '../src/components/ParkingPlan.js';
 import { ChecksStep } from '../src/screens/ChecksStep.js';
@@ -509,5 +510,18 @@ describe('MassingPanel', () => {
       <MassingPanel run={run} onInspect={() => {}} />,
     );
     expect(out).toMatch(/planning limit, not a structural or aviation one/);
+  });
+});
+
+describe('a traced figure on screen', () => {
+  it('is never rounded to a whole number it is not', () => {
+    // The affection plan's FAR arrived without a unit and was printed as a count:
+    // the sheet's 3.5 read "4" on the screen that exists to show what the sheet says.
+    expect(formatTraced('3.5')).toBe('3.5');
+    expect(formatTraced('5.0538')).toBe('5.054');
+    expect(formatTraced('3.5', 'ratio')).toBe('3.500');
+    // Counts stay counts, and areas keep the policy's one place.
+    expect(formatTraced('42', 'bays')).toBe('42');
+    expect(formatTraced('1365.23', 'm²')).toBe('1,365.2');
   });
 });

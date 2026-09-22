@@ -387,7 +387,9 @@ export function readFacts(
 
   const far =
     gfaFar?.[2] !== undefined
-      ? fromSheet('far', qRatio(toDecimal(gfaFar[2])), gfaFar[0])
+      ? // 'ratio', the unit the engine gives every FAR. Emitted with none, the screen
+        // formatted it as a count and printed the sheet's 3.5 as "4".
+        fromSheet('far', qRatio(toDecimal(gfaFar[2])), gfaFar[0], 'ratio')
       : absent(
           'far',
           'FAR',

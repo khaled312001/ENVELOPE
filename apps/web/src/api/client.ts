@@ -793,6 +793,7 @@ export interface RunSummary {
     readonly passed: boolean | null;
   };
   readonly lifeSafetyDeferred: number | null;
+  /** The export gates signed — G3 and G4, the only gates a stored run can hold. */
   readonly gatesSatisfied: number;
   readonly reviewer: { readonly name: string; readonly at: string } | null;
 }

@@ -128,7 +128,7 @@ const DASHBOARD: DashboardView = {
       assumptionCount: 2,
       invariants: { ran: 10, total: 18, dormant: 8, passed: true },
       lifeSafetyDeferred: 1,
-      gatesSatisfied: 4,
+      gatesSatisfied: 2,
       reviewer: { name: 'Ahmed Amin', at: '2026-08-30T09:05:00.000Z' },
     },
   ],

@@ -77,7 +77,7 @@ import {
   runChecks,
   type RunChecks,
 } from './checks.js';
-import { Gate, requireExportGates, subjectHash, type GateRecord } from './gates.js';
+import { EXPORT_GATES, Gate, requireExportGates, subjectHash, type GateRecord } from './gates.js';
 import { ENGINE_VERSION, presentRun } from './present.js';
 import { buildRunReport } from './report.js';
 import { canReview, type Actor } from './identity.js';
@@ -929,7 +929,7 @@ export async function build(
         plots: await repo.countPlots(),
         runs: await repo.countRuns(),
         runsShown: summaries.length,
-        exported: summaries.filter((r) => r.gatesSatisfied === 4).length,
+        exported: summaries.filter((r) => r.gatesSatisfied === EXPORT_GATES.length).length,
         reviewed: summaries.filter((r) => r.reviewer !== null).length,
       },
 
@@ -1444,7 +1444,16 @@ function summariseRun(run: StoredRun) {
       passed: payload.checks?.invariants.passed ?? null,
     },
     lifeSafetyDeferred: payload.checks?.validation.summary.lifeSafetyDeferred ?? null,
-    gatesSatisfied: Object.keys(gates).length,
+    /*
+      THE EXPORT GATES, OUT OF THE EXPORT GATES — NOT OUT OF FOUR.
+
+      G1 and G2 are given before a run exists: they gate its computation, so they
+      are never stored against it. A stored run can only ever hold G3 and G4, and
+      this used to be read as "n of 4": every list said "2 of 4" for a run that was
+      fully signed, and the readiness page counted runs with four gates as exported,
+      which no run can have — so that figure could never leave zero.
+    */
+    gatesSatisfied: EXPORT_GATES.filter((g) => gates[g] !== undefined).length,
     reviewer: reviewer ? { name: reviewer.actorName, at: reviewer.at } : null,
   };
 }

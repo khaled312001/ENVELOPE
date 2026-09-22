@@ -122,7 +122,7 @@ export const EN = {
       governing: 'Governing capacity',
       binds: 'What binds it',
       assumed: 'Assumed',
-      gates: 'Gates',
+      gates: 'Export gates',
       run: 'Run',
     },
     /** Between the gates signed and the gates there are. Both figures are the row's. */

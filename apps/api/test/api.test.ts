@@ -544,6 +544,33 @@ describe('export — the §3.4 artifact', () => {
     }
   };
 
+  it('counts a run signed at both export gates as cleared, as the engine signs it', async () => {
+    // The engine gives G1 and G2 before the run exists and never stores them, so a
+    // run it signs holds G3 and G4 only. Counted out of four, that run read "2 of 4"
+    // on every list and the readiness page's cleared-for-export figure stayed at zero.
+    const plot = await createPlot();
+    const run = (
+      await app.inject({ method: 'POST', url: '/api/runs', headers: ACTOR, payload: { ...RUN_BODY, plotId: plot.plotId } })
+    ).json();
+    const before = (await app.inject({ method: 'GET', url: '/api/dashboard', headers: ACTOR })).json();
+    for (const [gate, subject, who] of [
+      ['G3_ASSUMPTIONS_ACKNOWLEDGED', 'assumptions', ACTOR],
+      ['G4_REVIEWER_NAMED', 'capacity', REVIEWER],
+    ] as const) {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/runs/${run.runId}/gates`,
+        headers: who,
+        payload: { gate, subjectHash: subjectHash(run[subject]) },
+      });
+      expect(res.statusCode, gate).toBe(200);
+    }
+    const after = (await app.inject({ method: 'GET', url: '/api/dashboard', headers: ACTOR })).json();
+    expect(after.volume.exported).toBe(before.volume.exported + 1);
+    const row = (after.recentRuns as { runId: string; gatesSatisfied: number }[]).find((r) => r.runId === run.runId);
+    expect(row?.gatesSatisfied).toBe(2);
+  });
+
   it('returns a complete document once every gate is satisfied', async () => {
     const plot = await createPlot();
     const run = (

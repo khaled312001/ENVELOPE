@@ -53,6 +53,7 @@ const REVIEW_GATE = 'G4';
 /** The two gates an export answers to, by the keys the API stores them under. */
 const ASSUMPTIONS_KEY = 'G3_ASSUMPTIONS_ACKNOWLEDGED';
 const REVIEW_KEY = 'G4_REVIEWER_NAMED';
+const EXPORT_KEYS = [ASSUMPTIONS_KEY, REVIEW_KEY] as const;
 
 type Stored = RunView & { readonly access: RunAccess };
 
@@ -213,13 +214,15 @@ export function RunPage({
                   </dd>
                 </div>
                 {/* From the run's own gate record, not the list row, so a signature
-                    given on this page shows here without the list being read again. */}
+                    given on this page shows here without the list being read again.
+                    Out of the export gates, not four: G1 and G2 precede the run and
+                    are never stored against it, so "of 4" could not reach four. */}
                 <div>
                   <dt>{t.answer.gates}</dt>
                   <dd>
-                    <span className="value">{Object.keys(run.gates ?? {}).length}</span>
+                    <span className="value">{EXPORT_KEYS.filter((k) => run.gates?.[k]).length}</span>
                     {t.answer.gatesOf}
-                    <span className="value">4</span>
+                    <span className="value">{EXPORT_KEYS.length}</span>
                     {run.gates?.[REVIEW_KEY] ? (
                       <>
                         {t.answer.signedBy}

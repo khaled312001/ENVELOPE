@@ -60,7 +60,7 @@ export const EN = {
     levelsOf: ' of ',
     heightPermits: ' the height permits',
     assumed: 'Values assumed',
-    gates: 'Gates',
+    gates: 'Export gates signed',
     gatesOf: ' of ',
     signedBy: ' · signed by ',
     notSigned: ' · not signed',
@@ -168,7 +168,9 @@ export const EN = {
     noteBefore: 'Give another account access to this run. A reviewer may sign the review gate (',
     noteAfter: '); a reader may only open it. Nobody’s licence is checked.',
     email: 'Their email address',
-    emailHelp: 'The address they signed up with.',
+    emailHelp:
+      'The address they signed up with. Ask them to make an account first: a share to an ' +
+      'address no account uses does nothing, and this page will not say so.',
     legend: 'What they may do',
     review: {
       title: 'Review it',

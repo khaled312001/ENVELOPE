@@ -113,7 +113,7 @@ export const AR: WorkDictionary = {
       /* A count of assumptions, headed by the one word the glossary allows for them.
          «افتراضي» would be "default". */
       assumed: 'المُفترَض',
-      gates: 'البوّابات',
+      gates: 'بوّابات التصدير',
       run: 'التشغيلة',
     },
     of: ' من ',

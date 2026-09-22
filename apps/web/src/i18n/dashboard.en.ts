@@ -208,7 +208,7 @@ export const EN = {
     reviewedNoteAfter:
       '. The licence is recorded, not verified, and the signer is not checked against ' +
       'the author.',
-    exported: 'Exported',
+    exported: 'Both export gates signed',
 
     bindsTitle: 'Which limit binds, across what has been run',
     bindsNote:

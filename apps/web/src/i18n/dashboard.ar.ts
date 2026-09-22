@@ -222,7 +222,7 @@ export const AR: DashboardDictionary = {
       that implied one would claim a control this deployment does not have.
     */
     reviewedNoteAfter: '. تُسجَّل الرخصة ولا يُتحقَّق منها، ولا يُقارَن الموقِّع بمُنشئ التشغيلة.',
-    exported: 'المُصدَّرة',
+    exported: 'وُقّعت بوّابتا التصدير فيها',
 
     bindsTitle: 'أيّ قيد يُلزِم، عبر ما جرى تشغيله',
     bindsNote:

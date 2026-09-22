@@ -66,6 +66,7 @@ export interface RunRow {
   readonly bindingLabel: string;
   readonly assumptionCount: number;
   readonly draftRules: boolean;
+  /** The export gates signed, out of `EXPORT_GATES`. G1 and G2 precede the run and are not stored. */
   readonly gatesSatisfied: number;
   readonly reviewer: { readonly name: string; readonly at: string } | null;
   readonly sharedRole?: 'reviewer' | 'reader';
@@ -88,6 +89,13 @@ interface WorkView {
  */
 const day = (iso: string): string => iso.slice(0, 10);
 const time = (iso: string): string => iso.slice(11, 16);
+
+/**
+ * The export gates a stored run can hold: G3 and G4. G1 and G2 gate the computation,
+ * so they are given before the run exists and are never stored against it — which is
+ * why this is two and not four. A count, so not copy.
+ */
+const EXPORT_GATES = 2;
 
 /**
  * WHAT THE API SENT, ISOLATED ON THE ARABIC PAGE AND UNTOUCHED ON THE ENGLISH ONE.
@@ -220,7 +228,7 @@ export function RunTable({
               <td>
                 <span className="value">{r.gatesSatisfied}</span>
                 {t.table.of}
-                <span className="value">4</span>
+                <span className="value">{EXPORT_GATES}</span>
                 {r.reviewer ? (
                   <span className="wk__reviewer">
                     {t.table.signedBy}

@@ -153,6 +153,16 @@ function AssumptionRow({
   const [draft, setDraft] = useState(entry.value);
 
   const effect = entry.sensitivity ? Number(entry.sensitivity.relativeEffect) : null;
+  /*
+    A VALUE THAT IS A SENTENCE, NOT A QUANTITY. Every `.value` is `nowrap`, because a
+    figure broken across two lines is misread — but the unit mix is a list of types,
+    and on one unbreakable line it pushed the basis column down to a word per line:
+    the register rendered twenty thousand pixels tall on the one assumption that
+    moves the answer most. The engine joins list items with "; ", so each one is set
+    on its own line here and the cell is allowed to wrap. Nothing is recomputed.
+  */
+  const isText = /[A-Za-z]{2}/.test(entry.value);
+  const lines = isText ? entry.value.split('; ') : [];
   // Bar length is relative to the strongest assumption, so the top row is always
   // full and the rest are read against it. An absolute scale would make every
   // bar a sliver on a plot where nothing much is assumed.
@@ -181,7 +191,7 @@ function AssumptionRow({
         </span>
       </th>
 
-      <td className="data-table__num">
+      <td className={isText ? 'data-table__text' : 'data-table__num'}>
         {editing ? (
           <span className="inline-edit">
             <label className="sr-only" htmlFor={`edit-${entry.nodeId}`}>
@@ -212,7 +222,15 @@ function AssumptionRow({
             aria-label={t.editLabel(entry.label, `${entry.value}${entry.unit ? ` ${entry.unit}` : ''}`)}
           >
             <span className="value">
-              <EngineValue>{entry.value}</EngineValue>
+              {isText ? (
+                lines.map((line, i) => (
+                  <span key={`${i}:${line}`} className="value__line">
+                    <EngineText>{line}</EngineText>
+                  </span>
+                ))
+              ) : (
+                <EngineValue>{entry.value}</EngineValue>
+              )}
               {entry.unit ? <span className="value__unit">{entry.unit}</span> : null}
             </span>
             <span className="traced__marker" aria-hidden="true" />

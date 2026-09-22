@@ -956,6 +956,15 @@ select.input { cursor: pointer; }
 .data-table__label { font-weight: var(--weight-normal); }
 .data-table__param { display: block; font-size: var(--text-xs); }
 .data-table__basis { max-width: 34ch; color: var(--text-secondary); }
+/*
+  A value that is words, not a figure — the unit mix, a placement sentence. `.value`
+  is `nowrap` for figures, and one unbreakable forty-word value squeezed the basis
+  beside it to a word per line. Here it wraps, one list item to a line.
+*/
+.data-table__text { min-inline-size: 18ch; }
+.data-table__text .value { white-space: normal; overflow-wrap: anywhere; }
+.data-table__text .value__line { display: block; }
+.data-table__text .value__line + .value__line { margin-block-start: var(--space-hair); }
 
 /*
   A ROW HIGHLIGHT IS A READING AID, NOT AN AFFORDANCE — which is why it is a

@@ -303,6 +303,28 @@ describe('AssumptionRegister', () => {
       expect(a.basis.length).toBeGreaterThan(20);
     }
   });
+
+  // The unit mix is a list, and on one unbreakable line it squeezed the basis column
+  // to a word per line. Each item gets its own line, in a cell that may wrap.
+  it('sets a value that is a list one item to a line, in a cell that wraps', () => {
+    // The shape `nodeText` gives a list of objects: items joined with "; ".
+    const mix = {
+      ...run.assumptions[0]!,
+      parameterId: 'parking.unit_mix',
+      value:
+        'typeId 1BED, label 1 bedroom, share 0.5, nsaM2 70, count 40; ' +
+        'typeId 2BED, label 2 bedroom, share 0.375, nsaM2 110, count 30; ' +
+        'typeId 3BED, label 3 bedroom, share 0.125, nsaM2 160, count 10',
+      unit: null,
+    };
+    const out = html(
+      <AssumptionRegister assumptions={[mix]} onInspect={() => {}} onAcknowledge={() => {}} onEdit={() => {}} acknowledged={false} />,
+    );
+    const items = mix.value.split('; ');
+    expect(out.match(/class="value__line"/g)?.length).toBe(items.length);
+    expect(out).toContain('class="data-table__text"');
+    for (const item of items) expect(out).toContain(item);
+  });
 });
 
 describe('EvidenceStep', () => {

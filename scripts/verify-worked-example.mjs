@@ -30,9 +30,20 @@
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 
+import DxfParser from 'dxf-parser';
+
+import { runSheets } from '../apps/api/dist/drawing.js';
+import { subjectHash } from '../apps/api/dist/gates.js';
 import { build } from '../apps/api/dist/server.js';
 import { SqliteRunRepository } from '../apps/api/dist/store.js';
+import { CLASS_ACI } from '../packages/exports/dist/index.js';
+
+/* `exceljs` is the exports package's dependency, not the root's, so it is resolved
+   from there. It is the library that wrote the file, reading it back: enough to
+   read sheet names and notes, and no evidence about any other program. */
+const ExcelJS = createRequire(new URL('../packages/exports/package.json', import.meta.url))('exceljs');
 
 const FIXTURE = new URL('../apps/web/src/screens/worked-example.json', import.meta.url);
 /**
@@ -205,6 +216,178 @@ actual.parkingInFar = {
   governingSpreadM2: comparison.governingSpreadM2 ?? null,
   governingSpreadRelative: comparison.governingSpreadRelative ?? null,
   verdict: comparison.verdict ?? null,
+};
+
+/*
+  THE FILES, AS A READER DOWNLOADS THEM — for `/exports`.
+
+  That page names layers, sheets, notes and the format of each file, and every one
+  of them is read here out of the bytes the API returns, never out of the module
+  that writes them: a layer name read off `layerName` is a statement about a
+  function, and the page makes one about a file.
+
+  It also measures the sentence the page opens on — that nothing leaves until the
+  assumption register is acknowledged and a reviewer is named — by asking for the
+  export before, between and after the two signatures, and recording the answers.
+
+  The reviewer is the run's own author, with a licence string that says what it
+  is. That the export then opens is part of what the page reports: nothing
+  compares the two.
+*/
+const STAMP = 'REGULATORY VALIDITY: NOT ASSESSED';
+const REVIEWER = { ...ACTOR, 'x-actor-licence': 'CHECK-ONLY' };
+const exportAs = (format) =>
+  app.inject({ method: 'POST', url: `/api/runs/${run.runId}/export?format=${format}`, headers: REVIEWER });
+const refuse = (message) => {
+  console.error(`/exports: ${message}`);
+  process.exit(1);
+};
+
+const gateSequence = [{ signed: [], status: (await exportAs('json')).statusCode }];
+const signed = [];
+for (const [gate, subject] of [
+  ['G3_ASSUMPTIONS_ACKNOWLEDGED', 'assumptions'],
+  ['G4_REVIEWER_NAMED', 'capacity'],
+]) {
+  const r = await app.inject({
+    method: 'POST',
+    url: `/api/runs/${run.runId}/gates`,
+    headers: gate === 'G4_REVIEWER_NAMED' ? REVIEWER : ACTOR,
+    payload: { gate, subjectHash: subjectHash(run[subject]) },
+  });
+  if (r.statusCode >= 300) refuse(`${gate} was refused (${r.statusCode}): ${r.body.slice(0, 300)}`);
+  signed.push(gate);
+  gateSequence.push({ signed: [...signed], status: (await exportAs('json')).statusCode });
+}
+
+const download = async (format) => {
+  const r = await exportAs(format);
+  if (r.statusCode !== 200) refuse(`the ${format} export answered ${r.statusCode} with both gates signed`);
+  return r;
+};
+const stampedIn = [];
+const stamped = (format, text) => {
+  if (!text.includes(STAMP)) refuse(`the ${format} file does not carry "${STAMP}"`);
+  stampedIn.push(format);
+};
+
+// The JSON, first: it is the stored run, and the drawing list is composed from it
+// by the same call the export makes.
+const jsonExport = (await download('json')).json();
+// In the JSON the claim is a field rather than a sentence, so the field is what is
+// read: the first `regulatoryValidity` in the document, which must never be claimed.
+const jsonValidity = (function find(node) {
+  if (!node || typeof node !== 'object') return null;
+  if (node.regulatoryValidity?.status) return node.regulatoryValidity;
+  for (const child of Object.values(node)) {
+    const hit = find(child);
+    if (hit) return hit;
+  }
+  return null;
+})(jsonExport.document);
+if (jsonValidity?.status !== 'NEVER_CLAIMED') {
+  refuse(`the JSON export's regulatoryValidity is ${JSON.stringify(jsonValidity?.status ?? null)}, not NEVER_CLAIMED`);
+}
+stampedIn.push('json');
+if (!(jsonExport.payload?.provenance?.nodes?.length > 0)) {
+  refuse('the JSON export carries no provenance graph, and the page says it carries the whole run');
+}
+
+stamped('html', (await download('html')).body);
+const drawingSetHtml = (await download('sheets')).body;
+stamped('sheets', drawingSetHtml);
+
+// The drawing: the whole building, its layer table, and which layers carry the
+// assumed ink the writer maps ASSUMED to.
+const dxfText = (await download('dxf')).body;
+stamped('dxf', dxfText);
+const dxf = new DxfParser().parseSync(dxfText);
+const amberInk = CLASS_ACI.ASSUMED;
+const inkedAmber = new Set(dxf.entities.filter((e) => e.colorIndex === amberInk).map((e) => e.layer));
+// Layer 0 is every DXF's own default layer, not one this writer names or draws on.
+const dxfLayers = Object.values(dxf.tables?.layer?.layers ?? {})
+  .filter((l) => l.name !== '0')
+  .map((l) => ({ name: l.name, assumedInk: l.colorIndex === amberInk || inkedAmber.has(l.name) }));
+if (dxfLayers.length === 0) refuse('the building DXF declares no layers');
+
+// Every sheet as its own file, and each one stamped.
+const drawingSheets = runSheets(jsonExport.payload).map((s) => ({ id: s.id, number: s.number, title: s.title }));
+for (const sheet of drawingSheets) {
+  const r = await app.inject({
+    method: 'POST',
+    url: `/api/runs/${run.runId}/export?format=dxf&sheet=${encodeURIComponent(sheet.id)}`,
+    headers: REVIEWER,
+  });
+  if (r.statusCode !== 200) refuse(`sheet ${sheet.number} answered ${r.statusCode}`);
+  if (!r.body.includes(STAMP)) refuse(`sheet ${sheet.number}'s DXF does not carry "${STAMP}"`);
+}
+
+// The workbook's sheet names and notes, read back out of the file.
+const workbook = new ExcelJS.Workbook();
+await workbook.xlsx.load((await download('xlsx')).rawPayload);
+const workbookSheets = [];
+let workbookStatus = null;
+workbook.eachSheet((ws) => {
+  const a1 = ws.getCell('A1');
+  // A sheet's note is its first row, set in italic above the table; the cover opens
+  // on a title instead and carries the disclaimer on its Status row.
+  workbookSheets.push({ name: ws.name, note: a1.font?.italic ? String(a1.value) : null });
+  ws.eachRow((row) => {
+    if (row.getCell(1).value === 'Status') workbookStatus = String(row.getCell(2).value);
+  });
+});
+if (!workbookStatus) refuse('the workbook has no Status row');
+stamped('xlsx', workbookStatus);
+
+// The 3D model: the container's own version, the glTF asset version, what it
+// requires of a reader, and the sentences it carries in the scene's `extras`.
+const glbBytes = (await download('glb')).rawPayload;
+if (glbBytes.toString('ascii', 0, 4) !== 'glTF') refuse('the .glb does not open with the glTF magic');
+const glbJson = JSON.parse(glbBytes.toString('utf8', 20, 20 + glbBytes.readUInt32LE(12)));
+const glbExtras = glbJson.scenes?.[glbJson.scene ?? 0]?.extras ?? {};
+stamped('glb', (glbExtras.notice ?? []).join(' '));
+
+/*
+  THE CARS, COUNTED IN EACH FILE — `/dashboard`'s parity row.
+
+  Every drawing is walked from one model, so the files must draw the same cars as
+  the engine placed: in the drawing set, a car symbol; in the DXF, an INSERT of the
+  CAR block; in the model file, the car count each level's car mesh carries. This
+  is the downloaded-file half of `pnpm parity`, which does the same over more plots
+  and the screen, bay by bay. A disagreement stops the build here, so the row the
+  dashboard prints can only ever show four equal numbers — and says what that is
+  and is not evidence of.
+*/
+const carsEngine = Number(run.building.drawnBays.value);
+const carsDrawingSet = (drawingSetHtml.match(/\bsh-symbol sh-car\b/g) ?? []).length;
+const carsDxf = dxf.entities.filter((e) => e.type === 'INSERT' && e.name === 'CAR').length;
+const carsModelFile = (glbJson.nodes ?? []).reduce((n, node) => n + (node.extras?.carCount ?? 0), 0);
+if (new Set([carsEngine, carsDrawingSet, carsDxf, carsModelFile]).size !== 1) {
+  refuse(
+    `the files do not draw the engine's cars: engine ${carsEngine}, drawing set ${carsDrawingSet}, ` +
+      `DXF ${carsDxf}, model file ${carsModelFile}`,
+  );
+}
+
+actual.exports = {
+  gateSequence,
+  cars: { engine: carsEngine, drawingSet: carsDrawingSet, dxf: carsDxf, modelFile: carsModelFile },
+  stampedIn,
+  dxf: { version: dxf.header?.$ACADVER ?? null, layers: dxfLayers },
+  drawingSheets,
+  workbookSheets,
+  workbookStatus,
+  glb: {
+    containerVersion: glbBytes.readUInt32LE(4),
+    assetVersion: glbJson.asset?.version ?? null,
+    extensionsRequired: glbJson.extensionsRequired ?? [],
+    extensionsUsed: glbJson.extensionsUsed ?? [],
+    notice: glbExtras.notice ?? [],
+    units: glbExtras.units ?? null,
+    notModelled: glbExtras.notModelled ?? [],
+  },
+  jsonFields: Object.keys(jsonExport),
+  jsonValidity: { status: jsonValidity.status, detail: jsonValidity.detail ?? null },
 };
 
 await app.close();

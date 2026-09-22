@@ -111,6 +111,11 @@ const NOT_MODELLED: readonly string[] = [
   'Slab thickness. Levels are planes at their floor level. The engine computes no ' +
     'slab depth, and a drawn thickness would be an invented one.',
   'Façades, windows, balconies and units. The engine computes none of them.',
+  // Said because a 3D view invites the assumption that it shows the street. The run
+  // knows which way each edge faces and nothing about what stands beyond it.
+  'Neighbouring buildings and the road. The run knows which edges of the plot face a ' +
+    'road and which face a neighbour — the site plan writes that on the boundary — but ' +
+    'not what stands beyond them, so neither is drawn.',
   'Pedestrian entrance, refuse room and escape distances — NOT ASSESSED until their ' +
     'rules are encoded.',
 ];

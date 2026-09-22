@@ -106,6 +106,16 @@ interface DeferredRecord {
 const DEFERRED = SNAPSHOT.deferred as readonly DeferredRecord[];
 
 /**
+ * What the model does not draw, read out of the worked example's model file.
+ *
+ * Not typed here and not imported from the engine: the list is the one the .glb
+ * carries in its metadata, which `scripts/verify-worked-example.mjs` reads out of
+ * the file the API wrote. The model's own list and the file's are the same by
+ * construction (`pnpm parity` asserts it), and the file is what a reader holds.
+ */
+const NOT_DRAWN: readonly string[] = WORKED.verified.exports.glb.notModelled;
+
+/**
  * Whether a citation is a real one, READ OFF THE RECORD rather than asserted.
  *
  * Every seed rule in this deployment names `PLACEHOLDER-NOT-A-REAL-INSTRUMENT`,
@@ -345,10 +355,25 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
           surface in the product — so it is built in the engine and the picture is
           downstream of the arithmetic.
         </p>
+        <h3 className="rf-sub" id="not-drawn">
+          What the model does not draw
+        </h3>
         <p>
-          What the model does not contain is listed under the picture: slab thickness,
-          cores, façades. A view with no cores reads as a building with no cores unless it
-          says why.
+          A view with no cores reads as a building with no cores unless it says why. So the
+          engine keeps the list with the model, and the list travels with it: under the
+          picture on screen, and in the model file&rsquo;s own metadata. For the
+          worked example on the landing page, the file says:
+        </p>
+        <ul className="rf-list">
+          {NOT_DRAWN.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+        <p>
+          The façades and the buildings next door are the two a view in three dimensions
+          most invites a reader to assume. Neither is in the run, so neither is drawn — not
+          as a placeholder block and not as a texture. What the rules permit and the answer
+          leaves unused is drawn, as an outline, because that one the engine did compute.
         </p>
         <p>
           Where the podium stops and the tower starts is not derivable from a run. The

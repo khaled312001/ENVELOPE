@@ -49,6 +49,7 @@ import { describe, expect, it } from 'vitest';
 import type { DashboardView } from '../src/api/client.js';
 import { Dashboard, DashboardPanels } from '../src/screens/Dashboard.js';
 import SNAPSHOT from '../src/screens/readiness.json' with { type: 'json' };
+import WORKED from '../src/screens/worked-example.json' with { type: 'json' };
 import { expectSitewideProhibitions, stripTags } from './prohibitions.js';
 
 /** The shape `/api/dashboard` returns, with the values it currently returns. */
@@ -403,6 +404,23 @@ describe('the readiness page', () => {
     }
     for (const shown of ['2 of 7', '3 of 11', '5 of 9', '0.4.2-UNSIGNED', '9.9.9']) {
       expect(b, `${shown} is not read from the payload`).toContain(shown);
+    }
+  });
+
+  it('prints the cars each file draws, and says what their agreeing shows', () => {
+    // The row reads the worked example's file counts in both modes, because they
+    // describe the build rather than the deployment. The build stops if they
+    // differ, so the row can only show equal numbers — which is why the sentence
+    // bounding them is asserted present: equal counts without it read as a check
+    // on the layout, and they are a check on the drawings.
+    const cars = WORKED.verified.exports.cars;
+    expect(new Set(Object.values(cars)).size, 'the fixture records files that disagree').toBe(1);
+    for (const html of [panels(DASHBOARD, 'live'), panels(DASHBOARD, 'snapshot')]) {
+      const page = stripTags(html).replace(/\s+/g, ' ');
+      expect(page).toContain(`${cars.engine} Placed by the engine`);
+      expect(page).toContain(`${cars.modelFile} In the model file`);
+      expect(page).toMatch(/Agreement is self-consistency, and nothing more\./);
+      expect(page).toMatch(/is not the drawings agreeing with a regulation/);
     }
   });
 

@@ -49,6 +49,11 @@ const run = (cmd) => execSync(cmd, { cwd: ROOT, stdio: 'inherit' });
 /* ── 1. Compile, exactly as the gates do ─────────────────────────────── */
 
 run('pnpm build');
+/* The figures the site prints, re-derived from the engine and the files it writes,
+   before anything is packed. `/dashboard` says a build whose files draw different
+   cars is not published; this line is what makes that sentence true rather than a
+   habit of whoever ran the deploy. */
+run('pnpm example');
 run('pnpm --filter @envelope/web build');
 
 rmSync(OUT, { recursive: true, force: true });

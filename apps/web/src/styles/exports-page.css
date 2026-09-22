@@ -1,0 +1,60 @@
+/*
+ * `/exports` — what comes out.
+ *
+ * CLASS PREFIX: `.ex-`. The page sits inside `.rf` as well as `.ex`, and that is
+ * the chassis being reused rather than borrowed: `/exports` is `/refusals`'s
+ * sibling claim page — the IFC paragraph is shared between them word for word —
+ * and `refusals.css` already solves every problem a long page of schedules has
+ * (the hero, the lede spacing, the framed tables and their stacked view at 40rem,
+ * the one-element-per-cell rule). A second copy of those rules under `.ex` would
+ * be two definitions of one chassis, and the first edit would split them.
+ *
+ * So this file declares only what `/exports` has and `/refusals` does not: three
+ * lists of identifiers read out of files.
+ * No hex, no `var(--uncertain*)`. The amber on this page is `.traced--assumed`,
+ * the inline treatment `provenance.css` owns, on the layer names that hold
+ * something assumed.
+ */
+
+/*
+ * THE LAYER NAMES, as a run of identifiers that wraps.
+ *
+ * A layer name is up to 31 characters with no space in it, so a list of them set
+ * as prose would break mid-name at 320px. Each is an item of its own with
+ * `white-space: nowrap`, and the row wraps between items. The gap is the only
+ * separator — a comma or a middle dot would be a character a reader might copy
+ * into a CAD command line along with the name.
+ */
+.ex .ex-layers,
+.ex .ex-fields,
+.ex .ex-notice {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ex .ex-layers,
+.ex .ex-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+.ex .ex-layers code,
+.ex .ex-fields code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: slashed-zero lining-nums tabular-nums;
+  white-space: nowrap;
+}
+.ex .ex-fields {
+  margin-block: var(--space-3) var(--space-5);
+}
+
+/* The two sentences the model file carries, set as what they are: text in a
+   file, quoted exactly, one to a line. */
+.ex .ex-notice {
+  display: grid;
+  gap: var(--space-2);
+  margin-block: var(--space-3) var(--space-5);
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--border-width) solid var(--border-strong);
+}

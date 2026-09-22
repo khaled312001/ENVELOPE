@@ -96,6 +96,12 @@ import { useDict, Verbatim } from '../i18n/locale.js';
 // `/app?step=…` — and a `Route`-only signature rejects all of them.
 import { Link, type Href } from '../router.js';
 import SNAPSHOT from './readiness.json' with { type: 'json' };
+/* The drawings row reads the worked example's file counts, in both modes: they are
+   a property of the build, measured when it was made, not of the deployment's data. */
+import WORKED from './worked-example.json' with { type: 'json' };
+
+/** The cars each file draws for the worked example — see `verify-worked-example.mjs`. */
+const CARS = WORKED.verified.exports.cars;
 
 /**
  * The band label for a band the ENGINE named.
@@ -296,6 +302,7 @@ export function DashboardPanels({
     'volume',
     'exposure',
     'deferred',
+    'drawings',
     ...(showRuns ? ['runs'] : []),
     'no-score',
   ];
@@ -806,7 +813,38 @@ export function DashboardPanels({
         </div>
       </section>
 
-      {/* --- 8. Recent runs, signed in only ------------------------------- */}
+      {/* --- 8. Whether the drawings agree with the engine --------------- */}
+      {/*
+        THE SAME CARS IN EVERY FILE, counted in the files themselves. The build stops
+        if they differ, so this row can only print equal numbers — which is exactly why
+        the paragraph under it says what equal numbers do and do not show. Equal counts
+        without that sentence would read as a check on the layout; they are a check on
+        the drawings.
+      */}
+      <section className="shell section railed" aria-labelledby="db-drawings">
+        {index('drawings')}
+        <div className="railed__body">
+          <div className="section__head">
+            <h2 id="db-drawings">{t.drawings.title}</h2>
+            <p className="db-lede">{t.drawings.lede}</p>
+          </div>
+
+          <div className="section__body">
+            <div className="stat-row stat-row--compact">
+              <Stat label={t.drawings.engine} value={String(CARS.engine)} state="plain" />
+              <Stat label={t.drawings.drawingSet} value={String(CARS.drawingSet)} state="plain" />
+              <Stat label={t.drawings.dxf} value={String(CARS.dxf)} state="plain" />
+              <Stat label={t.drawings.modelFile} value={String(CARS.modelFile)} state="plain" />
+            </div>
+            <div className="refusal">
+              <h3 className="refusal__title">{t.drawings.scopeTitle}</h3>
+              <p>{t.drawings.scopeBody}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- 9. Recent runs, signed in only ------------------------------- */}
       {/*
         Behind the actor, because the table carries the names of the people who
         authored and reviewed each run. The snapshot writes `recentRuns` as `[]`
@@ -938,7 +976,7 @@ export function DashboardPanels({
         </section>
       ) : null}
 
-      {/* --- 9. No score, and not an availability page -------------------- */}
+      {/* --- 10. No score, and not an availability page ------------------- */}
       {/*
         R5: the last block of every page is what that page did not prove. Here that
         is the shape of the page itself — the thing it deliberately refuses to

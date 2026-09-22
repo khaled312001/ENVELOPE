@@ -184,6 +184,33 @@
   text-wrap: pretty;
 }
 
+/* A subheading inside a section body — `/refusals` §02's list of what the model
+   does not draw, and `/exports`, which shares this chassis. `.section__head`
+   spaces a section's own h2 and nothing spaces an h3 in the body, so without
+   this it sat on whatever came before it. */
+.rf .rf-sub {
+  margin-block: var(--space-7) var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  color: var(--text-primary);
+}
+
+/* A list of sentences in a section body, at the prose measure and in the prose
+   ink, so it reads as part of the argument rather than as a callout beside it. */
+.rf .rf-list {
+  display: grid;
+  gap: var(--space-3);
+  max-inline-size: var(--measure-prose);
+  margin: var(--space-3) 0 var(--space-5);
+  padding-inline-start: var(--space-5);
+  /* Square, like every other corner in the direction. Each item is a sentence of
+     its own, and without a marker seven of them read as one paragraph. */
+  list-style: square outside;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
 /* The second sentence of a two-sentence heading, on its own line and in the
    quieter ink. It is a heading and not a lede: the reviewer section's whole point
    is that the two halves are one statement, and splitting them into a heading and

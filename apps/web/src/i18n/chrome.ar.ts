@@ -119,6 +119,13 @@ export const AR: ChromeDictionary = {
       navLabel: 'المواقف',
       footerLabel: 'المواقف',
     },
+    '/exports': {
+      title: 'ما يخرج منه — TOP.ai',
+      description:
+        'الملفات التي يكتبها المحرّك — الرسم، وملف النموذج، والمصنَّف، والتشغيلة بياناتٍ، والتقرير — وما يحمله كلٌّ منها. كل اسم في الصفحة مقروء من ملف، ولا يخرج أيُّ ملف قبل توقيع بوّابتين.',
+      navLabel: null,
+      footerLabel: 'ما يخرج منه',
+    },
     '/refusals': {
       title: 'ما يرفضه — TOP.ai',
       description:

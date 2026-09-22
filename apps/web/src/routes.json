@@ -22,6 +22,17 @@
     "arabic": "untranslated"
   },
   {
+    "path": "/exports",
+    "title": "What comes out — TOP.ai",
+    "description": "The files the engine writes — the drawing, the model file, the workbook, the run as data and the report — and what each one carries. Every name on the page is read out of a file, and none of the files leaves before two gates are signed.",
+    "navLabel": null,
+    "footerLabel": "What comes out",
+    "nav": "footer-only",
+    "group": "product",
+    "needsActor": false,
+    "arabic": "untranslated"
+  },
+  {
     "path": "/refusals",
     "title": "What it refuses — TOP.ai",
     "description": "Everything this engine will not do, opening with the refusals it performs at runtime. If you are looking for the overclaim, start here.",

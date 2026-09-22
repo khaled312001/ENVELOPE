@@ -27,6 +27,7 @@ import { ROUTES } from '../src/router.js';
 const SLUGS: Readonly<Record<string, string>> = {
   '/': 'landing',
   '/parking': 'parking-page',
+  '/exports': 'exports',
   '/refusals': 'refusals',
   '/app': 'antechamber',
   /* Added with `work.test.tsx`, not ahead of it. This map is the enumeration's

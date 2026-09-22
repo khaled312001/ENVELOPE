@@ -31,6 +31,7 @@ import type { PageProps } from './Root.js';
 import type { Route } from './router.js';
 import Antechamber from './screens/Antechamber.js';
 import { Dashboard, DashboardPanels } from './screens/Dashboard.js';
+import Exports from './screens/Exports.js';
 import { Landing } from './screens/Landing.js';
 import NotFound from './screens/NotFound.js';
 import Parking from './screens/Parking.js';
@@ -45,6 +46,7 @@ export interface PageSpec extends PageMeta {
 const COMPONENTS: Readonly<Record<Route, (p: PageProps) => JSX.Element>> = {
   '/': (p) => <Landing navigate={p.navigate} />,
   '/parking': Parking,
+  '/exports': Exports,
   '/refusals': Refusals,
   '/app': Antechamber,
   '/work': Work,

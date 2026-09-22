@@ -298,6 +298,29 @@ export const EN = {
       'repeats it.',
   },
 
+  /**
+   * The drawings against the engine. The figures are the worked example's, counted
+   * in the files the API wrote by `scripts/verify-worked-example.mjs`; none is typed.
+   */
+  drawings: {
+    title: 'Whether the drawings agree with the engine',
+    lede:
+      'The cars each file draws for the worked example, counted in the files the API ' +
+      'wrote when this build was made. They are counted again on every build, and a ' +
+      'build whose files disagree is not published.',
+    engine: 'Placed by the engine',
+    drawingSet: 'In the drawing set',
+    dxf: 'In the DXF',
+    modelFile: 'In the model file',
+    scopeTitle: 'Agreement is self-consistency, and nothing more.',
+    scopeBody:
+      'Every file is drawn from the one building model, so equal counts show that no ' +
+      'drawing dropped, doubled or invented a car. They do not show that a bay is where ' +
+      'the code would put it: the drawings agreeing with each other is not the drawings ' +
+      'agreeing with a regulation. A second check, run with the tests, compares the ' +
+      'screen as well, over more plots, bay by bay and car by car.',
+  },
+
   /** §8 — signed in only: the table carries the names of real people. */
   runs: {
     title: 'Recent runs',

@@ -955,6 +955,19 @@ to be regenerated from the synthetic worked example first, and that is not scope
 **Never says.** A count of export formats. IFC. The name of any program a file opens in. Any
 integration claim.
 
+**As built, and where it departs from this brief.** Item 5 above was an R11 defect of its
+own: the drawings, the model file and the workbook do not carry the claim statement, the
+register *and* the signature. Every file says regulatory validity is not assessed — a field
+in the JSON, the sentence in the rest, checked file by file — and the page states which
+file carries what beyond that rather than rounding up. The gates section (item 6) prints
+what the export *answered* for the worked example before, between and after the two
+signatures (409, 409, 200), measured by `scripts/verify-worked-example.mjs`, and the check
+that measured it signed its own run — which is the page's evidence that G4 compares the
+signer with nobody. The degradation clause is moot: `verified.exports` is written by the
+same check that verifies the page, so there is no build in which the page has no lists.
+`/dashboard` gained the row the plan asked for from the same files: the cars the engine
+placed, and the cars the drawing set, the DXF and the model file each draw.
+
 ---
 
 ### 4.12 `/glossary`  *(later, buildable)*

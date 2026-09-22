@@ -1587,6 +1587,349 @@
       "governingSpreadM2": "0.00",
       "governingSpreadRelative": "0.000000",
       "verdict": "The parking-in-FAR treatment moves regulatory capacity by 8480 m², but not the governing capacity: the parking limit binds below both treatments. On this plot the open regulatory question does not change the answer — though it would on a plot where the FAR ceiling binds."
+    },
+    "exports": {
+      "gateSequence": [
+        {
+          "signed": [],
+          "status": 409
+        },
+        {
+          "signed": [
+            "G3_ASSUMPTIONS_ACKNOWLEDGED"
+          ],
+          "status": 409
+        },
+        {
+          "signed": [
+            "G3_ASSUMPTIONS_ACKNOWLEDGED",
+            "G4_REVIEWER_NAMED"
+          ],
+          "status": 200
+        }
+      ],
+      "cars": {
+        "engine": 92,
+        "drawingSet": 92,
+        "dxf": 92,
+        "modelFile": 92
+      },
+      "stampedIn": [
+        "json",
+        "html",
+        "sheets",
+        "dxf",
+        "xlsx",
+        "glb"
+      ],
+      "dxf": {
+        "version": "AC1009",
+        "layers": [
+          {
+            "name": "ENV-SITE-PLOT",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-SITE-EDGE-LABEL",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-SITE-DIMENSION",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-SITE-SETBACK",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-SITE-PODIUM",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-SITE-TOWER",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-SITE-ACCESS",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-SITE-ACCESS-ARROW",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-SITE-CUT-LINE",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-B1-SLAB",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-B1-RESERVED",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-B1-RAMP",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-B1-RAMP-ARROW",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-B1-AISLE",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-B1-AISLE-ARROW",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-B1-BAY",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-B1-CAR",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-B1-BAY-NUMBER",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L00-SLAB",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L00-RESERVED",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L00-RAMP",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L00-RAMP-ARROW",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L00-AISLE",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L00-AISLE-ARROW",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L00-BAY",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L00-CAR",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L00-BAY-NUMBER",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L00-ACCESS",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L00-ACCESS-ARROW",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-B1-MASS",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L00-MASS",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L01-SLAB",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L01-MASS",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L02-SLAB",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L02-MASS",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L03-SLAB",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L03-MASS",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L04-SLAB",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L04-MASS",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L05-SLAB",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L05-MASS",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L06-CONTEXT",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L07-CONTEXT",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L08-CONTEXT",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L09-CONTEXT",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L10-CONTEXT",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L11-CONTEXT",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L12-CONTEXT",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-L13-CONTEXT",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-R1-RAMP",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-ANNOTATION-TEXT",
+            "assumedInk": false
+          }
+        ]
+      },
+      "drawingSheets": [
+        {
+          "id": "site",
+          "number": "A-001",
+          "title": "Site plan"
+        },
+        {
+          "id": "level-B1",
+          "number": "A-101",
+          "title": "Parking level B1"
+        },
+        {
+          "id": "level-L00",
+          "number": "A-102",
+          "title": "Parking level L00"
+        },
+        {
+          "id": "typical",
+          "number": "A-201",
+          "title": "Typical floor"
+        },
+        {
+          "id": "section-a",
+          "number": "A-301",
+          "title": "Section A-A"
+        },
+        {
+          "id": "section-b",
+          "number": "A-302",
+          "title": "Section B-B"
+        }
+      ],
+      "workbookSheets": [
+        {
+          "name": "About this file",
+          "note": null
+        },
+        {
+          "name": "Capacity",
+          "note": "Three bands, never merged and never averaged. There is no \"realistic\" or \"expected\" figure in this file because the engine does not produce one — the honest substitute is the user realism discount, which defaults to 1.00."
+        },
+        {
+          "name": "Envelope",
+          "note": null
+        },
+        {
+          "name": "Parking demand",
+          "note": "Demand at the probe target. Compare against the \"Parking level\" sheet: a level that packs fewer bays than this sheet requires is a real and reportable state, not an error in either number."
+        },
+        {
+          "name": "Parking level",
+          "note": "Bays placed as rectangles to Dubai Building Code Table B.11, not an area divided by a factor. A bay count that cannot be laid out is not a bay count."
+        },
+        {
+          "name": "Assumption register",
+          "note": "Every gap the engine filled, why it filled it that way, and what the answer does if the assumption is wrong. Ranked by effect."
+        }
+      ],
+      "workbookStatus": "REGULATORY VALIDITY: NOT ASSESSED. This workbook is a generated capacity study. It is not a compliance assessment and must not be submitted as one.",
+      "glb": {
+        "containerVersion": 2,
+        "assetVersion": "2.0",
+        "extensionsRequired": [],
+        "extensionsUsed": [
+          "KHR_materials_unlit"
+        ],
+        "notice": [
+          "NOT FOR CONSTRUCTION. REGULATORY VALIDITY: NOT ASSESSED.",
+          "Generated capacity study, not a submission drawing."
+        ],
+        "units": "metres, Y up",
+        "notModelled": [
+          "Columns. With a structural grid the layout charges Table B.11's 300 mm clearance per bay, but it places no column, and drawing one would be drawing structure nobody checked against the bays.",
+          "Cores, stairs and lifts as rooms. The run declares how much of each parking level they take — drawn as the reserved zone — not where each one goes; on the tower floors their position is not determined at all.",
+          "Slab thickness. Levels are planes at their floor level. The engine computes no slab depth, and a drawn thickness would be an invented one.",
+          "Façades, windows, balconies and units. The engine computes none of them.",
+          "Neighbouring buildings and the road. The run knows which edges of the plot face a road and which face a neighbour — the site plan writes that on the boundary — but not what stands beyond them, so neither is drawn.",
+          "Pedestrian entrance, refuse room and escape distances — NOT ASSESSED until their rules are encoded.",
+          "Ramp transitions, headroom and the approach from the street — NOT ASSESSED (DBC B.7.2.2). Only the gradient over the reserved run is computed."
+        ]
+      },
+      "jsonFields": [
+        "runId",
+        "fingerprint",
+        "reportFingerprint",
+        "engineVersion",
+        "annexVersion",
+        "annexNotice",
+        "ruleSetHash",
+        "reviewer",
+        "draftRules",
+        "warning",
+        "document",
+        "payload"
+      ],
+      "jsonValidity": {
+        "status": "NEVER_CLAIMED",
+        "detail": "NOT ASSESSED. This system does not and cannot determine whether an authority would approve this scheme. Never claimed. Not obtainable."
+      }
     }
   }
 }

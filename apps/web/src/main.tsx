@@ -23,7 +23,7 @@ import { SessionProvider } from './session.js';
  * other way round, hovering an assumed value would silently delete the amber
  * ground and nothing would catch it.
  *
- * Then the six page stylesheets, one per route, in route order. Each declares only
+ * Then the page stylesheets, one per route, in route order. Each declares only
  * its own class prefix and never a chassis rule.
  */
 import './styles/tokens.css';
@@ -37,6 +37,7 @@ import './styles/drawing.css';
 import './styles/provenance.css';
 import './styles/landing.css';
 import './styles/parking-page.css';
+import './styles/exports-page.css';
 import './styles/refusals.css';
 import './styles/dashboard.css';
 import './styles/not-found.css';

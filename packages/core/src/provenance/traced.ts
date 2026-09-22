@@ -23,6 +23,28 @@ import {
 } from './classes.js';
 import type { Citation, NodeId, ProvenanceGraph } from './graph.js';
 
+/**
+ * How a value is written into its graph node — the string every screen, the report
+ * and the workbook print.
+ *
+ * It was `String(value)`, which is right for a number or a label and wrong for
+ * anything structured: the unit mix is an array of entries, and the first row of
+ * every assumption register — the assumption that moves the answer most — read
+ * "[object Object],[object Object],[object Object]" on screen, in the report and in
+ * the workbook. Structured values are now written out field by field, in the order
+ * the engine holds them, so the register shows what was assumed.
+ */
+export function nodeText(value: unknown): string {
+  if (value instanceof Decimal) return value.toString();
+  if (Array.isArray(value)) return value.map(nodeText).join('; ');
+  if (value !== null && typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, field]) => `${key} ${nodeText(field)}`)
+      .join(', ');
+  }
+  return String(value);
+}
+
 /** A value carrying the identity of its provenance node. Immutable. */
 export interface Traced<T> {
   readonly value: T;
@@ -133,7 +155,7 @@ export class Tracer {
       kind: NodeKind.INPUT,
       parameterId,
       label: opts.label ?? parameterId,
-      value: String(value),
+      value: nodeText(value),
       ...(opts.unit !== undefined ? { unit: opts.unit } : {}),
     });
     const user = this.graph.addNode({
@@ -169,7 +191,7 @@ export class Tracer {
       kind: NodeKind.ASSUMPTION,
       parameterId,
       label: opts.label ?? parameterId,
-      value: String(value),
+      value: nodeText(value),
       ...(opts.unit !== undefined ? { unit: opts.unit } : {}),
       ...(opts.detail !== undefined ? { detail: opts.detail } : {}),
     });
@@ -312,7 +334,7 @@ export class Tracer {
       kind: NodeKind.VALUE,
       parameterId,
       label: parameterId,
-      value: value instanceof Decimal ? value.toString() : String(value),
+      value: nodeText(value),
       provenanceClass,
       ...(unit !== undefined ? { unit } : {}),
     });

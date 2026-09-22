@@ -262,6 +262,23 @@ describe('assumption register — FR-ASM-001', () => {
     }
   });
 
+  it('shows what was assumed, not how JavaScript prints an object', () => {
+    // The unit mix is an array of entries, and every register used to open on
+    // "[object Object],[object Object],[object Object]" — the assumption that moves
+    // the answer most, printed as nothing a reader could check.
+    const input = baseInput({
+      unitMix: { source: 'ASSUMED', entries: MIX, basis: 'a generic mix, for this test only' },
+    });
+    const register = buildAssumptionRegister(input, runPipeline(input));
+    const mix = register.find((e) => e.parameterId === 'parking.unit_mix');
+    expect(mix, 'no unit mix in the register').toBeDefined();
+    for (const entry of register) expect(entry.value).not.toContain('[object Object]');
+    for (const e of MIX) {
+      expect(mix!.value).toContain(e.typeId);
+      expect(mix!.value).toContain(e.share.toString());
+    }
+  });
+
   it('ranks by measured effect on governing capacity, ±10%', () => {
     const input = baseInput();
     const register = buildAssumptionRegister(input, runPipeline(input));

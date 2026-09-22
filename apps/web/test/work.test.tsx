@@ -37,6 +37,21 @@
  * would be scanned by nothing at all. `Dashboard.tsx` already exports its panel set
  * for the same reason and with the same justification: the alternative is a page
  * test that measures the empty state and reports it as coverage.
+ *
+ * ---------------------------------------------------------------------------
+ * THE SOURCE IS NOW THREE FILES, AND EVERY SOURCE ASSERTION FOLLOWED ITS STRING.
+ *
+ * The page's copy moved into `i18n/work.en.ts` and `i18n/runPage.en.ts`, so a
+ * presence assertion that read `Work.tsx` alone would now fail on a page that
+ * carries the sentence — and a prohibition that read it alone would pass on a
+ * dictionary that added the claim. Each one reads the component AND its dictionary,
+ * and the refusals are held in the Arabic dictionary as well: a disclosure that is
+ * present in English and dropped in Arabic is the defect a reader of one language
+ * can never see.
+ *
+ * The Arabic renders at the end go through `StaticLocale`, because
+ * `renderToStaticMarkup` runs no effects and `LocaleProvider` could only ever
+ * render English here.
  */
 
 import { readFileSync } from 'node:fs';
@@ -51,14 +66,30 @@ import { describe, expect, it } from 'vitest';
   so nothing is gained by entering the graph at `pages.js` here and this file goes on
   testing this page while a sibling is mid-edit.
 */
+import { AR as CHROME_AR } from '../src/i18n/chrome.ar.js';
+import { StaticLocale } from '../src/i18n/locale.js';
+import { EN as RUN_EN } from '../src/i18n/runPage.en.js';
+import { AR as WORK_AR } from '../src/i18n/work.ar.js';
 import Work, { RunTable, type RunRow } from '../src/screens/Work.js';
 import {
+  arabicReadingText,
   BANNED_IN_HAND_WRITTEN_COPY,
+  expectNoEnglishProse,
   expectSitewideProhibitions,
   stripTags,
 } from './prohibitions.js';
 
+/** A module's source with its comments removed: comments discuss rejected words to reject them. */
+const stripped = (path: string): string =>
+  readFileSync(new URL(path, import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+
 const SOURCE = readFileSync(new URL('../src/screens/Work.tsx', import.meta.url), 'utf8');
+/** The page's English copy, which used to be inline in `SOURCE`. */
+const DICT = stripped('../src/i18n/work.en.ts');
+/** And its Arabic, held to the same refusals in meaning. */
+const DICT_AR = stripped('../src/i18n/work.ar.ts');
 
 /**
  * The page with no session provider, which is the signed-out branch.
@@ -112,10 +143,13 @@ describe('/work', () => {
     // Over the SOURCE, not the markup: every string on this page is hand-written,
     // so there is no engine-authored sentence for the file-level scan to exempt,
     // and a phrase inside a branch no static render reaches would otherwise ship
-    // unread. `prohibitions.ts` carries the argument for the split.
+    // unread. `prohibitions.ts` carries the argument for the split. The copy now
+    // lives in the dictionary, so the dictionary is scanned with the component.
     for (const banned of BANNED_IN_HAND_WRITTEN_COPY) {
       const hit = banned.exec(SOURCE.replace(/\/\*[\s\S]*?\*\//g, ''));
       expect(hit?.[0], `Work.tsx uses "${hit?.[0] ?? ''}"`).toBeUndefined();
+      const inDict = banned.exec(DICT);
+      expect(inDict?.[0], `work.en.ts uses "${inDict?.[0] ?? ''}"`).toBeUndefined();
     }
   });
 
@@ -146,6 +180,19 @@ describe('/work', () => {
       SOURCE.replace(/\/\*[\s\S]*?\*\//g, ''),
       'Work.tsx computes a sum or an average over rows',
     ).not.toMatch(/\.reduce\(|\/\s*rows\.length|\/\s*view\.\w+\.length/);
+    // The signed-in branch's words are in the dictionary now, where no render here
+    // reaches them — so the dictionary is held to the same list.
+    for (const aggregate of [
+      /\btotal capacity\b/i,
+      /\baverage\b/i,
+      /\bmean\b/i,
+      /\bacross (all|your) runs\b/i,
+      /\bportfolio\b/i,
+      /\btrend\b/i,
+      /\bthis (month|week|quarter)\b/i,
+    ]) {
+      expect(DICT, `work.en.ts states an aggregate: ${aggregate}`).not.toMatch(aggregate);
+    }
   });
 
   it('says what the scoping does not cover', () => {
@@ -168,13 +215,37 @@ describe('/work', () => {
       anyway, by rendering a branch this file cannot reach, would be a test that
       measures the empty state and reports it as coverage. The file is the unit,
       and it is stated rather than implied.
+
+      THE FILE IS NOW THE DICTIONARY. The sentence moved into `work.en.ts` when the
+      page's copy did, and the assertion moved with it — held against the component
+      as well, so that the disclosure cannot be quietly re-inlined somewhere this
+      does not read. The link to `/refusals` must still be the component's.
     */
     const src = SOURCE.replace(/\/\*[\s\S]*?\*\//g, '');
-    expect(src, '/work no longer says there is no tenancy').toMatch(/no firms\s+or projects/i);
-    expect(src, '/work no longer says the licence is unchecked').toMatch(/licence is\s+recorded but never checked/i);
-    expect(src, '/work still claims every route is unscoped').not.toMatch(/any identified caller can still read/i);
-    expect(src, '/work no longer points the disclosure at the refusals page').toMatch(
+    expect(DICT, '/work no longer says there is no tenancy').toMatch(/no firms\s+or projects/i);
+    expect(DICT, '/work no longer says the licence is unchecked').toMatch(/licence is\s+recorded but never checked/i);
+    for (const s of [src, DICT]) {
+      expect(s, '/work still claims every route is unscoped').not.toMatch(/any identified caller can still read/i);
+    }
+    expect(DICT, '/work no longer points the disclosure at the refusals page').toMatch(
       /what it refuses/i,
+    );
+    expect(src, 'the disclosure no longer links to /refusals').toMatch(
+      /t\.disclosure\.before[\s\S]{0,80}<Link to="\/refusals"/,
+    );
+
+    // The same two refusals in the Arabic, word for word as `work.ar.ts` states them:
+    // no firms and no projects, only accounts; the licence recorded and never checked.
+    expect(DICT_AR, 'the Arabic drops "no firms or projects"').toContain(
+      'لا توجد في هذا النشر شركات ولا مشاريع، بل حسابات فقط',
+    );
+    expect(DICT_AR, 'the Arabic drops "recorded but never checked"').toContain(
+      'تُسجَّل ولا يُتحقَّق منها إطلاقًا',
+    );
+    // The link names the page in the words the site names it with, so the sentence
+    // and the page it opens are not two names for one thing.
+    expect(WORK_AR.disclosure.link, 'the Arabic disclosure no longer names the refusals page').toBe(
+      CHROME_AR.routes['/refusals'].footerLabel,
     );
   });
 
@@ -233,11 +304,19 @@ describe('/work', () => {
 describe('the run page', () => {
   const RUN_SOURCE = readFileSync(new URL('../src/screens/RunPage.tsx', import.meta.url), 'utf8');
   const code = RUN_SOURCE.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  /*
+    The page's sentences, which used to be inline in `code`. Each assertion below
+    that held a sentence present now holds it present HERE, and each prohibition
+    reads both files — a claim added to the dictionary is still a claim on the page.
+  */
+  const dict = stripped('../src/i18n/runPage.en.ts');
+  const dictAr = stripped('../src/i18n/runPage.ar.ts');
+  const both = `${code}\n${dict}`;
 
   it('uses none of the apology vocabulary in its own source', () => {
     for (const banned of BANNED_IN_HAND_WRITTEN_COPY) {
-      const hit = banned.exec(code);
-      expect(hit?.[0], `RunPage.tsx uses "${hit?.[0] ?? ''}"`).toBeUndefined();
+      const hit = banned.exec(both);
+      expect(hit?.[0], `RunPage.tsx or runPage.en.ts uses "${hit?.[0] ?? ''}"`).toBeUndefined();
     }
   });
 
@@ -246,21 +325,155 @@ describe('the run page', () => {
     // runs of one plot invite a difference column, and a difference is a number the
     // engine never produced.
     expect(code, 'RunPage.tsx computes over rows').not.toMatch(/\.reduce\(|Decimal|parseFloat|Number\(r\./);
-    expect(code).toMatch(/nothing here is computed between them/i);
-    for (const claim of [/difference/i, /delta/i, /best/i, /improve/i, /secure/i, /verified/i, /private/i]) {
-      expect(code, `RunPage.tsx says ${claim}`).not.toMatch(claim);
+    expect(dict).toMatch(/nothing here is computed between them/i);
+    /*
+      WORD BOUNDARIES, AND THEY WERE NOT THERE. This list used to hold a literal
+      backspace character where each `\b` belonged — a `\b` typed through a layer
+      that read it as an escape — so every pattern required a control character no
+      source file contains, and the prohibition could not fail. It reads words now.
+    */
+    for (const claim of [/\bdifference\b/i, /\bdelta\b/i, /\bbest\b/i, /\bimprove/i, /\bsecure\b/i, /\bverified\b/i, /\bprivate\b/i]) {
+      expect(both, `RunPage.tsx or runPage.en.ts says ${claim}`).not.toMatch(claim);
+    }
+    // In Arabic: the same denial, and none of the words a comparison would need —
+    // difference, best, improvement — nor a claim that anything is secured or verified.
+    expect(dictAr).toContain('لا شيء هنا يُحسَب بينها');
+    for (const claim of [/فرق|الفارق/, /أفضل/, /تحسُّن|تحسّن|تحسين/, /آمن|مُؤمَّن|محمي/, /مُتحقَّق منه/]) {
+      expect(dictAr, `runPage.ar.ts says ${claim}`).not.toMatch(claim);
     }
   });
 
   it('answers a missing run and a run that is not yours in one sentence', () => {
     // The server gives one 404 for both so a run's existence does not leak; a page
     // that told them apart would leak it anyway.
-    expect(code).toMatch(/Either it does not exist, or it was not shared with you/);
+    expect(dict).toMatch(/Either it does not exist, or it was not shared with you/);
     expect(code).not.toMatch(/status === 403/);
+    // One kind for both, so there is no second sentence to reach for: the page can
+    // only say "missing or not shared", or "could not be loaded".
+    expect(Object.keys(RUN_EN.error).sort()).toEqual(['failed', 'missing']);
+    expect(dictAr).toContain('فإمّا أنها غير موجودة، وإمّا أنها لم تُشارَك معك');
   });
 
   it('does not say whether an account uses the address it shared with', () => {
-    expect(code).toMatch(/This page does\s+not say whether one does/);
-    expect(code).not.toMatch(/no account (uses|has) that/i);
+    expect(dict).toMatch(/This page does\s+not say whether one does/);
+    expect(both).not.toMatch(/no account (uses|has) that/i);
+    // The Arabic opens on a condition and closes on the same refusal, and says
+    // nothing in between that reads as "found" or "not found".
+    expect(dictAr).toContain('إن كان حسابٌ يستخدم العنوان');
+    expect(dictAr).toContain('لا تقول هذه الصفحة ما إذا كان حسابٌ يستخدمه');
+    expect(dictAr).not.toMatch(/لا يوجد حساب|لا حساب يستخدم|وُجد الحساب|الحساب موجود/);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * THE ARABIC PAGE, RENDERED.
+ * ---------------------------------------------------------------------- */
+
+describe('/work in Arabic', () => {
+  const ar = (node: JSX.Element): string =>
+    renderToStaticMarkup(<StaticLocale locale="ar">{node}</StaticLocale>);
+
+  const page = (): string =>
+    ar(<Work navigate={() => {}} actor={null} setActor={() => {}} search="" />);
+
+  /** Every qualifier a row can carry: signed and unsigned, shared, draft, a named band. */
+  const ROWS: readonly RunRow[] = [
+    ROW,
+    {
+      ...ROW,
+      runId: 'run-2',
+      governingBand: 'PARKING',
+      bindingLabel: 'Parking supply at the probe target',
+      draftRules: false,
+      reviewer: { name: 'Amal Reviewer', at: '2026-09-01T09:30:00.000Z' },
+      createdAt: '2026-09-01T09:30:00.000Z',
+      sharedRole: 'reviewer',
+    },
+  ];
+
+  const rows = (r: readonly RunRow[]): string =>
+    ar(
+      <RunTable
+        rows={r}
+        caption={WORK_AR.authored.caption}
+        empty={WORK_AR.shared.empty}
+        navigate={() => {}}
+      />,
+    );
+
+  it('carries the site-wide prohibitions', () => {
+    expectSitewideProhibitions(page(), '/work (ar)');
+    expectSitewideProhibitions(rows(ROWS), '/work rows (ar)');
+    expectSitewideProhibitions(rows([]), '/work empty (ar)');
+  });
+
+  it('leaves no English prose outside what the API sent', () => {
+    expectNoEnglishProse(page(), '/work (ar)');
+    expectNoEnglishProse(rows(ROWS), '/work rows (ar)');
+    expectNoEnglishProse(rows([]), '/work empty (ar)');
+  });
+
+  it('opens on one heading', () => {
+    expect([...page().matchAll(/<h1\b/g)].length).toBe(1);
+  });
+
+  it('prints what a row carries exactly as it was sent, and marks it English', () => {
+    // The plot, the community, the binding label, a name and a time are the API's.
+    // Translated, they would be a second record nobody issued; unmarked, a screen
+    // reader would read them in an Arabic voice and the bidi algorithm would swap
+    // the halves of a timestamp.
+    const html = rows(ROWS);
+    const reading = arabicReadingText(html);
+    for (const sent of [
+      ROW.plotNumber,
+      ROW.community,
+      'Parking supply at the probe target',
+      'Amal Reviewer',
+      '2026-08-30 10:00',
+      '2026-09-01 09:30',
+    ]) {
+      expect(stripTags(html), `${sent} is not on the Arabic row`).toContain(sent);
+      expect(reading, `${sent} is on the Arabic row outside Verbatim`).not.toContain(sent);
+    }
+    // The figure is the engine's, byte for byte, in Western digits.
+    expect(stripTags(html)).toContain('6,774.194');
+  });
+
+  it('names the band in Arabic and keeps its letter', () => {
+    const text = stripTags(rows(ROWS));
+    expect(text).toContain(`النطاق C · ${WORK_AR.bands.PARKING}`);
+    // A token the page has no question for is printed as the engine sent it.
+    expect(text).toContain(`النطاق ${ROW.governingBand}`);
+  });
+
+  it('keeps the draft-rules qualifier, the role and the unsigned state, in Arabic', () => {
+    expect(stripTags(rows([ROW]))).toContain(WORK_AR.table.draftRules);
+    expect(stripTags(rows([{ ...ROW, draftRules: false }]))).not.toContain(WORK_AR.table.draftRules);
+    expect(stripTags(rows([ROW]))).toContain(WORK_AR.table.notSigned);
+    expect(stripTags(rows(ROWS))).toContain(WORK_AR.table.roles.reviewer);
+  });
+
+  it('states no aggregate over runs', () => {
+    const scan = `${arabicReadingText(page())} ${arabicReadingText(rows(ROWS))} ${DICT_AR}`;
+    for (const aggregate of [
+      /متوسّط|متوسط/,
+      /مجموع/,
+      /إجمالي/,
+      /محفظة/,
+      /هذا الشهر|هذا الأسبوع|هذا الربع/,
+      /اتّجاه|اتجاه/,
+    ]) {
+      expect(scan, `/work (ar) states an aggregate: ${aggregate}`).not.toMatch(aggregate);
+    }
+  });
+
+  it('never describes the account as securing or verifying anything', () => {
+    // «يتحقّق» appears in this dictionary only negated — «ولا يتحقّق من رخصة أحد».
+    // The participle «مُتحقَّق منه» would be the claim.
+    const text = arabicReadingText(page());
+    for (const claim of [/آمن/, /مُؤمَّن|مؤمن/, /محمي/, /مُتحقَّق منه|متحقق منه/, /موثَّق/]) {
+      expect(text, `/work (ar) claims ${claim} of an account`).not.toMatch(claim);
+      expect(DICT_AR, `work.ar.ts claims ${claim}`).not.toMatch(claim);
+    }
   });
 });

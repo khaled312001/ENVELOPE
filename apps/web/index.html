@@ -118,6 +118,9 @@
       NO ARABIC MONO, and none is wanted. `--font-mono` carries figures,
       identifiers, formulas and basis strings — all of which stay Latin by the rule
       in `docs/05-design/arabic-glossary.md` — so Plex Mono keeps every job it had.
+      Where a mono-set label does hold an Arabic word, `rtl.css` puts this face
+      behind Plex Mono in the stack, so the Arabic letters are Plex and every Latin
+      letter and digit stays mono.
 
       Weights 300/400/500/600 to match the Latin request exactly; no italic axis,
       because Arabic has no italic and a synthesised oblique on an Arabic face is

@@ -32,10 +32,23 @@
  * at all — it is a half-filled form with no provenance graph, no fingerprint and
  * nothing computed, and putting it in the same list would be the one place on this
  * site where an unvalidated input sat beside a traced value.
+ *
+ * ---------------------------------------------------------------------------
+ * TWO LANGUAGES, AND NOTHING THE API SENT IS IN EITHER DICTIONARY.
+ *
+ * Every sentence, heading and column label comes from `i18n/work.en.ts` or its
+ * Arabic twin, held to one type. What a row carries — the plot number, the
+ * community, the governing figure, the binding label, a name, a timestamp — stays
+ * exactly as the API sent it and is set inside `Ltr` on the Arabic page, so the
+ * bidirectional algorithm cannot carry a full stop or a bracket to the wrong end of
+ * it. `docs/05-design/arabic-glossary.md` carries the argument.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
+import { AR } from '../i18n/work.ar.js';
+import { EN, type WorkDictionary } from '../i18n/work.en.js';
+import { useDict, useLocale, useT, Verbatim } from '../i18n/locale.js';
 import type { PageProps } from '../Root.js';
 import { Link, type Href } from '../router.js';
 import { useSession } from '../session.js';
@@ -71,21 +84,62 @@ interface WorkView {
  * `Dashboard.tsx` makes this argument already and it holds here: `toLocaleString`
  * renders differently on the reader's machine than on the one the screenshot was
  * taken on, so a date in a bug report and a date on the screen stop matching. The
- * ISO date, sliced, is the same everywhere.
+ * ISO date, sliced, is the same everywhere — and the same in both languages.
  */
 const day = (iso: string): string => iso.slice(0, 10);
 const time = (iso: string): string => iso.slice(11, 16);
 
-/** A band by its letter and its question, as the capacity screen names it. */
-const BAND: Readonly<Record<string, { readonly letter: string; readonly name: string }>> = {
-  REGULATORY: { letter: 'A', name: 'what the code permits' },
-  GEOMETRIC: { letter: 'B', name: 'what the envelope holds' },
-  PARKING: { letter: 'C', name: 'what the parking supports' },
+/**
+ * WHAT THE API SENT, ISOLATED ON THE ARABIC PAGE AND UNTOUCHED ON THE ENGLISH ONE.
+ *
+ * A plot number, a community, a binding label, a name or a timestamp is a Latin run,
+ * and inside an Arabic paragraph the bidirectional algorithm reorders it at its
+ * boundaries — `2026-08-30 10:00` renders with its two halves swapped. `Verbatim`
+ * sets `dir="ltr" lang="en"` and `rtl.css` isolates it, which fixes that and switches
+ * a screen reader's voice for it.
+ *
+ * On the English page the document is already `lang="en" dir="ltr"`, so the span
+ * would carry nothing a reader or a screen reader could use, and the English render
+ * of this page is held unchanged by the extraction that moved its copy into a
+ * dictionary. `Antechamber.tsx` makes the same choice for the same reason.
+ */
+export function Ltr({ children }: { readonly children: ReactNode }): JSX.Element {
+  const { locale } = useLocale();
+  return locale === 'ar' ? <Verbatim>{children}</Verbatim> : <>{children}</>;
+}
+
+/**
+ * The band's letter. The letters are the engine's names for the three bands — the
+ * PRD, the report and every export use them — so they are not copy and sit here
+ * rather than in either dictionary; the question each band answers is copy.
+ */
+const BAND_LETTER: Readonly<Record<string, string>> = {
+  REGULATORY: 'A',
+  GEOMETRIC: 'B',
+  PARKING: 'C',
 };
 
-export function bandLabel(band: string): string {
-  const b = BAND[band];
-  return b ? `band ${b.letter} · ${b.name}` : `band ${band}`;
+/**
+ * A band by its letter and its question, in the dictionary's words.
+ *
+ * A token this page has no question for falls back to itself — the engine's word,
+ * untranslated. A band the page cannot name is still a band the run reported, and
+ * inventing a name for it would put a word on the page that no rule produced.
+ */
+export function bandLabel(t: WorkDictionary, band: string): string {
+  const letter = BAND_LETTER[band];
+  const question = (t.bands as Readonly<Record<string, string>>)[band];
+  return letter && question ? t.band(letter, question) : t.bandToken(band);
+}
+
+/**
+ * `bandLabel` in the reader's language, for a screen that does not otherwise read
+ * this dictionary — `RunPage` names the governing band in the same words as the row
+ * it was opened from.
+ */
+export function useBandLabel(): (band: string) => string {
+  const t = useDict(EN, AR);
+  return (band: string): string => bandLabel(t, band);
 }
 
 /** Thousands separators and not one digit of rounding: the figure is the engine's. */
@@ -94,11 +148,6 @@ export function group(value: string): string {
   const grouped = (whole ?? '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return frac ? `${grouped}.${frac}` : grouped;
 }
-
-/** The draft keys the product writes, in the reader's words rather than the form's. */
-const DRAFT_LABELS: Readonly<Record<string, string>> = {
-  'plot-form': 'A plot you started entering',
-};
 
 export function RunTable({
   rows,
@@ -112,6 +161,7 @@ export function RunTable({
   /** With it, each run's time is a link to the run's own page. */
   readonly navigate?: (to: Href) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
   if (rows.length === 0) {
     return (
       <p className="muted wk__empty">{empty}</p>
@@ -123,20 +173,24 @@ export function RunTable({
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr>
-            <th scope="col">Plot</th>
-            <th scope="col">Governing capacity</th>
-            <th scope="col">What binds it</th>
-            <th scope="col">Assumed</th>
-            <th scope="col">Gates</th>
-            <th scope="col">Run</th>
+            <th scope="col">{t.table.columns.plot}</th>
+            <th scope="col">{t.table.columns.governing}</th>
+            <th scope="col">{t.table.columns.binds}</th>
+            <th scope="col">{t.table.columns.assumed}</th>
+            <th scope="col">{t.table.columns.gates}</th>
+            <th scope="col">{t.table.columns.run}</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.runId}>
               <td>
-                <span className="wk__plot">{r.plotNumber}</span>
-                <span className="wk__community">{r.community}</span>
+                <span className="wk__plot">
+                  <Ltr>{r.plotNumber}</Ltr>
+                </span>
+                <span className="wk__community">
+                  <Ltr>{r.community}</Ltr>
+                </span>
               </td>
               <td>
                 {/*
@@ -148,9 +202,11 @@ export function RunTable({
                   are one statement: this many square metres, from this band.
                 */}
                 <span className="value">{group(r.governingGfaM2)}</span> m²
-                <span className="wk__band">{bandLabel(r.governingBand)}</span>
+                <span className="wk__band">{bandLabel(t, r.governingBand)}</span>
               </td>
-              <td>{r.bindingLabel}</td>
+              <td>
+                <Ltr>{r.bindingLabel}</Ltr>
+              </td>
               <td>
                 {/*
                   Not a badge and not a colour. The amber treatment belongs to a
@@ -162,30 +218,39 @@ export function RunTable({
                 <span className="value">{r.assumptionCount}</span>
               </td>
               <td>
-                <span className="value">{r.gatesSatisfied}</span> of <span className="value">4</span>
+                <span className="value">{r.gatesSatisfied}</span>
+                {t.table.of}
+                <span className="value">4</span>
                 {r.reviewer ? (
-                  <span className="wk__reviewer">signed by {r.reviewer.name}</span>
+                  <span className="wk__reviewer">
+                    {t.table.signedBy}
+                    <Ltr>{r.reviewer.name}</Ltr>
+                  </span>
                 ) : (
-                  <span className="wk__reviewer muted">not signed</span>
+                  <span className="wk__reviewer muted">{t.table.notSigned}</span>
                 )}
               </td>
               <td>
                 {navigate ? (
                   <Link to={`/work?run=${encodeURIComponent(r.runId)}`} navigate={navigate} className="wk__when">
-                    {day(r.createdAt)} {time(r.createdAt)}
+                    <Ltr>
+                      {day(r.createdAt)} {time(r.createdAt)}
+                    </Ltr>
                   </Link>
                 ) : (
                   <span className="wk__when">
-                    {day(r.createdAt)} {time(r.createdAt)}
+                    <Ltr>
+                      {day(r.createdAt)} {time(r.createdAt)}
+                    </Ltr>
                   </span>
                 )}
-                {r.sharedRole ? <span className="chip">{r.sharedRole}</span> : null}
+                {r.sharedRole ? <span className="chip">{t.table.roles[r.sharedRole]}</span> : null}
                 {r.draftRules ? (
                   /* The run was computed against rules nobody approved. It is the
                      single most important qualifier a stored run carries, and a
                      list that omitted it would be presenting a demonstration as a
                      record. */
-                  <span className="chip chip--deferred">draft rules</span>
+                  <span className="chip chip--deferred">{t.table.draftRules}</span>
                 ) : null}
               </td>
             </tr>
@@ -196,11 +261,26 @@ export function RunTable({
   );
 }
 
+/**
+ * Why the list did not load, kept as a kind rather than as a sentence.
+ *
+ * A stored sentence is in whatever language the page was in when the request
+ * failed, and switching language afterwards would leave it behind. The server's own
+ * sentence is the exception: it is the server's, it is rendered as it arrived, and
+ * no dictionary holds a translation of it.
+ */
+type LoadError =
+  | { readonly kind: 'server'; readonly text: string }
+  | { readonly kind: 'status'; readonly status: number }
+  | { readonly kind: 'network' };
+
 export default function Work({ navigate, search }: PageProps): JSX.Element {
+  const t = useDict(EN, AR);
+  const chrome = useT();
   const { state, account } = useSession();
   const openRun = new URLSearchParams(search).get('run');
   const [view, setView] = useState<WorkView | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<LoadError | null>(null);
 
   useEffect(() => {
     if (state !== 'signed-in') return;
@@ -212,15 +292,15 @@ export default function Work({ navigate, search }: PageProps): JSX.Element {
         if (!r.ok) {
           setError(
             typeof body === 'object' && body !== null && 'error' in body
-              ? String((body as { error: unknown }).error)
-              : `the server answered ${r.status}`,
+              ? { kind: 'server', text: String((body as { error: unknown }).error) }
+              : { kind: 'status', status: r.status },
           );
           return;
         }
         setView(body as WorkView);
       })
       .catch(() => {
-        if (!cancelled) setError('the list could not be loaded');
+        if (!cancelled) setError({ kind: 'network' });
       });
     return () => {
       cancelled = true;
@@ -234,28 +314,22 @@ export default function Work({ navigate, search }: PageProps): JSX.Element {
   return (
     <div className="wk">
       <section className="shell section section--opening" aria-labelledby="wk-h">
-        <h1 id="wk-h">Your work</h1>
-        <p className="wk__lede">
-          Every run you author is kept exactly as it was computed, with its inputs, its
-          assumptions and its provenance graph. Nothing here is recomputed to fill a column.
-        </p>
+        <h1 id="wk-h">{t.hero.title}</h1>
+        <p className="wk__lede">{t.hero.lede}</p>
       </section>
 
       {state === 'checking' ? (
         <section className="shell section section--minor">
-          <p className="muted">Checking whether you are signed in…</p>
+          <p className="muted">{t.checking}</p>
         </section>
       ) : null}
 
       {state === 'signed-out' || state === 'offline' ? (
         <section className="shell section section--minor">
           <div className="plate">
-            <p>
-              This list is kept against an account. Open the engine and create one, or sign in
-              — a run authored without an account is computed identically and is not kept.
-            </p>
+            <p>{t.signedOut.body}</p>
             <Link to="/app" navigate={navigate} className="button button--primary">
-              Open the engine
+              {t.signedOut.cta}
             </Link>
           </div>
         </section>
@@ -264,7 +338,17 @@ export default function Work({ navigate, search }: PageProps): JSX.Element {
       {error ? (
         <section className="shell section section--minor">
           <p className="banner banner--danger" role="alert">
-            {error}
+            {error.kind === 'server' ? (
+              <Ltr>{error.text}</Ltr>
+            ) : error.kind === 'status' ? (
+              <>
+                {t.fetch.statusBefore}
+                <Ltr>{String(error.status)}</Ltr>
+                {t.fetch.statusAfter}
+              </>
+            ) : (
+              t.fetch.failed
+            )}
           </p>
         </section>
       ) : null}
@@ -273,19 +357,19 @@ export default function Work({ navigate, search }: PageProps): JSX.Element {
         <>
           <section className="shell section" aria-labelledby="wk-authored">
             <div className="section__head">
-              <h2 id="wk-authored">Runs you authored</h2>
+              <h2 id="wk-authored">{t.authored.title}</h2>
             </div>
             <RunTable
               rows={view.authored}
-              caption="Runs authored by this account"
-              empty="You have not authored a run yet. The engine opens from “Run a plot”."
+              caption={t.authored.caption}
+              empty={t.authored.empty(chrome.runAPlot)}
               navigate={navigate}
             />
           </section>
 
           <section className="shell section" aria-labelledby="wk-shared">
             <div className="section__head">
-              <h2 id="wk-shared">Shared with you</h2>
+              <h2 id="wk-shared">{t.shared.title}</h2>
               <p className="wk__note">
                 {/*
                   The one sentence on this page that describes a control, so it says
@@ -293,38 +377,41 @@ export default function Work({ navigate, search }: PageProps): JSX.Element {
                   the run is readable; it does not mean the licence was checked, and
                   the export still records an assertion rather than a verification.
                 */}
-                A run someone shared with you, in the role they named. A reviewer role makes the
-                run readable; it does not verify anybody’s licence.
+                {t.shared.note}
               </p>
             </div>
             <RunTable
               rows={view.shared}
-              caption="Runs shared with this account"
-              empty="Nothing has been shared with you."
+              caption={t.shared.caption}
+              empty={t.shared.empty}
               navigate={navigate}
             />
           </section>
 
           <section className="shell section section--minor" aria-labelledby="wk-drafts">
             <div className="section__head">
-              <h2 id="wk-drafts">Unfinished</h2>
-              <p className="wk__note">
-                What you had typed when you last closed the tab. A draft is not a run: nothing
-                in it has been computed, and it carries no provenance.
-              </p>
+              <h2 id="wk-drafts">{t.drafts.title}</h2>
+              <p className="wk__note">{t.drafts.note}</p>
             </div>
             {view.drafts.length === 0 ? (
-              <p className="muted wk__empty">Nothing unfinished.</p>
+              <p className="muted wk__empty">{t.drafts.empty}</p>
             ) : (
               <ul className="wk__drafts">
                 {view.drafts.map((d) => (
                   <li key={d.draftKey}>
-                    <span>{DRAFT_LABELS[d.draftKey] ?? d.draftKey}</span>
+                    <span>
+                      {/* A key the product does not name is the form's own word, as written. */}
+                      {(t.drafts.labels as Readonly<Record<string, string>>)[d.draftKey] ?? (
+                        <Ltr>{d.draftKey}</Ltr>
+                      )}
+                    </span>
                     <span className="wk__when">
-                      {day(d.updatedAt)} {time(d.updatedAt)}
+                      <Ltr>
+                        {day(d.updatedAt)} {time(d.updatedAt)}
+                      </Ltr>
                     </span>
                     <Link to="/app" navigate={navigate}>
-                      Resume it
+                      {t.drafts.resume}
                     </Link>
                   </li>
                 ))}
@@ -341,15 +428,15 @@ export default function Work({ navigate, search }: PageProps): JSX.Element {
                 the API, which was true until `access.ts` scoped every run route to
                 its author and the accounts it was shared with. What is still true is
                 narrower, and it is what a reader of a private list needs to know:
-                there are no firms or projects, only accounts.
+                there are no firms or projects, only accounts. The sentence is in the
+                dictionary, and `work.test.tsx` holds it present there in both
+                languages.
               */}
-              Only you and the accounts you share a run with can open it. There are no firms
-              or projects in this deployment, only accounts, and a reviewer&rsquo;s licence is
-              recorded but never checked. Both are on{' '}
+              {t.disclosure.before}
               <Link to="/refusals" navigate={navigate}>
-                what it refuses
+                {t.disclosure.link}
               </Link>
-              .
+              {t.disclosure.after}
             </p>
           </section>
         </>
@@ -357,7 +444,7 @@ export default function Work({ navigate, search }: PageProps): JSX.Element {
 
       {state === 'signed-in' && account && !view && !error ? (
         <section className="shell section section--minor">
-          <p className="muted">Loading your runs…</p>
+          <p className="muted">{t.loading}</p>
         </section>
       ) : null}
     </div>

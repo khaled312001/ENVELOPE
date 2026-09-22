@@ -84,6 +84,16 @@ describe('the Arabic dictionaries', () => {
     }
   });
 
+  it('calls the professional licence «الرخصة», never «الترخيص» (§6)', () => {
+    // «تراخيص» is Trakhees. A licence field named with the authority's word reads as
+    // though the number had been checked with it, and nothing here checks it. The
+    // pages disagreed on this word until this test existed.
+    for (const m of MODULES) {
+      const hit = /(^|[^؀-ۿ])[وبل]?(ال)?ترخيص[؀-ۿ]*/u.exec(m.code);
+      expect(hit?.[0].trim(), `${m.file} says «${hit?.[0].trim() ?? ''}»`).toBeUndefined();
+    }
+  });
+
   it('never calls an assumption «افتراضي» (§2) — that word is "default"', () => {
     // «افتراضي» is permitted only where the sentence means default and denies one:
     // «لا قيمة افتراضية». Anywhere else it is ASSUMED mistranslated as the one thing

@@ -21,6 +21,8 @@
 
 import type { ReactNode } from 'react';
 
+import { Verbatim } from '../i18n/locale.js';
+
 import type { Refusal } from './shared.js';
 
 /** A shared paragraph with a heading, widened so the Arabic twin can satisfy it. */
@@ -81,8 +83,8 @@ export const LIMITS_AR: readonly Refusal[] = [
     heading: 'لا يحلّ محلّ المهني.',
     body: (
       <>
-        يُسجِّل المُخرَج اسم المراجِع ورقم الترخيص الذي كتبه بجانبه. يُسجِّل النظام هذا
-        الإقرار، ولا يستطيع التحقّق من الترخيص لدى أي جهة، ولا يفحص أن الموقِّع ليس هو من
+        يُسجِّل المُخرَج اسم المراجِع ورقم الرخصة الذي كتبه بجانبه. يُسجِّل النظام هذا
+        الإقرار، ولا يستطيع التحقّق من الرخصة لدى أي جهة، ولا يفحص أن الموقِّع ليس هو من
         أنشأ التشغيلة. الفصل بين المهامّ ضابطٌ لا يملكه هذا البرنامج.
       </>
     ),
@@ -105,7 +107,11 @@ export const OPTIMISER_REFUSAL_AR: SharedParagraph = {
   heading: 'لا يبحث عن الموضع الأمثل للمنحدر والنواة.',
   body: (
     <>
-      الاختيار بين بدائل ممكنة قيمةٌ من صنف <code className="ident">TRADEOFF</code>، ومجموعة
+      الاختيار بين بدائل ممكنة قيمةٌ من صنف{' '}
+      <Verbatim>
+        <code className="ident">TRADEOFF</code>
+      </Verbatim>
+      ، ومجموعة
       أصناف المرحلة 0 لا تضمّ هذا الصنف — ومُنشئ القيمة المُتتبَّعة يرمي خطأً عند أي صنف
       خارجها. فليس هذا عملًا مؤجَّلًا خلف مفتاح، ولا إعداد يُشغِّله: إنه مرفوض بالبناء،
       والرفض هو التصميم.

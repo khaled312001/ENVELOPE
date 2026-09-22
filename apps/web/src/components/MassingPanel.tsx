@@ -28,7 +28,22 @@ import type { ElementSource } from '@envelope/core';
 import { lazy, Suspense } from 'react';
 
 import type { RunView } from '../api/client.js';
-import { CLASS_LABEL, TracedValue } from './TracedValue.js';
+import { useDict } from '../i18n/locale.js';
+import { AR } from '../i18n/massing.ar.js';
+import { EN } from '../i18n/massing.en.js';
+import { AR as TRACED_AR } from '../i18n/traced.ar.js';
+import { EN as TRACED_EN } from '../i18n/traced.en.js';
+import { EngineText, TracedValue } from './TracedValue.js';
+
+/*
+  THE WORDS LIVE IN `i18n/massing.*.ts`. What stays here is what the engine and
+  the model supply — placement statements, `notModelled`, level ids and names,
+  volume notes — rendered as written in both languages, inside `EngineText` so an
+  Arabic page marks each `Verbatim`. And two constants that are not words: the
+  name of the view, and the affection plan's own notation for a podium split.
+*/
+const VIEW = '3D';
+const PODIUM_SPLIT_EXAMPLE = 'G+2P+8';
 
 /*
   THREE.JS IS FETCHED WHEN A MASSING IS ON SCREEN, AND NOT BEFORE.
@@ -52,15 +67,17 @@ function SourceButton({
   readonly what: string;
   readonly onInspect: (nodeId: string) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
+  const classes = useDict(TRACED_EN, TRACED_AR);
   const cls = source.provenanceClass;
   return (
     <button
       type="button"
       className={`traced traced--${cls.toLowerCase()}`}
       onClick={() => onInspect(source.node)}
-      aria-label={`${what}: ${CLASS_LABEL[cls]}. Show where it came from.`}
+      aria-label={t.levels.sourceLabel(what, classes.classLabel[cls])}
     >
-      <span className="value">{CLASS_LABEL[cls]}</span>
+      <span className="value">{classes.classLabel[cls]}</span>
       <span className="traced__marker" aria-hidden="true">
         {cls === 'DERIVED' ? '§' : null}
       </span>
@@ -75,6 +92,7 @@ export function MassingPanel({
   readonly run: RunView;
   readonly onInspect: (nodeId: string) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
   const model = run.building;
   const assumedHeights = run.massing.masses.filter((m) => m.heightM.provenanceClass === 'ASSUMED');
   const assumedPlacements = model?.placements.filter((p) => p.source.provenanceClass === 'ASSUMED') ?? [];
@@ -87,13 +105,9 @@ export function MassingPanel({
       <header className="panel__header">
         <div>
           <h2 id="massing-heading" className="panel__title">
-            Massing
+            {t.title}
           </h2>
-          <p className="panel__subtitle">
-            The building the engine laid out, level by level, inside the envelope the rules
-            permit. Nothing here is designed: there are no façades, cores or units, because
-            the engine computes none of them.
-          </p>
+          <p className="panel__subtitle">{t.subtitle}</p>
         </div>
       </header>
 
@@ -104,24 +118,19 @@ export function MassingPanel({
           <BuildingViewer model={model} onInspect={onInspect} />
         </Suspense>
       ) : (
-        <p className="callout">
-          This run was computed before the engine built a model of the whole building, so
-          there is no 3D view of it. Compute the run again to see its levels, bays and ramp
-          stood up.
-        </p>
+        <p className="callout">{t.stored(VIEW)}</p>
       )}
 
       {model && answerPlacement ? (
         <div className="callout" role="note">
           <p>
             <strong>
-              {unplaced > 0
-                ? 'The solid levels are the answer. The outlines above them are room the rules leave unused.'
-                : 'Every level drawn is one the answer places.'}
+              {unplaced > 0 ? t.answer.partial : t.answer.whole}
             </strong>
           </p>
           <p>
-            {answerPlacement.statement} Levels this answer places:{' '}
+            <EngineText>{answerPlacement.statement}</EngineText>
+            {t.answer.levelsPlaced}
             <TracedValue traced={model.placedLevels} onInspect={onInspect} />.
           </p>
         </div>
@@ -135,15 +144,15 @@ export function MassingPanel({
       {assumedHeights.length > 0 ? (
         <div className="banner banner--assumed" role="note">
           <div>
-            <strong>This shape rests on an assumption, and it is drawn that way.</strong>
+            <strong>{t.heights.title}</strong>
             <p>
-              The total height is derived: the height ceiling divided by the floor-to-floor,
-              both from cited rules. What is <em>not</em> derived is where the podium stops
-              and the tower starts — an affection plan states that (&ldquo;G+2P+8&rdquo; is
-              two podium levels) and this run was not given one. So{' '}
-              {assumedHeights.map((m) => m.label.toLowerCase()).join(' and ')} carry the
-              amber, and the step-back you can see in the picture is the part to distrust. It
-              changes no capacity figure in this run.
+              {t.heights.before}
+              <em>{t.heights.not}</em>
+              {t.heights.mid}
+              <EngineText>{PODIUM_SPLIT_EXAMPLE}</EngineText>
+              {t.heights.afterExample}
+              {assumedHeights.map((m) => t.heights.volume(m.id, m.label)).join(t.heights.and)}
+              {t.heights.after}
             </p>
           </div>
         </div>
@@ -152,14 +161,13 @@ export function MassingPanel({
       {assumedPlacements.length > 0 ? (
         <div className="banner banner--assumed" role="note">
           <div>
-            <strong>Where each part stands is the engine&rsquo;s placement, not a rule&rsquo;s.</strong>
-            <p>
-              The areas are computed; their positions on the plot are not, because no rule
-              fixes them. So the engine placed them, and the outlines are drawn amber for it:
-            </p>
+            <strong>{t.placements.title}</strong>
+            <p>{t.placements.body}</p>
             <ul>
               {assumedPlacements.map((p) => (
-                <li key={p.subject}>{p.statement}</li>
+                <li key={p.subject}>
+                  <EngineText>{p.statement}</EngineText>
+                </li>
               ))}
             </ul>
           </div>
@@ -168,16 +176,13 @@ export function MassingPanel({
 
       {model ? (
         <table className="data-table">
-          <caption className="sr-only">
-            Every level and ramp in the 3D view, with its floor level, the bays laid out on
-            it, and where its outline or its slope came from
-          </caption>
+          <caption className="sr-only">{t.levels.caption(VIEW)}</caption>
           <thead>
             <tr>
-              <th scope="col">Level</th>
-              <th scope="col">Floor level</th>
-              <th scope="col">Bays</th>
-              <th scope="col">Outline or slope</th>
+              <th scope="col">{t.levels.columns.level}</th>
+              <th scope="col">{t.levels.columns.floorLevel}</th>
+              <th scope="col">{t.levels.columns.bays}</th>
+              <th scope="col">{t.levels.columns.source}</th>
             </tr>
           </thead>
           <tbody>
@@ -186,7 +191,9 @@ export function MassingPanel({
                 <th scope="row">
                   {l.id}{' '}
                   <span className="muted">
-                    {`· ${l.name}${l.placed === false ? ' · permitted, not placed' : ''}`}
+                    {'· '}
+                    <EngineText>{l.name}</EngineText>
+                    {l.placed === false ? t.levels.notPlaced : ''}
                   </span>
                 </th>
                 <td>
@@ -196,18 +203,20 @@ export function MassingPanel({
                   {l.parking ? (
                     <TracedValue traced={l.parking.bayCount} onInspect={onInspect} />
                   ) : (
-                    <span className="muted">none — not a parking level</span>
+                    <span className="muted">{t.levels.notParking}</span>
                   )}
                 </td>
                 <td>
-                  <SourceButton source={l.outlineSource} what={`${l.id} outline`} onInspect={onInspect} />
+                  <SourceButton source={l.outlineSource} what={t.levels.outlineOf(l.id)} onInspect={onInspect} />
                 </td>
               </tr>
             ))}
             {model.ramps.map((r) => (
               <tr key={r.id}>
                 <th scope="row">
-                  Ramp {r.id} <span className="muted">· {r.fromLevelId} to {r.toLevelId}, gradient not assessed</span>
+                  {t.levels.ramp}
+                  {r.id}{' '}
+                  <span className="muted">{t.levels.rampDetail(r.fromLevelId, r.toLevelId)}</span>
                 </th>
                 <td />
                 <td />
@@ -217,7 +226,7 @@ export function MassingPanel({
               </tr>
             ))}
             <tr>
-              <th scope="row">Every parking level</th>
+              <th scope="row">{t.levels.everyParkingLevel}</th>
               <td />
               <td>
                 <TracedValue traced={model.drawnBays} onInspect={onInspect} />
@@ -225,13 +234,13 @@ export function MassingPanel({
               <td />
             </tr>
             <tr>
-              <th scope="row">Height ceiling</th>
+              <th scope="row">{t.levels.heightCeiling}</th>
               <td>
                 <TracedValue traced={model.heightCeilingM} onInspect={onInspect} />
               </td>
               <td />
               <td>
-                <SourceButton source={model.setbackSource} what="Setback line" onInspect={onInspect} />
+                <SourceButton source={model.setbackSource} what={t.levels.setbackLine} onInspect={onInspect} />
               </td>
             </tr>
           </tbody>
@@ -239,23 +248,20 @@ export function MassingPanel({
       ) : null}
 
       <table className="data-table">
-        <caption className="sr-only">
-          The podium and the tower, with the height each was built to and where that height
-          came from
-        </caption>
+        <caption className="sr-only">{t.volumes.caption}</caption>
         <thead>
           <tr>
-            <th scope="col">Volume</th>
-            <th scope="col">Levels</th>
-            <th scope="col">Base</th>
-            <th scope="col">Height</th>
-            <th scope="col">What it is</th>
+            <th scope="col">{t.volumes.columns.volume}</th>
+            <th scope="col">{t.volumes.columns.levels}</th>
+            <th scope="col">{t.volumes.columns.base}</th>
+            <th scope="col">{t.volumes.columns.height}</th>
+            <th scope="col">{t.volumes.columns.what}</th>
           </tr>
         </thead>
         <tbody>
           {run.massing.masses.map((m) => (
             <tr key={m.id}>
-              <th scope="row">{m.label}</th>
+              <th scope="row">{t.volumes.name(m.id, m.label)}</th>
               <td>
                 <TracedValue traced={m.levels} onInspect={onInspect} />
               </td>
@@ -265,29 +271,30 @@ export function MassingPanel({
               <td>
                 <TracedValue traced={m.heightM} onInspect={onInspect} />
               </td>
-              <td className="fine-print">{m.note}</td>
+              <td className="fine-print">
+                <EngineText>{m.note}</EngineText>
+              </td>
             </tr>
           ))}
           <tr>
-            <th scope="row">Total</th>
+            <th scope="row">{t.volumes.total}</th>
             <td colSpan={2} />
             <td>
               <TracedValue traced={run.massing.totalHeightM} onInspect={onInspect} />
             </td>
-            <td className="fine-print">
-              Built height. The height ceiling this was derived from is a planning limit,
-              not a structural or aviation one — neither is assessed.
-            </td>
+            <td className="fine-print">{t.volumes.totalNote}</td>
           </tr>
         </tbody>
       </table>
 
       {model && model.notModelled.length > 0 ? (
         <>
-          <h3 className="panel__subheading">Not in this model</h3>
+          <h3 className="panel__subheading">{t.notModelled}</h3>
           <ul className="sheet-facts__notes">
             {model.notModelled.map((n) => (
-              <li key={n}>{n}</li>
+              <li key={n}>
+                <EngineText>{n}</EngineText>
+              </li>
             ))}
           </ul>
         </>

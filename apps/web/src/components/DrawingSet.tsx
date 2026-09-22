@@ -46,7 +46,20 @@ import {
 } from '@envelope/sheets';
 import { type KeyboardEvent, type MouseEvent, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { CLASS_DESCRIPTION } from './TracedValue.js';
+import { AR } from '../i18n/drawingSet.ar.js';
+import { EN } from '../i18n/drawingSet.en.js';
+import { useDict } from '../i18n/locale.js';
+import { AR as TRACED_AR } from '../i18n/traced.ar.js';
+import { EN as TRACED_EN } from '../i18n/traced.en.js';
+import { EngineText } from './TracedValue.js';
+
+/*
+  THE CONTROLS ROUND A SHEET ARE COPY AND LIVE IN `i18n/drawingSet.*.ts`. The sheet
+  is not: its geometry, number, title, facts and notes come from the display list the
+  report prints and the DXF writes, and they render here as the sheet states them in
+  both languages — inside `EngineText` where they sit in HTML, and untouched inside
+  the SVG, which is the same markup in every language.
+*/
 
 /** The slice of a run a drawing needs. */
 export interface DrawableRun {
@@ -83,6 +96,7 @@ export function DrawingSet({
   /** Which kind of sheet opens first. The parking step opens on a parking level. */
   readonly initialKind?: Sheet['kind'];
 }): JSX.Element {
+  const t = useDict(EN, AR);
   const sheets = useSheets(run);
   const base = cssId(useId());
   const [chosen, setChosen] = useState<string | null>(null);
@@ -90,13 +104,10 @@ export function DrawingSet({
 
   if (!run.building) {
     return (
-      <p className="muted">
-        This run was computed before drawings were made from the building model, so
-        there is nothing to draw. Compute the run again to see its sheets.
-      </p>
+      <p className="muted">{t.stored}</p>
     );
   }
-  if (sheets.length === 0) return <p className="muted">The engine drew no sheets for this run.</p>;
+  if (sheets.length === 0) return <p className="muted">{t.none}</p>;
 
   const fallback = sheets.find((s) => s.kind === initialKind) ?? sheets[0]!;
   const active = sheets.find((s) => s.id === chosen) ?? fallback;
@@ -126,7 +137,7 @@ export function DrawingSet({
       <div
         className="sheet-set__tabs"
         role="tablist"
-        aria-label="Sheets in this drawing set"
+        aria-label={t.tabs}
         onKeyDown={onKeyDown}
       >
         {sheets.map((s, i) => {
@@ -146,8 +157,12 @@ export function DrawingSet({
               tabIndex={selected ? 0 : -1}
               onClick={() => setChosen(s.id)}
             >
-              <span className="sheet-tab__number">{s.number}</span>
-              <span className="sheet-tab__title">{s.title}</span>
+              <span className="sheet-tab__number">
+                <EngineText>{s.number}</EngineText>
+              </span>
+              <span className="sheet-tab__title">
+                <EngineText>{s.title}</EngineText>
+              </span>
             </button>
           );
         })}
@@ -191,6 +206,7 @@ export function SheetView({
   readonly idPrefix: string;
   readonly onInspect: (nodeId: string) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
   const hatchId = `${idPrefix}-hatch`;
   const clipId = `${idPrefix}-clip`;
   const { widthMm: w, heightMm: h } = sheet.paper;
@@ -232,12 +248,12 @@ export function SheetView({
 
   return (
     <figure className="sheet-view">
-      <div className="sheet-view__tools" role="group" aria-label={`Zoom, ${sheet.number}`}>
+      <div className="sheet-view__tools" role="group" aria-label={t.zoomGroup(sheet.number)}>
         <button type="button" className="button button--ghost" onClick={() => zoomTo(step - 1)} disabled={step === 0}>
-          Zoom out
+          {t.zoomOut}
         </button>
         <span className="sheet-view__zoom" aria-live="polite">
-          {step === 0 ? 'Fitted to width' : `${zoom * 100}% of fitted`}
+          {step === 0 ? t.fitted : t.zoomed(String(zoom * 100))}
         </span>
         <button
           type="button"
@@ -245,11 +261,11 @@ export function SheetView({
           onClick={() => zoomTo(step + 1)}
           disabled={step === ZOOMS.length - 1}
         >
-          Zoom in
+          {t.zoomIn}
         </button>
         {step > 0 ? (
           <button type="button" className="button button--ghost" onClick={() => zoomTo(0)}>
-            Fit to width
+            {t.fit}
           </button>
         ) : null}
       </div>
@@ -257,7 +273,7 @@ export function SheetView({
         ref={scroller}
         className={`sheet-view__scroller${step > 0 ? ' is-zoomed' : ''}`}
         role="region"
-        aria-label={`${sheet.number} ${sheet.title}, scrollable`}
+        aria-label={t.scroller(sheet.number, sheet.title)}
         tabIndex={0}
       >
         <svg
@@ -265,7 +281,7 @@ export function SheetView({
           style={step > 0 ? { inlineSize: `${zoom * 100}%`, minInlineSize: `${40 * zoom}rem` } : undefined}
           viewBox={`0 0 ${w} ${h}`}
           role="img"
-          aria-label={`${sheet.number} ${sheet.title}, drawn at 1:${sheet.view.scale}. The values it quotes are listed below the drawing.`}
+          aria-label={t.drawing(sheet.number, sheet.title, `1:${sheet.view.scale}`)}
           onClick={onClick}
         >
           {/* The sheet's own stylesheet, the same string the SVG export embeds.
@@ -290,10 +306,7 @@ export function SheetView({
           </g>
         </svg>
       </div>
-      <figcaption className="fine-print sheet-view__hint">
-        Select a bay, a floor plate or a setback line to see where it came from. Everything
-        the title strip quotes is also listed below.
-      </figcaption>
+      <figcaption className="fine-print sheet-view__hint">{t.hint}</figcaption>
     </figure>
   );
 }
@@ -394,12 +407,15 @@ function SheetFacts({
   readonly sheet: Sheet;
   readonly onInspect: (nodeId: string) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
   return (
     <div className="sheet-facts">
       <dl className="kv kv--grid">
         {sheet.facts.map((f) => (
           <div key={f.label}>
-            <dt>{f.label}</dt>
+            <dt>
+              <EngineText>{f.label}</EngineText>
+            </dt>
             <dd>
               <FactValue fact={f} onInspect={onInspect} />
             </dd>
@@ -408,10 +424,12 @@ function SheetFacts({
       </dl>
       {sheet.notes.length > 0 ? (
         <>
-          <h3 className="panel__subheading">Notes on this sheet</h3>
+          <h3 className="panel__subheading">{t.notes}</h3>
           <ul className="sheet-facts__notes">
             {sheet.notes.map((n) => (
-              <li key={n}>{n}</li>
+              <li key={n}>
+                <EngineText>{n}</EngineText>
+              </li>
             ))}
           </ul>
         </>
@@ -427,16 +445,24 @@ function FactValue({
   readonly fact: StripFact;
   readonly onInspect: (nodeId: string) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
+  const classes = useDict(TRACED_EN, TRACED_AR);
   const { node, provenanceClass: cls } = fact;
   // An untraced fact is words — the level's name — not a quantity, so it is not
   // set as one: `.value` never wraps, and at 320px this line then widened the page.
-  if (!node || !cls) return <span>{fact.value}</span>;
+  if (!node || !cls) {
+    return (
+      <span>
+        <EngineText>{fact.value}</EngineText>
+      </span>
+    );
+  }
   return (
     <button
       type="button"
       className={`traced traced--${cls.toLowerCase()}`}
       onClick={() => onInspect(node)}
-      aria-label={`${fact.label}: ${fact.value}. ${CLASS_DESCRIPTION[cls]} Show where this number came from.`}
+      aria-label={t.factLabel(fact.label, fact.value, classes.classDescription[cls], classes.inspectAction)}
     >
       <span className="value">{fact.value}</span>
       <span className="traced__marker" aria-hidden="true">

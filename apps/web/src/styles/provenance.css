@@ -42,7 +42,7 @@
   font-family: var(--font-sans);
   font-size: 0.85em;
   color: var(--text-tertiary);
-  margin-left: 0.15em;
+  margin-inline-start: 0.15em;
 }
 
 /* Every traced value is a button: §20.2's "every number is a link. This is the
@@ -154,7 +154,7 @@
   font-family: var(--font-sans);
   font-size: 0.85em;
   color: var(--uncertain);
-  margin-left: 0.15em;
+  margin-inline-start: 0.15em;
 }
 
 /* --- USER_SET: a badge naming the person ---------------------------------- */

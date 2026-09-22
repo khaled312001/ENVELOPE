@@ -77,6 +77,20 @@
  * used. The hatched band is the setback the rules produced; the inner rectangle is the
  * tower plate cap. Drawing anything else here would be inventing a building on the
  * page that argues against inventing buildings.
+ *
+ * ---
+ *
+ * TWO LANGUAGES, AND EVERY CONSTRAINT ABOVE SURVIVES BOTH.
+ *
+ * Every sentence comes from `i18n/landing.en.ts` or its Arabic twin, and the English
+ * module is the type the Arabic one is held to. Nothing else moved. No figure is in
+ * either dictionary: the sentences that carry one are functions that hold the word
+ * order and take the value from the fixture. No engine string is in either: the basis,
+ * the formulas, and the class and band tokens are read here, as before, and on the
+ * Arabic page they go through `AsEmitted`, which is `Verbatim` there and nothing at
+ * all on the English page — so the English markup is the markup this page had before
+ * it had a second language, byte for byte, and the Arabic page carries every engine
+ * string in the language the engine wrote it in.
  */
 
 import { useCallback, useState } from 'react';
@@ -88,7 +102,11 @@ import { useCallback, useState } from 'react';
 import { Glyph } from '../components/SiteChrome.js';
 import { ProvenanceLegend } from '../components/TracedValue.js';
 import { WorkedExampleModel } from '../components/WorkedExampleModel.js';
+import { LIMITS_AR } from '../content/shared.ar.js';
 import { LIMITS } from '../content/shared.js';
+import { AR } from '../i18n/landing.ar.js';
+import { EN } from '../i18n/landing.en.js';
+import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 // `Href`, not `Route`. Every CTA on this site carries a query — `/app?demo=…` — and a
 // `Route`-only signature rejects all of them.
 import { Link, type Href } from '../router.js';
@@ -97,6 +115,35 @@ import example from './worked-example.json' with { type: 'json' };
 
 const V = example.verified;
 const I = example.input;
+
+/**
+ * THE TWO DIGITS THIS PAGE TYPES, held here and in neither dictionary.
+ *
+ * Both are facts about the software rather than figures about the plot, and both are
+ * on `landing.test.tsx`'s allowlist with the reason: the phase this demonstration
+ * belongs to, and the grid the kernel is defined on. They are passed into the
+ * sentences that carry them, the way `NotFound.tsx` passes its `200`, so the
+ * dictionaries stay free of every digit and a reader of either can see that at a
+ * glance.
+ */
+const PHASE = '0';
+const GRID_MM = '1';
+
+/**
+ * WHAT THE ENGINE SAID, IN THE LANGUAGE IT SAID IT.
+ *
+ * `Verbatim` on the Arabic page — `dir="ltr" lang="en"` and an isolate, so a basis
+ * string keeps its English voice and its full stop stays at the end it belongs to —
+ * and NOTHING on the English page, where the span would be `lang="en"` inside
+ * `lang="en"` and would change the markup of a page whose English is held
+ * byte-identical to what it was before the Arabic existed.
+ *
+ * It wraps OUTSIDE a `.value`, never inside one: `.verbatim` sets the sans face, and
+ * a figure is mono. `rtl.css` already isolates `.value` on its own.
+ */
+function AsEmitted({ children }: { readonly children: React.ReactNode }): JSX.Element {
+  return useLocale().locale === 'ar' ? <Verbatim>{children}</Verbatim> : <>{children}</>;
+}
 
 /** Thousands separators, and not one digit of rounding. */
 function group(value: string): string {
@@ -116,44 +163,23 @@ const setbackAt = (seq: number): string =>
  * The three bands, as the engine returned them.
  * ---------------------------------------------------------------------- */
 
+/**
+ * A band as the ENGINE returned it: its figure and its formula, both off the fixture.
+ * Its name and its note are copy and live in the dictionaries under the same id —
+ * including the note on C that may never say "bays that fit", which `landing.en.ts`
+ * carries with its reason.
+ */
 interface Band {
-  readonly id: string;
+  readonly id: 'a' | 'b' | 'c';
   readonly letter: string;
-  readonly name: string;
   readonly value: string;
   readonly formula: string;
-  readonly note: string;
 }
 
 const BANDS: readonly Band[] = [
-  {
-    id: 'a',
-    letter: 'A',
-    name: 'What the code permits',
-    value: V.bandAM2,
-    formula: V.formulas.bandA,
-    note: 'The floor-area ratio, applied to the plot. The only band a FAR calculator computes.',
-  },
-  {
-    id: 'b',
-    letter: 'B',
-    name: 'What the envelope holds',
-    value: V.bandBM2,
-    formula: V.formulas.bandB,
-    note: 'The plate the setbacks and the plate cap leave, stacked to the height ceiling.',
-  },
-  {
-    id: 'c',
-    letter: 'C',
-    name: 'What the parking supports',
-    value: V.bandCM2,
-    formula: V.formulas.bandC,
-    // NOT "bays that fit". The supply term this band rests on is an available area
-    // divided by an area-per-bay factor; the placed level runs afterwards and cannot
-    // reach back into it. Writing "fit" here would be the false causal claim §4.2 of
-    // the site map exists to prevent, on the page that sells traceability.
-    note: 'An available area divided by an area-per-bay factor, and the factor is assumed.',
-  },
+  { id: 'a', letter: 'A', value: V.bandAM2, formula: V.formulas.bandA },
+  { id: 'b', letter: 'B', value: V.bandBM2, formula: V.formulas.bandB },
+  { id: 'c', letter: 'C', value: V.bandCM2, formula: V.formulas.bandC },
 ];
 
 /**
@@ -193,12 +219,16 @@ const PLOT_W = Math.max(...XS) - Math.min(...XS);
 const PLOT_D = Math.max(...YS) - Math.min(...YS);
 const up = (yPlot: number): number => PLOT_D - yPlot;
 
-/** What an edge faces, in the drawing's own caps, from the classification it was given. */
-function edgeLabel(seq: number): string {
+/**
+ * What an edge faces, from the classification it was given. The dictionary names it
+ * — in the drawing's own caps in English, by the trade term in Arabic — but the token
+ * it names is always the recorded input's, read here and never typed per edge.
+ */
+function edgeLabel(seq: number, name: typeof EN.figure.edge): string {
   const edge = I.plot.edges.find((e) => e.seq === seq);
   if (!edge) return '';
-  if ('roadHierarchy' in edge && edge.roadHierarchy) return `${edge.roadHierarchy} ROAD`;
-  return edge.classification.replace(/_/g, ' ');
+  const road = 'roadHierarchy' in edge && edge.roadHierarchy ? edge.roadHierarchy : undefined;
+  return name(edge.classification, road);
 }
 
 const podium = {
@@ -219,17 +249,19 @@ const tower = {
  * it always does. Rendered twice in that case, so the hatch's id is the caller's.
  */
 function PlotPlan({ hatchId = 'lp-hatch' }: { readonly hatchId?: string }): JSX.Element {
+  const t = useDict(EN, AR).figure;
   return (
     <svg
       className="lp-plan"
       viewBox="-12 -6 98 61"
       role="img"
-      aria-label={
-        `Plan of a ${PLOT_W} by ${PLOT_D} metre plot. Setbacks of ` +
-        `${setbackAt(0)}, ${setbackAt(1)}, ${setbackAt(2)} and ${setbackAt(3)} metres leave a ` +
-        `footprint of ${group(V.footprintM2)} square metres, inside which the tower plate cap ` +
-        `leaves ${group(V.towerPlateCapM2)}.`
-      }
+      aria-label={t.planLabel({
+        width: String(PLOT_W),
+        depth: String(PLOT_D),
+        setbacks: [setbackAt(0), setbackAt(1), setbackAt(2), setbackAt(3)],
+        footprint: group(V.footprintM2),
+        plateCap: group(V.towerPlateCapM2),
+      })}
     >
       <defs>
         {/* The setback is area the rules take away, so it is drawn as removed —
@@ -259,7 +291,7 @@ function PlotPlan({ hatchId = 'lp-hatch' }: { readonly hatchId?: string }): JSX.
 
       <g className="lp-plan__label">
         <text x={tower.x + tower.w / 2} y={tower.y + tower.h / 2 - 1.4} textAnchor="middle">
-          TOWER PLATE CAP
+          {t.plateCapTag}
         </text>
         <text
           className="lp-plan__label-v"
@@ -281,10 +313,10 @@ function PlotPlan({ hatchId = 'lp-hatch' }: { readonly hatchId?: string }): JSX.
           thing a reader is here to check. */}
       <g className="lp-plan__edge">
         <text x={PLOT_W / 2} y={-2.2} textAnchor="middle">
-          {edgeLabel(2)}
+          {edgeLabel(2, t.edge)}
         </text>
         <text x={PLOT_W / 2} y={PLOT_D + 3.6} textAnchor="middle">
-          {edgeLabel(0)}
+          {edgeLabel(0, t.edge)}
         </text>
       </g>
 
@@ -346,15 +378,19 @@ function PlotPlan({ hatchId = 'lp-hatch' }: { readonly hatchId?: string }): JSX.
  * ---------------------------------------------------------------------- */
 
 function AssumedFactor(): JSX.Element {
+  const t = useDict(EN, AR).assumed;
   return (
     <div className="callout lp-assumption" data-state="assumed">
       <span className="callout__mark">
         <Glyph name="assumed" />
       </span>
       <div className="callout__body">
-        <strong>{V.bayAreaFactorClass} — the area a bay is taken to consume</strong>
+        <strong>
+          <AsEmitted>{V.bayAreaFactorClass}</AsEmitted>
+          {t.titleAfter}
+        </strong>
         <p>
-          The parking supply is an available area divided by{' '}
+          {t.before}{' '}
           <span className="traced traced--assumed">
             <span className="value">
               {V.bayAreaFactorM2}
@@ -362,7 +398,8 @@ function AssumedFactor(): JSX.Element {
             </span>
             <span className="traced__marker" aria-hidden="true" />
           </span>
-          , and that divisor is not a constant: {V.bayAreaFactorBasis}
+          {t.after}
+          <AsEmitted>{V.bayAreaFactorBasis}</AsEmitted>
         </p>
       </div>
     </div>
@@ -404,6 +441,7 @@ function BandRow({
   readonly extraFormula?: string;
   readonly children?: React.ReactNode;
 }): JSX.Element {
+  const t = useDict(EN, AR).bands;
   const share = (Number(band.value) / widest) * 100;
   return (
     <li className={`lp-band${binding ? ' is-binding' : ''}${hero ? ' lp-band--hero' : ''}`}>
@@ -412,10 +450,11 @@ function BandRow({
           {band.letter}
         </span>
         <span className="lp-band__name">
-          Band {band.letter} — {band.name}
+          {t.word}
+          {band.letter} — {t[band.id].name}
           {/* The binding row says so in words, carries a heavier rule and a larger
               figure. Colour carries none of the meaning on its own. */}
-          {binding ? <span className="lp-tag lp-tag--binds">binds</span> : null}
+          {binding ? <span className="lp-tag lp-tag--binds">{t.binds}</span> : null}
         </span>
         <button
           type="button"
@@ -424,10 +463,10 @@ function BandRow({
           aria-controls={`lp-why-${band.id}`}
           onClick={onToggle}
         >
-          <span className="lp-band__why">{open ? 'hide' : 'why'}</span>
+          <span className="lp-band__why">{open ? t.hide : t.why}</span>
           <span className="lp-band__number">{group(band.value)}</span>
           <span className="lp-band__unit">m²</span>
-          {open ? null : <span className="lp-band__why">?</span>}
+          {open ? null : <span className="lp-band__why">{t.question}</span>}
         </button>
       </div>
       {/* The chassis meter, not a fourth bar primitive. `--meter-value` is the share
@@ -467,9 +506,18 @@ function BandRow({
       */}
       {children}
       <div className="lp-band__why-panel" id={`lp-why-${band.id}`} hidden={!open}>
-        <p className="lp-band__formula">{band.formula}</p>
-        {extraFormula ? <p className="lp-band__formula">{extraFormula}</p> : null}
-        <p className="lp-band__note">{band.note}</p>
+        {/* The engine's own formula strings, never translated: a re-typed formula
+            drifts as easily as a re-typed value, and a translated one is a formula
+            the engine never wrote. */}
+        <p className="lp-band__formula">
+          <AsEmitted>{band.formula}</AsEmitted>
+        </p>
+        {extraFormula ? (
+          <p className="lp-band__formula">
+            <AsEmitted>{extraFormula}</AsEmitted>
+          </p>
+        ) : null}
+        <p className="lp-band__note">{t[band.id].note}</p>
       </div>
     </li>
   );
@@ -585,6 +633,9 @@ export function Landing({
    * exists to prevent. It stays a real disclosure — a reader who has read it can
    * put it away — but the shipped state is open.
    */
+  const t = useDict(EN, AR);
+  /* The five refusals `/refusals` also renders, from the one module each language has. */
+  const limits = useDict(LIMITS, LIMITS_AR);
   const [heroOpen, setHeroOpen] = useState(true);
   const [openBand, setOpenBand] = useState<string | null>(null);
   const toggle = useCallback(
@@ -624,7 +675,7 @@ export function Landing({
               to the property and not to `:nth-child`, so inserting a paragraph does
               not silently re-time the hero. */}
           <p className="eyebrow" style={{ '--motion-order': 0 } as React.CSSProperties}>
-            Phase 0 · engine demonstration
+            {t.eyebrow(PHASE)}
           </p>
 
           <h1
@@ -632,8 +683,7 @@ export function Landing({
             id="lp-title"
             style={{ '--motion-order': 1 } as React.CSSProperties}
           >
-            What these rules imply for this plot, and the derivation of every figure that
-            says so.
+            {t.title}
           </h1>
 
           {/*
@@ -651,7 +701,7 @@ export function Landing({
             argument.
           */}
           <div className="lp-answer" style={{ '--motion-order': 2 } as React.CSSProperties}>
-            <p className="lp-answer__label">Governing capacity, this run</p>
+            <p className="lp-answer__label">{t.answerLabel}</p>
             <ol className="lp-bands lp-bands--single">
               <BandRow
                 band={GOVERNING}
@@ -672,23 +722,22 @@ export function Landing({
               <Glyph name="never-claimed" />
             </span>
             <span>
-              {/* Set in caps in the SOURCE and not by `text-transform`, and the reason is
+              {/* Set in caps in the STRING and not by `text-transform`, and the reason is
                   mechanical rather than typographic: `expectClaimOrder` finds each of the
                   five claims by its first occurrence in the markup, so a sentence-case
                   "Regulatory validity" here would be found before the claim statement and
                   the order assertion would measure this stamp instead of that table. The
                   sentence-case string belongs to the claim row; this is the status stamp,
                   and the design language writes it in caps anyway. */}
-              <strong>REGULATORY VALIDITY — NOT ASSESSED.</strong> No rule in this deployment
-              is approved by a named professional, and every clause reference it holds is a
-              placeholder rather than a sourced citation.
+              <strong>{t.validity.stamp}</strong>
+              {t.validity.body}
             </span>
           </p>
 
           <p className="lp-hero__lede" style={{ '--motion-order': 4 } as React.CSSProperties}>
-            A compliance checker asks whether a setback clears some figure, and needs a
-            drawing to exist. This engine reads the same clause as an inward offset, so the
-            rule <strong>generates</strong> the answer instead of testing a drawing.
+            {t.lede.before}
+            <strong>{t.lede.emphasis}</strong>
+            {t.lede.after}
           </p>
 
           <div
@@ -706,10 +755,10 @@ export function Landing({
               navigate={navigate}
               className="button button--primary"
             >
-              Run this plot yourself
+              {t.cta.run}
             </Link>
             <Link to="/refusals" navigate={navigate} className="button">
-              What it refuses
+              {t.cta.refusals}
             </Link>
           </div>
         </div>
@@ -719,11 +768,7 @@ export function Landing({
             {/* The run's own building model, from the same run as every figure on
                 this page. The plan is its stand-in on paper and without WebGL. */}
             <WorkedExampleModel
-              label={
-                `This run's building in 3D: ${V.levels} levels of floor area above the ` +
-                `parking, inside the envelope the rules permit to ${V.maxLevelsByHeight} ` +
-                'levels. The figures beside it state the same in words.'
-              }
+              label={t.figure.modelLabel(V.levels, V.maxLevelsByHeight)}
               fallback={<PlotPlan hatchId="lp-hatch-fallback" />}
             />
             <div className="print-only">
@@ -732,20 +777,25 @@ export function Landing({
           </div>
           <figcaption className="figure__caption">
             <p className="figure__label">
-              <span className="figure__no">Model</span>
+              <span className="figure__no">{t.figure.number}</span>
               <span>
-                {PLOT_W} × {PLOT_D} m · {I.plot.landUse.replace(/_/g, ' ').toLowerCase()}
+                {/* A dimension is a Latin run: isolated on the Arabic page, so the
+                    bidirectional algorithm cannot print 80 × 40 as 40 × 80. */}
+                <AsEmitted>
+                  {PLOT_W} × {PLOT_D} m
+                </AsEmitted>{' '}
+                · {t.figure.landUse(I.plot.landUse)}
               </span>
             </p>
             <dl className="figure__spec">
               <div>
-                <dt>Plot area</dt>
+                <dt>{t.figure.spec.plotArea}</dt>
                 <dd>
                   <span className="value">{group(V.plotAreaM2)}</span> m²
                 </dd>
               </div>
               <div>
-                <dt>Setbacks, per edge</dt>
+                <dt>{t.figure.spec.setbacks}</dt>
                 <dd>
                   <span className="value">
                     {setbackAt(0)} · {setbackAt(1)} · {setbackAt(2)} · {setbackAt(3)}
@@ -754,30 +804,28 @@ export function Landing({
                 </dd>
               </div>
               <div>
-                <dt>Footprint after offset</dt>
+                <dt>{t.figure.spec.footprint}</dt>
                 <dd>
                   <span className="value">{group(V.footprintM2)}</span> m²
                 </dd>
               </div>
               <div>
-                <dt>Tower plate cap</dt>
+                <dt>{t.figure.spec.plateCap}</dt>
                 <dd>
                   <span className="value">{group(V.towerPlateCapM2)}</span> m²
                 </dd>
               </div>
               <div>
-                <dt>Levels the answer places</dt>
+                <dt>{t.figure.spec.levels}</dt>
                 <dd>
-                  <span className="value">{V.levels}</span> of{' '}
-                  <span className="value">{V.maxLevelsByHeight}</span> the height permits
+                  <span className="value">{V.levels}</span>
+                  {t.figure.spec.levelsOf}
+                  <span className="value">{V.maxLevelsByHeight}</span>
+                  {t.figure.spec.levelsAfter}
                 </dd>
               </div>
             </dl>
-            <p className="figure__source">
-              This run, to scale, as the engine stacked it · solid levels are the answer,
-              outlines are height the answer leaves unused · amber marks what the engine
-              assumed where no rule decides · regulatory validity — not assessed
-            </p>
+            <p className="figure__source">{t.figure.source}</p>
           </figcaption>
         </figure>
       </section>
@@ -796,12 +844,8 @@ export function Landing({
         </p>
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="lp-capacities">Capacities are reported separately, never averaged</h2>
-            <p className="lp-lede">
-              What the code permits, what the envelope holds and what the parking supports
-              are separate questions. Quoting only the largest is how a plot gets bought
-              against a number that was never available.
-            </p>
+            <h2 id="lp-capacities">{t.capacities.title}</h2>
+            <p className="lp-lede">{t.capacities.lede}</p>
           </div>
 
           <ol className="lp-bands">
@@ -823,9 +867,19 @@ export function Landing({
             band A bind would have left it false with every gate green.
           */}
           <p className="lp-verdict">
-            On this run, <strong className="lp-verdict__band">{V.governingBand}</strong> binds,
-            and the <span className="lp-verdict__band">{V.nextBindingBand}</span> ceiling sits{' '}
-            <strong>{group(V.headroomToNextM2)} m²</strong> above the answer.
+            {t.capacities.verdict.before}
+            <strong className="lp-verdict__band">
+              <AsEmitted>{V.governingBand}</AsEmitted>
+            </strong>
+            {t.capacities.verdict.between}
+            <span className="lp-verdict__band">
+              <AsEmitted>{V.nextBindingBand}</AsEmitted>
+            </span>
+            {t.capacities.verdict.after}
+            <strong>
+              <AsEmitted>{group(V.headroomToNextM2)} m²</AsEmitted>
+            </strong>
+            {t.capacities.verdict.end}
           </p>
         </div>
       </section>
@@ -843,17 +897,13 @@ export function Landing({
         </p>
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="lp-parking">How the parking number is actually made</h2>
+            <h2 id="lp-parking">{t.parking.title}</h2>
           </div>
 
           <p className="lp-prose">
-            Band C is the smaller of what the floor area permits and what the parking supply
-            can serve. That supply is an available area divided by an area-per-bay factor,
-            and no cited rule fixes the factor — it is the amber figure in the fold. The
-            engine lays the level out as bays, aisles and a ramp inside the podium outline{' '}
-            <em>afterwards</em>, so the drawing is a check on the factor and never its
-            source. What the drawing costs against what the factor predicted is reported
-            rather than absorbed.
+            {t.parking.proseBefore}
+            <em>{t.parking.proseEmphasis}</em>
+            {t.parking.proseAfter}
           </p>
 
           {/*
@@ -876,8 +926,10 @@ export function Landing({
                 it twice must not meet it once as an assumption and once as a fact. */}
             <div>
               <dt>
-                Assumed in the supply model{' '}
-                <span className="lp-costed__class">{V.bayAreaFactorClass}</span>
+                {t.parking.costed.assumed}{' '}
+                <span className="lp-costed__class">
+                  <AsEmitted>{V.bayAreaFactorClass}</AsEmitted>
+                </span>
               </dt>
               <dd>
                 <span className="traced traced--assumed">
@@ -891,9 +943,9 @@ export function Landing({
             </div>
             <div>
               <dt>
-                Measured on the level as laid out{' '}
+                {t.parking.costed.measured}{' '}
                 <span className="lp-costed__class">
-                  {V.levelPlan.areaPerBayM2.provenanceClass}
+                  <AsEmitted>{V.levelPlan.areaPerBayM2.provenanceClass}</AsEmitted>
                 </span>
               </dt>
               <dd>
@@ -902,8 +954,10 @@ export function Landing({
             </div>
             <div>
               <dt>
-                Bays the placed level holds{' '}
-                <span className="lp-costed__class">{V.levelPlan.bayCount.provenanceClass}</span>
+                {t.parking.costed.bays}{' '}
+                <span className="lp-costed__class">
+                  <AsEmitted>{V.levelPlan.bayCount.provenanceClass}</AsEmitted>
+                </span>
               </dt>
               <dd>
                 <span className="value">{V.levelPlan.bayCount.value}</span>
@@ -913,7 +967,7 @@ export function Landing({
 
           <p className="lp-prose">
             <Link to="/parking" navigate={navigate}>
-              The chain from the factor to the band, and the level drawn
+              {t.parking.link}
             </Link>
           </p>
         </div>
@@ -932,10 +986,8 @@ export function Landing({
         </p>
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="lp-guarantees">What holds the answer up</h2>
-            <p className="lp-lede">
-              Not a model, and not a guess with a confidence interval painted on afterwards.
-            </p>
+            <h2 id="lp-guarantees">{t.guarantees.title}</h2>
+            <p className="lp-lede">{t.guarantees.lede}</p>
           </div>
 
           {/*
@@ -959,41 +1011,32 @@ export function Landing({
               <span className="lp-chain__mark">
                 <OffsetDiagram />
               </span>
-              <h3>Rules that generate, not rules that judge</h3>
-              <p>A setback clause becomes an inward offset; nothing is tested afterwards.</p>
+              <h3>{t.guarantees.chain.generate.title}</h3>
+              <p>{t.guarantees.chain.generate.body}</p>
             </li>
 
             <li className="lp-chain__stage reveal">
               <span className="lp-chain__mark">
                 <VertexDiagram />
               </span>
-              <h3>Exact arithmetic on a declared grid</h3>
-              <p>
-                Integer millimetres and exact predicates; a near-tangent offset raises
-                rather than returning a plausible wrong answer.
-              </p>
+              <h3>{t.guarantees.chain.exact.title}</h3>
+              <p>{t.guarantees.chain.exact.body}</p>
             </li>
 
             <li className="lp-chain__stage reveal">
               <span className="lp-chain__mark">
                 <TraceDiagram />
               </span>
-              <h3>Every value carries its derivation</h3>
-              <p>
-                A filled gap is amber, and it says what it costs rather than merely that
-                it exists.
-              </p>
+              <h3>{t.guarantees.chain.derivation.title}</h3>
+              <p>{t.guarantees.chain.derivation.body}</p>
             </li>
 
             <li className="lp-chain__stage reveal">
               <span className="lp-chain__mark">
                 <BlockedDiagram />
               </span>
-              <h3>A layer that blocks emission</h3>
-              <p>
-                An independent check that cannot see the engine; a failure blocks the
-                output and never warns.
-              </p>
+              <h3>{t.guarantees.chain.blocks.title}</h3>
+              <p>{t.guarantees.chain.blocks.body}</p>
             </li>
           </ol>
 
@@ -1007,10 +1050,7 @@ export function Landing({
           */}
           <figure className="lp-key">
             <ProvenanceLegend />
-            <figcaption>
-              The four classes, as the engine renders them. Amber is reserved for one of
-              them, and nothing else in the product is permitted to use it.
-            </figcaption>
+            <figcaption>{t.guarantees.keyCaption}</figcaption>
           </figure>
         </div>
       </section>
@@ -1028,84 +1068,59 @@ export function Landing({
         </p>
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="lp-claims">Exactly what we claim</h2>
-            <p className="lp-lede">
-              Separate questions get separate answers, in every report the engine produces,
-              and the wording is fixed in the specification rather than written by whoever is
-              selling.
-            </p>
+            <h2 id="lp-claims">{t.claims.title}</h2>
+            <p className="lp-lede">{t.claims.lede}</p>
           </div>
         </div>
 
+        {/* THE ORDER IS HERE AND NOT IN A DICTIONARY. It is §16.5's, the refusal is
+            last, and `landing.test.tsx` asserts it in both languages — so neither
+            dictionary can reorder the claims, only word them. */}
         <dl className="railed__full lp-claims">
           {[
             {
-              t: 'Self-consistency',
-              s: 'Supported',
+              id: 'self-consistency',
+              t: t.claims.selfConsistency.title,
+              s: t.claims.selfConsistency.status,
               m: 'supported' as const,
-              d: (
-                <>
-                  The output satisfies every constraint we encoded and its arithmetic closes.
-                  This says the engine did what it was told — not that what it was told is
-                  right.
-                </>
-              ),
+              d: t.claims.selfConsistency.body,
             },
             {
-              t: 'Rule coverage',
-              s: 'Partial, and quantified',
+              id: 'coverage',
+              t: t.claims.coverage.title,
+              s: t.claims.coverage.status,
               m: 'partial' as const,
               d: (
                 <>
-                  We report how many of the requirements <em>we identified</em> are encoded,
-                  and list what is deferred. The denominator is our own inventory. A
-                  requirement nobody thought of is missing from both sides of that ratio, so a
-                  high proportion is evidence of diligence, never of completeness.
+                  {t.claims.coverage.bodyBefore}
+                  <em>{t.claims.coverage.bodyEmphasis}</em>
+                  {t.claims.coverage.bodyAfter}
                 </>
               ),
             },
             {
-              t: 'Geometric validity',
-              s: 'Supported',
+              id: 'geometry',
+              t: t.claims.geometry.title,
+              s: t.claims.geometry.status,
               m: 'supported' as const,
-              d: (
-                <>
-                  Every polygon is computed in exact integer arithmetic on a declared 1 mm
-                  grid, and every area is recomputed by independent methods that must agree
-                  exactly. Degenerate geometry raises rather than returning a plausible wrong
-                  answer.
-                </>
-              ),
+              d: t.claims.geometry.body(GRID_MM),
             },
             {
-              t: 'Agreement with professional judgement',
-              s: 'Not yet measured',
+              id: 'judgement',
+              t: t.claims.judgement.title,
+              s: t.claims.judgement.status,
               m: 'deferred' as const,
-              d: (
-                <>
-                  Whether a qualified architect would produce a comparable answer has not been
-                  measured. The study needs the inter-architect variance band established
-                  first, by architects who have not yet been engaged. Until then no figure may
-                  be quoted, and none is.
-                </>
-              ),
+              d: t.claims.judgement.body,
             },
             {
-              t: 'Regulatory validity',
-              s: 'Never claimed',
+              id: 'regulatory',
+              t: t.claims.regulatory.title,
+              s: t.claims.regulatory.status,
               m: 'never' as const,
-              d: (
-                <>
-                  This system does not and cannot determine whether an authority would approve
-                  a scheme. Not “not yet”. Not “pending certification”. It is not obtainable
-                  from any computation, our validator agreeing with our generator is
-                  self-consistency and nothing more, and no output of this product may be
-                  described as a compliance check.
-                </>
-              ),
+              d: t.claims.regulatory.body,
             },
           ].map((c) => (
-            <div className={`lp-claim lp-claim--${c.m} reveal`} key={c.t}>
+            <div className={`lp-claim lp-claim--${c.m} reveal`} key={c.id}>
               <dt>
                 <span className="lp-claim__title">{c.t}</span>
                 <span className={`lp-status lp-status--${c.m}`}>
@@ -1120,7 +1135,7 @@ export function Landing({
 
         <p className="railed__body lp-prose lp-after">
           <Link to="/refusals" navigate={navigate}>
-            What each of these statuses would take to change
+            {t.claims.link}
           </Link>
         </p>
       </section>
@@ -1138,15 +1153,9 @@ export function Landing({
         </p>
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="lp-limits">What it does not do</h2>
-            <p className="lp-lede">
-              {/* The lede used to call itself "longer than the feature list". It is
-                  longer by item count and SHORTER by word count, and a
-                  self-description the page does not satisfy is a small dishonesty on
-                  the page that sells honesty. */}
-              More of them than there are features, and deliberately so. Every line here is a
-              thing somebody will otherwise assume.
-            </p>
+            <h2 id="lp-limits">{t.limits.title}</h2>
+            {/* The lede is honest about its own length; `landing.en.ts` says why. */}
+            <p className="lp-lede">{t.limits.lede}</p>
           </div>
         </div>
 
@@ -1156,11 +1165,12 @@ export function Landing({
           already draws the row rule, and two horizontals for one boundary is exactly
           the double-start the section rhythm exists to remove.
 
-          The five items come from `content/shared.tsx`. They are the same paragraphs
-          `/refusals` renders, and a second copy here would be a second copy to edit.
+          The five items come from `content/shared.tsx`, or its Arabic twin
+          `content/shared.ar.tsx`. They are the same paragraphs `/refusals` renders, and a
+          second copy here would be a second copy to edit — in either language.
         */}
         <ol className="railed__full railed railed--rows lp-limits">
-          {LIMITS.map((limit, i) => (
+          {limits.map((limit, i) => (
             <li className="railed__row lp-limit reveal" key={limit.id}>
               <p className="railed__margin index" aria-hidden="true">
                 {String(i + 1).padStart(2, '0')}
@@ -1174,10 +1184,9 @@ export function Landing({
         </ol>
 
         <p className="railed__body lp-prose lp-after">
-          There are more of these, and some of them the software performs at runtime as a
-          refusal you can watch it return.{' '}
+          {t.limits.after}{' '}
           <Link to="/refusals" navigate={navigate}>
-            The whole list, and what it would take to change any of it
+            {t.limits.link}
           </Link>
         </p>
       </section>
@@ -1187,22 +1196,16 @@ export function Landing({
           ============================================================= */}
       <section className="lp-status-band" aria-labelledby="lp-readiness">
         <div className="shell lp-status-band__inner">
-          <h2 id="lp-readiness">Where this deployment actually stands</h2>
-          <p>
-            No rule in it is approved by a named professional, the metric definitions annex
-            is unsigned, and every clause reference it carries is a placeholder rather than a
-            sourced citation. Every figure it produces today is an engine demonstration on
-            draft rules — not a capacity assessment, and not quotable to a third party. That
-            is stated on every screen and printed on every report.
-          </p>
+          <h2 id="lp-readiness">{t.readiness.title}</h2>
+          <p>{t.readiness.body}</p>
           <div className="cta lp-cta">
             {readinessHasNumbers ? (
               <Link to="/dashboard" navigate={navigate} className="button button--primary">
-                See the readiness numbers
+                {t.readiness.numbers}
               </Link>
             ) : null}
             <Link to="/app" navigate={navigate} className="button">
-              Open the engine anyway
+              {t.readiness.engine}
             </Link>
           </div>
         </div>

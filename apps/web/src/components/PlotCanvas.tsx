@@ -50,7 +50,11 @@
  * Each class now also has a dash pattern, and the legend swatch draws the same one.
  */
 
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
+
+import { AR } from '../i18n/plotCanvas.ar.js';
+import { EN } from '../i18n/plotCanvas.en.js';
+import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 
 export interface PlotVertex {
   readonly x: string;
@@ -107,13 +111,6 @@ const SWATCH_DASH: Record<PlotEdgeView['classification'], string | undefined> = 
   OTHER: '1 2.4',
 };
 
-const EDGE_LABEL: Record<PlotEdgeView['classification'], string> = {
-  ROAD: 'Road',
-  ADJACENT_PLOT: 'Neighbouring plot',
-  OPEN_SPACE: 'Open space',
-  OTHER: 'Other',
-};
-
 /**
  * Grid intervals a surveyor would actually use. The step is the first of these that
  * divides the plot into at most twelve — more than that is texture, fewer is not a
@@ -146,9 +143,33 @@ export function PlotCanvas({
     `url(#:r7:)` does not.
   */
   const uid = useId().replace(/:/g, '');
+  /*
+    The words around the drawing, in the reader's language — called before the early
+    return for the same reason `useId` is. The words INSIDE it are the sheet's, and
+    stay as a sheet carries them; see `i18n/plotCanvas.en.ts`.
+  */
+  const words = useDict(EN, AR);
+  const { locale } = useLocale();
+  const EDGE_LABEL = words.classes;
+  /** A road's hierarchy in the legend row: named where the dictionary names it, the
+      engine's token otherwise — isolated on the Arabic page, untouched on the English. */
+  const hierarchyNote = (h: string): ReactNode => {
+    const named = words.hierarchy?.[h];
+    if (named) return ` (${named})`;
+    const token = h.toLowerCase();
+    return locale === 'ar' ? (
+      <>
+        {' ('}
+        <Verbatim>{token}</Verbatim>
+        {')'}
+      </>
+    ) : (
+      ` (${token})`
+    );
+  };
 
   const pts = vertices.map((v) => ({ x: Number(v.x), y: Number(v.y) }));
-  if (pts.length < 3) return <p className="muted">No boundary to draw yet.</p>;
+  if (pts.length < 3) return <p className="muted">{words.empty}</p>;
 
   const xs = pts.map((p) => p.x);
   const ys = pts.map((p) => p.y);
@@ -341,16 +362,16 @@ export function PlotCanvas({
         className="plot-svg"
         role="img"
         aria-label={
-          `Plot of ${areaM2} square metres with ${edges.length} edges. ` +
+          words.figure.lead(areaM2, edges.length) +
           edges
             .map(
               (e) =>
-                `Edge ${e.seq + 1}, ${EDGE_LABEL[e.classification]}, ${e.lengthM} metres` +
-                (e.setbackM ? `, setback ${e.setbackM} metres` : ''),
+                words.figure.edge(e.seq + 1, EDGE_LABEL[e.classification], e.lengthM) +
+                (e.setbackM ? words.figure.setback(e.setbackM) : ''),
             )
-            .join('. ') +
-          (footprintAreaM2 ? `. Buildable footprint ${footprintAreaM2} square metres.` : '') +
-          ` Drawn to a graphic scale, grid north up, grid interval ${gridStep} metres.`
+            .join(words.figure.edgeSeparator) +
+          (footprintAreaM2 ? words.figure.footprint(footprintAreaM2) : '') +
+          words.figure.scale(gridStep)
         }
       >
         <defs>
@@ -645,9 +666,10 @@ export function PlotCanvas({
                   onClick={() => onSelectEdge(edge.seq)}
                   tabIndex={0}
                   role="button"
-                  aria-label={`Edge ${edge.seq + 1}: ${EDGE_LABEL[edge.classification]}, ${
-                    edge.lengthM
-                  } metres${edge.setbackM ? `, setback ${edge.setbackM} metres` : ''}`}
+                  aria-label={
+                    words.hit(edge.seq + 1, EDGE_LABEL[edge.classification], edge.lengthM) +
+                    (edge.setbackM ? words.figure.setback(edge.setbackM) : '')
+                  }
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
@@ -847,16 +869,20 @@ export function PlotCanvas({
                 />
               </svg>
               <span className="plot-legend__label">
-                Edge {e.seq + 1} · {EDGE_LABEL[e.classification]}
-                {e.roadHierarchy ? ` (${e.roadHierarchy.toLowerCase()})` : ''}
+                {words.legend.edge}
+                {e.seq + 1}
+                {words.legend.separator}
+                {EDGE_LABEL[e.classification]}
+                {e.roadHierarchy ? hierarchyNote(e.roadHierarchy) : ''}
               </span>
               <span className="plot-legend__value value">{e.lengthM} m</span>
               {e.setbackM ? (
                 <span className="plot-legend__setback">
-                  setback <span className="value">{e.setbackM} m</span>
+                  {words.legend.setback}
+                  <span className="value">{e.setbackM} m</span>
                 </span>
               ) : (
-                <span className="muted">setback not yet resolved</span>
+                <span className="muted">{words.legend.unresolved}</span>
               )}
             </>
           );

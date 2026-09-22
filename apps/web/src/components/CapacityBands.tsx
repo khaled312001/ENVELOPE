@@ -12,8 +12,11 @@
  * bar is also labelled with its value.
  */
 
+import { AR } from '../i18n/bands.ar.js';
+import { EN } from '../i18n/bands.en.js';
+import { useDict } from '../i18n/locale.js';
 import type { AssumptionEntry } from './AssumptionRegister.js';
-import { TracedValue, type TracedWire } from './TracedValue.js';
+import { EngineText, EngineValue, TracedValue, type TracedWire } from './TracedValue.js';
 
 export interface CapacityView {
   readonly bandA: TracedWire;
@@ -30,22 +33,15 @@ export interface CapacityView {
   readonly explanation: string;
 }
 
-const BAND_META = {
-  REGULATORY: {
-    letter: 'A',
-    name: 'Regulatory capacity',
-    question: 'What do FAR and the area caps permit?',
-  },
-  GEOMETRIC: {
-    letter: 'B',
-    name: 'Geometric capacity',
-    question: 'What does the envelope physically hold?',
-  },
-  PARKING: {
-    letter: 'C',
-    name: 'Parking capacity',
-    question: 'What can the achievable parking supply support?',
-  },
+/**
+ * The band letters, which are names rather than words — the PRD, the report and
+ * every export call the bands A, B and C in either language. Each band's name and
+ * question are copy, and live in `i18n/bands.*.ts`.
+ */
+const BAND_LETTER = {
+  REGULATORY: 'A',
+  GEOMETRIC: 'B',
+  PARKING: 'C',
 } as const;
 
 export function CapacityBands({
@@ -62,6 +58,7 @@ export function CapacityBands({
    */
   readonly governingAssumption?: AssumptionEntry | undefined;
 }): JSX.Element {
+  const t = useDict(EN, AR);
   const bands = [
     { key: 'REGULATORY' as const, traced: capacity.bandA },
     { key: 'GEOMETRIC' as const, traced: capacity.bandB },
@@ -74,49 +71,53 @@ export function CapacityBands({
       <header className="panel__header">
         <div>
           <h2 id="capacity-heading" className="panel__title">
-            Capacity
+            {t.title}
           </h2>
-          <p className="panel__subtitle">
-            Three limits, computed separately. The governing capacity is the smallest —
-            not the largest, and never an average.
-          </p>
+          <p className="panel__subtitle">{t.subtitle}</p>
         </div>
       </header>
 
       {/* The answer, once, large. */}
       <div className="governing">
         <div className="governing__figure">
-          <span className="governing__label">Governing capacity</span>
+          <span className="governing__label">{t.governing}</span>
           <TracedValue traced={capacity.governingGfa} onInspect={onInspect} size="display" />
           <span className="governing__band">
-            Band {BAND_META[capacity.governingBand].letter} ·{' '}
-            {BAND_META[capacity.governingBand].name.toLowerCase()}
+            {t.band}
+            {BAND_LETTER[capacity.governingBand]}
+            {' · '}
+            {t.bandName(t.bands[capacity.governingBand].name)}
           </span>
         </div>
         <div className="governing__meta">
           <dl className="kv">
             <div>
-              <dt>Binding constraint</dt>
+              <dt>{t.binding}</dt>
               <dd>
-                {capacity.governingConstraint.label}
-                <span className="muted"> · {capacity.governingConstraint.ruleId}</span>
-              </dd>
-            </div>
-            <div>
-              <dt>Headroom to the next limit</dt>
-              <dd>
-                <span className="value">{capacity.headroomToNextM2}</span>
-                <span className="value__unit">m²</span>
+                <EngineText>{capacity.governingConstraint.label}</EngineText>
                 <span className="muted">
-                  {' '}
-                  before {BAND_META[capacity.nextBindingBand as keyof typeof BAND_META]?.name.toLowerCase() ??
-                    capacity.nextBindingBand.toLowerCase()}{' '}
-                  binds
+                  {' · '}
+                  <EngineText>{capacity.governingConstraint.ruleId}</EngineText>
                 </span>
               </dd>
             </div>
             <div>
-              <dt>Levels</dt>
+              <dt>{t.headroom}</dt>
+              <dd>
+                <span className="value">{capacity.headroomToNextM2}</span>
+                <span className="value__unit">m²</span>
+                <span className="muted">
+                  {t.beforeBinds(
+                    t.bandName(
+                      t.bands[capacity.nextBindingBand as keyof typeof BAND_LETTER]?.name ??
+                        capacity.nextBindingBand,
+                    ),
+                  )}
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt>{t.levels}</dt>
               <dd>
                 <TracedValue traced={capacity.levels} onInspect={onInspect} />
               </dd>
@@ -124,7 +125,7 @@ export function CapacityBands({
             <div>
               {/* §15.4 — the floor that does not fit is real lost capacity and is
                   reported rather than smoothed away. */}
-              <dt>Lost to whole floors</dt>
+              <dt>{t.lostToFloors}</dt>
               <dd>
                 <span className="value">{capacity.integerGranularityLossM2}</span>
                 <span className="value__unit">m²</span>
@@ -158,44 +159,50 @@ export function CapacityBands({
       {governingAssumption ? (
         <div className="governing__assumption callout" data-state="assumed">
           <p className="callout__title">
-            <span className="chip chip--assumed">Assumed</span> {governingAssumption.label}
+            <span className="chip chip--assumed">{t.assumed}</span>{' '}
+            <EngineText>{governingAssumption.label}</EngineText>
           </p>
           <p>
-            <span className="value">{governingAssumption.value}</span>
+            <span className="value">
+              <EngineValue>{governingAssumption.value}</EngineValue>
+            </span>
             {governingAssumption.unit ? (
               <span className="value__unit">{governingAssumption.unit}</span>
             ) : null}{' '}
-            — {governingAssumption.basis}
+            — <EngineText>{governingAssumption.basis}</EngineText>
           </p>
           {governingAssumption.sensitivity ? (
             <p className="callout__note">
-              Perturbed by {governingAssumption.sensitivity.perturbation}, the governing
-              capacity moves between{' '}
-              <span className="value">{governingAssumption.sensitivity.lowGoverningGfaM2}</span> and{' '}
-              <span className="value">{governingAssumption.sensitivity.highGoverningGfaM2}</span> m².
+              {t.perturbedBefore(governingAssumption.sensitivity.perturbation)}
+              <span className="value">{governingAssumption.sensitivity.lowGoverningGfaM2}</span>
+              {t.perturbedAnd}
+              <span className="value">{governingAssumption.sensitivity.highGoverningGfaM2}</span>
+              {t.perturbedAfter}
             </p>
           ) : null}
         </div>
       ) : null}
 
-      <p className="governing__explanation">{capacity.explanation}</p>
+      <p className="governing__explanation">
+        <EngineText>{capacity.explanation}</EngineText>
+      </p>
 
       {/* The comparison. */}
       <ul className="bands">
         {bands.map(({ key, traced }) => {
           const value = Number(traced.value) || 0;
           const governing = key === capacity.governingBand;
-          const meta = BAND_META[key];
+          const meta = t.bands[key];
           return (
             <li key={key} className={governing ? 'band band--governing' : 'band'}>
               <div className="band__head">
                 <span className="band__letter" aria-hidden="true">
-                  {meta.letter}
+                  {BAND_LETTER[key]}
                 </span>
                 <div>
                   <h3 className="band__name">
                     {meta.name}
-                    {governing ? <span className="chip chip--binding">binds</span> : null}
+                    {governing ? <span className="chip chip--binding">{t.binds}</span> : null}
                   </h3>
                   <p className="band__question">{meta.question}</p>
                 </div>
@@ -219,16 +226,10 @@ export function CapacityBands({
       <footer className="panel__footer">
         <div className="realism">
           <div>
-            <span className="realism__label">Your realism discount</span>
+            <span className="realism__label">{t.realismLabel}</span>
             <TracedValue traced={capacity.userRealismDiscount} onInspect={onInspect} />
           </div>
-          <p className="fine-print">
-            The engine does not estimate what is &ldquo;realistically&rdquo; achievable. That
-            would need achieved-versus-permitted FAR and efficiency data that no public
-            source carries, and a number invented from a heuristic is the one number you
-            could not check. If you want to discount these figures, you set the factor and
-            it is recorded as yours.
-          </p>
+          <p className="fine-print">{t.realismNote}</p>
         </div>
       </footer>
     </section>

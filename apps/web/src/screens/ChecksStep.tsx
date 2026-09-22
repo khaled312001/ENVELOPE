@@ -24,6 +24,21 @@
 import { useState } from 'react';
 
 import type { ChecksView, RunView } from '../api/client.js';
+import { EngineText } from '../components/TracedValue.js';
+import { AR } from '../i18n/checks.ar.js';
+import { EN } from '../i18n/checks.en.js';
+import { useDict } from '../i18n/locale.js';
+
+/*
+  THE COPY LIVES IN `i18n/checks.*.ts`. What stays here is everything the validator
+  and the run supply — each claim's detail, the notices, every invariant's id,
+  statement and figures, every rule's outcome — which is rendered as the engine
+  wrote it in either language, inside `EngineText` so an Arabic page marks it
+  `Verbatim`. The English render is byte-for-byte what it was before the move.
+*/
+
+/** The runtime budget the footer states — a figure, so not a word in a dictionary. */
+const RUNTIME_BUDGET = '10 s';
 
 type ClaimKey =
   | 'selfConsistency'
@@ -32,13 +47,13 @@ type ClaimKey =
   | 'professionalAgreement'
   | 'regulatoryValidity';
 
-/** §16.5's order and headings. Fixed, and not a presentation choice. */
-const CLAIM_ORDER: readonly { key: ClaimKey; title: string }[] = [
-  { key: 'selfConsistency', title: 'Self-consistency' },
-  { key: 'ruleCoverage', title: 'Rule coverage' },
-  { key: 'geometricValidity', title: 'Geometric validity' },
-  { key: 'professionalAgreement', title: 'Professional agreement' },
-  { key: 'regulatoryValidity', title: 'Regulatory validity' },
+/** §16.5's order. Fixed, and not a presentation choice; the headings are in the dictionary. */
+const CLAIM_ORDER: readonly ClaimKey[] = [
+  'selfConsistency',
+  'ruleCoverage',
+  'geometricValidity',
+  'professionalAgreement',
+  'regulatoryValidity',
 ];
 
 const STATUS_CLASS: Record<string, string> = {
@@ -47,14 +62,6 @@ const STATUS_CLASS: Record<string, string> = {
   PARTIAL: 'partial',
   NOT_ASSESSED: 'not-assessed',
   NEVER_CLAIMED: 'never',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  SUPPORTED: 'Supported',
-  MEASURED: 'Measured',
-  PARTIAL: 'Partial',
-  NOT_ASSESSED: 'Not assessed',
-  NEVER_CLAIMED: 'Never claimed',
 };
 
 const STATUS_GLYPH: Record<string, string> = {
@@ -66,7 +73,9 @@ const STATUS_GLYPH: Record<string, string> = {
 };
 
 export function ChecksStep({ run }: { readonly run: RunView }): JSX.Element {
+  const t = useDict(EN, AR);
   const checks = run.checks;
+  const statusLabel = t.status as Readonly<Record<string, string>>;
 
   return (
     <>
@@ -74,17 +83,14 @@ export function ChecksStep({ run }: { readonly run: RunView }): JSX.Element {
         <header className="panel__header">
           <div>
             <h2 id="claims-heading" className="panel__title">
-              What we checked, and what we did not
+              {t.title}
             </h2>
-            <p className="panel__subtitle">
-              Five different questions, answered separately. They are not the same
-              question, and only one of them is about the regulator.
-            </p>
+            <p className="panel__subtitle">{t.subtitle}</p>
           </div>
         </header>
 
         <dl className="claims">
-          {CLAIM_ORDER.map(({ key, title }) => {
+          {CLAIM_ORDER.map((key) => {
             const claim = checks.validation.claims[key];
             const variant = STATUS_CLASS[claim.status] ?? 'not-assessed';
             return (
@@ -93,24 +99,30 @@ export function ChecksStep({ run }: { readonly run: RunView }): JSX.Element {
                   <span className="claim__glyph" aria-hidden="true">
                     {STATUS_GLYPH[claim.status] ?? '⌗'}
                   </span>
-                  {title}
+                  {t.claims[key]}
                   <span className="claim__status">
-                    {STATUS_LABEL[claim.status] ?? claim.status}
+                    {statusLabel[claim.status] ?? claim.status}
                   </span>
                 </dt>
-                <dd>{claim.detail}</dd>
+                <dd>
+                  <EngineText>{claim.detail}</EngineText>
+                </dd>
               </div>
             );
           })}
         </dl>
 
         <div className="callout callout--warn">
-          <p>{checks.validation.selfConsistencyNotice}</p>
+          <p>
+            <EngineText>{checks.validation.selfConsistencyNotice}</EngineText>
+          </p>
         </div>
 
         <details className="disclosure">
-          <summary>What independence here does and does not mean</summary>
-          <p className="fine-print">{checks.validation.independenceLimit}</p>
+          <summary>{t.independence}</summary>
+          <p className="fine-print">
+            <EngineText>{checks.validation.independenceLimit}</EngineText>
+          </p>
         </details>
       </section>
 
@@ -118,16 +130,18 @@ export function ChecksStep({ run }: { readonly run: RunView }): JSX.Element {
       <ConstraintOutcomes checks={checks} />
 
       <p className="fine-print">
-        Runtime {run.elapsedMs} ms
-        {run.withinRuntimeBudget ? ' — within the 10 s budget.' : ' — over the 10 s budget.'}
-        {' · '}
-        Definitions annex {run.annexVersion}.
+        {t.footer.runtime}
+        {run.elapsedMs}
+        {run.withinRuntimeBudget ? t.footer.within(RUNTIME_BUDGET) : t.footer.over(RUNTIME_BUDGET)}
+        {t.footer.annex}
+        <EngineText>{run.annexVersion}</EngineText>.
       </p>
     </>
   );
 }
 
 function InvariantTable({ checks }: { readonly checks: ChecksView }): JSX.Element {
+  const t = useDict(EN, AR).invariants;
   const [showAll, setShowAll] = useState(false);
   const { invariants } = checks;
   const passed = invariants.results.filter((r) => r.status === 'PASS').length;
@@ -135,23 +149,25 @@ function InvariantTable({ checks }: { readonly checks: ChecksView }): JSX.Elemen
   const rows = showAll
     ? invariants.results
     : invariants.results.filter((r) => r.status !== 'DORMANT');
+  const ranSentence = t.ran(
+    String(invariants.ran),
+    String(invariants.total),
+    String(invariants.dormant.length),
+  );
 
   return (
     <section className="panel" aria-labelledby="invariants-heading">
       <header className="panel__header">
         <div>
           <h2 id="invariants-heading" className="panel__title">
-            Conservation checks
+            {t.title}
           </h2>
-          <p className="panel__subtitle">
-            Arithmetic that has to close whatever the rules say. A failure here blocks
-            the run — it is never a warning.
-          </p>
+          <p className="panel__subtitle">{t.subtitle}</p>
         </div>
         <div className="panel__header-actions">
-          <span className="chip chip--ok">{passed} passed</span>
-          {failed > 0 ? <span className="chip chip--danger">{failed} failed</span> : null}
-          <span className="chip">{invariants.dormant.length} not assessed</span>
+          <span className="chip chip--ok">{t.passed(String(passed))}</span>
+          {failed > 0 ? <span className="chip chip--danger">{t.failed(String(failed))}</span> : null}
+          <span className="chip">{t.notAssessed(String(invariants.dormant.length))}</span>
         </div>
       </header>
 
@@ -161,22 +177,20 @@ function InvariantTable({ checks }: { readonly checks: ChecksView }): JSX.Elemen
         which is exactly the claim the engine refuses to make.
       */}
       <p className="fine-print">
-        {invariants.ran} of {invariants.total} checks in the catalogue ran on this
-        artifact. {invariants.dormant.length} had nothing to check and are{' '}
-        <strong>not counted as passes</strong>.
+        {ranSentence.before}
+        <strong>{ranSentence.emphasis}</strong>
+        {ranSentence.after}
       </p>
 
       <table className="data-table">
-        <caption className="sr-only">
-          Invariant results, with the observed and expected values for each
-        </caption>
+        <caption className="sr-only">{t.caption}</caption>
         <thead>
           <tr>
-            <th scope="col">Check</th>
-            <th scope="col">Statement</th>
-            <th scope="col">Observed</th>
-            <th scope="col">Expected</th>
-            <th scope="col">Tolerance</th>
+            <th scope="col">{t.columns.check}</th>
+            <th scope="col">{t.columns.statement}</th>
+            <th scope="col">{t.columns.observed}</th>
+            <th scope="col">{t.columns.expected}</th>
+            <th scope="col">{t.columns.tolerance}</th>
           </tr>
         </thead>
         <tbody>
@@ -190,9 +204,12 @@ function InvariantTable({ checks }: { readonly checks: ChecksView }): JSX.Elemen
                 <StatusChip status={r.status} />
               </th>
               <td>
-                {r.statement}
+                <EngineText>{r.statement}</EngineText>
                 {r.status === 'DORMANT' || r.status === 'FAIL' ? (
-                  <span className="data-table__basis"> — {r.detail}</span>
+                  <span className="data-table__basis">
+                    {' — '}
+                    <EngineText>{r.detail}</EngineText>
+                  </span>
                 ) : null}
               </td>
               {/*
@@ -203,7 +220,9 @@ function InvariantTable({ checks }: { readonly checks: ChecksView }): JSX.Elemen
               */}
               <Measured value={r.observed} />
               <Measured value={r.expected} />
-              <td className="data-table__num">{r.tolerance}</td>
+              <td className="data-table__num">
+                <EngineText>{r.tolerance}</EngineText>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -217,11 +236,11 @@ function InvariantTable({ checks }: { readonly checks: ChecksView }): JSX.Elemen
             aria-expanded={showAll}
             onClick={() => setShowAll((v) => !v)}
           >
-            {showAll
-              ? 'Hide the checks that had nothing to check'
-              : `Show the ${invariants.dormant.length} checks that had nothing to check`}
+            {showAll ? t.hideDormant : t.showDormant(String(invariants.dormant.length))}
           </button>
-          <p className="fine-print">{invariants.dormantNote}</p>
+          <p className="fine-print">
+            <EngineText>{invariants.dormantNote}</EngineText>
+          </p>
         </>
       ) : null}
     </section>
@@ -232,16 +251,22 @@ const NUMERIC = /^[-\d.,\s]+$/;
 
 function Measured({ value }: { readonly value: string | null }): JSX.Element {
   if (value === null) return <td className="data-table__num muted">—</td>;
-  return <td className={NUMERIC.test(value) ? 'data-table__num' : ''}>{value}</td>;
+  return (
+    <td className={NUMERIC.test(value) ? 'data-table__num' : ''}>
+      <EngineText>{value}</EngineText>
+    </td>
+  );
 }
 
 function StatusChip({ status }: { readonly status: string }): JSX.Element {
-  if (status === 'PASS') return <span className="chip chip--ok">pass</span>;
-  if (status === 'FAIL') return <span className="chip chip--danger">fail</span>;
-  return <span className="chip chip--deferred">not assessed</span>;
+  const t = useDict(EN, AR).invariants;
+  if (status === 'PASS') return <span className="chip chip--ok">{t.pass}</span>;
+  if (status === 'FAIL') return <span className="chip chip--danger">{t.fail}</span>;
+  return <span className="chip chip--deferred">{t.notAssessedChip}</span>;
 }
 
 function ConstraintOutcomes({ checks }: { readonly checks: ChecksView }): JSX.Element {
+  const t = useDict(EN, AR).outcomes;
   const { summary, outcomes } = checks.validation;
   const hard = outcomes.filter((o) => o.category === 'HARD');
   const deferred = outcomes.filter((o) => o.category === 'DEFERRED');
@@ -251,21 +276,18 @@ function ConstraintOutcomes({ checks }: { readonly checks: ChecksView }): JSX.El
       <header className="panel__header">
         <div>
           <h2 id="constraints-heading" className="panel__title">
-            The answer, re-checked against the rules
+            {t.title}
           </h2>
-          <p className="panel__subtitle">
-            By a module that cannot see the one that produced it. Agreement is
-            self-consistency — never compliance.
-          </p>
+          <p className="panel__subtitle">{t.subtitle}</p>
         </div>
         <div className="panel__header-actions">
-          <span className="chip chip--ok">{summary.hardSatisfied} satisfied</span>
+          <span className="chip chip--ok">{t.satisfiedCount(String(summary.hardSatisfied))}</span>
           {summary.hardViolated > 0 ? (
-            <span className="chip chip--danger">{summary.hardViolated} violated</span>
+            <span className="chip chip--danger">{t.violatedCount(String(summary.hardViolated))}</span>
           ) : null}
           {summary.hardNotEvaluable > 0 ? (
             <span className="chip chip--warn">
-              {summary.hardNotEvaluable} not evaluable
+              {t.notEvaluableCount(String(summary.hardNotEvaluable))}
             </span>
           ) : null}
         </div>
@@ -277,15 +299,17 @@ function ConstraintOutcomes({ checks }: { readonly checks: ChecksView }): JSX.El
             <div className="rule-list__head">
               <code>{o.parameterId}</code>
               {o.status === 'SATISFIED' ? (
-                <span className="chip chip--ok">satisfied</span>
+                <span className="chip chip--ok">{t.satisfied}</span>
               ) : o.status === 'VIOLATED' ? (
-                <span className="chip chip--danger">violated</span>
+                <span className="chip chip--danger">{t.violated}</span>
               ) : (
-                <span className="chip chip--warn">not evaluable</span>
+                <span className="chip chip--warn">{t.notEvaluable}</span>
               )}
-              {o.isLifeSafety ? <span className="chip chip--danger">life safety</span> : null}
+              {o.isLifeSafety ? <span className="chip chip--danger">{t.lifeSafety}</span> : null}
             </div>
-            <span className="muted">{o.statement}</span>
+            <span className="muted">
+              <EngineText>{o.statement}</EngineText>
+            </span>
           </li>
         ))}
       </ul>
@@ -293,28 +317,28 @@ function ConstraintOutcomes({ checks }: { readonly checks: ChecksView }): JSX.El
       {deferred.length > 0 ? (
         <div className="rule-group rule-group--deferred">
           <h3 className="panel__section">
-            Applicable, and not assessed <span className="chip">{deferred.length}</span>
+            {t.deferredTitle}
+            <span className="chip">{deferred.length}</span>
             {summary.lifeSafetyDeferred > 0 ? (
               <span className="chip chip--danger">
-                {summary.lifeSafetyDeferred} life safety
+                {t.lifeSafetyCount(String(summary.lifeSafetyDeferred))}
               </span>
             ) : null}
           </h3>
-          <p className="fine-print">
-            Declared in every output. What was not checked has to be visible rather
-            than absent — an omitted check reads as a check that passed.
-          </p>
+          <p className="fine-print">{t.deferredNote}</p>
           <ul className="rule-list">
             {deferred.map((o) => (
               <li key={o.ruleId}>
                 <div className="rule-list__head">
                   <code>{o.ruleId}</code>
-                  <span className="chip chip--deferred">not assessed</span>
+                  <span className="chip chip--deferred">{t.notAssessed}</span>
                   {o.isLifeSafety ? (
-                    <span className="chip chip--danger">life safety</span>
+                    <span className="chip chip--danger">{t.lifeSafety}</span>
                   ) : null}
                 </div>
-                <span className="muted">{o.reason ?? o.statement}</span>
+                <span className="muted">
+                  <EngineText>{o.reason ?? o.statement}</EngineText>
+                </span>
               </li>
             ))}
           </ul>

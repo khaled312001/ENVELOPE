@@ -20,6 +20,14 @@
 
 import { useState } from 'react';
 
+import { useDict } from '../i18n/locale.js';
+import { AR } from '../i18n/register.ar.js';
+import { EN } from '../i18n/register.en.js';
+import { EngineText, EngineValue } from './TracedValue.js';
+
+/** The engine's perturbation for the sensitivity column — a figure, so not a word in a dictionary. */
+const PERTURBATION = '±10%';
+
 export interface AssumptionEntry {
   readonly nodeId: string;
   readonly parameterId: string;
@@ -50,6 +58,7 @@ export function AssumptionRegister({
   onEdit,
   onInspect,
 }: AssumptionRegisterProps): JSX.Element {
+  const t = useDict(EN, AR);
   const measured = assumptions.filter((a) => a.sensitivity !== null);
   const strongest = measured[0]?.sensitivity
     ? Number(measured[0].sensitivity.relativeEffect)
@@ -60,39 +69,32 @@ export function AssumptionRegister({
       <header className="panel__header">
         <div>
           <h2 id="assumptions-heading" className="panel__title">
-            Assumptions
+            {t.title}
           </h2>
           <p className="panel__subtitle">
             {assumptions.length === 0
-              ? 'Every value in this run came from a rule or from you. Nothing was assumed.'
-              : `${assumptions.length} value${assumptions.length === 1 ? '' : 's'} had no ` +
-                `governing rule. ${
-                  strongest > 0
-                    ? `The one at the top moves the answer by ${(strongest * 100).toFixed(1)}%.`
-                    : ''
-                }`}
+              ? t.none
+              : (assumptions.length === 1 ? t.noRule.one : t.noRule.other)(String(assumptions.length)) +
+                (strongest > 0 ? t.topMoves((strongest * 100).toFixed(1)) : '')}
           </p>
         </div>
       </header>
 
       {assumptions.length === 0 ? null : (
         <table className="data-table">
-          <caption className="sr-only">
-            Assumptions made in this run, ordered by how much each moves the governing
-            capacity
-          </caption>
+          <caption className="sr-only">{t.caption}</caption>
           <thead>
             <tr>
               <th scope="col" className="data-table__rank">
                 #
               </th>
-              <th scope="col">Assumption</th>
+              <th scope="col">{t.columns.assumption}</th>
               <th scope="col" className="data-table__num">
-                Value
+                {t.columns.value}
               </th>
-              <th scope="col">Why it was assumed</th>
+              <th scope="col">{t.columns.why}</th>
               <th scope="col" className="data-table__num">
-                Effect at ±10%
+                {t.columns.effectAt(PERTURBATION)}
               </th>
             </tr>
           </thead>
@@ -114,17 +116,17 @@ export function AssumptionRegister({
       <footer className="panel__footer panel__footer--gate">
         {acknowledged ? (
           <p className="gate-status gate-status--done">
-            <span aria-hidden="true">✓</span> You acknowledged these assumptions. You can
-            still change any of them.
+            <span aria-hidden="true">✓</span>
+            {t.acknowledged}
           </p>
         ) : (
           <>
             <p className="gate-status gate-status--pending">
-              <span aria-hidden="true">!</span> Read these before exporting. The report
-              carries them, and so does any decision made from it.
+              <span aria-hidden="true">!</span>
+              {t.pending}
             </p>
             <button type="button" className="button button--primary" onClick={onAcknowledge}>
-              I have read the assumptions
+              {t.acknowledge}
             </button>
           </>
         )}
@@ -146,6 +148,7 @@ function AssumptionRow({
   readonly onEdit: (parameterId: string, value: string) => void;
   readonly onInspect: (nodeId: string) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(entry.value);
 
@@ -169,18 +172,20 @@ function AssumptionRow({
           type="button"
           className="link-button"
           onClick={() => onInspect(entry.nodeId)}
-          title="Show where this assumption is used"
+          title={t.showUse}
         >
-          {entry.label}
+          <EngineText>{entry.label}</EngineText>
         </button>
-        <span className="muted data-table__param">{entry.parameterId}</span>
+        <span className="muted data-table__param">
+          <EngineText>{entry.parameterId}</EngineText>
+        </span>
       </th>
 
       <td className="data-table__num">
         {editing ? (
           <span className="inline-edit">
             <label className="sr-only" htmlFor={`edit-${entry.nodeId}`}>
-              {entry.label}
+              <EngineText>{entry.label}</EngineText>
             </label>
             <input
               id={`edit-${entry.nodeId}`}
@@ -204,12 +209,10 @@ function AssumptionRow({
             type="button"
             className="traced traced--assumed"
             onClick={() => setEditing(true)}
-            aria-label={`Edit ${entry.label}, currently ${entry.value}${
-              entry.unit ? ` ${entry.unit}` : ''
-            }`}
+            aria-label={t.editLabel(entry.label, `${entry.value}${entry.unit ? ` ${entry.unit}` : ''}`)}
           >
             <span className="value">
-              {entry.value}
+              <EngineValue>{entry.value}</EngineValue>
               {entry.unit ? <span className="value__unit">{entry.unit}</span> : null}
             </span>
             <span className="traced__marker" aria-hidden="true" />
@@ -217,7 +220,9 @@ function AssumptionRow({
         )}
       </td>
 
-      <td className="data-table__basis">{entry.basis}</td>
+      <td className="data-table__basis">
+        <EngineText>{entry.basis}</EngineText>
+      </td>
 
       <td className="data-table__num">
         {entry.sensitivity ? (
@@ -229,14 +234,13 @@ function AssumptionRow({
               aria-hidden="true"
             />
             <span className="sr-only">
-              Moves the governing capacity by {(effect! * 100).toFixed(1)} percent when
-              perturbed by {entry.sensitivity.perturbation}
+              {t.moves((effect! * 100).toFixed(1), entry.sensitivity.perturbation)}
             </span>
           </span>
         ) : (
-          <span className="not-assessed" title="This assumption could not be perturbed independently.">
+          <span className="not-assessed" title={t.notMeasuredTitle}>
             <span aria-hidden="true">⌗</span>
-            Not measured
+            {t.notMeasured}
           </span>
         )}
       </td>

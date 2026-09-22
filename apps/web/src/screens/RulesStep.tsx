@@ -14,20 +14,58 @@
  * and excluded and why, and which are applicable but will not be assessed. §3.4
  * requires all three in every output, and showing them before the computation is
  * what makes the acknowledgement mean something.
+ *
+ * The copy is in `i18n/rules.en.ts` and `rules.ar.ts`. What stays here, in English
+ * in both languages, is what is posted to the engine — the generic mix and its
+ * basis, and the two bases below — because a basis string is recorded in the
+ * provenance graph, printed in the report and signed at G4, and is never
+ * translated.
  */
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 
 import {
   api,
   ApiError,
   type Actor,
+  type DeveloperStandardView,
   type ParkingComparison,
   type PlotView,
   type RuleSummary,
   type RunRequestBody,
   type StandardsView,
 } from '../api/client.js';
+import { AR } from '../i18n/rules.ar.js';
+import { EN } from '../i18n/rules.en.js';
+import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
+
+/**
+ * A rule record, a developer's text or an API sentence, isolated on the Arabic
+ * page and untouched on the English one — whose markup is held byte-identical to
+ * what it was before this screen's copy moved into `i18n/rules.en.ts`.
+ */
+function useVerbatim(): (value: ReactNode) => ReactNode {
+  const { locale } = useLocale();
+  return (value) => (locale === 'ar' ? <Verbatim>{value}</Verbatim> : value);
+}
+
+/*
+  THE FIGURES INSIDE THIS SCREEN'S SENTENCES, each named once, because no digit is
+  typed into a dictionary.
+
+  The swing is `FR-DEF-002`'s: parking-in-FAR moves capacity by 15–35%. The 1.00 is
+  what the engine used to assume for saleable efficiency without saying so. The
+  example efficiency is the low end of the 93–97% the Azizi brief states. The
+  podium example reads the digit out of a real height code.
+*/
+const PARKING_IN_FAR_SWING = '15–35%';
+const PHASE = '0';
+const PODIUM_EXAMPLE_DIGIT = '2';
+const PODIUM_EXAMPLE_CODE = 'G+2P+8';
+const EFFICIENCY_ONCE_ASSUMED = '1.00';
+const EFFICIENCY_EXAMPLE = '0.93';
+const EFFICIENCY_ABOVE = '0';
+const EFFICIENCY_AT_MOST = '1';
 
 /**
  * The mix used when no developer standard is chosen.
@@ -64,6 +102,8 @@ export function RulesStep({
   readonly onRun: (body: RunRequestBody) => void;
   readonly onError: (e: ApiError) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
+  const ltr = useVerbatim();
   const [rules, setRules] = useState<{ pending: readonly RuleSummary[]; warning: string } | null>(
     null,
   );
@@ -158,13 +198,6 @@ export function RulesStep({
   const efficiencyValid =
     efficiency.trim() !== '' && Number(efficiency) > 0 && Number(efficiency) <= 1;
 
-  const deferred = (rules?.pending ?? []).filter(
-    (r) => r.ruleClass === 'DEFERRED' || r.mechanization === 'NON_MECHANIZABLE',
-  );
-  const evaluative = (rules?.pending ?? []).filter((r) => r.ruleClass === 'EVALUATIVE_ONLY');
-  const generative = (rules?.pending ?? []).filter((r) => r.ruleClass === 'GENERATIVE');
-  const filtering = (rules?.pending ?? []).filter((r) => r.ruleClass === 'FILTERING');
-
   return (
     <>
       {/* --- The blocking question ------------------------------------- */}
@@ -172,17 +205,14 @@ export function RulesStep({
         <header className="panel__header">
           <div>
             <h2 id="parking-far-heading" className="panel__title">
-              Does parking count toward FAR here?
+              {t.parkingInFar.title}
             </h2>
-            <p className="panel__subtitle">
-              This changes the answer by 15–35%. There is no default and we will not
-              assume one.
-            </p>
+            <p className="panel__subtitle">{t.parkingInFar.subtitle(PARKING_IN_FAR_SWING)}</p>
           </div>
         </header>
 
         <fieldset className="choice-set">
-          <legend className="sr-only">Parking-in-FAR treatment</legend>
+          <legend className="sr-only">{t.parkingInFar.legend}</legend>
 
           <label className={`choice ${parkingInFar === 'COUNTS_TOWARD_FAR' ? 'is-selected' : ''}`}>
             <input
@@ -193,11 +223,8 @@ export function RulesStep({
               onChange={() => setParkingInFar('COUNTS_TOWARD_FAR')}
             />
             <span>
-              <strong>Yes, it counts</strong>
-              <span className="choice__detail">
-                Parking area consumes part of the permitted floor area, so less is left to
-                sell.
-              </span>
+              <strong>{t.parkingInFar.counts.label}</strong>
+              <span className="choice__detail">{t.parkingInFar.counts.detail}</span>
             </span>
           </label>
 
@@ -210,10 +237,8 @@ export function RulesStep({
               onChange={() => setParkingInFar('EXCLUDED_FROM_FAR')}
             />
             <span>
-              <strong>No, it is excluded</strong>
-              <span className="choice__detail">
-                The full permitted floor area is available above the parking.
-              </span>
+              <strong>{t.parkingInFar.excluded.label}</strong>
+              <span className="choice__detail">{t.parkingInFar.excluded.detail}</span>
             </span>
           </label>
 
@@ -228,11 +253,8 @@ export function RulesStep({
               onChange={() => setParkingInFar('OPEN_REGULATORY_QUESTION')}
             />
             <span>
-              <strong>I don&rsquo;t know yet</strong>
-              <span className="choice__detail">
-                A legitimate answer. We will not compute a capacity, but we will show you
-                what each treatment would be worth.
-              </span>
+              <strong>{t.parkingInFar.open.label}</strong>
+              <span className="choice__detail">{t.parkingInFar.open.detail}</span>
             </span>
           </label>
         </fieldset>
@@ -256,48 +278,23 @@ export function RulesStep({
             }
           }}
         >
-          Show me what each answer is worth
+          {t.parkingInFar.compare}
         </button>
-        {!efficiencyValid ? (
-          <p className="fine-print">
-            The comparison runs the pipeline twice, so it needs the saleable share of GFA
-            below first.
-          </p>
-        ) : null}
+        {!efficiencyValid ? <p className="fine-print">{t.parkingInFar.compareNeeds}</p> : null}
 
-        {comparison ? (
-          <div className="comparison">
-            <div className="comparison__side">
-              <span className="comparison__label">If it counts</span>
-              <span className="value comparison__value">
-                {comparison.countsTowardFar.governingGfaM2 ?? '—'}
-                <span className="value__unit">m²</span>
-              </span>
-            </div>
-            <div className="comparison__side">
-              <span className="comparison__label">If it is excluded</span>
-              <span className="value comparison__value">
-                {comparison.excludedFromFar.governingGfaM2 ?? '—'}
-                <span className="value__unit">m²</span>
-              </span>
-            </div>
-            <p className="comparison__verdict">{comparison.verdict}</p>
-          </div>
-        ) : null}
+        {comparison ? <ComparisonResult comparison={comparison} /> : null}
       </section>
 
       {/* --- Parking levels ------------------------------------------- */}
       <section className="panel">
         <header className="panel__header">
           <div>
-            <h2 className="panel__title">Parking levels</h2>
-            <p className="panel__subtitle">
-              How many levels of structured parking the scheme can provide.
-            </p>
+            <h2 className="panel__title">{t.levels.title}</h2>
+            <p className="panel__subtitle">{t.levels.subtitle}</p>
           </div>
         </header>
         <div className="field field--compact">
-          <label htmlFor="levels">Levels available</label>
+          <label htmlFor="levels">{t.levels.available}</label>
           <input
             id="levels"
             className="input input--num"
@@ -309,7 +306,7 @@ export function RulesStep({
           />
         </div>
         <div className="field field--compact">
-          <label htmlFor="podium-levels">Podium levels</label>
+          <label htmlFor="podium-levels">{t.levels.podium}</label>
           <input
             id="podium-levels"
             className="input input--num"
@@ -324,14 +321,17 @@ export function RulesStep({
           <p id="podium-levels-hint" className="field__help">
             {sheetPodiumLevels ? (
               <>
-                Read from the affection plan as{' '}
-                <span className="value">{sheetPodiumLevels.raw}</span>. Confirm or change it —
-                the run records it under your name.
+                {t.levels.fromSheetBefore}
+                <span className="value">{ltr(sheetPodiumLevels.raw)}</span>
+                {t.levels.fromSheetAfter}
               </>
             ) : (
               <>
-                The number of podium levels in the height code, such as the 2 in G+2P+8. Left
-                empty, the massing shows one podium level and marks it as assumed.
+                {t.levels.example.before}
+                {ltr(PODIUM_EXAMPLE_DIGIT)}
+                {t.levels.example.between}
+                {ltr(PODIUM_EXAMPLE_CODE)}
+                {t.levels.example.after}
               </>
             )}
           </p>
@@ -339,242 +339,30 @@ export function RulesStep({
       </section>
 
       {/* --- Disclosure ------------------------------------------------ */}
-      <section className="panel" aria-labelledby="rules-heading">
-        <header className="panel__header">
-          <div>
-            <h2 id="rules-heading" className="panel__title">
-              The rules
-            </h2>
-            <p className="panel__subtitle">
-              What will be applied, and what will not. Both matter.
-            </p>
-          </div>
-        </header>
-
-        {rules ? (
-          <>
-            <div className="banner banner--danger" role="alert">
-              <div>
-                <strong>No rule in this deployment is approved.</strong>
-                <p>{rules.warning}</p>
-              </div>
-            </div>
-
-            <RuleGroup
-              title="Construct the envelope"
-              note="These build geometry directly — a setback becomes an offset, not a test."
-              rules={generative}
-            />
-            <RuleGroup
-              title="Prune candidates"
-              note="Applied while constructing; a violating candidate is never created."
-              rules={filtering}
-            />
-            <RuleGroup
-              title="Can only reject, never construct"
-              note="Topological rules have no constructive inverse. In Phase 0 nothing generates a floorplate, so these can only be declared."
-              rules={evaluative}
-            />
-            <RuleGroup
-              title="Applicable, and not assessed"
-              note="Declared in every output so that what we did not check is visible rather than absent."
-              rules={deferred}
-              deferred
-            />
-          </>
-        ) : (
-          <p className="muted">Loading the rule set…</p>
-        )}
-      </section>
+      <RuleDisclosure rules={rules} />
 
       {/* --- The developer's brief ------------------------------------- */}
-      {standards && standard ? (
-        <section className="panel" aria-labelledby="standard-heading">
-          <header className="panel__header">
-            <div>
-              <h2 id="standard-heading" className="panel__title">
-                Build to a developer&rsquo;s standard
-              </h2>
-              <p className="panel__subtitle">
-                Optional, and it changes the answer. A developer&rsquo;s brief fixes the
-                unit mix and the areas a scheme is priced on — which is what turns a
-                permitted GFA into a unit count.
-              </p>
-            </div>
-          </header>
-
-          {/*
-            The distinction this panel exists to preserve. A standard is a
-            commercial brief; the rules above are regulation. Showing them in one
-            list would be the first step to showing them in one ink.
-          */}
-          <div className="banner banner--assumed" role="note">
-            <div>
-              <strong>This is not a regulation.</strong>
-              <p>{standards.disclaimer}</p>
-            </div>
-          </div>
-
-          {standards.brief ? (
-            <div className="callout callout--ok">
-              <p>
-                <strong>
-                  This plot has its own brief — {standards.brief.briefId}, plot{' '}
-                  {standards.brief.plotNumber}.
-                </strong>{' '}
-                It states FAR {standards.brief.far.value} and {standards.brief.gfaM2.value}{' '}
-                m² of GFA.
-              </p>
-              {standards.brief.far.note ? (
-                <p className="fine-print">{standards.brief.far.note}</p>
-              ) : null}
-              <p className="fine-print">
-                Its scenarios replace the general standard&rsquo;s — the wider mix does not
-                apply to this plot.
-              </p>
-            </div>
-          ) : null}
-
-          <fieldset className="choice-set">
-            <legend className="field-group__legend">
-              {standard.developer} — {standard.title}
-            </legend>
-
-            <label className={`choice ${scenarioId === '' ? 'is-selected' : ''}`}>
-              <input
-                type="radio"
-                name="mix-scenario"
-                value=""
-                checked={scenarioId === ''}
-                onChange={() => setScenarioId('')}
-              />
-              <span>
-                <strong>None — use a generic mix</strong>
-                <span className="choice__detail">
-                  A stand-in nobody entered. It is declared as an assumption, and it moves
-                  the unit count directly.
-                </span>
-              </span>
-            </label>
-
-            {standard.scenarios.map((s) => (
-              <label
-                key={s.scenarioId}
-                className={`choice ${scenarioId === s.scenarioId ? 'is-selected' : ''}`}
-              >
-                <input
-                  type="radio"
-                  name="mix-scenario"
-                  value={s.scenarioId}
-                  checked={scenarioId === s.scenarioId}
-                  onChange={() => {
-                    setScenarioId(s.scenarioId);
-                    // Fill the efficiency from the same document, at the
-                    // conservative end of its range. It stays editable: it is
-                    // the user's number and it is recorded as theirs.
-                    if (efficiency === '') {
-                      setEfficiency(standard.targets.saleableEfficiencyMin.value);
-                    }
-                  }}
-                />
-                <span>
-                  <strong>
-                    {s.label}{' '}
-                    {s.fromBrief ? (
-                      <span className="chip chip--ok">from this plot&rsquo;s brief</span>
-                    ) : null}
-                  </strong>
-                  <span className="choice__detail">
-                    {s.entries
-                      .map(
-                        (e) =>
-                          `${(Number(e.share) * 100).toFixed(0)}% ${e.label} at ${e.nsaM2} m²`,
-                      )
-                      .join(' · ')}
-                  </span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
-
-          {scenario ? (
-            <>
-              <h3 className="panel__subheading">Where these areas come from</h3>
-              <ul className="reason-list">
-                {scenario.entries.map((e) => (
-                  <li key={e.typeId}>{e.derivation}</li>
-                ))}
-              </ul>
-              <p className="fine-print">
-                {scenario.citation.instrumentId} {scenario.citation.clauseReference}, p.{' '}
-                {scenario.citation.sourcePage} — &ldquo;{scenario.citation.sourceTextVerbatim}
-                &rdquo;
-              </p>
-              {scenario.rangeNote ? (
-                <p className="callout callout--warn">{scenario.rangeNote}</p>
-              ) : null}
-            </>
-          ) : null}
-
-          <h3 className="panel__subheading">
-            What the standard asks for and this engine does not do
-          </h3>
-          <ul className="reason-list reason-list--uncertain">
-            {standard.notMechanized.map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
-        </section>
-      ) : standards?.withheld ? (
-        /* Withheld by the deployment, and said so where the picker would be. An
-           absent section would let the reader assume there was nothing to pick. */
-        <section className="panel" aria-labelledby="standard-heading">
-          <h2 id="standard-heading" className="panel__title">
-            Build to a developer&rsquo;s standard
-          </h2>
-          <p>{standards.withheld}</p>
-        </section>
-      ) : null}
+      <DeveloperStandardPanel
+        standards={standards}
+        scenarioId={scenarioId}
+        onChoose={(id) => {
+          setScenarioId(id);
+          // Fill the efficiency from the same document, at the
+          // conservative end of its range. It stays editable: it is
+          // the user's number and it is recorded as theirs.
+          if (id !== '' && standard && efficiency === '') {
+            setEfficiency(standard.targets.saleableEfficiencyMin.value);
+          }
+        }}
+      />
 
       {/* --- Saleable efficiency, which has no default ------------------- */}
-      <section className="panel panel--emphasis" aria-labelledby="efficiency-heading">
-        <header className="panel__header">
-          <div>
-            <h2 id="efficiency-heading" className="panel__title">
-              How much of the GFA is saleable?
-            </h2>
-            <p className="panel__subtitle">
-              Cores, corridors, structure, plant and amenity are all inside GFA and none of
-              them sells. There is no default here: this engine used to take 1.00 without
-              saying so, and reported more units than any building holds.
-            </p>
-          </div>
-        </header>
-
-        <div className="field">
-          <label htmlFor="saleable-efficiency">Saleable area ÷ GFA</label>
-          <input
-            id="saleable-efficiency"
-            className="input input--num"
-            inputMode="decimal"
-            value={efficiency}
-            placeholder="e.g. 0.93"
-            onChange={(e) => setEfficiency(e.target.value)}
-            aria-describedby="saleable-efficiency-help"
-          />
-          <p id="saleable-efficiency-help" className="field__help">
-            {standard
-              ? `${standard.developer} states ${standard.targets.saleableEfficiencyMin.value} to ${standard.targets.saleableEfficiencyMax.value} — "${standard.targets.saleableEfficiencyMin.citation.sourceTextVerbatim}". Whatever you enter is recorded as yours.`
-              : 'A number above 0 and at most 1. Whatever you enter is recorded as yours.'}
-          </p>
-          {efficiency.trim() !== '' && !efficiencyValid ? (
-            <p className="field__help" role="alert">
-              It has to sit above 0 and at most 1. Above 1 would mean the building sells
-              more area than it has.
-            </p>
-          ) : null}
-        </div>
-      </section>
+      <SaleableEfficiency
+        standard={standard}
+        efficiency={efficiency}
+        valid={efficiencyValid}
+        onChange={setEfficiency}
+      />
 
       <div className="actions">
         <button
@@ -583,19 +371,357 @@ export function RulesStep({
           disabled={!parkingInFar || !efficiencyValid || busy}
           onClick={() => parkingInFar && efficiencyValid && onRun(body(parkingInFar))}
         >
-          {busy ? 'Computing…' : 'Compute capacity'}
+          {busy ? t.run.busy : t.run.idle}
         </button>
-        {!parkingInFar ? (
-          <p className="fine-print">Answer the parking question above to continue.</p>
-        ) : null}
+        {!parkingInFar ? <p className="fine-print">{t.run.needsParking}</p> : null}
         {parkingInFar && !efficiencyValid ? (
-          <p className="fine-print">
-            Enter the saleable share of GFA to continue. It is not a formality — it moves
-            the unit count by the whole of whatever it is not.
-          </p>
+          <p className="fine-print">{t.run.needsEfficiency}</p>
         ) : null}
       </div>
     </>
+  );
+}
+
+/*
+  THE TWO SECTIONS BELOW ARE THEIR OWN COMPONENTS, AND EXPORTED, FOR ONE REASON.
+
+  Both render only once `/api/rules` and `/api/standards` have answered, which
+  happens in an effect — and a static render runs no effects. So the copy in them
+  was reached by nothing but a browser. Lifting them out changes no markup (a
+  component boundary is not an element) and lets a test hand them the API's own
+  answers, in either language.
+*/
+
+/** What will be applied, what will not, and why — before anything is computed. */
+export function RuleDisclosure({
+  rules,
+}: {
+  readonly rules: { readonly pending: readonly RuleSummary[]; readonly warning: string } | null;
+}): JSX.Element {
+  const deferred = (rules?.pending ?? []).filter(
+    (r) => r.ruleClass === 'DEFERRED' || r.mechanization === 'NON_MECHANIZABLE',
+  );
+  const evaluative = (rules?.pending ?? []).filter((r) => r.ruleClass === 'EVALUATIVE_ONLY');
+  const generative = (rules?.pending ?? []).filter((r) => r.ruleClass === 'GENERATIVE');
+  const filtering = (rules?.pending ?? []).filter((r) => r.ruleClass === 'FILTERING');
+  const t = useDict(EN, AR).rules;
+  const ltr = useVerbatim();
+
+  return (
+    <section className="panel" aria-labelledby="rules-heading">
+      <header className="panel__header">
+        <div>
+          <h2 id="rules-heading" className="panel__title">
+            {t.title}
+          </h2>
+          <p className="panel__subtitle">{t.subtitle}</p>
+        </div>
+      </header>
+
+      {rules ? (
+        <>
+          <div className="banner banner--danger" role="alert">
+            <div>
+              <strong>{t.noneApproved}</strong>
+              {/* The API's own warning, as it wrote it. */}
+              <p>{ltr(rules.warning)}</p>
+            </div>
+          </div>
+
+          <RuleGroup
+            title={t.groups.generative.title}
+            note={t.groups.generative.note}
+            rules={generative}
+          />
+          <RuleGroup
+            title={t.groups.filtering.title}
+            note={t.groups.filtering.note}
+            rules={filtering}
+          />
+          <RuleGroup
+            title={t.groups.evaluative.title}
+            note={t.groups.evaluative.note(PHASE)}
+            rules={evaluative}
+          />
+          <RuleGroup
+            title={t.groups.deferred.title}
+            note={t.groups.deferred.note}
+            rules={deferred}
+            deferred
+          />
+        </>
+      ) : (
+        <p className="muted">{t.loading}</p>
+      )}
+    </section>
+  );
+}
+
+/** The developer-standard picker, or the deployment's reason for withholding it. */
+export function DeveloperStandardPanel({
+  standards,
+  scenarioId,
+  onChoose,
+}: {
+  readonly standards: StandardsView | null;
+  readonly scenarioId: string;
+  /** `''` is the generic mix. */
+  readonly onChoose: (scenarioId: string) => void;
+}): JSX.Element | null {
+  const t = useDict(EN, AR).standard;
+  const ltr = useVerbatim();
+  const { locale } = useLocale();
+  const standard = standards?.standards[0];
+  const scenario = standard?.scenarios.find((s) => s.scenarioId === scenarioId);
+
+  if (standards && standard) {
+    return (
+      <section className="panel" aria-labelledby="standard-heading">
+        <header className="panel__header">
+          <div>
+            <h2 id="standard-heading" className="panel__title">
+              {t.title}
+            </h2>
+            <p className="panel__subtitle">{t.subtitle}</p>
+          </div>
+        </header>
+
+        {/*
+          The distinction this panel exists to preserve. A standard is a
+          commercial brief; the rules above are regulation. Showing them in one
+          list would be the first step to showing them in one ink.
+        */}
+        <div className="banner banner--assumed" role="note">
+          <div>
+            <strong>{t.notice}</strong>
+            <p>{ltr(standards.disclaimer)}</p>
+          </div>
+        </div>
+
+        {standards.brief ? (
+          <div className="callout callout--ok">
+            <p>
+              <strong>
+                {t.brief.before}
+                {ltr(standards.brief.briefId)}
+                {t.brief.plot}
+                {ltr(standards.brief.plotNumber)}
+                {t.brief.end}
+              </strong>{' '}
+              {t.brief.statesFar}
+              {standards.brief.far.value}
+              {t.brief.statesAnd}
+              {standards.brief.gfaM2.value}
+              {t.brief.statesGfa}
+            </p>
+            {standards.brief.far.note ? (
+              <p className="fine-print">{ltr(standards.brief.far.note)}</p>
+            ) : null}
+            <p className="fine-print">{t.brief.replaces}</p>
+          </div>
+        ) : null}
+
+        <fieldset className="choice-set">
+          <legend className="field-group__legend">
+            {ltr(standard.developer)} — {ltr(standard.title)}
+          </legend>
+
+          <label className={`choice ${scenarioId === '' ? 'is-selected' : ''}`}>
+            <input
+              type="radio"
+              name="mix-scenario"
+              value=""
+              checked={scenarioId === ''}
+              onChange={() => onChoose('')}
+            />
+            <span>
+              <strong>{t.none.label}</strong>
+              <span className="choice__detail">{t.none.detail}</span>
+            </span>
+          </label>
+
+          {standard.scenarios.map((s) => (
+            <label
+              key={s.scenarioId}
+              className={`choice ${scenarioId === s.scenarioId ? 'is-selected' : ''}`}
+            >
+              <input
+                type="radio"
+                name="mix-scenario"
+                value={s.scenarioId}
+                checked={scenarioId === s.scenarioId}
+                onChange={() => onChoose(s.scenarioId)}
+              />
+              <span>
+                <strong>
+                  {ltr(s.label)}{' '}
+                  {s.fromBrief ? <span className="chip chip--ok">{t.fromBrief}</span> : null}
+                </strong>
+                <span className="choice__detail">
+                  {/* Each unit type's label is the developer's; the share and the area
+                      are the resolved figures the API sent. */}
+                  {locale === 'ar'
+                    ? s.entries.map((e, k) => (
+                        <Fragment key={e.typeId}>
+                          {k > 0 ? t.entrySeparator : ''}
+                          {t.entryShare((Number(e.share) * 100).toFixed(0))}
+                          <Verbatim>{e.label}</Verbatim>
+                          {t.entryArea(e.nsaM2)}
+                        </Fragment>
+                      ))
+                    : s.entries
+                        .map(
+                          (e) =>
+                            `${t.entryShare((Number(e.share) * 100).toFixed(0))}${e.label}${t.entryArea(e.nsaM2)}`,
+                        )
+                        .join(t.entrySeparator)}
+                </span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+
+        {scenario ? (
+          <>
+            <h3 className="panel__subheading">{t.whereFrom}</h3>
+            <ul className="reason-list">
+              {scenario.entries.map((e) => (
+                <li key={e.typeId}>{ltr(e.derivation)}</li>
+              ))}
+            </ul>
+            <p className="fine-print">
+              {ltr(`${scenario.citation.instrumentId} ${scenario.citation.clauseReference}`)}
+              {t.page}
+              {scenario.citation.sourcePage}
+              {t.quoteBefore}
+              {ltr(scenario.citation.sourceTextVerbatim)}
+              {t.quoteAfter}
+            </p>
+            {scenario.rangeNote ? (
+              <p className="callout callout--warn">{ltr(scenario.rangeNote)}</p>
+            ) : null}
+          </>
+        ) : null}
+
+        <h3 className="panel__subheading">{t.notMechanized}</h3>
+        <ul className="reason-list reason-list--uncertain">
+          {standard.notMechanized.map((n) => (
+            <li key={n}>{ltr(n)}</li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
+  if (standards?.withheld) {
+    /* Withheld by the deployment, and said so where the picker would be. An
+       absent section would let the reader assume there was nothing to pick. */
+    return (
+      <section className="panel" aria-labelledby="standard-heading">
+        <h2 id="standard-heading" className="panel__title">
+          {t.title}
+        </h2>
+        <p>{ltr(standards.withheld)}</p>
+      </section>
+    );
+  }
+  return null;
+}
+
+/** What the two treatments are worth, side by side, and the engine's verdict on them. */
+export function ComparisonResult({
+  comparison,
+}: {
+  readonly comparison: ParkingComparison;
+}): JSX.Element {
+  const t = useDict(EN, AR).parkingInFar;
+  const ltr = useVerbatim();
+  return (
+    <div className="comparison">
+      <div className="comparison__side">
+        <span className="comparison__label">{t.ifCounts}</span>
+        <span className="value comparison__value">
+          {comparison.countsTowardFar.governingGfaM2 ?? '—'}
+          <span className="value__unit">m²</span>
+        </span>
+      </div>
+      <div className="comparison__side">
+        <span className="comparison__label">{t.ifExcluded}</span>
+        <span className="value comparison__value">
+          {comparison.excludedFromFar.governingGfaM2 ?? '—'}
+          <span className="value__unit">m²</span>
+        </span>
+      </div>
+      <p className="comparison__verdict">{ltr(comparison.verdict)}</p>
+    </div>
+  );
+}
+
+/**
+ * The saleable-efficiency question, which has no default.
+ *
+ * Its own component, and exported, because the validation line below renders only
+ * once somebody has typed an out-of-range value — which a static render never
+ * does. Lifting it out changes no markup.
+ */
+export function SaleableEfficiency({
+  standard,
+  efficiency,
+  valid,
+  onChange,
+}: {
+  readonly standard: DeveloperStandardView | undefined;
+  readonly efficiency: string;
+  readonly valid: boolean;
+  readonly onChange: (value: string) => void;
+}): JSX.Element {
+  const t = useDict(EN, AR).efficiency;
+  const ltr = useVerbatim();
+  return (
+    <section className="panel panel--emphasis" aria-labelledby="efficiency-heading">
+      <header className="panel__header">
+        <div>
+          <h2 id="efficiency-heading" className="panel__title">
+            {t.title}
+          </h2>
+          <p className="panel__subtitle">{t.subtitle(EFFICIENCY_ONCE_ASSUMED)}</p>
+        </div>
+      </header>
+
+      <div className="field">
+        <label htmlFor="saleable-efficiency">{t.label}</label>
+        <input
+          id="saleable-efficiency"
+          className="input input--num"
+          inputMode="decimal"
+          value={efficiency}
+          placeholder={t.placeholder(EFFICIENCY_EXAMPLE)}
+          onChange={(e) => onChange(e.target.value)}
+          aria-describedby="saleable-efficiency-help"
+        />
+        <p id="saleable-efficiency-help" className="field__help">
+          {standard ? (
+            <>
+              {t.fromStandard.before}
+              {ltr(standard.developer)}
+              {t.fromStandard.states}
+              {standard.targets.saleableEfficiencyMin.value}
+              {t.fromStandard.to}
+              {standard.targets.saleableEfficiencyMax.value}
+              {t.fromStandard.quoteBefore}
+              {ltr(standard.targets.saleableEfficiencyMin.citation.sourceTextVerbatim)}
+              {t.fromStandard.after}
+            </>
+          ) : (
+            t.bounds(EFFICIENCY_ABOVE, EFFICIENCY_AT_MOST)
+          )}
+        </p>
+        {efficiency.trim() !== '' && !valid ? (
+          <p className="field__help" role="alert">
+            {t.invalid(EFFICIENCY_ABOVE, EFFICIENCY_AT_MOST)}
+          </p>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
@@ -610,6 +736,8 @@ function RuleGroup({
   readonly rules: readonly RuleSummary[];
   readonly deferred?: boolean;
 }): JSX.Element | null {
+  const t = useDict(EN, AR).rules;
+  const ltr = useVerbatim();
   if (rules.length === 0) return null;
   return (
     <div className={`rule-group${deferred ? ' rule-group--deferred' : ''}`}>
@@ -620,15 +748,17 @@ function RuleGroup({
       <ul className="rule-list">
         {rules.map((r) => (
           <li key={r.ruleId}>
+            {/* The rule record as the store holds it: id, parameter, instrument,
+                clause and note are never copy. */}
             <div className="rule-list__head">
               <code>{r.ruleId}</code>
-              {r.isLifeSafety ? <span className="chip chip--danger">life safety</span> : null}
-              {deferred ? <span className="chip">not assessed</span> : null}
+              {r.isLifeSafety ? <span className="chip chip--danger">{t.lifeSafety}</span> : null}
+              {deferred ? <span className="chip">{t.notAssessed}</span> : null}
             </div>
             <span className="muted">
-              {r.parameterId} · {r.citation.instrumentId} {r.citation.clauseReference}
+              {ltr(`${r.parameterId} · ${r.citation.instrumentId} ${r.citation.clauseReference}`)}
             </span>
-            {r.note ? <p className="rule-list__note">{r.note}</p> : null}
+            {r.note ? <p className="rule-list__note">{ltr(r.note)}</p> : null}
           </li>
         ))}
       </ul>

@@ -135,6 +135,7 @@ export default function Root(): JSX.Element {
   const t = useT();
   const { locale } = useLocale();
   const spec = route === NOT_FOUND ? NOT_FOUND_PAGE : PAGES[route];
+  const engineIsEnglish = locale === 'ar' && PAGES['/app'].arabic !== 'translated';
 
   /**
    * ONE title effect, from the route record.
@@ -225,18 +226,22 @@ export default function Root(): JSX.Element {
     >
       {engineMounted ? (
         /*
-          THE ENGINE IS WHERE `/app`'S ENGLISH BEGINS, so this subtree — and only
-          this one — is marked as the English it contains when the page is Arabic.
-          The antechamber above it is translated; the ten steps are not yet. The
-          route is `partial` in `routes.json` for exactly this reason, and the notice
-          sits here rather than in `SiteChrome` because only this component knows
-          where the boundary is.
+          WHILE `/app` WAS `partial`, THE ENGINE WAS WHERE ITS ENGLISH BEGAN, so this
+          subtree — and only this one — was marked as the English it contained when
+          the page was Arabic, with the notice here rather than in `SiteChrome`
+          because only this component knows where the boundary is.
+
+          It reads the route record rather than assuming either answer. The ten
+          steps are translated now and the record says so; hard-coding "English"
+          here would have gone on wrapping an Arabic engine in `lang="en"` — every
+          Arabic sentence read aloud in an English voice — for as long as nobody
+          looked, which is the same drift the record exists to end.
         */
         <div
           hidden={!showEngine}
-          {...(locale === 'ar' ? { dir: 'ltr' as const, lang: 'en' } : {})}
+          {...(engineIsEnglish ? { dir: 'ltr' as const, lang: 'en' } : {})}
         >
-          {locale === 'ar' ? <UntranslatedNotice /> : null}
+          {engineIsEnglish ? <UntranslatedNotice /> : null}
           <EngineApp navigate={navigate} actor={actor} setActor={setActor} search={search} />
         </div>
       ) : null}

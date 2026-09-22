@@ -25,15 +25,26 @@
  * secondary Latin of an Arabic face rather than the Latin the rest of the site is
  * set in.
  *
- * `--font-mono` is deliberately untouched. Figures, identifiers, formulas and basis
+ * `--font-mono` keeps Plex Mono FIRST. Figures, identifiers, formulas and basis
  * strings stay Latin by the rule in `docs/05-design/arabic-glossary.md`, so Plex
  * Mono keeps every job it had — and a traced value has to be byte-identical to what
  * the engine produced, which Arabic-Indic digits would not be.
+ *
+ * What is added behind it is Plex Arabic, and only for the letters Plex Mono does
+ * not have. The translation put Arabic words into mono-set labels — a unit's name,
+ * a figure's caption, a legend's meta line — and with nothing Arabic in the mono
+ * stack each of those fell through to whatever the platform had: Segoe UI on one
+ * machine, a Naskh on another, beside Plex Arabic in the sentence next to it. The
+ * browser picks a face per character, in list order, so every Latin letter and every
+ * digit is still Plex Mono; this changes the Arabic glyphs and nothing else.
  */
 :root[lang='ar'] {
   --font-sans:
     'IBM Plex Sans Arabic', 'IBM Plex Sans', 'Noto Sans Arabic', 'Segoe UI', system-ui,
     -apple-system, sans-serif;
+  --font-mono:
+    'IBM Plex Mono', 'IBM Plex Sans Arabic', 'Noto Sans Arabic', ui-monospace, 'SF Mono',
+    'JetBrains Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
 }
 
 /*
@@ -118,6 +129,20 @@
   direction: ltr;
 }
 
+/*
+ * A paragraph that holds nothing but the engine's own sentence is an English
+ * paragraph, and is set as one. Left inside the Arabic flow it was right-aligned
+ * and ragged on the left — forty English words wrapping the wrong way under an
+ * amber callout, which reads as a layout fault on the one block the reader most
+ * needs to read. Named by class, not by `:has()` over "a paragraph whose only
+ * element is English", because a mixed Arabic sentence with one quoted identifier
+ * matches that too: text nodes are not children to `:only-child`.
+ */
+:root[lang='ar'] .pk-basis {
+  direction: ltr;
+  text-align: left;
+}
+
 /* ==========================================================================
  * 3. MARKS THAT ARE DIRECTIONAL BY MEANING
  * ======================================================================= */
@@ -168,6 +193,17 @@
 .sheet-set__tabs,
 .dwg-frame {
   direction: ltr;
+}
+
+/*
+ * The one sentence inside a drawing box. When WebGL fails, the viewer says so in
+ * prose, and that prose sits inside `.massing-viewer`'s left-to-right box — so an
+ * Arabic sentence would take the drawing's direction: aligned to the wrong edge,
+ * its closing full stop at the start. The drawing stays LTR; the sentence about it
+ * does not.
+ */
+:root[dir='rtl'] .massing-viewer__failed {
+  direction: rtl;
 }
 
 /*

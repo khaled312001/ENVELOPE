@@ -6,12 +6,23 @@
  * value of the gate is not the click — it is that the user sees the computed
  * area next to the stated one, and the classification of every edge, at a moment
  * when changing them is free.
+ *
+ * The copy is in `i18n/parameters.en.ts` and `parameters.ar.ts`. What stays here is
+ * what the plot supplies — its number, community, area and frontage count — and
+ * the two figures inside sentences, named once below.
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import type { PlotView } from '../api/client.js';
 import { PlotCanvas } from '../components/PlotCanvas.js';
+import { AR } from '../i18n/parameters.ar.js';
+import { EN } from '../i18n/parameters.en.js';
+import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
+
+/** `FR-PLT-001 AC2`'s tolerance, and the phase whose scope the shape note states. */
+const AREA_TOLERANCE = '2%';
+const PHASE = '0';
 
 export function ParametersStep({
   plot,
@@ -22,31 +33,30 @@ export function ParametersStep({
   readonly confirmed: boolean;
   readonly onConfirm: () => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
+  const { locale } = useLocale();
   const [selected, setSelected] = useState<number | null>(null);
+
+  /* The plot's own names, isolated on the Arabic page and untouched on the English. */
+  const ltr = (value: ReactNode): ReactNode =>
+    locale === 'ar' ? <Verbatim>{value}</Verbatim> : value;
 
   return (
     <section className="panel" aria-labelledby="params-heading">
       <header className="panel__header">
         <div>
           <h2 id="params-heading" className="panel__title">
-            Confirm the plot
+            {t.title}
           </h2>
-          <p className="panel__subtitle">
-            Everything after this is computed from what is on this screen. Check it while
-            changing it is still free.
-          </p>
+          <p className="panel__subtitle">{t.subtitle}</p>
         </div>
       </header>
 
       {plot.areaMismatch ? (
         <div className="banner banner--blocked" role="alert">
           <div>
-            <strong>The two areas disagree by more than 2%.</strong>
-            <p>
-              The area computed from your dimensions and the area printed on the affection
-              plan differ. One of them is wrong, and we do not assume it is yours — check
-              which before continuing.
-            </p>
+            <strong>{t.mismatch.title(AREA_TOLERANCE)}</strong>
+            <p>{t.mismatch.body}</p>
           </div>
         </div>
       ) : null}
@@ -62,34 +72,32 @@ export function ParametersStep({
 
         <dl className="kv">
           <div>
-            <dt>Plot</dt>
+            <dt>{t.fields.plot}</dt>
             <dd>
-              {plot.plotNumber} · {plot.community}
+              {ltr(plot.plotNumber)} · {ltr(plot.community)}
             </dd>
           </div>
           <div>
-            <dt>Land use</dt>
-            <dd>Residential tower</dd>
+            <dt>{t.fields.landUse}</dt>
+            <dd>{t.fields.landUseValue}</dd>
           </div>
           <div>
-            <dt>Computed area</dt>
+            <dt>{t.fields.computedArea}</dt>
             <dd>
               <span className="value">{plot.computedAreaM2}</span>
               <span className="value__unit">m²</span>
             </dd>
           </div>
           <div>
-            <dt>Shape</dt>
+            <dt>{t.fields.shape}</dt>
             <dd>
-              {plot.shapeClass.toLowerCase().replace('_', ' ')}
-              <span className="muted">
-                {' '}
-                — Phase 0 handles rectilinear and simple convex plots only
-              </span>
+              {t.shapes?.[plot.shapeClass] ??
+                ltr(plot.shapeClass.toLowerCase().replace('_', ' '))}
+              <span className="muted">{t.fields.shapeScope(PHASE)}</span>
             </dd>
           </div>
           <div>
-            <dt>Road frontages</dt>
+            <dt>{t.fields.roadFrontages}</dt>
             <dd>{plot.edges.filter((e) => e.classification === 'ROAD').length}</dd>
           </div>
         </dl>
@@ -98,16 +106,15 @@ export function ParametersStep({
       <footer className="panel__footer panel__footer--gate">
         {confirmed ? (
           <p className="gate-status gate-status--done">
-            <span aria-hidden="true">✓</span> Plot confirmed.
+            <span aria-hidden="true">✓</span> {t.gate.confirmed}
           </p>
         ) : (
           <>
             <p className="gate-status gate-status--pending">
-              <span aria-hidden="true">!</span> Rules cannot resolve until this is
-              confirmed — they key on the edge classifications above.
+              <span aria-hidden="true">!</span> {t.gate.pending}
             </p>
             <button type="button" className="button button--primary" onClick={onConfirm}>
-              This is the plot
+              {t.gate.confirm}
             </button>
           </>
         )}

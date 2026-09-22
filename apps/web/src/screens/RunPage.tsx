@@ -19,20 +19,41 @@
  * - Sharing, for the run's author only. The server answers the same way whether or
  *   not an account uses the address, and so does this page, so it cannot be used to
  *   find out who has an account.
+ *
+ * TWO LANGUAGES. Every sentence comes from `i18n/runPage.en.ts` or its Arabic twin;
+ * everything the run carries — plot, community, figures, the binding label, names,
+ * timestamps, the gate id — is set as the API sent it, inside `Ltr` on the Arabic
+ * page. The refusals above are held in both dictionaries by `work.test.tsx`.
  */
 
-import { type FormEvent, useEffect, useId, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useId, useState } from 'react';
 
 import { AuthFailure, accountRuns, type RunAccess } from '../api/auth.js';
 import type { RunView } from '../api/client.js';
 import { ModelFigure } from '../components/ModelFigure.js';
+import { AR } from '../i18n/runPage.ar.js';
+import { EN } from '../i18n/runPage.en.js';
+import { useDict } from '../i18n/locale.js';
 import { Link, type Href } from '../router.js';
-import { bandLabel, group, RunTable, type RunRow } from './Work.js';
+import { group, Ltr, RunTable, useBandLabel, type RunRow } from './Work.js';
 
 const day = (iso: string): string => iso.slice(0, 10);
 const time = (iso: string): string => iso.slice(11, 16);
 
+/** The review gate's id, as the engine names it. An identifier, so not copy. */
+const REVIEW_GATE = 'G4';
+
 type Stored = RunView & { readonly access: RunAccess };
+
+/**
+ * Why the run did not load, as a kind: a sentence stored in state would stay in the
+ * language the page was in when the request failed.
+ *
+ * `missing` covers BOTH a run that does not exist and a run that was not shared with
+ * you. The server gives one 404 for both so a run's existence does not leak, and a
+ * page with two kinds here would leak it anyway.
+ */
+type LoadError = 'missing' | 'failed';
 
 export function RunPage({
   runId,
@@ -44,8 +65,10 @@ export function RunPage({
   readonly rows: readonly RunRow[];
   readonly navigate: (to: Href) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
+  const bandLabel = useBandLabel();
   const [run, setRun] = useState<Stored | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<LoadError | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,11 +82,7 @@ export function RunPage({
       .catch((e: unknown) => {
         if (cancelled) return;
         // One sentence for "missing" and "not yours", because the server gives one answer for both.
-        setError(
-          e instanceof AuthFailure && e.status === 404
-            ? 'This run is not on your list. Either it does not exist, or it was not shared with you.'
-            : 'The run could not be loaded. Reload the page to try again.',
-        );
+        setError(e instanceof AuthFailure && e.status === 404 ? 'missing' : 'failed');
       });
     return () => {
       cancelled = true;
@@ -82,21 +101,39 @@ export function RunPage({
       <section className="shell section section--opening" aria-labelledby="rn-h">
         <p className="rn__back">
           <Link to="/work" navigate={navigate}>
-            Your work
+            {t.back}
           </Link>
         </p>
-        <h1 id="rn-h">{run ? `Plot ${run.plot.plotNumber}` : 'A run'}</h1>
+        <h1 id="rn-h">
+          {run ? (
+            <>
+              {t.plot}
+              <Ltr>{run.plot.plotNumber}</Ltr>
+            </>
+          ) : (
+            t.aRun
+          )}
+        </h1>
         {run ? (
           <p className="wk__lede">
-            {run.plot.community} · computed {row ? `${day(row.createdAt)} ${time(row.createdAt)}` : 'earlier'}
-            {row ? ` by ${row.createdBy}` : ''}. Kept exactly as it was computed; nothing on this
-            page is recomputed.
+            <Ltr>{run.plot.community}</Ltr>
+            {row ? (
+              <>
+                {t.lede.computedAt}
+                <Ltr>{`${day(row.createdAt)} ${time(row.createdAt)}`}</Ltr>
+                {t.lede.by}
+                <Ltr>{row.createdBy}</Ltr>
+              </>
+            ) : (
+              t.lede.computedEarlier
+            )}
+            {t.lede.kept}
           </p>
         ) : null}
         {run?.draftRules ? (
           <p className="rn__draft">
-            <span className="chip chip--deferred">draft rules</span> Computed against rules no
-            named professional has approved.
+            <span className="chip chip--deferred">{t.draftChip}</span>
+            {t.draftNote}
           </p>
         ) : null}
       </section>
@@ -104,14 +141,14 @@ export function RunPage({
       {error ? (
         <section className="shell section section--minor">
           <p className="banner banner--danger" role="alert">
-            {error}
+            {t.error[error]}
           </p>
         </section>
       ) : null}
 
       {!run && !error ? (
         <section className="shell section section--minor">
-          <p className="muted">Loading the run…</p>
+          <p className="muted">{t.loading}</p>
         </section>
       ) : null}
 
@@ -119,40 +156,53 @@ export function RunPage({
         <>
           <section className="shell section" aria-labelledby="rn-answer">
             <div className="section__head">
-              <h2 id="rn-answer">The answer</h2>
+              <h2 id="rn-answer">{t.answer.title}</h2>
             </div>
             <div className="rn__layout">
               <dl className="rn__facts">
                 <div>
-                  <dt>Governing capacity</dt>
+                  <dt>{t.answer.governing}</dt>
                   <dd className="rn__governing">
                     <span className="value">{group(run.capacity.governingGfa.value)}</span> m²
                     <span className="wk__band">{bandLabel(run.capacity.governingBand)}</span>
                   </dd>
                 </div>
                 <div>
-                  <dt>What binds it</dt>
-                  <dd>{run.capacity.governingConstraint.label}</dd>
-                </div>
-                <div>
-                  <dt>Levels the answer places</dt>
+                  <dt>{t.answer.binds}</dt>
                   <dd>
-                    <span className="value">{run.capacity.levels.value}</span> of{' '}
-                    <span className="value">{run.envelope.maxLevelsByHeight.value}</span> the height permits
+                    <Ltr>{run.capacity.governingConstraint.label}</Ltr>
                   </dd>
                 </div>
                 <div>
-                  <dt>Values assumed</dt>
+                  <dt>{t.answer.levels}</dt>
+                  <dd>
+                    <span className="value">{run.capacity.levels.value}</span>
+                    {t.answer.levelsOf}
+                    <span className="value">{run.envelope.maxLevelsByHeight.value}</span>
+                    {t.answer.heightPermits}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t.answer.assumed}</dt>
                   <dd>
                     <span className="value">{run.assumptions.length}</span>
                   </dd>
                 </div>
                 {row ? (
                   <div>
-                    <dt>Gates</dt>
+                    <dt>{t.answer.gates}</dt>
                     <dd>
-                      <span className="value">{row.gatesSatisfied}</span> of <span className="value">4</span>
-                      {row.reviewer ? ` · signed by ${row.reviewer.name}` : ' · not signed'}
+                      <span className="value">{row.gatesSatisfied}</span>
+                      {t.answer.gatesOf}
+                      <span className="value">4</span>
+                      {row.reviewer ? (
+                        <>
+                          {t.answer.signedBy}
+                          <Ltr>{row.reviewer.name}</Ltr>
+                        </>
+                      ) : (
+                        t.answer.notSigned
+                      )}
                     </dd>
                   </div>
                 ) : null}
@@ -161,30 +211,15 @@ export function RunPage({
               <figure className="figure rn__model">
                 <div className="figure__plate">
                   {run.building ? (
-                    <ModelFigure
-                      model={run.building}
-                      label={
-                        `This run's building in 3D: ${run.capacity.levels.value} levels of floor ` +
-                        'area inside the envelope the rules permit. The figures beside it state the ' +
-                        'same in words.'
-                      }
-                    />
+                    <ModelFigure model={run.building} label={t.model.label(run.capacity.levels.value)} />
                   ) : (
-                    <p className="rn__nomodel">
-                      This run was computed before the engine built a model of the whole building,
-                      so there is nothing to stand up. Compute the plot again to see it.
-                    </p>
+                    <p className="rn__nomodel">{t.model.none}</p>
                   )}
                 </div>
                 <figcaption className="figure__caption">
                   <p className="figure__source">
-                    {run.building?.placedLevels
-                      ? 'As the engine stacked it · solid levels are the answer, outlines are height the answer leaves unused · '
-                      : run.building
-                        ? 'As the engine stacked it · stored before the model recorded which levels the answer places, so every level the height permits is drawn solid · '
-                        : ''}
-                    amber marks what the engine assumed where no rule decides · regulatory validity —
-                    not assessed
+                    {run.building?.placedLevels ? t.model.placed : run.building ? t.model.stored : ''}
+                    {t.model.tail}
                   </p>
                 </figcaption>
               </figure>
@@ -193,30 +228,28 @@ export function RunPage({
 
           <section className="shell section" aria-labelledby="rn-siblings">
             <div className="section__head">
-              <h2 id="rn-siblings">Other runs of this plot</h2>
-              <p className="wk__note">
-                Each is its own run, with its own inputs and assumptions. Read them side by side;
-                nothing here is computed between them.
-              </p>
+              <h2 id="rn-siblings">{t.siblings.title}</h2>
+              <p className="wk__note">{t.siblings.note}</p>
             </div>
             <RunTable
               rows={siblings}
-              caption={`Other runs of plot ${run.plot.plotNumber}`}
-              empty="This is the only run of this plot on your list."
+              caption={t.siblings.caption(run.plot.plotNumber)}
+              empty={t.siblings.empty}
               navigate={navigate}
             />
           </section>
 
           <section className="shell section section--minor" aria-labelledby="rn-share">
             <div className="section__head">
-              <h2 id="rn-share">Share this run</h2>
+              <h2 id="rn-share">{t.share.title}</h2>
             </div>
             {run.access === 'author' ? (
               <ShareForm runId={runId} />
             ) : (
               <p className="wk__note">
-                You can open this run as its {run.access}. Only the account that computed it can
-                share it.
+                {t.share.asBefore}
+                {t.roles[run.access]}
+                {t.share.asAfter}
               </p>
             )}
           </section>
@@ -228,13 +261,17 @@ export function RunPage({
 
 type Role = 'reviewer' | 'reader';
 
+/** What went wrong with a share, as a kind — the sentence is the dictionary's. */
+type Problem = 'email' | 'role' | 'session' | 'failed';
+
 function ShareForm({ runId }: { readonly runId: string }): JSX.Element {
+  const t = useDict(EN, AR);
   const emailId = useId();
   const helpId = useId();
   const errorId = useId();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Problem | null>(null);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState<{ readonly email: string; readonly role: Role } | null>(null);
 
@@ -242,11 +279,11 @@ function ShareForm({ runId }: { readonly runId: string }): JSX.Element {
     e.preventDefault();
     const address = email.trim();
     if (!address.includes('@')) {
-      setProblem('Enter the email address of the account you are sharing with.');
+      setProblem('email');
       return;
     }
     if (role === null) {
-      setProblem('Choose what they may do with the run: review it, or only read it.');
+      setProblem('role');
       return;
     }
     setProblem(null);
@@ -259,23 +296,33 @@ function ShareForm({ runId }: { readonly runId: string }): JSX.Element {
         setRole(null);
       })
       .catch((err: unknown) => {
-        setProblem(
-          err instanceof AuthFailure && err.status === 401
-            ? 'Your session has ended. Sign in again, then share the run.'
-            : 'The run could not be shared. Try again in a moment.',
-        );
+        setProblem(err instanceof AuthFailure && err.status === 401 ? 'session' : 'failed');
       })
       .finally(() => setSending(false));
   };
 
+  const choices: readonly (readonly [Role, string, ReactNode])[] = [
+    [
+      'reviewer',
+      t.form.review.title,
+      <>
+        {t.form.review.detailBefore}
+        <Ltr>{REVIEW_GATE}</Ltr>
+        {t.form.review.detailAfter}
+      </>,
+    ],
+    ['reader', t.form.read.title, t.form.read.detail],
+  ];
+
   return (
     <form className="plate rn__share" onSubmit={submit} noValidate>
       <p className="wk__note">
-        Give another account access to this run. A reviewer may sign the review gate (G4); a
-        reader may only open it. Nobody&rsquo;s licence is checked.
+        {t.form.noteBefore}
+        <Ltr>{REVIEW_GATE}</Ltr>
+        {t.form.noteAfter}
       </p>
       <div className="field">
-        <label htmlFor={emailId}>Their email address</label>
+        <label htmlFor={emailId}>{t.form.email}</label>
         <input
           id={emailId}
           className="input"
@@ -287,17 +334,12 @@ function ShareForm({ runId }: { readonly runId: string }): JSX.Element {
           {...(problem && !email.includes('@') ? { 'aria-invalid': true as const } : {})}
         />
         <p className="field__help" id={helpId}>
-          The address they signed up with.
+          {t.form.emailHelp}
         </p>
       </div>
       <fieldset className="choice-set">
-        <legend className="field-group__legend">What they may do</legend>
-        {(
-          [
-            ['reviewer', 'Review it', 'Open the run and sign the review gate, G4.'],
-            ['reader', 'Read it', 'Open the run. Nothing else.'],
-          ] as const
-        ).map(([value, title, detail]) => (
+        <legend className="field-group__legend">{t.form.legend}</legend>
+        {choices.map(([value, title, detail]) => (
           <label key={value} className={`choice ${role === value ? 'is-selected' : ''}`}>
             <input type="radio" name={`share-role-${runId}`} value={value} checked={role === value} onChange={() => setRole(value)} />
             <span>
@@ -309,18 +351,21 @@ function ShareForm({ runId }: { readonly runId: string }): JSX.Element {
       </fieldset>
       {problem ? (
         <p className="ac__error" id={errorId} role="alert">
-          {problem}
+          {t.form.problem[problem]}
         </p>
       ) : null}
       <div className="cta">
         <button type="submit" className="button button--primary" disabled={sending} aria-busy={sending}>
-          {sending ? 'Sharing…' : 'Share the run'}
+          {sending ? t.form.sending : t.form.submit}
         </button>
       </div>
       {done ? (
         <p className="rn__shared" role="status">
-          If an account uses {done.email}, it can now open this run as a {done.role}. This page does
-          not say whether one does, so it cannot be used to find out who has an account.
+          {t.form.done.before}
+          <Ltr>{done.email}</Ltr>
+          {t.form.done.middle}
+          {t.roles[done.role]}
+          {t.form.done.after}
         </p>
       ) : null}
     </form>

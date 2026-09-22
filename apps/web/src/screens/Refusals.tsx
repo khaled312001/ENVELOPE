@@ -49,9 +49,10 @@
  * ---
  *
  * ON THE SHARED PARAGRAPHS. The five "does not" items, the IFC/glTF paragraph and
- * the optimiser heading come from `content/shared.tsx` and are rendered here as each
- * section's lede, never re-typed. A second copy diverges the first time somebody
- * edits one, and these are the paragraphs the whole proposition rests on.
+ * the optimiser heading come from `content/shared.tsx` — or, on the Arabic page,
+ * from its twin `content/shared.ar.tsx` — and are rendered here as each section's
+ * lede, never re-typed. A second copy diverges the first time somebody edits one,
+ * and these are the paragraphs the whole proposition rests on.
  *
  * §07 IS NO LONGER AN EXCEPTION. `OPTIMISER_REFUSAL.body` used to end "…rather than
  * a limitation to apologise for", and `limitation` is in `BANNED_IN_ALL_COPY` —
@@ -60,11 +61,39 @@
  * one word it did not own. The word has been repaired in `content/shared.tsx`, the
  * body is imported like every other shared paragraph, and the second copy is gone
  * with it: two statements of one refusal diverge the first time somebody edits one.
+ *
+ * ---
+ *
+ * TWO LANGUAGES, AND THE ENGINE'S WORDS IN NEITHER DICTIONARY.
+ *
+ * Every hand-written sentence on this page comes from `i18n/refusals.en.ts` or its
+ * Arabic counterpart, and the English module is the type the Arabic one is held
+ * to, so a missing translation is a compile error rather than an English sentence
+ * rendering under an Arabic heading. What stays here is what this page did not
+ * write: the deferred rule records out of the readiness snapshot, the model file's
+ * list of what it does not draw, every file path, status code and type name. On
+ * the Arabic page each of those is rendered inside `Verbatim` — `dir="ltr"
+ * lang="en"`, isolated — because a record translated is a second record nobody
+ * issued, and an identifier laid out right-to-left is one a reader cannot check.
+ *
+ * `Verbatim` WRAPS ONLY ON THE ARABIC PAGE. The English render is byte-for-byte what
+ * it was before the page had a second language: its tests grip that text, and on a
+ * `lang="en"` document the wrapper would say nothing the document does not already
+ * say. `Ident` and `AsEmitted` below are the two places that decision is made.
  */
 
 import type { ReactNode } from 'react';
 
 import { IFC_GLTF, LIMITS, OPTIMISER_REFUSAL, type Refusal } from '../content/shared.js';
+import {
+  IFC_GLTF_AR,
+  LIMITS_AR,
+  OPTIMISER_REFUSAL_AR,
+  type SharedParagraph,
+} from '../content/shared.ar.js';
+import { AR } from '../i18n/refusals.ar.js';
+import { EN, type RefusalsDictionary } from '../i18n/refusals.en.js';
+import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
 import SNAPSHOT from './readiness.json' with { type: 'json' };
@@ -79,11 +108,15 @@ import WORKED from './worked-example.json' with { type: 'json' };
  * first time that order changed, and nothing would look broken. It throws rather
  * than returning a blank: a refusal that fails to render reads as a refusal the
  * product does not make, which is the one failure mode this page cannot have.
+ *
+ * The list is passed in because there are two of them, and the ids are shared:
+ * `LIMITS_AR` carries the same five ids as `LIMITS`, so one id finds one refusal
+ * in either language.
  * ---------------------------------------------------------------------- */
 
-function limit(id: string): Refusal {
-  const found = LIMITS.find((l) => l.id === id);
-  if (!found) throw new Error(`content/shared.tsx carries no refusal with id "${id}"`);
+function limitIn(list: readonly Refusal[], id: string): Refusal {
+  const found = list.find((l) => l.id === id);
+  if (!found) throw new Error(`content/shared carries no refusal with id "${id}"`);
   return found;
 }
 
@@ -112,6 +145,7 @@ const DEFERRED = SNAPSHOT.deferred as readonly DeferredRecord[];
  * carries in its metadata, which `scripts/verify-worked-example.mjs` reads out of
  * the file the API wrote. The model's own list and the file's are the same by
  * construction (`pnpm parity` asserts it), and the file is what a reader holds.
+ * It is the file's text, so it is never translated.
  */
 const NOT_DRAWN: readonly string[] = WORKED.verified.exports.glb.notModelled;
 
@@ -130,6 +164,33 @@ const isSourced = (c: DeferredRecord['citation']): boolean =>
   c.instrumentId !== 'PLACEHOLDER-NOT-A-REAL-INSTRUMENT' &&
   c.sourcePage > 0 &&
   !c.sourceTextVerbatim.startsWith('[NOT SOURCED]');
+
+/**
+ * The rows of §11, in the one order both languages render them in.
+ *
+ * The dictionary keys the rows rather than listing them, so the Arabic cannot drop
+ * one and still compile; this list is the order. `_EVERY_ROW` fails to compile if a
+ * row is added to the dictionary and not to this list, which is the other half: a
+ * translated row that is never rendered is a refusal the page stopped stating.
+ */
+type NotHereId = keyof RefusalsDictionary['notOnSite']['rows'];
+const NOT_HERE = [
+  'accuracy',
+  'customers',
+  'caseStudy',
+  'comparison',
+  'price',
+  'certification',
+  'security',
+  'uptime',
+  'blog',
+  'integrations',
+  'team',
+  'terms',
+] as const satisfies readonly NotHereId[];
+const _EVERY_ROW: Exclude<NotHereId, (typeof NOT_HERE)[number]> extends never ? true : false =
+  true;
+void _EVERY_ROW;
 
 /* -------------------------------------------------------------------------
  * The section chassis.
@@ -193,9 +254,30 @@ function Section({
   );
 }
 
-/** A file path, a status code or a type name, set as a specimen rather than as prose. */
+/**
+ * What the engine, the API or a fixture emitted, rendered as it was emitted.
+ *
+ * Bare on the English page and inside `Verbatim` on the Arabic one — see the
+ * docblock. A clause reference such as `UAE FLS Code, Chapter 2` is a citation off
+ * a rule record: under an Arabic column heading it keeps its words, its direction
+ * and an English voice, or the reader is handed a citation nobody can look up.
+ */
+function AsEmitted({ children }: { readonly children: ReactNode }): JSX.Element {
+  return useLocale().locale === 'ar' ? <Verbatim>{children}</Verbatim> : <>{children}</>;
+}
+
+/**
+ * A file path, a status code or a type name, set as a specimen rather than as prose.
+ *
+ * `AsEmitted` sits OUTSIDE the `code`, as `Dashboard.tsx` does it, so `.rf-ident`
+ * keeps its mono face on both pages rather than inheriting `.verbatim`'s family.
+ */
 function Ident({ children }: { readonly children: ReactNode }): JSX.Element {
-  return <code className="rf-ident">{children}</code>;
+  return (
+    <AsEmitted>
+      <code className="rf-ident">{children}</code>
+    </AsEmitted>
+  );
 }
 
 /* -------------------------------------------------------------------------
@@ -203,36 +285,23 @@ function Ident({ children }: { readonly children: ReactNode }): JSX.Element {
  * ---------------------------------------------------------------------- */
 
 export default function Refusals({ navigate }: PageProps): JSX.Element {
+  const t = useDict(EN, AR);
+  const limits = useDict(LIMITS, LIMITS_AR);
+  const limit = (id: string): Refusal => limitIn(limits, id);
+  const files = useDict<SharedParagraph>(IFC_GLTF, IFC_GLTF_AR);
+  const optimiser = useDict<SharedParagraph>(OPTIMISER_REFUSAL, OPTIMISER_REFUSAL_AR);
+
   return (
     <div className="rf">
       {/* ================= HERO ========================================= */}
       <section className="shell section section--opening" aria-labelledby="rf-hero-h">
-        <h1 id="rf-hero-h">What it refuses</h1>
-        <p className="rf__lede">
-          Refusals here are things the software does, not things it lacks. If you are
-          looking for the overclaim, start on this page.
-        </p>
-        <p className="rf__hero-note">
-          Each item below is a status code the API returns, a class the type system will
-          not construct, or a page this site declines to print. Where something is
-          genuinely missing rather than refused, it is in the last section but one, next
-          to the name of the person who closes it.
-        </p>
+        <h1 id="rf-hero-h">{t.hero.title}</h1>
+        <p className="rf__lede">{t.hero.lede}</p>
+        <p className="rf__hero-note">{t.hero.note}</p>
       </section>
 
       {/* ================= 01 · THE REFUSAL CONTRACT ==================== */}
-      <Section
-        index={1}
-        id="contract"
-        major
-        title="The refusal contract"
-        lede={
-          <>
-            Before any of the prose: what the API does at runtime, and the file that does
-            it. These are not policies written down somewhere. They are the responses.
-          </>
-        }
-      >
+      <Section index={1} id="contract" major title={t.contract.title} lede={t.contract.lede}>
         {/* R13: a wide table scrolls inside its own container rather than pushing
             the document sideways, and a scroller is keyboard-reachable because
             2.1.1 applies to a scroll region the same way it applies to a control.
@@ -241,27 +310,24 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
         <div
           className="schedule"
           role="region"
-          aria-label="What the API refuses at runtime"
+          aria-label={t.contract.regionLabel}
           tabIndex={0}
         >
           <table>
-            <caption className="sr-only">
-              Three requests the API refuses, the response each one receives, and the file
-              that enforces it.
-            </caption>
+            <caption className="sr-only">{t.contract.caption}</caption>
             <thead>
               <tr>
-                <th scope="col">What is asked for</th>
-                <th scope="col">What comes back</th>
+                <th scope="col">{t.contract.columns.asked}</th>
+                <th scope="col">{t.contract.columns.response}</th>
                 <th scope="col" className="schedule__fill">
-                  Where it is enforced
+                  {t.contract.columns.enforced}
                 </th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <th scope="row" data-label="Asked for">
-                  A run with the parking-in-FAR treatment undeclared
+                <th scope="row" data-label={t.contract.cells.asked}>
+                  {t.contract.undeclared}
                 </th>
                 {/*
                   ONE ELEMENT PER CELL, and it is not tidiness. Below 40rem the
@@ -274,36 +340,38 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
                   looks like a wrapping fault rather than a layout one, which is why
                   it survives a screenshot.
                 */}
-                <td data-label="Response">
+                <td data-label={t.contract.cells.response}>
                   <span className="rf-cell">
-                    <Ident>422</Ident>, and no guess
+                    <Ident>422</Ident>
+                    {t.contract.noGuess}
                   </span>
                 </td>
-                <td className="schedule__fill" data-label="Enforced in">
+                <td className="schedule__fill" data-label={t.contract.cells.enforced}>
                   <Ident>packages/capacity/src/pipeline.ts</Ident>
                 </td>
               </tr>
               <tr>
-                <th scope="row" data-label="Asked for">
-                  An export while the assumption gate or the reviewer gate is unsatisfied
+                <th scope="row" data-label={t.contract.cells.asked}>
+                  {t.contract.exportGate}
                 </th>
-                <td data-label="Response">
+                <td data-label={t.contract.cells.response}>
                   <Ident>409</Ident>
                 </td>
-                <td className="schedule__fill" data-label="Enforced in">
+                <td className="schedule__fill" data-label={t.contract.cells.enforced}>
                   <Ident>apps/api/src/gates.ts</Ident>
                 </td>
               </tr>
               <tr>
-                <th scope="row" data-label="Asked for">
-                  A run that fails an invariant or a hard constraint
+                <th scope="row" data-label={t.contract.cells.asked}>
+                  {t.contract.failsCheck}
                 </th>
-                <td data-label="Response">
+                <td data-label={t.contract.cells.response}>
                   <span className="rf-cell">
-                    <Ident>422</Ident>, and the run is never stored
+                    <Ident>422</Ident>
+                    {t.contract.neverStored}
                   </span>
                 </td>
-                <td className="schedule__fill" data-label="Enforced in">
+                <td className="schedule__fill" data-label={t.contract.cells.enforced}>
                   <Ident>apps/api/src/server.ts</Ident>
                 </td>
               </tr>
@@ -311,77 +379,32 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
           </table>
         </div>
 
-        <p>
-          The third row is the one that is easy to soften, and it has not been. A run that
-          fails a check does not become a stored artefact with a caveat attached to it; it
-          does not become an artefact. The checks run before anything is written, there is
-          no warning level, there is no configurable severity and there is no override
-          flag — and adding one would be a defect rather than a feature.
-        </p>
+        <p>{t.contract.thirdRow}</p>
 
         <div className="callout">
           <div className="callout__body">
-            <strong>Which gates stand where</strong>
-            <p>
-              Four gates exist. That count is safe to write down because the{' '}
-              <Ident>Gate</Ident> type has four members and adding a fifth is a
-              compile-time event rather than a copy edit. Two of them stand in front of
-              export — the assumption register and the named reviewer — and an export
-              attempted before either has been acknowledged answers <Ident>409</Ident>, as
-              does one whose acknowledgement was given against different content and has
-              lapsed. The other two name earlier steps, rule resolution and capacity
-              computation, and that is where the file records them; the export door is not
-              where they stand. There is no chain in the source that makes one gate wait on
-              another, so a page telling you an export waits on all four would be
-              describing a control by inference rather than by reading.
-            </p>
+            <strong>{t.contract.gatesTitle}</strong>
+            <p>{t.contract.gatesBody(<Ident>Gate</Ident>, <Ident>409</Ident>)}</p>
           </div>
         </div>
       </Section>
 
       {/* ================= 02 · IT DOES NOT DRAW A BUILDING ============= */}
-      <Section
-        index={2}
-        id="draw"
-        title={limit('draw').heading}
-        lede={limit('draw').body}
-      >
-        <p>
-          The 3D view is the engine&rsquo;s own model of the building — each level at its
-          floor, each car in its bay, the ramp between the levels it joins — and every
-          object in it is coloured by the provenance class of the value it stands for
-          rather than by a palette the renderer chose. A building assembled in the viewer
-          would be a building nobody computed, drawn convincingly, on the most persuasive
-          surface in the product — so it is built in the engine and the picture is
-          downstream of the arithmetic.
-        </p>
+      <Section index={2} id="draw" title={limit('draw').heading} lede={limit('draw').body}>
+        <p>{t.draw.model}</p>
         <h3 className="rf-sub" id="not-drawn">
-          What the model does not draw
+          {t.draw.notDrawnTitle}
         </h3>
-        <p>
-          A view with no cores reads as a building with no cores unless it says why. So the
-          engine keeps the list with the model, and the list travels with it: under the
-          picture on screen, and in the model file&rsquo;s own metadata. For the
-          worked example on the landing page, the file says:
-        </p>
+        <p>{t.draw.notDrawnLede}</p>
         <ul className="rf-list">
           {NOT_DRAWN.map((n) => (
-            <li key={n}>{n}</li>
+            <li key={n}>
+              <AsEmitted>{n}</AsEmitted>
+            </li>
           ))}
         </ul>
-        <p>
-          The façades and the buildings next door are the two a view in three dimensions
-          most invites a reader to assume. Neither is in the run, so neither is drawn — not
-          as a placeholder block and not as a texture. What the rules permit and the answer
-          leaves unused is drawn, as an outline, because that one the engine did compute.
-        </p>
-        <p>
-          Where the podium stops and the tower starts is not derivable from a run. The
-          affection plan states it. A run given no podium level count therefore carries an
-          assumed one: it is amber, it is listed in the assumption register, and it is said
-          in words as well as in colour, because a reader who cannot see the colour has to
-          be told the same thing by the sentence.
-        </p>
+        <p>{t.draw.neighbours}</p>
+        <p>{t.draw.podium}</p>
       </Section>
 
       {/* ================= 03 · IT DOES NOT CHECK LIFE SAFETY =========== */}
@@ -391,11 +414,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
         title={limit('life-safety').heading}
         lede={limit('life-safety').body}
       >
-        <p>
-          A missing check reads as a check that passed. That is the whole reason the
-          deferred constraints are named in every single output rather than dropped from
-          it — a reader can argue with a list, and cannot argue with an omission.
-        </p>
+        <p>{t.lifeSafety.omission}</p>
 
         {DEFERRED.length === 0 ? (
           /* NEVER AN EMPTY TABLE HERE. An empty list reads as "nothing is
@@ -403,32 +422,24 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
              prevent, and it would read that way loudest on the page that promises
              the opposite. So an absent or empty snapshot says it is absent. */
           <div className="empty" data-state="deferred">
-            <p className="empty__title">The deferred list is not in this build.</p>
-            <p>
-              This section reads the deferred constraints from a generated readiness
-              snapshot, and the snapshot this build carries names none. That is not the
-              same statement as nothing being deferred, so nothing is listed rather than an
-              empty table. Regenerating the snapshot from a real run restores it.
-            </p>
+            <p className="empty__title">{t.lifeSafety.emptyTitle}</p>
+            <p>{t.lifeSafety.emptyBody}</p>
           </div>
         ) : (
           <div
             className="schedule"
             role="region"
-            aria-label="Constraints this engine defers"
+            aria-label={t.lifeSafety.regionLabel}
             tabIndex={0}
           >
             <table>
-              <caption className="sr-only">
-                Constraints this engine defers, the parameter each one governs, and the
-                state of the citation behind it.
-              </caption>
+              <caption className="sr-only">{t.lifeSafety.caption}</caption>
               <thead>
                 <tr>
-                  <th scope="col">Rule</th>
-                  <th scope="col">Parameter</th>
+                  <th scope="col">{t.lifeSafety.columns.rule}</th>
+                  <th scope="col">{t.lifeSafety.columns.parameter}</th>
                   <th scope="col" className="schedule__fill">
-                    Clause reference
+                    {t.lifeSafety.columns.clause}
                   </th>
                 </tr>
               </thead>
@@ -444,7 +455,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
                           as in the table. A rule id set beside a clause reference
                           reads as a regulation unless something adjacent says
                           otherwise, and a footnote is not adjacent. */}
-                      <th scope="row" data-label="Rule">
+                      <th scope="row" data-label={t.lifeSafety.columns.rule}>
                         <span className="rf-cell">
                           <Ident>{d.ruleId}</Ident>
                           <span className="rf-chips">
@@ -455,19 +466,21 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
                                treatment and the heading above it. Painting a taxonomy
                                label in the ink reserved for NEVER CLAIMED would spend
                                the product's loudest colour on a category. */
-                              <span className="chip">Life safety</span>
+                              <span className="chip">{t.lifeSafety.chips.lifeSafety}</span>
                             ) : null}
                             <span className={sourced ? 'chip' : 'chip chip--deferred'}>
-                              {sourced ? 'Citation on file' : 'Draft · not sourced'}
+                              {sourced
+                                ? t.lifeSafety.chips.sourced
+                                : t.lifeSafety.chips.notSourced}
                             </span>
                           </span>
                         </span>
                       </th>
-                      <td data-label="Parameter">
+                      <td data-label={t.lifeSafety.columns.parameter}>
                         <Ident>{d.parameterId}</Ident>
                       </td>
-                      <td className="schedule__fill" data-label="Clause reference">
-                        {d.citation.clauseReference}
+                      <td className="schedule__fill" data-label={t.lifeSafety.columns.clause}>
+                        <AsEmitted>{d.citation.clauseReference}</AsEmitted>
                       </td>
                     </tr>
                   );
@@ -477,15 +490,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
           </div>
         )}
 
-        <p>
-          The chip beside each id reports the state of that record&rsquo;s own citation and
-          nothing more. Every seed rule in this deployment names a placeholder instrument
-          and clause text marked not sourced, so every chip says so — and it says so
-          because the record does, not because this page was written while that was true.
-          A clause reference on a page like this one is a promise; the chip is what keeps
-          the promise honest until a licensed architect has read the instrument and put
-          their name to the rule.
-        </p>
+        <p>{t.lifeSafety.chipNote}</p>
       </Section>
 
       {/* ================= 04 · REALISTICALLY ACHIEVABLE ================ */}
@@ -495,28 +500,17 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
         title={limit('realistic').heading}
         lede={limit('realistic').body}
       >
-        <p>
-          There is no realistic band, no expected band and no likely band. The field does
-          not exist in the schema, so one cannot be configured in, enabled for a customer
-          or added by a deployment — the absence is structural rather than a setting
-          somebody left off. Any number put there would arrive without a derivation, on a
-          product where every other figure carries one, and there is nothing in the engine
-          that could give it one.
-        </p>
+        <p>{t.realistic.schema}</p>
 
         <div className="plate">
           <div className="plate__header">
             <div>
               <p className="plate__title">
-                Realism discount on the run this site publishes:{' '}
+                {t.realistic.discountLabel}{' '}
                 <span className="value">{WORKED.input.run.realismDiscount}</span>
               </p>
               <p className="plate__subtitle">
-                No discount, which is the default. It is <Ident>USER_SET</Ident> rather
-                than assumed: it holds until a named person changes it, and whoever changes
-                it is recorded beside the figure they chose. That is the honest substitute
-                for a realism band — a haircut somebody signs, rather than one the engine
-                applies on their behalf and calls achievable.
+                {t.realistic.discountNote(<Ident>USER_SET</Ident>)}
               </p>
             </div>
           </div>
@@ -530,22 +524,13 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
         title={limit('parking-in-far').heading}
         lede={limit('parking-in-far').body}
       >
+        <p>{t.parking.noDefault(<Ident>DERIVED</Ident>, <Ident>USER_SET</Ident>)}</p>
         <p>
-          There is no default and there was never one to remove. The treatment is either{' '}
-          <Ident>DERIVED</Ident> from a cited rule or <Ident>USER_SET</Ident> by a named
-          person; with neither, the run is refused before a capacity band is computed at
-          all. That refusal is the first row of the contract above.
-        </p>
-        <p>
-          No range is quoted here, and that is a deliberate deletion rather than an
-          omission. A range cited from a specification is a claim about documents; the
-          spread between the two answers for a plot the engine actually ran is a
-          measurement. So the measurement is what this site prints, on{' '}
+          {t.parking.spreadBefore}
           <Link to="/parking" navigate={navigate}>
-            the parking page
+            {t.parking.spreadLink}
           </Link>
-          , where both answers for the same plot are set side by side and the difference
-          between them is engine output rather than a sentence.
+          {t.parking.spreadAfter}
         </p>
       </Section>
 
@@ -557,43 +542,26 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
         title={
           <>
             {limit('professional').heading}{' '}
-            <span className="rf-title__and">
-              And it does not enforce that the reviewer is not the author.
-            </span>
+            <span className="rf-title__and">{t.professional.titleAnd}</span>
           </>
         }
         lede={limit('professional').body}
       >
         <div className="grid">
           <div className="plate">
-            <h3 className="plate__title">What the reviewer gate does</h3>
-            <p>
-              It refuses the acknowledgement unless the actor asserts a professional
-              licence number, and it writes that name, that licence and that timestamp onto
-              the export. Nothing leaves the system unsigned, and the signature is a
-              person&rsquo;s rather than the system&rsquo;s: the engine never reports that
-              it decided anything.
-            </p>
+            <h3 className="plate__title">{t.professional.doesTitle}</h3>
+            <p>{t.professional.doesBody}</p>
           </div>
           <div className="plate">
-            <h3 className="plate__title">What it does not do</h3>
-            <p>
-              It does not verify the licence with anybody — no registry is consulted,
-              because no such integration has been scoped. And it does not compare the
-              person signing against the person who authored the run. The check is that a
-              licence string is non-empty, and it is the only check the handler makes.
-            </p>
+            <h3 className="plate__title">{t.professional.doesNotTitle}</h3>
+            <p>{t.professional.doesNotBody}</p>
           </div>
         </div>
 
         <div className="callout">
           <div className="callout__body">
-            <strong>So one person can author a run and sign it.</strong>
-            <p>
-              One person, holding one licence number, can do both — and this deployment
-              will record the result as a reviewed export. The gate is a signature line,
-              and a signature line is worth exactly what the signature is worth.
-            </p>
+            <strong>{t.professional.calloutTitle}</strong>
+            <p>{t.professional.calloutBody}</p>
           </div>
         </div>
 
@@ -606,110 +574,39 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
           and the sentence is what moves: a phrase a reader can misread as a control
           is a phrase this page should not contain, whichever clause it sits in.
         */}
-        <p>
-          Scoping a run to its author alone was considered and rejected. The gate exists
-          for the case where a different person signs, and an ownership check would refuse
-          exactly that case. What was built instead is a share: the author names an
-          account as a reviewer or a reader, and only those accounts can open the run. A
-          share names who signs; nothing checks who they are, and nothing stops an
-          author signing their own run. There are no firms or projects either — a run
-          belongs to one account. None of that is evidence that some other control took
-          its place. An asserted control is worse than a missing one, because a missing
-          one is visible, and saying so here is the reason a reader can believe the rest
-          of the page.
-        </p>
+        <p>{t.professional.share}</p>
       </Section>
 
       {/* ================= 07 · THE OPTIMISER =========================== */}
-      <Section
-        index={7}
-        id="optimiser"
-        title={OPTIMISER_REFUSAL.heading}
-        lede={OPTIMISER_REFUSAL.body}
-      >
+      <Section index={7} id="optimiser" title={optimiser.heading} lede={optimiser.body}>
         {/* The shared paragraph states the mechanism; this page says what an optimiser
             would have had to claim in order to answer at all. The two do not overlap,
             which is the test for whether a page-side paragraph has earned its place
             beside an imported one. */}
-        <p>
-          An optimiser that ranked layouts would be answering a question about preference
-          with the authority of a calculation, and every figure it produced would be a
-          number the reader could not trace back to a rule — because there is no rule.
-          There is a judgement, and the judgement is the architect&rsquo;s.
-        </p>
+        <p>{t.optimiser.judgement}</p>
       </Section>
 
       {/* ================= 08 · DEVELOPER STANDARDS ===================== */}
-      <Section
-        index={8}
-        id="standards"
-        title="A developer standard could not cut your envelope, however many it held"
-        lede={
-          <>
-            A developer&rsquo;s brief is a commercial preference. A regulation binds. The
-            type system is where the difference is enforced, because a sentence in a
-            document is not enforcement.
-          </>
-        }
-      >
+      <Section index={8} id="standards" title={t.standards.title} lede={t.standards.lede}>
         <p>
-          <Ident>DeveloperStandard</Ident> and <Ident>ProjectBrief</Ident> are deliberately
-          not <Ident>RuleRecord</Ident>s. That is the whole mechanism: a{' '}
-          <Ident>RuleRecord</Ident> is resolvable by the parameter resolver and can
-          therefore bind the envelope, and these are not resolvable by it, so they cannot
-          bind anything. They are served from their own endpoint and are never merged into
-          the rule set. A standard that bound the envelope would be reporting a
-          client&rsquo;s brief as a legal limit — a private target printed with the
-          authority of a code — and the screen that offers them says, above the picker,
-          that a standard is not a regulation.
+          {t.standards.mechanism(
+            <Ident>DeveloperStandard</Ident>,
+            <Ident>ProjectBrief</Ident>,
+            <Ident>RuleRecord</Ident>,
+          )}
         </p>
-        <p>
-          No cap, target, benchmark or ratio out of any developer&rsquo;s brief appears on
-          this site, in numbers or in prose, and no developer is named. Those figures are
-          transcribed accurately, each carrying the page and the bounding box it came from
-          so the transcription can be checked rather than trusted, and they are reachable
-          through the signed-in application and nowhere else. A confidential figure
-          rewritten as a sentence is still the figure.
-        </p>
+        <p>{t.standards.confidential}</p>
       </Section>
 
       {/* ================= 09 · NOT THE WHOLE CODE ====================== */}
-      <Section
-        index={9}
-        id="coverage"
-        title="It is not the whole code"
-        lede={
-          <>
-            What is encoded is a fraction of what applies to a building, and the fraction is
-            not quantified, because nothing in this build can quantify it honestly.
-          </>
-        }
-      >
-        <p>
-          The clause families encoded here are parking, setback, dimension and access. The
-          fire code is not read at all — not partially, not with the gaps flagged. It is
-          not an input to this engine, which is why life safety appears above as a list of
-          deferred constraints rather than as a set of checks with a caveat.
-        </p>
-        <p>
-          No page count of the source codes appears on this site. A corpus figure comes
-          from a generated inventory or it does not appear, and this build holds no such
-          inventory — so the honest statement of coverage is the list of families in the
-          sentence above, and the reader supplies their own sense of what is missing from
-          it. A percentage typed by hand would read as measurement and would be the one
-          number here nobody could trace.
-        </p>
+      <Section index={9} id="coverage" title={t.coverage.title} lede={t.coverage.lede}>
+        <p>{t.coverage.families}</p>
+        <p>{t.coverage.noPageCount}</p>
       </Section>
 
       {/* ================= 10 · A FILE IS NOT AN INTEGRATION ============ */}
-      <Section index={10} id="files" title={IFC_GLTF.heading} lede={IFC_GLTF.body}>
-        <p>
-          What another program does with a file we write is that program&rsquo;s behaviour,
-          and we make no claim about it. We do not test against a third-party application,
-          we do not say a file works with one, and we will not name one on this site. A
-          format is a thing we can be held to; a tool&rsquo;s behaviour is a thing somebody
-          else ships.
-        </p>
+      <Section index={10} id="files" title={files.heading} lede={files.body}>
+        <p>{t.files.behaviour}</p>
       </Section>
 
       {/* ================= 11 · NOT ON THIS SITE ======================== */}
@@ -717,159 +614,44 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
         index={11}
         id="not-on-this-site"
         major
-        title="What is not on this site, and why"
-        lede={
-          <>
-            Not one of these is declined for taste. Each is a page the genre supplies by
-            default and this product has nothing true to put on.
-          </>
-        }
+        title={t.notOnSite.title}
+        lede={t.notOnSite.lede}
       >
         <div
           className="schedule"
           role="region"
-          aria-label="Pages and claims this site does not carry"
+          aria-label={t.notOnSite.regionLabel}
           tabIndex={0}
         >
           <table>
-            <caption className="sr-only">
-              Standard pages and claims this site does not carry, and the reason for each.
-            </caption>
+            <caption className="sr-only">{t.notOnSite.caption}</caption>
             <thead>
               <tr>
-                <th scope="col">Not here</th>
+                <th scope="col">{t.notOnSite.columns.notHere}</th>
                 <th scope="col" className="schedule__fill">
-                  Why
+                  {t.notOnSite.columns.why}
                 </th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  An accuracy figure
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  The inter-architect variance study that would produce one has not been
-                  run, so there is no measured agreement to report. A rounded guess would
-                  be the one figure on this site that could not answer where it came from.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  A customer count or a logo wall
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  There are no customers.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  A case study
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  Every real plot in the corpus belongs to somebody else. The material to
-                  build one is confidential rather than merely absent.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  A comparison table
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  We have evaluated no competitor. The only competitor material held
-                  anywhere is a machine transcript of a private call, which is neither an
-                  evaluation nor ours to publish.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  A price
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  Nothing about the present engagement generalises, and a number that does
-                  not generalise printed as if it did is the same defect as any other
-                  untraceable figure.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  A certification badge
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  No output of this engine is certified by any authority, and there is no
-                  certification to badge.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  A security or trust page
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  A badge is a claim about a deployment, made by whoever prints it. The
-                  page that would state this deployment&rsquo;s posture is written when the
-                  people who set that posture have settled it, and not before.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  An uptime page
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  Nothing monitors availability, so there is nothing to report. The
-                  readiness page counts what is not ready, which is a different question
-                  and is named as one.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  A blog or a newsletter
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  Neither would carry anything that is not already on this site, and a
-                  publishing schedule is a promise about the future.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  An integrations page
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  Exports travel as files, which is the section above. There is nothing to
-                  list.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  A team or an about page
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  There is no legal entity to describe.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" data-label="Not here">
-                  Terms or a privacy policy
-                </th>
-                <td className="schedule__fill" data-label="Why">
-                  There is no legal entity, and drafting a legal instrument in-house is not
-                  a design task. It is written by a lawyer, for an entity, and neither of
-                  those is in place.
-                </td>
-              </tr>
+              {NOT_HERE.map((id) => (
+                <tr key={id}>
+                  <th scope="row" data-label={t.notOnSite.columns.notHere}>
+                    {t.notOnSite.rows[id].what}
+                  </th>
+                  <td className="schedule__fill" data-label={t.notOnSite.columns.why}>
+                    {t.notOnSite.rows[id].why}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
         <div className="callout">
           <div className="callout__body">
-            <strong>The rule that produced the list</strong>
-            <p>
-              No figure on this site is typed by a human. Every number on every public page
-              reads from a fixture written by a script from a real run, and a build step
-              re-runs the engine and diffs it — so a figure that drifted would fail a gate
-              rather than sit on a page. A page that cannot cite a number does not print
-              one, which is why this section carries none.
-            </p>
+            <strong>{t.notOnSite.ruleTitle}</strong>
+            <p>{t.notOnSite.ruleBody}</p>
           </div>
         </div>
       </Section>
@@ -878,112 +660,75 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
       <Section
         index={12}
         id="who-changes"
-        title="Which of these could change, and who changes them"
-        lede={
-          <>
-            A gap with an owner is a plan; a gap without one is an excuse. So every item
-            below names what closes it, and the permanent ones say plainly that nothing
-            does.
-          </>
-        }
+        title={t.whoChanges.title}
+        lede={t.whoChanges.lede}
       >
         <div className="grid">
           <div className="plate">
-            <h3 className="plate__title">Permanent by design</h3>
+            <h3 className="plate__title">{t.whoChanges.permanent.title}</h3>
             <ul className="rf-owners">
-              <li>
-                <strong>The compliance claim.</strong> Regulatory validity is not assessed
-                here and is never claimed, at any readiness, in any deployment. It is not a
-                gap; it is what the product is.
-              </li>
-              <li>
-                <strong>The realism band.</strong> No realistic, expected or likely
-                capacity, and no field in the schema to hold one.
-              </li>
-              <li>
-                <strong>The optimiser class.</strong> A <Ident>TRADEOFF</Ident> value sits
-                outside the class set this phase emits, and the constructor throws on one.
-              </li>
+              <Owner item={t.whoChanges.permanent.compliance} />
+              <Owner item={t.whoChanges.permanent.realism} />
+              <Owner
+                item={{
+                  label: t.whoChanges.permanent.optimiser.label,
+                  body: t.whoChanges.permanent.optimiser.body(<Ident>TRADEOFF</Ident>),
+                }}
+              />
             </ul>
           </div>
 
           <div className="plate">
-            <h3 className="plate__title">Awaiting a named human</h3>
+            <h3 className="plate__title">{t.whoChanges.awaiting.title}</h3>
             <ul className="rf-owners">
-              <li>
-                <strong>Rule approval.</strong> A licensed Dubai architect authors and
-                approves each rule against the actual instrument. Until one has, every
-                citation on every screen is a placeholder and says so.
-              </li>
-              <li>
-                <strong>The annex signature.</strong> The metric definitions annex is
-                reviewed and signed. That signature is what unblocks every area term in the
-                product, which is most of them.
-              </li>
-              <li>
-                <strong>The agreement study.</strong> A variance band needs architects
-                under contract, measuring the plots this engine measured.
-              </li>
+              <Owner item={t.whoChanges.awaiting.approval} />
+              <Owner item={t.whoChanges.awaiting.annex} />
+              <Owner item={t.whoChanges.awaiting.study} />
             </ul>
           </div>
 
           <div className="plate">
-            <h3 className="plate__title">Outside this phase of work</h3>
+            <h3 className="plate__title">{t.whoChanges.outside.title}</h3>
             <ul className="rf-owners">
-              <li>
-                <strong>Unit layouts.</strong> A capacity is not a plan, and this phase
-                stops at the envelope.
-              </li>
-              <li>
-                <strong>Further code coverage.</strong> Each family added is a set of rules
-                authored, cited and approved by the same named architect.
-              </li>
-              <li>
-                <strong>The dormant invariants.</strong> They read a unit and per-level
-                schedule this phase does not generate. Synthesising one to wake them would
-                be verifying the engine against its own output, which is not verification.
-              </li>
+              <Owner item={t.whoChanges.outside.units} />
+              <Owner item={t.whoChanges.outside.coverage} />
+              <Owner item={t.whoChanges.outside.dormant} />
             </ul>
           </div>
         </div>
 
-        <p>
-          No date appears in any of that, and none will. An owner is a plan; a date is a
-          promise, and this product does not make those. A sentence that names the person
-          who closes a gap does not need to say when.
-        </p>
+        <p>{t.whoChanges.noDate}</p>
       </Section>
 
       {/* ================= 13 · WHAT THIS PAGE DID NOT PROVE ============ */}
       <Section
         index={13}
         id="unproven"
-        title="What this page did not prove"
-        lede={<>That the refusals above are the complete set.</>}
+        title={t.unproven.title}
+        lede={<>{t.unproven.lede}</>}
       >
-        <p>
-          This page was written by the people who built the engine, from the files that
-          enforce each item on it. A refusal nobody thought to write down is not here, and
-          no gate on this repository can find one — a prohibition test catches a sentence
-          that says too much, and is blind to a sentence that was never written. So the
-          list is as complete as its authors, which is exactly the standard this product
-          refuses to accept from anybody else.
-        </p>
-        <p>
-          The readiness page is the shorter route to an argument with this one. It counts
-          what is not ready in this deployment rather than describing it, it leads with the
-          figures that read zero, and it carries no composite score for a reader to stop
-          at.
-        </p>
+        <p>{t.unproven.authors}</p>
+        <p>{t.unproven.readiness}</p>
         <div className="cta">
           <Link to="/dashboard" navigate={navigate} className="button">
-            See what is not ready
+            {t.unproven.cta}
           </Link>
-          <p className="cta__note">
-            Approved rules and signed definitions both read zero on this deployment.
-          </p>
+          <p className="cta__note">{t.unproven.ctaNote}</p>
         </div>
       </Section>
     </div>
+  );
+}
+
+/** One item of §12: the bold label, then the sentence that says what closes it. */
+function Owner({
+  item,
+}: {
+  readonly item: { readonly label: string; readonly body: ReactNode };
+}): JSX.Element {
+  return (
+    <li>
+      <strong>{item.label}</strong> {item.body}
+    </li>
   );
 }

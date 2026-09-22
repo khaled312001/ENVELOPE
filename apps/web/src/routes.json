@@ -8,7 +8,7 @@
     "nav": "footer-only",
     "group": "product",
     "needsActor": false,
-    "arabic": "untranslated"
+    "arabic": "translated"
   },
   {
     "path": "/parking",
@@ -19,7 +19,7 @@
     "nav": "primary",
     "group": "product",
     "needsActor": false,
-    "arabic": "untranslated"
+    "arabic": "translated"
   },
   {
     "path": "/exports",
@@ -30,7 +30,7 @@
     "nav": "footer-only",
     "group": "product",
     "needsActor": false,
-    "arabic": "untranslated"
+    "arabic": "translated"
   },
   {
     "path": "/refusals",
@@ -41,7 +41,7 @@
     "nav": "primary",
     "group": "claim",
     "needsActor": false,
-    "arabic": "untranslated"
+    "arabic": "translated"
   },
   {
     "path": "/app",
@@ -52,7 +52,7 @@
     "nav": "footer-only",
     "group": "product",
     "needsActor": true,
-    "arabic": "partial"
+    "arabic": "translated"
   },
   {
     "path": "/work",
@@ -63,7 +63,7 @@
     "nav": "footer-only",
     "group": "product",
     "needsActor": false,
-    "arabic": "untranslated"
+    "arabic": "translated"
   },
   {
     "path": "/dashboard",

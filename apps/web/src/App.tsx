@@ -25,7 +25,7 @@
  * server enforces it for real, because a gate a client can skip is not a gate.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import {
   api,
@@ -51,6 +51,9 @@ import { ParametersStep } from './screens/ParametersStep.js';
 import { PlotForm } from './screens/PlotForm.js';
 import { Link, type Href } from './router.js';
 import { RulesStep } from './screens/RulesStep.js';
+import { AR } from './i18n/app.ar.js';
+import { EN } from './i18n/app.en.js';
+import { useDict, useLocale, Verbatim } from './i18n/locale.js';
 
 /*
   `gated` is DELETED. It was metadata nobody read: the flag said `plot` was gated
@@ -59,21 +62,65 @@ import { RulesStep } from './screens/RulesStep.js';
   plausible-looking source of truth for what blocks a step is worse than none —
   someone reads the table, believes it, and writes a guard against a fact the
   application does not hold.
+
+  THE LABELS MOVED TO `i18n/app.en.ts` AND THE IDS STAYED. An id is the engine's
+  name for a step — what `?step=` answers to and what the antechamber lists — and a
+  translated id would name a step nothing here answers to. The label is copy.
 */
 const STEPS = [
-  { id: 'intake', label: 'Sheet' },
-  { id: 'plot', label: 'Plot' },
-  { id: 'parameters', label: 'Parameters' },
-  { id: 'rules', label: 'Rules' },
-  { id: 'assumptions', label: 'Assumptions' },
-  { id: 'capacity', label: 'Capacity' },
-  { id: 'parking', label: 'Parking' },
-  { id: 'checks', label: 'Checks' },
-  { id: 'evidence', label: 'Evidence' },
-  { id: 'export', label: 'Export' },
+  { id: 'intake' },
+  { id: 'plot' },
+  { id: 'parameters' },
+  { id: 'rules' },
+  { id: 'assumptions' },
+  { id: 'capacity' },
+  { id: 'parking' },
+  { id: 'checks' },
+  { id: 'evidence' },
+  { id: 'export' },
 ] as const;
 
 type StepId = (typeof STEPS)[number]['id'];
+
+/**
+ * What the `?step=` banner has to say, kept as DATA and not as a sentence.
+ *
+ * It used to be stored as an English string, set once in an effect. A sentence in
+ * state is a sentence in the language that was active when the effect ran — switch
+ * to Arabic and the banner stays English until the address changes. The facts are
+ * stored instead and the sentence is written at render, in whichever language is
+ * current.
+ */
+export type StepHint =
+  | { readonly kind: 'unknown'; readonly wanted: string }
+  | { readonly kind: 'locked'; readonly step: StepId };
+
+/**
+ * An engine string, isolated on the Arabic page and untouched on the English one.
+ *
+ * A Latin run inside an Arabic sentence is reordered at its boundaries by the
+ * bidirectional algorithm, so a trailing full stop or a bracketed citation lands at
+ * the wrong end. `Verbatim` sets `dir="ltr" lang="en"`. On the English page the
+ * document already is both, so the span would carry nothing — and this screen's
+ * English rendering is held byte-identical to what it was before its copy moved.
+ */
+function useVerbatim(): (value: ReactNode) => ReactNode {
+  const { locale } = useLocale();
+  return (value) => (locale === 'ar' ? <Verbatim>{value}</Verbatim> : value);
+}
+
+/**
+ * The figures inside sentences on this screen, each named once.
+ *
+ * They are not in the dictionary because no digit is. "within 1%" is the engine's
+ * `withinOnePercent` flag, labelled; A3 is the paper the drawing set is composed
+ * for; the model file is glTF 2.0 because that is what `@envelope/massing` writes.
+ */
+const WITHIN_THRESHOLD = '1%';
+const DRAWING_SET_PAPER = 'A3';
+const THREE_D = '3D';
+const MODEL_FORMAT = 'glTF 2.0';
+const LAYER_EXAMPLES = ['ENV-B1-BAY', 'ENV-B1-CAR'] as const;
 
 export function EngineApp({
   navigate,
@@ -109,9 +156,11 @@ export function EngineApp({
    */
   readonly search: string;
 }): JSX.Element {
+  const t = useDict(EN, AR);
+  const ltr = useVerbatim();
 
   const [step, setStep] = useState<StepId>('intake');
-  const [stepHint, setStepHint] = useState<string | null>(null);
+  const [stepHint, setStepHint] = useState<StepHint | null>(null);
   const [prefill, setPrefill] = useState<Prefill | null>(null);
   const [plot, setPlot] = useState<PlotView | null>(null);
   const [plotHash, setPlotHash] = useState<string | null>(null);
@@ -166,15 +215,12 @@ export function EngineApp({
     const known = STEPS.find((st) => st.id === wanted);
     if (!known) {
       setStep('intake');
-      setStepHint(
-        `There is no step called “${wanted}”. The steps are: ` +
-          `${STEPS.map((st) => st.id).join(', ')}.`,
-      );
+      setStepHint({ kind: 'unknown', wanted });
       return;
     }
     if (!reachable.has(known.id)) {
       setStep('intake');
-      setStepHint(`“${known.label}” opens once the steps before it have something to read.`);
+      setStepHint({ kind: 'locked', step: known.id });
       return;
     }
     setStepHint(null);
@@ -220,6 +266,9 @@ export function EngineApp({
   // certain they owned the same fact.
   if (!actor) return <></>;
 
+  /** The API's own sentence when it sent one; the fallback is ours. */
+  const draftWarning = run?.warning ?? null;
+
   return (
     <div className="app">
       {/* No header and no <main> here. `SiteChrome` owns the single
@@ -227,13 +276,9 @@ export function EngineApp({
           that id resolve the skip link to whichever comes first in the document —
           usually the hidden engine, which is a skip link that focuses nothing a
           sighted keyboard user can see. */}
-      {stepHint ? (
-        <p className="banner" role="status">
-          {stepHint}
-        </p>
-      ) : null}
+      {stepHint ? <StepHintBanner hint={stepHint} /> : null}
 
-      <nav className="stepper" aria-label="Steps">
+      <nav className="stepper" aria-label={t.steps.nav}>
         <ol>
           {STEPS.map((s, i) => {
             const available = reachable.has(s.id);
@@ -248,13 +293,13 @@ export function EngineApp({
                   onClick={() => available && setStep(s.id)}
                   disabled={!available}
                   aria-current={current ? 'step' : undefined}
-                  title={available ? undefined : 'Complete the earlier steps first'}
+                  title={available ? undefined : t.steps.locked}
                 >
                   <span className="stepper__num" aria-hidden="true">
                     {i + 1}
                   </span>
-                  <span className="stepper__label">{s.label}</span>
-                  {!available ? <span className="sr-only"> (not yet available)</span> : null}
+                  <span className="stepper__label">{t.steps.labels[s.id]}</span>
+                  {!available ? <span className="sr-only">{t.steps.lockedSr}</span> : null}
                 </button>
               </li>
             );
@@ -268,9 +313,8 @@ export function EngineApp({
 
       {run?.draftRules ? (
         <div className="banner banner--danger" role="alert">
-          <strong>These numbers are not an assessment.</strong>{' '}
-          {run.warning ??
-            'This run used draft rules with placeholder citations. It demonstrates the engine; it does not measure this plot.'}
+          <strong>{t.draft.title}</strong>{' '}
+          {draftWarning === null ? t.draft.fallback : ltr(draftWarning)}
         </div>
       ) : null}
 
@@ -397,58 +441,7 @@ export function EngineApp({
           ) : null}
 
           {step === 'parking' && run ? (
-            <>
-              <ParkingPanel run={run} onInspect={inspect} />
-              {run.levelPlan ? (
-                <>
-                  <section className="panel" aria-labelledby="level-heading">
-                    <header className="panel__header">
-                      <div>
-                        <h2 id="level-heading" className="panel__title">
-                          The drawings
-                        </h2>
-                        <p className="panel__subtitle">
-                          Every parking level with its bays numbered and a car in each,
-                          the site plan, the typical floor and two sections, all drawn from
-                          the one building the engine computed. A bay count that cannot be
-                          laid out is not a bay count — but the supply figure that fixed
-                          the governing capacity was not this drawing. It was an available
-                          area divided by an assumed factor, computed before the level was
-                          laid out at all. The two are compared on the parking page.
-                        </p>
-                      </div>
-                    </header>
-                    {/* A run stored before the building model existed has no sheets;
-                        it keeps the level drawing it was computed with, below. */}
-                    {run.building ? (
-                      <>
-                        <DrawingSet run={run} onInspect={inspect} />
-                        <h3 className="panel__subheading">The level as packed</h3>
-                      </>
-                    ) : null}
-                    <ParkingPlan
-                      levelPlan={run.levelPlan}
-                      plotVertices={plot?.vertices}
-                      onInspect={inspect}
-                      figure={!run.building}
-                    />
-                  </section>
-                  <VehicleAccessPanel levelPlan={run.levelPlan} onInspect={inspect} />
-                </>
-              ) : (
-                <div className="banner banner--assumed" role="note">
-                  <div>
-                    <strong>No parking level was laid out for this plot.</strong>
-                    <p>
-                      {run.levelPlanRefusal ??
-                        'The engine did not report a reason, which is itself worth raising.'}{' '}
-                      The demand figures above still stand — what is missing is the
-                      drawing, not the arithmetic.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </>
+            <ParkingStep run={run} plot={plot} onInspect={inspect} />
           ) : null}
 
           {step === 'checks' && run ? <ChecksStep run={run} /> : null}
@@ -484,10 +477,44 @@ export function EngineApp({
           `DISCLAIMER` constant, on every route including this one. What is left is
           the build line, which is information rather than a claim. */}
       <p className="colophon__build">
-        Engine {run?.engineVersion ?? 'unreported'} · definitions annex{' '}
-        {run?.annexVersion ?? 'unsigned'}
+        {t.build.engine}
+        {run?.engineVersion !== undefined ? ltr(run.engineVersion) : t.build.unreported}
+        {t.build.annex}{' '}
+        {run?.annexVersion !== undefined ? ltr(run.annexVersion) : t.build.unsigned}
       </p>
     </div>
+  );
+}
+
+/**
+ * The `?step=` banner, written at render from the facts `EngineApp` stored.
+ *
+ * The id the visitor typed and the engine's list of ids are not copy in either
+ * language, so the sentence is written around them and, on the Arabic page, they
+ * are isolated — without which the closing quotation mark and the full stop migrate
+ * to the wrong end of the line.
+ */
+export function StepHintBanner({ hint }: { readonly hint: StepHint }): JSX.Element {
+  const t = useDict(EN, AR);
+  const ltr = useVerbatim();
+  return (
+    <p className="banner" role="status">
+      {hint.kind === 'unknown' ? (
+        <>
+          {t.hint.unknownLead}
+          {ltr(hint.wanted)}
+          {t.hint.unknownBetween}
+          {ltr(STEPS.map((st) => st.id).join(', '))}
+          {t.hint.unknownTail}
+        </>
+      ) : (
+        <>
+          {t.hint.lockedLead}
+          {t.steps.labels[hint.step]}
+          {t.hint.lockedTail}
+        </>
+      )}
+    </p>
   );
 }
 
@@ -557,18 +584,19 @@ export function Header({
   /** The theme toggle, owned by `Root`. */
   readonly children?: React.ReactNode;
 }): JSX.Element {
+  const t = useDict(EN, AR).header;
   return (
     <div className="shell app-header__meta">
       {run ? (
-        <span className="chip" title={`Computed in ${run.elapsedMs} ms`}>
-          {run.elapsedMs} ms
+        <span className="chip" title={t.computedIn(String(run.elapsedMs))}>
+          {t.elapsed(String(run.elapsedMs))}
         </span>
       ) : null}
       {actor ? <span className="badge-user">{actor.name}</span> : null}
       {children}
       {actor ? (
         <button type="button" className="button button--sm" onClick={onSignOut}>
-          Change
+          {t.change}
         </button>
       ) : null}
       {/* `navigate` is kept in the signature because the badge grows a link back to
@@ -588,7 +616,7 @@ export function Header({
   is not authentication. It was none of those as a bare form on a blank page.
 */
 
-function ErrorBanner({
+export function ErrorBanner({
   error,
   onDismiss,
 }: {
@@ -597,93 +625,107 @@ function ErrorBanner({
 }): JSX.Element {
   // The engine's refusals are the product working. They are presented as
   // information the user needs, not as a system failure to apologise for.
+  const t = useDict(EN, AR).error;
+  const ltr = useVerbatim();
   const blocked = error.status === 422 || error.status === 409;
   return (
     <div className={`banner ${blocked ? 'banner--blocked' : 'banner--danger'}`} role="alert">
       <div>
-        <strong>{blocked ? 'The engine stopped here' : 'Something went wrong'}</strong>
-        <p>{error.message}</p>
-        {error.gate ? <p className="fine-print">Blocked at: {error.gate}</p> : null}
+        <strong>{blocked ? t.blocked : t.failed}</strong>
+        {/* The API's sentence, as the API wrote it — the only party that knows why. */}
+        <p>{ltr(error.message)}</p>
+        {error.gate ? (
+          <p className="fine-print">
+            {t.blockedAt}
+            {ltr(error.gate)}
+          </p>
+        ) : null}
       </div>
-      <button type="button" className="button button--ghost button--icon" onClick={onDismiss} aria-label="Dismiss">
+      <button type="button" className="button button--ghost button--icon" onClick={onDismiss} aria-label={t.dismiss}>
         ✕
       </button>
     </div>
   );
 }
 
-function EnvelopePanel({
+export function EnvelopePanel({
   run,
   onInspect,
 }: {
   readonly run: RunView;
   readonly onInspect: (n: string) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR).envelope;
+  const ltr = useVerbatim();
   const e = run.envelope;
   return (
     <section className="panel" aria-labelledby="envelope-heading">
       <header className="panel__header">
         <div>
           <h2 id="envelope-heading" className="panel__title">
-            Buildable envelope
+            {t.title}
           </h2>
-          <p className="panel__subtitle">
-            Each dimension names the constraint that produced it.
-          </p>
+          <p className="panel__subtitle">{t.subtitle}</p>
         </div>
       </header>
 
       <dl className="kv kv--grid">
         <div>
-          <dt>Setback-permitted footprint</dt>
+          <dt>{t.fields.setbackPermittedFootprint}</dt>
           <dd><TracedValue traced={e.setbackPermittedFootprint} onInspect={onInspect} /></dd>
         </div>
         <div>
-          <dt>Coverage cap</dt>
+          <dt>{t.fields.coverageCap}</dt>
           <dd><TracedValue traced={e.coverageCap} onInspect={onInspect} /></dd>
         </div>
         <div>
-          <dt>Podium footprint</dt>
+          <dt>{t.fields.podiumFootprint}</dt>
           <dd><TracedValue traced={e.podiumFootprint} onInspect={onInspect} /></dd>
         </div>
         <div>
-          <dt>Tower plate</dt>
+          <dt>{t.fields.towerPlate}</dt>
           <dd><TracedValue traced={e.towerPlateCap} onInspect={onInspect} /></dd>
         </div>
         <div>
-          <dt>Height ceiling</dt>
+          <dt>{t.fields.heightCeiling}</dt>
           <dd><TracedValue traced={e.heightCeilingM} onInspect={onInspect} /></dd>
         </div>
         <div>
-          <dt>Levels by height</dt>
+          <dt>{t.fields.levelsByHeight}</dt>
           <dd><TracedValue traced={e.maxLevelsByHeight} onInspect={onInspect} /></dd>
         </div>
       </dl>
 
-      <h3 className="panel__section">What binds each dimension</h3>
+      <h3 className="panel__section">{t.bindsTitle}</h3>
       <table className="data-table">
         <thead>
           <tr>
-            <th scope="col">Dimension</th>
-            <th scope="col">Binding constraint</th>
-            <th scope="col" className="data-table__num">Value</th>
-            <th scope="col">Next closest</th>
+            <th scope="col">{t.columns.dimension}</th>
+            <th scope="col">{t.columns.binding}</th>
+            <th scope="col" className="data-table__num">{t.columns.value}</th>
+            <th scope="col">{t.columns.nextClosest}</th>
           </tr>
         </thead>
         <tbody>
           {e.bindingConstraints.map((b) => (
             <tr key={b.dimension}>
-              <th scope="row">{b.dimension.replace(/_/g, ' ')}</th>
+              <th scope="row">
+                {t.dimensions?.[b.dimension] ?? ltr(b.dimension.replace(/_/g, ' '))}
+              </th>
+              {/* The constraint's label, its rule and the runner-up's label are the
+                  engine's, and are rendered as it wrote them. */}
               <td>
-                {b.label} <span className="muted">· {b.ruleId}</span>
+                {ltr(b.label)} <span className="muted">· {ltr(b.ruleId)}</span>
               </td>
               <td className="data-table__num value">{b.value}</td>
               <td>
                 {b.runnerUp ? (
                   <>
-                    {b.runnerUp.label} at <span className="value">{b.runnerUp.value}</span>
+                    {ltr(b.runnerUp.label)}
+                    {t.runnerUpAt}
+                    <span className="value">{b.runnerUp.value}</span>
                     {b.runnerUp.withinOnePercent ? (
-                      <span className="chip chip--warn">within 1%</span>
+                      <span className="chip chip--warn">{t.within(WITHIN_THRESHOLD)}</span>
                     ) : null}
                   </>
                 ) : (
@@ -702,20 +744,12 @@ function EnvelopePanel({
         shown rather than logged.
       */}
       <details className="disclosure">
-        <summary>
-          Setback resolution took {e.fixpoint.iterations} iteration
-          {e.fixpoint.iterations === 1 ? '' : 's'}
-          {e.fixpoint.converged ? '' : ' and did not converge'}
-        </summary>
-        <p className="fine-print">
-          The boundary setback depends on the level count, the level count depends on the
-          footprint, and the footprint depends on the setback. The solver seeds the level
-          count at the most restrictive plausible value and iterates until the applicable
-          rules and their resolved values stop changing.
-        </p>
+        <summary>{t.iterations(e.fixpoint.iterations, e.fixpoint.converged)}</summary>
+        <p className="fine-print">{t.fixpointNote}</p>
+        {/* Each note is the solver's own record of one pass. */}
         <ol className="iteration-log">
           {e.fixpoint.history.map((h) => (
-            <li key={h.index}>{h.note}</li>
+            <li key={h.index}>{ltr(h.note)}</li>
           ))}
         </ol>
       </details>
@@ -723,13 +757,83 @@ function EnvelopePanel({
   );
 }
 
-function ParkingPanel({
+/**
+ * Step 6 — the demand panel, then the drawings or the engine's reason for having
+ * none.
+ *
+ * Its own component, and exported, for one reason: the stepper opens on step 0
+ * and a static render never reaches step 6, so the copy here was rendered by
+ * nothing but a browser. Lifting it out changes no markup — a component boundary
+ * is not an element — and lets `app-arabic.test.tsx` read both languages of it.
+ */
+export function ParkingStep({
+  run,
+  plot,
+  onInspect,
+}: {
+  readonly run: RunView;
+  readonly plot: PlotView | null;
+  readonly onInspect: (n: string) => void;
+}): JSX.Element {
+  const t = useDict(EN, AR).parkingStep;
+  const ltr = useVerbatim();
+  return (
+    <>
+      <ParkingPanel run={run} onInspect={onInspect} />
+      {run.levelPlan ? (
+        <>
+          <section className="panel" aria-labelledby="level-heading">
+            <header className="panel__header">
+              <div>
+                <h2 id="level-heading" className="panel__title">
+                  {t.drawingsTitle}
+                </h2>
+                <p className="panel__subtitle">{t.drawingsSubtitle}</p>
+              </div>
+            </header>
+            {/* A run stored before the building model existed has no sheets;
+                it keeps the level drawing it was computed with, below. */}
+            {run.building ? (
+              <>
+                <DrawingSet run={run} onInspect={onInspect} />
+                <h3 className="panel__subheading">{t.levelAsPacked}</h3>
+              </>
+            ) : null}
+            <ParkingPlan
+              levelPlan={run.levelPlan}
+              plotVertices={plot?.vertices}
+              onInspect={onInspect}
+              figure={!run.building}
+            />
+          </section>
+          <VehicleAccessPanel levelPlan={run.levelPlan} onInspect={onInspect} />
+        </>
+      ) : (
+        <div className="banner banner--assumed" role="note">
+          <div>
+            <strong>{t.noLevelTitle}</strong>
+            <p>
+              {run.levelPlanRefusal !== null && run.levelPlanRefusal !== undefined
+                ? ltr(run.levelPlanRefusal)
+                : t.noReason}{' '}
+              {t.noLevelTail}
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+export function ParkingPanel({
   run,
   onInspect,
 }: {
   readonly run: RunView;
   readonly onInspect: (n: string) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR).parking;
+  const ltr = useVerbatim();
   const p = run.parking;
   const fits = Number(p.headroomBays) >= 0;
   return (
@@ -737,36 +841,42 @@ function ParkingPanel({
       <header className="panel__header">
         <div>
           <h2 id="parking-heading" className="panel__title">
-            Parking
+            {t.title}
           </h2>
-          <p className="panel__subtitle">
-            Demand, then supply, then what the supply can actually carry.
-          </p>
+          <p className="panel__subtitle">{t.subtitle}</p>
         </div>
       </header>
 
       <dl className="kv kv--grid">
-        <div><dt>Resident bays</dt><dd><TracedValue traced={p.residentBays} onInspect={onInspect} /></dd></div>
-        <div><dt>Visitor bays</dt><dd><TracedValue traced={p.visitorBays} onInspect={onInspect} /></dd></div>
-        <div><dt>Total bays</dt><dd><TracedValue traced={p.totalBays} onInspect={onInspect} /></dd></div>
-        <div><dt>Area per bay</dt><dd><TracedValue traced={p.bayAreaFactorM2} onInspect={onInspect} /></dd></div>
-        <div><dt>Area required</dt><dd><TracedValue traced={p.requiredAreaM2} onInspect={onInspect} /></dd></div>
-        <div><dt>Levels required</dt><dd><TracedValue traced={p.levelsRequired} onInspect={onInspect} /></dd></div>
-        <div><dt>Levels available</dt><dd><TracedValue traced={p.levelsAvailable} onInspect={onInspect} /></dd></div>
+        <div><dt>{t.fields.residentBays}</dt><dd><TracedValue traced={p.residentBays} onInspect={onInspect} /></dd></div>
+        <div><dt>{t.fields.visitorBays}</dt><dd><TracedValue traced={p.visitorBays} onInspect={onInspect} /></dd></div>
+        <div><dt>{t.fields.totalBays}</dt><dd><TracedValue traced={p.totalBays} onInspect={onInspect} /></dd></div>
+        <div><dt>{t.fields.areaPerBay}</dt><dd><TracedValue traced={p.bayAreaFactorM2} onInspect={onInspect} /></dd></div>
+        <div><dt>{t.fields.areaRequired}</dt><dd><TracedValue traced={p.requiredAreaM2} onInspect={onInspect} /></dd></div>
+        <div><dt>{t.fields.levelsRequired}</dt><dd><TracedValue traced={p.levelsRequired} onInspect={onInspect} /></dd></div>
+        <div><dt>{t.fields.levelsAvailable}</dt><dd><TracedValue traced={p.levelsAvailable} onInspect={onInspect} /></dd></div>
         <div>
-          <dt>Units the parking can carry</dt>
+          <dt>{t.fields.unitsCarried}</dt>
           <dd><TracedValue traced={p.supportableUnitCeiling} onInspect={onInspect} /></dd>
         </div>
       </dl>
 
+      {/* The engine's sentence about what the supply means for the podium. */}
       <p className={`callout ${fits ? 'callout--ok' : 'callout--warn'}`}>
-        {p.podiumImplication}
+        {ltr(p.podiumImplication)}
       </p>
     </section>
   );
 }
 
-function ExportPanel({
+/** What the export step holds once the report has been prepared. */
+export interface ExportDoneState {
+  readonly result: ExportResult;
+  readonly html: string;
+  readonly sheets: string | null;
+}
+
+export function ExportPanel({
   actor,
   run,
   gates,
@@ -781,11 +891,9 @@ function ExportPanel({
   readonly onGoToAssumptions: () => void;
   readonly onError: (e: ApiError) => void;
 }): JSX.Element {
-  const [done, setDone] = useState<{ result: ExportResult; html: string; sheets: string | null } | null>(
-    null,
-  );
+  const t = useDict(EN, AR).export;
+  const [done, setDone] = useState<ExportDoneState | null>(null);
   const [busy, setBusy] = useState(false);
-  const sheets = useSheets(run);
   const canSign = Boolean(actor.licence);
   const ready =
     Boolean(gates['G3_ASSUMPTIONS_ACKNOWLEDGED']) && Boolean(gates['G4_REVIEWER_NAMED']);
@@ -795,12 +903,9 @@ function ExportPanel({
       <header className="panel__header">
         <div>
           <h2 id="export-heading" className="panel__title">
-            Export
+            {t.title}
           </h2>
-          <p className="panel__subtitle">
-            Two things have to be true before anything leaves: you have read the
-            assumptions, and someone has put their name to it.
-          </p>
+          <p className="panel__subtitle">{t.subtitle}</p>
         </div>
       </header>
 
@@ -810,11 +915,8 @@ function ExportPanel({
             {gates['G3_ASSUMPTIONS_ACKNOWLEDGED'] ? '✓' : '○'}
           </span>
           <div>
-            <strong>Assumptions read</strong>
-            <p>
-              {run.assumptions.length} assumption
-              {run.assumptions.length === 1 ? '' : 's'} in this run.
-            </p>
+            <strong>{t.assumptionsRead}</strong>
+            <p>{t.assumptionCount(run.assumptions.length)}</p>
             {/*
               Acknowledged on the register, not here. §20.2 makes the register
               "the moment the user understands this is not magic", and a tick box on
@@ -824,7 +926,7 @@ function ExportPanel({
             */}
             {!gates['G3_ASSUMPTIONS_ACKNOWLEDGED'] ? (
               <button type="button" className="link-button" onClick={onGoToAssumptions}>
-                Read them on the assumption register
+                {t.readThem}
               </button>
             ) : null}
           </div>
@@ -834,11 +936,17 @@ function ExportPanel({
             {gates['G4_REVIEWER_NAMED'] ? '✓' : '○'}
           </span>
           <div>
-            <strong>Signed by a named reviewer</strong>
+            <strong>{t.signedBy}</strong>
             <p>
-              {canSign
-                ? `${actor.name} will be recorded as the reviewer.`
-                : 'Add your licence number to sign. We record it; we cannot verify it.'}
+              {canSign ? (
+                <>
+                  {t.reviewerBefore}
+                  <PersonName name={actor.name} />
+                  {t.reviewerAfter}
+                </>
+              ) : (
+                t.noLicence
+              )}
             </p>
             {!gates['G4_REVIEWER_NAMED'] && canSign ? (
               <button
@@ -846,7 +954,7 @@ function ExportPanel({
                 className="button"
                 onClick={() => onAcknowledge('G4_REVIEWER_NAMED', hashOf(run.capacity))}
               >
-                Sign this export
+                {t.sign}
               </button>
             ) : null}
           </div>
@@ -877,175 +985,213 @@ function ExportPanel({
             }
           }}
         >
-          {busy ? 'Preparing…' : 'Export report'}
+          {busy ? t.preparing : t.exportReport}
         </button>
-        {!ready ? (
-          <p className="fine-print">
-            Both of the above have to be true first. Neither is a formality: one records
-            that a person read what the engine had to assume, the other records who put
-            their name to the output.
-          </p>
-        ) : null}
+        {!ready ? <p className="fine-print">{t.notReady}</p> : null}
       </div>
 
-      {done ? (
+      {done ? <ExportDone actor={actor} run={run} done={done} onError={onError} /> : null}
+    </section>
+  );
+}
+
+/**
+ * The name a person typed, isolated on the Arabic page.
+ *
+ * Not `Verbatim`: a name is not an engine string and need not be English, so it
+ * gets no `lang`. It gets `<bdi>` — its direction is its own, and a Latin name at
+ * the edge of an Arabic sentence would otherwise carry the full stop with it.
+ */
+function PersonName({ name }: { readonly name: string }): JSX.Element {
+  const { locale } = useLocale();
+  return locale === 'ar' ? <bdi>{name}</bdi> : <>{name}</>;
+}
+
+/**
+ * The export step after the report has been prepared: the fixed run, its two
+ * fingerprints and every file behind the same two gates.
+ *
+ * Its own component, and exported, because it renders only after a click — so the
+ * copy in it was rendered by nothing but a browser. Lifting it out changes no
+ * markup, and `useSheets` moves with it: the sheet list is read only where it is
+ * shown.
+ */
+export function ExportDone({
+  actor,
+  run,
+  done,
+  onError,
+}: {
+  readonly actor: Actor;
+  readonly run: RunView;
+  readonly done: ExportDoneState;
+  readonly onError: (e: ApiError) => void;
+}): JSX.Element {
+  const t = useDict(EN, AR).export;
+  const ltr = useVerbatim();
+  const sheets = useSheets(run);
+
+  return (
+    <>
+      <div className="callout callout--ok">
+        <p>
+          {t.fixedBefore}
+          <code>{run.runId.slice(0, 8)}</code>
+          {t.fixedAfter}
+        </p>
+      </div>
+
+      {/*
+        Two artifacts, and two fingerprints beside them.
+
+        §3.4 item 9 promises a report and a JSON export; a screen that said
+        "export prepared" and handed over neither had promised and not
+        delivered. The fingerprints are printed rather than hidden because
+        §13.4's guarantee is only worth something if a reader can check it —
+        one covers the question that was asked, the other the answer that came
+        back.
+      */}
+      <dl className="kv">
+        <div>
+          <dt>{t.runFingerprint}</dt>
+          <dd>
+            <code>{done.result.fingerprint}</code>
+            <span className="muted">{t.runFingerprintNote}</span>
+          </dd>
+        </div>
+        <div>
+          <dt>{t.reportFingerprint}</dt>
+          <dd>
+            <code>{done.result.reportFingerprint.digest.slice(0, 16)}…</code>
+            <span className="muted">
+              {' '}
+              {t.reportFingerprintBefore}
+              {ltr(done.result.reportFingerprint.algorithm)}
+              {t.reportFingerprintAfter}
+            </span>
+          </dd>
+        </div>
+      </dl>
+
+      {done.result.annexNotice ? (
+        <div className="banner banner--danger" role="alert">
+          <div>
+            <strong>{t.annexTitle}</strong>
+            <p>{ltr(done.result.annexNotice)}</p>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="actions actions--row">
+        <button
+          type="button"
+          className="button"
+          onClick={() => openDocument(done.html, 'text/html')}
+        >
+          {t.openReport}
+        </button>
+        {done.sheets ? (
+          <button
+            type="button"
+            className="button"
+            onClick={() => openDocument(done.sheets!, 'text/html')}
+          >
+            {t.openDrawingSet(DRAWING_SET_PAPER)}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="button"
+          onClick={() =>
+            openDocument(JSON.stringify(done.result.document, null, 2), 'application/json')
+          }
+        >
+          {t.openJson}
+        </button>
+        {/*
+          CAD and Excel, behind the same two gates as the report.
+
+          The client asked for both by name. The temptation is to treat a
+          drawing as a lesser artifact that can skip the acknowledgement; it
+          is the opposite — a DXF is the output most likely to be x-reffed
+          into a submission set and read by someone who never saw the
+          assumption register, so it is gated identically and it carries the
+          disclaimer inside the file.
+
+          Downloaded rather than opened in a tab: neither format renders in a
+          browser, and a tab of binary is a broken feature.
+        */}
+        <button
+          type="button"
+          className="button"
+          onClick={() => void download(actor, run.runId, 'dxf', onError)}
+        >
+          {t.downloadDxf}
+        </button>
+        {run.building ? (
+          <button
+            type="button"
+            className="button"
+            onClick={() => void download(actor, run.runId, 'glb', onError)}
+          >
+            {t.downloadModel(THREE_D)}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="button"
+          onClick={() => void download(actor, run.runId, 'xlsx', onError)}
+        >
+          {t.downloadXlsx}
+        </button>
+      </div>
+
+      <p className="fine-print">
+        {t.cad.lead(THREE_D)}
+        <code>{LAYER_EXAMPLES[0]}</code>
+        {t.cad.between}
+        <code>{LAYER_EXAMPLES[1]}</code>
+        {t.cad.afterLayers}
+        <strong>{t.cad.not}</strong>
+        {t.cad.tail}
+      </p>
+      {run.building ? (
+        <p className="fine-print">
+          {t.glb.lead(THREE_D)}
+          <code>.glb</code>
+          {t.glb.tail(THREE_D, MODEL_FORMAT)}
+        </p>
+      ) : null}
+
+      {/*
+        One sheet at a time, behind the same two gates as the whole building.
+        A consultant who needs level B2 should not have to take the building
+        apart to get it, and a sheet downloaded alone is exactly the sheet on
+        screen — flat, framed and titled, at true size in metres.
+      */}
+      {sheets.length > 0 ? (
         <>
-          <div className="callout callout--ok">
-            <p>
-              Run <code>{run.runId.slice(0, 8)}</code> is fixed as it stands. Editing an
-              assumption from here creates a new run and leaves this one untouched.
-            </p>
-          </div>
-
-          {/*
-            Two artifacts, and two fingerprints beside them.
-
-            §3.4 item 9 promises a report and a JSON export; a screen that said
-            "export prepared" and handed over neither had promised and not
-            delivered. The fingerprints are printed rather than hidden because
-            §13.4's guarantee is only worth something if a reader can check it —
-            one covers the question that was asked, the other the answer that came
-            back.
-          */}
-          <dl className="kv">
-            <div>
-              <dt>Run fingerprint</dt>
-              <dd>
-                <code>{done.result.fingerprint}</code>
-                <span className="muted"> — the inputs, versions and rule set</span>
-              </dd>
-            </div>
-            <div>
-              <dt>Report fingerprint</dt>
-              <dd>
-                <code>{done.result.reportFingerprint.digest.slice(0, 16)}…</code>
-                <span className="muted">
-                  {' '}
-                  — {done.result.reportFingerprint.algorithm} over the content
-                </span>
-              </dd>
-            </div>
-          </dl>
-
-          {done.result.annexNotice ? (
-            <div className="banner banner--danger" role="alert">
-              <div>
-                <strong>The metric definitions annex is not signed.</strong>
-                <p>{done.result.annexNotice}</p>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="actions actions--row">
-            <button
-              type="button"
-              className="button"
-              onClick={() => openDocument(done.html, 'text/html')}
-            >
-              Open the report
-            </button>
-            {done.sheets ? (
-              <button
-                type="button"
-                className="button"
-                onClick={() => openDocument(done.sheets!, 'text/html')}
-              >
-                Open the drawing set (A3)
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="button"
-              onClick={() =>
-                openDocument(JSON.stringify(done.result.document, null, 2), 'application/json')
-              }
-            >
-              Open the JSON export
-            </button>
-            {/*
-              CAD and Excel, behind the same two gates as the report.
-
-              The client asked for both by name. The temptation is to treat a
-              drawing as a lesser artifact that can skip the acknowledgement; it
-              is the opposite — a DXF is the output most likely to be x-reffed
-              into a submission set and read by someone who never saw the
-              assumption register, so it is gated identically and it carries the
-              disclaimer inside the file.
-
-              Downloaded rather than opened in a tab: neither format renders in a
-              browser, and a tab of binary is a broken feature.
-            */}
-            <button
-              type="button"
-              className="button"
-              onClick={() => void download(actor, run.runId, 'dxf', onError)}
-            >
-              Download the CAD drawing (DXF)
-            </button>
-            {run.building ? (
-              <button
-                type="button"
-                className="button"
-                onClick={() => void download(actor, run.runId, 'glb', onError)}
-              >
-                Download the 3D model (glTF)
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="button"
-              onClick={() => void download(actor, run.runId, 'xlsx', onError)}
-            >
-              Download the workbook (XLSX)
-            </button>
-          </div>
-
-          <p className="fine-print">
-            The CAD drawing is the whole building: every parking level at its own
-            height with a car in every bay, the ramps as slopes between levels, and the
-            massing stood up as 3D faces. Each level has its own layers —{' '}
-            <code>ENV-B1-BAY</code>, <code>ENV-B1-CAR</code> — so a reviewer can switch
-            off one level, or one kind of thing on it. Revit and IFC are{' '}
-            <strong>not</strong> included: round-tripping IFC is a body of work this
-            phase has not quoted, and a badly-shaped one would be worse than none.
-          </p>
-          {run.building ? (
-            <p className="fine-print">
-              The 3D model is the capacity step&rsquo;s 3D view as a <code>.glb</code> file: binary glTF
-              2.0, with no extension a reader is required to support. It is in metres,
-              measured from the middle of the plot, with a node for each level and its
-              cars. It carries the same two sentences in its metadata, because a 3D file
-              has no title block to print them in.
-            </p>
-          ) : null}
-
-          {/*
-            One sheet at a time, behind the same two gates as the whole building.
-            A consultant who needs level B2 should not have to take the building
-            apart to get it, and a sheet downloaded alone is exactly the sheet on
-            screen — flat, framed and titled, at true size in metres.
-          */}
-          {sheets.length > 0 ? (
-            <>
-              <h3 className="panel__subheading">One sheet at a time</h3>
-              <ul className="sheet-downloads">
-                {sheets.map((s) => (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      className="link-button"
-                      onClick={() => void download(actor, run.runId, 'dxf', onError, s)}
-                    >
-                      Download {s.number}: {s.title} (DXF)
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
+          <h3 className="panel__subheading">{t.oneSheet}</h3>
+          <ul className="sheet-downloads">
+            {sheets.map((s) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => void download(actor, run.runId, 'dxf', onError, s)}
+                >
+                  {t.sheetBefore}
+                  {ltr(s.number)}
+                  {t.sheetBetween}
+                  {ltr(s.title)}
+                  {t.sheetAfter}
+                </button>
+              </li>
+            ))}
+          </ul>
         </>
       ) : null}
-    </section>
+    </>
   );
 }
 

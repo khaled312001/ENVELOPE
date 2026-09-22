@@ -29,7 +29,7 @@
  *    user's to enter.
  */
 
-import { useRef, useState } from 'react';
+import { Fragment, useRef, useState, type ReactNode } from 'react';
 
 import {
   api,
@@ -41,6 +41,39 @@ import {
 } from '../api/client.js';
 import type { TracedWire } from '../components/TracedValue.js';
 import { TracedValue } from '../components/TracedValue.js';
+import { AR } from '../i18n/intake.ar.js';
+import { EN } from '../i18n/intake.en.js';
+import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
+
+/**
+ * What the sheet and the API said, isolated on the Arabic page and untouched on
+ * the English one — whose markup is held byte-identical to what it was before its
+ * copy moved into `i18n/intake.en.ts`.
+ */
+function useVerbatim(): (value: ReactNode) => ReactNode {
+  const { locale } = useLocale();
+  return (value) => (locale === 'ar' ? <Verbatim>{value}</Verbatim> : value);
+}
+
+/**
+ * The figures inside this screen's sentences, each named once, because no digit is
+ * typed into a dictionary. The typical size is the three real sheets on file
+ * (1.2–1.5 MB); the tolerance is `FR-PLT-001 AC2`; the worked example is the
+ * wording of a conditional setback as Trakhees prints it.
+ */
+const TYPICAL_SHEET_MB = '1.5';
+const AREA_TOLERANCE = '2%';
+const CONDITIONAL_EXAMPLE = '0 m to a solid wall and 4.0 m to a window wall';
+
+/**
+ * A failure, kept as the facts rather than as a sentence — so it is written in
+ * whichever language is on screen when it renders, not the one that was on screen
+ * when the file was dropped.
+ */
+export type IntakeError =
+  | { readonly kind: 'too-large'; readonly name: string; readonly sizeMb: string }
+  /** The API's own sentence, or the thrown value's; rendered as it arrived. */
+  | { readonly kind: 'reported'; readonly text: string };
 
 export interface Prefill {
   readonly plotNumber: string;
@@ -66,9 +99,10 @@ export function AffectionPlanIntake({
   readonly onUse: (prefill: Prefill) => void;
   readonly onSkip: () => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
   const [read, setRead] = useState<AffectionPlanRead | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<IntakeError | null>(null);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -80,11 +114,11 @@ export function AffectionPlanIntake({
     // Checked here as well as on the server. The server's refusal is the one
     // that counts; this one is the one that arrives before a 3 MB upload.
     if (file.size > MAX_BYTES) {
-      setError(
-        `${file.name} is ${(file.size / 1024 / 1024).toFixed(1)} MB. Affection plans are ` +
-          'single sheets of about 1.5 MB — a file this large is usually a scanned ' +
-          'bundle, and a scan has no text to read.',
-      );
+      setError({
+        kind: 'too-large',
+        name: file.name,
+        sizeMb: (file.size / 1024 / 1024).toFixed(1),
+      });
       return;
     }
 
@@ -92,11 +126,13 @@ export function AffectionPlanIntake({
     try {
       setRead(await api.readAffectionPlan(actor, file));
     } catch (e) {
-      setError(
-        e instanceof ApiError
-          ? `${e.message}${typeof e.detail === 'string' ? ` ${e.detail}` : ''}`
-          : String(e),
-      );
+      setError({
+        kind: 'reported',
+        text:
+          e instanceof ApiError
+            ? `${e.message}${typeof e.detail === 'string' ? ` ${e.detail}` : ''}`
+            : String(e),
+      });
     } finally {
       setBusy(false);
     }
@@ -107,13 +143,9 @@ export function AffectionPlanIntake({
       <header className="panel__header">
         <div>
           <h2 id="intake-heading" className="panel__title">
-            Read an affection plan
+            {t.title}
           </h2>
-          <p className="panel__subtitle">
-            Drop the PDF in. We read the printed values, re-check the sheet&rsquo;s own
-            arithmetic, and list what it does not say. Nothing is saved until you have
-            looked at it.
-          </p>
+          <p className="panel__subtitle">{t.subtitle}</p>
         </div>
       </header>
 
@@ -143,26 +175,19 @@ export function AffectionPlanIntake({
             ▤
           </span>
           <span className="dropzone__text">
-            <strong>{busy ? 'Reading the sheet…' : 'Choose a PDF, or drop one here'}</strong>
-            <span className="fine-print">
-              The sheet must be the issued PDF. A photograph or a scan has no text on it
-              to read, and this does not guess at pixels.
-            </span>
+            <strong>{busy ? t.dropzone.busy : t.dropzone.idle}</strong>
+            <span className="fine-print">{t.dropzone.issuedOnly}</span>
           </span>
         </label>
       </div>
 
-      {error ? (
-        <div className="banner banner--danger" role="alert">
-          {error}
-        </div>
-      ) : null}
+      {error ? <IntakeErrorBanner error={error} /> : null}
 
       {read ? <Reading read={read} onUse={onUse} /> : null}
 
       <footer className="panel__footer">
         <button type="button" className="button" onClick={onSkip}>
-          Skip — I&rsquo;ll type the values in
+          {t.skip}
         </button>
       </footer>
     </section>
@@ -179,6 +204,7 @@ function Field({
   /** The value is a phrase, not a quantity — let it wrap. */
   readonly prose?: boolean;
 }): JSX.Element {
+  const t = useDict(EN, AR);
   return (
     <div>
       <dt>{label}</dt>
@@ -190,7 +216,7 @@ function Field({
           // affection plan is DERIVED, because the sheet is a citable instrument.
           <TracedValue traced={traced} onInspect={() => undefined} />
         ) : (
-          <span className="value value--absent">not printed on this sheet</span>
+          <span className="value value--absent">{t.notPrinted}</span>
         )}
       </dd>
     </div>
@@ -199,26 +225,37 @@ function Field({
 
 /** The three faces of one mass, or a plain statement that a face is unstated. */
 function Faces({ face }: { readonly face: SetbackFaceView }): JSX.Element {
-  const entries: readonly [string, SetbackValueView | undefined][] = [
+  const t = useDict(EN, AR);
+  const { locale } = useLocale();
+  const entries: readonly [keyof typeof t.faces, SetbackValueView | undefined][] = [
     ['front', face.front],
     ['side', face.side],
     ['rear', face.rear],
   ];
   const stated = entries.filter(([, v]) => v !== undefined);
-  if (stated.length === 0) return <span className="value--absent">not stated</span>;
+  if (stated.length === 0) return <span className="value--absent">{t.notStated}</span>;
 
   return (
     <>
       {stated.map(([name, v], i) => (
         <span key={name}>
-          {i > 0 ? ', ' : ''}
-          {name}{' '}
+          {i > 0 ? t.faceSeparator : ''}
+          {t.faces[name]}{' '}
           {v!.kind === 'FIXED' ? (
             <strong>{v!.metres} m</strong>
           ) : (
             <>
-              <span className="chip chip--warn">needs a decision</span>{' '}
-              {v!.options.map((o) => `${o.metres} m ${o.condition}`).join(' or ')}
+              <span className="chip chip--warn">{t.needsDecision}</span>{' '}
+              {/* Each option's condition is the sheet's own wording. On the Arabic
+                  page each is isolated, so «أو» sits between them and not inside. */}
+              {locale === 'ar'
+                ? v!.options.map((o, k) => (
+                    <Fragment key={k}>
+                      {k > 0 ? t.or : ''}
+                      <Verbatim>{`${o.metres} m ${o.condition}`}</Verbatim>
+                    </Fragment>
+                  ))
+                : v!.options.map((o) => `${o.metres} m ${o.condition}`).join(t.or)}
             </>
           )}
         </span>
@@ -227,62 +264,108 @@ function Faces({ face }: { readonly face: SetbackFaceView }): JSX.Element {
   );
 }
 
-function Reading({
+/**
+ * What was read off one sheet. Exported because it renders only after an upload,
+ * which a static render never performs — `app-arabic.test.tsx` feeds it the API's
+ * own reading of the real sheets instead.
+ */
+/**
+ * The refusal, written at render from the facts the drop handler stored.
+ *
+ * Its own component, and exported, because it renders only after a file is dropped
+ * — which a static render never does. Lifting it out changes no markup.
+ */
+export function IntakeErrorBanner({ error }: { readonly error: IntakeError }): JSX.Element {
+  const t = useDict(EN, AR);
+  const ltr = useVerbatim();
+  return (
+    <div className="banner banner--danger" role="alert">
+      {error.kind === 'too-large' ? (
+        <>
+          {t.tooLarge.before}
+          {ltr(error.name)}
+          {t.tooLarge.after(error.sizeMb, TYPICAL_SHEET_MB)}
+        </>
+      ) : (
+        ltr(error.text)
+      )}
+    </div>
+  );
+}
+
+export function Reading({
   read,
   onUse,
 }: {
   readonly read: AffectionPlanRead;
   readonly onUse: (prefill: Prefill) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR);
+  const ltr = useVerbatim();
+  const { locale } = useLocale();
   const f = read.facts;
   const blocked = f.blocking.length > 0;
+  const percent = (fraction: string): string => (Number(fraction) * 100).toFixed(0);
 
   return (
     <div className="reading">
-      <h3 className="panel__section">{read.filename}</h3>
+      {/* The reader's own file name, as their file system gave it. */}
+      <h3 className="panel__section">{ltr(read.filename)}</h3>
 
       <dl className="kv kv--grid">
-        <Field label="Plot number" traced={f.parcelId} />
-        <Field label="Community" traced={f.community} prose />
-        <Field label="Land use" traced={f.landUse} prose />
-        <Field label="Plot area" traced={f.totalAreaSqm} />
-        <Field label="FAR" traced={f.far} />
-        <Field label="Permitted GFA" traced={f.gfaSqm} />
-        <Field label="Issued" traced={f.issueDate} />
-        <Field label="Drawing reference" traced={f.drawingRef} />
+        <Field label={t.fields.plotNumber} traced={f.parcelId} />
+        <Field label={t.fields.community} traced={f.community} prose />
+        <Field label={t.fields.landUse} traced={f.landUse} prose />
+        <Field label={t.fields.plotArea} traced={f.totalAreaSqm} />
+        <Field label={t.fields.far} traced={f.far} />
+        <Field label={t.fields.gfa} traced={f.gfaSqm} />
+        <Field label={t.fields.issued} traced={f.issueDate} />
+        <Field label={t.fields.drawingRef} traced={f.drawingRef} />
       </dl>
 
       {f.height ? (
         <p className="callout callout--ok">
-          <strong>Height:</strong> {f.height.value.raw} — {f.height.value.groundFloors} ground,{' '}
-          {f.height.value.podiumLevels} podium, {f.height.value.typicalFloors} typical.
+          <strong>{t.height.label}</strong> {ltr(f.height.value.raw)} —{' '}
+          {/* Each count is rendered as a child, never stringified. `api/client.ts`
+              declares a `groundFloors` that `packages/intake` does not emit, so the
+              page has always printed that slot as nothing — a defect to fix at the
+              type, not to paper over here with the word "undefined". */}
+          {t.height.groundBefore}
+          {f.height.value.groundFloors}
+          {t.height.groundAfter}
+          {t.height.podiumBefore}
+          {f.height.value.podiumLevels}
+          {t.height.podiumAfter}
+          {t.height.typicalBefore}
+          {f.height.value.typicalFloors}
+          {t.height.typicalAfter}
         </p>
       ) : null}
 
       {f.setbacks ? (
         <>
-          <h4 className="panel__subheading">Setbacks, as printed</h4>
+          <h4 className="panel__subheading">{t.setbacks.title}</h4>
           <ul className="reason-list">
             <li>
-              <strong>Ground floor and podium</strong> — <Faces face={f.setbacks.value.podium} />
+              <strong>{t.setbacks.podium}</strong> — <Faces face={f.setbacks.value.podium} />
             </li>
             <li>
-              <strong>Tower</strong> — <Faces face={f.setbacks.value.tower} />
+              <strong>{t.setbacks.tower}</strong> — <Faces face={f.setbacks.value.tower} />
             </li>
           </ul>
           <p className="fine-print">
-            As printed: &ldquo;{f.setbacks.value.raw}&rdquo;
+            {t.setbacks.asPrintedBefore}
+            {ltr(f.setbacks.value.raw)}
+            {t.setbacks.asPrintedAfter}
           </p>
           {f.setbacks.value.requiresDecision ? (
             <div className="banner banner--assumed" role="note">
               <div>
-                <strong>One of these setbacks depends on a decision nobody has made.</strong>
+                <strong>{t.setbacks.decision.title}</strong>
                 <p>
-                  The sheet states two values for the same face — typically &ldquo;0 m to a
-                  solid wall and 4.0 m to a window wall&rdquo;. That is the sheet being
-                  precise, not vague: it depends on a façade the applicant has not chosen.
-                  Collapsing it to one number would pick the façade for them, so it stays as
-                  printed and the run is blocked until someone chooses.
+                  {t.setbacks.decision.before}
+                  {ltr(CONDITIONAL_EXAMPLE)}
+                  {t.setbacks.decision.after}
                 </p>
               </div>
             </div>
@@ -292,14 +375,12 @@ function Reading({
 
       {f.coverage ? (
         <p className="callout">
-          <strong>Coverage:</strong>{' '}
+          <strong>{t.coverage.label}</strong>{' '}
           {f.coverage.value.podium
-            ? `podium ${(Number(f.coverage.value.podium) * 100).toFixed(0)}% of plot area`
-            : 'podium not stated'}
-          {f.coverage.value.tower
-            ? `, tower ${(Number(f.coverage.value.tower) * 100).toFixed(0)}%`
-            : ''}
-          .
+            ? t.coverage.podium(percent(f.coverage.value.podium))
+            : t.coverage.podiumMissing}
+          {f.coverage.value.tower ? t.coverage.tower(percent(f.coverage.value.tower)) : ''}
+          {t.coverage.end}
         </p>
       ) : null}
 
@@ -310,30 +391,31 @@ function Reading({
       */}
       {f.crossChecks.length > 0 ? (
         <>
-          <h4 className="panel__subheading">The sheet&rsquo;s own arithmetic, re-checked</h4>
+          <h4 className="panel__subheading">{t.crossChecks.title}</h4>
           <ul className="reason-list">
             {f.crossChecks.map((c) => (
               <li key={c.name}>
                 <span className={c.passed ? 'chip chip--ok' : 'chip chip--danger'}>
-                  {c.passed ? 'agrees' : 'disagrees'}
+                  {c.passed ? t.crossChecks.agrees : t.crossChecks.disagrees}
                 </span>{' '}
-                {c.detail}
+                {ltr(c.detail)}
               </li>
             ))}
           </ul>
         </>
       ) : null}
 
+      {/* Each gap's label and consequence are `packages/intake`'s own words. */}
       {f.missing.length > 0 ? (
         <>
           <h4 className="panel__subheading">
-            What this sheet does not say
+            {t.missingTitle}
             <span className="chip chip--warn">{f.missing.length}</span>
           </h4>
           <ul className="reason-list reason-list--uncertain">
             {f.missing.map((m) => (
               <li key={m.field}>
-                <strong>{m.label}</strong> — {m.consequence}
+                <strong>{ltr(m.label)}</strong> — {ltr(m.consequence)}
               </li>
             ))}
           </ul>
@@ -342,15 +424,22 @@ function Reading({
 
       {blocked ? (
         <div className="banner banner--danger" role="alert">
-          <strong>This sheet cannot drive a capacity run.</strong> It omits{' '}
-          {f.blocking.map((b) => b.label).join(', ')}. Those are not values this engine
-          will supply — a limit borrowed from a neighbouring plot is the precise mistake
-          this product exists to prevent. You can still create the plot and enter the
-          limits from the governing regulation yourself.
+          <strong>{t.blocked.title}</strong>
+          {t.blocked.before}
+          {locale === 'ar'
+            ? f.blocking.map((b, k) => (
+                <Fragment key={b.field}>
+                  {k > 0 ? t.blocked.labelSeparator : ''}
+                  <Verbatim>{b.label}</Verbatim>
+                </Fragment>
+              ))
+            : f.blocking.map((b) => b.label).join(t.blocked.labelSeparator)}
+          {t.blocked.after}
         </div>
       ) : null}
 
-      <p className="fine-print">{read.disclaimer}</p>
+      {/* The API's disclaimer, said on every reading and rendered as it wrote it. */}
+      <p className="fine-print">{ltr(read.disclaimer)}</p>
 
       <div className="actions actions--row">
         <button
@@ -372,17 +461,11 @@ function Reading({
             })
           }
         >
-          Use these values
+          {t.use}
         </button>
       </div>
       <div>
-        <p className="fine-print">
-          The plot number, community and stated area carry over, and the podium count
-          waits for you to confirm it on the rules step. Width and depth do not carry over:
-          the sheet gives an area, and a rectangle inferred from an area is a plot shape
-          nobody surveyed. Enter the dimensions and the 2% check will compare them against
-          the area above.
-        </p>
+        <p className="fine-print">{t.carryOver(AREA_TOLERANCE)}</p>
       </div>
     </div>
   );

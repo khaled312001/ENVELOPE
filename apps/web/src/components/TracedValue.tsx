@@ -15,6 +15,10 @@
 
 import type { ReactNode } from 'react';
 
+import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
+import { AR } from '../i18n/traced.ar.js';
+import { EN } from '../i18n/traced.en.js';
+
 export type ProvenanceClass =
   | 'DERIVED'
   | 'ASSUMED'
@@ -32,24 +36,39 @@ export interface TracedWire {
   readonly unit?: string;
 }
 
-/** Plain-language description of each class, for the title and the legend. */
-export const CLASS_DESCRIPTION: Readonly<Record<ProvenanceClass, string>> = {
-  DERIVED: 'Computed from a cited rule. Open to see the clause.',
-  ASSUMED: 'Assumed — no rule governs this. You can edit it.',
-  USER_SET: 'You entered this value.',
-  OBSERVED: 'Observed across comparable approved projects.',
-  TRADEOFF: 'Chosen by the optimiser among feasible alternatives.',
-  VARIANCE: 'Governed by a documented exemption. Open to see the evidence.',
-};
+/**
+ * Plain-language description of each class, for the title and the legend — the
+ * English, still exported for a caller that reads it outside a render. A render
+ * reads `useDict(EN, AR).classDescription`, which is this same object in English.
+ */
+export const CLASS_DESCRIPTION: Readonly<Record<ProvenanceClass, string>> = EN.classDescription;
 
-export const CLASS_LABEL: Readonly<Record<ProvenanceClass, string>> = {
-  DERIVED: 'Derived',
-  ASSUMED: 'Assumed',
-  USER_SET: 'You set this',
-  OBSERVED: 'Observed',
-  TRADEOFF: 'Trade-off',
-  VARIANCE: 'Variance',
-};
+export const CLASS_LABEL: Readonly<Record<ProvenanceClass, string>> = EN.classLabel;
+
+/**
+ * WHAT THE ENGINE SAID, MARKED AS SUCH ON AN ARABIC PAGE AND UNTOUCHED ON AN ENGLISH ONE.
+ *
+ * A basis, a rule's label, a placement statement, a validator's sentence: the
+ * glossary forbids translating them, and on a right-to-left page each needs
+ * `Verbatim` — `dir="ltr" lang="en"` — so its punctuation stays at its own end and
+ * a screen reader changes voice for it. On an English page the wrapper would be a
+ * span that says nothing, and the English render of every screen that shows engine
+ * text is held byte-for-byte to what it was, so there it renders the text alone.
+ */
+export function EngineText({ children }: { readonly children: ReactNode }): JSX.Element {
+  const { locale } = useLocale();
+  return locale === 'ar' ? <Verbatim>{children}</Verbatim> : <>{children}</>;
+}
+
+/**
+ * A value as the engine emitted it. Most are figures and render as they are; some
+ * are words the engine chose — a placement is "centred on the podium" — and those
+ * are the engine's English, so they go through `EngineText` like any other engine
+ * string rather than being read to an Arabic reader as Arabic copy.
+ */
+export function EngineValue({ children }: { readonly children: string }): JSX.Element {
+  return /[A-Za-z]{2}/.test(children) ? <EngineText>{children}</EngineText> : <>{children}</>;
+}
 
 /**
  * DISPLAY PRECISION IS A SURFACE POLICY. It changes no provenance and no computed
@@ -135,6 +154,7 @@ export function TracedValue({
   actorName,
   size = 'inline',
 }: TracedValueProps): JSX.Element {
+  const t = useDict(EN, AR);
   const cls = traced.provenanceClass;
   const isAssumed = cls === 'ASSUMED';
 
@@ -146,8 +166,9 @@ export function TracedValue({
     else onInspect(traced.node);
   };
 
-  const description = CLASS_DESCRIPTION[cls];
-  const action = isAssumed && onEdit ? 'Edit this assumption' : 'Show where this number came from';
+  const description = t.classDescription[cls];
+  const action = isAssumed && onEdit ? t.editAction : t.inspectAction;
+  const figure = `${formatTraced(traced.value, traced.unit)}${traced.unit ? ` ${traced.unit}` : ''}`;
 
   return (
     <span className={size === 'display' ? 'traced-display' : undefined}>
@@ -155,16 +176,14 @@ export function TracedValue({
         type="button"
         className={`traced traced--${cls.toLowerCase()}`}
         onClick={handleClick}
-        aria-label={`${traced.parameterId}: ${formatTraced(traced.value, traced.unit)}${
-          traced.unit ? ` ${traced.unit}` : ''
-        }. ${description} ${action}.`}
-        title={`${CLASS_LABEL[cls]} — ${description}`}
+        aria-label={t.ariaLabel(traced.parameterId, figure, description, action)}
+        title={t.title(t.classLabel[cls], description)}
       >
         {/* `data-full` carries the engine's own string, unrounded, so the
             precision the engine computed is on the element rather than in a
             tooltip nobody can reach. */}
         <span className="value" data-full={traced.value}>
-          {formatTraced(traced.value, traced.unit)}
+          <EngineValue>{formatTraced(traced.value, traced.unit)}</EngineValue>
           {traced.unit ? <span className="value__unit">{traced.unit}</span> : null}
         </span>
         <span className="traced__marker" aria-hidden="true">
@@ -172,14 +191,14 @@ export function TracedValue({
         </span>
       </button>
       {cls === 'USER_SET' && actorName ? (
-        <span className="badge-user" title={`Entered by ${actorName}`}>
+        <span className="badge-user" title={t.enteredBy(actorName)}>
           {actorName}
         </span>
       ) : null}
       {/* The class is announced to assistive technology as text, not conveyed by
           colour. A screen-reader user must learn that a number is assumed at the
           same moment a sighted user does. */}
-      <span className="sr-only"> ({CLASS_LABEL[cls]})</span>
+      <span className="sr-only">{t.srClass(t.classLabel[cls])}</span>
     </span>
   );
 }
@@ -192,10 +211,11 @@ export function TracedValue({
  * "nobody looked at this", which is the true statement and the useful one.
  */
 export function NotAssessed({ reason }: { readonly reason: string }): JSX.Element {
+  const t = useDict(EN, AR);
   return (
     <span className="not-assessed" title={reason}>
       <span aria-hidden="true">⌗</span>
-      Not assessed
+      {t.notAssessed}
     </span>
   );
 }
@@ -207,6 +227,7 @@ export function NotAssessed({ reason }: { readonly reason: string }): JSX.Elemen
  * means has not been told that the number is an assumption.
  */
 export function ProvenanceLegend(): JSX.Element {
+  const t = useDict(EN, AR);
   const sample = (cls: ProvenanceClass, value: string): TracedWire => ({
     value,
     node: 'legend',
@@ -216,7 +237,7 @@ export function ProvenanceLegend(): JSX.Element {
   });
 
   return (
-    <div className="provenance-legend" role="note" aria-label="How to read these numbers">
+    <div className="provenance-legend" role="note" aria-label={t.legend.label}>
       <span className="provenance-legend__item">
         <span className="traced traced--derived">
           <span className="value">{sample('DERIVED', '5.25').value}</span>
@@ -224,25 +245,25 @@ export function ProvenanceLegend(): JSX.Element {
             §
           </span>
         </span>
-        From a cited rule
+        {t.legend.derived}
       </span>
       <span className="provenance-legend__item">
         <span className="traced traced--assumed">
           <span className="value">32.0</span>
           <span className="traced__marker" aria-hidden="true" />
         </span>
-        Assumed — editable, and it moves the answer
+        {t.legend.assumed}
       </span>
       <span className="provenance-legend__item">
-        <span className="badge-user">You</span>
-        You entered it
+        <span className="badge-user">{t.legend.you}</span>
+        {t.legend.userSet}
       </span>
       <span className="provenance-legend__item">
         <span className="not-assessed">
           <span aria-hidden="true">⌗</span>
-          Not assessed
+          {t.legend.notAssessed}
         </span>
-        Applicable, not checked
+        {t.legend.notChecked}
       </span>
     </div>
   );

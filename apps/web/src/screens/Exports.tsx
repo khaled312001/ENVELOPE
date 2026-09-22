@@ -30,35 +30,59 @@
  *
  * NO SAMPLE FILE IS OFFERED. A file downloaded from a public page would have
  * skipped the two gates this page describes.
+ *
+ * ---------------------------------------------------------------------------
+ * TWO LANGUAGES, AND THE FILE'S WORDS IN NEITHER DICTIONARY.
+ *
+ * The page's own sentences come from `i18n/exports.en.ts` or its Arabic twin. What
+ * it read out of a file does not: on the Arabic page a sheet title, a workbook note
+ * or the Status line is still what the FILE says, in the language the file says it,
+ * set `Verbatim` (or in `code`, which `rtl.css` isolates). A translated sheet title
+ * would be a title no drawing carries — the glossary's argument for basis strings,
+ * applied to the files.
  */
 
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 import { IFC_GLTF } from '../content/shared.js';
+import { IFC_GLTF_AR, type SharedParagraph } from '../content/shared.ar.js';
+import { AR } from '../i18n/exports.ar.js';
+import { EN } from '../i18n/exports.en.js';
+import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
 import WORKED from './worked-example.json' with { type: 'json' };
 
 const X = WORKED.verified.exports;
 
-/** A format's id in the check's output, and the name this page gives it. */
-const FILE_NAME: Readonly<Record<string, string>> = {
-  json: 'the JSON',
-  html: 'the report',
-  sheets: 'the drawing set',
-  dxf: 'the drawing',
-  xlsx: 'the workbook',
-  glb: 'the model file',
-};
+/**
+ * The DXF release this page names, and the sheet size of the printed set.
+ *
+ * Named here once rather than in two dictionaries that could drift: `R12` is what
+ * the file's own `AC1009` header means, and a translation that typed `R14` would be
+ * a claim about the file nobody checked.
+ */
+const DXF_RELEASE = 'R12';
+const SHEET_SIZE = 'A3';
 
-/** What a gate's id is called in a sentence. */
-const GATE_NAME: Readonly<Record<string, string>> = {
-  G3_ASSUMPTIONS_ACKNOWLEDGED: 'the assumption register (G3)',
-  G4_REVIEWER_NAMED: 'a named reviewer (G4)',
-};
+/** The words the drawings and the model file carry, quoted — the file's, not ours. */
+const NOT_FOR_CONSTRUCTION = 'not for construction';
 
-/** A phrase opening a table row, with its first letter raised. */
+/** A phrase opening a table row, with its first letter raised. A no-op on Arabic. */
 const sentence = (phrase: string): string => phrase.charAt(0).toUpperCase() + phrase.slice(1);
+
+/**
+ * WHAT A FILE SAID, ISOLATED ON THE ARABIC PAGE AND UNTOUCHED ON THE ENGLISH ONE.
+ *
+ * A sheet title, a note or a version inside an Arabic paragraph is reordered by the
+ * bidirectional algorithm at its boundaries; `Verbatim` sets `dir="ltr" lang="en"`
+ * and `rtl.css` isolates it. On the English page the span would carry nothing, and
+ * the English render is held unchanged — the choice `Antechamber.tsx` records.
+ */
+function Ltr({ children }: { readonly children: ReactNode }): JSX.Element {
+  const { locale } = useLocale();
+  return locale === 'ar' ? <Verbatim>{children}</Verbatim> : <>{children}</>;
+}
 
 /**
  * The layer table, grouped by the part of the building each layer belongs to.
@@ -114,69 +138,78 @@ function Ident({ children }: { readonly children: ReactNode }): JSX.Element {
 }
 
 export default function Exports({ navigate }: PageProps): JSX.Element {
+  const t = useDict(EN, AR);
+  const ifc = useDict<SharedParagraph>(IFC_GLTF, IFC_GLTF_AR);
   const unsigned = X.gateSequence[0];
+
+  const fileName = (id: string): string => (t.fileNames as Readonly<Record<string, string>>)[id] ?? id;
+
+  /**
+   * A gate as a sentence names it: what it is called, and its id in brackets. The
+   * id is the first segment of the token the check recorded (`G3_ASSUMPTIONS_…`), so
+   * it is read rather than typed. A token the dictionary does not name is printed
+   * as recorded.
+   */
+  const gate = (token: string, first: boolean): ReactNode => {
+    const name = (t.gateNames as Readonly<Record<string, string>>)[token];
+    if (name === undefined) return <Ltr>{token}</Ltr>;
+    return (
+      <>
+        {first ? sentence(name) : name} (<Ltr>{token.split('_')[0]}</Ltr>)
+      </>
+    );
+  };
+
   return (
     <div className="rf ex">
       <section className="shell section section--opening" aria-labelledby="ex-h">
-        <h1 id="ex-h">What comes out</h1>
-        <p className="rf__lede">
-          Every file this engine writes says its regulatory validity is not assessed, and
-          none of them leaves until the assumption register is acknowledged and someone puts
-          their name and licence on the export.
-        </p>
-        <p className="rf__hero-note">
-          Every layer, sheet, note and version below was read out of the files the engine
-          wrote for the worked example on the landing page, by the check that runs before
-          this site is built. None of them is typed here: a file that changes changes this
-          page, or stops the build.
-        </p>
+        <h1 id="ex-h">{t.hero.title}</h1>
+        <p className="rf__lede">{t.hero.lede}</p>
+        <p className="rf__hero-note">{t.hero.note}</p>
       </section>
 
       {/* ================= 01 · THE DRAWING ============================== */}
       <Section
         index={1}
         id="drawing"
-        title="The drawing"
+        title={t.drawing.title}
         lede={
           <>
-            DXF R12 — the file&rsquo;s own header says <Ident>{X.dxf.version}</Ident>. R12
-            predates the object model later revisions add, so it is the simplest complete
-            DXF, and this drawing uses nothing it lacks.
+            DXF {DXF_RELEASE}
+            {t.drawing.lede.afterFormat}
+            <Ident>{X.dxf.version}</Ident>
+            {t.drawing.lede.afterVersion}
+            {DXF_RELEASE}
+            {t.drawing.lede.afterRelease}
           </>
         }
       >
         <p>
-          It comes two ways. The whole building in one file, in three dimensions: the site
-          plan at grade, each parking level at its own floor, each slab at its level, the
-          massing as faces and the ramp as the slope it is. And each sheet of the drawing
-          set as a file of its own, flat and at true size, for referencing into a drawing of
-          your own. A section comes only as a sheet; drawn into the model, it would stand in
-          the car park. The same sheets also come as one document to print, A3, one sheet to
-          a page.
+          {t.drawing.body}
+          {SHEET_SIZE}
+          {t.drawing.bodyAfterSize}
         </p>
 
-        <div className="schedule" role="region" aria-label="The sheets of the drawing set" tabIndex={0}>
+        <div className="schedule" role="region" aria-label={t.drawing.sheets.region} tabIndex={0}>
           <table>
-            <caption className="sr-only">
-              The sheets the worked example&rsquo;s drawing set contains, each also written as a
-              DXF of its own.
-            </caption>
+            <caption className="sr-only">{t.drawing.sheets.caption}</caption>
             <thead>
               <tr>
-                <th scope="col">Sheet</th>
+                <th scope="col">{t.drawing.sheets.sheet}</th>
                 <th scope="col" className="schedule__fill">
-                  Title
+                  {t.drawing.sheets.title}
                 </th>
               </tr>
             </thead>
             <tbody>
               {X.drawingSheets.map((s) => (
                 <tr key={s.id}>
-                  <th scope="row" data-label="Sheet">
+                  <th scope="row" data-label={t.drawing.sheets.sheet}>
                     <Ident>{s.number}</Ident>
                   </th>
-                  <td className="schedule__fill" data-label="Title">
-                    {s.title}
+                  <td className="schedule__fill" data-label={t.drawing.sheets.title}>
+                    {/* The drawing's own title, as its title block prints it. */}
+                    <Ltr>{s.title}</Ltr>
                   </td>
                 </tr>
               ))}
@@ -185,38 +218,32 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
         </div>
 
         <h3 className="rf-sub" id="layers">
-          The layers
+          {t.drawing.layersTitle}
         </h3>
         <p>
-          One layer per level per element, named <Ident>ENV-&lt;level&gt;-&lt;element&gt;</Ident>.
-          A reviewer&rsquo;s first move on receiving the file is to switch things off — bays
-          off to check the aisle runs, the ramp off to see what it costs, every level but one
-          off to read it alone. One layer for all the parking would make all of those
-          arguments happen at once.
+          {t.drawing.layersBefore}
+          <Ident>ENV-&lt;level&gt;-&lt;element&gt;</Ident>
+          {t.drawing.layersAfter}
         </p>
 
-        <div className="schedule" role="region" aria-label="The layers of the building DXF" tabIndex={0}>
+        <div className="schedule" role="region" aria-label={t.drawing.layers.region} tabIndex={0}>
           <table>
-            <caption className="sr-only">
-              Every layer the worked example&rsquo;s building DXF declares, grouped by the
-              second part of its name — the site, a level, a ramp or the annotation — in the
-              file&rsquo;s own order. A marked layer holds something the engine assumed.
-            </caption>
+            <caption className="sr-only">{t.drawing.layers.caption}</caption>
             <thead>
               <tr>
-                <th scope="col">Part</th>
+                <th scope="col">{t.drawing.layers.part}</th>
                 <th scope="col" className="schedule__fill">
-                  Layers in the file
+                  {t.drawing.layers.inFile}
                 </th>
               </tr>
             </thead>
             <tbody>
               {layersByLevel().map((row) => (
                 <tr key={row.level}>
-                  <th scope="row" data-label="Part">
+                  <th scope="row" data-label={t.drawing.layers.part}>
                     <Ident>{row.level}</Ident>
                   </th>
-                  <td className="schedule__fill" data-label="Layers">
+                  <td className="schedule__fill" data-label={t.drawing.layers.cellLabel}>
                     <ul className="ex-layers">
                       {row.layers.map((l) =>
                         l.assumedInk ? (
@@ -224,7 +251,7 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
                             <span className="traced--assumed" data-state="assumed">
                               <code className="value">{l.name}</code>
                             </span>
-                            <span className="sr-only"> (holds something assumed)</span>
+                            <span className="sr-only">{t.drawing.layers.assumedNote}</span>
                           </li>
                         ) : (
                           <li key={l.name}>
@@ -241,54 +268,46 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
         </div>
 
         <p>
-          A layer marked{' '}
+          {t.drawing.marked.before}{' '}
           <span className="traced--assumed" data-state="assumed">
-            <span className="value">like this</span>
+            <span className="value">{t.drawing.marked.sample}</span>
           </span>{' '}
-          holds something the engine assumed. In the file, those elements are inked in the
-          orange nearest the screen&rsquo;s amber that a DXF colour index holds, on the layer
-          of the element they are — so the assumption survives the export as colour, and
-          there is no separate layer to switch off to hide it.
+          {t.drawing.marked.after}
         </p>
-        <p>
-          Levels drawn as outline only are height the rules permit and the answer leaves
-          unused: a grey outline on a layer of its own, with no mass.
-        </p>
+        <p>{t.drawing.outline}</p>
       </Section>
 
       {/* ================= 02 · THE MODEL FILE =========================== */}
       <Section
         index={2}
         id="model"
-        title="The model file"
+        title={t.model.title}
         lede={
           <>
-            It writes binary glTF {X.glb.assetVersion} and lists no extension a reader is
-            required to support. That sentence is the whole claim.
+            {t.model.ledeBefore}
+            <Ltr>{X.glb.assetVersion}</Ltr>
+            {t.model.ledeAfter}
           </>
         }
       >
         <p>
-          The file names{' '}
+          {t.model.namesBefore}{' '}
           {X.glb.extensionsUsed.map((e, i) => (
             <span key={e}>
-              {i > 0 ? ', ' : ''}
+              {i > 0 ? t.listSeparator : ''}
               <Ident>{e}</Ident>
             </span>
           ))}{' '}
-          as an extension it uses, and none as one it requires, so a reader that does not
-          know it can still draw the building. The cars are written as ordinary meshes for
-          the same reason: the instancing extension would have made the file smaller, and it
-          is marked required, so a reader without it would have to refuse the whole file.
+          {t.model.namesAfter}
         </p>
         <p>
-          A model file has no title block, so it carries its own, in the scene&rsquo;s
-          metadata: the units ({X.glb.units}), the point of the plot its coordinates are
-          measured from, the list of{' '}
+          {t.model.unitsBefore}
+          <Ltr>{X.glb.units}</Ltr>
+          {t.model.unitsAfter}
           <Link to="/refusals#not-drawn" navigate={navigate}>
-            what the model does not draw
+            {t.model.notDrawn}
           </Link>
-          , and these two sentences, word for word:
+          {t.model.notDrawnAfter}
         </p>
         <ul className="ex-notice">
           {X.glb.notice.map((line) => (
@@ -297,53 +316,40 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
             </li>
           ))}
         </ul>
-        <p>
-          It is written by the server, past the same two gates as every other file. The
-          browser holds the same model and could write the same bytes, and a file it wrote
-          for itself would have passed the gates only because it said so.
-        </p>
+        <p>{t.model.server}</p>
       </Section>
 
       {/* ================= 03 · THE WORKBOOK ============================= */}
-      <Section
-        index={3}
-        id="workbook"
-        title="The workbook"
-        lede={
-          <>
-            It writes XLSX, for the reader who takes the numbers into a pro forma. Every value
-            row carries its provenance class and its citation or its basis, and an assumed row
-            keeps an amber fill and a dashed edge.
-          </>
-        }
-      >
-        <div className="schedule" role="region" aria-label="The sheets of the workbook" tabIndex={0}>
+      <Section index={3} id="workbook" title={t.workbook.title} lede={<>{t.workbook.lede}</>}>
+        <div className="schedule" role="region" aria-label={t.workbook.region} tabIndex={0}>
           <table>
-            <caption className="sr-only">
-              The workbook&rsquo;s sheets in order, and the sentence each one sets above its
-              table.
-            </caption>
+            <caption className="sr-only">{t.workbook.caption}</caption>
             <thead>
               <tr>
-                <th scope="col">Sheet</th>
+                <th scope="col">{t.workbook.sheet}</th>
                 <th scope="col" className="schedule__fill">
-                  What it says above the table
+                  {t.workbook.says}
                 </th>
               </tr>
             </thead>
             <tbody>
               {X.workbookSheets.map((s, i) => (
                 <tr key={s.name}>
-                  <th scope="row" data-label="Sheet">
-                    {s.name}
+                  <th scope="row" data-label={t.workbook.sheet}>
+                    <Ltr>{s.name}</Ltr>
                   </th>
-                  <td className="schedule__fill" data-label="Says">
-                    {s.note ??
-                      (i === 0 ? (
-                        <span className="rf-cell">Status: {X.workbookStatus}</span>
-                      ) : (
-                        <span className="muted rf-cell">Nothing. The table starts on the first row.</span>
-                      ))}
+                  <td className="schedule__fill" data-label={t.workbook.saysLabel}>
+                    {s.note !== null ? (
+                      <Ltr>{s.note}</Ltr>
+                    ) : i === 0 ? (
+                      /* `Status` is the label cell of the file's own row, and the sentence
+                         beside it is the file's: both stay as the workbook has them. */
+                      <span className="rf-cell">
+                        <Ltr>Status: {X.workbookStatus}</Ltr>
+                      </span>
+                    ) : (
+                      <span className="muted rf-cell">{t.workbook.nothing}</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -353,18 +359,8 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
       </Section>
 
       {/* ================= 04 · THE RUN AS DATA, AND THE REPORT ========== */}
-      <Section
-        index={4}
-        id="json"
-        title="The run as data, and the report"
-        lede={
-          <>
-            The JSON is the whole run, provenance graph included, so a tool downstream can
-            walk every derivation again rather than trust the figure at the end of it.
-          </>
-        }
-      >
-        <p>Its top-level fields, as the file has them:</p>
+      <Section index={4} id="json" title={t.json.title} lede={<>{t.json.lede}</>}>
+        <p>{t.json.fields}</p>
         <ul className="ex-fields">
           {X.jsonFields.map((f) => (
             <li key={f}>
@@ -373,86 +369,70 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
           ))}
         </ul>
         <p>
-          In the JSON the regulatory claim is a field rather than a sentence:{' '}
-          <Ident>regulatoryValidity.status</Ident> is <Ident>{X.jsonValidity.status}</Ident>,
-          and its detail reads &ldquo;{X.jsonValidity.detail}&rdquo;
+          {t.json.validityBefore}
+          <Ident>regulatoryValidity.status</Ident>
+          {t.json.validityIs}
+          <Ident>{X.jsonValidity.status}</Ident>
+          {t.json.detailBefore}
+          <Ltr>{X.jsonValidity.detail}</Ltr>
+          {t.json.detailAfter}
         </p>
-        <p>
-          The report is the same run as a document to read and print: the five-way claim
-          statement, the assumption register with every basis, the deferred constraints by
-          name, the engine and rule-set versions with the rule set&rsquo;s content hash, and
-          the name, asserted licence and time of whoever signed the review gate.
-        </p>
+        <p>{t.json.report}</p>
       </Section>
 
       {/* ================= 05 · WHAT EVERY FILE CARRIES =================== */}
       <Section
         index={5}
         id="stamped"
-        title="What every file carries"
+        title={t.stamped.title}
         lede={
           <>
-            Each of them says regulatory validity is not assessed, and the check that wrote
-            this page looked in each: {X.stampedIn.map((f) => FILE_NAME[f] ?? f).join(', ')}. In
-            the JSON it is the field above; in the rest, the sentence{' '}
-            <Ident>REGULATORY VALIDITY: NOT ASSESSED</Ident>.
+            {t.stamped.ledeBefore}
+            {X.stampedIn.map(fileName).join(t.listSeparator)}
+            {t.stamped.ledeMiddle}
+            <Ident>REGULATORY VALIDITY: NOT ASSESSED</Ident>
+            {t.stamped.ledeAfter}
           </>
         }
       >
         <p>
-          The rest does not travel everywhere, and this page does not round it up. The
-          drawings and the model file carry that sentence and &ldquo;not for
-          construction&rdquo; — in the title block, or in the model&rsquo;s metadata — and
-          not the register or the signature. The workbook adds the assumption register. The
-          report and the JSON carry all of it: the claim statement, the register, the
-          deferred constraints, the versions and the signature.
+          {t.stamped.restBefore}
+          <Ltr>{NOT_FOR_CONSTRUCTION}</Ltr>
+          {t.stamped.restAfter}
         </p>
-        <p>
-          The signature is described as what it is: a name, a licence number the signer
-          typed, and a time. The licence is recorded and never checked with anybody.
-        </p>
+        <p>{t.stamped.signature}</p>
       </Section>
 
       {/* ================= 06 · THE GATES ================================ */}
-      <Section
-        index={6}
-        id="gates"
-        title="Which gates stand in front of export"
-        lede={
-          <>
-            Four gates exist. Two stand in front of export; the other two name earlier steps,
-            rule resolution and capacity computation, and stand there. This is what the export
-            answered for the worked example, asked before, between and after the two
-            signatures:
-          </>
-        }
-      >
-        <div className="schedule" role="region" aria-label="What the export answered at each step" tabIndex={0}>
+      <Section index={6} id="gates" title={t.gates.title} lede={<>{t.gates.lede}</>}>
+        <div className="schedule" role="region" aria-label={t.gates.region} tabIndex={0}>
           <table>
-            <caption className="sr-only">
-              The export requested three times for the same run, with the gates signed so far,
-              and the status code each request received.
-            </caption>
+            <caption className="sr-only">{t.gates.caption}</caption>
             <thead>
               <tr>
-                <th scope="col">Signed so far</th>
+                <th scope="col">{t.gates.signed}</th>
                 <th scope="col" className="schedule__fill">
-                  The export answered
+                  {t.gates.answered}
                 </th>
               </tr>
             </thead>
             <tbody>
               {X.gateSequence.map((step) => (
                 <tr key={step.signed.join('+') || 'none'}>
-                  <th scope="row" data-label="Signed">
+                  <th scope="row" data-label={t.gates.signedLabel}>
                     {step.signed.length === 0
-                      ? 'Nothing'
-                      : sentence(step.signed.map((g) => GATE_NAME[g] ?? g).join(', and '))}
+                      ? t.gates.nothing
+                      : step.signed.map((g, i) => (
+                          <Fragment key={g}>
+                            {i > 0 ? t.gateJoin : ''}
+                            {gate(g, i === 0)}
+                          </Fragment>
+                        ))}
                   </th>
-                  <td className="schedule__fill" data-label="Answered">
+                  <td className="schedule__fill" data-label={t.gates.answeredLabel}>
                     <span className="rf-cell">
                       <Ident>{step.status}</Ident>
-                      {step.status === 200 ? ' — the file' : ' — refused, and nothing is written'}
+                      {step.status === 200 ? t.gates.file : t.gates.refused}
                     </span>
                   </td>
                 </tr>
@@ -461,45 +441,35 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
           </table>
         </div>
         <p>
-          An acknowledgement is given against the content it was shown. If that content has
-          changed since, the gate has lapsed and the export answers{' '}
-          <Ident>{unsigned?.status}</Ident> again. A stored run is never edited: changing an
-          assumption computes a new run, and the new run starts with nothing signed.
+          {t.gates.lapsedBefore}
+          <Ident>{unsigned?.status}</Ident>
+          {t.gates.lapsedAfter}
         </p>
         <p>
-          The review gate does not require a second person. It records who signed, and it
-          does not compare them with the run&rsquo;s author — the check behind the table above
-          signed its own run, and the export opened. Separation of duties is a control this
-          software does not have, and it is on{' '}
+          {t.gates.separationBefore}
           <Link to="/refusals#professional" navigate={navigate}>
-            what it refuses
+            {t.gates.separationLink}
           </Link>
-          .
+          {t.gates.separationAfter}
         </p>
       </Section>
 
       {/* ================= 07 · A FILE IS NOT AN INTEGRATION ============= */}
-      <Section index={7} id="files" title={IFC_GLTF.heading} lede={IFC_GLTF.body}>
+      <Section index={7} id="files" title={ifc.heading} lede={ifc.body}>
         <p>
-          &ldquo;Writes DXF R12&rdquo; and &ldquo;writes binary glTF&rdquo; are facts about a
-          file, and this page can be held to them. A sentence naming a program that opens the
-          file would be a claim about a tool somebody else ships, and none is made here.
+          {t.files.before}
+          {DXF_RELEASE}
+          {t.files.after}
         </p>
       </Section>
 
       {/* ================= 08 · WHAT THIS PAGE DID NOT PROVE ============= */}
-      <Section index={8} id="not-proved" title="What this page did not prove">
-        <p>
-          That any of these files may be relied on. The sentence on each one says why.
-        </p>
-        <p>
-          No sample file is offered here, because a file downloaded from a public page would
-          have skipped the two gates this page describes. To get the same files, run the
-          worked example, acknowledge its register and sign its review gate.
-        </p>
+      <Section index={8} id="not-proved" title={t.notProved.title}>
+        <p>{t.notProved.first}</p>
+        <p>{t.notProved.second}</p>
         <div className="cta">
           <Link to="/app?demo=worked-example" navigate={navigate} className="button button--primary">
-            Run the worked example
+            {t.notProved.cta}
           </Link>
         </div>
       </Section>

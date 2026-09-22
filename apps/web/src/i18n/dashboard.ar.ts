@@ -215,13 +215,13 @@ export const AR: DashboardDictionary = {
     plots: 'قطع الأرض',
     runs: 'التشغيلات',
     reviewed: 'المُراجَعة والموقَّعة',
-    reviewedNoteBefore: 'لا تغادر التشغيلةُ المبنى إلّا بعد أن يضع شخصٌ رقم ترخيصه بجانبها عند ',
+    reviewedNoteBefore: 'لا تغادر التشغيلةُ المبنى إلّا بعد أن يضع شخصٌ رقم رخصته بجانبها عند ',
     /*
-      «يُسجَّل الترخيص ولا يُتحقَّق منه» — recorded, not verified. The distinction is
+      «تُسجَّل الرخصة ولا يُتحقَّق منها» — recorded, not verified. The distinction is
       the whole sentence: the software performs no check here, and an Arabic verb
       that implied one would claim a control this deployment does not have.
     */
-    reviewedNoteAfter: '. يُسجَّل الترخيص ولا يُتحقَّق منه، ولا يُقارَن الموقِّع بمُنشئ التشغيلة.',
+    reviewedNoteAfter: '. تُسجَّل الرخصة ولا يُتحقَّق منها، ولا يُقارَن الموقِّع بمُنشئ التشغيلة.',
     exported: 'المُصدَّرة',
 
     bindsTitle: 'أيّ قيد يُلزِم، عبر ما جرى تشغيله',

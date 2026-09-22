@@ -20,6 +20,8 @@
  * which makes this file the only thing standing in front of it.
  */
 
+import { readFileSync } from 'node:fs';
+
 import type { BuildingModel } from '@envelope/core';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -30,12 +32,18 @@ import { describe, expect, it } from 'vitest';
 // `SiteChrome` while `PAGES` was still undefined. `page-meta.ts` ended the cycle, so this
 // is now only the division of labour: `route-coverage.test.ts` asserts that this route
 // dispatches to this component, and this file asserts what the component says.
+import { OPTIMISER_REFUSAL_AR } from '../src/content/shared.ar.js';
+import { OPTIMISER_REFUSAL } from '../src/content/shared.js';
+import { StaticLocale } from '../src/i18n/locale.js';
+import { AR } from '../src/i18n/parking.ar.js';
 import Parking, { MODEL_LEVEL } from '../src/screens/Parking.js';
 import MODEL from '../src/screens/worked-example.building.json' with { type: 'json' };
 import WORKED from '../src/screens/worked-example.json' with { type: 'json' };
 import {
+  arabicReadingText,
   expectAssumedTreatmentPresent,
   expectNoCountInHeadings,
+  expectNoEnglishProse,
   expectSitewideProhibitions,
   group,
   stripTags,
@@ -358,5 +366,145 @@ describe('/parking', () => {
     expect(level?.parking, `${MODEL_LEVEL} is not a parking level in the model`).toBeTruthy();
     expect(level!.parking!.bayCount).toEqual(V.levelPlan.bayCount);
     expect(level!.placed).toBe(true);
+  });
+});
+
+/* =========================================================================
+ * THE SAME PAGE, IN ARABIC.
+ *
+ * Rendered inside `StaticLocale`, because `renderToStaticMarkup` runs no effects and
+ * `LocaleProvider` could only ever render English here. Everything above holds the
+ * English page; everything below holds the claim that the Arabic one is the same page
+ * — the same figures off the same fixture, the same amber, the same engine strings
+ * untranslated — and not a second page that happens to share a route.
+ * ====================================================================== */
+
+const arabic = (): string =>
+  renderToStaticMarkup(
+    <StaticLocale locale="ar">
+      <Parking navigate={() => {}} actor={null} setActor={() => {}} search="" />
+    </StaticLocale>,
+  );
+
+/** As a person reads it: tags gone, React's escapes undone, whitespace flattened. */
+const read = (html: string): string =>
+  stripTags(html)
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ');
+
+/** Every string the ENGINE wrote that this page quotes. None may be translated. */
+const ENGINE_STRINGS: readonly string[] = [
+  V.bayAreaFactorBasis,
+  WORKED.input.run.parkingUsableFraction.basis,
+  V.formulas.bandC,
+  V.access.recommended.rationale,
+  ...V.access.candidates.map((c) => c.rationale),
+  ...V.access.rejected.map((r) => r.reason),
+  ...V.levelPlan.notAssessed,
+  V.parkingInFar.verdict,
+];
+
+/** A dictionary module's source with its comments removed, as `arabic.test.ts` reads it. */
+const dictionarySource = (file: string): string =>
+  readFileSync(new URL(`../src/i18n/${file}`, import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+
+describe('/parking in Arabic', () => {
+  it('carries the site-wide prohibitions', () => {
+    // Over the engine's English strings too, which the Arabic page quotes verbatim —
+    // a compliance claim does not become acceptable by being set right to left.
+    expectSitewideProhibitions(arabic(), '/parking (ar)');
+  });
+
+  it('leaves no English prose outside what the engine wrote', () => {
+    expectNoEnglishProse(arabic(), '/parking (ar)');
+  });
+
+  it('prints the same figures as the English page, off the same fixture', () => {
+    const en = text();
+    const ar = read(arabic());
+    for (const figure of [
+      group(V.levelPlan.bayCount.value),
+      group(V.governingGfaM2),
+      group(V.bandCM2),
+      group(V.totalBays),
+      V.levelPlan.areaPerBayM2.value,
+      V.levelPlan.packingRect.coveragePct,
+      V.access.recommended.usableWindowM,
+      group(V.parkingInFar.regulatorySpreadM2),
+    ]) {
+      expect(en, `the English page does not print ${figure}`).toContain(figure);
+      expect(ar, `the Arabic page does not print ${figure}`).toContain(figure);
+    }
+  });
+
+  it('types no figure into either dictionary', () => {
+    // A digit in a dictionary is a number with no provenance, one language further
+    // from anyone who would notice it. The two exceptions are NAMES, not quantities:
+    // what the phase is called, and what the 3D view is called.
+    const en = dictionarySource('parking.en.ts').replace('Phase 0', '').replace(/\b3D\b/g, '');
+    const ar = dictionarySource('parking.ar.ts').replace('المرحلة 0', '');
+    expect(en, 'parking.en.ts types a figure').not.toMatch(/\d/);
+    expect(ar, 'parking.ar.ts types a figure').not.toMatch(/\d/);
+  });
+
+  it('keeps the ASSUMED treatment, unsoftened, and says the word beside every amber', () => {
+    const html = arabic();
+    expectAssumedTreatmentPresent(html, '/parking (ar)');
+    // The same number of amber carriers as the English page. A translation pass is the
+    // quietest place for a callout to lose its `data-state`, and nothing else would see
+    // it go.
+    const carriers = /data-state="assumed"|traced--assumed/g;
+    const amber = [...html.matchAll(carriers)].length;
+    expect(amber).toBe([...markup().matchAll(carriers)].length);
+    // «مُفترَض» is the label and `ASSUMED` the engine's token; either says it.
+    const said = [...stripTags(html).matchAll(/مُفترَض|\bASSUMED\b/g)].length;
+    expect(said, 'amber appears more often than the word does').toBeGreaterThanOrEqual(amber);
+  });
+
+  it('renders the optimiser refusal from its shared Arabic twin', () => {
+    const html = arabic();
+    expect(html).toContain(OPTIMISER_REFUSAL_AR.heading);
+    expect(html).toContain(renderToStaticMarkup(<>{OPTIMISER_REFUSAL_AR.body}</>));
+    expect(html, 'the English refusal leaked onto the Arabic page').not.toContain(
+      OPTIMISER_REFUSAL.heading,
+    );
+  });
+
+  it('quotes every engine string verbatim, and marks it as the English it is', () => {
+    const html = arabic();
+    const all = read(html);
+    const reading = arabicReadingText(html);
+    for (const s of ENGINE_STRINGS) {
+      expect(all, `the Arabic page does not quote: ${s}`).toContain(s);
+      // `arabicReadingText` drops everything under `lang="en"`. An engine string still
+      // in it was either translated or rendered outside `Verbatim`.
+      expect(reading, `an engine string is not marked lang="en": ${s}`).not.toContain(s);
+    }
+  });
+
+  it('types no clause number into its own Arabic copy', () => {
+    // The same prohibition as the English suite's, and simpler to state here: the
+    // reading text is the page's own copy with every engine string already removed.
+    const reading = arabicReadingText(arabic());
+    expect(reading).not.toMatch(/\bB\.\d+(\.\d+)+/);
+    expect(reading).not.toMatch(/\bTable B\.\d+/i);
+  });
+
+  it('draws the ramp as not assessed, never as an assumption', () => {
+    const html = arabic();
+    expect(html).toContain('parking-legend__swatch--ramp');
+    expect(html).not.toMatch(/parking-legend__swatch--ramp[^"]*traced--assumed/);
+    expect(read(html)).toContain(AR.notAssessed);
+  });
+
+  it('ends on a limit and not on a call to action', () => {
+    const html = arabic();
+    const lastHeading = [...html.matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi)].at(-1);
+    expect(stripTags(lastHeading?.[1] ?? '').trim()).toBe(AR.unproven.title);
+    expect(html.slice(html.lastIndexOf('<h2'))).not.toMatch(/button--primary/);
   });
 });

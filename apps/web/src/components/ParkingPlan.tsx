@@ -30,7 +30,22 @@
  */
 
 import type { LevelPlanView, WirePoint } from '../api/client.js';
-import { TracedValue } from './TracedValue.js';
+import { useDict } from '../i18n/locale.js';
+import { AR } from '../i18n/parkingPlan.ar.js';
+import { EN } from '../i18n/parkingPlan.en.js';
+import { EngineText, TracedValue } from './TracedValue.js';
+
+/*
+  THE WORDS ROUND THE DRAWING LIVE IN `i18n/parkingPlan.*.ts`; the drawing itself
+  is not copy and does not change with the language. The clauses below are cited,
+  not worded, so they stay here and render verbatim in both languages — as do the
+  junction clearance, which is a figure, and every rationale, refusal and
+  not-assessed line the engine wrote.
+*/
+const BAY_TABLE = 'B.11';
+const RAMP_CLAUSE = 'B.7.2.2';
+const ACCESS_CLAUSE = 'B.7.2.1';
+const JUNCTION_CLEARANCE = '15 m';
 
 interface Pt {
   readonly x: number;
@@ -94,48 +109,49 @@ export function ParkingPlan({
    */
   readonly figure?: boolean;
 }): JSX.Element {
+  const t = useDict(EN, AR);
   const num = (p: WirePoint): Pt => ({ x: Number(p.x), y: Number(p.y) });
   const podium = levelPlan.podiumRing.map(num);
   const plot = (plotVertices ?? []).map(num);
   const all = [...podium, ...plot, ...levelPlan.rects.flatMap((r) => r.outline.map(num))];
 
-  if (all.length < 3) return <p className="muted">No level was laid out for this run.</p>;
+  if (all.length < 3) return <p className="muted">{t.none}</p>;
 
   const packing = levelPlan.packingRect.exact ? (
-    <>
-      The podium is a rectangle, so the level was packed on its own outline —
-      nothing was given up to draw it.
-    </>
+    <>{t.packing.exact}</>
   ) : (
     <>
-      <strong>The podium is not a rectangle.</strong> The level was packed into
-      the largest rectangle inside it — {levelPlan.packingRect.coveragePct}% of the
-      footprint{figure ? ', shown dashed' : ''}. The bay count is a floor, not a ceiling.
+      <strong>{t.packing.notRectangle}</strong>
+      {t.packing.before}
+      {levelPlan.packingRect.coveragePct}
+      {t.packing.percentOf}
+      {figure ? t.packing.shownDashed : ''}
+      {t.packing.after}
     </>
   );
 
   const figures = (
     <dl className="kv kv--grid">
       <div>
-        <dt>Bays laid out</dt>
+        <dt>{t.figures.bays}</dt>
         <dd>
           <TracedValue traced={levelPlan.bayCount} onInspect={onInspect} />
         </dd>
       </div>
       <div>
-        <dt>Area per bay achieved</dt>
+        <dt>{t.figures.areaPerBay}</dt>
         <dd>
           <TracedValue traced={levelPlan.areaPerBayM2} onInspect={onInspect} />
         </dd>
       </div>
       <div>
-        <dt>Module depth</dt>
+        <dt>{t.figures.moduleDepth}</dt>
         <dd>
           <TracedValue traced={levelPlan.moduleDepthM} onInspect={onInspect} />
         </dd>
       </div>
       <div>
-        <dt>Cores, plant and ramp landing</dt>
+        <dt>{t.figures.deductions}</dt>
         <dd>
           <TracedValue traced={levelPlan.deductionsM2} onInspect={onInspect} />
         </dd>
@@ -175,12 +191,12 @@ export function ParkingPlan({
   const stroke = Math.max(w, h) / 400;
 
   const summary =
-    `${levelPlan.bayCount.value} bays laid out on a ` +
-    `${levelPlan.packingRect.widthM} by ${levelPlan.packingRect.depthM} metre level, ` +
-    `at ${levelPlan.areaPerBayM2.value} square metres per bay` +
-    (access
-      ? `. Vehicle access ${access.widthM} m wide on frontage ${access.edgeSeq}.`
-      : '. No frontage on this plot can take a vehicle access.');
+    t.summary(
+      levelPlan.bayCount.value,
+      levelPlan.packingRect.widthM,
+      levelPlan.packingRect.depthM,
+      levelPlan.areaPerBayM2.value,
+    ) + (access ? t.summaryAccess(access.widthM, String(access.edgeSeq)) : t.summaryNoAccess);
 
   return (
     <div className="parking-plan">
@@ -283,31 +299,42 @@ export function ParkingPlan({
         item — the ramp's caption broke into four stacked columns and read as
         nonsense in exactly the place a reader most needs a sentence.
       */}
-      <ul className="parking-legend" aria-label="What the drawing shows">
+      <ul className="parking-legend" aria-label={t.legend.label}>
         <li>
           <span className="parking-legend__swatch parking-legend__swatch--bay" aria-hidden="true" />
           <span>
-            Bay — {levelPlan.standard.bayWidthM} × {levelPlan.standard.bayLengthM} m, Table
-            B.11
+            {t.legend.bay}
+            {levelPlan.standard.bayWidthM}
+            {t.legend.times}
+            {levelPlan.standard.bayLengthM}
+            {t.legend.bayUnit}
+            <EngineText>{BAY_TABLE}</EngineText>
           </span>
         </li>
         <li>
           <span className="parking-legend__swatch parking-legend__swatch--aisle" aria-hidden="true" />
           <span>
-            Drive aisle — {levelPlan.standard.drivewayWidthM} m,{' '}
-            {levelPlan.standard.driveway === 'TWO_WAY' ? 'two way' : 'one way'}
+            {t.legend.aisle}
+            {levelPlan.standard.drivewayWidthM}
+            {t.legend.aisleUnit}
+            {levelPlan.standard.driveway === 'TWO_WAY' ? t.legend.twoWay : t.legend.oneWay}
           </span>
         </li>
         <li>
           <span className="parking-legend__swatch parking-legend__swatch--ramp" aria-hidden="true" />
           <span>
-            Ramp — <strong>plan area only.</strong> Gradient, transitions and headroom under
-            B.7.2.2 are <em>not assessed</em>.
+            {t.legend.ramp}
+            <strong>{t.legend.rampOnly}</strong>
+            {t.legend.rampBefore}
+            <EngineText>{RAMP_CLAUSE}</EngineText>
+            {t.legend.rampMid}
+            <em>{t.legend.rampNot}</em>
+            {t.legend.rampAfter}
           </span>
         </li>
         <li>
           <span className="parking-legend__swatch parking-legend__swatch--access" aria-hidden="true" />
-          <span>Vehicle access — recommended, not decided for you</span>
+          <span>{t.legend.access}</span>
         </li>
       </ul>
 
@@ -331,6 +358,7 @@ export function VehicleAccessPanel({
   readonly levelPlan: LevelPlanView;
   readonly onInspect: (nodeId: string) => void;
 }): JSX.Element {
+  const t = useDict(EN, AR).access;
   const { recommended, candidates, rejected } = levelPlan.access;
 
   return (
@@ -338,12 +366,14 @@ export function VehicleAccessPanel({
       <header className="panel__header">
         <div>
           <h2 id="access-heading" className="panel__title">
-            Vehicle access
+            {t.title}
           </h2>
           <p className="panel__subtitle">
-            Where the driveway can go, ranked. B.7.2.1 measures its 15 m junction
-            clearance from the chamfered corner of the plot, and prefers the more
-            secondary of the frontages.
+            {t.subtitleBefore}
+            <EngineText>{ACCESS_CLAUSE}</EngineText>
+            {t.subtitleMid}
+            {JUNCTION_CLEARANCE}
+            {t.subtitleAfter}
           </p>
         </div>
       </header>
@@ -352,35 +382,39 @@ export function VehicleAccessPanel({
         <div className="callout callout--ok">
           <p>
             <strong>
-              Frontage {recommended.edgeSeq}
-              {recommended.hierarchy ? ` — ${recommended.hierarchy.toLowerCase()} road` : ''}
+              {t.frontage}
+              {recommended.edgeSeq}
+              {recommended.hierarchy ? t.road(recommended.hierarchy) : ''}
             </strong>
-            , {recommended.widthM} m wide, centred {recommended.centreOffsetM} m along it.
+            {t.recommended(recommended.widthM, recommended.centreOffsetM)}
           </p>
-          <p className="fine-print">{recommended.rationale}</p>
           <p className="fine-print">
-            {recommended.usableWindowM} m of that frontage is clear of both corners once
-            the junction clearance is taken off each end.
+            <EngineText>{recommended.rationale}</EngineText>
           </p>
+          <p className="fine-print">{t.usable(recommended.usableWindowM)}</p>
         </div>
       ) : (
         <div className="callout callout--warn">
           <p>
-            <strong>No frontage on this plot can take a vehicle access.</strong> Every
-            boundary was refused for the reason listed below. This is a finding about the
-            plot, not a failure of the run.
+            <strong>{t.noneTitle}</strong>
+            {t.noneBody}
           </p>
         </div>
       )}
 
       {candidates.length > 1 ? (
         <>
-          <h3 className="panel__subheading">Alternatives</h3>
+          <h3 className="panel__subheading">{t.alternatives}</h3>
           <ul className="reason-list">
             {candidates.slice(1).map((c) => (
               <li key={c.edgeSeq}>
-                <strong>Frontage {c.edgeSeq}</strong> — {c.rationale}. {c.usableWindowM} m
-                clear window.
+                <strong>
+                  {t.frontage}
+                  {c.edgeSeq}
+                </strong>
+                {' — '}
+                <EngineText>{c.rationale}</EngineText>
+                {t.alternativeWindow(c.usableWindowM)}
               </li>
             ))}
           </ul>
@@ -389,11 +423,16 @@ export function VehicleAccessPanel({
 
       {rejected.length > 0 ? (
         <>
-          <h3 className="panel__subheading">Refused, and why</h3>
+          <h3 className="panel__subheading">{t.refused}</h3>
           <ul className="reason-list">
             {rejected.map((r) => (
               <li key={r.edgeSeq}>
-                <strong>Frontage {r.edgeSeq}</strong> — {r.reason}
+                <strong>
+                  {t.frontage}
+                  {r.edgeSeq}
+                </strong>
+                {' — '}
+                <EngineText>{r.reason}</EngineText>
               </li>
             ))}
           </ul>
@@ -408,10 +447,12 @@ export function VehicleAccessPanel({
       */}
       {levelPlan.notAssessed.length > 0 ? (
         <>
-          <h3 className="panel__subheading">Not assessed</h3>
+          <h3 className="panel__subheading">{t.notAssessed}</h3>
           <ul className="reason-list reason-list--uncertain">
             {levelPlan.notAssessed.map((n) => (
-              <li key={n}>{n}</li>
+              <li key={n}>
+                <EngineText>{n}</EngineText>
+              </li>
             ))}
           </ul>
         </>
@@ -423,7 +464,7 @@ export function VehicleAccessPanel({
           className="link-button"
           onClick={() => onInspect(recommended.node)}
         >
-          Show how this placement was derived
+          {t.showDerivation}
         </button>
       ) : null}
     </section>

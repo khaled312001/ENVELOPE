@@ -48,13 +48,33 @@
  * gradient, transitions and headroom are NOT ASSESSED, which is a deferred fact, not
  * an assumption. Removing an amber that was never an assumption is what makes the
  * remaining amber mean something. This page follows the code, not the older comment.
+ *
+ * ---
+ *
+ * TWO LANGUAGES, AND THE ENGINE SPEAKS ONLY ONE OF THEM.
+ *
+ * Every sentence this page authors comes from `i18n/parking.en.ts` or its Arabic
+ * twin, and the English module is the type the Arabic one is held to. Nothing the
+ * ENGINE wrote moved: the bases, the formula, the access rationales and refusal
+ * reasons, the not-assessed residue, the verdict and the class and band tokens are
+ * rendered here as the run emitted them. On the Arabic page they are marked as the
+ * English they are — `Engine` wraps an inline run in `Verbatim`, and `engineLang`
+ * puts `dir="ltr" lang="en"` on an element whose whole content is the engine's and
+ * whose own face must survive (the formula is mono; a `.verbatim` span would set it
+ * in sans). On the English page both are no-ops, and the markup is byte-identical to
+ * the render before the translation: the English suite in `parking-page.test.tsx`
+ * was written against that render, and it reads it unchanged.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 
 import { Glyph } from '../components/SiteChrome.js';
 import { WorkedExampleModel } from '../components/WorkedExampleModel.js';
+import { OPTIMISER_REFUSAL_AR, type SharedParagraph } from '../content/shared.ar.js';
 import { OPTIMISER_REFUSAL } from '../content/shared.js';
+import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
+import { AR } from '../i18n/parking.ar.js';
+import { EN, type ParkingDictionary } from '../i18n/parking.en.js';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
 import example from './worked-example.json' with { type: 'json' };
@@ -82,11 +102,44 @@ function group(value: string): string {
 const trim = (value: string): string =>
   value.includes('.') ? value.replace(/\.?0+$/, '') : value;
 
-/** `DEG_90` → `90°`, `TWO_WAY` → `two way`. The wire enum, made readable. */
-const readable = (token: string): string =>
+/**
+ * `DEG_90` → `90°`, `TWO_WAY` → `two way` · «ثنائي الاتجاه». The wire enum, made
+ * readable. The angle is formatting and the same in both languages; the words are
+ * the dictionary's. A token neither dictionary knows falls back to the rule this
+ * function always applied, so a new engine enum renders as its own word rather than
+ * as nothing.
+ */
+const readable = (t: ParkingDictionary, token: string): string =>
   token.startsWith('DEG_')
     ? `${token.slice(4)}°`
-    : token.toLowerCase().replace(/_/g, ' ');
+    : (t.tokens[token] ?? token.toLowerCase().replace(/_/g, ' '));
+
+/* -------------------------------------------------------------------------
+ * THE ENGINE'S OWN WORDS, MARKED AS SUCH.
+ *
+ * Two instruments, because the engine's strings arrive in two shapes. An inline
+ * run inside a sentence the page wrote — a band token, a basis — takes `Engine`,
+ * which is `Verbatim` on the Arabic page. An element whose WHOLE content is the
+ * engine's and whose own face must survive — the mono formula, the class token in
+ * the gauge — takes `engineLang` on the element itself: a `.verbatim` span inside it
+ * would set the run in sans. Either way the result is `dir="ltr" lang="en"`, which
+ * is what isolates the run from the bidirectional algorithm and switches a screen
+ * reader's voice.
+ *
+ * Both are no-ops in English. That is not a shortcut: the English markup is held
+ * byte-identical to the render the English suite was written against.
+ * ---------------------------------------------------------------------- */
+
+const ENGINE_LANG = { dir: 'ltr', lang: 'en' } as const;
+const AS_WRITTEN = {} as const;
+
+function useEngineLang(): typeof ENGINE_LANG | typeof AS_WRITTEN {
+  return useLocale().locale === 'ar' ? ENGINE_LANG : AS_WRITTEN;
+}
+
+function Engine({ children }: { readonly children: ReactNode }): JSX.Element {
+  return useLocale().locale === 'ar' ? <Verbatim>{children}</Verbatim> : <>{children}</>;
+}
 
 /* -------------------------------------------------------------------------
  * THE WIRE SHAPES, WIDENED ON PURPOSE.
@@ -202,12 +255,7 @@ const KIND_STROKE: Readonly<Record<string, string>> = {
   RAMP: 'var(--deferred)',
   OBSTRUCTION: 'var(--deferred-hatch)',
 };
-/** The legend's rows, in the order the drawing paints them. */
-const KIND_LABEL: Readonly<Record<string, string>> = {
-  BAY: 'Bay',
-  AISLE: 'Drive aisle',
-  RAMP: 'Ramp',
-};
+/* The legend's row labels are copy, and live in `parking.en.ts` as `kinds`. */
 /*
  * THE SWATCH CARRIES THE DRAWING'S OWN INK, and getting this wrong is worse than
  * having no legend at all.
@@ -242,19 +290,32 @@ function Fig({
   label,
   value,
   unit,
+  unitIsEngine,
   note,
 }: {
   readonly label: string;
   readonly value: string;
   readonly unit?: string;
-  readonly note?: string;
+  /**
+   * The unit is the one the engine put on the traced value, not one this page
+   * supplied, so on the Arabic page it is marked as the English it is. A unit the
+   * page supplies («موقف» for the demand figure) is copy and is translated.
+   */
+  readonly unitIsEngine?: boolean;
+  /** A node rather than a string: a note can carry an engine token inside a sentence. */
+  readonly note?: ReactNode;
 }): JSX.Element {
+  const engineLang = useEngineLang();
   return (
     <div className="pk-fig">
       <p className="pk-fig__label">{label}</p>
       <p className="pk-fig__value">
         <span className="value">{value}</span>
-        {unit ? <span className="value__unit">{unit}</span> : null}
+        {unit ? (
+          <span className="value__unit" {...(unitIsEngine ? engineLang : AS_WRITTEN)}>
+            {unit}
+          </span>
+        ) : null}
       </p>
       {note ? <p className="pk-fig__note">{note}</p> : null}
     </div>
@@ -277,27 +338,32 @@ function AssumedValue({
   readonly value: string;
   readonly unit?: string;
 }): JSX.Element {
+  /* The spoken class is «مُفترَض» on the Arabic page and never «افتراضي», which
+     is "default" — the one thing this codebase forbids having. The amber itself
+     does not change with the language. */
+  const t = useDict(EN, AR);
   return (
     <span className="traced--assumed">
       <span className="value">{value}</span>
       {unit ? <span className="value__unit">{unit}</span> : null}
       <span className="traced__marker" aria-hidden="true" />
-      <span className="sr-only"> — assumed</span>
+      <span className="sr-only">{t.assumed.spoken}</span>
     </span>
   );
 }
 
 /** The rail-gutter tally: channel 5 of the ASSUMED treatment. */
 function Tally({ count }: { readonly count: number }): JSX.Element {
+  const t = useDict(EN, AR);
   return count > 0 ? (
     <p className="margin-tally">
       <Glyph name="assumed" />
       {count}
-      <span className="margin-tally__label">assumed here</span>
+      <span className="margin-tally__label">{t.assumed.tally}</span>
     </p>
   ) : (
     <p className="margin-tally margin-tally--none">
-      <span className="margin-tally__label">nothing assumed here</span>
+      <span className="margin-tally__label">{t.assumed.tallyNone}</span>
     </p>
   );
 }
@@ -369,6 +435,7 @@ function LevelDrawing({
   readonly plan: NonNullable<typeof levelPlan>;
   readonly emphasis: string | null;
 }): JSX.Element {
+  const t = useDict(EN, AR);
   const rects = [...plan.rects].sort(
     (a, b) => (KIND_ORDER[a.kind] ?? 9) - (KIND_ORDER[b.kind] ?? 9),
   );
@@ -404,13 +471,19 @@ function LevelDrawing({
     ];
   });
 
-  const summary =
-    `Parking level as placed. ${plan.bayCount.value} bays at ` +
-    `${plan.standard.bayWidthM} by ${plan.standard.bayLengthM} metres, a ` +
-    `${plan.standard.drivewayWidthM} metre aisle, and a ramp strip down one edge, ` +
-    `packed into a ${plan.packingRect.widthM} by ${plan.packingRect.depthM} metre ` +
-    `rectangle inside the podium. Vehicle access ${access.widthM} metres wide on ` +
-    `frontage ${access.edgeSeq}.`;
+  /* The drawing's accessible NAME is copy and is translated; the text drawn inside
+     it (the road labels below) is part of the drawing and is not. Every figure in
+     the name is the run's. */
+  const summary = t.level.summary({
+    bays: plan.bayCount.value,
+    bayWidth: plan.standard.bayWidthM,
+    bayLength: plan.standard.bayLengthM,
+    aisleWidth: plan.standard.drivewayWidthM,
+    packWidth: plan.packingRect.widthM,
+    packDepth: plan.packingRect.depthM,
+    accessWidth: access.widthM,
+    frontage: String(access.edgeSeq),
+  });
 
   return (
     <svg
@@ -524,6 +597,7 @@ function RampDrawing({
   readonly widthM: string;
   readonly depthM: string;
 }): JSX.Element {
+  const t = useDict(EN, AR);
   const w = Number(widthM);
   const d = Number(depthM);
   const s = Math.max(w, d) / 220;
@@ -535,7 +609,7 @@ function RampDrawing({
       className="pk-ramp"
       viewBox={`${-w * 1.9} ${-d * 0.08} ${w * 3.2} ${d * 1.38}`}
       role="img"
-      aria-label={`Ramp footprint, ${trim(widthM)} by ${trim(depthM)} metres in plan.`}
+      aria-label={t.ramp.drawingLabel(trim(widthM), trim(depthM))}
     >
       <defs>
         <pattern
@@ -594,6 +668,12 @@ function RampDrawing({
 /* ---------------------------------------------------------------------- */
 
 export default function Parking({ navigate }: PageProps): JSX.Element {
+  const t = useDict(EN, AR);
+  const engineLang = useEngineLang();
+  /* The optimiser refusal is SHARED with `/refusals`, so it is switched between its
+     two single sources rather than translated here a second time. */
+  const optimiser = useDict<SharedParagraph>(OPTIMISER_REFUSAL, OPTIMISER_REFUSAL_AR);
+
   /* The legend doubles as the target-size control list: each row is a real
      button that thickens its own kind in the drawing. A 1px polygon edge is not
      a target anybody can hit, and 2.5.8's answer is a full-width row beside it —
@@ -629,40 +709,37 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
               read from the same fixture as everything below. */}
           <div className="railed__body pk-opening">
             <div className="pk-opening__claim">
-              <p className="eyebrow">Phase 0 · the parking band</p>
+              <p className="eyebrow">{t.opening.eyebrow}</p>
               <h1 id="pk-h1" className="pk-claim">
-                The number that governs this plot rests on an assumption.
+                {t.opening.title}
               </h1>
-              <p className="pk__lede pk-claim__lede">
-                Here is the assumption, with the basis it was recorded against. Then the
-                level is drawn — bay by bay, aisle and ramp, inside the podium the
-                setbacks left — and this page reports what the drawing costs against
-                what the assumption predicted. The gap is the argument, not the
-                embarrassment.
-              </p>
+              <p className="pk__lede pk-claim__lede">{t.opening.lede}</p>
             </div>
-            <aside
-              className="pk-opening__evidence"
-              aria-label="The governing figure, and the assumption it rests on"
-            >
+            <aside className="pk-opening__evidence" aria-label={t.opening.evidenceLabel}>
               <Fig
-                label="Governing capacity, this run"
+                label={t.opening.governingLabel}
                 value={group(V.governingGfaM2)}
                 unit="m²"
-                note={`The ${band} band — the smallest of the three, so it governs.`}
+                note={t.opening.governingNote(band)}
               />
-              <p className="pk-fig__label">It rests on</p>
+              <p className="pk-fig__label">{t.opening.restsOn}</p>
               <div className="callout" data-state="assumed">
                 <span className="callout__mark" aria-hidden="true">
                   <Glyph name="assumed" />
                 </span>
                 <div className="callout__body">
+                  {/* The unit stays `m²/bay` in both languages: it is the notation the
+                      engine's basis and its achieved-area figure both use, and §5 sets
+                      the two side by side. One unit written two ways there would read
+                      as two units. */}
                   <strong>
-                    Gross area per bay —{' '}
+                    {t.factorName}{' '}
                     <AssumedValue value={V.bayAreaFactorM2} unit="m²/bay" /> ·{' '}
-                    {V.bayAreaFactorClass}
+                    <Engine>{V.bayAreaFactorClass}</Engine>
                   </strong>
-                  <p className="pk-basis">{V.bayAreaFactorBasis}</p>
+                  <p className="pk-basis">
+                    <Engine>{V.bayAreaFactorBasis}</Engine>
+                  </p>
                 </div>
               </div>
             </aside>
@@ -674,94 +751,73 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
       <Section
         index="02"
         id="pk-chain"
-        title="Where the governing number comes from"
+        title={t.chain.title}
         tally={<Tally count={SUPPLY_ASSUMPTIONS.length} />}
-        lede={
-          <>
-            Six links, in the order the engine computes them. The fourth is a division,
-            and its divisor is an assumption with a written basis and a measured
-            sensitivity rather than a constant. Everything below this section is
-            downstream of it.
-          </>
-        }
+        lede={<>{t.chain.lede}</>}
       >
         <ol className="pk-chain">
           <li className="pk-chain__item">
-            <p className="pk-chain__name">Bays per unit, from the mix</p>
-            <p className="pk-chain__note">
-              The declared unit mix sets how many bays each unit owes. It is the demand
-              side of the model and it is fixed before any area is divided.
-            </p>
+            <p className="pk-chain__name">{t.chain.mix.name}</p>
+            <p className="pk-chain__note">{t.chain.mix.note}</p>
           </li>
           <li className="pk-chain__item">
-            <p className="pk-chain__name">Demand at the probe scheme</p>
-            <p className="pk-chain__note">
-              The engine takes the unit count that floor area and geometry would allow and
-              asks what that scheme would need. This is a probe used to find the ceiling,
-              and it is not the demand of the answer. The next section is about nothing
-              else.
-            </p>
+            <p className="pk-chain__name">{t.chain.probe.name}</p>
+            <p className="pk-chain__note">{t.chain.probe.note}</p>
           </li>
           <li className="pk-chain__item">
-            <p className="pk-chain__name">Available area across the declared levels</p>
-            <p className="pk-chain__note">
-              The podium footprint, taken across the levels the run declared, reduced by
-              the fraction of a level that cores, ramps and plant consume.
-            </p>
+            <p className="pk-chain__name">{t.chain.available.name}</p>
+            <p className="pk-chain__note">{t.chain.available.note}</p>
             <p className="pk-chain__fig">
               <span className="pk-chain__op" aria-hidden="true">
                 ×
               </span>
               <span>
                 <span className="value">{IN.run.parkingLevelsAvailable}</span>
-                <span className="value__unit">levels declared</span>
+                <span className="value__unit">{t.chain.available.levels}</span>
               </span>
               <span className="pk-chain__op" aria-hidden="true">
                 ×
               </span>
-              <AssumedValue value={IN.run.parkingUsableFraction.value} unit="usable" />
+              <AssumedValue
+                value={IN.run.parkingUsableFraction.value}
+                unit={t.chain.available.usable}
+              />
             </p>
             <p className="pk-chain__basis">
-              Basis, in full: {IN.run.parkingUsableFraction.basis}.
+              {t.chain.available.basis}
+              <Engine>{IN.run.parkingUsableFraction.basis}</Engine>.
             </p>
           </li>
 
           <li className="pk-chain__item pk-chain__item--pivot">
-            <p className="pk-chain__name">
-              Supply is that area divided by an area factor
-            </p>
-            <p className="pk-chain__note">
-              This is the division the whole page is about. No cited rule fixes the gross
-              area a bay consumes once its share of aisle, column and circulation is
-              charged to it, so the engine records an assumption, demands a basis for it,
-              and ranks it in the register by how far the answer moves when it is
-              perturbed.
-            </p>
+            <p className="pk-chain__name">{t.chain.divide.name}</p>
+            <p className="pk-chain__note">{t.chain.divide.note}</p>
             <div className="callout" data-state="assumed">
               <span className="callout__mark" aria-hidden="true">
                 <Glyph name="assumed" />
               </span>
               <div className="callout__body">
                 <strong>
-                  Gross area per bay — <AssumedValue value={V.bayAreaFactorM2} unit="m²/bay" />{' '}
-                  · {V.bayAreaFactorClass}
+                  {`${t.factorName} `}
+                  <AssumedValue value={V.bayAreaFactorM2} unit="m²/bay" />{' '}
+                  · <Engine>{V.bayAreaFactorClass}</Engine>
                 </strong>
-                <p className="pk-basis">{V.bayAreaFactorBasis}</p>
+                <p className="pk-basis">
+                  <Engine>{V.bayAreaFactorBasis}</Engine>
+                </p>
               </div>
             </div>
           </li>
 
           <li className="pk-chain__item">
-            <p className="pk-chain__name">The supportable unit ceiling</p>
-            <p className="pk-chain__note">
-              Supply, converted back into units at the same bays-per-unit rate. It is a
-              floor division, so the ceiling it produces is never rounded up into units
-              the parking cannot serve.
-            </p>
+            <p className="pk-chain__name">{t.chain.ceiling.name}</p>
+            <p className="pk-chain__note">{t.chain.ceiling.note}</p>
           </li>
           <li className="pk-chain__item pk-chain__item--result">
-            <p className="pk-chain__name">The parking band</p>
-            <p className="pk-chain__formula">{V.formulas.bandC}</p>
+            <p className="pk-chain__name">{t.chain.band}</p>
+            <p className="pk-chain__formula" {...engineLang}>
+              {V.formulas.bandC}
+            </p>
             <p className="pk-chain__fig">
               <span className="value">{group(V.bandCM2)}</span>
               <span className="value__unit">m²</span>
@@ -770,11 +826,14 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
         </ol>
 
         <p className="pk-verdict">
-          On this run the <strong>{band}</strong> band is the smallest of the three, so
-          the governing capacity is <span className="value">{group(V.governingGfaM2)}</span>
-          <span className="value__unit">m²</span>. Trace that figure back through the six
-          links above and the fourth one is an assumption. That is the honest shape of the
-          headline number on this site, and it is stated here rather than found later.
+          {t.chain.verdictBefore}
+          <strong>
+            <Engine>{band}</Engine>
+          </strong>
+          {t.chain.verdictMid}
+          <span className="value">{group(V.governingGfaM2)}</span>
+          <span className="value__unit">m²</span>
+          {t.chain.verdictAfter}
         </p>
       </Section>
 
@@ -783,48 +842,39 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
         <Section
           index="03"
           id="pk-demand"
-          title="Demand and supply are different numbers"
-          lede={
-            <>
-              This section exists because the site would otherwise print one of them as
-              the other. Three quantities carry the word “bays” and no two of them are the
-              same number.
-            </>
-          }
+          title={t.demand.title}
+          lede={<>{t.demand.lede}</>}
         >
           <div className="pk-figures">
             <Fig
-              label="Demand, probe scheme"
+              label={t.demand.probeLabel}
               value={group(V.totalBays)}
-              unit="bays"
-              note="What the larger scheme used to probe for the parking ceiling would need."
+              unit={t.demand.bays}
+              note={t.demand.probeNote}
             />
           </div>
 
           <div className="callout">
             <div className="callout__body">
-              <strong>Two of the three are not on the wire, and neither is printed.</strong>
-              <p>
-                What the declared levels hold, and what the reported answer actually needs,
-                are both computed by the engine and carry their own derivations. Neither is
-                serialised by the presenter in the API today, so neither appears here as a
-                figure. The gap belongs to that presenter, and closing it is an API change
-                rather than a page change.
-              </p>
-              <p>
-                The bay count on the drawing below is a fourth quantity again — bays the
-                layout placed — and it is used in the sections about the drawing and
-                nowhere else.
-              </p>
+              <strong>{t.demand.gapTitle}</strong>
+              <p>{t.demand.gapBody}</p>
+              <p>{t.demand.fourth}</p>
             </div>
           </div>
 
+          {/* THE QUOTATION IS NOT TRANSLATED. It is the engine's own note, from the
+              block in `pipeline.ts` that computes the demand of the emitted answer, and
+              it is presented as that. An Arabic rendering would put words in the
+              engine's mouth that its source does not contain; the attribution under it
+              is the page's, and is. */}
           <blockquote className="pk-quote">
             <p>
-              “Comparing one scheme’s supply against the other’s demand reports a correct
-              answer as a shortfall.”
+              <Engine>
+                “Comparing one scheme’s supply against the other’s demand reports a correct
+                answer as a shortfall.”
+              </Engine>
             </p>
-            <footer>The engine’s own note, where the demand of the emitted answer is computed</footer>
+            <footer>{t.demand.quoteSource}</footer>
           </blockquote>
         </Section>
       ) : null}
@@ -834,21 +884,18 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
         <Section
           index="04"
           id="pk-refused"
-          title="No level was laid out for this run"
-          lede={
-            <>
-              The engine returns a reason rather than an empty object, because an empty
-              plan reads as “no bays” and that is a different statement.
-            </>
-          }
+          title={t.refused.title}
+          lede={<>{t.refused.lede}</>}
         >
           <div className="callout" data-state="blocked">
             <span className="callout__mark" aria-hidden="true">
               <Glyph name="variance" />
             </span>
             <div className="callout__body">
-              <strong>The layout was refused.</strong>
-              <p>{refusal}</p>
+              <strong>{t.refused.callout}</strong>
+              <p>
+                <Engine>{refusal}</Engine>
+              </p>
             </div>
           </div>
         </Section>
@@ -860,15 +907,8 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
           <Section
             index="04"
             id="pk-level"
-            title="The level, drawn"
-            lede={
-              <>
-                Every rectangle here is one the engine placed, in the coordinates the
-                geometry kernel used. The drawing runs after the band above, on a supply
-                figure that was already settled, and nothing in it reaches back into that
-                figure.
-              </>
-            }
+            title={t.level.title}
+            lede={<>{t.level.lede}</>}
           >
             <figure className="figure reveal">
               <div className="figure__plate">
@@ -877,14 +917,15 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
               <figcaption className="figure__caption">
                 <p className="figure__label">
                   <span className="figure__no">{IN.plot.plotNumber}</span>
-                  <span>Parking level · as placed</span>
-                  <span>{IN.plot.community}</span>
+                  <span>{t.level.figureLabel}</span>
+                  {/* The community is named as the affection plan names it. */}
+                  <span {...engineLang}>{IN.plot.community}</span>
                 </p>
 
                 {/* The legend, and the target-size control list. Below the fold it
                     becomes a single column of 44px rows; the drawing above it keeps
                     its aspect ratio and never scrolls. */}
-                <ul className="pk-legend parking-legend" aria-label="What the drawing shows">
+                <ul className="pk-legend parking-legend" aria-label={t.level.legendLabel}>
                   {(['BAY', 'AISLE', 'RAMP'] as const).map((kind) => {
                     const count = plan.rects.filter((r) => r.kind === kind).length;
                     const rows = [
@@ -905,17 +946,19 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
                             aria-hidden="true"
                           />
                           <span className="pk-legend__text">
-                            <span className="pk-legend__name">{KIND_LABEL[kind] ?? kind}</span>
+                            <span className="pk-legend__name">{t.kinds[kind] ?? kind}</span>
                             <span className="pk-legend__meta">
                               {kind === 'BAY'
-                                ? `${plan.standard.bayWidthM} × ${plan.standard.bayLengthM} m · ${count} placed`
+                                ? t.level.bayMeta(
+                                    plan.standard.bayWidthM,
+                                    plan.standard.bayLengthM,
+                                    String(count),
+                                  )
                                 : null}
                               {kind === 'AISLE'
-                                ? `${plan.standard.drivewayWidthM} m · ${readable(plan.standard.driveway)}`
+                                ? `${plan.standard.drivewayWidthM} m · ${readable(t, plan.standard.driveway)}`
                                 : null}
-                              {kind === 'RAMP'
-                                ? `plan area reserved · module row ${rows.join(', ')}`
-                                : null}
+                              {kind === 'RAMP' ? t.level.rampMeta(rows) : null}
                             </span>
                           </span>
                         </button>
@@ -929,17 +972,19 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
                         aria-hidden="true"
                       />
                       <span className="pk-legend__text">
-                        <span className="pk-legend__name">Vehicle access</span>
+                        <span className="pk-legend__name">{t.level.accessName}</span>
                         <span className="pk-legend__meta">
-                          {access.recommended.widthM} m on frontage{' '}
-                          {access.recommended.edgeSeq} · recommended, not decided for you
+                          {access.recommended.widthM}
+                          {t.level.accessOn}{' '}
+                          {access.recommended.edgeSeq}
+                          {t.level.accessRecommended}
                         </span>
                       </span>
                     </span>
                   </li>
                 </ul>
 
-                <p className="figure__source">Regulatory validity — not assessed</p>
+                <p className="figure__source">{t.level.validity}</p>
               </figcaption>
             </figure>
 
@@ -951,28 +996,18 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
               <div className="figure__plate">
                 <WorkedExampleModel
                   focusLevelId={MODEL_LEVEL}
-                  label={
-                    `The ground parking level in 3D, with a car in each of its ` +
-                    `${plan.bayCount.value} bays and the ramp down to the level below. ` +
-                    'The plan above draws the same bays.'
-                  }
-                  fallback={
-                    <p className="massing-viewer__failed">
-                      This browser cannot draw in 3D, because WebGL is switched off or
-                      unavailable. The plan above draws the same bays.
-                    </p>
-                  }
+                  label={t.level.modelLabel(plan.bayCount.value)}
+                  fallback={<p className="massing-viewer__failed">{t.level.modelFallback}</p>}
                 />
               </div>
               <figcaption className="figure__caption">
                 <p className="figure__label">
                   <span className="figure__no">{IN.plot.plotNumber}</span>
-                  <span>The same level, stood up</span>
+                  <span>{t.level.modelFigureLabel}</span>
                 </p>
                 <p className="figure__source">
-                  {plan.bayCount.value} cars, one in each bay the plan draws · a car is the
-                  sheet&rsquo;s drafting symbol, not a vehicle the engine sized · the ramp&rsquo;s
-                  gradient is not assessed · regulatory validity — not assessed
+                  {plan.bayCount.value}
+                  {t.level.modelSource}
                 </p>
               </figcaption>
             </figure>
@@ -982,22 +1017,17 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
           <Section
             index="05"
             id="pk-cost"
-            title="What the drawing costs the assumption"
+            title={t.cost.title}
             tally={<Tally count={SUPPLY_ASSUMPTIONS.length} />}
-            lede={
-              <>
-                The section this product is for. The supply model spent a fixed area on
-                every bay; the layout then had to find room for aisles, a ramp strip and
-                the depth a module actually needs. Set the two against each other and the
-                assumption is either vindicated or it is not.
-              </>
-            }
+            lede={<>{t.cost.lede}</>}
           >
             <div className="pk-gauge reveal">
               <div className="pk-gauge__row">
                 <p className="pk-gauge__label">
-                  What the supply model spent, per bay
-                  <span className="pk-gauge__class">{V.bayAreaFactorClass}</span>
+                  {t.cost.spent}
+                  <span className="pk-gauge__class" {...engineLang}>
+                    {V.bayAreaFactorClass}
+                  </span>
                 </p>
                 <p className="pk-gauge__value">
                   <AssumedValue value={V.bayAreaFactorM2} unit="m²/bay" />
@@ -1025,12 +1055,16 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
 
               <div className="pk-gauge__row">
                 <p className="pk-gauge__label">
-                  What the drawing achieved, per bay
-                  <span className="pk-gauge__class">{plan.areaPerBayM2.provenanceClass}</span>
+                  {t.cost.achieved}
+                  <span className="pk-gauge__class" {...engineLang}>
+                    {plan.areaPerBayM2.provenanceClass}
+                  </span>
                 </p>
                 <p className="pk-gauge__value">
                   <span className="value">{plan.areaPerBayM2.value}</span>
-                  <span className="value__unit">{plan.areaPerBayM2.unit}</span>
+                  <span className="value__unit" {...engineLang}>
+                    {plan.areaPerBayM2.unit}
+                  </span>
                 </p>
                 {/* The datum sits where the assumption predicted, so the bar answers
                     "how far past" and not only "how long". It is a tick in the gutter
@@ -1058,61 +1092,43 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
             <p className="pk-verdict">
               {Number(plan.areaPerBayM2.value) > Number(V.bayAreaFactorM2) ? (
                 <>
-                  <strong>
-                    The drawing came out heavier than the factor predicted on this plot.
-                  </strong>{' '}
-                  A bay on the drawn level carries more gross area than the supply model
-                  charged it, which makes the supply figure the band above rests on the
-                  optimistic one. That is a finding about this plot, and it is printed as
-                  one.
+                  <strong>{t.cost.heavierTitle}</strong> {t.cost.heavierBody}
                 </>
               ) : (
                 <>
-                  <strong>
-                    The drawing came out at or under what the factor predicted on this
-                    plot.
-                  </strong>{' '}
-                  A bay on the placed level carries no more gross area than the supply
-                  model charged it. That is a finding about this plot, and it holds for
-                  this plot only.
+                  <strong>{t.cost.lighterTitle}</strong> {t.cost.lighterBody}
                 </>
               )}
             </p>
 
             <div className="pk-figures">
               <Fig
-                label="Bays the layout placed"
+                label={t.cost.placed}
                 value={group(plan.bayCount.value)}
                 unit={plan.bayCount.unit}
-                note="Not the supply figure, and not the demand. Bays that were drawn."
+                unitIsEngine
+                note={t.cost.placedNote}
               />
               <Fig
-                label="Usable area on the level"
+                label={t.cost.usable}
                 value={group(plan.usableAreaM2.value)}
                 unit={plan.usableAreaM2.unit}
-                note={`Provenance class ${plan.usableAreaM2.provenanceClass}.`}
+                unitIsEngine
+                note={t.cost.provenanceNote(plan.usableAreaM2.provenanceClass)}
               />
               <Fig
-                label="Cores, plant and ramp landing"
+                label={t.cost.deductions}
                 value={group(plan.deductionsM2.value)}
                 unit={plan.deductionsM2.unit}
-                note={`Provenance class ${plan.deductionsM2.provenanceClass}.`}
+                unitIsEngine
+                note={t.cost.provenanceNote(plan.deductionsM2.provenanceClass)}
               />
             </div>
 
             <div className="callout">
               <div className="callout__body">
-                <strong>
-                  Both figures are printed and neither is subtracted from the other.
-                </strong>
-                <p>
-                  The engine emits the factor and the achieved area with a derivation
-                  each, and emits no traced difference between them. A subtraction
-                  performed in this page would be the one number here that could not
-                  answer where it came from, which is the defect the whole product exists
-                  to prevent. The difference belongs in the engine’s parking layout
-                  module, emitted with its own derivation, and that is where it is owed.
-                </p>
+                <strong>{t.cost.neitherTitle}</strong>
+                <p>{t.cost.neitherBody}</p>
               </div>
             </div>
           </Section>
@@ -1121,46 +1137,31 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
           <Section
             index="06"
             id="pk-pack"
-            title="Packed inside the podium, never its bounding box"
-            lede={
-              <>
-                A bounding box is easy to pack and it is not the site. The layout targets
-                the largest rectangle that fits inside the podium outline, so the error
-                runs by containment and the bay count is a floor rather than a hope.
-              </>
-            }
+            title={t.pack.title}
+            lede={<>{t.pack.lede}</>}
           >
             <div className="pk-figures">
-              <Fig label="Pack rectangle, width" value={trim(plan.packingRect.widthM)} unit="m" />
-              <Fig label="Pack rectangle, depth" value={trim(plan.packingRect.depthM)} unit="m" />
+              <Fig label={t.pack.width} value={trim(plan.packingRect.widthM)} unit="m" />
+              <Fig label={t.pack.depth} value={trim(plan.packingRect.depthM)} unit="m" />
               <Fig
-                label="Module depth"
+                label={t.pack.module}
                 value={plan.moduleDepthM.value}
                 unit={plan.moduleDepthM.unit}
-                note="Bay, aisle and bay, taken together."
+                unitIsEngine
+                note={t.pack.moduleNote}
               />
-              <Fig
-                label="Podium covered by the pack"
-                value={plan.packingRect.coveragePct}
-                unit="%"
-              />
+              <Fig label={t.pack.coverage} value={plan.packingRect.coveragePct} unit="%" />
             </div>
 
             {plan.packingRect.exact ? (
               <p className="pk-verdict">
-                <strong>The inscribed rectangle is exact on this run.</strong> The podium
-                is itself a rectangle, so nothing was given up to draw the level and the
-                pack target and the podium outline coincide. On a podium that is not a
-                rectangle they do not, the drawing shows both, and the unusable remainder
-                is reported in square metres rather than absorbed into a ratio.
+                <strong>{t.pack.exactTitle}</strong>
+                {t.pack.exactBody}
               </p>
             ) : (
               <p className="pk-verdict">
-                <strong>The inscribed rectangle is not exact on this run.</strong> The
-                podium is not a rectangle, so the pack target is smaller than the
-                footprint and the drawing shows both outlines. The remainder is reported
-                in square metres rather than absorbed into a ratio, and the bay count that
-                follows from it is a floor.
+                <strong>{t.pack.inexactTitle}</strong>
+                {t.pack.inexactBody}
               </p>
             )}
           </Section>
@@ -1169,43 +1170,35 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
           <Section
             index="07"
             id="pk-dims"
-            title="The dimensions this run was cut to"
-            lede={
-              <>
-                Only the row the run actually used. The full minimum-dimensions table is
-                not republished here: the engine holds six rows, not the ten a
-                five-angles-by-two-driveways grid implies, so a page promising the grid
-                would be describing a table that does not exist — and republishing a code
-                table wholesale is an exposure that citing a clause is not.
-              </>
-            }
+            title={t.dims.title}
+            lede={<>{t.dims.lede}</>}
           >
-            <div className="schedule" role="region" aria-label="Bay dimensions used by this run" tabIndex={0}>
+            <div className="schedule" role="region" aria-label={t.dims.regionLabel} tabIndex={0}>
               <table>
-                <caption className="sr-only">
-                  The bay and driveway dimensions this run was cut to.
-                </caption>
+                <caption className="sr-only">{t.dims.caption}</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Dimension</th>
+                    <th scope="col">{t.dims.dimension}</th>
                     <th scope="col" className="schedule__num">
-                      This run
+                      {t.dims.thisRun}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { k: 'Parking angle', v: readable(plan.standard.angle), u: '' },
-                    { k: 'Driveway', v: readable(plan.standard.driveway), u: '' },
-                    { k: 'Bay width', v: plan.standard.bayWidthM, u: 'm' },
-                    { k: 'Bay length', v: plan.standard.bayLengthM, u: 'm' },
-                    { k: 'Driveway width', v: plan.standard.drivewayWidthM, u: 'm' },
+                    { k: t.dims.angle, v: readable(t, plan.standard.angle), u: '' },
+                    { k: t.dims.driveway, v: readable(t, plan.standard.driveway), u: '' },
+                    { k: t.dims.bayWidth, v: plan.standard.bayWidthM, u: 'm' },
+                    { k: t.dims.bayLength, v: plan.standard.bayLengthM, u: 'm' },
+                    { k: t.dims.drivewayWidth, v: plan.standard.drivewayWidthM, u: 'm' },
                   ].map((row) => (
                     <tr key={row.k}>
-                      <th scope="row" data-label="Dimension">
+                      {/* `data-label` is re-emitted as the row header below the fold, so
+                          it is rendered copy and takes the column's own key. */}
+                      <th scope="row" data-label={t.dims.dimension}>
                         {row.k}
                       </th>
-                      <td className="schedule__num" data-label="This run">
+                      <td className="schedule__num" data-label={t.dims.thisRun}>
                         <span className="value">
                           {row.v}
                           {row.u ? <span className="value__unit">{row.u}</span> : null}
@@ -1219,17 +1212,8 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
 
             <div className="callout">
               <div className="callout__body">
-                <strong>Two things this section holds and does not print.</strong>
-                <p>
-                  The structural clearance charged per obstructed side is a module
-                  constant inside the layout engine rather than a field on the dimension
-                  record, so it does not travel on the wire. The clause reference the
-                  dimensions were taken from is a citation the engine uses internally as a
-                  provenance rule, and the presenter serialises it for nothing. Both need
-                  a serialiser change in the API, and both are named here rather than
-                  filled in: a clause number typed by hand, on the page that argues against
-                  typed figures, is the wrong way to close a gap.
-                </p>
+                <strong>{t.dims.heldTitle}</strong>
+                <p>{t.dims.heldBody}</p>
               </div>
             </div>
           </Section>
@@ -1239,15 +1223,8 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
             <Section
               index="08"
               id="pk-ramp"
-              title="The ramp is placed; its gradient is not assessed"
-              lede={
-                <>
-                  The strip below is reserved in plan and nothing more. Drawing a ramp
-                  that reads as checked when only its footprint was considered would be
-                  worse than drawing none, so it keeps the deferred treatment — the hatch,
-                  the dashed edge and the italic — everywhere it appears on this page.
-                </>
-              }
+              title={t.ramp.title}
+              lede={<>{t.ramp.lede}</>}
             >
               <div className="pk-ramp-block reveal">
                 <div className="pk-ramp-block__drawing">
@@ -1255,20 +1232,16 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
                 </div>
                 <div className="pk-ramp-block__body">
                   <div className="pk-figures">
-                    <Fig label="Ramp strip, width" value={trim(ramp.widthM)} unit="m" />
-                    <Fig label="Ramp strip, length" value={trim(ramp.heightM)} unit="m" />
+                    <Fig label={t.ramp.width} value={trim(ramp.widthM)} unit="m" />
+                    <Fig label={t.ramp.length} value={trim(ramp.heightM)} unit="m" />
                   </div>
                   {/* The chip carries the STATUS and the sentence carries the subject.
                       Putting the subject inside the chip makes it an inline-flex box
                       that shrink-wraps to max-content and cannot wrap, which is a
                       sideways scroll at 320px on a page whose drawing is the point. */}
                   <p className="pk-fig__note">
-                    <NotAssessed>Not assessed</NotAssessed> — gradient, transitions and
-                    headroom. Those are a separate clause family, they need a section
-                    rather than a plan, and this run did not read them. The strip is the
-                    area the layout took out of the level before it packed anything else,
-                    which is why it is visible in the bay count and invisible in the code
-                    check.
+                    <NotAssessed>{t.notAssessed}</NotAssessed>
+                    {t.ramp.notAssessedBody}
                   </p>
                 </div>
               </div>
@@ -1279,73 +1252,78 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
           <Section
             index="09"
             id="pk-access"
-            title="Where the cars get in"
-            lede={
-              <>
-                The recommendation, the frontages it beat, and every frontage that was
-                refused with the reason it was refused. The refusals are the half a
-                spreadsheet never gives you, and they are the reason a reviewer can argue
-                with the placement instead of taking it.
-              </>
-            }
+            title={t.access.title}
+            lede={<>{t.access.lede}</>}
           >
             <div className="callout" data-state="derived">
               <span className="callout__mark" aria-hidden="true">
                 <Glyph name="derived" />
               </span>
               <div className="callout__body">
+                {/* Three values off the run, in the word order of the page's language:
+                    Arabic puts «طريق» before the hierarchy and «بعرض» before the
+                    width, which is why English has two empty slots here. */}
                 <strong>
-                  Frontage {access.recommended.edgeSeq} ·{' '}
-                  {readable(access.recommended.hierarchy)} road ·{' '}
-                  {access.recommended.widthM} m wide
+                  {t.access.frontage}
+                  {access.recommended.edgeSeq} ·{' '}
+                  {t.access.roadBefore}
+                  {readable(t, access.recommended.hierarchy)}
+                  {t.access.roadAfter}{' '}
+                  {t.access.widthBefore}
+                  {access.recommended.widthM}
+                  {t.access.widthAfter}
                 </strong>
-                <p>{access.recommended.rationale}</p>
                 <p>
-                  Centred {access.recommended.centreOffsetM} m along it, inside{' '}
-                  {access.recommended.usableWindowM} m of frontage that is clear of both
-                  corners once the junction clearance is taken off each end.
+                  <Engine>{access.recommended.rationale}</Engine>
+                </p>
+                <p>
+                  {t.access.centredBefore}
+                  {access.recommended.centreOffsetM}
+                  {t.access.centredMid}{' '}
+                  {access.recommended.usableWindowM}
+                  {t.access.centredAfter}
                 </p>
               </div>
             </div>
 
-            <h3 className="pk-subhead">Ranked, in the engine’s own words</h3>
+            <h3 className="pk-subhead">{t.access.rankedTitle}</h3>
             <div
               className="schedule"
               role="region"
-              aria-label="Viable frontages, ranked"
+              aria-label={t.access.rankedRegion}
               tabIndex={0}
             >
               <table>
-                <caption className="sr-only">
-                  Every frontage that can take a vehicle access, ranked, with the reason.
-                </caption>
+                <caption className="sr-only">{t.access.rankedCaption}</caption>
                 <thead>
                   <tr>
                     <th scope="col" className="schedule__rank">
-                      Rank
+                      {t.access.rank}
                     </th>
-                    <th scope="col">Frontage</th>
+                    <th scope="col">{t.access.frontageColumn}</th>
                     <th scope="col" className="schedule__fill">
-                      Why
+                      {t.access.why}
                     </th>
                     <th scope="col" className="schedule__num">
-                      Clear window
+                      {t.access.clearWindow}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {access.candidates.map((c) => (
                     <tr key={c.edgeSeq}>
-                      <td className="schedule__rank" data-label="Rank">
+                      <td className="schedule__rank" data-label={t.access.rank}>
                         {c.rank}
                       </td>
-                      <th scope="row" data-label="Frontage">
-                        {c.edgeSeq} · {readable(c.hierarchy)}
+                      <th scope="row" data-label={t.access.frontageColumn}>
+                        {c.edgeSeq} · {readable(t, c.hierarchy)}
                       </th>
-                      <td className="schedule__fill" data-label="Why">
-                        <p>{c.rationale}</p>
+                      <td className="schedule__fill" data-label={t.access.why}>
+                        <p>
+                          <Engine>{c.rationale}</Engine>
+                        </p>
                       </td>
-                      <td className="schedule__num" data-label="Clear window">
+                      <td className="schedule__num" data-label={t.access.clearWindow}>
                         <span className="value">
                           {c.usableWindowM}
                           <span className="value__unit">m</span>
@@ -1357,35 +1335,37 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
               </table>
             </div>
 
-            <h3 className="pk-subhead">Refused, and why</h3>
+            <h3 className="pk-subhead">{t.access.refusedTitle}</h3>
             <div
               className="schedule"
               role="region"
-              aria-label="Frontages that cannot take a vehicle access"
+              aria-label={t.access.refusedRegion}
               tabIndex={0}
             >
               <table>
-                <caption className="sr-only">
-                  Every frontage that was refused, with the reason it was refused.
-                </caption>
+                <caption className="sr-only">{t.access.refusedCaption}</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Frontage</th>
-                    <th scope="col">Classification</th>
+                    <th scope="col">{t.access.frontageColumn}</th>
+                    <th scope="col">{t.access.classification}</th>
                     <th scope="col" className="schedule__fill">
-                      Reason
+                      {t.access.reason}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {access.rejected.map((r) => (
                     <tr key={r.edgeSeq}>
-                      <th scope="row" data-label="Frontage">
+                      <th scope="row" data-label={t.access.frontageColumn}>
                         {r.edgeSeq}
                       </th>
-                      <td data-label="Classification">{readable(r.classification)}</td>
-                      <td className="schedule__fill" data-label="Reason">
-                        <p>{r.reason}</p>
+                      <td data-label={t.access.classification}>
+                        {readable(t, r.classification)}
+                      </td>
+                      <td className="schedule__fill" data-label={t.access.reason}>
+                        <p>
+                          <Engine>{r.reason}</Engine>
+                        </p>
                       </td>
                     </tr>
                   ))}
@@ -1393,22 +1373,17 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
               </table>
             </div>
 
-            <h3 className="pk-subhead">Reported not assessed</h3>
-            <p className="pk-fig__note">
-              These come off the run as the engine wrote them. Whether the opening sits
-              opposite a junction needs the surrounding road network, which no affection
-              plan carries, so it is reported rather than allowed to block the rest — and
-              the clause references inside these sentences are the engine’s own strings,
-              quoted rather than re-typed. No rule record in this deployment is approved
-              against a sourced instrument.
-            </p>
+            <h3 className="pk-subhead">{t.access.deferredTitle}</h3>
+            <p className="pk-fig__note">{t.access.deferredNote}</p>
             <ul className="pk-deferred">
               {plan.notAssessed.map((n) => (
                 <li key={n}>
                   <span className="pk-deferred__mark" aria-hidden="true">
                     <Glyph name="deferred" />
                   </span>
-                  <span>{n}</span>
+                  <span>
+                    <Engine>{n}</Engine>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -1425,38 +1400,16 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
       <Section
         index="11"
         id="pk-not"
-        title="What it does not do here"
+        title={t.not.title}
         minor
-        lede={
-          <>
-            Each of these is refused rather than unbuilt, and the first is refused by the
-            type system rather than by a decision anyone could reverse in a sprint.
-          </>
-        }
+        lede={<>{t.not.lede}</>}
       >
         <div className="pk-refusals">
           <div className="refusal reveal">
-            <h3 className="refusal__title">{OPTIMISER_REFUSAL.heading}</h3>
-            <p>{OPTIMISER_REFUSAL.body}</p>
+            <h3 className="refusal__title">{optimiser.heading}</h3>
+            <p>{optimiser.body}</p>
           </div>
-          {[
-            {
-              h: 'It does not design a structural grid.',
-              p: 'Column positions, transfer structure and the spans a podium needs are absent. The layout charges a clearance where a bay is obstructed and stops there; where the columns actually fall is an engineering decision this phase does not make.',
-            },
-            {
-              h: 'It does not check fire tender access, turning circles or egress.',
-              p: 'The access placement reads frontage hierarchy and junction clearance. Whether an appliance can reach the building, turn, and stand is a different clause family and it is not read at all. A missing check reads as a check that passed, so it is named in every output rather than omitted.',
-            },
-            {
-              h: 'It does not lay out mechanical or stacked parking.',
-              p: 'Every bay drawn here is a bay a car drives into and out of under its own power. A stacker changes the area per bay, the aisle it needs and the count the level holds, and none of that is modelled.',
-            },
-            {
-              h: 'It does not judge whether the level can be a basement.',
-              p: 'Water table, excavation, shoring and the cost of going down are outside this phase. The run declares how many levels are available and the engine takes that declaration at face value, attributed to whoever made it.',
-            },
-          ].map((r) => (
+          {t.not.items.map((r) => (
             <div className="refusal reveal" key={r.h}>
               <h3 className="refusal__title">{r.h}</h3>
               <p>{r.p}</p>
@@ -1466,7 +1419,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
 
         <div className="cta">
           <Link to="/refusals" navigate={navigate} className="button">
-            Everything else it refuses
+            {t.not.cta}
           </Link>
         </div>
       </Section>
@@ -1475,41 +1428,32 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
       <Section
         index="12"
         id="pk-unproven"
-        title="What this page did not prove"
+        title={t.unproven.title}
         minor
-        lede={<>Every page here ends on a limit. This is the one that matters most.</>}
+        lede={<>{t.unproven.lede}</>}
       >
         <ol className="pk-limits">
           <li className="pk-limit">
-            <strong>That the level as drawn is buildable.</strong>
-            <p>
-              Rectangles that do not overlap and clear their dimensions are a packing
-              result, not a design. Nothing here has been checked for structure, drainage,
-              ventilation, fire or the hundred things a set of drawings resolves.
-            </p>
+            <strong>{t.unproven.buildable.title}</strong>
+            <p>{t.unproven.buildable.body}</p>
           </li>
           <li className="pk-limit">
-            <strong>That the assumed factor is right for this plot.</strong>
-            <p>
-              It is the mid-point of a range, recorded with a basis and ranked by
-              sensitivity, and it moves the governing capacity in rough proportion to
-              itself. The section above measures what the drawing did against it; it does
-              not establish that the assumption was correct.
-            </p>
+            <strong>{t.unproven.factor.title}</strong>
+            <p>{t.unproven.factor.body}</p>
           </li>
           <li className="pk-limit">
-            <strong>That the clauses encoded here are the clauses that apply.</strong>
+            <strong>{t.unproven.clauses.title}</strong>
+            {/* `[NOT SOURCED]` is what the record carries, in capitals, and it stays
+                code in both languages: a reader checking a record looks for exactly
+                that string. */}
             <p>
-              Every seed rule in this deployment carries a placeholder instrument, a source
-              page of zero and clause text marked <code>[NOT SOURCED]</code>. A licensed
-              Dubai architect has to author and approve each record against the actual
-              instrument before any of it is a citation. There is no rule library route in
-              this build to send you to, so the state is stated here instead of linked, and
-              the readiness figures are on the{' '}
+              {t.unproven.clauses.before}
+              <code>[NOT SOURCED]</code>
+              {t.unproven.clauses.mid}{' '}
               <Link to="/dashboard" navigate={navigate}>
-                deployment readiness page
+                {t.unproven.clauses.link}
               </Link>
-              .
+              {t.unproven.clauses.after}
             </p>
           </li>
         </ol>
@@ -1538,6 +1482,7 @@ function ParkingInFar({
   readonly data: NonNullable<typeof parkingInFar>;
   readonly declared: string;
 }): JSX.Element | null {
+  const t = useDict(EN, AR);
   /* The array is annotated rather than inferred, and that is not decoration. A
      `const` with a declared union type is narrowed by control flow to whatever was
      assigned to it, so inferring the element type here would give `side: FarLeg`,
@@ -1552,26 +1497,14 @@ function ParkingInFar({
   const counts: FarSide = data.countsTowardFar;
   const excluded: FarSide = data.excludedFromFar;
   const sides: readonly Column[] = [
-    { id: 'counts', label: 'Parking counted toward floor area', side: counts, token: 'COUNTS_TOWARD_FAR' },
-    { id: 'excluded', label: 'Parking excluded from floor area', side: excluded, token: 'EXCLUDED_FROM_FAR' },
+    { id: 'counts', label: t.far.counts, side: counts, token: 'COUNTS_TOWARD_FAR' },
+    { id: 'excluded', label: t.far.excluded, side: excluded, token: 'EXCLUDED_FROM_FAR' },
   ];
   const bothAnswered = answered(counts) && answered(excluded);
   if (!answered(counts) && !answered(excluded)) return null;
 
   return (
-    <Section
-      index="10"
-      id="pk-far"
-      title="The declaration with no default"
-      lede={
-        <>
-          Whether parking counts toward floor area is not something this engine decides.
-          It is derived from a citation, or set by a named person, or the run is refused —
-          and rather than quote a range from a specification, this is the same plot run
-          both ways.
-        </>
-      }
-    >
+    <Section index="10" id="pk-far" title={t.far.title} lede={<>{t.far.lede}</>}>
       <div className="pk-compare">
         {sides.map((s) => (
           <div
@@ -1582,28 +1515,30 @@ function ParkingInFar({
             <p className="pk-compare__label">
               {s.label}
               {declared === s.token ? (
-                <span className="pk-compare__tag">declared on this run</span>
+                <span className="pk-compare__tag">{t.far.declared}</span>
               ) : null}
             </p>
             {answered(s.side) ? (
               <dl className="pk-compare__rows">
                 <div>
-                  <dt>Regulatory limit</dt>
+                  <dt>{t.far.regulatoryLimit}</dt>
                   <dd>
                     <span className="value">{group(s.side.regulatoryGfaM2)}</span>
                     <span className="value__unit">m²</span>
                   </dd>
                 </div>
                 <div>
-                  <dt>Governing capacity</dt>
+                  <dt>{t.far.governingCapacity}</dt>
                   <dd>
                     <span className="value">{group(s.side.governingGfaM2)}</span>
                     <span className="value__unit">m²</span>
                   </dd>
                 </div>
                 <div>
-                  <dt>Governing band</dt>
-                  <dd>{s.side.governingBand}</dd>
+                  <dt>{t.far.governingBand}</dt>
+                  <dd>
+                    <Engine>{s.side.governingBand}</Engine>
+                  </dd>
                 </div>
               </dl>
             ) : (
@@ -1612,8 +1547,10 @@ function ParkingInFar({
                   <Glyph name="variance" />
                 </span>
                 <div className="callout__body">
-                  <strong>This leg did not answer.</strong>
-                  <p>{s.side.error}</p>
+                  <strong>{t.far.legFailed}</strong>
+                  <p>
+                    <Engine>{s.side.error}</Engine>
+                  </p>
                 </div>
               </div>
             )}
@@ -1626,37 +1563,35 @@ function ParkingInFar({
           <div className="pk-figures">
             {data.regulatorySpreadM2 !== null ? (
               <Fig
-                label="Spread, regulatory limit"
+                label={t.far.spreadRegulatory}
                 value={group(data.regulatorySpreadM2)}
                 unit="m²"
               />
             ) : null}
             {data.governingSpreadM2 !== null ? (
               <Fig
-                label="Spread, governing capacity"
+                label={t.far.spreadGoverning}
                 value={group(data.governingSpreadM2)}
                 unit="m²"
               />
             ) : null}
             {data.governingSpreadRelative !== null ? (
               <Fig
-                label="Governing spread, relative"
+                label={t.far.spreadRelative}
                 value={data.governingSpreadRelative}
-                note="Of the larger of the two governing capacities."
+                note={t.far.spreadRelativeNote}
               />
             ) : null}
           </div>
-          <p className="pk-verdict">{data.verdict}</p>
+          <p className="pk-verdict">
+            <Engine>{data.verdict}</Engine>
+          </p>
         </>
       ) : (
         <div className="callout">
           <div className="callout__body">
-            <strong>No spread is reported, because only one leg answered.</strong>
-            <p>
-              A spread computed from one side is not a spread, and a single column
-              presented as a comparison is worse than no comparison. The leg that answered
-              is above, in full, with the engine’s own message for the leg that did not.
-            </p>
+            <strong>{t.far.oneLegTitle}</strong>
+            <p>{t.far.oneLegBody}</p>
           </div>
         </div>
       )}

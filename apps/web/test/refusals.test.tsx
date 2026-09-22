@@ -21,9 +21,18 @@
  * pages, so they are banned here by pattern — and the disclosure that replaces them
  * is asserted present, because an asserted control is worse than a missing one and
  * a deleted disclosure is how an asserted one comes back.
+ *
+ * THE ARABIC PAGE IS HELD TO THE SAME RULES, RENDERED. `/refusals in Arabic` mounts
+ * the page under `StaticLocale` and scans what an Arabic reader reads — the text
+ * outside `Verbatim` and `code` — for English prose left behind, for a hedge, and
+ * for the reviewer disclosure, which is asserted present in Arabic for the same
+ * reason it is asserted present in English: a translation that dropped it would
+ * pass every prohibition in this file. A failure in a language the reviewer does
+ * not read is the one nobody finds by looking.
  */
 
 import { readFileSync } from 'node:fs';
+import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
@@ -39,12 +48,17 @@ import { describe, expect, it } from 'vitest';
   `PAGES['/refusals']` dispatches to a component, so nothing is gained by asserting it
   twice, and this file goes on testing this page while a sibling is mid-edit.
 */
+import { IFC_GLTF, LIMITS, OPTIMISER_REFUSAL } from '../src/content/shared.js';
+import { IFC_GLTF_AR, LIMITS_AR, OPTIMISER_REFUSAL_AR } from '../src/content/shared.ar.js';
+import { StaticLocale, Verbatim } from '../src/i18n/locale.js';
 import Refusals from '../src/screens/Refusals.js';
 import SNAPSHOT from '../src/screens/readiness.json' with { type: 'json' };
 import WORKED from '../src/screens/worked-example.json' with { type: 'json' };
 import {
+  arabicReadingText,
   BANNED_IN_HAND_WRITTEN_COPY,
   expectNoCountInHeadings,
+  expectNoEnglishProse,
   expectSitewideProhibitions,
   stripTags,
 } from './prohibitions.js';
@@ -59,7 +73,18 @@ const markup = (): string =>
 /** What a reader reads: tags stripped, whitespace collapsed. */
 const text = (): string => stripTags(markup()).replace(/\s+/g, ' ');
 
-const SOURCE = readFileSync(new URL('../src/screens/Refusals.tsx', import.meta.url), 'utf8');
+/**
+ * THE MODULES THE PAGE'S COPY LIVES IN.
+ *
+ * The copy moved out of the component into `refusals.en.ts` and `refusals.ar.ts`,
+ * so a scan over `Refusals.tsx` alone would go on passing while the sentences it
+ * exists to police sat one file over. The unit of assertion is the three files.
+ */
+const SOURCES = [
+  '../src/screens/Refusals.tsx',
+  '../src/i18n/refusals.en.ts',
+  '../src/i18n/refusals.ar.ts',
+].map((path) => ({ path, code: readFileSync(new URL(path, import.meta.url), 'utf8') }));
 
 describe('/refusals', () => {
   it('carries the site-wide prohibitions', () => {
@@ -271,9 +296,14 @@ describe('/refusals', () => {
     // engine's own claim statement verbatim and that statement contains "NOT YET
     // MEASURED". Here the file is the unit of assertion and the exception
     // disappears — comments included, because a comment is where the vocabulary
-    // gets rehearsed before it reaches the page.
-    for (const banned of BANNED_IN_HAND_WRITTEN_COPY) {
-      expect(SOURCE, `Refusals.tsx matched ${banned}`).not.toMatch(banned);
+    // gets rehearsed before it reaches the page. The files are the component and
+    // both of its dictionaries, because the sentences live in the dictionaries now.
+    expect(SOURCES.length).toBe(3);
+    for (const { path, code } of SOURCES) {
+      expect(code.length, `${path} read as empty`).toBeGreaterThan(0);
+      for (const banned of BANNED_IN_HAND_WRITTEN_COPY) {
+        expect(code, `${path} matched ${banned}`).not.toMatch(banned);
+      }
     }
   });
 
@@ -286,5 +316,125 @@ describe('/refusals', () => {
     const t = text();
     expect(t).toMatch(/what this page did not prove/i);
     expect(t.lastIndexOf('did not prove')).toBeGreaterThan(t.indexOf('refusal contract'));
+  });
+});
+
+/* =========================================================================
+ * THE ARABIC PAGE
+ * ====================================================================== */
+
+const arabicMarkup = (): string =>
+  renderToStaticMarkup(
+    <StaticLocale locale="ar">
+      <Page navigate={() => {}} actor={null} setActor={() => {}} search="" />
+    </StaticLocale>,
+  );
+
+/** What an Arabic reader reads: the text outside `Verbatim` and `code`. */
+const arabicText = (): string => arabicReadingText(arabicMarkup());
+
+/** Every `id` on a render, in document order. */
+const ids = (html: string): string[] => [...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1] ?? '');
+
+/** A fragment as the page would render it, for a substring match against the page. */
+const rendered = (node: ReactNode): string => renderToStaticMarkup(<>{node}</>);
+
+describe('/refusals in Arabic', () => {
+  it('carries the site-wide prohibitions', () => {
+    expectSitewideProhibitions(arabicMarkup(), '/refusals (ar)');
+  });
+
+  it('leaves no English prose outside what the engine emitted', () => {
+    // The deferred rule records, the model file's list and every identifier stay
+    // English inside `Verbatim`; everything else on the page is copy, and copy left
+    // in English under an Arabic heading is a page that looks finished in two
+    // languages at once.
+    expectNoEnglishProse(arabicMarkup(), '/refusals (ar)');
+  });
+
+  it('keeps every anchor the English page has, in the same order', () => {
+    // A link to #not-drawn or #professional is forwarded without a language in it,
+    // so the anchor has to land on the Arabic page too. Checked against the English
+    // render rather than a list, so a section added to one and not the other fails.
+    const en = ids(markup());
+    expect(en).toEqual(expect.arrayContaining(['contract', 'not-drawn', 'professional', 'unproven']));
+    expect(ids(arabicMarkup())).toEqual(en);
+  });
+
+  it('renders the shared refusals from their Arabic twins, and not the English', () => {
+    // One source per shared paragraph in each language. A page that re-typed one
+    // of these, or fell back to the English constant, would pass every scan here
+    // except this one.
+    const html = arabicMarkup();
+    for (const l of LIMITS_AR) {
+      expect(html, `missing Arabic heading for ${l.id}`).toContain(l.heading);
+      expect(html, `missing Arabic body for ${l.id}`).toContain(rendered(l.body));
+    }
+    for (const p of [IFC_GLTF_AR, OPTIMISER_REFUSAL_AR]) {
+      expect(html).toContain(p.heading);
+      expect(html).toContain(rendered(p.body));
+    }
+    for (const heading of [...LIMITS.map((l) => l.heading), IFC_GLTF.heading, OPTIMISER_REFUSAL.heading]) {
+      expect(html, `English shared heading on the Arabic page: ${heading}`).not.toContain(heading);
+    }
+  });
+
+  it('never hedges a refusal', () => {
+    // §3 of the glossary: a hedge in a refusal is a claim. Over the RENDERED text,
+    // so a hedge arriving through a shared paragraph is caught as well as one typed
+    // into this page's dictionary. «قد» before a past verb is emphasis and stays
+    // legal; before a present verb it is "may".
+    const t = arabicText();
+    expect(t).not.toMatch(/(^|[^؀-ۿ])ربما(?=$|[^؀-ۿ])/u);
+    expect(t).not.toMatch(/(^|[^؀-ۿ])قد\s+[يتنأ][؀-ۿ]*(?=$|[^؀-ۿ])/u);
+    expect(t).not.toMatch(/(^|[^؀-ۿ])عادةً?(?=$|[^؀-ۿ])/u);
+  });
+
+  it('states in Arabic that the reviewer is not checked against the author', () => {
+    // PRESENCE, and the twin of the English assertion: a translation that dropped
+    // or merged these would pass every prohibition, and the reader it fails is the
+    // one who cannot check it against the English. Both denials keep their own verb.
+    const t = arabicText();
+    expect(t).toContain('لا تتحقّق من الرخصة لدى أيّ جهة');
+    expect(t).toContain('ولا تُقارن الشخص الذي يوقّع بالشخص الذي أنشأ التشغيلة');
+    expect(t).toContain('الفصل بين المهامّ ضابطٌ لا يملكه هذا البرنامج');
+  });
+
+  it('renders every engine string as the engine emitted it, inside Verbatim', () => {
+    // glossary §1: a record translated is a second record nobody issued, and an
+    // identifier laid out right-to-left is one a reader cannot check.
+    const html = arabicMarkup();
+    for (const d of SNAPSHOT.deferred) {
+      for (const id of [d.ruleId, d.parameterId]) {
+        expect(html, `${id} not verbatim`).toContain(
+          rendered(
+            <Verbatim>
+              <code className="rf-ident">{id}</code>
+            </Verbatim>,
+          ),
+        );
+      }
+      expect(html, `clause for ${d.ruleId} not verbatim`).toContain(
+        rendered(<Verbatim>{d.citation.clauseReference}</Verbatim>),
+      );
+    }
+    for (const n of WORKED.verified.exports.glb.notModelled) {
+      expect(html, `not-drawn item not verbatim: ${n}`).toContain(rendered(<Verbatim>{n}</Verbatim>));
+    }
+    // And the realism discount is the fixture's, as on the English page.
+    expect(arabicText()).toContain(WORKED.input.run.realismDiscount);
+  });
+
+  it('prints no date, no percentage, no Arabic-Indic digit and no named developer', () => {
+    // The English page's prohibitions, in the script they would arrive in.
+    const t = stripTags(arabicMarkup()).replace(/\s+/g, ' ');
+    expect(t).not.toMatch(/\b(19|20)\d{2}\b/);
+    expect(t).not.toMatch(
+      /(يناير|فبراير|مارس|أبريل|إبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر|كانون|شباط|آذار|نيسان|أيار|حزيران|تموز|أيلول|تشرين)/u,
+    );
+    expect(t).not.toMatch(/\d\s*[%٪]/);
+    expect(t).not.toMatch(/[٠-٩۰-۹]/);
+    expect(t).not.toMatch(/\bazizi\b/i);
+    expect(t).not.toMatch(/عزيزي/u);
   });
 });

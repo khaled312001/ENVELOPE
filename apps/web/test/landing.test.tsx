@@ -19,6 +19,12 @@
  * MOVED rather than copied: while its assertions lived in this file, `/dashboard`'s
  * coverage was invisibly supplied by `/`'s filename, so `route-coverage.test.ts`
  * could not tell a route with a test from a route without one.
+ *
+ * THE ARABIC PAGE IS RENDERED TOO, at the bottom of this file, because a translation
+ * is exactly where every guarantee above can fail without an English test noticing:
+ * a figure re-typed into a sentence, a basis string translated, a refusal softened,
+ * a claim moved up the list. Its grips read the Arabic dictionary and `LIMITS_AR`
+ * rather than Arabic literals here, for the reason the English grips read `LIMITS`.
  */
 
 import { readFileSync } from 'node:fs';
@@ -26,12 +32,17 @@ import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
+import { LIMITS_AR } from '../src/content/shared.ar.js';
 import { LIMITS } from '../src/content/shared.js';
+import { AR } from '../src/i18n/landing.ar.js';
+import { StaticLocale } from '../src/i18n/locale.js';
 import { Landing } from '../src/screens/Landing.js';
 import WORKED from '../src/screens/worked-example.json' with { type: 'json' };
 import {
+  arabicReadingText,
   expectAssumedTreatmentPresent,
   expectClaimOrder,
+  expectNoEnglishProse,
   expectSitewideProhibitions,
   group,
   stripTags,
@@ -449,5 +460,198 @@ describe('the landing page', () => {
     // `border-left-width` is how the last 6px rail on this page slipped past a
     // checker that only reads the logical property.
     expect(css).not.toMatch(/border-(inline-start|left)(-width)?:\s*\d+px/);
+  });
+});
+
+/* =========================================================================
+ * `/` IN ARABIC.
+ *
+ * The same page, rendered through `StaticLocale` — `renderToStaticMarkup` runs no
+ * effects and has no storage, so `LocaleProvider` could only ever render English
+ * here, and every Arabic string on the page would otherwise be rendered by nothing
+ * until a browser opened it.
+ *
+ * The assertions are the English ones asked again of a second language, and the
+ * ones that matter most are the ones only a second language can fail: that no figure
+ * was re-typed into a sentence, that no engine string was translated, and that the
+ * refusal is still last.
+ * ====================================================================== */
+
+const arabic = (): string =>
+  renderToStaticMarkup(
+    <StaticLocale locale="ar">
+      <Landing navigate={() => {}} />
+    </StaticLocale>,
+  );
+const arabicText = (): string => stripTags(arabic()).replace(/\s+/g, ' ');
+
+/** Every run of digits a reader sees, de-grouped — the English test's own scan. */
+const figuresIn = (t: string): string[] =>
+  [...new Set([...t.matchAll(/\d[\d,]*(?:\.\d+)?/g)].map((m) => m[0].replace(/,/g, '')))].sort();
+
+describe('/ in Arabic', () => {
+  it('carries every site-wide prohibition', () => {
+    // The scans are English regexes and most of them cannot fire on Arabic prose.
+    // They run anyway, because an Arabic page still carries English: every basis,
+    // formula and token the engine wrote, and a component another pass translated.
+    expectSitewideProhibitions(arabic(), 'the Arabic landing page');
+  });
+
+  it('leaves no English prose outside Verbatim', () => {
+    // A page that passes everything else with one paragraph left in English looks
+    // finished in two languages at once — the i18n form of a hidden default.
+    expectNoEnglishProse(arabic(), 'the Arabic landing page');
+  });
+
+  it('prints the same figures as the English page, and not one more', () => {
+    /*
+      NO FIGURE WAS RE-TYPED INTO A SENTENCE. A translator writing «6774.194» into an
+      Arabic string would produce a page that is right today and wrong the day the
+      engine moves — the exact defect the fixture exists to close, one language
+      further from anyone who would notice.
+
+      Two figures are gripped by name, both read off the fixture: the governing
+      capacity, which is the page's answer, and the headroom above it, which is the
+      one figure the Arabic verdict wraps in a different word order. Then the
+      stronger property: the SET of figures a reader sees is identical in both
+      languages, so nothing was added, dropped or rounded in translation. The English
+      set is held to the fixture by the test above.
+    */
+    const en = text();
+    const ar = arabicText();
+    for (const figure of [group(V.governingGfaM2), group(V.headroomToNextM2)]) {
+      expect(en, `${figure} is missing from the English page`).toContain(figure);
+      expect(ar, `${figure} is missing from the Arabic page`).toContain(figure);
+    }
+    expect(figuresIn(ar)).toEqual(figuresIn(en));
+  });
+
+  it('carries every engine string in the language the engine wrote it in', () => {
+    /*
+      A basis string is a record of why a number was assumed, signed at G4 — a
+      translated one is a second record nobody issued. So each of these is asserted
+      PRESENT in the markup and ABSENT from the Arabic reading text, which is the
+      page minus what `Verbatim` marks `lang="en"`. Present-but-unwrapped fails the
+      second half; translated fails the first.
+    */
+    const markup = arabic();
+    const reading = arabicReadingText(markup);
+    for (const emitted of [
+      V.bayAreaFactorBasis,
+      V.formulas.bandA,
+      V.formulas.bandB,
+      V.formulas.bandC,
+      V.formulas.governingGfa,
+      V.governingBand,
+      V.nextBindingBand,
+      V.bayAreaFactorClass,
+      V.levelPlan.bayCount.provenanceClass,
+    ]) {
+      expect(markup, `the engine's "${emitted}" is missing`).toContain(emitted);
+      expect(reading, `the engine's "${emitted}" is outside Verbatim`).not.toContain(emitted);
+    }
+  });
+
+  it('keeps the assumed factor and its basis in the same view as the governing figure', () => {
+    // A PRESENCE ASSERTION, asked again of the Arabic page: the hero ships open, the
+    // amber treatment is rendered, and the basis sits beside the figure in full.
+    const html = arabic();
+    const hero = html.slice(0, html.indexOf('id="capacities"'));
+    expectAssumedTreatmentPresent(hero, 'the Arabic landing page fold');
+    expect(hero, 'the hero disclosure does not ship open').toContain('aria-expanded="true"');
+    expect(hero).toContain(group(V.governingGfaM2));
+    expect(hero).toContain(V.bayAreaFactorM2);
+    expect(hero).toMatch(/data-state="assumed"/);
+    expect(hero, 'the basis is truncated or not Verbatim').toContain(
+      `lang="en" class="verbatim">${V.bayAreaFactorBasis}<`,
+    );
+  });
+
+  it('states all five claims, in §16.5 order, with the refusal last', () => {
+    /*
+      The Arabic titles are read from the dictionary and found by their claim-title
+      element, not by bare text. Arabic has no capitals, so the fold's status stamp
+      «الصلاحية التنظيمية — لم تُقيَّم» opens with the fifth title's own words — the
+      trick the English stamp uses to stay out of `expectClaimOrder`'s way is not
+      available, and a bare `indexOf` would measure the stamp instead of the table.
+    */
+    const html = arabic();
+    const c = AR.claims;
+    const order = [c.selfConsistency, c.coverage, c.geometry, c.judgement, c.regulatory].map(
+      (claim) => html.indexOf(`<span class="lp-claim__title">${claim.title}</span>`),
+    );
+    expect(order.every((i) => i >= 0), 'the Arabic page does not state all five claims').toBe(
+      true,
+    );
+    expect([...order].sort((a, b) => a - b), 'the Arabic claims are out of order').toEqual(order);
+    expect(arabicText()).toContain(c.regulatory.status);
+  });
+
+  it('renders the five shared refusals from LIMITS_AR, and none from LIMITS', () => {
+    // The same paragraphs `/refusals` renders, from the one Arabic module both pages
+    // read. An English heading here would mean the switch was forgotten.
+    const ar = arabicText();
+    for (const limit of LIMITS_AR) {
+      expect(ar, `missing refusal: ${limit.heading}`).toContain(limit.heading);
+    }
+    for (const limit of LIMITS) {
+      expect(ar, `English refusal on the Arabic page: ${limit.heading}`).not.toContain(
+        limit.heading,
+      );
+    }
+  });
+
+  it('templates the verdict from the fixture, in Arabic word order', () => {
+    // R10 in Arabic: the dictionary holds the four stretches of sentence and no band
+    // name; the tokens and the headroom are the fixture's. Whitespace is squashed
+    // because `Verbatim` adds element boundaries a reader does not see.
+    const squash = (s: string): string => s.replace(/\s+/g, '');
+    const v = AR.capacities.verdict;
+    expect(squash(arabicText())).toContain(
+      squash(
+        `${v.before}${V.governingBand}${v.between}${V.nextBindingBand}${v.after}` +
+          `${group(V.headroomToNextM2)} m²${v.end}`,
+      ),
+    );
+  });
+
+  it('names each frontage from the recorded input, never from a literal', () => {
+    const html = arabic();
+    for (const edge of WORKED.input.plot.edges) {
+      if (!('roadHierarchy' in edge)) continue;
+      expect(html).toContain(AR.figure.edge(edge.classification, edge.roadHierarchy));
+      expect(html, 'the drawing still carries the English road label').not.toContain(
+        `${edge.roadHierarchy} ROAD`,
+      );
+    }
+  });
+
+  it('claims no permission, and uses «مطابقة» and «افتراضي» only negated', () => {
+    /*
+      `arabic.test.ts` holds each dictionary's SOURCE to the glossary. This holds the
+      RENDERED page, which also carries `LIMITS_AR` and the components another pass
+      translated — the words a reader actually meets on `/`.
+
+      «ما يمكن بناؤه» is the Arabic of the h1 this page was rewritten to stop
+      writing. «مطابق» predicated of an output says the opposite of the product;
+      «افتراضي» is "default", and may appear only in a sentence that denies one.
+    */
+    const reading = arabicReadingText(arabic());
+    expect(reading).not.toMatch(/يمكن بناؤه/u);
+    const negated = /(ليس|ليست|لا|غير|ولا|وليس|بلا|دون)\s+([؀-ۿ]+\s+){0,2}$/u;
+    for (const hit of reading.matchAll(/[؀-ۿ]*(مطابق|افتراضي)[؀-ۿ]*/gu)) {
+      const before = reading.slice(Math.max(0, (hit.index ?? 0) - 40), hit.index);
+      expect(negated.test(before), `«${hit[0]}» unnegated after «${before.trim()}»`).toBe(true);
+    }
+  });
+
+  it('says the deployment is not ready, in the fold and again at the foot', () => {
+    // A PRESENCE ASSERTION. The refusal sits beneath the answer at equal weight in
+    // Arabic as in English; a translation that let it slip below the fold would pass
+    // every prohibition above.
+    const html = arabic();
+    const hero = html.slice(0, html.indexOf('id="capacities"'));
+    expect(stripTags(hero)).toContain(AR.validity.stamp);
+    expect(arabicText()).toContain(AR.readiness.body);
   });
 });

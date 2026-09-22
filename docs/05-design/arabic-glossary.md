@@ -246,6 +246,7 @@ sheet needs to match the word on the sheet.
 | Dubai Building Code | كود دبي للمباني |
 | Development Control Regulations | لوائح ضبط التطوير |
 | Trakhees | تراخيص |
+| professional licence · licence number | الرخصة المهنية · رقم الرخصة — **never «الترخيص»**: «تراخيص» is the authority, and a field named with its word reads as though the number had been checked with it. It has not |
 | developer standard | معيار المطوّر |
 | project brief | موجز المشروع |
 | rule · encoded rule | قاعدة · قاعدة مُرمَّزة |

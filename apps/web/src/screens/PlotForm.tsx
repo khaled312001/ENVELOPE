@@ -25,6 +25,15 @@ import { useSession } from '../session.js';
 
 import { api, ApiError, type Actor, type PlotCreated, type PlotView } from '../api/client.js';
 import { PlotCanvas } from '../components/PlotCanvas.js';
+import { AR } from '../i18n/plotForm.ar.js';
+import { EN } from '../i18n/plotForm.en.js';
+import { useDict } from '../i18n/locale.js';
+
+/**
+ * `FR-PLT-001 AC2`'s tolerance between the computed and the stated area. Named here
+ * rather than typed into a sentence, because no digit is typed into a dictionary.
+ */
+const AREA_TOLERANCE = '2%';
 
 type Classification = 'ROAD' | 'ADJACENT_PLOT' | 'OPEN_SPACE' | 'OTHER' | '';
 type Hierarchy = 'ARTERIAL' | 'COLLECTOR' | 'LOCAL' | 'ACCESS' | '';
@@ -82,6 +91,7 @@ export function PlotForm({
   onError,
   prefill,
 }: PlotFormProps): JSX.Element {
+  const t = useDict(EN, AR);
   const [plotNumber, setPlotNumber] = useState(prefill?.plotNumber || '345-1234');
   const [community, setCommunity] = useState(prefill?.community ?? '');
   const [width, setWidth] = useState('80');
@@ -213,16 +223,17 @@ export function PlotForm({
       {draft.recovered ? (
         <div className="callout pf-draft" role="status">
           <div className="callout__body">
-            <strong>You had started entering a plot.</strong> Saved{' '}
-            <span className="value">{draft.recovered.updatedAt.slice(0, 16).replace('T', ' ')}</span>.
-            Nothing below has been changed.
+            <strong>{t.draft.title}</strong>
+            {t.draft.savedBefore}
+            <span className="value">{draft.recovered.updatedAt.slice(0, 16).replace('T', ' ')}</span>
+            {t.draft.savedAfter}
           </div>
           <div className="pf-draft__actions">
             <button type="button" className="button button--sm" onClick={applyRecovered}>
-              Restore it
+              {t.draft.restore}
             </button>
             <button type="button" className="button button--sm" onClick={draft.discard}>
-              Discard it
+              {t.draft.discard}
             </button>
           </div>
         </div>
@@ -231,39 +242,30 @@ export function PlotForm({
       {/* The save state is reported and never celebrated. "Saved" is a fact; a tick
           that appears and fades is a claim the reader cannot check afterwards. */}
       <p className="pf-draft__state muted" aria-live="polite">
-        {draft.state === 'saving' ? 'Saving…' : null}
-        {draft.state === 'saved' && draft.savedAt
-          ? `Saved ${draft.savedAt.slice(11, 16)}`
-          : null}
-        {draft.state === 'local-only'
-          ? 'Kept on this device only — sign in and it follows you.'
-          : null}
-        {draft.state === 'error' ? 'The last save did not reach the server.' : null}
+        {draft.state === 'saving' ? t.save.saving : null}
+        {draft.state === 'saved' && draft.savedAt ? t.save.saved(draft.savedAt.slice(11, 16)) : null}
+        {draft.state === 'local-only' ? t.save.localOnly : null}
+        {draft.state === 'error' ? t.save.error : null}
       </p>
       <header className="panel__header">
         <div>
-          <h2 className="panel__title">The plot</h2>
-          <p className="panel__subtitle">
-            Enter the dimensions from the affection plan. Every edge needs a
-            classification — the setback depends on it, and there is no default.
-          </p>
+          <h2 className="panel__title">{t.title}</h2>
+          <p className="panel__subtitle">{t.subtitle}</p>
         </div>
       </header>
 
       {prefill ? (
         <div className="callout callout--ok">
-          <strong>Carried over from the sheet you uploaded.</strong> The plot number,
-          community and stated area are filled in. Width and depth are not: the sheet
-          gives an area, not a frontage, and a rectangle inferred from an area would then
-          pass the 2% check against the number it came from.
+          <strong>{t.carried.title}</strong>
+          {t.carried.body(AREA_TOLERANCE)}
         </div>
       ) : null}
 
       <div className="field-group">
-        <p className="field-group__legend">Which plot</p>
+        <p className="field-group__legend">{t.which.legend}</p>
         <div className="grid grid--2">
         <div className="field">
-          <label htmlFor="plot-number">Plot number</label>
+          <label htmlFor="plot-number">{t.which.plotNumber}</label>
           <input
             id="plot-number"
             className="input"
@@ -274,28 +276,25 @@ export function PlotForm({
         </div>
 
         <div className="field">
-          <label htmlFor="community">Community</label>
+          <label htmlFor="community">{t.which.community}</label>
           <input
             id="community"
             className="input"
             value={community}
             onChange={(e) => setCommunity(e.target.value)}
-            placeholder="e.g. Business Bay"
+            placeholder={t.which.communityPlaceholder}
             required
           />
-          <p className="field__help">
-            The Development Control Regulation is per community, so this decides which
-            rules apply.
-          </p>
+          <p className="field__help">{t.which.communityHelp}</p>
         </div>
         </div>
       </div>
 
       <div className="field-group">
-        <p className="field-group__legend">How big</p>
+        <p className="field-group__legend">{t.size.legend}</p>
         <div className="grid grid--2">
         <div className="field">
-          <label htmlFor="width">Width (m)</label>
+          <label htmlFor="width">{t.size.width}</label>
           <input
             id="width"
             className="input input--num"
@@ -307,7 +306,7 @@ export function PlotForm({
         </div>
 
         <div className="field">
-          <label htmlFor="depth">Depth (m)</label>
+          <label htmlFor="depth">{t.size.depth}</label>
           <input
             id="depth"
             className="input input--num"
@@ -320,7 +319,8 @@ export function PlotForm({
 
         <div className="field">
           <label htmlFor="stated-area">
-            Area on the affection plan (m²) <span className="muted">optional</span>
+            {t.size.stated}
+            <span className="muted">{t.size.optional}</span>
           </label>
           <input
             id="stated-area"
@@ -330,15 +330,12 @@ export function PlotForm({
             onChange={(e) => setStatedArea(e.target.value)}
             placeholder={computedArea ?? ''}
           />
-          <p className="field__help">
-            If you enter it, we compare it against the area computed from your dimensions
-            and tell you when they disagree by more than 2%.
-          </p>
+          <p className="field__help">{t.size.statedHelp(AREA_TOLERANCE)}</p>
         </div>
 
         {computedArea ? (
           <div className="field field--readout">
-            <span className="field__readout-label">Computed area</span>
+            <span className="field__readout-label">{t.size.computed}</span>
             <span className="value field__readout-value">
               {computedArea}
               <span className="value__unit">m²</span>
@@ -349,13 +346,11 @@ export function PlotForm({
       </div>
 
       <h3 className="panel__section">
-        Edges
+        {t.edges.title}
         {unclassified > 0 ? (
-          <span className="chip chip--warn">
-            {unclassified} still unclassified
-          </span>
+          <span className="chip chip--warn">{t.edges.unclassified(String(unclassified))}</span>
         ) : (
-          <span className="chip chip--ok">all classified</span>
+          <span className="chip chip--ok">{t.edges.allClassified}</span>
         )}
       </h3>
 
@@ -368,7 +363,7 @@ export function PlotForm({
               </span>
               <div className="edge-list__controls">
                 <div className="field field--compact">
-                  <label htmlFor={`edge-${i}-class`}>Edge {i + 1} faces</label>
+                  <label htmlFor={`edge-${i}-class`}>{t.edges.faces(String(i + 1))}</label>
                   <select
                     id={`edge-${i}-class`}
                     className="input"
@@ -388,17 +383,17 @@ export function PlotForm({
                     }
                     required
                   >
-                    <option value="">Choose…</option>
-                    <option value="ROAD">A road</option>
-                    <option value="ADJACENT_PLOT">A neighbouring plot</option>
-                    <option value="OPEN_SPACE">Open space</option>
-                    <option value="OTHER">Something else</option>
+                    <option value="">{t.edges.choose}</option>
+                    <option value="ROAD">{t.edges.classes.ROAD}</option>
+                    <option value="ADJACENT_PLOT">{t.edges.classes.ADJACENT_PLOT}</option>
+                    <option value="OPEN_SPACE">{t.edges.classes.OPEN_SPACE}</option>
+                    <option value="OTHER">{t.edges.classes.OTHER}</option>
                   </select>
                 </div>
 
                 {edge.classification === 'ROAD' ? (
                   <div className="field field--compact">
-                    <label htmlFor={`edge-${i}-road`}>Road type</label>
+                    <label htmlFor={`edge-${i}-road`}>{t.edges.roadType}</label>
                     <select
                       id={`edge-${i}-road`}
                       className="input"
@@ -412,13 +407,13 @@ export function PlotForm({
                       }
                       required
                     >
-                      <option value="">Choose…</option>
-                      <option value="ARTERIAL">Arterial</option>
-                      <option value="COLLECTOR">Collector</option>
-                      <option value="LOCAL">Local</option>
-                      <option value="ACCESS">Access</option>
+                      <option value="">{t.edges.choose}</option>
+                      <option value="ARTERIAL">{t.edges.hierarchy.ARTERIAL}</option>
+                      <option value="COLLECTOR">{t.edges.hierarchy.COLLECTOR}</option>
+                      <option value="LOCAL">{t.edges.hierarchy.LOCAL}</option>
+                      <option value="ACCESS">{t.edges.hierarchy.ACCESS}</option>
                     </select>
-                    <p className="field__help">The setback table is keyed on this.</p>
+                    <p className="field__help">{t.edges.roadHelp}</p>
                   </div>
                 ) : null}
               </div>
@@ -440,13 +435,10 @@ export function PlotForm({
 
       <footer className="panel__footer">
         <button type="submit" className="button button--primary" disabled={!complete || busy}>
-          {busy ? 'Checking the boundary…' : 'Continue'}
+          {busy ? t.submit.busy : t.submit.idle}
         </button>
         {!complete ? (
-          <p className="fine-print">
-            Classify every edge to continue. A default here would silently change the
-            footprint.
-          </p>
+          <p className="fine-print">{t.submit.incomplete}</p>
         ) : null}
       </footer>
     </form>

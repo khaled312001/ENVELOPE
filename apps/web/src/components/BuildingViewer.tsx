@@ -47,12 +47,52 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
+import { useDict } from '../i18n/locale.js';
+import { AR } from '../i18n/viewer.ar.js';
+import { EN, type ViewerDictionary } from '../i18n/viewer.en.js';
+
 type View = 'axon' | 'top';
 
 /** How far apart "pull the levels apart" sets them, in metres. A viewing aid; nothing is measured across it. */
 const SPREAD_GAP_M = 3;
 /** No cut: every material keeps everything below this height. */
 const NO_CUT = 1e6;
+/** The view's name wherever a sentence says it — a constant, so not a word in a dictionary. */
+const VIEW = '3D';
+
+/**
+ * THE WORDS BESIDE THE MODEL, IN THE PAGE'S LANGUAGE — AND NOTHING ELSE CHANGED.
+ *
+ * `@envelope/massing` composes each label round the model's own level name, id and
+ * figure, and adds a few words of its own: "permitted, not placed", "gradient not
+ * assessed", "Height ceiling", "setback". Those words are looked up here by their
+ * exact English (`EN.scene`, which IS the package's wording) and replaced with the
+ * active locale's; everything round them is left as the model states it. In English
+ * this returns the label untouched. If the package ever rewords a phrase, the
+ * lookup misses and the label shows the package's English — a word in the wrong
+ * language, never a figure in the wrong place.
+ */
+function sceneText(label: SceneLabel, words: ViewerDictionary['scene']): string {
+  const en = EN.scene;
+  const { text } = label;
+  if (words === en) return text;
+  const suffix = (phrase: string, next: string): string =>
+    text.endsWith(` · ${phrase}`) ? text.slice(0, text.length - phrase.length) + next : text;
+  switch (label.kind) {
+    case 'level':
+      return suffix(en.permittedNotPlaced, words.permittedNotPlaced);
+    case 'ramp':
+      return suffix(en.gradientNotAssessed, words.gradientNotAssessed);
+    case 'ceiling':
+      return text.startsWith(`${en.heightCeiling} `)
+        ? words.heightCeiling + text.slice(en.heightCeiling.length)
+        : text;
+    case 'edge':
+      return text.replace(` · ${en.setback} `, ` · ${words.setback} `);
+    default:
+      return text;
+  }
+}
 
 interface Handle {
   setView(view: View): void;
@@ -98,7 +138,10 @@ export interface BuildingViewerProps {
    * a parking level is lost at the foot of a case drawn to the height ceiling.
    */
   readonly focusLevelId?: string;
-  /** The model's accessible name. It says where the same content is in words. */
+  /**
+   * The model's accessible name. It says where the same content is in words.
+   * Without one, the viewer names itself in the page's language.
+   */
   readonly label?: string;
   /** Drawn in the canvas's place where WebGL is unavailable. */
   readonly fallback?: ReactNode;
@@ -109,9 +152,11 @@ export function BuildingViewer({
   onInspect,
   variant = 'full',
   focusLevelId,
-  label = 'The building in 3D. Every level in it is listed in the table below.',
+  label,
   fallback,
 }: BuildingViewerProps): JSX.Element {
+  const t = useDict(EN, AR);
+  const name = label ?? t.label(VIEW);
   const figure = variant === 'figure';
   const stageRef = useRef<HTMLDivElement>(null);
   const scaleBarRef = useRef<HTMLSpanElement>(null);
@@ -133,6 +178,11 @@ export function BuildingViewer({
   chosen.current = { view, levelId, spread, cutM, live };
   const inspect = useRef(onInspect);
   inspect.current = onInspect;
+  // The words beside the model follow the page's language without rebuilding the
+  // scene: the labels are kept, and their text is set again when the locale changes.
+  const sceneWords = useRef(t.scene);
+  sceneWords.current = t.scene;
+  const labels = useRef<{ el: HTMLElement; label: SceneLabel }[]>([]);
 
   const last = model.levels[model.levels.length - 1];
   const topM = last ? (last.elevationMm + last.heightMm) / 1000 : 0;
@@ -200,7 +250,8 @@ export function BuildingViewer({
       el.className = `massing-label massing-label--${l.kind}`;
       if (l.provenanceClass === 'ASSUMED') el.dataset['state'] = 'assumed';
       else if (l.provenanceClass === 'DERIVED') el.dataset['state'] = 'derived';
-      el.textContent = l.text;
+      el.textContent = sceneText(l, sceneWords.current);
+      labels.current.push({ el, label: l });
       const tag = new CSS2DObject(el);
       tag.position.set(l.at[0], l.at[1], l.at[2]);
       (l.levelId ? (levelGroup.get(l.levelId) ?? built.root) : built.root).add(tag);
@@ -543,6 +594,7 @@ export function BuildingViewer({
 
     return () => {
       handle.current = null;
+      labels.current = [];
       if (queued) cancelAnimationFrame(queued);
       observer.disconnect();
       canvas.removeEventListener('pointerdown', onDown);
@@ -561,54 +613,57 @@ export function BuildingViewer({
   useEffect(() => handle.current?.spread(spread), [spread]);
   useEffect(() => handle.current?.cut(cutM), [cutM]);
   useEffect(() => handle.current?.live(live), [live]);
+  useEffect(() => {
+    for (const { el, label: l } of labels.current) el.textContent = sceneText(l, t.scene);
+  }, [t.scene]);
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey) return;
     if (handle.current?.key(e.key, e.shiftKey)) e.preventDefault();
   };
 
-  const cutLabel = cutM === null ? 'no cut' : `+${cutM.toFixed(1)} m`;
+  const cutLabel = cutM === null ? t.noCut : `+${cutM.toFixed(1)} m`;
 
   const tools = figure ? (
     <div className="massing-tools">
       <label className="toggle">
         <input type="checkbox" checked={live} onChange={(e) => setLive(e.target.checked)} />
-        Turn and zoom the model
+        {t.turnOn}
       </label>
       {live ? (
         <button type="button" className="link-button" onClick={() => handle.current?.reset()}>
-          Reset the view
+          {t.reset}
         </button>
       ) : null}
     </div>
   ) : (
     <div className="massing-tools">
-      <div className="segmented" role="group" aria-label="View">
+      <div className="segmented" role="group" aria-label={t.viewGroup}>
         <button type="button" className="segmented__option" aria-pressed={view === 'axon'} onClick={() => setView('axon')}>
-          3D
+          {t.axon(VIEW)}
         </button>
         <button type="button" className="segmented__option" aria-pressed={view === 'top'} onClick={() => setView('top')}>
-          From above
+          {t.top}
         </button>
       </div>
       <label className="massing-tools__field">
-        <span>Show</span>
+        <span>{t.show}</span>
         <select className="input" value={levelId ?? ''} onChange={(e) => setLevelId(e.target.value === '' ? null : e.target.value)}>
-          <option value="">Every level</option>
+          <option value="">{t.everyLevel}</option>
           {model.levels.map((l) => (
             <option key={l.id} value={l.id}>
               {l.id} · {l.name}
-              {l.placed === false ? ' · permitted, not placed' : ''}
+              {l.placed === false ? t.notPlaced : ''}
             </option>
           ))}
         </select>
       </label>
       <label className="toggle">
         <input type="checkbox" checked={spread} onChange={(e) => setSpread(e.target.checked)} />
-        Pull the levels apart
+        {t.spread}
       </label>
       <label className="massing-tools__field massing-tools__cut">
-        <span>Cut through at</span>
+        <span>{t.cutAt}</span>
         <input
           type="range"
           min={0}
@@ -628,7 +683,7 @@ export function BuildingViewer({
         className="link-button"
         onClick={() => handle.current?.reset()}
       >
-        Reset the view
+        {t.reset}
       </button>
     </div>
   );
@@ -636,11 +691,9 @@ export function BuildingViewer({
   // What the pointer does, said once. Selection is only promised where it opens something.
   const hint = figure
     ? live
-      ? 'Drag to turn it, and scroll or pinch to zoom. With it focused, the arrow keys turn it and Home starts again.'
-      : 'It stays still until you turn it on, so scrolling over it moves the page.'
-    : 'Drag to turn it and scroll to zoom — or, once it has focus, use the arrow keys (Shift ' +
-      'to pan), + and − to zoom and Home to start again.' +
-      (onInspect ? ' Select a car, a slab, the ramp or the envelope to see where it came from.' : '');
+      ? t.hint.figureLive
+      : t.hint.figureStill
+    : t.hint.full + (onInspect ? t.hint.select : '');
 
   return (
     <div className={`massing${figure ? ' massing--figure' : ''}`} data-focus={focusLevelId ? 'level' : undefined}>
@@ -650,8 +703,8 @@ export function BuildingViewer({
         className="massing-viewer"
         tabIndex={live ? 0 : undefined}
         role="group"
-        aria-roledescription="3D view"
-        aria-label={label}
+        aria-roledescription={t.roleDescription(VIEW)}
+        aria-label={name}
         aria-describedby={hintId}
         data-view={view}
         onKeyDown={onKeyDown}
@@ -660,7 +713,7 @@ export function BuildingViewer({
         {view === 'top' ? (
           <>
             <span className="massing-viewer__north" aria-hidden="true">
-              ↑ Grid north
+              {t.north}
             </span>
             <span className="massing-viewer__scale" aria-hidden="true">
               <span ref={scaleBarRef} className="massing-viewer__scale-bar" />
@@ -670,11 +723,7 @@ export function BuildingViewer({
         ) : null}
         {failed
           ? (fallback ?? (
-              <p className="massing-viewer__failed">
-                This browser could not start 3D drawing — WebGL is switched off or unavailable.
-                Every level is listed in the table below, and each parking level is drawn on the
-                Parking step.
-              </p>
+              <p className="massing-viewer__failed">{t.failed(VIEW)}</p>
             ))
           : null}
       </div>

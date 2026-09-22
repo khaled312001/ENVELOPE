@@ -14,6 +14,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useDict } from '../i18n/locale.js';
+import { AR } from '../i18n/provenanceTree.ar.js';
+import { EN } from '../i18n/provenanceTree.en.js';
+import { AR as TRACED_AR } from '../i18n/traced.ar.js';
+import { EN as TRACED_EN } from '../i18n/traced.en.js';
+import { EngineText } from './TracedValue.js';
+
 export interface Citation {
   readonly instrumentId: string;
   readonly instrumentVersion: string;
@@ -42,19 +49,6 @@ export interface ProvTree {
   readonly edges: readonly { readonly kind: string; readonly child: ProvTree }[];
 }
 
-/** How each edge kind reads in a sentence. */
-const EDGE_PHRASE: Readonly<Record<string, string>> = {
-  derivedFrom: 'computed as',
-  uses: 'using',
-  citedIn: 'cited in',
-  enteredBy: 'entered by',
-  justifiedBy: 'because',
-  boundedBy: 'bounded by',
-  sourcedFrom: 'from',
-  sensitiveTo: 'sensitive to',
-  supersededBy: 'superseded by',
-};
-
 const KIND_ICON: Readonly<Record<string, string>> = {
   VALUE: '=',
   COMPUTATION: 'ƒ',
@@ -75,6 +69,7 @@ export interface ProvenanceTreeProps {
 }
 
 export function ProvenanceTree({ tree, loading, onClose }: ProvenanceTreeProps): JSX.Element | null {
+  const t = useDict(EN, AR);
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -95,16 +90,16 @@ export function ProvenanceTree({ tree, loading, onClose }: ProvenanceTreeProps):
       className="provenance-panel"
       role="dialog"
       aria-modal="false"
-      aria-label="Where this number came from"
+      aria-label={t.title}
     >
       <header className="provenance-panel__header">
-        <h2 className="provenance-panel__title">Where this number came from</h2>
+        <h2 className="provenance-panel__title">{t.title}</h2>
         <button
           ref={closeRef}
           type="button"
           className="button button--ghost button--icon"
           onClick={onClose}
-          aria-label="Close derivation"
+          aria-label={t.close}
         >
           ✕
         </button>
@@ -112,19 +107,16 @@ export function ProvenanceTree({ tree, loading, onClose }: ProvenanceTreeProps):
 
       <div className="provenance-panel__body">
         {loading ? (
-          <p className="muted">Loading the derivation…</p>
+          <p className="muted">{t.loading}</p>
         ) : tree ? (
           <Branch tree={tree} depth={0} relation={null} />
         ) : (
-          <p className="muted">No derivation was recorded for this value.</p>
+          <p className="muted">{t.none}</p>
         )}
       </div>
 
       <footer className="provenance-panel__footer">
-        <p className="fine-print">
-          Every value in this run resolves to a rule, an assumption, or a person. Nothing
-          resolves to &ldquo;the system decided&rdquo;.
-        </p>
+        <p className="fine-print">{t.footer}</p>
       </footer>
     </aside>
   );
@@ -141,6 +133,7 @@ function Branch({
 }): JSX.Element {
   // Deep branches start collapsed. The first two levels answer most questions;
   // expanding further is a deliberate act, not a wall of text on arrival.
+  const t = useDict(EN, AR);
   const [open, setOpen] = useState(depth < 2);
   const { node } = tree;
   const hasChildren = tree.edges.length > 0;
@@ -154,7 +147,7 @@ function Branch({
             className="prov-branch__toggle"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            aria-label={open ? `Collapse ${node.label}` : `Expand ${node.label}`}
+            aria-label={open ? t.collapse(node.label) : t.expand(node.label)}
           >
             {open ? '▾' : '▸'}
           </button>
@@ -181,7 +174,7 @@ function Branch({
               key={`${e.child.node.id}-${i}`}
               tree={e.child}
               depth={depth + 1}
-              relation={EDGE_PHRASE[e.kind] ?? e.kind}
+              relation={(t.edges as Readonly<Record<string, string>>)[e.kind] ?? e.kind}
             />
           ))}
         </div>
@@ -190,19 +183,29 @@ function Branch({
   );
 }
 
+/**
+ * One node, as the engine recorded it. Every string here but a chip is the engine's
+ * — a formula, a rule id, a clause quoted from its instrument, a basis, a name — and
+ * is wrapped in `EngineText`, which marks it `Verbatim` on an Arabic page and
+ * leaves it bare on an English one.
+ */
 function NodeSummary({ node }: { readonly node: ProvNode }): JSX.Element {
+  const t = useDict(EN, AR);
+  const classes = useDict(TRACED_EN, TRACED_AR);
   switch (node.kind) {
     case 'VALUE':
       return (
         <span>
           <strong className="value">
-            {node.value}
+            <EngineText>{node.value}</EngineText>
             {node.unit ? <span className="value__unit">{node.unit}</span> : null}
           </strong>{' '}
-          <span className="muted">{node.parameterId}</span>
+          <span className="muted">
+            <EngineText>{node.parameterId}</EngineText>
+          </span>
           {node.provenanceClass ? (
             <span className={`chip chip--${node.provenanceClass.toLowerCase()}`}>
-              {node.provenanceClass.replace('_', ' ').toLowerCase()}
+              {classes.classChip(node.provenanceClass)}
             </span>
           ) : null}
         </span>
@@ -214,11 +217,15 @@ function NodeSummary({ node }: { readonly node: ProvNode }): JSX.Element {
     case 'RULE':
       return (
         <span>
-          <strong>{node.ruleId ?? node.label}</strong>
+          <strong>
+            <EngineText>{node.ruleId ?? node.label}</EngineText>
+          </strong>
           {node.citation ? (
             <span className="muted">
-              {' '}
-              — {node.citation.instrumentId} {node.citation.clauseReference}
+              {' — '}
+              <EngineText>
+                {node.citation.instrumentId} {node.citation.clauseReference}
+              </EngineText>
             </span>
           ) : null}
         </span>
@@ -227,54 +234,77 @@ function NodeSummary({ node }: { readonly node: ProvNode }): JSX.Element {
     case 'SOURCE_CLAUSE':
       return node.citation ? (
         <figure className="prov-clause">
-          <blockquote>{node.citation.sourceTextVerbatim}</blockquote>
+          <blockquote>
+            <EngineText>{node.citation.sourceTextVerbatim}</EngineText>
+          </blockquote>
+          {/* The citation, page included, is the instrument's reference and is set as
+              one: a clause number with its page in another language is a reference
+              nobody can look up. */}
           <figcaption>
-            {node.citation.instrumentId} v{node.citation.instrumentVersion},{' '}
-            {node.citation.clauseReference}
-            {node.citation.sourcePage > 0 ? `, p.${node.citation.sourcePage}` : null}
+            <EngineText>
+              {node.citation.instrumentId} v{node.citation.instrumentVersion},{' '}
+              {node.citation.clauseReference}
+              {node.citation.sourcePage > 0 ? `, p.${node.citation.sourcePage}` : null}
+            </EngineText>
           </figcaption>
         </figure>
       ) : (
-        <span>{node.label}</span>
+        <span>
+          <EngineText>{node.label}</EngineText>
+        </span>
       );
 
     case 'ASSUMPTION':
       return (
         <span>
-          <strong className="prov-assumption">{node.label}</strong>
+          <strong className="prov-assumption">
+            <EngineText>{node.label}</EngineText>
+          </strong>
           {node.value ? (
             <>
               {' = '}
-              <span className="value">{node.value}</span>
+              <span className="value">
+                <EngineText>{node.value}</EngineText>
+              </span>
             </>
           ) : null}
-          <span className="chip chip--assumed">assumed</span>
+          <span className="chip chip--assumed">{t.assumed}</span>
         </span>
       );
 
     case 'BASIS':
       // The sentence a user reads when they ask "why did you assume that?".
       // If it is empty or vague, the assumption should not have been made.
-      return <span className="prov-basis">{node.label}</span>;
+      return (
+        <span className="prov-basis">
+          <EngineText>{node.label}</EngineText>
+        </span>
+      );
 
     case 'USER':
       return (
         <span>
-          <span className="badge-user">{node.label}</span>
+          <span className="badge-user">
+            <EngineText>{node.label}</EngineText>
+          </span>
         </span>
       );
 
     case 'CONSTRAINT':
       return (
         <span>
-          {node.label}
+          <EngineText>{node.label}</EngineText>
           {node.detail?.['binding'] === true ? (
-            <span className="chip chip--binding">binding</span>
+            <span className="chip chip--binding">{t.binding}</span>
           ) : null}
         </span>
       );
 
     default:
-      return <span>{node.label}</span>;
+      return (
+        <span>
+          <EngineText>{node.label}</EngineText>
+        </span>
+      );
   }
 }

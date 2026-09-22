@@ -189,6 +189,8 @@ export function ParkingPlan({
   const sorted = [...levelPlan.rects].sort((a, b) => ORDER[a.kind] - ORDER[b.kind]);
   const access = levelPlan.access.recommended;
   const stroke = Math.max(w, h) / 400;
+  // The plot step numbers its edges from 1 and so does its figure; `edgeSeq` counts
+  // from 0. Printed raw, "frontage 1" here was edge 2 on the screen before it.
 
   const summary =
     t.summary(
@@ -196,7 +198,7 @@ export function ParkingPlan({
       levelPlan.packingRect.widthM,
       levelPlan.packingRect.depthM,
       levelPlan.areaPerBayM2.value,
-    ) + (access ? t.summaryAccess(access.widthM, String(access.edgeSeq)) : t.summaryNoAccess);
+    ) + (access ? t.summaryAccess(access.widthM, String(access.edgeSeq + 1)) : t.summaryNoAccess);
 
   return (
     <div className="parking-plan">
@@ -383,7 +385,7 @@ export function VehicleAccessPanel({
           <p>
             <strong>
               {t.frontage}
-              {recommended.edgeSeq}
+              {recommended.edgeSeq + 1}
               {recommended.hierarchy ? t.road(recommended.hierarchy) : ''}
             </strong>
             {t.recommended(recommended.widthM, recommended.centreOffsetM)}
@@ -410,7 +412,7 @@ export function VehicleAccessPanel({
               <li key={c.edgeSeq}>
                 <strong>
                   {t.frontage}
-                  {c.edgeSeq}
+                  {c.edgeSeq + 1}
                 </strong>
                 {' — '}
                 <EngineText>{c.rationale}</EngineText>
@@ -429,7 +431,7 @@ export function VehicleAccessPanel({
               <li key={r.edgeSeq}>
                 <strong>
                   {t.frontage}
-                  {r.edgeSeq}
+                  {r.edgeSeq + 1}
                 </strong>
                 {' — '}
                 <EngineText>{r.reason}</EngineText>

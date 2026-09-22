@@ -482,7 +482,8 @@ function LevelDrawing({
     packWidth: plan.packingRect.widthM,
     packDepth: plan.packingRect.depthM,
     accessWidth: access.widthM,
-    frontage: String(access.edgeSeq),
+    // Numbered from 1, as the plot step and its figure number edges; `edgeSeq` is 0-based.
+    frontage: String(access.edgeSeq + 1),
   });
 
   return (
@@ -976,7 +977,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
                         <span className="pk-legend__meta">
                           {access.recommended.widthM}
                           {t.level.accessOn}{' '}
-                          {access.recommended.edgeSeq}
+                          {access.recommended.edgeSeq + 1}
                           {t.level.accessRecommended}
                         </span>
                       </span>
@@ -1265,7 +1266,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
                     width, which is why English has two empty slots here. */}
                 <strong>
                   {t.access.frontage}
-                  {access.recommended.edgeSeq} ·{' '}
+                  {access.recommended.edgeSeq + 1} ·{' '}
                   {t.access.roadBefore}
                   {readable(t, access.recommended.hierarchy)}
                   {t.access.roadAfter}{' '}
@@ -1316,7 +1317,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
                         {c.rank}
                       </td>
                       <th scope="row" data-label={t.access.frontageColumn}>
-                        {c.edgeSeq} · {readable(t, c.hierarchy)}
+                        {c.edgeSeq + 1} · {readable(t, c.hierarchy)}
                       </th>
                       <td className="schedule__fill" data-label={t.access.why}>
                         <p>
@@ -1357,7 +1358,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
                   {access.rejected.map((r) => (
                     <tr key={r.edgeSeq}>
                       <th scope="row" data-label={t.access.frontageColumn}>
-                        {r.edgeSeq}
+                        {r.edgeSeq + 1}
                       </th>
                       <td data-label={t.access.classification}>
                         {readable(t, r.classification)}

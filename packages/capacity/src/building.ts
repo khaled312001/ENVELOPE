@@ -444,8 +444,10 @@ function sectionsOf(
     x: (centre.x + longest.end.x - longest.start.x) as Mm,
     y: (centre.y + longest.end.y - longest.start.y) as Mm,
   };
+  // Numbered from 1: the plot step, its figure and the access panel all count edges
+  // that way, and a drawing note that said "boundary 0" named an edge no screen shows.
   const longTaken =
-    `Through the middle of the podium, parallel to boundary ${longest.seq}, ` +
+    `Through the middle of the podium, parallel to boundary ${longest.seq + 1}, ` +
     'the longest side of the plot.';
 
   const context = { plot, setbackRing, levels, ramps, strip };

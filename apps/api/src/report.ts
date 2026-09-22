@@ -317,10 +317,12 @@ export function buildRunReport(args: BuildReportInput): RunReport {
     governing: capacity.governingBand === band,
   });
 
+  // The label is the band's name without its letter: the report heads each card
+  // "Band A · <label>", and a label that began "Band A —" printed the name twice.
   const bands: readonly CapacityBandView[] = [
     bandOf(
       'REGULATORY',
-      'Band A — regulatory',
+      'regulatory',
       'What do FAR and the area caps permit?',
       capacity.regulationLimitedGfa,
       `FAR ${capacity.permittedFar.value.toString()} × plot area ${plotAreaM2.toFixed(2)} m²` +
@@ -331,7 +333,7 @@ export function buildRunReport(args: BuildReportInput): RunReport {
     ),
     bandOf(
       'GEOMETRIC',
-      'Band B — geometric',
+      'geometric',
       'What does the envelope physically hold within height and footprint limits?',
       capacity.geometryLimitedGfa,
       `tower plate ${envelope.towerPlateCap.value.toFixed(2)} m² × ` +
@@ -343,7 +345,7 @@ export function buildRunReport(args: BuildReportInput): RunReport {
     ),
     bandOf(
       'PARKING',
-      'Band C — parking',
+      'parking',
       'What can the achievable parking supply support?',
       capacity.parkingLimitedGfa,
       `${parking.supportableUnitCeiling.value} unit(s) supportable by parking × ` +

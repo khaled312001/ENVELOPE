@@ -632,6 +632,10 @@ describe('export — the §3.4 artifact', () => {
     expect(html).toMatch(/DRAFT rules with placeholder citations/);
     expect(html).toMatch(/NOT SIGNED/);
     expect(html).toMatch(/@media\s+print/);
+    // Each band card names its band once. The labels are set here, at the composition
+    // root, and the renderer prefixes the letter — "Band A · Band A — regulatory" was both.
+    expect(html).toContain('<h3>Band A · regulatory</h3>');
+    expect(html).not.toMatch(/<h3>Band [ABC] · Band/);
   });
 
   it('produces the same bytes twice — §13.4', async () => {

@@ -710,6 +710,19 @@ describe('run fingerprint — §13.4', () => {
 
 describe('HTML report', () => {
   const html = toHtml(makeRun());
+
+  it('numbers plot edges from 1, as every screen before it does', () => {
+    // The fixture's edges carry seq 0 and 1; a reader who classified "edge 1" on the
+    // plot step must find edge 1 here, not a row headed 0.
+    expect(html).toContain('<tr><th scope="row">1</th><td>ROAD · ARTERIAL</td>');
+    expect(html).toContain('<tr><th scope="row">2</th><td>ADJACENT_PLOT</td>');
+    expect(html).not.toContain('<tr><th scope="row">0</th>');
+  });
+
+  it('names each band once in its heading', () => {
+    expect(html).toContain('<h3>Band A · Regulation-limited</h3>');
+    expect(html).not.toMatch(/<h3>Band [ABC] · Band [ABC]/);
+  });
   it('is a self-contained document with no external resource', () => {
     expect(html.startsWith('<!doctype html>')).toBe(true);
     expect(html).toContain('<html lang="en"');

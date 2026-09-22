@@ -862,8 +862,11 @@ function envelopeSection(run: RunReport, indexes: Indexes): string {
     binding(dimension.binding, indexes),
   ]);
 
+  // Numbered from 1, as the plot step, its figure and the access panel number edges.
+  // `seq` counts from 0, and a report whose table said "edge 0" named an edge no
+  // screen the reader had just used shows.
   const edgeRows = run.envelope.edges.map((edge) => [
-    `${edge.seq}`,
+    `${edge.seq + 1}`,
     esc(edge.classification) + (edge.roadHierarchy === null ? '' : ` · ${esc(edge.roadHierarchy)}`),
     plain(edge.lengthM, 'm'),
     plain(edge.appliedSetbackM, 'm'),

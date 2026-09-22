@@ -68,8 +68,10 @@ import { describe, expect, it } from 'vitest';
 */
 import { AR as CHROME_AR } from '../src/i18n/chrome.ar.js';
 import { StaticLocale } from '../src/i18n/locale.js';
+import { AR as RUN_AR } from '../src/i18n/runPage.ar.js';
 import { EN as RUN_EN } from '../src/i18n/runPage.en.js';
 import { AR as WORK_AR } from '../src/i18n/work.ar.js';
+import { ReviewPanel, type ReviewSubject } from '../src/screens/RunPage.js';
 import Work, { RunTable, type RunRow } from '../src/screens/Work.js';
 import {
   arabicReadingText,
@@ -475,5 +477,106 @@ describe('/work in Arabic', () => {
       expect(text, `/work (ar) claims ${claim} of an account`).not.toMatch(claim);
       expect(DICT_AR, `work.ar.ts claims ${claim}`).not.toMatch(claim);
     }
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * THE REVIEW GATE AND THE FILES, ON THE RUN PAGE.
+ *
+ * The panel offers what the server would accept and nothing it would not: the review
+ * signature to the author or a reviewer holding a licence number, and the files only
+ * once both export gates are signed. The server checks all of it again, so what these
+ * tests hold is the page's honesty — that it does not offer a control the server
+ * would refuse, and that it says what a signature does not prove.
+ * ---------------------------------------------------------------------- */
+
+describe('the review panel', () => {
+  const SIGNED = {
+    G3_ASSUMPTIONS_ACKNOWLEDGED: { actorName: 'Hana Author', at: '2026-09-20T08:15:00.000Z' },
+    G4_REVIEWER_NAMED: { actorName: 'Omar Reviewer', at: '2026-09-21T11:40:00.000Z' },
+  };
+  const subject = (over: Partial<ReviewSubject>): ReviewSubject => ({
+    runId: 'run-1',
+    gates: {},
+    access: 'author',
+    capacity: {},
+    ...over,
+  });
+  const panel = (s: ReviewSubject, licence: string | null, locale: 'en' | 'ar' = 'en'): string =>
+    renderToStaticMarkup(
+      <StaticLocale locale={locale}>
+        <ReviewPanel run={s} licence={licence} onSigned={() => {}} />
+      </StaticLocale>,
+    );
+  const buttons = (html: string): string[] =>
+    [...html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)].map((m) => stripTags(m[1] ?? '').replace(/\s+/g, ' ').trim());
+
+  it('offers the review signature to an author or reviewer with a licence, and says what it does not prove', () => {
+    for (const access of ['author', 'reviewer'] as const) {
+      const html = panel(subject({ access }), 'DM-12345');
+      expect(buttons(html), access).toEqual(['Sign the review gate (G4)']);
+      expect(stripTags(html)).toContain('Nobody checks the licence');
+      expect(stripTags(html)).toContain('nothing stops an author signing their own run');
+    }
+  });
+
+  it('offers no signature to a reader, or to an account with no licence number', () => {
+    expect(buttons(panel(subject({ access: 'reader' }), 'DM-12345'))).toEqual([]);
+    expect(stripTags(panel(subject({ access: 'reader' }), 'DM-12345'))).toContain(RUN_EN.review.readerOnly);
+    expect(buttons(panel(subject({ access: 'author' }), null))).toEqual([]);
+    expect(stripTags(panel(subject({ access: 'author' }), null))).toContain(RUN_EN.review.noLicence);
+  });
+
+  it('never offers the assumption gate, because this page does not list the assumptions', () => {
+    // One button in the fullest unsigned state, and it is the review's.
+    const html = panel(subject({}), 'DM-12345');
+    expect(buttons(html)).toHaveLength(1);
+    expect(stripTags(html)).toContain(RUN_EN.review.assumptionsWhere);
+    expect(buttons(html).join(' ')).not.toMatch(/assumption|acknowledg/i);
+  });
+
+  it('holds the files back until both gates are signed', () => {
+    const onlyReview = panel(subject({ gates: { G4_REVIEWER_NAMED: SIGNED.G4_REVIEWER_NAMED } }), null);
+    expect(stripTags(onlyReview)).toContain(RUN_EN.files.locked);
+    expect(onlyReview).not.toContain(RUN_EN.files.html);
+
+    const both = panel(subject({ gates: SIGNED, access: 'reader' }), null);
+    expect(stripTags(both)).not.toContain(RUN_EN.files.locked);
+    // A run with no model has nothing to draw, so it is not offered the drawn files —
+    // the server would answer 409 for them.
+    expect(buttons(both)).toEqual([RUN_EN.files.html, RUN_EN.files.json, RUN_EN.files.xlsx]);
+  });
+
+  it('names who signed and when, as the run recorded it', () => {
+    const text = stripTags(panel(subject({ gates: SIGNED }), 'DM-12345'));
+    expect(text).toContain('Omar Reviewer');
+    expect(text).toContain('2026-09-21 11:40');
+    expect(text).toContain('Hana Author');
+    expect(buttons(panel(subject({ gates: SIGNED }), 'DM-12345'))).not.toContain('Sign the review gate (G4)');
+  });
+
+  it('in Arabic: no English prose, and what the run carries stays as it was sent', () => {
+    const states = [
+      panel(subject({}), 'DM-12345', 'ar'),
+      panel(subject({ access: 'reader' }), null, 'ar'),
+      panel(subject({}), null, 'ar'),
+      panel(subject({ gates: SIGNED }), null, 'ar'),
+    ];
+    for (const html of states) {
+      expectSitewideProhibitions(html, 'review panel (ar)');
+      expectNoEnglishProse(html, 'review panel (ar)');
+    }
+    const signed = states[3]!;
+    const reading = arabicReadingText(signed);
+    for (const sent of ['Omar Reviewer', 'Hana Author', '2026-09-21 11:40']) {
+      expect(stripTags(signed)).toContain(sent);
+      expect(reading, `${sent} is outside Verbatim`).not.toContain(sent);
+    }
+    // The gate id sits in its own Verbatim run inside the Arabic label.
+    expect(buttons(states[0]!).map((b) => b.replace(/\s/g, ''))).toEqual([
+      `${RUN_AR.review.signBefore}G4${RUN_AR.review.signAfter}`.replace(/\s/g, ''),
+    ]);
+    expect(RUN_AR.review.signNote).toContain('لا يفحص أحدٌ الرخصة');
+    expect(RUN_AR.review.signNote).toContain('توقيع تشغيلته بنفسه');
   });
 });

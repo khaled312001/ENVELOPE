@@ -54,6 +54,7 @@ import { RulesStep } from './screens/RulesStep.js';
 import { AR } from './i18n/app.ar.js';
 import { EN } from './i18n/app.en.js';
 import { useDict, useLocale, Verbatim } from './i18n/locale.js';
+import { hashOf } from './gateHash.js';
 
 /*
   `gated` is DELETED. It was metadata nobody read: the flag said `plot` was gated
@@ -1242,24 +1243,6 @@ function openDocument(text: string, type: string): void {
 
 // ---------------------------------------------------------------------------
 
-/** Stable hash of what a gate is acknowledging. Mirrors the server's function. */
-function hashOf(subject: unknown): string {
-  const canonical = (v: unknown): string => {
-    if (v === null || typeof v !== 'object') return JSON.stringify(v) ?? 'null';
-    if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;
-    return `{${Object.entries(v as Record<string, unknown>)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, val]) => `${JSON.stringify(k)}:${canonical(val)}`)
-      .join(',')}}`;
-  };
-  const payload = canonical(subject);
-  let h = 0x811c9dc5;
-  for (let i = 0; i < payload.length; i++) {
-    h ^= payload.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return h.toString(16).padStart(8, '0');
-}
 
 function applyAssumptionEdit(
   body: RunRequestBody,

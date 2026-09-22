@@ -95,6 +95,62 @@ export const EN = {
     empty: 'This is the only run of this plot on your list.',
   },
 
+  /*
+    THE TWO EXPORT GATES, AND THE FILES BEHIND THEM.
+
+    `review.assumptionsWhere` is a refusal: the assumptions are acknowledged on the
+    register, where each one is listed, and this page does not list them. A tick
+    here would let someone accept a list they never opened — the reason the engine's
+    own export step sends the reader back to the register rather than offering one.
+
+    `review.signNote` says what a signature records and what it does not: the name
+    and licence number on the account, checked with nobody, and nothing stops an
+    author signing their own run. Both are true of the server, and the page that
+    collects the signature is where a reader needs to hear it.
+  */
+  review: {
+    title: 'Review and files',
+    note:
+      'Nothing leaves the system until two gates are signed against this run as it was ' +
+      'computed. The server checks both again for every file it hands out.',
+    assumptions: 'Assumptions acknowledged',
+    assumptionsWhere:
+      'Given by the author on the assumption register in the engine, where every ' +
+      'assumption is listed. Not given here, because this page does not list them.',
+    signed: 'Review signed',
+    by: 'Signed by ',
+    at: ' · ',
+    unsigned: 'Not signed yet.',
+    signBefore: 'Sign the review gate (',
+    signAfter: ')',
+    signing: 'Signing…',
+    signNote:
+      'Signing records your name and the licence number on your account next to this ' +
+      'run. Nobody checks the licence, and nothing stops an author signing their own run.',
+    noLicence:
+      'Signing needs a licence number on the account, and this account was made without ' +
+      'one. The number is given when an account is made.',
+    readerOnly:
+      'You can open this run and download its files once both gates are signed. Signing ' +
+      'is for its author, or for an account it was shared with to review.',
+    refusedBefore: 'The review was not signed. The server said: ',
+    session: 'Your session has ended. Sign in again, then sign the review.',
+  },
+
+  files: {
+    title: 'Files',
+    locked: 'The files open once both gates are signed.',
+    html: 'Open the report',
+    sheets: 'Open the drawing set',
+    newTab: 'Opens in a new tab.',
+    json: 'Download the report data (JSON)',
+    dxf: 'Download the building for CAD (DXF)',
+    glb: 'Download the 3D model (glTF)',
+    xlsx: 'Download the workbook (XLSX)',
+    preparing: 'Preparing…',
+    refusedBefore: 'The file was not handed out. The server said: ',
+  },
+
   share: {
     title: 'Share this run',
     asBefore: 'You can open this run as its ',

@@ -16,6 +16,11 @@
  * - The other runs of the same plot, as rows. They are separate runs with separate
  *   inputs, so nothing is computed between them — no difference, no change, no
  *   "best". The reader compares; the page does not.
+ * - Review and files: the two export gates as the run records them, the review
+ *   gate's signature for an account that may give it, and the run's files once both
+ *   are signed. The page decides nothing here that the server does not decide again:
+ *   it offers the signature to the accounts the server would accept it from, and
+ *   every file request is checked against the gates on arrival.
  * - Sharing, for the run's author only. The server answers the same way whether or
  *   not an account uses the address, and so does this page, so it cannot be used to
  *   find out who has an account.
@@ -28,13 +33,15 @@
 
 import { type FormEvent, type ReactNode, useEffect, useId, useState } from 'react';
 
-import { AuthFailure, accountRuns, type RunAccess } from '../api/auth.js';
+import { AuthFailure, accountRuns, type RunAccess, type RunFileFormat } from '../api/auth.js';
 import type { RunView } from '../api/client.js';
 import { ModelFigure } from '../components/ModelFigure.js';
+import { hashOf } from '../gateHash.js';
 import { AR } from '../i18n/runPage.ar.js';
 import { EN } from '../i18n/runPage.en.js';
 import { useDict } from '../i18n/locale.js';
 import { Link, type Href } from '../router.js';
+import { useSession } from '../session.js';
 import { group, Ltr, RunTable, useBandLabel, type RunRow } from './Work.js';
 
 const day = (iso: string): string => iso.slice(0, 10);
@@ -42,6 +49,10 @@ const time = (iso: string): string => iso.slice(11, 16);
 
 /** The review gate's id, as the engine names it. An identifier, so not copy. */
 const REVIEW_GATE = 'G4';
+
+/** The two gates an export answers to, by the keys the API stores them under. */
+const ASSUMPTIONS_KEY = 'G3_ASSUMPTIONS_ACKNOWLEDGED';
+const REVIEW_KEY = 'G4_REVIEWER_NAMED';
 
 type Stored = RunView & { readonly access: RunAccess };
 
@@ -67,8 +78,21 @@ export function RunPage({
 }): JSX.Element {
   const t = useDict(EN, AR);
   const bandLabel = useBandLabel();
+  const session = useSession();
   const [run, setRun] = useState<Stored | null>(null);
   const [error, setError] = useState<LoadError | null>(null);
+
+  /*
+    After a signature the run is read again rather than patched here: the gate is
+    the server's record, and a page that wrote its own copy of it could show a
+    signature the server had refused.
+  */
+  const reload = (): void => {
+    accountRuns
+      .get(runId)
+      .then(setRun)
+      .catch(() => setError('failed'));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -188,24 +212,24 @@ export function RunPage({
                     <span className="value">{run.assumptions.length}</span>
                   </dd>
                 </div>
-                {row ? (
-                  <div>
-                    <dt>{t.answer.gates}</dt>
-                    <dd>
-                      <span className="value">{row.gatesSatisfied}</span>
-                      {t.answer.gatesOf}
-                      <span className="value">4</span>
-                      {row.reviewer ? (
-                        <>
-                          {t.answer.signedBy}
-                          <Ltr>{row.reviewer.name}</Ltr>
-                        </>
-                      ) : (
-                        t.answer.notSigned
-                      )}
-                    </dd>
-                  </div>
-                ) : null}
+                {/* From the run's own gate record, not the list row, so a signature
+                    given on this page shows here without the list being read again. */}
+                <div>
+                  <dt>{t.answer.gates}</dt>
+                  <dd>
+                    <span className="value">{Object.keys(run.gates ?? {}).length}</span>
+                    {t.answer.gatesOf}
+                    <span className="value">4</span>
+                    {run.gates?.[REVIEW_KEY] ? (
+                      <>
+                        {t.answer.signedBy}
+                        <Ltr>{run.gates[REVIEW_KEY].actorName}</Ltr>
+                      </>
+                    ) : (
+                      t.answer.notSigned
+                    )}
+                  </dd>
+                </div>
               </dl>
 
               <figure className="figure rn__model">
@@ -225,6 +249,8 @@ export function RunPage({
               </figure>
             </div>
           </section>
+
+          <ReviewPanel run={run} licence={session.account?.licence ?? null} onSigned={reload} />
 
           <section className="shell section" aria-labelledby="rn-siblings">
             <div className="section__head">
@@ -256,6 +282,232 @@ export function RunPage({
         </>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Why the signature did not go through. `session` is the one the page can say in its
+ * own words; any other refusal is the server's sentence, shown as it was sent — the
+ * reason a reviewer is refused (no licence, not their run, a stale subject) is the
+ * server's to state, and a paraphrase here would drift from it.
+ */
+type SignRefusal = { readonly kind: 'session' } | { readonly kind: 'server'; readonly sentence: string };
+
+/** The run's files, in the order a reader wants them: what to read, then what to open elsewhere. */
+const FILES: readonly { readonly format: RunFileFormat; readonly opens: boolean; readonly drawn: boolean }[] = [
+  { format: 'html', opens: true, drawn: false },
+  { format: 'sheets', opens: true, drawn: true },
+  { format: 'json', opens: false, drawn: false },
+  { format: 'dxf', opens: false, drawn: true },
+  { format: 'glb', opens: false, drawn: true },
+  { format: 'xlsx', opens: false, drawn: false },
+];
+
+const EXTENSION: Record<RunFileFormat, string> = {
+  html: 'html',
+  sheets: 'html',
+  json: 'json',
+  dxf: 'dxf',
+  glb: 'glb',
+  xlsx: 'xlsx',
+};
+
+/**
+ * What the panel reads of a run, and nothing more: its id, its gates, the reader's
+ * role on it, whether it has a model to draw, and the subject G4 is signed over —
+ * which is only ever hashed, so it is `unknown` here rather than a shape to rely on.
+ */
+export type ReviewSubject = Pick<Stored, 'runId' | 'gates' | 'access' | 'building'> & {
+  readonly capacity: unknown;
+};
+
+/**
+ * The two export gates, the review signature, and the files behind them.
+ *
+ * Exported so the tests can render each state — signed, unsigned, reader, no
+ * licence — without a server.
+ *
+ * THE ASSUMPTION GATE IS NOT OFFERED HERE, and that is the design. G3 is given on the
+ * register, where every assumption is listed; this page shows a count. A button here
+ * would accept a list the reader never opened, which is exactly why the engine's own
+ * export step sends the reader back to the register instead of offering one.
+ */
+export function ReviewPanel({
+  run,
+  licence,
+  onSigned,
+}: {
+  readonly run: ReviewSubject;
+  /** The licence number on the signed-in account, or null. The server decides again. */
+  readonly licence: string | null;
+  readonly onSigned: () => void;
+}): JSX.Element {
+  const t = useDict(EN, AR);
+  const gates = run.gates ?? {};
+  const assumptions = gates[ASSUMPTIONS_KEY];
+  const review = gates[REVIEW_KEY];
+  const mayReview = run.access === 'author' || run.access === 'reviewer';
+  const ready = Boolean(assumptions && review);
+  const [signing, setSigning] = useState(false);
+  const [refusal, setRefusal] = useState<SignRefusal | null>(null);
+  const [fetching, setFetching] = useState<RunFileFormat | null>(null);
+  const [fileRefusal, setFileRefusal] = useState<string | null>(null);
+
+  const sign = (): void => {
+    setSigning(true);
+    setRefusal(null);
+    accountRuns
+      .signReview(run.runId, hashOf(run.capacity))
+      .then(onSigned)
+      .catch((e: unknown) => {
+        if (e instanceof AuthFailure && e.status === 401) setRefusal({ kind: 'session' });
+        else setRefusal({ kind: 'server', sentence: e instanceof Error ? e.message : String(e) });
+      })
+      .finally(() => setSigning(false));
+  };
+
+  const fetchFile = (format: RunFileFormat, opens: boolean): void => {
+    setFetching(format);
+    setFileRefusal(null);
+    accountRuns
+      .file(run.runId, format)
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        if (opens) {
+          // Read before it is filed: a report that lands in Downloads unopened is how
+          // a claim statement goes unread. The engine's export step does the same.
+          window.open(url, '_blank', 'noopener');
+        } else {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `envelope-${run.runId.slice(0, 8)}.${EXTENSION[format]}`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      })
+      .catch((e: unknown) => setFileRefusal(e instanceof Error ? e.message : String(e)))
+      .finally(() => setFetching(null));
+  };
+
+  const when = (at: string): string => `${day(at)} ${time(at)}`;
+
+  return (
+    <section className="shell section" aria-labelledby="rn-review">
+      <div className="section__head">
+        <h2 id="rn-review">{t.review.title}</h2>
+        <p className="wk__note">{t.review.note}</p>
+      </div>
+
+      <ol className="gate-list rn__gates">
+        <li className={assumptions ? 'is-done' : undefined}>
+          <span className="gate-list__glyph" aria-hidden="true">
+            {assumptions ? '✓' : '○'}
+          </span>
+          <div>
+            <strong>{t.review.assumptions}</strong>
+            {assumptions ? (
+              <p>
+                {t.review.by}
+                <Ltr>{assumptions.actorName}</Ltr>
+                {t.review.at}
+                <Ltr>{when(assumptions.at)}</Ltr>
+              </p>
+            ) : (
+              <p>
+                {t.review.unsigned} {t.review.assumptionsWhere}
+              </p>
+            )}
+          </div>
+        </li>
+        <li className={review ? 'is-done' : undefined}>
+          <span className="gate-list__glyph" aria-hidden="true">
+            {review ? '✓' : '○'}
+          </span>
+          <div>
+            <strong>{t.review.signed}</strong>
+            {review ? (
+              <p>
+                {t.review.by}
+                <Ltr>{review.actorName}</Ltr>
+                {t.review.at}
+                <Ltr>{when(review.at)}</Ltr>
+              </p>
+            ) : !mayReview ? (
+              <p>
+                {t.review.unsigned} {t.review.readerOnly}
+              </p>
+            ) : licence === null ? (
+              <p>
+                {t.review.unsigned} {t.review.noLicence}
+              </p>
+            ) : (
+              <>
+                <p>
+                  {t.review.unsigned} {t.review.signNote}
+                </p>
+                <button type="button" className="button" onClick={sign} disabled={signing} aria-busy={signing}>
+                  {signing ? (
+                    t.review.signing
+                  ) : (
+                    <>
+                      {t.review.signBefore}
+                      <Ltr>{REVIEW_GATE}</Ltr>
+                      {t.review.signAfter}
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+            {refusal ? (
+              <p className="ac__error" role="alert">
+                {refusal.kind === 'session' ? (
+                  t.review.session
+                ) : (
+                  <>
+                    {t.review.refusedBefore}
+                    <Ltr>{refusal.sentence}</Ltr>
+                  </>
+                )}
+              </p>
+            ) : null}
+          </div>
+        </li>
+      </ol>
+
+      <div className="rn__files">
+        <h3>{t.files.title}</h3>
+        {ready ? (
+          <>
+            <ul className="rn__file-list">
+              {FILES.filter((f) => !f.drawn || run.building).map(({ format, opens }) => (
+                <li key={format}>
+                  <button
+                    type="button"
+                    className={format === 'html' ? 'button button--primary' : 'button'}
+                    onClick={() => fetchFile(format, opens)}
+                    disabled={fetching !== null}
+                    aria-busy={fetching === format}
+                  >
+                    {fetching === format ? t.files.preparing : t.files[format]}
+                  </button>
+                  {opens ? <span className="rn__file-note">{t.files.newTab}</span> : null}
+                </li>
+              ))}
+            </ul>
+            {fileRefusal ? (
+              <p className="ac__error" role="alert">
+                {t.files.refusedBefore}
+                <Ltr>{fileRefusal}</Ltr>
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <p className="wk__note">{t.files.locked}</p>
+        )}
+      </div>
+    </section>
   );
 }
 

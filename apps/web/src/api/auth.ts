@@ -116,4 +116,55 @@ export const accountRuns = {
       method: 'POST',
       body: JSON.stringify({ email, role }),
     }),
+
+  /**
+   * G4 — the review gate — signed on this account's session.
+   *
+   * The one act a `reviewer` share exists for. The server decides whether this
+   * account may sign (the author or a reviewer, holding a licence number) and
+   * records the name and licence the account carries; nothing here asserts either.
+   */
+  signReview: async (runId: string, subjectHash: string): Promise<void> => {
+    const res = await fetch(`/api/runs/${encodeURIComponent(runId)}/gates`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ gate: 'G4_REVIEWER_NAMED', subjectHash }),
+    });
+    if (!res.ok) throw await refusal(res);
+  },
+
+  /**
+   * One export of a stored run, behind the same gates the engine's export step
+   * answers to — the server checks them again on every request, so a page that
+   * offered this too early would be refused, not obeyed.
+   */
+  file: async (runId: string, format: RunFileFormat): Promise<Blob> => {
+    const res = await fetch(`/api/runs/${encodeURIComponent(runId)}/export?format=${format}`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw await refusal(res);
+    return res.blob();
+  },
 };
+
+/** The files a stored run exports, by the API's own format names. */
+export type RunFileFormat = 'html' | 'json' | 'sheets' | 'dxf' | 'glb' | 'xlsx';
+
+/**
+ * A refusal the run routes explained, in the server's own sentence.
+ *
+ * The run routes answer `{ error, message }` — `error` is a class name ("Forbidden")
+ * and `message` is the sentence a person can act on, where the account routes put
+ * the sentence in `error`. `call` reads the account routes' shape; reading it here
+ * would show a reviewer the word "Forbidden" instead of the reason.
+ */
+async function refusal(res: Response): Promise<AuthFailure> {
+  const body = (await res.json().catch(() => ({}))) as { message?: unknown; error?: unknown };
+  const sentence =
+    typeof body.message === 'string'
+      ? body.message
+      : typeof body.error === 'string'
+        ? body.error
+        : `the server answered ${res.status}`;
+  return new AuthFailure(res.status, sentence);
+}

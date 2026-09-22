@@ -212,3 +212,35 @@
   background-color: var(--surface-sunken);
   max-inline-size: var(--measure-prose);
 }
+
+/* The two export gates, and the files behind them. The gate list is the engine's
+   own component, so a signature reads the same on both screens. */
+.rn__gates {
+  margin: 0 0 var(--rhythm-block);
+  padding: 0;
+  list-style: none;
+  max-inline-size: 48rem;
+}
+.rn__gates p {
+  max-inline-size: var(--measure-prose);
+}
+.rn__files h3 {
+  margin: 0 0 var(--space-3);
+}
+.rn__file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rn__file-list li {
+  display: grid;
+  gap: var(--space-hair);
+  justify-items: start;
+}
+.rn__file-note {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}

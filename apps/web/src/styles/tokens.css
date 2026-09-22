@@ -265,14 +265,18 @@
      is a value edit and not a 38-site rename. It absorbs the twelve radius
      literals: the meter family's 2/3/4px and the `999px` written twice for what is
      visually one pill. --- */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 6px;
-  --radius-pill: 999px;   /* the system's ONE documented exception, named the way
-                             Carbon names its tag radius — so it is a decision and
-                             not a magic number written twice. */
-  --radius-round: 50%;    /* replaces the `50%` literals written for round counters
-                             and status glyphs. */
+  /* AND THEN TO ZERO (direction.md §1). Every drawing this product makes — each
+     sheet's frame, its title block, the plan in the landing fold, a bay — is drawn
+     with square corners, and a plate with a 4px corner standing beside a sheet with a
+     square frame read as two instruments on one desk. The names stay so that no
+     consumer changes and a later direction can re-pitch them in one place; the
+     pill is gone rather than zeroed, because a token called `pill` that draws a
+     rectangle is a name that lies. */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-round: 50%;    /* A circle is geometry, not rounding: the round counters
+                             and status glyphs keep it. */
 
   --border-width: 1px;
   --border-width-emphasis: 2px;
@@ -332,6 +336,106 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Primitives — the palette as it is, named by what each value IS.
+ *
+ * Every colour the three themes use, once. The name is the family and the CIE L*
+ * lightness times ten, so `--graphite-975` is a cool neutral at L* 97.5 and the
+ * step says where it sits without a lookup: the higher the number, the lighter
+ * the value, in every family. Ten times, not the whole number, because one triple
+ * and four pairs of separately measured values round to the same integer L* —
+ * each was tuned to its own contrast floor, and merging them silently would move
+ * a floor nobody re-measured. They are listed side by side here, which is the one place
+ * a later pass can see them and decide.
+ *
+ * A PRIMITIVE IS NEVER READ BY A COMPONENT. Only the semantic blocks below read
+ * these; a stylesheet writes `var(--surface-raised)`, never `var(--graphite-1000)`.
+ * The themes choose among primitives; the primitives do not change with the
+ * theme. `scripts/contrast.mjs` resolves every semantic token through this layer,
+ * so the measurement is of the value painted, not of the name.
+ *
+ * Direction: docs/05-design/direction.md.
+ * ------------------------------------------------------------------------ */
+:root {
+  /* Graphite: the cool neutrals, chroma 2-12. Every screen ground, ink and edge. */
+  --graphite-976: #f6f8fd;
+  --graphite-965: #f3f5f9;
+  --graphite-961: #f2f4f8;
+  --graphite-951: #eef1f8;
+  --graphite-948: #eef0f5;
+  --graphite-930: #e7ebf3;
+  --graphite-884: #dbdee5;
+  --graphite-817: #c8cbd3;
+  --graphite-743: #b6b6bf;
+  --graphite-691: #a8a8b2;
+  --graphite-658: #9ca0a8;
+  --graphite-597: #8c9098;
+  --graphite-563: #84878e;
+  --graphite-543: #7f8289;
+  --graphite-540: #7f8187;
+  --graphite-535: #7d8087;
+  --graphite-531: #7c7f85;
+  --graphite-508: #77797f;
+  --graphite-467: #6e6e78;
+  --graphite-443: #656971;
+  --graphite-434: #66666d;
+  --graphite-432: #656571;
+  --graphite-365: #55555f;
+  --graphite-361: #545460;
+  --graphite-302: #44474f;
+  --graphite-235: #35383f;
+  --graphite-203: #2e3139;
+  --graphite-141: #21242a;
+  --graphite-132: #202226;
+  --graphite-82: #16181d;
+  --graphite-73: #14161c;
+  --graphite-39: #0c0e11;
+  --graphite-5: #010204;
+
+  /* Grey: the true neutrals, chroma 0-2. Paper, and the print theme. */
+  --grey-1000: #ffffff;
+  --grey-937: #ededed;
+  --grey-806: #c8c8c8;
+  --grey-659: #a0a0a0;
+  --grey-399: #5e5e5e;
+  --grey-378: #595959;
+  --grey-315: #4a4a4a;
+  --grey-212: #333333;
+  --grey-0: #000000;
+
+  /* Blue: the one interactive hue. */
+  --blue-947: #eaf0fd;
+  --blue-755: #9dbaf8;
+  --blue-673: #7ba3f5;
+  --blue-430: #2b5cd9;
+  --blue-338: #1f47b0;
+  --blue-133: #1c2230;
+
+  /* Amber: ASSUMED, and nothing else. Read only by the --uncertain-* tokens. */
+  --amber-961: #fdf3e0;
+  --amber-861: #ffd08a;
+  --amber-772: #f0b45c;
+  --amber-545: #a87a32;
+  --amber-540: #a17b33;
+  --amber-379: #854b00;
+  --amber-282: #643800;
+  --amber-161: #33260f;
+
+  /* Red: VARIANCE, the documented exemption. */
+  --red-947: #fdeceb;
+  --red-685: #f08b84;
+  --red-544: #b47069;
+  --red-533: #c0655e;
+  --red-376: #a8271f;
+  --red-124: #33191a;
+
+  /* Green: DERIVED. */
+  --green-955: #e9f5ee;
+  --green-725: #6cc396;
+  --green-400: #1f6b45;
+  --green-134: #14261d;
+}
+
+/* ---------------------------------------------------------------------------
  * Light theme
  *
  * THE NEUTRALS HAVE A TEMPERATURE AND A LADDER, and both are repairs rather than
@@ -376,13 +480,13 @@
  * every one of those moves raises a contrast ratio rather than lowering it.
  * ------------------------------------------------------------------------ */
 :root {
-  --surface-base: #f6f8fd;
-  --surface-raised: #ffffff;
-  --surface-sunken: #eef1f8;
-  --surface-inset: #e7ebf3;
+  --surface-base: var(--graphite-976);
+  --surface-raised: var(--grey-1000);
+  --surface-sunken: var(--graphite-951);
+  --surface-inset: var(--graphite-930);
 
-  --text-primary: #14161c;
-  --text-secondary: #55555f;
+  --text-primary: var(--graphite-73);
+  --text-secondary: var(--graphite-365);
   /* It was #757581, tuned against --surface-raised ONLY (4.55) and measured only
      there — while being a ground 24 times across the three stylesheets. Measured
      on the rest: sunken 4.06, inset 3.81, base 4.39, deferred 4.13. Four live
@@ -390,13 +494,13 @@
      BINDING CONSTRAINT, HEADROOM, LEVELS and LOST TO WHOLE FLOORS — the five
      labels around the product's hero number. A token tuned against one ground and
      painted on nine is a token measured by accident. New worst case 4.81. */
-  --text-tertiary: #656571;
-  --text-inverse: #ffffff;
+  --text-tertiary: var(--graphite-432);
+  --text-inverse: var(--grey-1000);
 
   /* Decorative separators. Exempt from 1.4.11 — they carry no information a
      reader needs, and raising them to 3:1 turns every panel into a wireframe. */
-  --border-subtle: #dbdee5;
-  --border-default: #c8cbd3;
+  --border-subtle: var(--graphite-884);
+  --border-default: var(--graphite-817);
   /*
     The boundary of an interactive control — input, button, radio card.
     WCAG 1.4.11 covers "visual information required to identify user interface
@@ -410,20 +514,20 @@
      the dashed `.dropzone` edge app.css calls "the first thing a new user touches",
      and the dashed `.not-assessed` boundary, one of two non-colour cues for the
      deferred state. New worst case 3.18. */
-  --border-control: #7f8187;
+  --border-control: var(--graphite-540);
   /* INFORMATIVE STRUCTURE, and now the token that carries it: the datum rule, the
      plate cap, the meter, the neutral status rail, the table header rule, the
      eyebrow hairline. It was #94948e, which passed at 3.05 on --surface-raised —
      the only ground ever checked — and measured 2.55 on --surface-inset, the
      non-governing capacity bar's own track. A meter whose entire job is "which of
      these three is smaller" is the canonical 1.4.11 case. New worst case 3.62. */
-  --border-strong: #77797f;
+  --border-strong: var(--graphite-508);
 
   /* One blue. Interactive affordance and nothing else. */
-  --accent: #2b5cd9;
-  --accent-hover: #1f47b0;
-  --accent-subtle: #eaf0fd;
-  --accent-focus: #2b5cd9;
+  --accent: var(--blue-430);
+  --accent-hover: var(--blue-338);
+  --accent-subtle: var(--blue-947);
+  --accent-focus: var(--blue-430);
 
   /* ASSUMED — the loudest thing in the system. Deliberately.
 
@@ -434,7 +538,7 @@
      mode is a user mistaking an assumption for a fact, the loudest colour on the
      page was a link. Now 6.99, leading --accent by 1.210x on each of the nine. The
      darkening is 0.6 of a stop; it stays unmistakably amber. */
-  --uncertain: #854b00;
+  --uncertain: var(--amber-379);
   /* THE SECOND HALF OF THE ROW ABOVE, and moving one without the other is the
      defect. --uncertain-strong and --uncertain are spent as TWO RANKS — the strong
      one on the value text, the other on the drawn pencil — and they measured 1.540x
@@ -443,16 +547,16 @@
      the other token took (122 -> 100, 68 -> 56), which keeps the hue relationship and
      restores the separation to 1.425x. Contrast only improves — worst case 8.34, up
      from 6.62 — so this is the opposite of a softening. */
-  --uncertain-strong: #643800;
-  --uncertain-surface: #fdf3e0;
+  --uncertain-strong: var(--amber-282);
+  --uncertain-surface: var(--amber-961);
   /* The dotted underline under an ASSUMED value, measured against the amber
      surface it is drawn on — not against white. At #e0a54a it was 1.98:1 there:
      a non-colour cue nobody could see, which is not a cue. */
-  --uncertain-border: #a87a32;
+  --uncertain-border: var(--amber-545);
 
   /* VARIANCE — a documented exemption. Serious, not alarming. */
-  --variance: #a8271f;
-  --variance-surface: #fdeceb;
+  --variance: var(--red-376);
+  --variance-surface: var(--red-947);
   /* §20.3 specifies VARIANCE as "Red border, evidence link" — the border IS half
      the specification. At #d98a84 it measured 2.32 on its own surface against a 3.0
      floor, the largest failure in the shipped palette, and the same token draws the
@@ -460,11 +564,11 @@
      paints the product's central refusal and is under the same protection as the
      amber, and lightening it so that amber would outrank it is that softening
      arrived at from the other side. */
-  --variance-border: #c0655e;
+  --variance-border: var(--red-533);
 
   /* DERIVED — confirmation, used sparingly. */
-  --derived: #1f6b45;
-  --derived-surface: #e9f5ee;
+  --derived: var(--green-400);
+  --derived-surface: var(--green-955);
 
   /*
     The one inverted band on the landing page.
@@ -476,25 +580,38 @@
     control boundary on that band and is held to 1.4.11's 3:1 like every other
     control boundary, which is why it is not simply `--text-secondary`.
   */
-  --surface-contrast: #14161c;
-  --text-on-contrast: #f2f4f8;
-  --text-on-contrast-dim: #b6b6bf;
-  --border-on-contrast: #6e6e78;
+  --surface-contrast: var(--graphite-73);
+  --text-on-contrast: var(--graphite-961);
+  --text-on-contrast-dim: var(--graphite-743);
+  --border-on-contrast: var(--graphite-467);
 
   /* Deferred / not assessed — present, legible, and obviously empty. */
-  --deferred: #656971;
-  --deferred-surface: #f3f5f9;
+  --deferred: var(--graphite-443);
+  --deferred-surface: var(--graphite-965);
   /* The hatch is the non-colour cue for "not assessed" (§20.3), so it is held
      to 1.4.11's 3:1 like any other informative graphic. At #d8d8d3 it was
      1.43:1 — present in the CSS and invisible on screen. */
   /* At #8d8d8a it measured 2.97 on --surface-sunken, which is the ground of the
      hero drawing's setback hatch — the largest and most-viewed instance of the
      pattern, captioned "what the setback rules take away". New worst case 3.36. */
-  --deferred-hatch: #7c7f85;
+  --deferred-hatch: var(--graphite-531);
 
-  --shadow-sm: 0 1px 2px rgb(16 16 26 / 0.06);
-  --shadow-md: 0 2px 8px rgb(16 16 26 / 0.08), 0 1px 2px rgb(16 16 26 / 0.04);
-  --shadow-lg: 0 8px 28px rgb(16 16 26 / 0.12), 0 2px 6px rgb(16 16 26 / 0.06);
+  /* THE PRIMARY ACTION IS INK (direction.md §3). It was the blue, and the blue's
+     largest single area on every route was that one button — 4,545px² of accent on
+     each first screen, the most chromatic thing above the fold wherever no value
+     was assumed. The action keeps the heaviest mark on the page and gives up the
+     hue: the blue is left to links, focus, selection and the current step, which is
+     what "interactive affordance and nothing else" was for. No new ink: the hover
+     is an existing graphite, one rung lighter, so the press reads as the same
+     control letting go. */
+  --action: var(--graphite-73);
+  --action-hover: var(--graphite-203);
+  --text-on-action: var(--grey-1000);
+
+  /* No shadows (direction.md §2). Every edge in the language is a hairline or a
+     tonal cut, as on paper; the one shadow left — the nav's shade on scroll — is a
+     darker hairline now. The --shadow-* tokens are deleted rather than set to
+     `none`, because a token with no consumer is decoration in a token file. */
 }
 
 /* ---------------------------------------------------------------------------
@@ -514,98 +631,98 @@
  * ------------------------------------------------------------------------ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --surface-base: #16181d;
-    --surface-raised: #21242a;
-    --surface-sunken: #0c0e11;
-    --surface-inset: #2e3139;
+    --surface-base: var(--graphite-82);
+    --surface-raised: var(--graphite-141);
+    --surface-sunken: var(--graphite-39);
+    --surface-inset: var(--graphite-203);
 
-    --text-primary: #eef0f5;
-    --text-secondary: #a8a8b2;
-    --text-tertiary: #9ca0a8;
-    --text-inverse: #16181d;
+    --text-primary: var(--graphite-948);
+    --text-secondary: var(--graphite-691);
+    --text-tertiary: var(--graphite-658);
+    --text-inverse: var(--graphite-82);
 
-    --border-subtle: #35383f;
-    --border-default: #44474f;
-    --border-control: #7d8087;
-    --border-strong: #84878e;
+    --border-subtle: var(--graphite-235);
+    --border-default: var(--graphite-302);
+    --border-control: var(--graphite-535);
+    --border-strong: var(--graphite-563);
 
-    --accent: #7ba3f5;
-    --accent-hover: #9dbaf8;
-    --accent-subtle: #1c2230;
-    --accent-focus: #7ba3f5;
+    --accent: var(--blue-673);
+    --accent-hover: var(--blue-755);
+    --accent-subtle: var(--blue-133);
+    --accent-focus: var(--blue-673);
 
-    --uncertain: #f0b45c;
-    --uncertain-strong: #ffd08a;
-    --uncertain-surface: #33260f;
-    --uncertain-border: #a17b33;
+    --uncertain: var(--amber-772);
+    --uncertain-strong: var(--amber-861);
+    --uncertain-surface: var(--amber-161);
+    --uncertain-border: var(--amber-540);
 
-    --variance: #f08b84;
-    --variance-surface: #33191a;
-    --variance-border: #b47069;
+    --variance: var(--red-685);
+    --variance-surface: var(--red-124);
+    --variance-border: var(--red-544);
 
-    --derived: #6cc396;
-    --derived-surface: #14261d;
+    --derived: var(--green-725);
+    --derived-surface: var(--green-134);
 
-    --surface-contrast: #010204;
-    --text-on-contrast: #eef0f5;
-    --text-on-contrast-dim: #a8a8b2;
-    --border-on-contrast: #66666d;
+    --surface-contrast: var(--graphite-5);
+    --text-on-contrast: var(--graphite-948);
+    --text-on-contrast-dim: var(--graphite-691);
+    --border-on-contrast: var(--graphite-434);
 
-    --deferred: #8c9098;
-    --deferred-surface: #202226;
-    --deferred-hatch: #7f8289;
+    --deferred: var(--graphite-597);
+    --deferred-surface: var(--graphite-132);
+    --deferred-hatch: var(--graphite-543);
 
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-md: 0 2px 8px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.3);
-    --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.35);
+    --action: var(--graphite-948);
+    --action-hover: var(--graphite-817);
+    --text-on-action: var(--graphite-82);
   }
 }
 
 :root[data-theme='dark'] {
-  --surface-base: #16181d;
-  --surface-raised: #21242a;
-  --surface-sunken: #0c0e11;
-  --surface-inset: #2e3139;
+  --surface-base: var(--graphite-82);
+  --surface-raised: var(--graphite-141);
+  --surface-sunken: var(--graphite-39);
+  --surface-inset: var(--graphite-203);
 
-  --text-primary: #eef0f5;
-  --text-secondary: #a8a8b2;
-  --text-tertiary: #9ca0a8;
-  --text-inverse: #16181d;
+  --text-primary: var(--graphite-948);
+  --text-secondary: var(--graphite-691);
+  --text-tertiary: var(--graphite-658);
+  --text-inverse: var(--graphite-82);
 
-  --border-subtle: #35383f;
-  --border-default: #44474f;
-  --border-control: #7d8087;
-  --border-strong: #84878e;
+  --border-subtle: var(--graphite-235);
+  --border-default: var(--graphite-302);
+  --border-control: var(--graphite-535);
+  --border-strong: var(--graphite-563);
 
-  --accent: #7ba3f5;
-  --accent-hover: #9dbaf8;
-  --accent-subtle: #1c2230;
-  --accent-focus: #7ba3f5;
+  --accent: var(--blue-673);
+  --accent-hover: var(--blue-755);
+  --accent-subtle: var(--blue-133);
+  --accent-focus: var(--blue-673);
 
-  --uncertain: #f0b45c;
-  --uncertain-strong: #ffd08a;
-  --uncertain-surface: #33260f;
-  --uncertain-border: #a17b33;
+  --uncertain: var(--amber-772);
+  --uncertain-strong: var(--amber-861);
+  --uncertain-surface: var(--amber-161);
+  --uncertain-border: var(--amber-540);
 
-  --variance: #f08b84;
-  --variance-surface: #33191a;
-  --variance-border: #b47069;
+  --variance: var(--red-685);
+  --variance-surface: var(--red-124);
+  --variance-border: var(--red-544);
 
-  --derived: #6cc396;
-  --derived-surface: #14261d;
+  --derived: var(--green-725);
+  --derived-surface: var(--green-134);
 
-  --surface-contrast: #010204;
-  --text-on-contrast: #eef0f5;
-  --text-on-contrast-dim: #a8a8b2;
-  --border-on-contrast: #66666d;
+  --surface-contrast: var(--graphite-5);
+  --text-on-contrast: var(--graphite-948);
+  --text-on-contrast-dim: var(--graphite-691);
+  --border-on-contrast: var(--graphite-434);
 
-  --deferred: #8c9098;
-  --deferred-surface: #202226;
-  --deferred-hatch: #7f8289;
+  --deferred: var(--graphite-597);
+  --deferred-surface: var(--graphite-132);
+  --deferred-hatch: var(--graphite-543);
 
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.35);
+  --action: var(--graphite-948);
+  --action-hover: var(--graphite-817);
+  --text-on-action: var(--graphite-82);
   }
 
 /* ---------------------------------------------------------------------------
@@ -619,43 +736,43 @@
  * ------------------------------------------------------------------------ */
 @media print {
   :root {
-    --surface-base: #ffffff;
-    --surface-raised: #ffffff;
-    --surface-sunken: #ffffff;
-    --surface-inset: #ededed;   /* a 7% tint a laser can dither without banding.
+    --surface-base: var(--grey-1000);
+    --surface-raised: var(--grey-1000);
+    --surface-sunken: var(--grey-1000);
+    --surface-inset: var(--grey-937);   /* a 7% tint a laser can dither without banding.
                                    It is the meter track, so it is the one rung of
                                    the surface ladder that does NOT go flat here —
                                    the object the rung exists for. */
-    --text-primary: #000000;
-    --text-secondary: #333333;
-    --text-tertiary: #545460;
+    --text-primary: var(--grey-0);
+    --text-secondary: var(--grey-212);
+    --text-tertiary: var(--graphite-361);
 
-    --border-subtle: #c8c8c8;
-    --border-default: #a0a0a0;
-    --border-control: #595959;
-    --border-strong: #4a4a4a;
+    --border-subtle: var(--grey-806);
+    --border-default: var(--grey-659);
+    --border-control: var(--grey-378);
+    --border-strong: var(--grey-315);
 
-    --deferred: #333333;
-    --deferred-surface: #ffffff;
-    --deferred-hatch: #5e5e5e;  /* tokenises the #666 that provenance.css hard-coded
+    --deferred: var(--grey-212);
+    --deferred-surface: var(--grey-1000);
+    --deferred-hatch: var(--grey-399);  /* tokenises the #666 that provenance.css hard-coded
                                    for the hatch carrying NOT ASSESSED on a
                                    photocopy — the highest-stakes graphic in the
                                    system, and the one no checker had ever seen. */
 
     /* The inverted band inverts back. A full-bleed black band costs a page of
        toner and photocopies to mud. */
-    --surface-contrast: #ffffff;
-    --text-on-contrast: #000000;
-    --text-on-contrast-dim: #333333;
-    --border-on-contrast: #595959;
+    --surface-contrast: var(--grey-1000);
+    --text-on-contrast: var(--grey-0);
+    --text-on-contrast-dim: var(--grey-212);
+    --border-on-contrast: var(--grey-378);
 
     /* Every state SURFACE goes white. Not an amber exception — a uniform rule.
        A cream fill dithers to a grey smudge, and the ASSUMED treatment already
        drops its ground on paper and carries on its other four channels. */
-    --uncertain-surface: #ffffff;
-    --variance-surface: #ffffff;
-    --derived-surface: #ffffff;
-    --accent-subtle: #ffffff;
+    --uncertain-surface: var(--grey-1000);
+    --variance-surface: var(--grey-1000);
+    --derived-surface: var(--grey-1000);
+    --accent-subtle: var(--grey-1000);
 
     /* --accent, --uncertain, --uncertain-strong, --uncertain-border, --variance,
        --variance-border and --derived are DELIBERATELY NOT OVERRIDDEN. Collapsing
@@ -665,8 +782,5 @@
        is what lets §7.4's ordering invariant hold in all three themes instead of
        being suspended for paper. */
 
-    --shadow-sm: none;
-    --shadow-md: none;
-    --shadow-lg: none;
   }
 }

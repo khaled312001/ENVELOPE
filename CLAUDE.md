@@ -291,6 +291,11 @@ is a defect even when it makes something easier.
 ## Conventions
 
 - `const` objects with `as const`, never `enum`.
+- Colours: a stylesheet reads a **semantic** token (`--text-primary`), never a primitive
+  (`--graphite-73`). The primitive layer in `tokens.css` is read by the theme blocks only,
+  and `pnpm contrast` assertion (9) fails anything else. The visual direction — straight
+  corners, no shadows, an ink primary button — is argued in
+  [`docs/05-design/direction.md`](docs/05-design/direction.md).
 - Branded types for units (`Mm`, `Mm2`). A metre passed as a millimetre must not compile.
 - IBM Plex Sans and IBM Plex Mono, loaded in `apps/web/index.html` over the system
   stack. The two share metrics and a skeleton, which is what lets a mono figure sit

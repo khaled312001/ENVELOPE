@@ -535,7 +535,7 @@
   display: inline-block;
   margin-inline-start: var(--space-2);
   padding: 0.1em 0.5em;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   letter-spacing: var(--tracking-label);

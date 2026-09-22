@@ -2,6 +2,13 @@
 
 Authoritative. Where this document and a stylesheet disagree, the stylesheet is wrong.
 
+> **Amended 2026-09-22 by [`direction.md`](direction.md)** — the Phase 1 visual direction,
+> awaiting the client's approval. Three decisions here are superseded: radius is **0** and
+> `--radius-pill` is deleted (§2.6); the `--shadow-*` tokens are deleted (§2.6); and
+> `.button--primary` is **ink**, on `--action`, not the blue (§6.10). Everything else in
+> this document stands. Where the two disagree on those three, `direction.md` is the newer
+> decision and says why.
+
 Every ratio quoted here was computed against the tokens as written, by a corrected
 three-theme extractor, and is reproducible from §3. Nothing is asserted that was not
 measured. Where a value is a judgement rather than a measurement, it says so.
@@ -381,6 +388,9 @@ different fill mechanisms and four fill colours.
 ```
 
 ### 2.6 Changed — radius, elevation, focus
+
+> Superseded in part: radius is now 0, the pill is deleted and the shadow tokens are
+> gone — [`direction.md`](direction.md) §1 and §2. The focus section below stands.
 
 ```css
 :root {
@@ -2630,6 +2640,10 @@ not a broken one.
 **320px:** full width, height unchanged; it cannot overflow.
 
 ### 6.10 CTA and the control family
+
+> Superseded in part: `.button--primary` is filled with `--action` (ink) under
+> `--text-on-action`, not with `--accent` — [`direction.md`](direction.md) §3. The
+> `text-decoration: none` below had been dropped from the stylesheet and is restored.
 
 ```css
 .button {

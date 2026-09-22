@@ -374,6 +374,14 @@
   --border-control: var(--border-on-contrast);
   --border-strong: var(--border-on-contrast);
   --accent-focus: var(--text-on-contrast);
+  /* The primary action is ink (direction.md §3), and ink on an ink band is a
+     button nobody can see. There is no primary button here today; the rebinding is
+     for the first one, and it is the same inversion `.lp-status-band` makes by
+     hand. Both pairs are the band's own, read the other way round, so they are
+     measured already: 16.42 and 8.98 in light. */
+  --action: var(--text-on-contrast);
+  --action-hover: var(--text-on-contrast-dim);
+  --text-on-action: var(--surface-contrast);
   --response-ground-hover: var(--border-on-contrast);
   --response-ground-press: var(--border-on-contrast);
   --response-edge-active: var(--text-on-contrast);

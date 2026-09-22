@@ -216,6 +216,13 @@
   --border-default: var(--border-on-contrast);
   --border-control: var(--border-on-contrast);
   --border-strong: var(--border-on-contrast);
+  /* The primary action is ink (direction.md §3), and ink on an ink band is a
+     button nobody can see — so on the band the action takes the band's own inks.
+     Both pairs are the band's text pairs read the other way round, so they are
+     measured already. */
+  --action: var(--text-on-contrast);
+  --action-hover: var(--text-on-contrast-dim);
+  --text-on-action: var(--surface-contrast);
   background: var(--surface-contrast);
   color: var(--text-on-contrast);
   /* The band has an edge at BOTH ends. A section rule OPENS a section; an
@@ -1246,6 +1253,28 @@
   .cta__note { flex: 1 1 100%; }
 }
 
+/*
+ * THE PROSE LINK — a floor under every page, at zero specificity.
+ *
+ * Each page wrote its own link rule (`.rf a`, `.ac a`, `.nav a`) and the landing
+ * page wrote none, so its three prose links were painted by the browser:
+ * rgb(0, 0, 238), a colour no theme followed and no pair measured. In the dark
+ * theme that measures 1.89:1 on the page ground — a 1.4.3 failure on the front door,
+ * invisible to `pnpm contrast` because no rule painted it, and found only by
+ * looking. This is the floor: `:where()` adds no specificity, so every page rule
+ * still wins, and it paints `--accent`, which is measured on all nine grounds in
+ * three themes. Controls are excluded exactly as every page rule excludes them.
+ */
+:where(a:not(.button, .link-button)) {
+  color: var(--accent);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: var(--border-width);
+}
+:where(a:not(.button, .link-button):hover, a:not(.button, .link-button):focus-visible) {
+  color: var(--accent-hover);
+  text-decoration-thickness: var(--border-width-emphasis);
+}
+
 /* ==========================================================================
  * 12. EMPTY STATE — frequently the answer, not a gap to apologise for
  * ======================================================================= */
@@ -1336,22 +1365,18 @@
    attribute is absent, the border stays transparent, and the nav looks exactly as
    it did before. The failure mode of the feature is the design, which is the only
    acceptable failure mode for a decoration. */
-/* TWO CHANNELS, NOT ONE. A 1px border going from transparent to --border-default
-   is a change nobody has ever noticed, which made the only scroll-driven state in
-   the product effectively invisible. The shade is what a reader actually reads as
-   "the page has moved under the bar" — but the BORDER is still what carries it,
-   because --shadow-sm resolves to `none` in print and anything carried by
-   elevation alone is hierarchy the printed report never receives. Second channel,
-   never the only one. */
+/* ONE CHANNEL, AND IT IS THE EDGE. A 1px border going from transparent to
+   --border-default was a change nobody noticed, so a shade was added under it —
+   the last shadow in the language. The shade is gone (direction.md §2): the edge
+   darkens to --border-strong instead, the informative hairline measured at 3:1 on
+   every ground, which is the hard edge a title block has when a drawing passes
+   under it. It also survives print, where a shade never did. */
 .nav[data-scrolled='true'] {
-  border-block-end-color: var(--border-default);
-  box-shadow: var(--shadow-sm);
+  border-block-end-color: var(--border-strong);
 }
 @media (prefers-reduced-motion: no-preference) {
   .nav {
-    transition:
-      border-color var(--duration-base) var(--ease-standard),
-      box-shadow var(--duration-base) var(--ease-standard);
+    transition: border-color var(--duration-base) var(--ease-standard);
   }
 }
 

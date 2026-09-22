@@ -266,6 +266,11 @@ const INKS = [
   // --- Boundaries, split by JOB rather than by weight.
   ['--border-control', 3.0, 'input, button, radio card, the dashed dropzone and .not-assessed edges'],
   ['--border-strong', 3.0, 'the datum rule, the plate cap, the meter, the neutral rail, the header rule'],
+
+  // --- The primary action (direction.md §3). A filled control has no border of its
+  // own to measure: its FILL is the boundary 1.4.11 asks about, so the fill is held
+  // to 3:1 against every ground it can stand on, like any other control edge.
+  ['--action', 3.0, "the primary button's fill, which is its own boundary"],
 ];
 
 const PAIRS = INKS.flatMap(([fg, floor, note, grounds = GROUNDS]) =>
@@ -282,8 +287,12 @@ const PAIRS = INKS.flatMap(([fg, floor, note, grounds = GROUNDS]) =>
 // of the nine grounds and `--border-strong` is measured on all nine. Adding them
 // again would be a second row for one measurement.
 PAIRS.push(
-  ['--text-inverse', '--accent', 4.5, 'primary button label'],
-  ['--text-inverse', '--accent-hover', 4.5, 'primary button label under the pointer'],
+  ['--text-on-action', '--action', 4.5, 'primary button label'],
+  ['--text-on-action', '--action-hover', 4.5, 'primary button label under the pointer'],
+  // The blue fill survives where it marks a STATE rather than an action: the
+  // current step's numeral and the binding band's letter.
+  ['--text-inverse', '--accent', 4.5, 'the current step and the binding band letter'],
+  ['--text-inverse', '--accent-hover', 4.5, 'the same, under the pointer'],
   ['--text-on-contrast', '--surface-contrast', 4.5, 'text on the band'],
   ['--text-on-contrast-dim', '--surface-contrast', 4.5, 'body text on the band'],
   ['--border-on-contrast', '--surface-contrast', 3.0, 'control edge on the band'],
@@ -874,6 +883,37 @@ function assertNoLiteralColours() {
  * else; the scene builder colours by provenance class, so that one entry is the
  * only way amber can reach the model.
  */
+/**
+ * (9) A PRIMITIVE IS READ BY THE THEMES AND BY NOTHING ELSE.
+ *
+ * `tokens.css` names every colour twice: once as what it IS (`--graphite-73`) and
+ * once as what it is FOR (`--text-primary`). Only the second follows the theme. A
+ * stylesheet that reads `var(--graphite-73)` paints the light theme's ink in the
+ * dark theme too, and no pair measures it, because pairs are written between
+ * roles. (6) would catch it as "unmeasured", which is true and misleading: the fix
+ * is not a new pair, it is the role. So the rule is stated here in its own words,
+ * and it covers every declaration — not only the paint properties (6) reads — and
+ * the drawing sources, whose fallbacks must name roles as well.
+ */
+const PRIMITIVE = /var\((--(?:graphite|grey|blue|amber|red|green)-\d+)\b/;
+function assertPrimitivesPrivate(drawingSources) {
+  for (const [file, css] of SHEETS) {
+    for (const [sel, decl, line] of declarations(css, file)) {
+      const m = PRIMITIVE.exec(decl);
+      if (m) {
+        fail(
+          `${file}:${line} reads the primitive ${m[1]} on ${sel}. A component reads ` +
+            `a semantic token; a primitive does not change with the theme.`,
+        );
+      }
+    }
+  }
+  for (const { file, src } of drawingSources) {
+    const m = PRIMITIVE.exec(src);
+    if (m) fail(`${file} reads the primitive ${m[1]}. Drawing inks name a role, as the web's do.`);
+  }
+}
+
 const DRAWING_SOURCES = [
   { file: 'packages/sheets/src/svg.ts', amberOk: /sh-c-assumed/, what: 'an ASSUMED value' },
   { file: 'packages/massing/src/palette.ts', amberOk: /^\s*assumed:/, what: 'the ASSUMED ink' },
@@ -1058,6 +1098,7 @@ assertRailWidths();
 assertEveryPaintedTokenIsMeasured();
 assertNoLiteralColours();
 assertSheetStylesheet();
+assertPrimitivesPrivate(DRAWING_SOURCES);
 
 console.log(
   `\n${rows.length} WCAG row(s) across three themes: ${rows.length - failures} pass, ` +

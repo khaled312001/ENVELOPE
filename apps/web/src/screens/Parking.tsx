@@ -614,17 +614,51 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
       {/* --- 1. The claim ------------------------------------------------- */}
       <section className="shell section section--opening" aria-labelledby="pk-h1">
         <div className="railed">
-          <div className="railed__body">
-            <p className="eyebrow">Phase 0 · the parking band</p>
-            <h1 id="pk-h1" className="pk-claim">
-              The number that governs this plot rests on an assumption.
-            </h1>
-            <p className="pk__lede pk-claim__lede">
-              Here is the assumption, with the basis it was recorded against. Then the
-              level is drawn — bay by bay, aisle and ramp, inside the podium the setbacks
-              left — and this page reports what the drawing costs against what the
-              assumption predicted. The gap is the argument, not the embarrassment.
-            </p>
+          {/* THE CLAIM HOLDS ITS OWN EVIDENCE (direction.md §4). The lede says "here
+              is the assumption", and for as long as this page existed the assumption
+              was 1,100px further down: the first screen of the page about an
+              assumption carried no amber at all, which `pnpm amber` named on every
+              run. The figure and the value it rests on stand beside the sentence now,
+              read from the same fixture as everything below. */}
+          <div className="railed__body pk-opening">
+            <div className="pk-opening__claim">
+              <p className="eyebrow">Phase 0 · the parking band</p>
+              <h1 id="pk-h1" className="pk-claim">
+                The number that governs this plot rests on an assumption.
+              </h1>
+              <p className="pk__lede pk-claim__lede">
+                Here is the assumption, with the basis it was recorded against. Then the
+                level is drawn — bay by bay, aisle and ramp, inside the podium the
+                setbacks left — and this page reports what the drawing costs against
+                what the assumption predicted. The gap is the argument, not the
+                embarrassment.
+              </p>
+            </div>
+            <aside
+              className="pk-opening__evidence"
+              aria-label="The governing figure, and the assumption it rests on"
+            >
+              <Fig
+                label="Governing capacity, this run"
+                value={group(V.governingGfaM2)}
+                unit="m²"
+                note={`The ${band} band — the smallest of the three, so it governs.`}
+              />
+              <p className="pk-fig__label">It rests on</p>
+              <div className="callout" data-state="assumed">
+                <span className="callout__mark" aria-hidden="true">
+                  <Glyph name="assumed" />
+                </span>
+                <div className="callout__body">
+                  <strong>
+                    Gross area per bay —{' '}
+                    <AssumedValue value={V.bayAreaFactorM2} unit="m²/bay" /> ·{' '}
+                    {V.bayAreaFactorClass}
+                  </strong>
+                  <p className="pk-basis">{V.bayAreaFactorBasis}</p>
+                </div>
+              </div>
+            </aside>
           </div>
         </div>
       </section>

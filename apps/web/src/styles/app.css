@@ -600,6 +600,11 @@ select.input { cursor: pointer; }
   border-radius: var(--radius-md);
   background-color: var(--surface-raised);
   color: var(--text-primary);
+  /* A control is not a link, however it is marked up. The design language wrote
+     this line (§6.10) and the stylesheet dropped it, so every `<a class="button">`
+     outside the nav — the landing page's two calls to action among them — was
+     drawn underlined: a link wearing a button's clothes. */
+  text-decoration: none;
   cursor: pointer;
 }
 /*
@@ -639,10 +644,12 @@ select.input { cursor: pointer; }
   box-shadow: none;
 }
 
+/* INK, NOT THE BLUE (direction.md §3). The heaviest mark on the page stays the
+   primary action's; the hue goes back to links, focus and selection. */
 .button--primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--text-inverse);
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--text-on-action);
 }
 /*
   A FILLED CONTROL HAS NO LADDER UNDER IT, so hover and press share one tone and
@@ -659,8 +666,8 @@ select.input { cursor: pointer; }
 .button--primary:hover:not(:disabled),
 .button--primary:focus-visible:not(:disabled),
 .button--primary:active:not(:disabled) {
-  background-color: var(--accent-hover);
-  border-color: var(--accent-hover);
+  background-color: var(--action-hover);
+  border-color: var(--action-hover);
 }
 
 .button--ghost { border-color: transparent; background-color: transparent; }
@@ -708,7 +715,7 @@ select.input { cursor: pointer; }
   gap: var(--space-2);
   padding: 0.1em 0.5em;
   margin-left: var(--space-2);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   background: var(--state-surface, var(--surface-inset));

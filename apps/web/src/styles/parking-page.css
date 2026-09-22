@@ -256,6 +256,10 @@
   --border-default: var(--border-on-contrast);
   --border-control: var(--border-on-contrast);
   --border-strong: var(--border-on-contrast);
+  /* As on the chassis band: the ink action takes the band's inks here. */
+  --action: var(--text-on-contrast);
+  --action-hover: var(--text-on-contrast-dim);
+  --text-on-action: var(--surface-contrast);
   background: var(--surface-contrast);
   color: var(--text-on-contrast);
   /* An edge at BOTH ends. A section rule OPENS a section; a band is a block, and
@@ -337,6 +341,33 @@
   margin-block-start: var(--rhythm-block);
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
+}
+
+/* The claim, and beside it the evidence it promises (direction.md §4). The
+   evidence column is narrower and sits on the claim's last line: it is what the
+   sentence points at, not a second headline. It draws no rule of its own — each
+   label already carries the figure's caption rule, and a third hairline above
+   the first would be two rules reading as one thick one. At 60rem the two stack,
+   claim first, which is the order a screen reader reads them in. */
+.pk-opening {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: var(--space-7);
+  align-items: end;
+}
+.pk-opening > * { min-inline-size: 0; }
+.pk-opening__evidence {
+  display: grid;
+  gap: var(--space-3);
+}
+.pk-opening__evidence > .pk-fig__label {
+  margin-block-start: var(--space-4);
+}
+@media (max-width: 60rem) {
+  .pk-opening {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--rhythm-block);
+  }
 }
 
 /* ==========================================================================

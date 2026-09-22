@@ -1,0 +1,857 @@
+<!doctype html>
+<!--
+  TOP.ai — user guide, Arabic. `scripts/guide/build.mjs` fills every double-braced
+  name from a real run and prints this to A4. No figure in this file is typed by hand:
+  a number that appears below without braces is a label on the screen (a step number,
+  a gate name), never a result. The contents' page numbers are resolved from the
+  chapter markers read back out of the first printing.
+-->
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>دليل المستخدم — TOP.ai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+<!-- ================================================================ cover -->
+<section class="cover">
+  <div class="cover__band">
+    <div class="cover__brand"><span class="cover__mark" aria-hidden="true"></span><span class="en">TOP.ai</span></div>
+    <p class="cover__kicker">دليل المستخدم · الموقع ولوحة التحكّم</p>
+    <h1 class="cover__title">من مخطّط الأفكشن<br>إلى طابق المواقف</h1>
+    <p class="cover__sub">كيف تستخدم TOP.ai خطوةً خطوة على قطعة أرضٍ حقيقية: ما تُدخله، وما تختاره، وما يظهر على كل شاشة، والرسومات والملفات التي تخرج في النهاية.</p>
+  </div>
+  <figure class="cover__figure"><img src="shots/e14-massing.jpg" alt="الكتلة البنائية للقطعة {{plot.number}} كما رسمها المحرّك"></figure>
+  <div class="cover__meta">
+    <div><b class="num">{{plot.number}}</b>قطعة الأرض · المجتمع <span class="num">{{plot.community}}</span></div>
+    <div><b class="num">{{guide.date}}</b>تاريخ اللقطات</div>
+    <div><b class="num">{{run.engine}}</b>إصدار المحرّك</div>
+    <div><b>لم تُقيَّم</b>الصلاحية التنظيمية</div>
+  </div>
+</section>
+
+<!-- ======================================================== about the guide -->
+<section class="front">
+  <h1 style="font-size:19pt;font-weight:400;margin-bottom:5mm">عن هذا الدليل</h1>
+  <p class="lede">يشرح هذا الدليل الموقع العامّ، ومحرّك الحساب بخطواته العشر، ولوحة التحكّم التي تُحفظ فيها التشغيلات وتُشارَك وتُراجَع، ثم الملفات التي تخرج منها. ويسير الشرح كلّه على مشروعٍ واحد حقيقي: القطعة <span class="num">{{plot.number}}</span> في المجتمع <span class="num">{{plot.community}}</span> بمنطقة ورسان، من رفع مخطّط الأفكشن حتى تنزيل ملف <span class="en">CAD</span>.</p>
+
+  <div class="callout callout--tip">
+    <span class="callout__label">كل رقمٍ هنا نسخه المحرّك، لا كاتبُ الدليل</span>
+    <p>اللقطات مأخوذة من تشغيلةٍ فعلية (<span class="code">{{run.short}}</span>)، وكل رقمٍ في النصّ قُرئ من تلك التشغيلة أو من الملفات التي نُزِّلت منها، ثم طُبع الدليل آليًّا. فإن عدتَ إلى الموقع وأدخلتَ القيم نفسها، فستجد الأرقام نفسها.</p>
+  </div>
+
+  <div class="callout callout--limit">
+    <span class="callout__label">عرضٌ توضيحي على قواعد مسوّدة</span>
+    <p>القواعد المعتمدة من مهنيٍّ مُسمّى في هذا النشر: <span class="num">{{rd.rules}}</span>. فكل ما يحسبه المحرّك الآن يقوم على قواعد مسوّدة بمراجع مؤقّتة، ويقول كل مُخرَجٍ ذلك صراحةً:</p>
+    <p class="en small" dir="ltr" style="text-align:left">{{run.warning}}</p>
+    <p>فالأرقام في هذا الدليل تشرح طريقة العمل، ولا تصلح تقديرًا لطاقة القطعة ولا يجوز الاستشهاد بها.</p>
+  </div>
+
+  <h2>كيف تقرأ هذا الدليل</h2>
+  <ul>
+    <li>ما بين «علامتين» هو النصّ كما يظهر على الشاشة حرفيًّا: اسم زرّ أو عنوان أو خيار.</li>
+    <li>الخطوات مرقّمة كما يرقّمها شريط الخطوات أعلى المحرّك، من 1 إلى 10. ويظهر الشريط في رأس كل خطوة وعليه الخطوة الحالية مظلّلة.</li>
+    <li>اللون الكهرماني في هذا الدليل، كما في الموقع، لا يعني إلّا شيئًا واحدًا: <strong>قيمة افترضها المحرّك</strong> ولم تحكمها قاعدة. لا يُستعمل للتنبيه ولا للزينة.</li>
+    <li>بعض النصوص على الشاشات العربية تبقى بالإنجليزية: أسماء القواعد، وجُمل المحرّك التي يولّدها أثناء الحساب، ولوحات الرسم. هذا مقصود؛ فهي تُنسخ من المحرّك كما هي حتى لا تنحرف الترجمة عن الحساب.</li>
+  </ul>
+
+  <h2 class="page-break" style="margin-top:0">المحتويات</h2>
+  <ol class="toc">
+    <li><span class="n">01</span><span class="t">ما الذي يفعله TOP.ai، وما الذي لا يفعله<small>الخطوات العشر، والحدود الثلاثة، وكيف تقرأ أي رقم</small></span><span class="p">{{page:ch-1}}</span></li>
+    <li><span class="n">02</span><span class="t">الموقع العامّ<small>الصفحة الرئيسة، وما يرفضه، والمواقف، والجاهزية، على الهاتف وفي الوضع الداكن</small></span><span class="p">{{page:ch-2}}</span></li>
+    <li><span class="n">03</span><span class="t">الدخول: ضيفٌ أم حساب<small>ما يحفظه الحساب، ولماذا تُدخَل الرخصة عند الإنشاء</small></span><span class="p">{{page:ch-3}}</span></li>
+    <li><span class="n">04</span><span class="t">المشروع المستخدم في هذا الدليل<small>ما يقوله المخطّط، وما أدخلناه، وما لا ينتقل منه إلى الحساب</small></span><span class="p">{{page:ch-4}}</span></li>
+    <li><span class="n">05</span><span class="t">الخطوات 1–5: من المخطّط إلى الإقرار بالافتراضات</span><span class="p">{{page:ch-5}}</span></li>
+    <li><span class="n">06</span><span class="t">الخطوتان 6–7: الطاقة والمواقف والرسومات</span><span class="p">{{page:ch-6}}</span></li>
+    <li><span class="n">07</span><span class="t">الخطوات 8–10: الفحوص والأدلّة والتصدير</span><span class="p">{{page:ch-7}}</span></li>
+    <li><span class="n">08</span><span class="t">لوحة التحكّم: أعمالك والمشاركة والمراجعة</span><span class="p">{{page:ch-8}}</span></li>
+    <li><span class="n">09</span><span class="t">الملفات التي تخرج من TOP.ai<small>التقرير، ومجموعة الرسومات A3، وملف CAD، والنموذج ثلاثي الأبعاد، والمصنّف، والبيانات</small></span><span class="p">{{page:ch-9}}</span></li>
+    <li><span class="n">10</span><span class="t">صفحة الجاهزية</span><span class="p">{{page:ch-10}}</span></li>
+    <li><span class="n">11</span><span class="t">أسئلة شائعة وحلّ المشكلات</span><span class="p">{{page:ch-11}}</span></li>
+    <li><span class="n">12</span><span class="t">مسرد المصطلحات</span><span class="p">{{page:ch-12}}</span></li>
+  </ol>
+</section>
+
+<!-- ============================================================ chapter 1 -->
+<section class="chapter" id="ch-1">
+  <header class="chapter__head">
+    <span class="chapter__no">01</span>
+    <h1>ما الذي يفعله TOP.ai، وما الذي لا يفعله<span class="mk">@@ch-1@@</span></h1>
+    <p>يقرأ حدود قطعة الأرض، ويحسب ما يمكن بناؤه عليها، ويرصّ المواقف طابقًا طابقًا — ويُريك من أين جاء كل رقم.</p>
+  </header>
+
+  <p>تبدأ من مخطّط الأفكشن (<span class="en">Affection Plan</span>) الذي تصدره الجهة المختصّة للقطعة. يقرأ TOP.ai القيم المطبوعة فيه، ثم تُكمل أنت ما لا يذكره المخطّط، فيحسب المحرّك الغلاف البنائي الذي تسمح به القواعد، والمساحة الطابقية الممكنة، وعدد المواقف المطلوبة، ثم يضع المواقف والممرّات والمنحدر في طوابق المصطبة مستطيلًا مستطيلًا. وتخرج النتيجة تقريرًا ومجموعة رسومات وملف <span class="en">CAD</span> ونموذجًا ثلاثي الأبعاد.</p>
+
+  <h2>الخطوات العشر</h2>
+  <ol class="flow">
+    <li><b>1</b>المخطّط — يقرأ مخطّط الأفكشن</li>
+    <li><b>2</b>القطعة — الأبعاد وتصنيف الأضلاع</li>
+    <li><b>3</b>الوسائط — تأكيد القطعة (G1)</li>
+    <li><b>4</b>القواعد — ما سيُطبَّق وأسئلته (G2)</li>
+    <li><b>5</b>الافتراضات — الإقرار بها (G3)</li>
+    <li><b>6</b>الطاقة — الحدود الثلاثة والكتلة</li>
+    <li><b>7</b>المواقف — الطلب والطوابق والرسومات</li>
+    <li><b>8</b>الفحوص — ما فُحص وما لم يُفحص</li>
+    <li><b>9</b>الأدلّة — مصدر كل رقم</li>
+    <li><b>10</b>التصدير — توقيع المراجع (G4) والملفات</li>
+  </ol>
+  <p>الخطوة 1 اختيارية: قطعةٌ ليس مخطّطها في يدك تبقى قطعة، فتستطيع أن تبدأ من الخطوة 2 وتُدخل القيم بنفسك. أمّا ما بعدها فلا يُفتح حتى تكتمل الخطوة التي قبله، ويقول الشريط ذلك على كل خطوة مغلقة: «أكمل الخطوات السابقة أولًا».</p>
+
+  <h2>ثلاثة حدود، لا رقمٌ واحد</h2>
+  <p>لا يعطيك المحرّك «طاقة» واحدة. يحسب ثلاثة حدود مستقلّة، والطاقة الحاكمة هي أصغرها — لا أكبرها، ولا متوسّطها:</p>
+  <table>
+    <thead><tr><th>النطاق</th><th>السؤال الذي يجيب عنه</th><th>ما يحدّه</th></tr></thead>
+    <tbody>
+      <tr><td><b>A</b> — الطاقة التنظيمية</td><td>ما الذي يسمح به معامل البناء وسقوف المساحة؟</td><td>معامل البناء × مساحة القطعة</td></tr>
+      <tr><td><b>B</b> — الطاقة الهندسية</td><td>ما الذي يتّسع له الغلاف البنائي فعليًّا؟</td><td>مسطّح البناء بعد الارتدادات × عدد الطوابق التي يسمح بها الارتفاع</td></tr>
+      <tr><td><b>C</b> — طاقة المواقف</td><td>ما الذي يستطيع عرضُ المواقف القابل للتحقيق أن يدعمه؟</td><td>عدد المواقف التي تتّسع لها الطوابق المتاحة</td></tr>
+    </tbody>
+  </table>
+  <p>ولا يوجد نطاقٌ رابع «واقعي» أو «متوقّع». إن أردت أن تخصم من الأرقام لأسبابٍ تعرفها، فهناك معاملٌ اسمه «خصم الواقعية الذي تحدّده أنت»، قيمته الابتدائية <span class="num">1.000</span>، ويُسجَّل باسمك إن غيّرته.</p>
+
+  <h2>كيف تقرأ أي رقم</h2>
+  <p>كل قيمة في المحرّك تحمل وسمًا يقول من أين جاءت، وكل قيمة قابلة للنقر تفتح لوحة «من أين جاء هذا الرقم» (الشكل في الخطوة 9).</p>
+  <table>
+    <thead><tr><th>الوسم على الشاشة</th><th>معناه</th><th>ما تفعله</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag tag--derived">مُشتَقّ</span> وعلامة <span class="num">§</span></td><td>محسوب من قاعدة مُستشهَد بها.</td><td>افتحه لترى البند والمعادلة.</td></tr>
+      <tr><td><span class="tag tag--assumed">✎ مُفترَض</span></td><td>لم تحكمه قاعدة، فملأ المحرّك الفجوة بقيمة وسجّل أساسها وأثرها.</td><td>اقرأ الأساس، وعدّله إن كان عندك رقمٌ أدقّ.</td></tr>
+      <tr><td><span class="tag tag--user">أنت أدخلته</span></td><td>قيمة أدخلتها بنفسك، وتُسجَّل باسمك.</td><td>أنت مسؤولٌ عنها أمام من يقرأ المُخرَج.</td></tr>
+      <tr><td><span class="tag">لم يُقيَّم</span> (مُهشَّر)</td><td>فحصٌ لم يجد ما يفحصه، أو بندٌ لم يُقيَّم في هذه المرحلة.</td><td>لا تعدّه اجتيازًا؛ فهو ليس كذلك.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>خمسة أسئلة، يُجاب عن كلٍّ منها على حدة</h2>
+  <p>في كل تشغيلة، وفي الصفحة الرئيسة، وفي كل تقرير، يظهر البيان نفسه بترتيبه نفسه. قد تبدو الأسئلة الخمسة متشابهة، لكنها مختلفة، وواحدٌ منها فقط يتعلّق بالجهة التنظيمية:</p>
+  <table>
+    <thead><tr><th>السؤال</th><th>ما يقوله الجواب</th></tr></thead>
+    <tbody>
+      <tr><td>الاتّساق الذاتي</td><td>أنّ المحرّك فعل ما طُلب منه وأنّ حسابه يُغلق. لا أنّ ما طُلب منه صحيح.</td></tr>
+      <tr><td>تغطية القواعد</td><td>كم من المتطلّبات التي حدّدناها رُمِّز فعلًا. نسبةٌ من قائمتنا، لا دليلٌ على الاكتمال.</td></tr>
+      <tr><td>الصلاحية الهندسية</td><td>أنّ الأشكال سليمة، وأنّ المساحات حُسبت ثلاث مرّات مستقلّة فاتّفقت.</td></tr>
+      <tr><td>الاتّفاق مع الحكم المهني</td><td>لم يُقَس بعد. فلا يوجد رقم «دقّة» في أي مكان.</td></tr>
+      <tr><td>الصلاحية التنظيمية</td><td><strong>لا تُدَّعى إطلاقًا.</strong> النظام لا يحدّد، ولا يستطيع أن يحدّد، هل ستوافق الجهة المختصّة على المخطّط.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout--limit">
+    <span class="callout__label">ما لا يفعله TOP.ai</span>
+    <ul>
+      <li>لا يقول إنّ المشروع مطابقٌ للأنظمة، ولا يقبل أن يُوصف أيّ مُخرَجٍ منه بذلك.</li>
+      <li>لا يبحث عن أفضل موضعٍ للمنحدر أو القلب الخدمي لتعظيم عدد الوحدات؛ فذلك مُحسِّنٌ خارج نطاق هذه المرحلة.</li>
+      <li>لا يصمّم واجهات ولا أنوية ولا وحدات؛ الكتلة البنائية طوابق ومواقف ومنحدر، وما لا يحسبه المحرّك لا يُرسم.</li>
+      <li>لا يقرأ المخطّط الممسوح ضوئيًّا ولا الصورة؛ يحتاج ملف <span class="en">PDF</span> الصادر نفسه.</li>
+      <li>لا يستعير حدًّا من قطعةٍ مجاورة حين لا يذكره المخطّط؛ يُبلغ عن النقص ويتوقّف.</li>
+      <li>لا يتحقّق من أرقام الرخص المهنية؛ يسجّلها كما كُتبت.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ chapter 2 -->
+<section class="chapter" id="ch-2">
+  <header class="chapter__head">
+    <span class="chapter__no">02</span>
+    <h1>الموقع العامّ<span class="mk">@@ch-2@@</span></h1>
+    <p>ما يراه الزائر قبل أن يفتح المحرّك. وهو تحت الانضباط نفسه الذي يخضع له التقرير: لا رقم فيه لم يُنتجه المحرّك.</p>
+  </header>
+
+  <h2>الصفحة الرئيسة</h2>
+  <p>في أعلى كل صفحة شريطٌ ثابت يقول «الصلاحية التنظيمية — لم تُقيَّم». وتحته رأس الموقع: الشعار، وروابط «ما يرفضه» و«المواقف» و«الجاهزية»، ثم زرّ اللغة («<span class="en">English</span>» على الصفحات العربية)، وزرّ الوضع الفاتح/الداكن <span class="num">◐</span>، وزرّ «شغِّل قطعة» الذي يفتح المحرّك.</p>
+  <figure class="shot">
+    <img src="shots/p01-landing-fold.jpg" alt="الصفحة الرئيسة">
+    <figcaption>أول ما يظهر من الصفحة الرئيسة: نموذجٌ ثلاثي الأبعاد لقطعةٍ مثالٍ محسوبة، والطاقة الحاكمة لها، وتحتها مباشرةً أول قيمة مُفترَضة بالكهرماني مع أساسها. انقر على أي رقم لترى معادلته. قطعة المثال هذه غير قطعة المشروع في هذا الدليل.</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="shots/p02-landing-capacities.jpg" alt="الحدود الثلاثة في الصفحة الرئيسة">
+    <figcaption>الحدود الثلاثة لقطعة المثال، كلٌّ في بطاقة، والحاكم منها مُعلَّم بـ«يُلزِم».</figcaption>
+  </figure>
+  <figure class="shot half">
+    <img src="shots/p03-landing-claims.jpg" alt="البيان ذو الأسئلة الخمسة">
+    <figcaption>البيان ذو الأسئلة الخمسة، بترتيبه الذي يظهر به في كل تقرير.</figcaption>
+  </figure>
+  <figure class="shot half">
+    <img src="shots/p04-landing-limits.jpg" alt="ما لا يفعله">
+    <figcaption>قسم «ما لا يفعله»، وهو أطول من قائمة الميزات عن قصد.</figcaption>
+  </figure>
+
+  <h2>الصفحات الأخرى</h2>
+  <div class="pair">
+    <figure class="shot">
+      <img src="shots/p05-parking.jpg" alt="صفحة المواقف">
+      <figcaption>«المواقف»: كيف يرصّ المحرّك المواقف والممرّات والمنحدر، وبأي أبعاد.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="shots/p06-exports.jpg" alt="صفحة الملفات">
+      <figcaption>صفحة الملفات: ما يخرج من المحرّك، وما في كل ملف، مقروءًا من ملفاتٍ فعلية.</figcaption>
+    </figure>
+  </div>
+  <div class="pair">
+    <figure class="shot">
+      <img src="shots/p07-refusals.jpg" alt="ما يرفضه">
+      <figcaption>«ما يرفضه»: كل رفضٍ فعلٌ يؤدّيه البرنامج، ومعه المكان الذي يُفرض فيه.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="shots/p09-not-found.jpg" alt="صفحة غير موجودة">
+      <figcaption>عنوانٌ غير موجود: صفحةٌ تقول ذلك وتعيدك إلى ما يمكن فتحه.</figcaption>
+    </figure>
+  </div>
+  <figure class="shot half">
+    <img src="shots/p08-readiness.jpg" alt="صفحة الجاهزية">
+    <figcaption>«الجاهزية»: تبدأ بما ليس جاهزًا. يشرحها الفصل 10.</figcaption>
+  </figure>
+
+  <h2>على الهاتف، وفي الوضع الداكن</h2>
+  <div class="pair pair--phone">
+    <figure class="shot">
+      <img src="shots/p10-landing-phone.jpg" alt="الصفحة الرئيسة على الهاتف">
+      <figcaption>على الهاتف: عمودٌ واحد، بلا تمريرٍ أفقي.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="shots/p11-landing-dark.jpg" alt="الوضع الداكن">
+      <figcaption>الوضع الداكن، من زرّ <span class="num">◐</span>. يبقى الكهرماني للمُفترَض وحده في الوضعين.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================================================ chapter 3 -->
+<section class="chapter" id="ch-3">
+  <header class="chapter__head">
+    <span class="chapter__no">03</span>
+    <h1>الدخول: ضيفٌ أم حساب<span class="mk">@@ch-3@@</span></h1>
+    <p>لا يوجد وضعٌ مجهول الهوية: كل قيمة تحدّدها تُسجَّل مقرونةً باسم.</p>
+  </header>
+
+  <p>زرّ «شغِّل قطعة» يفتح صفحة «قبل أن يفتح المحرّك». فيها طريقان: أن تمضي باسمك وحده ضيفًا، أو أن تُنشئ حسابًا أو تسجّل الدخول به.</p>
+  <figure class="shot half">
+    <img src="shots/a01-antechamber.jpg" alt="قبل أن يفتح المحرّك">
+    <figcaption>«قبل أن يفتح المحرّك»: لماذا يُطلب اسمك، وما الذي يسجّله حقل الرخصة وما الذي لا يفعله.</figcaption>
+  </figure>
+  <div class="pair">
+    <figure class="shot">
+      <img src="shots/a02-guest-form.jpg" alt="المتابعة ضيفًا">
+      <figcaption>ضيفًا: اسمٌ فقط. يُطبع هذا الاسم على المُخرَج.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="shots/a03-create-account.jpg" alt="إنشاء حساب">
+      <figcaption>«إنشاء حساب»: الاسم، ورقم الرخصة المهنية (اختياري)، والبريد، وكلمة مرور من اثني عشر محرفًا على الأقلّ.</figcaption>
+    </figure>
+  </div>
+
+  <table>
+    <thead><tr><th></th><th>ضيف</th><th>حساب</th></tr></thead>
+    <tbody>
+      <tr><td>يعمل المحرّك</td><td>نعم، بالطريقة نفسها</td><td>نعم</td></tr>
+      <tr><td>تُحفظ تشغيلاتك</td><td>في هذا المتصفّح وحده؛ فإن مسحتَ بياناته أو انتقلتَ إلى غيره تعذّر الوصول إليها</td><td>باسمك، من أي جهاز</td></tr>
+      <tr><td>يُحفظ ما تكتبه أوّلًا بأوّل</td><td>لا</td><td>نعم، ويظهر في «ما لم يكتمل»</td></tr>
+      <tr><td>يستطيع أحدٌ أن يشارك معك تشغيلة</td><td>لا</td><td>نعم، ببريدك</td></tr>
+      <tr><td>تستطيع توقيع المراجعة (G4)</td><td>لا</td><td>نعم، إن أدخلتَ رقم رخصة عند الإنشاء</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout--limit">
+    <span class="callout__label">الرخصة تُدخَل عند إنشاء الحساب، ولا تُضاف لاحقًا</span>
+    <p>إن كنت ستوقّع مراجعاتٍ لغيرك، فأدخل رقم رخصتك المهنية في نموذج «إنشاء حساب». يُسجَّل كما تكتبه، ولا يُتحقَّق منه لدى أي جهة، ولا يمكن إضافته إلى حسابٍ قائم. ولا شيء يمنع منشئ التشغيلة من توقيع مراجعتها بنفسه؛ الفصل بين المهامّ ضابطٌ لا تفرضه البرمجية حتى الآن.</p>
+  </div>
+  <p>في هذا الدليل أنشأنا حسابين: <span class="en">{{author}}</span> مهندسةً تُعدّ التشغيلة، و<span class="en">{{reviewer}}</span> مراجِعًا يوقّعها. وكلا الحسابين برقم رخصةٍ تجريبي.</p>
+</section>
+
+<!-- ============================================================ chapter 4 -->
+<section class="chapter" id="ch-4">
+  <header class="chapter__head">
+    <span class="chapter__no">04</span>
+    <h1>المشروع المستخدم في هذا الدليل<span class="mk">@@ch-4@@</span></h1>
+    <p>قطعة أرضٍ حقيقية في ورسان، ومخطّط الأفكشن الصادر لها.</p>
+  </header>
+
+  <h2>ما يقوله المخطّط</h2>
+  <p>الملف: <span class="code">{{sheet.file}}</span> — مرجع الرسم <span class="num">{{sheet.drawing}}</span>، تاريخ الإصدار <span class="num">{{sheet.issued}}</span>. قرأ المحرّك منه:</p>
+  <dl class="facts">
+    <div><dt>رقم القطعة</dt><dd>{{sheet.parcel}}</dd></div>
+    <div><dt>المجتمع العمراني</dt><dd>{{sheet.community}}</dd></div>
+    <div><dt>مساحة القطعة</dt><dd>{{sheet.area}} <small>m²</small></dd></div>
+    <div><dt>معامل البناء (FAR)</dt><dd>{{sheet.far}}</dd></div>
+    <div><dt>المساحة الطابقية المسموح بها (GFA)</dt><dd>{{sheet.gfa}} <small>m²</small></dd></div>
+    <div><dt>الارتفاع</dt><dd>{{sheet.height}}</dd></div>
+  </dl>
+  <table>
+    <tbody>
+      <tr><th>استعمال الأرض</th><td class="en">{{sheet.landUse}}</td></tr>
+      <tr><th>الارتدادات كما طُبعت</th><td class="en">{{sheet.setbacks}}</td></tr>
+      <tr><th>نسبة التغطية كما طُبعت</th><td class="en">{{sheet.coverage}}</td></tr>
+      <tr><th>طوابق المصطبة</th><td class="num">{{sheet.podiumLevels}}</td></tr>
+      <tr><th>إعادة فحص حساب المخطّط</th><td class="en">{{sheet.crossCheck}}</td></tr>
+      <tr><th>قيمٌ لا يذكرها المخطّط</th><td class="num">{{sheet.missing}}</td></tr>
+    </tbody>
+  </table>
+  <p>يعيد المحرّك حساب المخطّط نفسه: معامل البناء × المساحة يساوي هنا <span class="num">{{sheet.farTimesArea}} m²</span>، وهو ما طبعه المخطّط، فيظهر الفحص بوسم «يتّفق».</p>
+
+  <h2>ما أدخلناه نحن</h2>
+  <p>لا يذكر المخطّط كل ما يحتاجه الحساب. هذه القيم أدخلناها بأنفسنا، وكل واحدة منها مسجّلة في التشغيلة باسم من أدخلها:</p>
+  <table>
+    <thead><tr><th>القيمة</th><th>ما أدخلناه</th><th>أين</th></tr></thead>
+    <tbody>
+      <tr><td>العرض × العمق</td><td class="num">{{plot.width}} × {{plot.depth}} m</td><td>الخطوة 2. المساحة المحسوبة منهما <span class="num">{{plot.area}} m²</span>، وتُقارَن بمساحة المخطّط.</td></tr>
+      <tr><td>تصنيف الأضلاع</td><td>1 طريق (محلّي) · 2 قطعة مجاورة · 3 طريق (تجميعي) · 4 قطعة مجاورة</td><td>الخطوة 2، كما يظهر في رسم المخطّط.</td></tr>
+      <tr><td>هل تُحتسب المواقف ضمن معامل البناء؟</td><td>«لا، هي مستثناة»</td><td>الخطوة 4</td></tr>
+      <tr><td>طوابق المواقف المتاحة</td><td class="num">{{in.parkingLevels}}</td><td>الخطوة 4</td></tr>
+      <tr><td>الحصّة القابلة للبيع من المساحة الطابقية</td><td class="num">{{in.efficiency}}</td><td>الخطوة 4</td></tr>
+      <tr><td>خصم الواقعية</td><td class="num">{{in.realism}}</td><td>لم نغيّره</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout--limit">
+    <span class="callout__label">ما يُقرأ من المخطّط، وما يدخل الحساب فعلًا</span>
+    <p>معامل البناء <span class="num">{{sheet.far}}</span> والمساحة الطابقية <span class="num">{{sheet.gfa}} m²</span> والارتدادات ونسبة التغطية كلّها تُقرأ من المخطّط وتُعاد مراجعتها وتُعرض في الخطوة 1 — لكنها <strong>لا تدخل الحساب في هذا الإصدار</strong>. الذي ينتقل منها إلى الحساب هو رقم القطعة والمجتمع والمساحة (لفحص الفرق مع أبعادك) وعدد طوابق المصطبة.</p>
+    <p>أمّا الحدود فيأخذها المحرّك من قواعد هذا النشر، وهي مسوّدة: معامل بناء <span class="num">{{cap.permittedFar}}</span>، وارتدادات <span class="num">{{edge1.setback}}</span> و<span class="num">{{edge2.setback}}</span> و<span class="num">{{edge3.setback}}</span> و<span class="num">{{edge4.setback}}</span> m للأضلاع من 1 إلى 4. لذلك يظهر النطاق A في هذا المشروع <span class="num">{{cap.A}} m²</span> (معامل <span class="num">{{cap.impliedFar}}</span> × المساحة)، لا <span class="num">{{sheet.gfa}}</span> التي يطبعها المخطّط. هذه فجوة معروفة ومُبلَّغٌ عنها، وهي سببٌ آخر لئلّا يُستشهد بأرقام هذا الدليل.</p>
+  </div>
+</section>
+
+<!-- ============================================================ chapter 5 -->
+<section class="chapter" id="ch-5">
+  <header class="chapter__head">
+    <span class="chapter__no">05</span>
+    <h1>الخطوات 1–5: من المخطّط إلى الإقرار بالافتراضات<span class="mk">@@ch-5@@</span></h1>
+    <p>ما تُدخله وما تختاره قبل أن يحسب المحرّك شيئًا.</p>
+  </header>
+
+  <div class="step-head">
+  <h2><span class="step">1</span>المخطّط</h2>
+  <ul class="where"><li class="on">1 المخطّط</li><li>2 القطعة</li><li>3 الوسائط</li><li>4 القواعد</li><li>5 الافتراضات</li><li>6 الطاقة</li><li>7 المواقف</li><li>8 الفحوص</li><li>9 الأدلّة</li><li>10 التصدير</li></ul>
+  <p>أفلِت ملف مخطّط الأفكشن في المربّع، أو انقر «اختر ملف <span class="en">PDF</span>، أو أفلِته هنا». يجب أن يكون الملف الصادر نفسه: الصورة الفوتوغرافية والمسح الضوئي لا نصّ فيهما يُقرأ، والمحرّك لا يخمّن نصًّا من صورة. ولا يُحفظ شيءٌ حتى تنظر فيه.</p>
+  </div>
+  <figure class="shot third">
+    <img src="shots/e00-intake-empty.jpg" alt="خطوة المخطّط قبل رفع الملف">
+    <figcaption>الخطوة 1 قبل رفع الملف.</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="shots/e01-intake-read.jpg" alt="المخطّط بعد قراءته">
+    <figcaption>بعد القراءة: كل قيمة بجانبها <span class="num">§</span> تفتح موضعها في الملف. الارتفاع مفسَّرًا، والارتدادات كما طُبعت ومفصّلةً لكل مستوى، ونسبة التغطية، ثم إعادة فحص حساب المخطّط. وفي الأسفل «استخدم هذه القيم» أو «تخطَّ — سأُدخل القيم بنفسي».</figcaption>
+  </figure>
+  <div class="callout callout--tip">
+    <span class="callout__label">حين يسكت المخطّط عن حدّ</span>
+    <p>إن لم يطبع المخطّط معامل بناء أو ارتدادًا، فلن يستعير المحرّك قيمةً من قطعةٍ مجاورة. يُدرج النقص تحت «لا يذكرها المخطّط»، ولا يبدأ الحساب حتى يُسدّ من مصدرٍ آخر. وإن طُبع الارتداد مشروطًا (مثل «0 m إلى جدارٍ مصمت، و4 m إلى جدارٍ بنوافذ»)، بقي مشروطًا ولم يُختزَل إلى رقمٍ واحد.</p>
+  </div>
+
+  <div class="step-head">
+  <h2><span class="step">2</span>القطعة</h2>
+  <ul class="where"><li>1 المخطّط</li><li class="on">2 القطعة</li><li>3 الوسائط</li><li>4 القواعد</li><li>5 الافتراضات</li><li>6 الطاقة</li><li>7 المواقف</li><li>8 الفحوص</li><li>9 الأدلّة</li><li>10 التصدير</li></ul>
+  <p>ينقل «استخدم هذه القيم» رقم القطعة والمجتمع والمساحة المذكورة. أمّا العرض والعمق فلا يُنقلان: المخطّط يذكر مساحةً لا واجهة، والمستطيل المستنتج من مساحةٍ شكلُ قطعةٍ لم يمسحها أحد. استبدل القيمتين الظاهرتين في الحقلين بأبعاد قطعتك، فتُقارَن المساحة المحسوبة بمساحة المخطّط ويُبلَّغ إن اختلفتا بأكثر من <span class="num">2%</span>.</p>
+  </div>
+  <figure class="shot">
+    <img src="shots/e02-plot-prefilled.jpg" alt="نموذج القطعة مملوءًا من المخطّط">
+    <figcaption>نموذج القطعة بعد النقل من المخطّط: الحقول المملوءة، والعرض والعمق بقيمتيهما الابتدائيتين، والأضلاع الأربعة «دون تصنيف بعد».</figcaption>
+  </figure>
+  <p>ثم صنّف كل ضلع من القائمة «الضلع n يطلّ على». لا قيمة افتراضية هنا ولا تصنيف تلقائي، لأنّ الارتداد يتوقّف على التصنيف: لو وُضع تصنيفٌ تلقائي لتغيّر مسطّح البناء دون أن يراه أحد. في مشروعنا: الضلع 1 طريق (محلّي)، والضلع 3 طريق (تجميعي)، والضلعان 2 و4 قطعتان مجاورتان. ثم «تابع».</p>
+  <figure class="shot">
+    <img src="shots/e03-plot-classified.jpg" alt="الأضلاع مصنّفة">
+    <figcaption>الأبعاد <span class="num">{{plot.width}} × {{plot.depth}} m</span> والأضلاع مصنّفة. الضلع الأزرق طريق، والمتقطّع قطعةٌ مجاورة.</figcaption>
+  </figure>
+
+  <div class="step-head">
+  <h2><span class="step">3</span>الوسائط — أكِّد قطعة الأرض</h2>
+  <ul class="where"><li>1 المخطّط</li><li>2 القطعة</li><li class="on">3 الوسائط</li><li>4 القواعد</li><li>5 الافتراضات</li><li>6 الطاقة</li><li>7 المواقف</li><li>8 الفحوص</li><li>9 الأدلّة</li><li>10 التصدير</li></ul>
+  <p>كل ما بعد هذه الخطوة يُحسَب مما على هذه الشاشة، فافحصه ما دام تغييره بلا كلفة. الزرّ «هذه هي القطعة» هو البوّابة الأولى (<span class="en">G1</span>).</p>
+  </div>
+  <figure class="shot">
+    <img src="shots/e04-plot-confirm.jpg" alt="تأكيد القطعة">
+    <figcaption>«أكِّد قطعة الأرض»: القطعة <span class="num">{{plot.number}}</span> في المجتمع <span class="num">{{plot.community}}</span>، والمساحة المحسوبة <span class="num">{{plot.area}} m²</span>، والشكل، وعدد الواجهات على طرق، والرسم مع أطوال الأضلاع وتصنيفها.</figcaption>
+  </figure>
+
+  <div class="step-head">
+  <h2><span class="step">4</span>القواعد</h2>
+  <ul class="where"><li>1 المخطّط</li><li>2 القطعة</li><li>3 الوسائط</li><li class="on">4 القواعد</li><li>5 الافتراضات</li><li>6 الطاقة</li><li>7 المواقف</li><li>8 الفحوص</li><li>9 الأدلّة</li><li>10 التصدير</li></ul>
+  <p>في هذه الخطوة أربعة أسئلة لا يجيب عنها المحرّك عنك، وقائمة القواعد التي ستُطبَّق.</p>
+  </div>
+
+  <h3>هل تُحتسب المواقف ضمن معامل البناء هنا؟</h3>
+  <p>يغيّر هذا الجواب الطاقة بنسبة <span class="num">15–35%</span>، ولا قيمة افتراضية له. الخيارات: «نعم، تُحتسب»، و«لا، هي مستثناة»، و«لا أعرف بعد». الخيار الثالث مشروع، لكن المحرّك لن يحسب طاقةً معه؛ وسيُريك ما تساويه كل معالجة إن طلبت «أرِني ما تساويه كل إجابة» — بعد أن تُدخل الحصّة القابلة للبيع أدناه، لأنّ المقارنة تشغّل الحساب مرّتين.</p>
+  <div class="pair">
+    <figure class="shot">
+      <img src="shots/e05-parking-question.jpg" alt="سؤال المواقف ضمن معامل البناء">
+      <figcaption>السؤال قبل الإجابة.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="shots/e10-comparison.jpg" alt="المقارنة بين المعالجتين">
+      <figcaption>بعد «لا، هي مستثناة» و«أرِني ما تساويه كل إجابة»: الطاقة الحاكمة واحدة في المعالجتين هنا، لأنّ المواقف تُلزِم قبلهما معًا.</figcaption>
+    </figure>
+  </div>
+
+  <h3>طوابق المواقف</h3>
+  <p>كم طابقًا من المواقف المبنيّة يستطيع المشروع أن يوفّر، وكم طابقًا منها في المصطبة. يقرأ المحرّك عدد طوابق المصطبة من الارتفاع المطبوع (<span class="en">{{sheet.height}}</span>) ويطلب أن تؤكّده أو تغيّره، ويُسجَّل ما تُدخله باسمك.</p>
+  <figure class="shot third">
+    <img src="shots/e06-podium.jpg" alt="طوابق المواقف">
+    <figcaption>«الطوابق المتاحة» و«طوابق المصطبة»، وكلاهما <span class="num">{{in.parkingLevels}}</span> في مشروعنا.</figcaption>
+  </figure>
+
+  <h3>القواعد التي ستُطبَّق</h3>
+  <p>كل قاعدة بمعرّفها ومرجعها. وفي هذا النشر يعلو القائمةَ تنبيهٌ أحمر: «لا قاعدة معتمدة في هذا النشر»، والمراجع كلّها مؤقّتة (<span class="en">PLACEHOLDER-NOT-A-REAL-INSTRUMENT</span>).</p>
+  <figure class="shot">
+    <img src="shots/e07-rules.jpg" alt="القواعد">
+    <figcaption>«بناء الغلاف»: القواعد التي تبني الهندسة مباشرةً — الارتدادات إزاحةٌ لا اختبار.</figcaption>
+  </figure>
+
+  <h3>معيار المطوّر، والحصّة القابلة للبيع</h3>
+  <p>معيار المطوّر (مساحات الوحدات ومزيجها كما يطلبها مطوّرٌ بعينه) ليس نظامًا، ويظهر فوقه تنبيهٌ بذلك. وهو محجوب في هذا النشر، فتقول الخطوة ذلك بدل القائمة.</p>
+  <figure class="shot">
+    <img src="shots/e08-standards-withheld.jpg" alt="معايير المطوّرين محجوبة">
+    <figcaption>معايير المطوّرين غير متاحة في هذا النشر.</figcaption>
+  </figure>
+  <p>أمّا «ما القابل للبيع من إجمالي المساحة الطابقية؟» فلا قيمة افتراضية له: الأنوية والممرّات والإنشاء والمعدّات والمرافق كلّها داخل المساحة الطابقية، ولا يُباع منها شيء. أدخلنا <span class="num">{{in.efficiency}}</span>.</p>
+  <figure class="shot">
+    <img src="shots/e09-efficiency.jpg" alt="الحصّة القابلة للبيع">
+    <figcaption>رقمٌ أكبر من <span class="num">0</span> ولا يتجاوز <span class="num">1</span>، ويُسجَّل باسمك.</figcaption>
+  </figure>
+  <p>ثم «احسب الطاقة». بهذا الزرّ تُعطى البوّابة الثانية (<span class="en">G2</span>): أنك رأيت القواعد التي ستُطبَّق.</p>
+
+  <div class="step-head">
+  <h2><span class="step">5</span>الافتراضات</h2>
+  <ul class="where"><li>1 المخطّط</li><li>2 القطعة</li><li>3 الوسائط</li><li>4 القواعد</li><li class="on">5 الافتراضات</li><li>6 الطاقة</li><li>7 المواقف</li><li>8 الفحوص</li><li>9 الأدلّة</li><li>10 التصدير</li></ul>
+  <p>كل قيمة لم تحكمها قاعدة تظهر هنا، مرتّبةً بأثرها: كم تتحرّك الإجابة إن تغيّرت القيمة بمقدار <span class="num">±10%</span>. في مشروعنا <span class="num">{{asm.count}}</span> افتراضات، قيس أثر <span class="num">{{asm.measured}}</span> منها، وأعلاها <span class="code">{{asm.top}}</span> بأثر <span class="num">{{asm.topEffect}}</span>.</p>
+  </div>
+  <figure class="shot">
+    <img src="shots/e11-assumptions.jpg" alt="سجلّ الافتراضات">
+    <figcaption>سجلّ الافتراضات: الافتراض، وقيمته بالكهرماني، وعلى أي أساسٍ افتُرض، وأثره. «لم يُقَس» تعني أنّ أحدًا لم يقس أثره، لا أنّ أثره صفر.</figcaption>
+  </figure>
+  <table class="asm">
+    <caption>السجلّ كما تحمله التشغيلة</caption>
+    <thead><tr><th class="num">#</th><th>الافتراض</th><th>القيمة</th><th class="num">الأثر عند ±10%</th></tr></thead>
+    <tbody>{{asm.rows}}</tbody>
+  </table>
+  <p>انقر أي قيمة مُفترَضة لتعدّلها إن كان عندك رقمٌ أدقّ؛ فتصير قيمةً «أنت أدخلته». وحين تفرغ من القراءة، انقر «قرأتُ الافتراضات». هذه البوّابة الثالثة (<span class="en">G3</span>)، وهي أول بوّابة تُحفظ مع التشغيلة وتُطبع على المُخرَج.</p>
+  <figure class="shot">
+    <img src="shots/e12-assumptions-acknowledged.jpg" alt="الإقرار بالافتراضات">
+    <figcaption>بعد الإقرار: «أقررتَ بهذه الافتراضات. ولا يزال لك أن تُعدِّل أيًّا منها.»</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ chapter 6 -->
+<section class="chapter" id="ch-6">
+  <header class="chapter__head">
+    <span class="chapter__no">06</span>
+    <h1>الخطوتان 6–7: الطاقة والمواقف والرسومات<span class="mk">@@ch-6@@</span></h1>
+    <p>الجواب، والمبنى الذي يمثّله، وطوابق المواقف بمواقفها مرقّمةً.</p>
+  </header>
+
+  <div class="step-head">
+  <h2><span class="step">6</span>الطاقة</h2>
+  <ul class="where"><li>1 المخطّط</li><li>2 القطعة</li><li>3 الوسائط</li><li>4 القواعد</li><li>5 الافتراضات</li><li class="on">6 الطاقة</li><li>7 المواقف</li><li>8 الفحوص</li><li>9 الأدلّة</li><li>10 التصدير</li></ul>
+  <dl class="facts">
+    <div><dt>A — الطاقة التنظيمية</dt><dd>{{cap.A}} <small>m²</small></dd></div>
+    <div><dt>B — الطاقة الهندسية</dt><dd>{{cap.B}} <small>m²</small></dd></div>
+    <div><dt>C — طاقة المواقف</dt><dd>{{cap.C}} <small>m²</small></dd></div>
+    <div><dt>الطاقة الحاكمة (النطاق {{cap.band}})</dt><dd>{{cap.governing}} <small>m²</small></dd></div>
+    <div><dt>الهامش حتى الحدّ التالي</dt><dd>{{cap.headroom}} <small>m²</small></dd></div>
+    <div><dt>الطوابق التي تضعها الإجابة</dt><dd>{{cap.levels}}</dd></div>
+  </dl>
+  </div>
+  <p>المواقف هي التي تُلزِم هذه القطعة. يسمح النظام بمساحةٍ أكبر مما يستطيع عرضُ المواقف أن يخدمه، ويقول المحرّك ذلك بجملته:</p>
+  <p class="en small" dir="ltr" style="text-align:left">{{cap.explanation}}</p>
+  <figure class="shot">
+    <img src="shots/e13-capacity.jpg" alt="الطاقة التطويرية">
+    <figcaption>«الطاقة التطويرية»: الحاكمة وقيدها المُلزِم ومعرّف قاعدته، والهامش، والطوابق، و«المفقود بحساب الطوابق كاملةً» (<span class="num">{{cap.granularityLoss}} m²</span>). تحتها أول افتراضٍ يحرّك هذا الرقم، ثم الحدود الثلاثة بأشرطةٍ متناسبة، وخصم الواقعية.</figcaption>
+  </figure>
+
+  <h3>الكتلة البنائية</h3>
+  <p>المبنى الذي وزّعه المحرّك، طابقًا طابقًا، داخل الغلاف الذي تسمح به القواعد. لا شيء هنا مُصمَّم: لا واجهات ولا أنوية ولا وحدات، لأنّ المحرّك لا يحسب أيًّا منها. الطوابق المُصمَتة هي الإجابة (<span class="num">{{cap.levels}}</span> طوابق فوق <span class="num">{{in.parkingLevels}}</span> من مواقف المصطبة)، والخطوط الخارجية فوقها (<span class="num">{{bld.unused}}</span>) حيّزٌ يتركه الارتفاع غير مستخدم. وما وضعه المحرّك حيث لا تحسم قاعدة — منسوب طوابق المواقف، وميل المنحدر — يُرسم بالكهرماني.</p>
+  <figure class="shot">
+    <img src="shots/e14-massing.jpg" alt="الكتلة البنائية">
+    <figcaption>أدوات العرض: «مجسّم» أو «من الأعلى»، و«اعرض» طابقًا بعينه أو «كل الطوابق»، و«باعِد بين الطوابق»، و«اقطع عند» منسوبٍ ما، و«أعِد ضبط العرض». اسحب لتدير، ومرّر لتكبّر، أو استعمل لوحة المفاتيح. اختر سيارةً أو بلاطةً أو المنحدر لترى مصدرها.</figcaption>
+  </figure>
+  <figure class="shot half">
+    <img src="shots/e15-levels.jpg" alt="جدول الطوابق">
+    <figcaption>جدول الطوابق تحت الكتلة، وهو ما يقرؤه قارئ الشاشة بدل الصورة: الطابق، ومنسوب أرضيته، ومواقفه، وحدّه الخارجي أو ميله.</figcaption>
+  </figure>
+
+  <h3>الغلاف البنائي</h3>
+  <p>كل بُعدٍ يسمّي القيد الذي أنتجه. مسطّح البناء بعد الارتدادات <span class="num">{{env.footprint}} m²</span> أصغر من حدّ نسبة التغطية <span class="num">{{env.coverage}} m²</span>، فالارتدادات هي المُلزِمة. وحدّ الارتفاع <span class="num">{{env.height}} m</span> بارتفاع <span class="num">{{env.f2f}} m</span> من طابقٍ إلى طابق يعطي <span class="num">{{env.maxLevels}}</span> طابقًا.</p>
+  <figure class="shot">
+    <img src="shots/e16-envelope.jpg" alt="الغلاف البنائي">
+    <figcaption>«ما الذي يُلزِم كل بُعد»: القيد المُلزِم وقيمته، والأقرب بعده. و«تكرارات حلّ الارتدادات»: كم مرّةً احتاج المحرّك ليصل إلى ارتدادٍ ثابت، لأنّ الارتداد قد يتوقّف على عدد الطوابق.</figcaption>
+  </figure>
+
+  <div class="step-head">
+  <h2><span class="step">7</span>المواقف</h2>
+  <ul class="where"><li>1 المخطّط</li><li>2 القطعة</li><li>3 الوسائط</li><li>4 القواعد</li><li>5 الافتراضات</li><li>6 الطاقة</li><li class="on">7 المواقف</li><li>8 الفحوص</li><li>9 الأدلّة</li><li>10 التصدير</li></ul>
+  <p>الطلب، ثم العرض، ثم ما يستطيع العرض أن يحمله فعلًا.</p>
+  </div>
+  <dl class="facts">
+    <div><dt>مواقف السكّان</dt><dd>{{pk.resident}}</dd></div>
+    <div><dt>مواقف الزوّار</dt><dd>{{pk.visitor}}</dd></div>
+    <div><dt>مجموع المواقف</dt><dd>{{pk.required}}</dd></div>
+    <div><dt>المساحة لكل موقف (مُفترَضة)</dt><dd>{{pk.factor}} <small>m²/موقف</small></dd></div>
+    <div><dt>الطوابق المطلوبة / المتاحة</dt><dd>{{pk.levelsRequired}} / {{pk.levelsAvailable}}</dd></div>
+    <div><dt>الوحدات التي تكفيها المواقف</dt><dd>{{pk.unitCeiling}}</dd></div>
+  </dl>
+  <figure class="shot">
+    <img src="shots/e17-parking.jpg" alt="المواقف">
+    <figcaption>«المواقف»: <span class="num">{{pk.requiredArea}} m²</span> مطلوبة لا تتّسع لها الطوابق المتاحة. فيقول المحرّك ما الذي يحلّ ذلك: أن يكبر مسطّح المصطبة، أو يُضاف طابق قبو، أو ينزل عدد الوحدات.</figcaption>
+  </figure>
+
+  <h3>مجموعة الرسومات</h3>
+  <p>المواقف لا تُقسم مساحةً على معامل؛ تُرصّ مستطيلاتٍ في أكبر مستطيلٍ يقع <em>داخل</em> المصطبة: الموقف <span class="num">{{lp.bayW}} × {{lp.bayL}} m</span> والممرّ ذو الاتجاهين <span class="num">{{lp.aisle}} m</span>. يتّسع كل طابق مواقف في مشروعنا لـ<span class="num">{{lp.bays}}</span> موقفًا، ومجموع ما رُسم في الطوابق كلها <span class="num">{{bld.drawnBays}}</span>. ويُحجز <span class="num">{{lp.reserved}} m²</span> للأنوية والمعدّات والحركة دون أن يُرسم ما بداخلها. في الموقع <span class="num">{{sheets.count}}</span> لوحات، كلٌّ في تبويب:</p>
+  <p class="en small" dir="ltr" style="text-align:left">{{sheets.list}}</p>
+  <figure class="shot">
+    <img src="shots/e18-sheet-parking-level.jpg" alt="لوحة طابق المواقف">
+    <figcaption>اللوحة A-101: المواقف مرقّمة وفي كل موقفٍ سيارة، والممرّ، والمنحدر ووجهته، والمنطقة المحجوزة بخطٍّ متقطّع، ومدخل المركبات. وفي شريط العنوان ما وضعه المحرّك بالكهرماني: منسوب الأرضية، وميل المنحدر (<span class="num">{{ramp.gradient}}%</span>، لم يُقيَّم)، والمساحة المحجوزة. أزرار «صغِّر» و«مُلاءَمة للعرض» و«كبِّر» فوق اللوحة.</figcaption>
+  </figure>
+  <div class="pair">
+    <figure class="shot">
+      <img src="shots/e19-sheet-site-plan.jpg" alt="مخطّط الموقع">
+      <figcaption>A-001 مخطّط الموقع: حدود القطعة، وخطوط الارتداد، والمصطبة، والمدخل، وخطّا القطاعين.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="shots/e20-sheet-parking-level-2.jpg" alt="طابق المواقف الثاني">
+      <figcaption>A-102: طابق المواقف الثاني، والمنحدر نازلًا إليه.</figcaption>
+    </figure>
+  </div>
+  <div class="pair">
+    <figure class="shot">
+      <img src="shots/e21-sheet-typical-floor.jpg" alt="الطابق المتكرّر">
+      <figcaption>A-201 الطابق المتكرّر: لوح البرج داخل الارتدادات.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="shots/e22-sheet-sections.jpg" alt="القطاع">
+      <figcaption>A-301 / A-302 القطاعان: الطوابق بمناسيبها، وسقف الارتفاع.</figcaption>
+    </figure>
+  </div>
+
+  <h3>مدخل المركبات</h3>
+  <p>المواضع الممكنة لممرّ المركبات، مرتّبة. يقيس البند <span class="en">B.7.2.1</span> خلوص التقاطع من الركن المشطوف للقطعة، ويفضّل الواجهة المطلّة على الطريق الأدنى تصنيفًا. التوصية هنا الضلع <span class="num">{{access.edge}}</span> بعرض <span class="num">{{access.width}} m</span>، ويبقى منه <span class="num">{{access.window}} m</span> بعد خلوص التقاطع. البديل الضلع 3، والمرفوض <span class="num">{{access.rejected}}</span> (يحاذيان قطعًا مجاورة). وما يحتاج شبكة الطرق أو موافقة هيئة الطرق يُعلَن «لم يُقيَّم» ولا يُحسم.</p>
+  <figure class="shot">
+    <img src="shots/e23-access.jpg" alt="مدخل المركبات">
+    <figcaption>«مدخل المركبات»: الموصى به، و«البدائل»، و«مرفوضة، ولماذا»، و«لم يُقيَّم». و«اعرض كيف اشتُقّ هذا الموضع» يفتح مصدره.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ chapter 7 -->
+<section class="chapter" id="ch-7">
+  <header class="chapter__head">
+    <span class="chapter__no">07</span>
+    <h1>الخطوات 8–10: الفحوص والأدلّة والتصدير<span class="mk">@@ch-7@@</span></h1>
+    <p>ما فُحص وما لم يُفحص، ومصدر كل رقم، وما يلزم قبل أن يخرج أي ملف.</p>
+  </header>
+
+  <div class="step-head">
+  <div class="step-head">
+  <h2><span class="step">8</span>الفحوص</h2>
+  <ul class="where"><li>1 المخطّط</li><li>2 القطعة</li><li>3 الوسائط</li><li>4 القواعد</li><li>5 الافتراضات</li><li>6 الطاقة</li><li>7 المواقف</li><li class="on">8 الفحوص</li><li>9 الأدلّة</li><li>10 التصدير</li></ul>
+  <p>ما الذي فحصه المحرّك في هذه التشغيلة وما الذي لم يفحصه، كلٌّ باسمه. يعني الإخفاق هنا حجب التشغيلة، ولا يُعرض الفحص الذي لم يجرِ على أنه اجتياز.</p>
+  </div>
+  <figure class="shot">
+    <img src="shots/e24-claims.jpg" alt="ما فُحص وما لم يُفحص">
+    <figcaption>«ما فُحص، وما لم يُفحص»: الأسئلة الخمسة لهذه التشغيلة، كلٌّ بجوابه. الأخير أحمر دائمًا: الصلاحية التنظيمية لا تُدَّعى.</figcaption>
+  </figure>
+  <p><strong>فحوص الحفظ الحسابي</strong> حسابٌ يجب أن ينغلق أيًّا كان ما تقوله القواعد، والإخفاق فيها يحجب التشغيلة كلها ولا يكون تحذيرًا. جرى منها <span class="num">{{inv.ran}}</span> من <span class="num">{{inv.total}}</span>: اجتاز <span class="num">{{inv.passed}}</span> وأخفق <span class="num">{{inv.failed}}</span>. والباقي <span class="num">{{inv.dormant}}</span> لم يجد ما يفحصه لأنه يحتاج جدول وحداتٍ أو جدول طوابق لا تولّدهما هذه المرحلة (<span class="en small">{{inv.dormantList}}</span>)، وهذه لا تُحتسب اجتيازات.</p>
+  <figure class="shot">
+    <img src="shots/e25-invariants.jpg" alt="فحوص الحفظ الحسابي">
+    <figcaption>كل فحص بمنطوقه، والمرصود، والمتوقّع، والتفاوت المسموح. معامل البناء المحقَّق هنا <span class="num">{{cap.achievedFar}}</span>.</figcaption>
+  </figure>
+  <p><strong>إعادة فحص الإجابة مقابل القواعد</strong> تجريها وحدةٌ لا ترى الوحدة التي أنتجتها. القيود الصارمة التي فُحصت <span class="num">{{con.checked}}</span>، استوفي منها <span class="num">{{con.satisfied}}</span> وخولف <span class="num">{{con.violated}}</span>. وبنودٌ منطبقة لم تُقيَّم <span class="num">{{con.deferred}}</span>، منها <span class="num">{{con.lifeSafety}}</span> يتعلّق بسلامة الأرواح، ويُعلَن في كل مُخرَج.</p>
+  <figure class="shot">
+    <img src="shots/e26-constraints.jpg" alt="الإجابة يُعاد فحصها مقابل القواعد">
+    <figcaption>«الإجابة، يُعاد فحصها مقابل القواعد»، ثم «منطبقة، ولم تُقيَّم» مع وسم «سلامة الأرواح».</figcaption>
+  </figure>
+
+  <div class="step-head">
+  <h2><span class="step">9</span>الأدلّة</h2>
+  <ul class="where"><li>1 المخطّط</li><li>2 القطعة</li><li>3 الوسائط</li><li>4 القواعد</li><li>5 الافتراضات</li><li>6 الطاقة</li><li>7 المواقف</li><li>8 الفحوص</li><li class="on">9 الأدلّة</li><li>10 التصدير</li></ul>
+  <p>من أين جاء كل رقم: على رسم القطعة، وفي قائمة أرقام التشغيلة كلها، وفي لوحة الاشتقاق التي يفتحها النقر على أي رقم.</p>
+  </div>
+  <figure class="shot">
+    <img src="shots/e27-evidence.jpg" alt="قطعة الأرض وما اقتطعته القواعد منها">
+    <figcaption>«قطعة الأرض، وما اقتطعته القواعد منها»: الشريط المُهشَّر هو الارتداد، وعلى كل ضلعٍ مقداره (<span class="num">{{edge1.setback}}</span> · <span class="num">{{edge2.setback}}</span> · <span class="num">{{edge3.setback}}</span> · <span class="num">{{edge4.setback}}</span> m). اختر ضلعًا لترى القاعدة التي حدّدته.</figcaption>
+  </figure>
+  <figure class="shot half">
+    <img src="shots/e28-numbers.jpg" alt="كل رقم في هذه التشغيلة">
+    <figcaption>«كل رقمٍ في هذه التشغيلة»: الغلاف، والمواقف، والطاقة. كلٌّ منها يفتح اشتقاقه، ولا يعود أيٌّ منها إلى «قرّر النظام».</figcaption>
+  </figure>
+  <div class="keep">
+    <figure class="shot narrow">
+      <img src="shots/e29-derivation.jpg" alt="من أين جاء هذا الرقم">
+      <figcaption>«من أين جاء هذا الرقم» لمسطّح البناء بعد الارتدادات: المعادلة، ثم كل قيمةٍ دخلتها بوسمها، وكلٌّ قابلٌ للفتح إلى مصدره.</figcaption>
+    </figure>
+    <div class="callout callout--tip">
+      <span class="callout__label">ترقيم الأضلاع في لوحة الاشتقاق</span>
+      <p>معرّفات القيم في لوحة الاشتقاق تعدّ الأضلاع من الصفر: <span class="code">setback.road.edge_0</span> هو الضلع 1 على الشاشات والرسومات، و<span class="code">edge_1</span> هو الضلع 2، وهكذا.</p>
+    </div>
+  </div>
+
+  <h2><span class="step">10</span>التصدير</h2>
+  <ul class="where"><li>1 المخطّط</li><li>2 القطعة</li><li>3 الوسائط</li><li>4 القواعد</li><li>5 الافتراضات</li><li>6 الطاقة</li><li>7 المواقف</li><li>8 الفحوص</li><li>9 الأدلّة</li><li class="on">10 التصدير</li></ul>
+  <p>لا بدّ أن يتحقّق أمران قبل أن يخرج أي شيء: أن تكون الافتراضات قد قُرئت (<span class="en">G3</span>)، وأن يضع أحدٌ اسمه على الناتج (<span class="en">G4</span>). وليس أيٌّ منهما إجراءً شكليًّا. الزرّ «وقِّع هذا المُخرَج» يسجّلك أنت مراجِعًا. وفي مشروعنا لم توقّعه المُعِدّة، بل شاركت التشغيلة مع مراجِعٍ آخر فوقّعها من لوحة التحكّم (الفصل 8).</p>
+  </div>
+  <figure class="shot">
+    <img src="shots/e30-export-gates.jpg" alt="التصدير">
+    <figcaption>«التصدير»: البوّابة الأولى مستوفاة، والثانية تنتظر مراجِعًا مسمّى، و«صدِّر التقرير» غير متاح بعد.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ chapter 8 -->
+<section class="chapter" id="ch-8">
+  <header class="chapter__head">
+    <span class="chapter__no">08</span>
+    <h1>لوحة التحكّم: أعمالك والمشاركة والمراجعة<span class="mk">@@ch-8@@</span></h1>
+    <p>حيث تُحفظ كل تشغيلة كما حُسبت، وتُشارَك، وتُوقَّع، وتُنزَّل ملفاتها.</p>
+  </header>
+
+  <h2>أعمالك</h2>
+  <p>تُحفظ كل تشغيلة تُنشئها كما حُسبت تمامًا، بمدخلاتها وافتراضاتها وشبكة مصدر اشتقاقها، ولا يُعاد في هذه الصفحة حساب أي شيء. للصفحة ثلاثة أقسام: «تشغيلات أنشأتها»، و«مُشارَكة معك»، و«ما لم يكتمل» (ما كتبته حين أغلقت علامة التبويب آخر مرّة — مسوّدة لم يُحسب فيها شيء).</p>
+  <figure class="shot">
+    <img src="shots/d02-work-author.jpg" alt="أعمالك">
+    <figcaption>«أعمالك» عند <span class="en">{{author}}</span>: تشغيلةٌ واحدة، بقطعتها وطاقتها الحاكمة وقيدها المُلزِم وعدد مفترضاتها، و«بوّابات التصدير 1 من 2 · غير موقَّعة»، ووسم «قواعد مسوّدة».</figcaption>
+  </figure>
+
+  <h2>صفحة التشغيلة</h2>
+  <figure class="shot">
+    <img src="shots/d03-run-answer.jpg" alt="صفحة التشغيلة">
+    <figcaption>«قطعة الأرض <span class="num">{{plot.number}}</span>»: متى حُسبت ومن أنشأها، ثم «الإجابة» — الكتلة وبجانبها الطاقة الحاكمة، والقيد المُلزِم، والطوابق التي تضعها الإجابة من الطوابق التي يسمح بها الارتفاع، والقيم المُفترَضة، وبوّابات التصدير الموقّعة.</figcaption>
+  </figure>
+  <figure class="shot half">
+    <img src="shots/d04-run-review-unsigned.jpg" alt="المراجعة والملفات قبل التوقيع">
+    <figcaption>«المراجعة والملفات» قبل توقيع المراجعة: الإقرار بالافتراضات موقَّع باسم <span class="en">{{g3.by}}</span>، والملفات مقفلة حتى تُوقَّع البوّابتان.</figcaption>
+  </figure>
+
+  <h2>المشاركة</h2>
+  <p>في أسفل صفحة التشغيلة «شارِك هذه التشغيلة». اكتب بريد الحساب الآخر، واختر ما يجوز له: «أن يراجعها» (يفتحها ويوقّع بوّابة المراجعة) أو «أن يقرأها» (يفتحها، ولا شيء غير ذلك)، ثم «شارِك التشغيلة».</p>
+  <div class="pair">
+    <figure class="shot">
+      <img src="shots/d05-share-form.jpg" alt="نموذج المشاركة">
+      <figcaption>قبل الإرسال: البريد، والدور «أن يراجعها».</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="shots/d06-shared.jpg" alt="بعد المشاركة">
+      <figcaption>بعد الإرسال: «إن كان حسابٌ يستخدم هذا العنوان، فبوسعه الآن أن يفتح هذه التشغيلة».</figcaption>
+    </figure>
+  </div>
+  <div class="callout callout--limit">
+    <span class="callout__label">المشاركة لا تُنشئ حسابًا ولا تُرسل بريدًا</span>
+    <p>المشاركة مع عنوانٍ لا يستخدمه حساب لا تفعل شيئًا، ولن تقول الصفحة ذلك — عن قصد، حتى لا تصير أداةً لمعرفة من يملك حسابًا. فاطلب من المراجِع أن يُنشئ حسابه أوّلًا، ثم شارك.</p>
+  </div>
+
+  <h2>المراجِع يفتح التشغيلة ويوقّعها</h2>
+  <p>قبل المشاركة، لو فتح المراجِع رابط التشغيلة لرأى الرسالة نفسها التي يراها أي أحد لتشغيلةٍ غير موجودة. لا يكشف الموقع أنّ التشغيلة موجودة لمن لم تُشارَك معه.</p>
+  <figure class="shot third">
+    <img src="shots/d01-run-not-shared.jpg" alt="تشغيلة غير مشاركة">
+    <figcaption>«هذه التشغيلة ليست في قائمتك. فإمّا أنها غير موجودة، وإمّا أنها لم تُشارَك معك.»</figcaption>
+  </figure>
+  <figure class="shot half">
+    <img src="shots/d07-work-reviewer.jpg" alt="أعمال المراجِع">
+    <figcaption>بعد المشاركة، عند <span class="en">{{reviewer}}</span>: لا تشغيلات أنشأها، والتشغيلة في «مُشارَكة معك» بوسم «مراجِع».</figcaption>
+  </figure>
+  <div class="pair">
+    <figure class="shot">
+      <img src="shots/d08-review-before.jpg" alt="قبل توقيع المراجعة">
+      <figcaption>عند المراجِع: «وقِّع بوّابة المراجعة (G4)». يُسجِّل التوقيع اسمه ورقم الرخصة المحفوظ في حسابه.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="shots/d09-review-signed.jpg" alt="بعد التوقيع">
+      <figcaption>بعد التوقيع: البوّابتان موقَّعتان، و«الملفات» مفتوحة.</figcaption>
+    </figure>
+  </div>
+  <table>
+    <caption>البوّابتان كما سجّلتهما التشغيلة</caption>
+    <thead><tr><th>البوّابة</th><th>وقّعها</th><th>في</th></tr></thead>
+    <tbody>
+      <tr><td>الإقرار بالافتراضات (<span class="en">G3</span>)</td><td class="en">{{g3.by}}</td><td class="num">{{g3.at}}</td></tr>
+      <tr><td>توقيع المراجعة (<span class="en">G4</span>)</td><td class="en">{{g4.by}}</td><td class="num">{{g4.at}}</td></tr>
+    </tbody>
+  </table>
+  <figure class="shot half">
+    <img src="shots/d10-author-after-review.jpg" alt="المُعِدّة بعد المراجعة">
+    <figcaption>والمُعِدّة ترى التوقيع نفسه على صفحة تشغيلتها، والملفات مفتوحة لها أيضًا.</figcaption>
+  </figure>
+
+  <h2>من يستطيع ماذا</h2>
+  <table>
+    <thead><tr><th>الدور</th><th>يفتح التشغيلة</th><th>ينزّل الملفات</th><th>يُقرّ بالافتراضات (G3)</th><th>يوقّع المراجعة (G4)</th></tr></thead>
+    <tbody>
+      <tr><td>المُنشئ</td><td>نعم</td><td>نعم، بعد البوّابتين</td><td>نعم</td><td>نعم — ولا شيء يمنعه بعد</td></tr>
+      <tr><td>مراجِع</td><td>نعم</td><td>نعم، بعد البوّابتين</td><td>لا</td><td>نعم، إن كان في حسابه رقم رخصة</td></tr>
+      <tr><td>قارئ</td><td>نعم</td><td>نعم، بعد البوّابتين</td><td>لا</td><td>لا</td></tr>
+      <tr><td>أي أحدٍ آخر</td><td colspan="4">لا شيء: يرى رسالة «ليست في قائمتك»، كأنّ التشغيلة غير موجودة.</td></tr>
+    </tbody>
+  </table>
+  <p>ويعيد الخادم فحص البوّابتين مع كل ملفٍّ يسلّمه؛ فلا يكفي أن تقول الصفحة إنهما موقَّعتان.</p>
+</section>
+
+<!-- ============================================================ chapter 9 -->
+<section class="chapter" id="ch-9">
+  <header class="chapter__head">
+    <span class="chapter__no">09</span>
+    <h1>الملفات التي تخرج من TOP.ai<span class="mk">@@ch-9@@</span></h1>
+    <p>ستة مُخرَجات من نموذجٍ واحد للمبنى بناه المحرّك مرّة واحدة. لا رسم يُجمَّع من أرقام المساحات.</p>
+  </header>
+
+  <table>
+    <thead><tr><th>الزرّ في «الملفات»</th><th>ما تحصل عليه</th><th>اسم الملف</th></tr></thead>
+    <tbody>
+      <tr><td>«افتح التقرير»</td><td>التقرير في علامة تبويب جديدة، جاهزًا للطباعة</td><td>—</td></tr>
+      <tr><td>«افتح مجموعة الرسومات»</td><td>اللوحات (<span class="num">{{sheets.count}}</span>)، كلٌّ على صفحة A3 أفقية بمقياسها</td><td>—</td></tr>
+      <tr><td>«نزِّل بيانات التقرير (JSON)»</td><td>التشغيلة كاملة بصيغةٍ يقرؤها برنامج</td><td class="en">envelope-{{run.short}}.json</td></tr>
+      <tr><td>«نزِّل المبنى لبرامج CAD (DXF)»</td><td>المبنى ثلاثي الأبعاد لبرامج الرسم</td><td class="en">envelope-{{run.short}}.dxf</td></tr>
+      <tr><td>«نزِّل النموذج ثلاثي الأبعاد (glTF)»</td><td>النموذج كما يظهر في الموقع</td><td class="en">envelope-{{run.short}}.glb</td></tr>
+      <tr><td>«نزِّل المصنّف (XLSX)»</td><td>الأرقام في جداول</td><td class="en">envelope-{{run.short}}.xlsx</td></tr>
+    </tbody>
+  </table>
+  <p class="muted small">ويحمل التقرير ومجموعة الرسومات وملف CAD والنموذج ثلاثي الأبعاد الجملتين نفسهما: «ليس للتنفيذ» و«الصلاحية التنظيمية: لم تُقيَّم».</p>
+
+  <h2>التقرير</h2>
+  <p>يبدأ التقرير بما لا يجوز أن يفوت قارئه: تنبيه القواعد المسوّدة بالأحمر، ثم تنبيه ملحق تعريفات المقاييس غير الموقّع (<span class="en">{{rd.annex}}</span>) بالكهرماني، ثم الطاقة الحاكمة وقيدها، ثم «الصلاحية التنظيمية: لم تُقيَّم». وبعدها هوية التشغيلة وإصداراتها، والحدود الثلاثة، وسجلّ الافتراضات، والفحوص، والمراجع مرقّمة في الحواشي.</p>
+  <div class="pair">
+    <figure class="shot"><img src="shots/f01-report-1.jpg" alt="التقرير، الصفحة الأولى"><figcaption>رأس التقرير. الرقم الصغير بعد <span class="en">m²</span> رقم حاشية تحيل إلى مرجع القيمة.</figcaption></figure>
+    <figure class="shot"><img src="shots/f01-report-2.jpg" alt="التقرير، الحدود"><figcaption>الحدود الثلاثة، والحاكم منها مُعلَّم.</figcaption></figure>
+  </div>
+  <div class="pair">
+    <figure class="shot"><img src="shots/f01-report-3.jpg" alt="التقرير، الافتراضات والفحوص"><figcaption>السجلّ والفحوص، كما في المحرّك.</figcaption></figure>
+    <figure class="shot"><img src="shots/f01-report-4.jpg" alt="التقرير، المراجع"><figcaption>المراجع والبوّابتان باسمَي من وقّعهما.</figcaption></figure>
+  </div>
+
+  <h2>مجموعة الرسومات A3</h2>
+  <p>اللوحات نفسها التي في الخطوة 7، مُعدّة للطباعة: كل لوحة تملأ صفحة A3 أفقية بالمقياس المطبوع في شريط عنوانها.</p>
+  <div class="pair">
+    <figure class="shot"><img src="shots/f02-drawing-set-1.jpg" alt="مجموعة الرسومات 1"><figcaption>مخطّط الموقع A-001.</figcaption></figure>
+    <figure class="shot"><img src="shots/f02-drawing-set-2.jpg" alt="مجموعة الرسومات 2"><figcaption>طابق المواقف A-101.</figcaption></figure>
+  </div>
+  <div class="pair">
+    <figure class="shot"><img src="shots/f02-drawing-set-3.jpg" alt="مجموعة الرسومات 3"><figcaption>طابق المواقف A-102.</figcaption></figure>
+    <figure class="shot"><img src="shots/f02-drawing-set-4.jpg" alt="مجموعة الرسومات 4"><figcaption>الطابق المتكرّر A-201.</figcaption></figure>
+  </div>
+
+  <h2>ملف CAD</h2>
+  <p>ملف <span class="en">DXF R12</span>، يقرؤه أي برنامج رسم. قرأناه بقارئٍ مستقلّ لم يكتبه فريق TOP.ai، فوجدنا فيه:</p>
+  <dl class="facts">
+    <div><dt>الطبقات</dt><dd>{{dxf.layers}}</dd></div>
+    <div><dt>العناصر المرسومة</dt><dd>{{dxf.entities}}</dd></div>
+    <div><dt>السيارات</dt><dd>{{dxf.cars}}</dd></div>
+  </dl>
+  <p>الوحدة: <span class="en">{{dxf.units}}</span>. وعدد السيارات فيه يساوي عدد المواقف التي رسمها المحرّك (<span class="num">{{bld.drawnBays}}</span>)، كلٌّ على منسوب طابقه. أسماء الطبقات تبدأ بـ <span class="code">ENV-</span> ثم اللوحة ثم العنصر، مثل:</p>
+  <p class="en small" dir="ltr" style="text-align:left">{{dxf.sampleLayers}}</p>
+
+  <h2>النموذج ثلاثي الأبعاد</h2>
+  <p>ملف <span class="en">glTF</span> ثنائي (<span class="en">.glb</span>)، حجمه <span class="num">{{glb.kb}} KB</span> وفيه <span class="num">{{glb.nodes}}</span> عنصرًا. يكتبه الخادم لا المتصفّح، لأنّ الخادم وحده يستطيع أن يتحقّق من البوّابتين قبل أن يكتبه. ويحمل في بياناته الوصفية الجملة:</p>
+  <p class="en small" dir="ltr" style="text-align:left">{{glb.notice}}</p>
+
+  <h2>المصنّف</h2>
+  <p>ملف <span class="en">XLSX</span> من <span class="num">{{xlsx.count}}</span> أوراق:</p>
+  <p class="en small" dir="ltr" style="text-align:left">{{xlsx.sheets}}</p>
+  <table>
+    <caption>الحدود الثلاثة كما في ورقة <span class="en">Capacity</span></caption>
+    <thead><tr><th>الصفّ</th><th class="num">m²</th><th>المصدر</th></tr></thead>
+    <tbody>{{xlsx.bands}}</tbody>
+  </table>
+  <p>كل قيمة في المصنّف بجانبها وسم مصدرها كما في المحرّك، والقيم المُفترَضة ملوّنة بالكهرماني.</p>
+
+  <h2>بيانات التقرير (JSON)</h2>
+  <p>التشغيلة كاملة: المدخلات، والنتائج، والافتراضات، والفحوص، وشبكة الاشتقاق التي تفتحها لوحة «من أين جاء هذا الرقم». تصلح لأرشفة التشغيلة، أو لمقارنتها بتشغيلةٍ أخرى، أو لإدخالها في برنامجٍ آخر.</p>
+</section>
+
+<!-- ============================================================ chapter 10 -->
+<section class="chapter" id="ch-10">
+  <header class="chapter__head">
+    <span class="chapter__no">10</span>
+    <h1>صفحة الجاهزية<span class="mk">@@ch-10@@</span></h1>
+    <p>ما ينقص هذا النشر قبل أن تصلح أرقامه للاعتماد. تبدأ بما ليس جاهزًا، ولا تجمع ذلك في درجةٍ واحدة.</p>
+  </header>
+
+  <p>كل رقم في هذه الصفحة عدٌّ لشيءٍ قابلٍ للعدّ، ووراء كلٍّ منها إجراءٌ بشريٌّ مسمّى. ولا تتحوّل بطاقة إلى الأخضر: رقم الجاهزية يُذكر صريحًا لا أكثر.</p>
+  <figure class="shot">
+    <img src="shots/p08b-readiness-not-ready.jpg" alt="ما ليس جاهزًا">
+    <figcaption>«ما ليس جاهزًا»: القواعد المعتمدة من مهنيٍّ مسمّى <span class="num">{{rd.rules}}</span>، وتعريفات المقاييس الموقّعة <span class="num">{{rd.defs}}</span>، وفحوص الحفظ الحسابي التي جرت في آخر تشغيلة.</figcaption>
+  </figure>
+  <div class="callout callout--limit">
+    <span class="callout__label">لماذا تُقرأ القواعد صفرًا وهي تعمل</span>
+    <p>لكي يعمل عرضٌ توضيحي، يختم مُحمِّل التطوير كل قاعدة بوسم اعتمادٍ ليس لمعتمِدٍ حقيقي. وتُحتسب الجاهزية على السجلّات الأوّلية لا على ذلك المُحمِّل، فالرقم الذي تراه هو الحقيقي: لم تُعتمد أي قاعدة بعد. ويغيّره أمرٌ واحد: أن يكتب معماريٌّ مرخَّص كل قاعدة ويعتمدها.</p>
+  </div>
+  <figure class="shot half">
+    <img src="shots/d11-readiness-volume.jpg" alt="ما جرى تشغيله">
+    <figcaption>«ما جرى تشغيله»: قطع الأرض والتشغيلات والمُراجَعة منها والتي وُقّعت بوّابتا تصديرها — للنشر كله، لا لحسابك وحده. ثم أي قيدٍ يُلزِم عبر ما جرى تشغيله.</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="shots/d12-readiness-exposure.jpg" alt="حيث تكون الإجابات أقلّ استنادًا">
+    <figcaption>«حيث تكون الإجابات أقلّ استنادًا»: الافتراضات عبر كل التشغيلات، بأكبر أثرٍ قيس لكلٍّ منها، وعدد التشغيلات التي ظهر فيها، وأساسه بكلمات المحرّك.</figcaption>
+  </figure>
+  <figure class="shot half">
+    <img src="shots/d13-readiness-drawings.jpg" alt="الرسومات">
+    <figcaption>الرسومات والملفات التي خرجت من هذا النشر.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ chapter 11 -->
+<section class="chapter" id="ch-11">
+  <header class="chapter__head">
+    <span class="chapter__no">11</span>
+    <h1>أسئلة شائعة وحلّ المشكلات<span class="mk">@@ch-11@@</span></h1>
+  </header>
+
+  <h3>رفعتُ المخطّط فلم يُقرأ منه شيء.</h3>
+  <p>الأرجح أنّ الملف صورة: صورة فوتوغرافية، أو مسحٌ ضوئي، أو <span class="en">PDF</span> حُفظ من صورة. المحرّك يقرأ النصّ المكتوب في الملف ولا يخمّن نصًّا من صورة. اطلب الملف الصادر نفسه، أو انقر «تخطَّ — سأُدخل القيم بنفسي» وأدخلها في الخطوة 2.</p>
+
+  <h3>قرأ المخطّط، لكن الحساب لا يبدأ.</h3>
+  <p>انظر «قيمٌ لا يذكرها المخطّط». إن كان معامل البناء أو المساحة الطابقية غائبًا، فلن يستعير المحرّك قيمةً ولن يبدأ الحساب حتى يُسدّ النقص من مصدرٍ موثّق.</p>
+
+  <h3>تقول الخطوة 2 إنّ المساحتين تختلفان.</h3>
+  <p>المساحة المحسوبة من العرض والعمق تختلف عن مساحة المخطّط بأكثر من <span class="num">2%</span>. تأكّد أنك استبدلت القيمتين الابتدائيتين في حقلي العرض والعمق بأبعاد قطعتك.</p>
+
+  <h3>زرّ «احسب الطاقة» لا يعمل.</h3>
+  <p>تحته جملة تقول ما الناقص: غالبًا سؤال المواقف ضمن معامل البناء بلا جواب، أو الحصّة القابلة للبيع فارغة. «لا أعرف بعد» جوابٌ مقبول، لكنه لا يحسب طاقة.</p>
+
+  <h3>«صدِّر التقرير» غير متاح.</h3>
+  <p>لا بدّ من البوّابتين: «قرأتُ الافتراضات» في الخطوة 5، وتوقيع المراجعة من الخطوة 10 أو من صفحة التشغيلة. والإقرار مربوطٌ بالافتراضات التي قرأتها بعينها: فإن عدّلت أحدها وأُعيد الحساب، لزم الإقرار من جديد.</p>
+
+  <h3>شاركتُ التشغيلة ولم يرها المراجِع.</h3>
+  <p>المشاركة لا تفعل شيئًا مع بريدٍ لا يستخدمه حساب، ولا تقول الصفحة ذلك. اطلب منه أن يُنشئ حسابًا بالبريد نفسه، ثم شارك مرّة أخرى.</p>
+
+  <h3>لا أستطيع توقيع المراجعة.</h3>
+  <p>التوقيع يحتاج رقم رخصة محفوظًا في حسابك، ويُدخَل عند إنشاء الحساب فقط. وإن كانت التشغيلة مشاركة معك «أن تقرأها» فلن يظهر لك زرّ التوقيع أصلًا؛ اطلب من المُنشئ أن يشاركها معك «أن تراجعها».</p>
+
+  <h3>فتحتُ رابط تشغيلة فقيل «ليست في قائمتك».</h3>
+  <p>الرسالة واحدة للتشغيلة غير الموجودة وللتشغيلة التي لم تُشارَك معك، عن قصد. تأكّد من الرابط، أو اطلب من المُنشئ أن يشاركها مع بريد حسابك.</p>
+
+  <h3>كنتُ ضيفًا واختفت تشغيلاتي.</h3>
+  <p>تشغيلات الضيف مربوطة بمفتاحٍ عشوائي محفوظ في المتصفّح نفسه. إن مُسحت بياناته أو انتقلت إلى متصفّحٍ آخر، تعذّر الوصول إليها. استعمل حسابًا لأي عملٍ تحتاج الرجوع إليه.</p>
+
+  <h3>لماذا لا تعطيني الصفحة رقم «دقّة»؟</h3>
+  <p>لأنه لم يُقَس. قياس الدقّة يحتاج مقارنة المحرّك بتقديرات معماريّين مستقلّين على القطع نفسها، ولم تُجرَ بعد. وإلى أن تُجرى، «لم يُقَس» هو الجواب الصادق.</p>
+</section>
+
+<!-- ============================================================ chapter 12 -->
+<section class="chapter" id="ch-12">
+  <header class="chapter__head">
+    <span class="chapter__no">12</span>
+    <h1>مسرد المصطلحات<span class="mk">@@ch-12@@</span></h1>
+  </header>
+  <table>
+    <thead><tr><th>المصطلح</th><th>بالإنجليزية</th><th>معناه في TOP.ai</th></tr></thead>
+    <tbody>
+      <tr><td>مخطّط الأفكشن</td><td class="en">Affection Plan</td><td>الوثيقة الصادرة للقطعة بحدودها التنظيمية. مدخل الخطوة 1.</td></tr>
+      <tr><td>معامل البناء</td><td class="en">FAR</td><td>نسبة المساحة الطابقية المسموح بها إلى مساحة القطعة.</td></tr>
+      <tr><td>إجمالي المساحة الطابقية</td><td class="en">GFA</td><td>مجموع مساحات الطوابق التي يقيسها النظام. وحدة الطاقة في المحرّك.</td></tr>
+      <tr><td>الارتداد</td><td class="en">Setback</td><td>المسافة التي يُبعَد بها البناء عن ضلع القطعة، وتتوقّف على تصنيف الضلع.</td></tr>
+      <tr><td>نسبة التغطية</td><td class="en">Coverage</td><td>أقصى نسبةٍ من القطعة يجوز أن يغطّيها البناء.</td></tr>
+      <tr><td>المصطبة</td><td class="en">Podium</td><td>الطوابق السفلى، وفيها المواقف في الغالب.</td></tr>
+      <tr><td>لوح البرج</td><td class="en">Tower plate</td><td>مسطّح الطابق المتكرّر فوق المصطبة.</td></tr>
+      <tr><td>الغلاف البنائي</td><td class="en">Envelope</td><td>الحيّز الذي تسمح القواعد بالبناء فيه: مسطّحًا وارتفاعًا.</td></tr>
+      <tr><td>النطاق A / B / C</td><td class="en">Band</td><td>الطاقة التنظيمية، والهندسية، وطاقة المواقف.</td></tr>
+      <tr><td>الطاقة الحاكمة</td><td class="en">Governing capacity</td><td>أصغر النطاقات الثلاثة.</td></tr>
+      <tr><td>القيد المُلزِم</td><td class="en">Binding constraint</td><td>القاعدة التي تحدّ الطاقة الحاكمة.</td></tr>
+      <tr><td>مُشتَقّ</td><td class="en">DERIVED</td><td>قيمة محسوبة من قاعدة مُستشهَد بها.</td></tr>
+      <tr><td>مُفترَض</td><td class="en">ASSUMED</td><td>قيمة ملأ بها المحرّك فجوةً لا تحكمها قاعدة، بأساسٍ وأثرٍ مسجّلين. بالكهرماني دائمًا.</td></tr>
+      <tr><td>أنت أدخلته</td><td class="en">USER_SET</td><td>قيمة أدخلها شخصٌ مسمّى، وتُسجَّل باسمه.</td></tr>
+      <tr><td>لم يُقيَّم</td><td class="en">NOT ASSESSED / DORMANT</td><td>بندٌ لم يُفحص في هذه المرحلة، أو فحصٌ لم يجد ما يفحصه. ليس اجتيازًا.</td></tr>
+      <tr><td>التشغيلة</td><td class="en">Run</td><td>حسابٌ واحد بمدخلاته ونتائجه، يُحفظ كما حُسب ولا يُعاد حسابه.</td></tr>
+      <tr><td>البوّابة</td><td class="en">Gate G1–G4</td><td>إقرارٌ بشريٌّ مسمّى في مرحلةٍ من العمل. يُحفظ منها مع التشغيلة G3 (الافتراضات) وG4 (المراجعة)، وكلاهما شرطٌ للتصدير.</td></tr>
+      <tr><td>فحوص الحفظ الحسابي</td><td class="en">Invariants</td><td>علاقاتٌ حسابية يجب أن تنغلق أيًّا كانت القواعد. إخفاق أيٍّ منها يحجب التشغيلة.</td></tr>
+      <tr><td>الحصّة القابلة للبيع</td><td class="en">Saleable efficiency</td><td>ما يُباع من المساحة الطابقية. لا قيمة افتراضية لها.</td></tr>
+      <tr><td>خصم الواقعية</td><td class="en">Realism discount</td><td>معاملٌ تحدّده أنت إن أردت الخصم من الأرقام؛ قيمته الابتدائية <span class="num">1.000</span>.</td></tr>
+      <tr><td>معيار المطوّر</td><td class="en">Developer standard</td><td>مساحات الوحدات ومزيجها كما يطلبها مطوّر. ليس نظامًا، ولا يحدّ الغلاف.</td></tr>
+    </tbody>
+  </table>
+  <p class="muted small" style="margin-top:8mm">أُعدّ هذا الدليل من التشغيلة <span class="code">{{run.id}}</span> على إصدار المحرّك <span class="num">{{run.engine}}</span>، ولقطاته من <span class="num">{{guide.date}}</span>. ليس للتنفيذ. الصلاحية التنظيمية: لم تُقيَّم.</p>
+</section>
+
+</body>
+</html>

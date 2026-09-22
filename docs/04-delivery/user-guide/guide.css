@@ -1,0 +1,408 @@
+/*
+ * TOP.ai — user guide. Printed to A4 by `scripts/guide/build.mjs`.
+ *
+ * The product's own palette and rules, because the guide is read beside the product:
+ * straight corners, no shadows, an ink primary, and AMBER FOR ASSUMPTIONS ONLY. A
+ * guide that used amber for emphasis would teach its reader the one thing §13.1 exists
+ * to prevent — that amber means nothing in particular — before they ever open the
+ * engine. Limits and refusals take the ink rail; tips take the accent.
+ */
+
+:root {
+  --ink: #14161c;
+  --ink-2: #55555f;
+  --ink-3: #77797f;
+  --rule: #dbdee5;
+  --sunken: #eef1f8;
+  --base: #f7f8fb;
+  --accent: #2b5cd9;
+  --accent-soft: #e8eefc;
+  --amber: #854b00;
+  --amber-soft: #fdf3e0;
+  --green: #1f6b45;
+  --green-soft: #e9f5ee;
+  --sans: 'IBM Plex Sans Arabic', 'IBM Plex Sans', 'Noto Sans Arabic', 'Segoe UI', sans-serif;
+  --latin: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', 'IBM Plex Sans Arabic', Consolas, monospace;
+}
+
+@page {
+  size: A4;
+  margin: 20mm 17mm 19mm;
+  @top-right {
+    content: 'دليل المستخدم — TOP.ai';
+    font: 400 7.5pt var(--sans);
+    color: #77797f;
+    vertical-align: bottom;
+    padding-bottom: 4mm;
+  }
+  @top-left {
+    content: 'الصلاحية التنظيمية — لم تُقيَّم';
+    font: 400 7.5pt var(--sans);
+    color: #77797f;
+    vertical-align: bottom;
+    padding-bottom: 4mm;
+  }
+  @bottom-center {
+    content: counter(page);
+    font: 500 8pt var(--mono);
+    color: #55555f;
+    vertical-align: top;
+    padding-top: 4mm;
+  }
+}
+@page cover {
+  margin: 0;
+  @top-right { content: none; }
+  @top-left { content: none; }
+  @bottom-center { content: none; }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 10.2pt;
+  line-height: 1.85;
+  color: var(--ink);
+  background: #fff;
+  counter-reset: fig;
+}
+
+/* Latin runs inside Arabic prose: isolated, so a full stop stays at its own end. */
+.en, .code, .fig-n, .num {
+  unicode-bidi: isolate;
+  direction: ltr;
+}
+.en { font-family: var(--latin); }
+.code, .num { font-family: var(--mono); font-size: 0.92em; }
+.code { background: var(--sunken); padding: 0 0.3em; }
+
+/* Invisible anchors the build reads back out of the PDF to number the contents. */
+/* Left-to-right and isolated: inside an Arabic heading the bidi algorithm otherwise
+   moves the @@ pairs around the id, and the build cannot find it. */
+.mk { font-size: 1px; color: #fff; line-height: 0; direction: ltr; unicode-bidi: isolate; }
+
+/* ------------------------------------------------------------------ cover */
+
+.cover {
+  page: cover;
+  position: relative;
+  height: 297mm;
+  width: 210mm;
+  overflow: hidden;
+  background: var(--ink);
+  color: #fff;
+  break-after: page;
+}
+.cover__band {
+  position: absolute;
+  inset: 0 0 auto 0;
+  padding: 22mm 20mm 0;
+}
+.cover__brand {
+  display: flex;
+  align-items: center;
+  gap: 4mm;
+  font: 600 14pt var(--latin);
+  letter-spacing: 0.02em;
+}
+.cover__mark {
+  width: 11mm;
+  height: 11mm;
+  border: 0.6mm solid #fff;
+  display: grid;
+  place-items: center;
+}
+.cover__mark::after {
+  content: '';
+  width: 5mm;
+  height: 5mm;
+  background: var(--accent);
+}
+.cover__kicker {
+  margin: 30mm 0 4mm;
+  font: 500 10pt var(--sans);
+  color: #b9bcc6;
+}
+.cover__title {
+  margin: 0;
+  font: 300 38pt/1.25 var(--sans);
+}
+.cover__sub {
+  margin: 6mm 0 0;
+  max-width: 150mm;
+  font: 400 13pt/1.8 var(--sans);
+  color: #dfe2ea;
+}
+.cover__figure {
+  position: absolute;
+  inset: auto 20mm 42mm 20mm;
+  aspect-ratio: 1.62;
+  background: #fff;
+  border: 0.3mm solid #3a3d47;
+  overflow: hidden;
+}
+.cover__figure img {
+  /* The 3D view alone, not the panel around it: the picture is enlarged and moved so
+     the box shows only the canvas, with the building at its centre. The offsets are
+     fractions of the box, for the e14 crop (2400 × 2300 px, building near x 1300,
+     y 900): at 180% of the box's width, x 1300 lands mid-box at left −47.5%, and with
+     the box at 1.62:1, y 900 lands mid-box at top −59.4% — raised to −55% so the roof,
+     near y 490, is not clipped. */
+  position: absolute;
+  width: 180%;
+  max-width: none;
+  height: auto;
+  left: -47.5%;
+  top: -55%;
+}
+.cover__meta {
+  position: absolute;
+  inset: auto 20mm 14mm 20mm;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4mm;
+  font-size: 8.5pt;
+  line-height: 1.6;
+  color: #b9bcc6;
+}
+.cover__meta b { display: block; color: #fff; font-weight: 500; font-size: 9.5pt; }
+
+/* --------------------------------------------------------------- headings */
+
+h1, h2, h3, h4 { font-weight: 500; line-height: 1.4; margin: 0; }
+
+.chapter { break-before: page; }
+.chapter__head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 6mm;
+  align-items: end;
+  padding-bottom: 5mm;
+  margin-bottom: 7mm;
+  border-bottom: 0.6mm solid var(--ink);
+}
+.chapter__no {
+  font: 300 34pt/1 var(--mono);
+  color: var(--accent);
+  direction: ltr;
+}
+.chapter__head h1 { font-size: 21pt; font-weight: 400; }
+.chapter__head p { grid-column: 2; margin: 1.5mm 0 0; color: var(--ink-2); font-size: 10pt; line-height: 1.7; }
+
+h2 {
+  font-size: 13.5pt;
+  margin: 8mm 0 3mm;
+  padding-top: 2mm;
+  break-after: avoid;
+}
+h2 .step {
+  display: inline-block;
+  min-width: 7.5mm;
+  margin-inline-end: 2.5mm;
+  padding: 0 1.6mm;
+  font: 500 9.5pt/6.5mm var(--mono);
+  text-align: center;
+  color: #fff;
+  background: var(--ink);
+  vertical-align: 1.2pt;
+}
+h3 { font-size: 11pt; margin: 5mm 0 2mm; break-after: avoid; }
+
+p { margin: 0 0 3mm; }
+ul, ol { margin: 0 0 3.5mm; padding-inline-start: 6mm; }
+li { margin-bottom: 1.2mm; }
+li::marker { color: var(--ink-3); }
+strong { font-weight: 600; }
+.lede { font-size: 11pt; color: var(--ink-2); }
+
+/* ---------------------------------------------------------------- figures */
+
+figure.shot {
+  margin: 4mm 0 6mm;
+  break-inside: avoid;
+  counter-increment: fig;
+}
+figure.shot img {
+  display: block;
+  max-width: 100%;
+  max-height: 200mm;
+  margin-inline: auto;
+  border: 0.25mm solid var(--rule);
+  background: #fff;
+}
+figure.shot.half img { max-height: 118mm; }
+figure.shot.third img { max-height: 80mm; }
+figure.shot.tall img { max-height: 228mm; }
+figcaption {
+  margin-top: 2mm;
+  font-size: 8.6pt;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+figcaption::before {
+  content: 'شكل ' counter(fig) ' — ';
+  font-weight: 600;
+  color: var(--ink);
+}
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5mm;
+  align-items: start;
+  break-inside: avoid;
+}
+.pair figure.shot { margin: 4mm 0 5mm; }
+
+/* ---------------------------------------------------------------- callouts */
+
+.callout {
+  margin: 4mm 0 5mm;
+  padding: 3mm 4.5mm 3.2mm;
+  border-inline-start: 1.2mm solid var(--ink);
+  background: var(--sunken);
+  break-inside: avoid;
+}
+.callout > :last-child { margin-bottom: 0; }
+.callout__label {
+  display: block;
+  margin-bottom: 1mm;
+  font-size: 8.5pt;
+  font-weight: 600;
+  color: var(--ink);
+}
+.callout--tip { border-color: var(--accent); background: var(--accent-soft); }
+.callout--tip .callout__label { color: var(--accent); }
+/* Amber, as on the site: only where the engine assumed something. */
+.callout--assumed { border-color: var(--amber); background: var(--amber-soft); }
+.callout--assumed .callout__label { color: var(--amber); }
+.callout--done { border-color: var(--green); background: var(--green-soft); }
+.callout--done .callout__label { color: var(--green); }
+.callout--limit { border-color: var(--ink); background: #fff; outline: 0.3mm solid var(--rule); outline-offset: -0.3mm; }
+
+/* ------------------------------------------------------------------ tables */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 3mm 0 5mm;
+  font-size: 9pt;
+  line-height: 1.6;
+  break-inside: avoid;
+}
+caption {
+  caption-side: top;
+  text-align: start;
+  font-size: 8.8pt;
+  font-weight: 600;
+  padding-bottom: 1.5mm;
+}
+th, td {
+  text-align: start;
+  vertical-align: top;
+  padding: 1.6mm 2.2mm;
+  border-bottom: 0.25mm solid var(--rule);
+}
+thead th {
+  font-weight: 600;
+  font-size: 8.4pt;
+  color: var(--ink-2);
+  border-bottom: 0.45mm solid var(--ink);
+}
+td.num, th.num { text-align: end; white-space: nowrap; }
+tr.is-key td { font-weight: 600; background: var(--sunken); }
+.tag {
+  display: inline-block;
+  padding: 0 1.6mm;
+  font-size: 7.8pt;
+  line-height: 1.7;
+  border: 0.25mm solid currentColor;
+  white-space: nowrap;
+}
+.tag--derived { color: var(--green); }
+.tag--assumed { color: var(--amber); background: var(--amber-soft); }
+.tag--user { color: var(--accent); }
+
+/* A definition list for figures: label, then the figure, then where it came from. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin: 3mm 0 5mm;
+  border-top: 0.45mm solid var(--ink);
+  break-inside: avoid;
+}
+.facts > div { padding: 2.2mm 2.4mm 2.4mm; border-bottom: 0.25mm solid var(--rule); }
+.facts dt { font-size: 8pt; color: var(--ink-2); }
+.facts dd { margin: 0.5mm 0 0; font: 500 12pt var(--mono); direction: ltr; text-align: right; }
+.facts dd small { font: 400 8pt var(--sans); color: var(--ink-2); }
+
+/* -------------------------------------------------------------- contents */
+
+.toc { list-style: none; padding: 0; margin: 6mm 0 0; }
+.toc li {
+  display: grid;
+  grid-template-columns: 11mm 1fr auto;
+  align-items: baseline;
+  gap: 2mm;
+  padding: 2mm 0;
+  border-bottom: 0.25mm solid var(--rule);
+  margin: 0;
+}
+.toc .n { font: 500 10pt var(--mono); color: var(--accent); direction: ltr; text-align: right; }
+.toc .t { font-size: 11pt; }
+.toc .t small { display: block; font-size: 8.5pt; color: var(--ink-2); line-height: 1.5; }
+.toc .p { font: 500 10pt var(--mono); direction: ltr; }
+
+/* The flow map on the overview page. */
+.flow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2mm;
+  margin: 4mm 0 6mm;
+  padding: 0;
+  list-style: none;
+}
+.flow li {
+  margin: 0;
+  padding: 2mm 2.4mm;
+  background: var(--sunken);
+  border-top: 0.8mm solid var(--ink);
+  font-size: 8.6pt;
+  line-height: 1.5;
+  min-height: 17mm;
+}
+.flow li b { display: block; font: 500 9pt var(--mono); color: var(--accent); direction: ltr; text-align: right; }
+
+/* A small panel, printed at its own size rather than blown up to the column. */
+figure.shot.narrow img { max-width: 95mm; }
+/* A step's heading, its place on the stepper and its first paragraph stay on one page. */
+.step-head { break-inside: avoid; }
+.step-head > :last-child { margin-bottom: 3mm; }
+/* A phone beside a desktop: the columns follow the pictures' widths, not an even split. */
+.pair--phone { grid-template-columns: 1fr 2.3fr; }
+
+/* The register: the value column is what the engine assumed, so it takes the amber. */
+table.asm td:nth-child(3) { color: var(--amber); background: var(--amber-soft); }
+table.asm td.en { overflow-wrap: anywhere; }
+
+/* Where each step sits: the ten steps as the stepper shows them, one lit. */
+.where {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1mm;
+  margin: 0 0 4mm;
+  padding: 0;
+  list-style: none;
+  font-size: 7.6pt;
+  line-height: 1.5;
+}
+.where li { margin: 0; padding: 0.4mm 1.8mm; color: var(--ink-3); border: 0.25mm solid var(--rule); }
+.where li.on { color: #fff; background: var(--ink); border-color: var(--ink); }
+
+.keep { break-inside: avoid; }
+.page-break { break-before: page; }
+.muted { color: var(--ink-2); }
+.small { font-size: 8.8pt; }

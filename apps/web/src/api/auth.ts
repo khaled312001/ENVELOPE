@@ -14,6 +14,8 @@
  * cross-origin deployment sent the session to somewhere it should not.
  */
 
+import type { RunView } from './client.js';
+
 export interface Account {
   readonly accountId: string;
   readonly email: string;
@@ -94,4 +96,24 @@ export const drafts = {
 
   list: (): Promise<{ drafts: readonly { draftKey: string; updatedAt: string }[] }> =>
     call('/api/drafts'),
+};
+
+/** What the signed-in account may do with a run, as the server decided it. */
+export type RunAccess = 'author' | 'reviewer' | 'reader';
+
+/**
+ * A stored run, read on the account's session rather than an actor header — the
+ * run page on `/work`. The server answers 404 for a run this account may not see,
+ * whether or not it exists, so the page cannot tell the two apart either.
+ */
+export const accountRuns = {
+  get: (runId: string): Promise<RunView & { readonly access: RunAccess }> =>
+    call(`/api/runs/${encodeURIComponent(runId)}`),
+
+  /** `{ shared: true }` whether or not an account uses the address: see the route. */
+  share: (runId: string, email: string, role: 'reviewer' | 'reader'): Promise<{ shared: boolean }> =>
+    call(`/api/runs/${encodeURIComponent(runId)}/share`, {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    }),
 };

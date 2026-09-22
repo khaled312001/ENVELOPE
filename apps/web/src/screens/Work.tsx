@@ -37,8 +37,9 @@
 import { useEffect, useState } from 'react';
 
 import type { PageProps } from '../Root.js';
-import { Link } from '../router.js';
+import { Link, type Href } from '../router.js';
 import { useSession } from '../session.js';
+import { RunPage } from './RunPage.js';
 
 export interface RunRow {
   readonly runId: string;
@@ -75,6 +76,25 @@ interface WorkView {
 const day = (iso: string): string => iso.slice(0, 10);
 const time = (iso: string): string => iso.slice(11, 16);
 
+/** A band by its letter and its question, as the capacity screen names it. */
+const BAND: Readonly<Record<string, { readonly letter: string; readonly name: string }>> = {
+  REGULATORY: { letter: 'A', name: 'what the code permits' },
+  GEOMETRIC: { letter: 'B', name: 'what the envelope holds' },
+  PARKING: { letter: 'C', name: 'what the parking supports' },
+};
+
+export function bandLabel(band: string): string {
+  const b = BAND[band];
+  return b ? `band ${b.letter} · ${b.name}` : `band ${band}`;
+}
+
+/** Thousands separators and not one digit of rounding: the figure is the engine's. */
+export function group(value: string): string {
+  const [whole, frac] = value.split('.');
+  const grouped = (whole ?? '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return frac ? `${grouped}.${frac}` : grouped;
+}
+
 /** The draft keys the product writes, in the reader's words rather than the form's. */
 const DRAFT_LABELS: Readonly<Record<string, string>> = {
   'plot-form': 'A plot you started entering',
@@ -84,10 +104,13 @@ export function RunTable({
   rows,
   caption,
   empty,
+  navigate,
 }: {
   readonly rows: readonly RunRow[];
   readonly caption: string;
   readonly empty: string;
+  /** With it, each run's time is a link to the run's own page. */
+  readonly navigate?: (to: Href) => void;
 }): JSX.Element {
   if (rows.length === 0) {
     return (
@@ -124,8 +147,8 @@ export function RunTable({
                   comparison the three-band model exists to refuse. Together they
                   are one statement: this many square metres, from this band.
                 */}
-                <span className="value">{r.governingGfaM2}</span> m²
-                <span className="wk__band">band {r.governingBand}</span>
+                <span className="value">{group(r.governingGfaM2)}</span> m²
+                <span className="wk__band">{bandLabel(r.governingBand)}</span>
               </td>
               <td>{r.bindingLabel}</td>
               <td>
@@ -147,9 +170,15 @@ export function RunTable({
                 )}
               </td>
               <td>
-                <span className="wk__when">
-                  {day(r.createdAt)} {time(r.createdAt)}
-                </span>
+                {navigate ? (
+                  <Link to={`/work?run=${encodeURIComponent(r.runId)}`} navigate={navigate} className="wk__when">
+                    {day(r.createdAt)} {time(r.createdAt)}
+                  </Link>
+                ) : (
+                  <span className="wk__when">
+                    {day(r.createdAt)} {time(r.createdAt)}
+                  </span>
+                )}
                 {r.sharedRole ? <span className="chip">{r.sharedRole}</span> : null}
                 {r.draftRules ? (
                   /* The run was computed against rules nobody approved. It is the
@@ -167,8 +196,9 @@ export function RunTable({
   );
 }
 
-export default function Work({ navigate }: PageProps): JSX.Element {
+export default function Work({ navigate, search }: PageProps): JSX.Element {
   const { state, account } = useSession();
+  const openRun = new URLSearchParams(search).get('run');
   const [view, setView] = useState<WorkView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -196,6 +226,10 @@ export default function Work({ navigate }: PageProps): JSX.Element {
       cancelled = true;
     };
   }, [state]);
+
+  if (openRun && state === 'signed-in') {
+    return <RunPage runId={openRun} rows={view ? [...view.authored, ...view.shared] : []} navigate={navigate} />;
+  }
 
   return (
     <div className="wk">
@@ -245,6 +279,7 @@ export default function Work({ navigate }: PageProps): JSX.Element {
               rows={view.authored}
               caption="Runs authored by this account"
               empty="You have not authored a run yet. The engine opens from “Run a plot”."
+              navigate={navigate}
             />
           </section>
 
@@ -266,6 +301,7 @@ export default function Work({ navigate }: PageProps): JSX.Element {
               rows={view.shared}
               caption="Runs shared with this account"
               empty="Nothing has been shared with you."
+              navigate={navigate}
             />
           </section>
 
@@ -301,14 +337,15 @@ export default function Work({ navigate }: PageProps): JSX.Element {
               {/*
                 THE DISCLOSURE THIS PAGE IS OBLIGED TO CARRY.
 
-                `/api/work` is the first route in the product with any authorization,
-                and `/api/runs` still lists every run to any identified actor. A page
-                that showed a private list without saying that would be implying an
-                isolation the deployment does not have everywhere.
+                It used to say that any identified caller could read any run through
+                the API, which was true until `access.ts` scoped every run route to
+                its author and the accounts it was shared with. What is still true is
+                narrower, and it is what a reader of a private list needs to know:
+                there are no firms or projects, only accounts.
               */}
-              This list is scoped to your account. Other routes in this deployment are not:
-              any identified caller can still read any run through the API. That is disclosed
-              rather than fixed, and it is on{' '}
+              Only you and the accounts you share a run with can open it. There are no firms
+              or projects in this deployment, only accounts, and a reviewer&rsquo;s licence is
+              recorded but never checked. Both are on{' '}
               <Link to="/refusals" navigate={navigate}>
                 what it refuses
               </Link>

@@ -112,3 +112,103 @@
 .wk__drafts > li > :first-child {
   flex: 1 1 16rem;
 }
+
+/*
+ * A heading trimmed to its caps (`text-box: trim-both` in site.css) has no room
+ * below its baseline, so a note set straight under it collided with the heading's
+ * descenders: "Shared with you" sat on its own first line. The note takes its own
+ * interval.
+ */
+.wk .section__head > * + * {
+  margin-block-start: var(--space-4);
+}
+
+/* ---------------------------------------------------------------------------
+ * The run page — `/work?run=…`.
+ * ------------------------------------------------------------------------ */
+
+.rn__back {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+.rn__draft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* The answer beside the building it describes: the words first, because the
+   figure repeats them and the words are what a screen reader gets. */
+.rn__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+  column-gap: var(--space-7);
+  row-gap: var(--rhythm-block);
+  align-items: start;
+}
+.rn__layout > * {
+  min-inline-size: 0;
+}
+@media (max-width: 60rem) {
+  .rn__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.rn__facts {
+  margin: 0;
+}
+.rn__facts > div {
+  display: grid;
+  gap: var(--space-hair);
+  padding-block: var(--space-3);
+  border-block-end: var(--border-width) solid var(--border-subtle);
+}
+.rn__facts > div:first-child {
+  padding-block-start: 0;
+}
+.rn__facts > div:last-child {
+  border-block-end: none;
+}
+.rn__facts dt {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.rn__facts dd {
+  margin: 0;
+}
+/* The governing figure is the answer; everything else on the list qualifies it. */
+.rn__governing .value {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-light);
+}
+
+.rn__model {
+  margin: 0;
+}
+.rn__nomodel {
+  margin: 0;
+  max-inline-size: var(--measure-prose);
+  color: var(--text-secondary);
+}
+
+.rn__share {
+  display: grid;
+  gap: var(--space-4);
+  max-inline-size: 40rem;
+}
+.rn__share .wk__note,
+.rn__share .choice-set {
+  margin: 0;
+}
+.rn__shared {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: var(--border-width-emphasis) solid var(--border-strong);
+  background-color: var(--surface-sunken);
+  max-inline-size: var(--measure-prose);
+}

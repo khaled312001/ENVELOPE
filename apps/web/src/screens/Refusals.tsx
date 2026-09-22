@@ -582,13 +582,16 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
           is a phrase this page should not contain, whichever clause it sits in.
         */}
         <p>
-          Scoping a run to its author was considered and rejected. The gate exists for
-          the case where a different person signs, and an ownership check would refuse
-          exactly that case — so the control was not built, and the reason it was not
-          built is a good one. It is still not evidence that some other control took its
-          place. An asserted control is worse than a missing one, because a missing one
-          is visible, and saying so here is the reason a reader can believe the rest of
-          the page.
+          Scoping a run to its author alone was considered and rejected. The gate exists
+          for the case where a different person signs, and an ownership check would refuse
+          exactly that case. What was built instead is a share: the author names an
+          account as a reviewer or a reader, and only those accounts can open the run. A
+          share names who signs; nothing checks who they are, and nothing stops an
+          author signing their own run. There are no firms or projects either — a run
+          belongs to one account. None of that is evidence that some other control took
+          its place. An asserted control is worse than a missing one, because a missing
+          one is visible, and saying so here is the reason a reader can believe the rest
+          of the page.
         </p>
       </Section>
 

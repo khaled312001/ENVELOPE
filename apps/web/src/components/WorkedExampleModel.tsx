@@ -17,6 +17,7 @@ import type { BuildingModel } from '@envelope/core';
 import { lazy, Suspense } from 'react';
 
 import type { BuildingViewerProps } from './BuildingViewer.js';
+import { ModelFigurePlaceholder } from './ModelFigure.js';
 
 export type WorkedExampleModelProps = Omit<BuildingViewerProps, 'model' | 'variant' | 'onInspect'>;
 
@@ -36,14 +37,7 @@ const Figure = lazy(async () => {
 
 export function WorkedExampleModel(props: WorkedExampleModelProps): JSX.Element {
   return (
-    <Suspense
-      fallback={
-        <div className="massing massing--figure" data-focus={props.focusLevelId ? 'level' : undefined} aria-hidden="true">
-          <div className="massing-tools" />
-          <div className="massing-viewer" />
-        </div>
-      }
-    >
+    <Suspense fallback={<ModelFigurePlaceholder level={props.focusLevelId !== undefined} />}>
       <Figure {...props} />
     </Suspense>
   );

@@ -20,11 +20,12 @@
  *     them; nothing enforced the refusal, and a prohibition is the only thing that
  *     can, because the tempting version of this page passes every other check.
  *
- *   * THE DISCLOSURE STAYS. `/api/work` is the first route in the product with any
- *     authorization and `/api/runs` still lists every run to any identified actor.
- *     A page that showed a scoped list without saying that would be implying an
- *     isolation the deployment does not have. A deleted disclosure is invisible to
- *     every regex looking for a claim, so it is asserted PRESENT.
+ *   * THE DISCLOSURE STAYS. Every run route is now scoped to the run's author and
+ *     the accounts it was shared with, but there are no firms or projects and a
+ *     reviewer's licence is never checked. A page that showed a scoped list without
+ *     saying that would be implying an isolation the deployment does not have. A
+ *     deleted disclosure is invisible to every regex looking for a claim, so it is
+ *     asserted PRESENT.
  *
  *   * THE DRAFT-RULES QUALIFIER STAYS ON A ROW. A stored run computed against rules
  *     nobody approved is a demonstration; a list that dropped the chip would be
@@ -147,13 +148,16 @@ describe('/work', () => {
     ).not.toMatch(/\.reduce\(|\/\s*rows\.length|\/\s*view\.\w+\.length/);
   });
 
-  it('says the rest of the deployment is not scoped', () => {
+  it('says what the scoping does not cover', () => {
     /*
       A PRESENCE ASSERTION, and it is here because no prohibition can catch its
-      absence. The page shows a list scoped to one account while `/api/runs` still
-      answers any identified caller with every run; the sentence that says so is
-      the difference between a disclosed gap and an implied isolation, and deleting
-      it makes the page read BETTER.
+      absence. It used to hold the page to "any identified caller can still read any
+      run", which stopped being true when `access.ts` scoped every run route to its
+      author and the accounts it was shared with — a test enforcing a sentence the
+      code had made false. What is still true is narrower: there are no firms or
+      projects, only accounts, and a reviewer's licence is never checked. The sentence
+      that says so is the difference between a disclosed gap and an implied
+      isolation, and deleting it makes the page read BETTER.
     */
     /*
       OVER THE SOURCE, AND THE REASON IS THE MEASUREMENT ITSELF.
@@ -166,9 +170,9 @@ describe('/work', () => {
       and it is stated rather than implied.
     */
     const src = SOURCE.replace(/\/\*[\s\S]*?\*\//g, '');
-    expect(src, '/work no longer discloses that other routes are unscoped').toMatch(
-      /any identified caller can still read any run/i,
-    );
+    expect(src, '/work no longer says there is no tenancy').toMatch(/no firms\s+or projects/i);
+    expect(src, '/work no longer says the licence is unchecked').toMatch(/licence is\s+recorded but never checked/i);
+    expect(src, '/work still claims every route is unscoped').not.toMatch(/any identified caller can still read/i);
     expect(src, '/work no longer points the disclosure at the refusals page').toMatch(
       /what it refuses/i,
     );
@@ -216,5 +220,47 @@ describe('/work', () => {
   it('opens on one heading, with no count in it', () => {
     const h1 = [...markup().matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)];
     expect(h1.length, '/work renders more than one h1').toBe(1);
+  });
+
+  it('links each run to its own page, as a query on /work', () => {
+    const html = renderToStaticMarkup(
+      <RunTable rows={[ROW]} caption="Runs" empty="Nothing yet." navigate={() => {}} />,
+    );
+    expect(html).toContain('href="/work?run=run-1"');
+  });
+});
+
+describe('the run page', () => {
+  const RUN_SOURCE = readFileSync(new URL('../src/screens/RunPage.tsx', import.meta.url), 'utf8');
+  const code = RUN_SOURCE.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  it('uses none of the apology vocabulary in its own source', () => {
+    for (const banned of BANNED_IN_HAND_WRITTEN_COPY) {
+      const hit = banned.exec(code);
+      expect(hit?.[0], `RunPage.tsx uses "${hit?.[0] ?? ''}"`).toBeUndefined();
+    }
+  });
+
+  it('computes nothing between the runs of a plot, and says so', () => {
+    // The same prohibition as the list, on the page most tempted to break it: two
+    // runs of one plot invite a difference column, and a difference is a number the
+    // engine never produced.
+    expect(code, 'RunPage.tsx computes over rows').not.toMatch(/\.reduce\(|Decimal|parseFloat|Number\(r\./);
+    expect(code).toMatch(/nothing here is computed between them/i);
+    for (const claim of [/difference/i, /delta/i, /best/i, /improve/i, /secure/i, /verified/i, /private/i]) {
+      expect(code, `RunPage.tsx says ${claim}`).not.toMatch(claim);
+    }
+  });
+
+  it('answers a missing run and a run that is not yours in one sentence', () => {
+    // The server gives one 404 for both so a run's existence does not leak; a page
+    // that told them apart would leak it anyway.
+    expect(code).toMatch(/Either it does not exist, or it was not shared with you/);
+    expect(code).not.toMatch(/status === 403/);
+  });
+
+  it('does not say whether an account uses the address it shared with', () => {
+    expect(code).toMatch(/This page does\s+not say whether one does/);
+    expect(code).not.toMatch(/no account (uses|has) that/i);
   });
 });

@@ -97,6 +97,8 @@ export const EN = {
         'saved as you type it. The licence recorded on an export is still not verified with ' +
         'anybody.',
       signOut: 'Sign out',
+      licence: 'Licence number on this account: ',
+      noLicence: 'This account has no licence number, so it cannot sign a review.',
     },
 
     /*
@@ -138,6 +140,19 @@ export const EN = {
           'about capitals or symbols, because they produce weaker passwords rather than ' +
           'stronger ones.',
         helpIn: 'Only a hash of it is kept, so it cannot be recovered — only replaced.',
+      },
+      /*
+        THE ONLY WAY AN ACCOUNT CARRIES A LICENCE, and for a long time it was not on
+        the form. The API took one at sign-up and the panel never sent it, so every
+        account made on this screen held none — and the review gate asks for one, so
+        no signed-in account could sign a review at all. The field says what it is
+        for, and says in the same clause that the number is checked with nobody.
+      */
+      licence: {
+        label: 'Professional licence number (optional)',
+        help:
+          'Needed to sign a review. Recorded as you type it, and not confirmed with anybody. ' +
+          'It cannot be added later.',
       },
     },
 

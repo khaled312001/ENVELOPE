@@ -118,6 +118,8 @@ export const AR: AntechamberDictionary = {
         'التشغيلات التي تُنشئها تُحفَظ في هذا الحساب، ويُحفَظ ما تكتبه في أثناء ذلك أوّلًا بأوّل. ' +
         'والرخصة المُسجَّلة على المُخرَج لا تزال دون تحقُّق لدى أحد.',
       signOut: 'سجِّل الخروج',
+      licence: 'رقم الرخصة في هذا الحساب: ',
+      noLicence: 'لا رقم رخصة في هذا الحساب، فلا يمكنه توقيع مراجعة.',
     },
 
     /* A heading names the panel and a button commands an action; English spells
@@ -149,6 +151,13 @@ export const AR: AntechamberDictionary = {
           'لرموز، لأنّها تُنتج كلمات مرور أضعف لا أقوى.',
         /* «قيمة التجزئة» is the settled Arabic for a hash and needs no gloss. */
         helpIn: 'لا يُحفَظ منها إلا قيمة التجزئة، فلا يمكن استرجاعها — بل استبدالها فقط.',
+      },
+      /* «لا يُؤكَّد لدى أحد», as on the name-only form below: confirm, not verify. */
+      licence: {
+        label: 'رقم الرخصة المهنية (اختياري)',
+        help:
+          'يلزم لتوقيع المراجعة. يُسجَّل كما تكتبه، ولا يُؤكَّد لدى أحد. ' +
+          'ولا يمكن إضافته لاحقًا.',
       },
     },
 

@@ -34,6 +34,8 @@ import { describe, expect, it } from 'vitest';
   wrong end and this import is a preference again: the assertions here are about the
   screen, and the route table is `route-coverage.test.ts`'s.
 */
+import { AR as ANTE_AR } from '../src/i18n/antechamber.ar.js';
+import { EN as ANTE_EN } from '../src/i18n/antechamber.en.js';
 import Antechamber from '../src/screens/Antechamber.js';
 import {
   expectNoCountInHeadings,
@@ -348,5 +350,24 @@ describe('/app — the antechamber', () => {
         /\bENVELOPE\b/,
       );
     }
+  });
+});
+
+describe('the account form carries a licence', () => {
+  /*
+    The API took a licence at sign-up and the form never sent one, so no account made
+    here could sign a review. The field is back, and it has to say at the field what
+    the antechamber says above it: the number is recorded and confirmed with nobody.
+  */
+  it('says what the number is for, and that nobody confirms it', () => {
+    expect(ANTE_EN.account.fields.licence.help).toMatch(/sign a review/);
+    expect(ANTE_EN.account.fields.licence.help).toMatch(/not confirmed with anybody/);
+    expect(ANTE_AR.account.fields.licence.help).toContain('لا يُؤكَّد لدى أحد');
+    expect(ANTE_AR.account.fields.licence.label).toContain('الرخصة');
+  });
+
+  it('is sent with the sign-up', () => {
+    const panel = readFileSync(new URL('../src/components/AccountPanel.tsx', import.meta.url), 'utf8');
+    expect(panel).toMatch(/signUp\(\{[^}]*licence/);
   });
 });

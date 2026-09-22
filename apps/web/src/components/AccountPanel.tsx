@@ -73,6 +73,7 @@ export function AccountPanel(): JSX.Element {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [licence, setLicence] = useState('');
   const [error, setError] = useState<PanelError | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -84,6 +85,8 @@ export function AccountPanel(): JSX.Element {
   const passwordHelpId = useId();
   const emailHelpId = useId();
   const nameHelpId = useId();
+  const licenceId = useId();
+  const licenceHelpId = useId();
 
   /*
     `checking` IS RENDERED, AND IT IS NOT RENDERED AS "SIGNED OUT".
@@ -125,6 +128,16 @@ export function AccountPanel(): JSX.Element {
           <strong>{account.name}</strong> · <span className="value">{account.email}</span>
         </p>
         <p className="fine-print">{t.signedIn.terms}</p>
+        <p className="fine-print">
+          {account.licence ? (
+            <>
+              {t.signedIn.licence}
+              <span className="value">{account.licence}</span>
+            </>
+          ) : (
+            t.signedIn.noLicence
+          )}
+        </p>
         <button type="button" className="button button--sm" onClick={() => void signOut()}>
           {t.signedIn.signOut}
         </button>
@@ -138,7 +151,10 @@ export function AccountPanel(): JSX.Element {
     setBusy(true);
     try {
       if (mode === 'in') await signIn(email, password);
-      else await signUp({ email, password, name });
+      else {
+        const asserted = licence.trim();
+        await signUp({ email, password, name, ...(asserted ? { licence: asserted } : {}) });
+      }
     } catch (err) {
       /*
         The server's sentence, verbatim, and never a rewrite of it. It is the only
@@ -186,6 +202,24 @@ export function AccountPanel(): JSX.Element {
                 "every field", not "every field a test happens to render". */}
             <p className="field__help" id={nameHelpId}>
               {t.fields.name.help}
+            </p>
+          </div>
+        ) : null}
+
+        {mode === 'up' ? (
+          <div className="field">
+            <label htmlFor={licenceId}>{t.fields.licence.label}</label>
+            <input
+              id={licenceId}
+              className="input"
+              type="text"
+              value={licence}
+              onChange={(e) => setLicence(e.target.value)}
+              autoComplete="off"
+              aria-describedby={licenceHelpId}
+            />
+            <p className="field__help" id={licenceHelpId}>
+              {t.fields.licence.help}
             </p>
           </div>
         ) : null}

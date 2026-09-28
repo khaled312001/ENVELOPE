@@ -2388,3 +2388,66 @@ button.plot-legend__row:active {
 .mix-basis--assumed .traced--assumed {
   margin-inline-end: var(--space-2);
 }
+
+/* ==========================================================================
+ * THE PLOT-LIMITS PANEL
+ * ==========================================================================
+ *
+ * Two tables and a sentence under them. Almost all of it is already dressed —
+ * `.panel`, `.schedule`, `.callout`, `.fine-print` and `.ident` do the work, as
+ * they do everywhere else — so what is left is the spacing between the two lists
+ * and the one thing neither has a class for: the sheet's own words, sitting under
+ * the field name in the second table.
+ *
+ * NO COLOUR IS SPENT HERE, AND THAT IS THE POINT. The obvious design gives the
+ * applied rows a green rail and the unapplied ones amber, and both would be
+ * wrong: the palette has one accent and one alarm, the alarm is reserved
+ * exclusively for ASSUMED, and nothing on this panel is assumed. Position and a
+ * heading carry the difference, which is what carries it on every other neutral
+ * table on the site.
+ */
+
+.pl-source {
+  margin-block: 0 var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.pl-source__label {
+  color: var(--text-tertiary);
+}
+
+.pl-subhead {
+  margin-block: var(--space-6) var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.pl-lede {
+  margin-block: 0 var(--space-4);
+  max-inline-size: var(--measure-prose);
+  color: var(--text-secondary);
+}
+
+/*
+ * The sheet's own words, under the field they belong to.
+ *
+ * A block rather than a second column: the stated value is a phrase off a
+ * drawing ("GF & Podium: 0m from all sides | Tower: Front = 0m, Sides & Rear =
+ * 3m"), and a column narrow enough to sit beside the reason would wrap it to
+ * five lines on a laptop and scroll sideways on a phone.
+ */
+.pl-stated {
+  display: block;
+  margin-block-start: var(--space-1);
+  font-weight: 400;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.pl-claim {
+  margin-block-start: var(--space-6);
+}

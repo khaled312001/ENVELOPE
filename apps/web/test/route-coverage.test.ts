@@ -5,7 +5,7 @@
  * defect the document diagnoses everywhere else: it drifts the first time a route
  * lands without one, and it drifts silently, because nothing reads it.
  *
- * THIS IS WHY `/dashboard` GETS ITS OWN FILE. While its assertions lived inside
+ * THIS IS WHY `/readiness` GETS ITS OWN FILE. While its assertions lived inside
  * `landing.test.tsx`'s `describe('the status dashboard')` the rule could not be
  * mechanised at all — one route's coverage was invisibly supplied by another route's
  * filename, and no enumeration could tell the difference between that and a route
@@ -103,7 +103,7 @@ describe('route coverage', () => {
 /**
  * MOVED PATHS.
  *
- * `/dashboard` became `/readiness`, and the old path is in a user guide that has
+ * `/readiness` became `/readiness`, and the old path is in a user guide that has
  * already been handed over. A rename without a redirect is link rot with a good
  * explanation, and the failure is silent on both sides: nothing in the
  * application knows the old path existed, and nothing in the guide knows it

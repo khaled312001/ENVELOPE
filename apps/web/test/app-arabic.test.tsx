@@ -327,7 +327,7 @@ const CASES: readonly Case[] = [
   ...Object.keys(SHEETS).map(
     (key): Case => ({
       label: `the reading of ${key}.pdf`,
-      node: () => <Reading read={reads[key]!} onUse={noop} />,
+      node: () => <Reading read={reads[key]!} attachment={null} onUse={noop} />,
     }),
   ),
 

@@ -34,8 +34,10 @@ import { Fragment, useRef, useState, type ReactNode } from 'react';
 import {
   api,
   ApiError,
+  encodeAttachment,
   type Actor,
   type AffectionPlanRead,
+  type Attachment,
   type SetbackFaceView,
   type SetbackValueView,
 } from '../api/client.js';
@@ -86,6 +88,17 @@ export interface Prefill {
    * against. Absent when the sheet prints no height code at all.
    */
   readonly podiumLevels?: { readonly value: number; readonly raw: string };
+  /**
+   * The sheet itself, so the SERVER can read its limits when the plot is created.
+   *
+   * Not the limits — the bytes. A browser posting `{ far: 3.5 }` would produce a
+   * rule whose citation names a page in a document the server never opened, which
+   * is a number somebody typed wearing the evidence of a number somebody read.
+   * The reader pressed "use this sheet", so carrying the sheet is what they asked
+   * for; the numbers on this screen stay a reading, and the binding is the
+   * server's own.
+   */
+  readonly attachment?: Attachment;
 }
 
 const MAX_BYTES = 3 * 1024 * 1024;
@@ -101,6 +114,9 @@ export function AffectionPlanIntake({
 }): JSX.Element {
   const t = useDict(EN, AR);
   const [read, setRead] = useState<AffectionPlanRead | null>(null);
+  /* Kept beside the reading so "use this sheet" can hand the bytes on. Cleared
+     with it, so a stale attachment can never outlive the reading it belongs to. */
+  const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<IntakeError | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -110,6 +126,7 @@ export function AffectionPlanIntake({
     if (!file) return;
     setError(null);
     setRead(null);
+    setAttachment(null);
 
     // Checked here as well as on the server. The server's refusal is the one
     // that counts; this one is the one that arrives before a 3 MB upload.
@@ -124,7 +141,9 @@ export function AffectionPlanIntake({
 
     setBusy(true);
     try {
-      setRead(await api.readAffectionPlan(actor, file));
+      const encoded = await encodeAttachment(file);
+      setRead(await api.readAffectionPlan(actor, encoded));
+      setAttachment(encoded);
     } catch (e) {
       setError({
         kind: 'reported',
@@ -183,7 +202,7 @@ export function AffectionPlanIntake({
 
       {error ? <IntakeErrorBanner error={error} /> : null}
 
-      {read ? <Reading read={read} onUse={onUse} /> : null}
+      {read ? <Reading read={read} attachment={attachment} onUse={onUse} /> : null}
 
       <footer className="panel__footer">
         <button type="button" className="button" onClick={onSkip}>
@@ -295,9 +314,11 @@ export function IntakeErrorBanner({ error }: { readonly error: IntakeError }): J
 
 export function Reading({
   read,
+  attachment,
   onUse,
 }: {
   readonly read: AffectionPlanRead;
+  readonly attachment: Attachment | null;
   readonly onUse: (prefill: Prefill) => void;
 }): JSX.Element {
   const t = useDict(EN, AR);
@@ -474,6 +495,7 @@ export function Reading({
                     },
                   }
                 : {}),
+              ...(attachment ? { attachment } : {}),
             })
           }
         >

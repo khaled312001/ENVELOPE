@@ -23,7 +23,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAutosave } from '../useAutosave.js';
 import { useSession } from '../session.js';
 
-import { api, ApiError, type Actor, type PlotCreated, type PlotView } from '../api/client.js';
+import {
+  api,
+  ApiError,
+  type Actor,
+  type Attachment,
+  type PlotCreated,
+  type PlotView,
+} from '../api/client.js';
 import { PlotCanvas } from '../components/PlotCanvas.js';
 import { AR } from '../i18n/plotForm.ar.js';
 import { EN } from '../i18n/plotForm.en.js';
@@ -80,6 +87,8 @@ export interface PlotFormProps {
     readonly plotNumber: string;
     readonly community: string;
     readonly statedAreaM2: string;
+    /** The sheet itself, carried through so the SERVER reads its limits. */
+    readonly attachment?: Attachment;
   } | null;
   /**
    * The worked example, when the reader arrived by `?demo=worked-example`.
@@ -252,6 +261,15 @@ export function PlotForm({
           ...(d.classification === 'ROAD' ? { roadHierarchy: d.roadHierarchy } : {}),
         })),
         ...(statedArea ? { statedAreaM2: statedArea } : {}),
+        /*
+          THE SHEET, IF STEP 0 READ ONE — the bytes, not the numbers off them.
+
+          This is what makes the affection plan's own FAR bind the run instead of
+          being displayed and dropped. The server parses it again and builds the
+          rules from what IT read, so the citation on every one of them names a
+          box in a document this browser did not vouch for.
+        */
+        ...(prefill?.attachment ? { affectionPlan: prefill.attachment } : {}),
       });
       const view = await api.getPlot(actor, created.plotId);
       /* It is a plot now, with an id and a record of its own. Leaving the draft

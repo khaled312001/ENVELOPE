@@ -87,8 +87,37 @@ async function call<T>(
 // Shapes returned by the API
 // ---------------------------------------------------------------------------
 
+/**
+ * WHAT THE PLOT'S OWN AFFECTION PLAN DID, AS BOTH ENDPOINTS REPORT IT.
+ *
+ * Three states, and all three are said out loud rather than shown as an absence.
+ * The half that matters most is `notBound`: a response listing four limits from a
+ * sheet that states six would understate the document while looking complete, and
+ * "read, shown, and quietly dropped" is the exact defect this whole path closes.
+ */
+export interface SheetReport {
+  readonly attached: boolean;
+  readonly documentUri: string | null;
+  readonly issuedOn: string | null;
+  /** Why the sheet was set aside — a different parcel. The run still ran. */
+  readonly refused: string | null;
+  readonly bound: readonly {
+    readonly parameterId: string;
+    readonly value: string;
+    readonly unit: string;
+    /** The sheet's own words, as the parser located them. */
+    readonly clause: string;
+  }[];
+  readonly notBound: readonly {
+    readonly field: string;
+    readonly stated: string;
+    readonly reason: string;
+  }[];
+}
+
 export interface PlotCreated {
   readonly plotId: string;
+  readonly sheet: SheetReport;
   readonly shapeClass: string;
   readonly computedAreaM2: string;
   readonly statedAreaM2: string | null;
@@ -305,6 +334,32 @@ export interface SetbackFaceView {
 }
 
 /** What an affection plan says, and — as importantly — what it does not. */
+/**
+ * A file on its way to the server, encoded once.
+ *
+ * SEPARATE FROM THE READ BECAUSE THE SAME BYTES ARE SENT TWICE. Step 0 asks the
+ * server what the sheet says; step 1 attaches the sheet to the plot so the server
+ * can read its limits into rules. Encoding on each call would do the 1.5 MB twice
+ * and, worse, would leave the screen holding a `File` whose contents it has to
+ * re-read at a point where the user may already have navigated away from it.
+ */
+export interface Attachment {
+  /** Base64. Not a data URI — the server expects the payload alone. */
+  readonly content: string;
+  readonly filename: string;
+}
+
+export async function encodeAttachment(file: File): Promise<Attachment> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  // Chunked: `String.fromCharCode(...bytes)` on a 1.5 MB file overflows the
+  // argument list and throws `RangeError: Maximum call stack size exceeded`.
+  for (let i = 0; i < bytes.length; i += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  }
+  return { content: btoa(binary), filename: file.name };
+}
+
 export interface AffectionPlanRead {
   readonly filename: string;
   readonly disclaimer: string;
@@ -707,21 +762,12 @@ export const api = {
    * not*; nothing is persisted, because the point of the review screen is that
    * a person looks before a number enters the system.
    */
-  readAffectionPlan: async (actor: Actor, file: File): Promise<AffectionPlanRead> => {
-    const buffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    // Chunked: `String.fromCharCode(...bytes)` on a 1.5 MB file overflows the
-    // argument list and throws `RangeError: Maximum call stack size exceeded`.
-    for (let i = 0; i < bytes.length; i += 8192) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-    }
-    return call<AffectionPlanRead>('/api/intake/affection-plan', {
+  readAffectionPlan: async (actor: Actor, attachment: Attachment): Promise<AffectionPlanRead> =>
+    call<AffectionPlanRead>('/api/intake/affection-plan', {
       actor,
       method: 'POST',
-      body: JSON.stringify({ content: btoa(binary), filename: file.name }),
-    });
-  },
+      body: JSON.stringify(attachment),
+    }),
 };
 
 /**

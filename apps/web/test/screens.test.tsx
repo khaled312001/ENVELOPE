@@ -672,7 +672,7 @@ describe('the affection-plan reading', () => {
   it('says nothing is missing when the sheet states everything', () => {
     const read = readings.complete;
     expect(read.facts.missing.length).toBe(0);
-    const out = html(<Reading read={read} onUse={() => {}} />);
+    const out = html(<Reading read={read} attachment={null} onUse={() => {}} />);
     // No heading, no lead, no argument — an empty section would be a heading over
     // nothing, which reads as a finding the sheet did not produce.
     expect(out).not.toContain('What this sheet does not say');
@@ -682,7 +682,7 @@ describe('the affection-plan reading', () => {
   it('names every gap in the engine’s own words', () => {
     const read = readings.incomplete;
     expect(read.facts.missing.length).toBeGreaterThan(0);
-    const out = html(<Reading read={read} onUse={() => {}} />);
+    const out = html(<Reading read={read} attachment={null} onUse={() => {}} />);
     expect(out).toContain('What this sheet does not say');
     for (const gap of read.facts.missing) {
       expect(out).toContain(gap.label);
@@ -696,7 +696,7 @@ describe('the affection-plan reading', () => {
     before the plain sentence, inside a red banner. Order is the assertion.
   */
   it('states the fact and the action before the argument, and keeps the argument closed', () => {
-    const out = html(<Reading read={readings.incomplete} onUse={() => {}} />);
+    const out = html(<Reading read={readings.incomplete} attachment={null} onUse={() => {}} />);
     const lead = out.indexOf('These are limits this sheet is silent on.');
     const why = out.indexOf('Why the engine will not fill a gap in a sheet');
     expect(lead).toBeGreaterThan(-1);
@@ -713,7 +713,7 @@ describe('the affection-plan reading', () => {
   it('refuses the run on a sheet missing a binding limit, and offers the way round it', () => {
     const read = readings.incomplete;
     expect(read.facts.blocking.length).toBeGreaterThan(0);
-    const out = html(<Reading read={read} onUse={() => {}} />);
+    const out = html(<Reading read={read} attachment={null} onUse={() => {}} />);
     expect(out).toContain('This sheet cannot drive a capacity run.');
     expect(out).toContain('You can still create the plot and enter those limits yourself');
     for (const gap of read.facts.blocking) expect(out).toContain(gap.label);
@@ -724,7 +724,7 @@ describe('the affection-plan reading', () => {
      rather than editing copy. */
   it('carries the disclaimer the API wrote, verbatim, on both sheets', () => {
     for (const read of [readings.complete, readings.incomplete]) {
-      const out = html(<Reading read={read} onUse={() => {}} />);
+      const out = html(<Reading read={read} attachment={null} onUse={() => {}} />);
       expect(read.disclaimer).toContain('REGULATORY VALIDITY: NOT ASSESSED');
       expect(out).toContain(read.disclaimer);
     }

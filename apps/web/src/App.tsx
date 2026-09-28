@@ -35,10 +35,12 @@ import {
   type PlotView,
   type RunRequestBody,
   type RunView,
+  type SheetReport,
 } from './api/client.js';
 import { AssumptionRegister } from './components/AssumptionRegister.js';
 import { CapacityBands } from './components/CapacityBands.js';
 import { PlotCanvas } from './components/PlotCanvas.js';
+import { PlotLimits } from './components/PlotLimits.js';
 import { ProvenanceTree, type ProvTree } from './components/ProvenanceTree.js';
 import { ProvenanceLegend, TracedValue } from './components/TracedValue.js';
 import { MassingPanel } from './components/MassingPanel.js';
@@ -205,6 +207,16 @@ export function EngineApp({
   const [demo, setDemo] = useState<Demo | null>(null);
   const [plot, setPlot] = useState<PlotView | null>(null);
   const [plotHash, setPlotHash] = useState<string | null>(null);
+  /*
+    WHAT THE PLOT'S OWN SHEET DID, KEPT FROM THE MOMENT THE PLOT WAS MADE.
+
+    The server reads the affection plan when the plot is created and reports what
+    it bound and what it did not. That report belongs on the rules step, which is
+    where limits are chosen — so it is held here rather than re-fetched, because
+    the endpoint that produced it is a POST and re-running it would create a
+    second plot.
+  */
+  const [sheet, setSheet] = useState<SheetReport | null>(null);
   const [run, setRun] = useState<RunView | null>(null);
   const [request, setRequest] = useState<RunRequestBody | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
@@ -509,6 +521,7 @@ export function EngineApp({
                 onCreated={(created, view) => {
                   setPlot(view);
                   setPlotHash(created.gateSubjectHash);
+                  setSheet(created.sheet);
                   goto('parameters');
                 }}
                 onError={setError}
@@ -526,6 +539,8 @@ export function EngineApp({
                 }}
               />
             ) : null}
+
+            {step === 'rules' && plot && sheet ? <PlotLimits sheet={sheet} /> : null}
 
             {step === 'rules' && plot ? (
               <RulesStep

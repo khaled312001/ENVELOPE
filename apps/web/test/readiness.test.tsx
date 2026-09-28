@@ -1,9 +1,9 @@
 /**
- * `/dashboard` — deployment readiness, rendered.
+ * `/readiness` — deployment readiness, rendered.
  *
  * MOVED here out of `landing.test.tsx`, where it lived inside
  * `describe('the status dashboard')`. It was moved and not copied: while it sat
- * there, `/dashboard`'s coverage was invisibly supplied by `/`'s filename, and
+ * there, `/readiness`'s coverage was invisibly supplied by `/`'s filename, and
  * `route-coverage.test.ts` could not distinguish a route with a test from a route
  * without one.
  *
@@ -428,13 +428,13 @@ describe('the readiness page', () => {
     // R8's mechanical half, and the site-wide set runs it too. It is asserted here
     // as well because this page is made of counts, and a heading is exactly where
     // one gets typed.
-    expectSitewideProhibitions(panels(), '/dashboard signed in');
+    expectSitewideProhibitions(panels(), '/readiness signed in');
   });
 });
 
 describe('the readiness route', () => {
   it('renders signed out, from the build-time snapshot', () => {
-    // `/dashboard` dispatches ABOVE the actor check. Two of the landing page's
+    // `/readiness` dispatches ABOVE the actor check. Two of the landing page's
     // calls to action used to land a visitor on "Who is running this?", which asks
     // for identity before giving anything — and the snapshot exists so the page
     // never has to fabricate an actor to reach the API.
@@ -446,7 +446,7 @@ describe('the readiness route', () => {
     const r = (SNAPSHOT as unknown as DashboardView).readiness;
     expect(stripTags(markup)).toContain(`${r.rulesApproved} of ${r.rulesTotal}`);
     expect(stripTags(markup)).toContain(r.blocking);
-    expectSitewideProhibitions(markup, '/dashboard signed out');
+    expectSitewideProhibitions(markup, '/readiness signed out');
   });
 
   it('makes no request and shows no loading state without an actor', () => {

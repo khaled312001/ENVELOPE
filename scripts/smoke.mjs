@@ -542,6 +542,47 @@ await step('the address names the open step, and Back walks the flow rather than
   }
 });
 
+/**
+ * THE SHEET'S OWN LIMITS, BINDING THE RUN AND SAYING WHAT THEY DO NOT BIND.
+ *
+ * The highest-severity defect in the plan was this: the affection plan was read
+ * here, shown on the previous screen, and dropped before the engine ran. This
+ * plot ran on a draft FAR of 5.00 while the document open in the same session
+ * printed 3.5, with a full derivation under the wrong number.
+ *
+ * Checked in a browser because the path only exists end to end: the file was
+ * chosen by a person, posted with the plot, parsed by the server, resolved by the
+ * engine under §11.5 step 1, and reported back. Every layer has its own test and
+ * none of them can see this.
+ *
+ * THE SECOND HALF IS THE HALF THAT MATTERS. A panel listing what the sheet bound
+ * and staying quiet about what it did not would be the same silence one screen
+ * later, so the unapplied limits are asserted too.
+ */
+await step('the plot’s own sheet binds the run, and names what it does not bind', async () => {
+  const panel = page.locator('.pl');
+  await panel.waitFor({ timeout: wait(8000) });
+  const t = await panel.textContent();
+
+  if (!t.includes('IC1-CTYL-16_011')) throw new Error('the panel does not name the document');
+  if (!t.includes('3.5')) throw new Error('the sheet’s own FAR is not shown as applied');
+  if (!t.includes('far.max')) throw new Error('the bound parameter is not named');
+
+  // Stated on this sheet and applied by nothing: a level allowance, a stated
+  // GFA, and the tower’s own setback schedule.
+  for (const field of ['height', 'gfaSqm', 'setbacks.tower']) {
+    if (!t.includes(field)) throw new Error(`${field} is stated on the sheet and not reported`);
+  }
+
+  // Amber means ASSUMED and nothing here is assumed. §13.1.
+  if (await panel.locator('.traced--assumed').count()) {
+    throw new Error('the plot-limits panel painted amber');
+  }
+  if (!/never assessed and never claimed/i.test(t)) {
+    throw new Error('the panel dropped the claim sentence');
+  }
+});
+
 await step('the sheet\'s podium count waits on the rules step to be confirmed', async () => {
   // The Warsan sheet prints G+2P+8. It used to be read at intake and dropped at
   // the composition root, so every massing showed one podium level in amber. It

@@ -66,6 +66,7 @@ import {
   BANNED_IN_HAND_WRITTEN_COPY,
   expectNoEnglishProse,
   expectSitewideProhibitions,
+  pageProps,
   stripTags,
 } from './prohibitions.js';
 
@@ -97,26 +98,31 @@ const ACCOUNT = {
 /** The page with no session provider, which is the signed-out branch. */
 const page = (): string =>
   renderToStaticMarkup(
-    <Settings
-      navigate={() => {}}
-      actor={null}
-      setActor={() => {}}
-      search=""
-      theme="light"
-      toggleTheme={() => {}}
-    />,
+    <Settings {...pageProps()} />,
   );
 
 /** The four panels, which is what a signed-in reader actually meets. */
 const panels = (): string =>
   renderToStaticMarkup(
-    <SettingsPanels account={ACCOUNT} theme="light" toggleTheme={() => {}} />,
+    <SettingsPanels
+      account={ACCOUNT}
+      theme="light"
+      toggleTheme={() => {}}
+      density="comfortable"
+      setDensity={() => {}}
+    />,
   );
 
 const panelsAr = (): string =>
   renderToStaticMarkup(
     <StaticLocale locale="ar">
-      <SettingsPanels account={ACCOUNT} theme="light" toggleTheme={() => {}} />
+      <SettingsPanels
+        account={ACCOUNT}
+        theme="light"
+        toggleTheme={() => {}}
+        density="comfortable"
+        setDensity={() => {}}
+      />
     </StaticLocale>,
   );
 

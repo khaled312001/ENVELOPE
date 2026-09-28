@@ -99,6 +99,31 @@
   --sidebar-w: 16rem;
   --sidebar-w-collapsed: 4rem;
 
+  /* The two other shell measures, which were hard-coded where they were used.
+     `--inspector-w` was `minmax(20rem, 26rem)` written inline in app.css — the
+     provenance panel beside the step body — and `--header-h` did not exist at all
+     because the masthead sizes itself from its own padding, which is fine until
+     something has to align to it or offset a sticky element by it. */
+  --inspector-w-min: 20rem;
+  --inspector-w-max: 26rem;
+  --header-h: 3.5rem;   /* 56px, and the sidebar's brand block matches it */
+
+  /* --- DENSITY. Three row heights, and the reason it is a token and not a number.
+
+     A table in this product is a schedule: levels, bays, rules, checks, runs. A
+     single row height is what makes one feel like a web page instead of a
+     drawing's schedule block, and 48px is right for reading while 36px is right
+     for comparing forty rows of a level schedule at once.
+
+     `--row-h` is what every table row actually reads. The three named heights are
+     what the appearance control switches between, by setting `--row-h` on the
+     document. Comfortable is the default, so a document with no preference set
+     renders exactly as it did before this token existed. --- */
+  --row-compact: 2.25rem;       /* 36px */
+  --row-comfortable: 3rem;      /* 48px */
+  --row-spacious: 3.5rem;       /* 56px */
+  --row-h: var(--row-comfortable);
+
   /* --- Sizing. There was no sizing scale at all: control height was 2.5rem in
      three rules, 2rem in one, 3rem in one and 44px in two, and the horizontal
      meter — one conceptual object — existed at four heights, four radii, two fill
@@ -330,6 +355,17 @@
      the four components that have an exit. */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);      /* entrances */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);  /* state changes */
+  /* AND NOW --ease-in EXISTS, because now something leaves.
+
+     The note above is still the rule — "a duration with no consumer is decoration
+     in a token file" — and it named the exact condition under which this token
+     would be added: this language refuses the modal, the toast, the menu and the
+     popover, which are the four components that have an exit. The navigation
+     drawer below 768px is the fifth, and it is not one of the four: it is a
+     region that was always on the page and is being put away, so it leaves the
+     way it came and faster. Departures are --duration-fast against entrances'
+     --duration-base, which is the same asymmetry a press already uses. */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);          /* departures, and only those */
 
   /* The ONLY distance anything in this product ever travels. Naming it as a single
      token is what stops a future contributor writing a 40px slide. */
@@ -685,6 +721,23 @@
     --text-on-action: var(--graphite-82);
   }
 }
+
+/*
+ * DENSITY, SWITCHED BY THE ATTRIBUTE THE PRE-PAINT SCRIPT SETS.
+ *
+ * Two rules and not three: a document with no `data-density` is comfortable,
+ * which is the default declared above. Writing a third rule for the default would
+ * make "no preference" and "chose comfortable" two different states in the
+ * stylesheet, and they are one state in the reader's head.
+ *
+ * It is stored in the BROWSER and not on the account. `/settings` says so in
+ * words — theme, language and density follow the machine rather than the person —
+ * and that is honest rather than provisional: this deployment has no tenancy, and
+ * a preference that claimed to follow an account would be the smallest possible
+ * version of the claim §6.4 refuses.
+ */
+:root[data-density='compact'] { --row-h: var(--row-compact); }
+:root[data-density='spacious'] { --row-h: var(--row-spacious); }
 
 :root[data-theme='dark'] {
   --surface-base: var(--graphite-82);

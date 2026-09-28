@@ -40,6 +40,19 @@
           document.documentElement.setAttribute('lang', 'ar');
           document.documentElement.setAttribute('dir', 'rtl');
         }
+        /*
+          The same argument as the theme, one property further along: a density
+          applied after hydration reflows every table on the page once, and a
+          sidebar width applied after hydration flashes wide and then narrow.
+          Both are attributes on the element itself, before the first paint.
+        */
+        var d = localStorage.getItem('envelope.density');
+        if (d === 'compact' || d === 'spacious') {
+          document.documentElement.setAttribute('data-density', d);
+        }
+        if (localStorage.getItem('envelope.sidebar') === 'collapsed') {
+          document.documentElement.setAttribute('data-sidebar-collapsed', '');
+        }
       } catch (e) {
         /* private mode, blocked storage — the light, left-to-right default applies */
       }

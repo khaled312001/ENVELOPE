@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { EngineApp, Header, useTheme } from './App.js';
+import { EngineApp, Header, useDensity, useSidebar, useTheme, type Density } from './App.js';
 import { LanguageToggle, useLocale, useT } from './i18n/locale.js';
 import { useSession } from './session.js';
 import type { Actor } from './api/client.js';
@@ -45,6 +45,9 @@ export interface PageProps {
    */
   readonly theme: 'light' | 'dark';
   readonly toggleTheme: () => void;
+  /** The reading density of every schedule. Same ownership rule as the theme. */
+  readonly density: Density;
+  readonly setDensity: (d: Density) => void;
 }
 
 export type PageComponent = (p: PageProps) => JSX.Element;
@@ -61,6 +64,8 @@ export default function Root(): JSX.Element {
    * do nothing. One owner, passed down.
    */
   const [theme, toggleTheme] = useTheme();
+  const [density, setDensity] = useDensity();
+  const [railCollapsed, setRailCollapsed] = useSidebar();
   const { state: sessionState, account: session } = useSession();
 
   const [actor, setActorState] = useState<Actor | null>(() => {
@@ -168,7 +173,16 @@ export default function Root(): JSX.Element {
     document.title = title;
   }, [title]);
 
-  const pageProps: PageProps = { navigate, actor, setActor, search, theme, toggleTheme };
+  const pageProps: PageProps = {
+    navigate,
+    actor,
+    setActor,
+    search,
+    theme,
+    toggleTheme,
+    density,
+    setDensity,
+  };
 
   /*
     THE RAIL, ON THE ROUTES WHOSE RECORD ASKS FOR ONE.
@@ -190,6 +204,8 @@ export default function Root(): JSX.Element {
       <AppSidebar
         route={route}
         navigate={navigate}
+        collapsed={railCollapsed}
+        setCollapsed={setRailCollapsed}
         {...(sessionState === 'signed-in' && session ? { accountName: session.name } : {})}
       />
     ) : null;

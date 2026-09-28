@@ -269,6 +269,28 @@
 }
 
 /*
+  THE COLLAPSE ANIMATES THE GRID TRACK, NOT A MARGIN.
+
+  Animating a margin or a transform leaves the content column where it was and
+  slides the rail over or away from it; animating the TRACK moves both, which is
+  the difference between a rail that is put away and a rail that is hidden.
+
+  200ms and `--ease-standard`, which is `cubic-bezier(.4,0,.2,1)` — the plan's
+  figure and the token this language already spends on every state change. It sits
+  inside the motion guard with everything else, so a reader who asked for reduced
+  motion gets the new width immediately and without the slide.
+*/
+:root[data-sidebar-collapsed] .shell-grid--railed {
+  grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shell-grid--railed {
+    transition: grid-template-columns var(--duration-base) var(--ease-standard);
+  }
+}
+
+/*
   THE RAIL ITSELF.
 
   Sticky rather than fixed: fixed takes it out of flow, and a fixed rail beside a
@@ -317,7 +339,78 @@
   color: var(--text-tertiary);
 }
 
+/* The eyebrow and the collapse control share one row, so the control sits on the
+   rail's own top line rather than inventing a second one. */
+.sidebar__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-block-size: 1.5rem;
+}
+
+.sidebar__collapse {
+  display: grid;
+  place-items: center;
+  inline-size: var(--tap-min);
+  block-size: var(--tap-min);
+  margin: calc(var(--space-2) * -1);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.sidebar__collapse:hover,
+.sidebar__collapse:focus-visible { color: var(--text-primary); }
+
+/* The caret points the way the rail will MOVE, so it turns when the state does.
+   A logical flip as well, because on an RTL page the rail is on the right and
+   "away" is the other direction. */
+.sidebar__caret--out { transform: scaleX(-1); }
+:root[dir='rtl'] .sidebar__caret { transform: scaleX(-1); }
+:root[dir='rtl'] .sidebar__caret--out { transform: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .sidebar__caret { transition: transform var(--duration-base) var(--ease-standard); }
+}
+
 .sidebar__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* The mark never shrinks, so a collapsed rail is a column of aligned glyphs and
+   not a column of glyphs squeezed by whatever label is longest. */
+.sidebar__glyph { flex: none; }
+
+/*
+  THE LABEL IS CLIPPED, NEVER REMOVED — see the component for why: `display: none`
+  takes it out of the accessibility tree and leaves `aria-current="page"` on a link
+  with no name.
+
+  THE TIMING IS THE HALF THAT IS EASY TO GET WRONG. §5.1 asks for the label to
+  clear BEFORE the clip reaches it on collapse and to appear AFTER the rail has
+  opened on expand, and the reason is visible the moment it is not done: a label
+  fading at the same rate as the track produces a word being guillotined. So the
+  opacity runs at --duration-fast (140ms, faster than the 200ms track) and the
+  expand delays by 100ms, which is half the track's travel.
+*/
+.sidebar__label {
+  white-space: nowrap;
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sidebar__label {
+    transition:
+      opacity var(--duration-fast) var(--ease-standard) 100ms,
+      max-inline-size var(--duration-base) var(--ease-standard);
+  }
+}
+.sidebar__label { max-inline-size: 12rem; opacity: 1; }
+
+:root[data-sidebar-collapsed] .sidebar__label {
+  max-inline-size: 0;
+  opacity: 0;
+  /* No delay on the way out: the word has to be gone before the track arrives. */
+  transition-delay: 0ms;
+}
 
 /*
   A NAV ITEM, AND ITS CURRENT STATE IN TWO CHANNELS.
@@ -334,7 +427,12 @@
 .sidebar__item {
   display: flex;
   align-items: center;
+  /* §5.2 asks for a 36px item. `--tap-min` is 44px and WINS, because 36px is
+     below WCAG 2.5.8's 24px minimum only in theory and below every usability
+     finding in practice — and this codebase has already failed a target-size
+     audit once. The plan's figure is a density preference; the floor is not. */
   min-block-size: var(--tap-min);
+  gap: var(--space-2);   /* 8px, icon to label, as specified */
   padding: var(--space-2) var(--space-3);
   border-inline-start: var(--border-width-emphasis) solid transparent;
   border-radius: var(--radius-sm);
@@ -352,6 +450,16 @@
   border-inline-start-color: var(--action);
   color: var(--text-primary);
 }
+
+/* Collapsed: the glyph centres in what is left, and the inline padding goes,
+   because 12px each side of a 16px mark in a 64px rail is not centred. */
+:root[data-sidebar-collapsed] .sidebar__item {
+  justify-content: center;
+  padding-inline: 0;
+}
+:root[data-sidebar-collapsed] .sidebar__inner { padding-inline: var(--space-3); }
+:root[data-sidebar-collapsed] .sidebar__eyebrow,
+:root[data-sidebar-collapsed] .sidebar__who { display: none; }
 
 /* Who this is, at the foot of the rail. The guest sentence is prose and takes the
    fine measure; the signed-in pair is a label over a name. */
@@ -412,6 +520,22 @@
     padding-block-start: var(--space-2);
     border-block-start: none;
   }
+  /*
+    THE COLLAPSE CONTROL IS GONE HERE, AND SO IS THE STATE IT SETS.
+
+    The rail is a horizontal row at this width, so there is nothing to collapse —
+    and a stored `collapsed` from a desktop session would otherwise arrive on a
+    phone and hide every label in the row. The two rules below are what make the
+    preference a DESKTOP preference rather than a global one, without the state
+    having to know which screen it is on.
+  */
+  .sidebar__collapse { display: none; }
+  :root[data-sidebar-collapsed] .shell-grid--railed { grid-template-columns: none; }
+  :root[data-sidebar-collapsed] .sidebar__label { max-inline-size: 12rem; opacity: 1; }
+  :root[data-sidebar-collapsed] .sidebar__item { justify-content: flex-start; padding-inline: var(--space-3); }
+  :root[data-sidebar-collapsed] .sidebar__inner { padding-inline: var(--page-gutter); }
+  :root[data-sidebar-collapsed] .sidebar__eyebrow,
+  :root[data-sidebar-collapsed] .sidebar__who { display: block; }
 }
 
 /* ==========================================================================
@@ -1040,8 +1164,25 @@
   letter-spacing: var(--tracking-label);
   color: var(--text-tertiary);
   white-space: nowrap;
-  border-block-end: var(--border-width-emphasis) solid var(--border-strong);
+
+  /*
+    STICKY, for the same reason `.data-table` is: a schedule is read by running
+    down a column, and a head that has scrolled away turns every figure into an
+    unlabelled number. The ink datum is redrawn as an inset `box-shadow` because
+    a border on a sticky `<th>` inside `border-collapse: collapse` is dropped by
+    every engine — and that rule is the one horizontal the treatment is built on.
+
+    Above the stacked breakpoint only. Below it the header is visually hidden and
+    each row re-emits its own labels, so there is nothing to stick.
+  */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-raised);
+  border-block-end: none;
+  box-shadow: inset 0 calc(var(--border-width-emphasis) * -1) 0 0 var(--border-strong);
 }
+.schedule tbody > tr > * { min-block-size: var(--row-h); }
 .schedule tbody tr:last-child > * { border-block-end: none; }
 .schedule tfoot > tr > * {
   border-block-start: var(--border-width-emphasis) solid var(--border-strong);
@@ -2486,6 +2627,40 @@
 .field__optional {
   font-weight: var(--weight-normal);
   color: var(--text-tertiary);
+}
+
+/*
+ * A RADIO GROUP THAT IS A FIELDSET, and therefore needs the browser's own
+ * fieldset chrome turned off: a UA border and padding around three inline radios
+ * is the one place in this language a box appears that nothing asked for.
+ */
+.settings__radios {
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-inline-size: 0;   /* a fieldset refuses to shrink without this */
+}
+
+.settings__radio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+/*
+ * THE WHOLE LABEL IS THE TARGET, not the 13px circle beside it.
+ *
+ * WCAG 2.5.8 asks for 24px, and a bare radio input is smaller than that in every
+ * engine. Wrapping the input in its `<label>` makes the text part of the hit
+ * area, which is both the fix and what every reader expects anyway.
+ */
+.settings__radio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 1.5rem;
+  font-size: var(--text-sm);
+  cursor: pointer;
 }
 
 /* ==========================================================================

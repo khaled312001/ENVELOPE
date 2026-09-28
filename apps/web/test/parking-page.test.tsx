@@ -46,12 +46,13 @@ import {
   expectNoEnglishProse,
   expectSitewideProhibitions,
   group,
+  pageProps,
   stripTags,
 } from './prohibitions.js';
 
 const markup = (): string =>
   renderToStaticMarkup(
-    <Parking navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />,
+    <Parking {...pageProps()} />,
   );
 
 /** Rendered markup with tags stripped and whitespace flattened, as a person reads it. */
@@ -382,7 +383,7 @@ describe('/parking', () => {
 const arabic = (): string =>
   renderToStaticMarkup(
     <StaticLocale locale="ar">
-      <Parking navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />
+      <Parking {...pageProps()} />
     </StaticLocale>,
   );
 

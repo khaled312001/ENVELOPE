@@ -40,20 +40,14 @@ import { NOT_FOUND, ROUTES, type Location } from '../src/router.js';
 import {
   BANNED_IN_HAND_WRITTEN_COPY,
   expectSitewideProhibitions,
+  pageProps,
   stripTags,
 } from './prohibitions.js';
 
-const PROPS = {
-  navigate: () => {},
-  actor: null,
-  setActor: () => {},
-  search: '',
-  /* The chrome owns the theme and the page is handed it, so a page rendered
-     outside `Root` has to be handed one too. `light` because every assertion
-     below reads markup rather than colour. */
-  theme: 'light',
-  toggleTheme: () => {},
-} as const;
+/* The one page-contract fixture, from `prohibitions.ts`. It used to be declared
+   here as well, and the two copies had to be edited in step every time
+   `PageProps` gained a field. */
+const PROPS = pageProps();
 
 /** One route, rendered the way `Root` renders it: the page inside the chrome. */
 function page(route: Location): string {
@@ -154,7 +148,10 @@ describe('the site chrome', () => {
  * that does not exist, and that it says which of the two identities you are.
  */
 describe('the workspace shell', () => {
-  const railed = (route: Location, accountName?: string): string =>
+  /* `collapsed: false` is the state every assertion below reads: the labels are
+     what this block checks, and a collapsed rail clips them to zero width. The
+     collapsed rail has its own test at the end. */
+  const railed = (route: Location, accountName?: string, collapsed = false): string =>
     renderToStaticMarkup(
       <SiteChrome
         route={route}
@@ -163,6 +160,8 @@ describe('the workspace shell', () => {
           <AppSidebar
             route={route}
             navigate={() => {}}
+            collapsed={collapsed}
+            setCollapsed={() => {}}
             {...(accountName === undefined ? {} : { accountName })}
           />
         }
@@ -232,6 +231,56 @@ describe('the workspace shell', () => {
 
   /* §13.1. A rail is chrome, and chrome painted in the uncertainty colour teaches a
      reader that amber means nothing in particular. */
+  /* ----------------------------------------------------------------------
+   * COLLAPSED — where the rail can lose something a reader needs.
+   * ------------------------------------------------------------------- */
+
+  it('keeps every label in the accessibility tree when it is collapsed', () => {
+    const open = railed('/app', 'Khaled');
+    const shut = railed('/app', 'Khaled', true);
+    /*
+      THE FAILURE THIS CATCHES, and it is the obvious way to build a collapsed
+      rail: `display: none` on the label, or dropping it from the markup. Either
+      leaves `aria-current="page"` on a link with NO ACCESSIBLE NAME, so a screen
+      reader announces "link, current page" three times and names none of them.
+      The label is clipped by the stylesheet; it stays in the document.
+    */
+    for (const label of ['Run a plot', 'Your work', 'Settings']) {
+      expect(shut, `the collapsed rail dropped "${label}"`).toContain(label);
+    }
+    // And the same links are there, current state and all.
+    expect((shut.match(/sidebar__item/g) ?? []).length).toBe(
+      (open.match(/sidebar__item/g) ?? []).length,
+    );
+    expect(shut).toContain('aria-current="page"');
+  });
+
+  it('names each item a second way only while the label is clipped', () => {
+    // A collapsed rail is three unlabelled marks, so `title` names them. Expanded,
+    // a tooltip repeating the word beside it is noise in every screen reader that
+    // announces it — so it is removed rather than left on.
+    expect(railed('/app', 'Khaled', true)).toMatch(/title="Run a plot"/);
+    expect(railed('/app', 'Khaled')).not.toMatch(/title="Run a plot"/);
+  });
+
+  it('gives the collapse control a name that changes with its state', () => {
+    // `aria-expanded` and not `aria-pressed`: this discloses a region rather than
+    // toggling a setting. And the NAME changes too, because a name that stayed the
+    // same leaves a screen-reader user to infer the direction from the state.
+    expect(railed('/app', 'Khaled')).toContain('aria-expanded="true"');
+    expect(railed('/app', 'Khaled', true)).toContain('aria-expanded="false"');
+    expect(railed('/app', 'Khaled')).toContain('Collapse the workspace rail');
+    expect(railed('/app', 'Khaled', true)).toContain('Expand the workspace rail');
+  });
+
+  it('draws its own glyphs rather than borrowing an icon set', () => {
+    const markup = railed('/app', 'Khaled');
+    // Three marks, one per item, each hidden from the accessibility tree because
+    // the label beside it is the name.
+    expect((markup.match(/sidebar__glyph/g) ?? []).length).toBe(3);
+    expect(markup).toMatch(/<svg[^>]*class="sidebar__glyph"[^>]*aria-hidden="true"/);
+  });
+
   it('paints no amber', () => {
     const markup = railed('/app', 'A Person');
     const rail = markup.slice(markup.indexOf('class="sidebar"'), markup.indexOf('id="main"'));

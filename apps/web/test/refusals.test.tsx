@@ -60,6 +60,7 @@ import {
   expectNoCountInHeadings,
   expectNoEnglishProse,
   expectSitewideProhibitions,
+  pageProps,
   stripTags,
 } from './prohibitions.js';
 
@@ -67,7 +68,7 @@ const Page = Refusals;
 
 const markup = (): string =>
   renderToStaticMarkup(
-    <Page navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />,
+    <Page {...pageProps()} />,
   );
 
 /** What a reader reads: tags stripped, whitespace collapsed. */
@@ -326,7 +327,7 @@ describe('/refusals', () => {
 const arabicMarkup = (): string =>
   renderToStaticMarkup(
     <StaticLocale locale="ar">
-      <Page navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />
+      <Page {...pageProps()} />
     </StaticLocale>,
   );
 

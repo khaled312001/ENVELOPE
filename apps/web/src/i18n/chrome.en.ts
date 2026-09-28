@@ -82,6 +82,11 @@ export const EN = {
     label: 'Your workspace',
     heading: 'Workspace',
     signedInAs: 'Signed in as',
+    /* The accessible name of the collapse control, which CHANGES with the state:
+       a name that stayed the same would leave a screen-reader user to infer the
+       direction from `aria-expanded` alone. */
+    collapse: 'Collapse the workspace rail',
+    expand: 'Expand the workspace rail',
     guest: 'You are working as a guest. This browser holds the key to these runs; clearing it loses them, and no other device can reach them.',
   },
 

@@ -54,13 +54,14 @@ import {
   expectAssumedTreatmentPresent,
   expectNoEnglishProse,
   expectSitewideProhibitions,
+  pageProps,
   stripTags,
 } from './prohibitions.js';
 
 const X = WORKED.verified.exports;
 
 const markup = (): string =>
-  renderToStaticMarkup(<Exports navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />);
+  renderToStaticMarkup(<Exports {...pageProps()} />);
 
 /** What a reader reads: tags stripped, entities that matter decoded, whitespace collapsed. */
 const text = (): string =>
@@ -197,7 +198,7 @@ describe('/exports in Arabic', () => {
   const html = (): string =>
     renderToStaticMarkup(
       <StaticLocale locale="ar">
-        <Exports navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />
+        <Exports {...pageProps()} />
       </StaticLocale>,
     );
 

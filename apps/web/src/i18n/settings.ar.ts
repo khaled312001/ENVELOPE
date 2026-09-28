@@ -123,6 +123,18 @@ export const AR: SettingsDictionary = {
         'تُفحَص السِّمتان كلتاهما على تباين WCAG 2.2 في كل بناء، بما في ذلك اللون ' +
         'الكهرماني الذي يشير إلى قيمة مُفترَضة.',
     },
+    density: {
+      label: 'ارتفاع الصف',
+      /* «جدول» for a schedule, as the glossary gives it. Not «قائمة»: a schedule
+         is the drawing-office object — مناسيب، مواقف، قواعد، فحوص — and the whole
+         point of the control is that these tables are read like one. */
+      help:
+        'يسري على كل جدول في المنتج: المناسيب والمواقف والقواعد والفحوص. ' +
+        'المريح يُقرأ صفًّا صفًّا؛ والمضغوط يُظهر أربعين صفًّا على الشاشة لتقارن بينها.',
+      compact: 'مضغوط',
+      comfortable: 'مريح',
+      spacious: 'فسيح',
+    },
     language: {
       label: 'اللغة',
       help:

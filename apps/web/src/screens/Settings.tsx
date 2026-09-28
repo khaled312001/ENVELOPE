@@ -54,6 +54,7 @@ import { AuthFailure } from '../api/auth.js';
 import { useDict, useLocale, useT, LanguageToggle } from '../i18n/locale.js';
 import { AR } from '../i18n/settings.ar.js';
 import { EN } from '../i18n/settings.en.js';
+import { DENSITIES, type Density } from '../App.js';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
 import { useSession } from '../session.js';
@@ -135,10 +136,14 @@ export function SettingsPanels({
   account,
   theme,
   toggleTheme,
+  density,
+  setDensity,
 }: {
   readonly account: { readonly email: string; readonly name: string; readonly licence: string | null };
   readonly theme: 'light' | 'dark';
   readonly toggleTheme: () => void;
+  readonly density: Density;
+  readonly setDensity: (d: Density) => void;
 }): JSX.Element {
   const t = useDict(EN, AR);
   /* The page's own dictionary, and the chrome's — the theme control below reuses
@@ -200,6 +205,8 @@ export function SettingsPanels({
   const confirmId = useId();
   const confirmErrorId = useId();
   const themeHelpId = useId();
+  /* One name for the three radios, so they are one group rather than three. */
+  const densityName = useId();
   const languageHelpId = useId();
 
   /*
@@ -511,6 +518,38 @@ export function SettingsPanels({
             <p className="field__help">{t.appearance.theme.help}</p>
           </div>
 
+          {/*
+            A RADIO GROUP, NOT A SELECT AND NOT A SEGMENTED DIV.
+
+            Three mutually exclusive options is exactly what a radio group is, and
+            the native control brings arrow-key navigation, a single tab stop and
+            the right announcement for free. The category default here is a
+            segmented control built from `<div role="tablist">`, which announces
+            three tabs that open nothing.
+
+            The `<fieldset>` is what names the group for a screen reader; the
+            visible label is its `<legend>`, so there is no second label to keep
+            in step.
+          */}
+          <fieldset className="field settings__radios">
+            <legend className="settings__control-label">{t.appearance.density.label}</legend>
+            <div className="settings__radio-row">
+              {DENSITIES.map((d) => (
+                <label className="settings__radio" key={d}>
+                  <input
+                    type="radio"
+                    name={densityName}
+                    value={d}
+                    checked={density === d}
+                    onChange={() => setDensity(d)}
+                  />
+                  {t.appearance.density[d]}
+                </label>
+              ))}
+            </div>
+            <p className="field__help">{t.appearance.density.help}</p>
+          </fieldset>
+
           <div className="field">
             <span className="settings__control-label" id={languageHelpId}>
               {t.appearance.language.label}
@@ -533,7 +572,13 @@ export function SettingsPanels({
  * thing rather than a spinner: it lasts one request, and a flash of "no account"
  * followed by a form is worse than either.
  */
-export default function Settings({ navigate, theme, toggleTheme }: PageProps): JSX.Element {
+export default function Settings({
+  navigate,
+  theme,
+  toggleTheme,
+  density,
+  setDensity,
+}: PageProps): JSX.Element {
   const t = useDict(EN, AR);
   const { state, account } = useSession();
 
@@ -545,7 +590,13 @@ export default function Settings({ navigate, theme, toggleTheme }: PageProps): J
       </section>
 
       {state === 'signed-in' && account ? (
-        <SettingsPanels account={account} theme={theme} toggleTheme={toggleTheme} />
+        <SettingsPanels
+          account={account}
+          theme={theme}
+          toggleTheme={toggleTheme}
+          density={density}
+          setDensity={setDensity}
+        />
       ) : (
         <section className="shell section section--minor">
           <p className="settings__lede">{t.signedOut.heading}</p>

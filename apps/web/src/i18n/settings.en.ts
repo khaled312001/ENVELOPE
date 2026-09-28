@@ -143,6 +143,21 @@ export const EN = {
       label: 'Theme',
       help: 'Both themes are checked against WCAG 2.2 contrast on every build, including the amber that marks an assumed value.',
     },
+    density: {
+      label: 'Row height',
+      /**
+       * WHAT THE CONTROL IS FOR, in terms of the thing it changes.
+       *
+       * Not "compact / comfortable / spacious" with no explanation, which is the
+       * category default and tells a reader nothing. A table in this product is a
+       * schedule — levels, bays, rules, checks — and the choice is between reading
+       * one row and comparing forty. That is the sentence.
+       */
+      help: 'Every schedule in the product: the levels, the bays, the rules, the checks. Comfortable reads one row at a time; compact fits forty on a screen to compare them.',
+      compact: 'Compact',
+      comfortable: 'Comfortable',
+      spacious: 'Spacious',
+    },
     language: {
       label: 'Language',
       help: 'The engine and the site are in both. What the engine computed — a plot number, a rule citation, a figure — stays as it was recorded, in either language.',

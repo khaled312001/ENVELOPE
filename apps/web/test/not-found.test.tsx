@@ -36,7 +36,12 @@ import { describe, expect, it } from 'vitest';
 
 import { NOT_FOUND_PAGE, PAGES } from '../src/pages.js';
 import { ROUTES } from '../src/router.js';
-import { expectNoCountInHeadings, expectSitewideProhibitions, stripTags } from './prohibitions.js';
+import {
+  expectNoCountInHeadings,
+  expectSitewideProhibitions,
+  pageProps,
+  stripTags,
+} from './prohibitions.js';
 
 const Page = NOT_FOUND_PAGE.component;
 
@@ -57,7 +62,7 @@ function renderAt(pathname: string): string {
   });
   try {
     return renderToStaticMarkup(
-      <Page navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />,
+      <Page {...pageProps()} />,
     );
   } finally {
     Reflect.deleteProperty(globalThis, 'window');
@@ -67,7 +72,7 @@ function renderAt(pathname: string): string {
 /** The page as a host with no `window` renders it: no address, and no chip. */
 const markup = (): string =>
   renderToStaticMarkup(
-    <Page navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />,
+    <Page {...pageProps()} />,
   );
 
 /** The specimen chip's text, or `null` when the page rendered no chip at all. */

@@ -40,6 +40,10 @@ export const AR: ChromeDictionary = {
     label: 'مساحة عملك',
     heading: 'مساحة العمل',
     signedInAs: 'داخل باسم',
+    /* «اطوِ» و«افرد» — فعلان صريحان. The name changes with the state for the
+       reason the English carries. */
+    collapse: 'اطوِ شريط مساحة العمل',
+    expand: 'افرد شريط مساحة العمل',
     guest: 'أنت تعمل كضيف. هذا المتصفّح يحمل مفتاح هذه التشغيلات؛ مسحُه يفقدها، ولا يبلغها جهاز آخر.',
   },
 

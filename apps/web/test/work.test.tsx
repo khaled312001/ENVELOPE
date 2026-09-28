@@ -78,6 +78,7 @@ import {
   BANNED_IN_HAND_WRITTEN_COPY,
   expectNoEnglishProse,
   expectSitewideProhibitions,
+  pageProps,
   stripTags,
 } from './prohibitions.js';
 
@@ -102,7 +103,7 @@ const DICT_AR = stripped('../src/i18n/work.ar.ts');
  */
 const markup = (): string =>
   renderToStaticMarkup(
-    <Work navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />,
+    <Work {...pageProps()} />,
   );
 
 const text = (): string => stripTags(markup()).replace(/\s+/g, ' ');
@@ -376,7 +377,7 @@ describe('/work in Arabic', () => {
     renderToStaticMarkup(<StaticLocale locale="ar">{node}</StaticLocale>);
 
   const page = (): string =>
-    ar(<Work navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />);
+    ar(<Work {...pageProps()} />);
 
   /** Every qualifier a row can carry: signed and unsigned, shared, draft, a named band. */
   const ROWS: readonly RunRow[] = [

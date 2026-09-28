@@ -15,6 +15,36 @@
 
 import { expect } from 'vitest';
 
+import type { PageProps } from '../src/Root.js';
+
+/**
+ * THE PAGE CONTRACT, ONCE.
+ *
+ * `PageProps` gained two fields twice in one sitting, and each time twelve test
+ * files had to be edited to say the same thing — which is twelve chances to write
+ * a slightly different fixture and no test that would notice. The page contract
+ * is one object; its stand-in is one object.
+ *
+ * Typed as `PageProps` rather than inferred, so a field added to the contract
+ * fails HERE, in the one place that has to learn about it, instead of in every
+ * file that renders a page.
+ *
+ * `theme: 'light'` and `density: 'comfortable'` because every assertion in this
+ * suite reads markup rather than colour or row height; a test that needs the
+ * other values passes them.
+ */
+export const pageProps = (over: Partial<PageProps> = {}): PageProps => ({
+  navigate: () => {},
+  actor: null,
+  setActor: () => {},
+  search: '',
+  theme: 'light',
+  toggleTheme: () => {},
+  density: 'comfortable',
+  setDensity: () => {},
+  ...over,
+});
+
 /** Rendered markup with its tags removed, so a regex reads what a person reads. */
 export const stripTags = (markup: string): string => markup.replace(/<[^>]*>/g, ' ');
 

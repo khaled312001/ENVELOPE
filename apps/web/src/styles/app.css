@@ -449,7 +449,11 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   width: 100%;
   margin: 0 auto;
 }
-.layout--with-panel { grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem); }
+/* The two figures were written here and nowhere else, so nothing could align to
+   the inspector and nothing could offset by it. They are tokens now. */
+.layout--with-panel {
+  grid-template-columns: minmax(0, 1fr) minmax(var(--inspector-w-min), var(--inspector-w-max));
+}
 
 @media (max-width: 60rem) {
   .layout--with-panel { grid-template-columns: minmax(0, 1fr); }
@@ -1062,7 +1066,57 @@ select.input { cursor: pointer; }
      container; a COLUMN HEAD must not, because "TOLERANC / E" is not a label.
      Short words, so the minimum this imposes is a few pixels. */
   overflow-wrap: normal;
+
+  /*
+    STICKY, AND ONLY WHERE STICKY MEANS ANYTHING.
+
+    A long schedule — forty bays, thirty-six levels, thirteen checks — is read by
+    running down a column, and a column head that has scrolled away turns every
+    figure into an unlabelled number. `position: sticky` on a `<th>` inside a
+    table with `border-collapse: collapse` loses its border in every engine, which
+    is why the rule is redrawn as a `box-shadow` inset: the ink datum under the
+    header is the one horizontal this whole treatment is built on, and a sticky
+    header that dropped it would be worse than one that scrolled away.
+
+    It sticks to the VIEWPORT, not to a scroller, because these tables scroll with
+    the page. `top` is the plain physical property on purpose — `inset-block-start`
+    is correct and `position: sticky` resolves it identically, but the masthead
+    offset below is physical too and the pair reads as one decision.
+  */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-raised);
+  border-block-end: none;
+  box-shadow: inset 0 calc(var(--border-width-emphasis) * -1) 0 0 var(--border-strong);
 }
+/*
+  A HEADER INSIDE A HORIZONTAL SCROLLER DOES NOT STICK, and pretending otherwise
+  paints it over the row beside it. Below 48rem `.panel > .data-table` becomes a
+  block with `overflow-x: auto`, which makes the table its own scroll container —
+  a sticky `top` then resolves against a box that never scrolls vertically.
+*/
+@media (max-width: 48rem) {
+  .panel > .data-table thead th {
+    position: static;
+    border-block-end: var(--border-width-emphasis) solid var(--border-strong);
+    box-shadow: none;
+  }
+}
+
+/*
+  DENSITY, APPLIED IN ONE PLACE.
+
+  `--row-h` is a minimum, never a fixed height: a cell holding a basis string
+  wraps to four lines and must be allowed to. So the token sets the floor and the
+  content sets the rest, which is what makes "compact" mean "stop padding rows
+  that hold one word" rather than "clip the ones that do not".
+*/
+.data-table tbody > tr > * {
+  block-size: auto;
+  min-block-size: var(--row-h);
+}
+
 /* The last body row drew an interior rule against the panel's own padding, and a
    footer terminates the table the way the header opens it. */
 .data-table tbody tr:last-child > * { border-block-end: none; }

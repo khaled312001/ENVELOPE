@@ -40,6 +40,7 @@ import Antechamber from '../src/screens/Antechamber.js';
 import {
   expectNoCountInHeadings,
   expectSitewideProhibitions,
+  pageProps,
   stripTags,
 } from './prohibitions.js';
 
@@ -47,7 +48,7 @@ const Page = Antechamber;
 
 const markup = (search = ''): string =>
   renderToStaticMarkup(
-    <Page navigate={() => {}} actor={null} setActor={() => {}} search={search} theme="light" toggleTheme={() => {}} />,
+    <Page {...pageProps({ search })} />,
   );
 
 /** The three states this page has, and every scan below runs over all three. */

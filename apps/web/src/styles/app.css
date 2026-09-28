@@ -350,6 +350,87 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   color: var(--text-tertiary);
 }
 
+/* --- The step footer ----------------------------------------------------- */
+
+/*
+  The way on and the way back, under every step body. `App.tsx`'s `StepFooter`
+  carries the argument for why it exists at all; what is here is the two decisions
+  the stylesheet owns.
+
+  ONE: A RULE ABOVE, NOT A BOX AROUND. The footer is chrome sitting under content,
+  and a bordered card at the end of every panel would read as an eleventh panel —
+  the screen already closes each step with `.panel__footer`. A single hairline and
+  an interval are enough to say "this is not part of the step".
+
+  TWO: THE NEEDS SENTENCE SITS ABOVE THE BUTTON IT EXPLAINS, not beside it. Beside
+  it, the sentence is the widest thing in the row and pushes the control off the
+  end at 320px; above it, the pair stays together at every width and reads in the
+  order it is meant to — why first, control second.
+*/
+.step-footer {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-block-start: var(--rhythm-block);
+  padding-block-start: var(--space-5);
+  border-block-start: var(--border-width) solid var(--border-subtle);
+}
+
+/* The forward cell is a column so the sentence can stand over its button. */
+.step-footer__forward {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.step-footer__needs,
+.step-footer__end {
+  margin: 0;
+  max-inline-size: 34ch;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: end;
+}
+
+/*
+  The chevron is decoration and it is the one glyph on this screen with a direction,
+  so it is the one glyph that has to be flipped by hand. `transform` rather than a
+  second path: the same mark, mirrored, cannot drift from itself.
+*/
+.step-footer__chev {
+  inline-size: 1em;
+  block-size: 1em;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.step-footer__chev--back { transform: scaleX(-1); }
+[dir='rtl'] .step-footer__chev { transform: scaleX(-1); }
+[dir='rtl'] .step-footer__chev--back { transform: none; }
+
+/*
+  At phone width the two controls stack and each one fills the line. Two 44px
+  targets side by side at 320px leaves neither of them room for the step's name,
+  and a button reading "Continue to" with the name clipped is worse than a button
+  on its own line.
+*/
+@media (max-width: 30rem) {
+  .step-footer {
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+  }
+  .step-footer__forward { align-items: stretch; }
+  .step-footer__back { order: 2; }
+  .step-footer__needs,
+  .step-footer__end { text-align: start; max-inline-size: none; }
+}
+
 /* --- Layout -------------------------------------------------------------- */
 
 /*
@@ -899,6 +980,44 @@ select.input { cursor: pointer; }
   color: var(--text-tertiary);
 }
 .kv dd { margin: 0; }
+
+/* --- The assumption explainer -------------------------------------------- */
+
+/*
+  Three sentences and a disclosure, above the ranked table. `AssumptionRegister`
+  carries why it exists; what is here is the measure and the one alignment
+  decision that matters.
+
+  MEASURE, NOT WIDTH. The explainer is prose on a screen whose other content is a
+  table, so it takes a reading measure and stops — `--measure-prose` is the token
+  the design language sets for exactly this. Left to the panel's width it would
+  run to 120 characters on a desktop, which is the length at which a reader's eye
+  loses the line return and skips a line. This is the paragraph the client said
+  he could not follow; a line length that makes it harder to read would be a
+  strange way to answer that.
+
+  THE AMBER SWATCH IS INLINE WITH THE SENTENCE THAT NAMES IT, not floated beside
+  it. `.traced--assumed` carries a negative margin equal to its padding so it sits
+  on the text baseline without shifting the line box; `align-items: baseline` on
+  the flex row keeps that true when the sentence wraps.
+*/
+.assumption-explainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-inline-size: var(--measure-prose);
+  margin-block-end: var(--space-5);
+}
+.assumption-explainer p { margin: 0; }
+.assumption-explainer__amber {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+/* The swatch is the treatment itself rather than a coloured square: a square
+   would be a fourth thing to learn, and it would carry the colour without the
+   dotted underline and the pencil that make the colour legible in greyscale. */
+.assumption-explainer__amber .traced { flex: none; }
 
 .data-table {
   inline-size: 100%;

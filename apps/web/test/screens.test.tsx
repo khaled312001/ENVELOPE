@@ -40,6 +40,7 @@ import { AssumptionRegister } from '../src/components/AssumptionRegister.js';
 import { formatTraced } from '../src/components/TracedValue.js';
 import { MassingPanel } from '../src/components/MassingPanel.js';
 import { ParkingPlan, VehicleAccessPanel } from '../src/components/ParkingPlan.js';
+import { StepFooter, type FlowState } from '../src/App.js';
 import { ChecksStep } from '../src/screens/ChecksStep.js';
 import { EvidenceStep } from '../src/screens/EvidenceStep.js';
 
@@ -286,6 +287,38 @@ describe('CapacityBands', () => {
 });
 
 describe('AssumptionRegister', () => {
+  /*
+    THE EXPLAINER, which exists because a client read this screen and replied
+    «Assumptions مش فاهمها». Two properties are asserted and both are claims about
+    meaning rather than about layout: the step SAYS what an assumption is before it
+    ranks them, and it says in words that amber is not a warning — because the UAE
+    Design System makes amber the government warning colour, so a Dubai reader
+    arrives holding the opposite meaning and the page cannot leave it to convention.
+  */
+  it('says what an assumption is, and that amber is not a warning', () => {
+    const out = html(
+      <AssumptionRegister
+        assumptions={run.assumptions}
+        onInspect={() => {}}
+        onAcknowledge={() => {}}
+        onEdit={() => {}}
+        acknowledged={false}
+      />,
+    );
+    expect(out).toContain('An assumption is a number no document stated');
+    expect(out).toContain('Amber means assumed. It is not a warning');
+    /* The swatch is the treatment itself, so the sentence and its referent are in
+       one eyeful — a coloured square would carry the hue without the dotted
+       underline and the pencil that make it legible in greyscale. */
+    expect(out).toContain(
+      '<p class="assumption-explainer__amber"><span class="traced traced--assumed"',
+    );
+    /* The argument is available and is not in the way. */
+    expect(out).toContain('Why the engine assumes anything at all');
+    expect(out).toMatch(/<details[^>]*class="disclosure"/);
+    expect(out).not.toMatch(/<details[^>]*\sopen[\s>]/);
+  });
+
   it('shows every assumption with its basis', () => {
     const out = html(
       <AssumptionRegister
@@ -545,5 +578,81 @@ describe('a traced figure on screen', () => {
     // Counts stay counts, and areas keep the policy's one place.
     expect(formatTraced('42', 'bays')).toBe('42');
     expect(formatTraced('1365.23', 'm²')).toBe('1,365.2');
+  });
+});
+
+/**
+ * The step footer, which exists because of a reported dead end.
+ *
+ * `ParametersStep` prints a tick and no button once `G1` is signed, so returning to
+ * that step left the reader with nothing to press — and no step had a back control
+ * at all. What is asserted here is the two properties that made it a defect rather
+ * than a missing nicety: **there is always a way on or a statement that there is
+ * none**, and **a closed way on says what would open it**. Neither is visible in a
+ * screenshot of a clean run, which is exactly why they need a test.
+ */
+describe('StepFooter', () => {
+  const state = (over: Partial<FlowState> = {}): FlowState => ({
+    plot: null,
+    confirmed: false,
+    run: null,
+    ...over,
+  });
+
+  it('names the step each button reaches, rather than repeating "Continue"', () => {
+    const out = html(<StepFooter step="plot" flow={state({ plot: plotView })} onGo={() => {}} />);
+    expect(out).toContain('Back to ');
+    expect(out).toContain('Sheet');
+    expect(out).toContain('Continue to ');
+    expect(out).toContain('Parameters');
+  });
+
+  it('opens the way forward once the step ahead has what it needs', () => {
+    const out = html(
+      <StepFooter step="parameters" flow={state({ plot: plotView, confirmed: true })} onGo={() => {}} />,
+    );
+    expect(out).toContain('Continue to ');
+    expect(out).toContain('Rules');
+    expect(out).not.toContain('disabled=""');
+  });
+
+  /* THE DEFECT ITSELF. Confirmed plot, reopened step: before the footer existed this
+     render carried a tick and nothing else. */
+  it('still offers a way on from a step whose gate is already signed', () => {
+    const out = html(
+      <StepFooter step="parameters" flow={state({ plot: plotView, confirmed: true })} onGo={() => {}} />,
+    );
+    expect(out).toMatch(/<button[^>]*step-footer__next/);
+  });
+
+  it('says what would open a step that is not reachable, rather than dimming a dead end', () => {
+    const closed = html(<StepFooter step="parameters" flow={state({ plot: plotView })} onGo={() => {}} />);
+    expect(closed).toContain('disabled=""');
+    expect(closed).toContain('Confirm the plot first, and this opens.');
+
+    const noPlot = html(<StepFooter step="plot" flow={state()} onGo={() => {}} />);
+    expect(noPlot).toContain('Create the plot first, and this opens.');
+
+    const noRun = html(
+      <StepFooter step="rules" flow={state({ plot: plotView, confirmed: true })} onGo={() => {}} />,
+    );
+    expect(noRun).toContain('Run the engine on the rules step first, and this opens.');
+  });
+
+  it('shows no back control on the first step and no forward control on the last', () => {
+    const first = html(<StepFooter step="intake" flow={state()} onGo={() => {}} />);
+    expect(first).not.toContain('step-footer__back');
+
+    const last = html(<StepFooter step="export" flow={state({ plot: plotView, confirmed: true, run })} onGo={() => {}} />);
+    expect(last).not.toContain('step-footer__next');
+    expect(last).toContain('This is the last step.');
+  });
+
+  /* A second `<nav>` on a page needs a name of its own, or a screen reader lists two
+     landmarks called the same thing. The strip is "Steps"; this one is not. */
+  it('names its own landmark', () => {
+    const out = html(<StepFooter step="plot" flow={state({ plot: plotView })} onGo={() => {}} />);
+    expect(out).toContain('aria-label="Move between steps"');
+    expect(out).not.toContain('aria-label="Steps"');
   });
 });

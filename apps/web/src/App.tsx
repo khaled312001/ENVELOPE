@@ -25,7 +25,7 @@
  * server enforces it for real, because a gate a client can skip is not a gate.
  */
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 
 import {
   api,
@@ -82,6 +82,43 @@ const STEPS = [
 ] as const;
 
 type StepId = (typeof STEPS)[number]['id'];
+
+/**
+ * What a step is still waiting for, or `null` when it is open.
+ *
+ * ONE function, and both the strip's `reachable` set and the footer's sentence are
+ * built from it. They are the same fact asked two ways — *may I go there* and *why
+ * not yet* — and a footer that worked out its own answer would be a second opinion
+ * about what blocks a step. The two would drift the first time a gate moved, and
+ * the drift would be invisible: the strip would unlock a step the footer still
+ * refused, or worse, the other way round.
+ */
+type Missing = 'plot' | 'confirm' | 'run';
+
+export interface FlowState {
+  readonly plot: PlotView | null;
+  readonly confirmed: boolean;
+  readonly run: RunView | null;
+}
+
+function missingFor(id: StepId, state: FlowState): Missing | null {
+  switch (id) {
+    /* Step 0 is not gated — a plot whose sheet is not to hand is still a plot —
+       and step 1 is where the flow begins, so neither ever waits for anything. */
+    case 'intake':
+    case 'plot':
+      return null;
+    case 'parameters':
+      return state.plot ? null : 'plot';
+    case 'rules':
+      if (!state.plot) return 'plot';
+      return state.confirmed ? null : 'confirm';
+    /* Steps 5–9 are freely navigable ONCE THERE IS A RUN, and not before: each of
+       them renders the run's own figures and has nothing to show without it. */
+    default:
+      return state.run ? null : 'run';
+  }
+}
 
 /**
  * What the `?step=` banner has to say, kept as DATA and not as a sentence.
@@ -175,20 +212,14 @@ export function EngineApp({
     null,
   );
 
-  const reachable = useMemo(() => {
-    const done = new Set<StepId>(['intake', 'plot']);
-    if (plot) done.add('parameters');
-    if (plot && gates['G1_PLOT_CONFIRMED']) done.add('rules');
-    if (run) {
-      done.add('assumptions');
-      done.add('capacity');
-      done.add('parking');
-      done.add('checks');
-      done.add('evidence');
-      done.add('export');
-    }
-    return done;
-  }, [plot, run, gates]);
+  const flow: FlowState = { plot, confirmed: gates['G1_PLOT_CONFIRMED'] === true, run };
+
+  const reachable = useMemo(
+    () => new Set(STEPS.filter((s) => missingFor(s.id, flow) === null).map((s) => s.id)),
+    /* eslint-disable-next-line react-hooks/exhaustive-deps -- `flow` is rebuilt every
+       render from exactly these three, so depending on the object would defeat the memo. */
+    [plot, run, gates],
+  );
 
   /**
    * `?step=<id>` and `?demo=worked-example`.
@@ -461,6 +492,11 @@ export function EngineApp({
               onError={setError}
             />
           ) : null}
+
+          {/* Below the step body, not above it: the way on is read after the step
+              has been read, and a control that moves as the body grows is a control
+              that is somewhere different on every step. */}
+          <StepFooter step={step} flow={flow} onGo={setStep} />
         </div>
 
         {inspecting ? (
@@ -484,6 +520,133 @@ export function EngineApp({
         {run?.annexVersion !== undefined ? ltr(run.annexVersion) : t.build.unsigned}
       </p>
     </div>
+  );
+}
+
+/**
+ * The footer that carries the flow — §20.1's ordering, made operable.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY IT EXISTS, AND IT IS A REPORTED DEFECT RATHER THAN A POLISH ITEM.
+ *
+ * `ParametersStep` renders its footer conditionally: once `G1` is signed it shows a
+ * tick and NO BUTTON AT ALL. Confirming the plot advanced the step the first time
+ * through, so the defect was invisible on a clean run — but come back to that step
+ * from the strip, from a bookmark or from `?step=parameters`, and there was nothing
+ * to press. The client's words: «بعد confirm the plot في زرار المفروض ندوس عليه انو
+ * يدخلنا الصفحه الي بعدها مش موجود».
+ *
+ * And it was worse than the report. NO step had a back control. Ten small targets in
+ * a horizontal strip were the whole of the navigation for a nine-step flow, on a
+ * screen where each step is a decision someone may want to revisit.
+ *
+ * ---------------------------------------------------------------------------
+ * THE DISABLED BUTTON SAYS WHY, IN THE SENTENCE BESIDE IT.
+ *
+ * A `next` that is merely dim is a dead end, which is the one shape of refusal this
+ * product may not make — `/refusals` is a nav slot precisely because every refusal
+ * here is supposed to be legible. `missingFor` supplies the reason and the sentence
+ * names what would open the step.
+ *
+ * The button is genuinely `disabled` rather than `aria-disabled`, and the reason is
+ * a sibling paragraph rather than a description on the control. That is this
+ * screen's existing pattern — `RulesStep` disables its submit and prints
+ * `compareNeeds` next to it — and `app.css`'s `.button:disabled` was written for
+ * exactly this case: it drops the accent entirely rather than dimming it, because
+ * "the Continue button does nothing" was the most common report of this screen.
+ * Two patterns for one state would be worse than either.
+ *
+ * ---------------------------------------------------------------------------
+ * NO DIRECTIONAL WORD IN THE COPY.
+ *
+ * "Back" and "Continue" name a direction in the flow, not a direction on the screen.
+ * The chevrons are `aria-hidden` decoration and `app.css` flips them under `rtl`;
+ * copy reading "the button on the right" would be wrong in Arabic and meaningless
+ * to a screen reader in both languages. Each button also names the step it reaches,
+ * so the accessible name is "Continue to Rules" rather than "Continue" repeated ten
+ * times down a tab order.
+ */
+export function StepFooter({
+  step,
+  flow,
+  onGo,
+}: {
+  readonly step: StepId;
+  readonly flow: FlowState;
+  readonly onGo: (id: StepId) => void;
+}): JSX.Element {
+  const t = useDict(EN, AR);
+  const needsId = useId();
+  const f = t.steps.footer;
+
+  const index = STEPS.findIndex((s) => s.id === step);
+  const previous = index > 0 ? STEPS[index - 1] : undefined;
+  const next = index < STEPS.length - 1 ? STEPS[index + 1] : undefined;
+  const missing = next ? missingFor(next.id, flow) : null;
+
+  return (
+    <nav className="step-footer" aria-label={f.nav}>
+      {/* An empty cell rather than no cell: the grid places `next` at the inline end
+          whether or not there is a `back`, and a missing first child would slide it. */}
+      {previous ? (
+        <button
+          type="button"
+          className="button step-footer__back"
+          onClick={() => onGo(previous.id)}
+        >
+          <Chevron back />
+          {f.backBefore}
+          {t.steps.labels[previous.id]}
+        </button>
+      ) : (
+        <span />
+      )}
+
+      {next ? (
+        <div className="step-footer__forward">
+          {missing ? (
+            <p className="step-footer__needs" id={needsId}>
+              {f.needs[missing]}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className="button button--primary step-footer__next"
+            onClick={() => onGo(next.id)}
+            disabled={missing !== null}
+          >
+            {f.nextBefore}
+            {t.steps.labels[next.id]}
+            <Chevron />
+          </button>
+        </div>
+      ) : (
+        <p className="step-footer__end">{f.end}</p>
+      )}
+    </nav>
+  );
+}
+
+/**
+ * The footer's chevron — decoration, and the only glyph on this screen that is not
+ * in `SiteChrome`'s `MarkName` set.
+ *
+ * It is deliberately not added there: that set is the PROVENANCE LEGEND — assumed,
+ * derived, deferred, user-set, never-claimed — and every mark in it carries a
+ * meaning the report and the drawings share. A navigation arrow has no provenance
+ * class, and putting it in the legend would be the first mark in that set that means
+ * nothing.
+ */
+function Chevron({ back = false }: { readonly back?: boolean }): JSX.Element {
+  return (
+    <svg
+      className={`step-footer__chev${back ? ' step-footer__chev--back' : ''}`}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M6 3 L11 8 L6 13" />
+    </svg>
   );
 }
 

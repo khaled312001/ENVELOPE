@@ -80,6 +80,35 @@ export function AssumptionRegister({
         </div>
       </header>
 
+      {/*
+        WHAT AN ASSUMPTION IS, BEFORE THE LIST OF THEM.
+
+        §20.2 calls this step "the moment the user understands this is not magic",
+        and the step was opening on a ranked table that assumed the reader already
+        held the vocabulary. A client read it and wrote back «Assumptions مش
+        فاهمها». A ranked disclosure nobody can read is not a disclosure.
+
+        It is shown even when there are no assumptions: on that run the sentence is
+        what makes the absence legible — "nothing was assumed" says nothing to a
+        reader who does not know what would have been.
+      */}
+      <div className="assumption-explainer">
+        <p>{t.explainer.what}</p>
+        {/* The amber sentence carries the colour it names, so the claim and its
+            referent are in the same eyeful rather than a paragraph apart. */}
+        <p className="assumption-explainer__amber">
+          <span className="traced traced--assumed" aria-hidden="true">
+            <span className="traced__marker" />
+          </span>
+          {t.explainer.amber}
+        </p>
+        <p>{t.explainer.act}</p>
+        <details className="disclosure">
+          <summary>{t.explainer.whySummary}</summary>
+          <p>{t.explainer.why}</p>
+        </details>
+      </div>
+
       {assumptions.length === 0 ? null : (
         <table className="data-table">
           <caption className="sr-only">{t.caption}</caption>

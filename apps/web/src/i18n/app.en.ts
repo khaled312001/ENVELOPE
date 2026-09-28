@@ -56,6 +56,35 @@ export const EN = {
     locked: 'Complete the earlier steps first',
     /** Screen-reader suffix on a locked step; the leading space is the sentence's. */
     lockedSr: ' (not yet available)',
+
+    /**
+     * The footer under every step body — `StepFooter` in `App.tsx`.
+     *
+     * Each button NAMES THE STEP IT REACHES, so the two halves are a lead-in and a
+     * label read out of `labels` above. One dictionary entry for the step's name,
+     * used by the strip and by the footer, is what stops the same step being called
+     * two things on one screen.
+     *
+     * `needs` is keyed by `Missing` — what the next step is waiting for. Each is a
+     * whole sentence naming the action that opens it, because a disabled control
+     * with no stated reason is a dead end, and a dead end is the one refusal this
+     * product may not make.
+     */
+    footer: {
+      /** A second `<nav>` on the same page needs a name of its own. */
+      nav: 'Move between steps',
+      /** Lead-in before the previous step's label; the trailing space is the sentence's. */
+      backBefore: 'Back to ',
+      /** Lead-in before the next step's label. */
+      nextBefore: 'Continue to ',
+      needs: {
+        plot: 'Create the plot first, and this opens.',
+        confirm: 'Confirm the plot first, and this opens.',
+        run: 'Run the engine on the rules step first, and this opens.',
+      },
+      /** The tenth step has nowhere to go, and says so rather than showing a dead control. */
+      end: 'This is the last step.',
+    },
   },
 
   /**

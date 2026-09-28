@@ -16,8 +16,15 @@
 
 export const EN = {
   title: 'Confirm the plot',
-  subtitle:
-    'Everything after this is computed from what is on this screen. Check it while changing it is still free.',
+
+  /*
+    NO SUBTITLE, AND NO KEY FOR ONE. It read "Everything after this is computed
+    from what is on this screen. Check it while changing it is still free." —
+    which is, sentence for sentence, what the step primer now says immediately
+    above this panel. The panel keeps its title; the argument for the gate is one
+    block higher and is made once. Left as an empty string it would still have
+    rendered an empty paragraph, which is a blank line the layout pays for.
+  */
 
   mismatch: {
     title: (tolerance: string): string => `The two areas disagree by more than ${tolerance}.`,

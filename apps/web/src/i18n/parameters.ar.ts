@@ -14,7 +14,6 @@ import type { ParametersDictionary } from './parameters.en.js';
 
 export const AR: ParametersDictionary = {
   title: 'أكِّد قطعة الأرض',
-  subtitle: 'كل ما بعد هذه الخطوة يُحسَب مما على هذه الشاشة. افحصه ما دام تغييره بلا كلفة.',
 
   mismatch: {
     title: (tolerance: string): string => `تختلف المساحتان بأكثر من ${tolerance}.`,

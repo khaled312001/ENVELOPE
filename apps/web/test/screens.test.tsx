@@ -292,38 +292,6 @@ describe('CapacityBands', () => {
 });
 
 describe('AssumptionRegister', () => {
-  /*
-    THE EXPLAINER, which exists because a client read this screen and replied
-    «Assumptions مش فاهمها». Two properties are asserted and both are claims about
-    meaning rather than about layout: the step SAYS what an assumption is before it
-    ranks them, and it says in words that amber is not a warning — because the UAE
-    Design System makes amber the government warning colour, so a Dubai reader
-    arrives holding the opposite meaning and the page cannot leave it to convention.
-  */
-  it('says what an assumption is, and that amber is not a warning', () => {
-    const out = html(
-      <AssumptionRegister
-        assumptions={run.assumptions}
-        onInspect={() => {}}
-        onAcknowledge={() => {}}
-        onEdit={() => {}}
-        acknowledged={false}
-      />,
-    );
-    expect(out).toContain('An assumption is a number no document stated');
-    expect(out).toContain('Amber means assumed. It is not a warning');
-    /* The swatch is the treatment itself, so the sentence and its referent are in
-       one eyeful — a coloured square would carry the hue without the dotted
-       underline and the pencil that make it legible in greyscale. */
-    expect(out).toContain(
-      '<p class="assumption-explainer__amber"><span class="traced traced--assumed"',
-    );
-    /* The argument is available and is not in the way. */
-    expect(out).toContain('Why the engine assumes anything at all');
-    expect(out).toMatch(/<details[^>]*class="disclosure"/);
-    expect(out).not.toMatch(/<details[^>]*\sopen[\s>]/);
-  });
-
   it('shows every assumption with its basis', () => {
     const out = html(
       <AssumptionRegister

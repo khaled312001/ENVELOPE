@@ -38,8 +38,7 @@ export const AR: PlotFormDictionary = {
   },
 
   title: 'قطعة الأرض',
-  subtitle:
-    'أدخل الأبعاد من مخطّط الأفكشن (Affection Plan). كل ضلع يحتاج إلى تصنيف — فالارتداد يتوقّف عليه، ولا قيمة افتراضية له.',
+  subtitle: 'أدخل الأبعاد من مخطّط الأفكشن (Affection Plan).',
 
   carried: {
     title: 'نُقلت من المخطّط الذي رفعته.',

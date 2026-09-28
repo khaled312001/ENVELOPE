@@ -56,6 +56,7 @@ import { EN } from './i18n/app.en.js';
 import { useDict, useLocale, Verbatim } from './i18n/locale.js';
 import { hashOf } from './gateHash.js';
 import { demoFrom, type Demo } from './demo.js';
+import { StepPrimer } from './components/StepPrimer.js';
 
 /*
   `gated` is DELETED. It was metadata nobody read: the flag said `plot` was gated
@@ -474,6 +475,20 @@ export function EngineApp({
 
         <div className={`layout${inspecting ? ' layout--with-panel' : ''}`}>
           <div className="layout__main">
+            {/*
+              WHAT THE STEP IS, BEFORE THE STEP — on all ten, from one component
+              and one dictionary entry each.
+
+              Rendered HERE rather than inside each screen for two reasons. Four
+              of the ten steps are panels in this file rather than screens of
+              their own, so "the top of the screen" is not a place that exists for
+              them. And ten paragraphs written in ten files drift into ten shapes:
+              one grows a list, one loses its disclosure, one is never translated
+              — and the shape is the whole of the fix. See `StepPrimer.tsx` for the
+              three layers and the client's reply they answer.
+            */}
+            <StepPrimer step={step} />
+
             {step === 'intake' ? (
               <AffectionPlanIntake
                 actor={actor}

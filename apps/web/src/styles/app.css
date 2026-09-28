@@ -1084,40 +1084,53 @@ select.input { cursor: pointer; }
 /* --- The assumption explainer -------------------------------------------- */
 
 /*
-  Three sentences and a disclosure, above the ranked table. `AssumptionRegister`
-  carries why it exists; what is here is the measure and the one alignment
-  decision that matters.
+  THE PRIMER: three or four sentences and a disclosure, above whatever the step
+  itself renders. `StepPrimer.tsx` carries why it exists; what is here is the
+  measure and the one alignment decision that matters.
 
-  MEASURE, NOT WIDTH. The explainer is prose on a screen whose other content is a
-  table, so it takes a reading measure and stops — `--measure-prose` is the token
-  the design language sets for exactly this. Left to the panel's width it would
-  run to 120 characters on a desktop, which is the length at which a reader's eye
-  loses the line return and skips a line. This is the paragraph the client said
-  he could not follow; a line length that makes it harder to read would be a
-  strange way to answer that.
+  MEASURE, NOT WIDTH. This is prose on screens whose other content is tables,
+  forms and drawings, so it takes a reading measure and stops —
+  `--measure-prose` is the token the design language sets for exactly this.
+  Left to the panel width it would run to 120 characters on a desktop, which is
+  the length at which the eye loses the line return and skips a line. These are
+  the paragraphs a client said he could not follow; a line length that makes
+  them harder to read would be a strange way to answer that.
 
-  THE AMBER SWATCH IS INLINE WITH THE SENTENCE THAT NAMES IT, not floated beside
-  it. `.traced--assumed` carries a negative margin equal to its padding so it sits
-  on the text baseline without shifting the line box; `align-items: baseline` on
-  the flex row keeps that true when the sentence wraps.
+  THE AMBER SWATCH IS INLINE WITH THE SENTENCE THAT NAMES IT, not floated
+  beside it. `.traced--assumed` carries a negative margin equal to its padding
+  so it sits on the text baseline without shifting the line box; `align-items:
+  baseline` on the flex row keeps that true when the sentence wraps.
+
+  IT WAS `.assumption-explainer`, ON ONE STEP. The same three layers turned out
+  to be the answer for all ten, so the block generalised and the class went with
+  it. Nothing about the rules changed but their name.
 */
-.assumption-explainer {
+.primer {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   max-inline-size: var(--measure-prose);
   margin-block-end: var(--space-5);
 }
-.assumption-explainer p { margin: 0; }
-.assumption-explainer__amber {
+.primer p { margin: 0; }
+
+/* The fact is the sentence the reader must not miss, so it is the one line here
+   set in the body ink rather than the secondary; everything under it explains
+   it. No size change and no weight change — a heading is what that would make
+   it, and the outline of this screen already has its heading. */
+.primer__fact { color: var(--text-primary); }
+.primer__means { color: var(--text-secondary); }
+
+.primer__amber {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
+  color: var(--text-secondary);
 }
 /* The swatch is the treatment itself rather than a coloured square: a square
    would be a fourth thing to learn, and it would carry the colour without the
    dotted underline and the pencil that make the colour legible in greyscale. */
-.assumption-explainer__amber .traced { flex: none; }
+.primer__amber .traced { flex: none; }
 
 .data-table {
   inline-size: 100%;

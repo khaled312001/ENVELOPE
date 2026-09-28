@@ -88,26 +88,24 @@ export function AssumptionRegister({
         held the vocabulary. A client read it and wrote back «Assumptions مش
         فاهمها». A ranked disclosure nobody can read is not a disclosure.
 
-        It is shown even when there are no assumptions: on that run the sentence is
-        what makes the absence legible — "nothing was assumed" says nothing to a
-        reader who does not know what would have been.
+        ---------------------------------------------------------------------
+        THE EXPLAINER MOVED TO `StepPrimer`, AND THAT IS NOT A DEMOTION.
+
+        The fix written here first — fact, then the amber sentence, then what to
+        do, then the argument behind a closed disclosure — turned out to be the
+        answer for all ten steps and not only this one, so it became a component
+        and the copy became `primer.*.ts`. Two blocks saying nearly the same thing
+        at the top of this one step was the alternative, and it is the shape a
+        generalisation leaves behind when nobody deletes the original.
+
+        THE ONE THING THAT DID NOT SURVIVE INTACT is that this block was shown
+        even on a run with no assumptions, where the sentence is what makes the
+        absence legible. The primer is rendered for the step rather than for the
+        list, so that still holds — it is above this component either way. The
+        `explainer` keys stay in `register.*.ts` for exactly one reason: `none`
+        below reads "Nothing was assumed", and a reader meeting that needs the
+        primer's sentence to have already happened, which it has.
       */}
-      <div className="assumption-explainer">
-        <p>{t.explainer.what}</p>
-        {/* The amber sentence carries the colour it names, so the claim and its
-            referent are in the same eyeful rather than a paragraph apart. */}
-        <p className="assumption-explainer__amber">
-          <span className="traced traced--assumed" aria-hidden="true">
-            <span className="traced__marker" />
-          </span>
-          {t.explainer.amber}
-        </p>
-        <p>{t.explainer.act}</p>
-        <details className="disclosure">
-          <summary>{t.explainer.whySummary}</summary>
-          <p>{t.explainer.why}</p>
-        </details>
-      </div>
 
       {assumptions.length === 0 ? null : (
         <table className="data-table">

@@ -33,8 +33,15 @@ export const EN = {
   },
 
   title: 'The plot',
-  subtitle:
-    'Enter the dimensions from the affection plan. Every edge needs a classification — the setback depends on it, and there is no default.',
+  /*
+    THE EDGE SENTENCE MOVED UP, to the step primer that now opens every step —
+    it was "Every edge needs a classification — the setback depends on it, and
+    there is no default", and the primer says the same thing four lines above
+    this subtitle. Two adjacent blocks making one point in slightly different
+    words is not emphasis; it reads as a product repeating itself, and it was
+    visible the moment the two were screenshotted together.
+  */
+  subtitle: 'Enter the dimensions from the affection plan.',
 
   carried: {
     title: 'Carried over from the sheet you uploaded.',

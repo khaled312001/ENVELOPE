@@ -48,7 +48,6 @@ export function ParametersStep({
           <h2 id="params-heading" className="panel__title">
             {t.title}
           </h2>
-          <p className="panel__subtitle">{t.subtitle}</p>
         </div>
       </header>
 

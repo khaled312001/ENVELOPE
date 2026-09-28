@@ -107,6 +107,10 @@
   --inspector-w-min: 20rem;
   --inspector-w-max: 26rem;
   --header-h: 3.5rem;   /* 56px, and the sidebar's brand block matches it */
+  /* The nine steps as a rail. Wider than the workspace sidebar because a step
+     label is a phrase ("Affection plan", "Parking layout") rather than a word,
+     and the number sits beside it. */
+  --steprail-w: 13.5rem;
 
   /* --- DENSITY. Three row heights, and the reason it is a token and not a number.
 

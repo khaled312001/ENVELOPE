@@ -310,35 +310,6 @@ export function EngineApp({
           sighted keyboard user can see. */}
       {stepHint ? <StepHintBanner hint={stepHint} /> : null}
 
-      <nav className="stepper" aria-label={t.steps.nav}>
-        <ol>
-          {STEPS.map((s, i) => {
-            const available = reachable.has(s.id);
-            const current = step === s.id;
-            return (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  className={`stepper__step${current ? ' is-current' : ''}${
-                    available ? '' : ' is-locked'
-                  }`}
-                  onClick={() => available && setStep(s.id)}
-                  disabled={!available}
-                  aria-current={current ? 'step' : undefined}
-                  title={available ? undefined : t.steps.locked}
-                >
-                  <span className="stepper__num" aria-hidden="true">
-                    {i + 1}
-                  </span>
-                  <span className="stepper__label">{t.steps.labels[s.id]}</span>
-                  {!available ? <span className="sr-only">{t.steps.lockedSr}</span> : null}
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
-
       {error ? (
         <ErrorBanner error={error} onDismiss={() => setError(null)} />
       ) : null}
@@ -350,162 +321,211 @@ export function EngineApp({
         </div>
       ) : null}
 
-      <div className={`layout${inspecting ? ' layout--with-panel' : ''}`}>
-        <div className="layout__main">
-          {step === 'intake' ? (
-            <AffectionPlanIntake
-              actor={actor}
-              onUse={(p) => {
-                setPrefill(p);
-                setStep('plot');
-              }}
-              onSkip={() => setStep('plot')}
-            />
-          ) : null}
+      {/*
+        THE THREE COLUMNS §5.1 ASKS FOR: the steps as a rail, the canvas, and the
+        provenance inspector — the last of which `.layout--with-panel` already
+        owned, so this adds the first and nothing else moves.
 
-          {step === 'plot' ? (
-            <PlotForm
-              actor={actor}
-              busy={busy}
-              prefill={prefill}
-              onCreated={(created, view) => {
-                setPlot(view);
-                setPlotHash(created.gateSubjectHash);
-                setStep('parameters');
-              }}
-              onError={setError}
-              setBusy={setBusy}
-            />
-          ) : null}
+        THE BANNERS ARE NOW ABOVE THE GRID RATHER THAN BETWEEN THE STEPPER AND THE
+        CANVAS, which is the ordering fix the restructure made obvious: the error
+        and the draft-rules warning are both `role="alert"`, and an alert placed
+        after the navigation is an alert a screen reader reaches second. They span
+        the full width, because a message about the run is not a property of the
+        column it happened to sit in.
 
-          {step === 'parameters' && plot ? (
-            <ParametersStep
-              plot={plot}
-              confirmed={gates['G1_PLOT_CONFIRMED'] === true}
-              onConfirm={() => {
-                setGates((g) => ({ ...g, G1_PLOT_CONFIRMED: true }));
-                setStep('rules');
-              }}
-            />
-          ) : null}
+        THE RAIL IS A WIDE-WIDTH ARRANGEMENT ONLY. Below 64rem the stepper goes
+        back to the horizontal scroller it has always been — which is tuned, which
+        hides all but the current label on a phone, and which is the shape that
+        passes `no screen scrolls sideways`. A vertical rail on a phone would
+        spend a third of the viewport showing ten words.
+      */}
+      <div className="flow">
+        <nav className="stepper" aria-label={t.steps.nav}>
+          <ol>
+            {STEPS.map((s, i) => {
+              const available = reachable.has(s.id);
+              const current = step === s.id;
+              return (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    className={`stepper__step${current ? ' is-current' : ''}${
+                      available ? '' : ' is-locked'
+                    }`}
+                    onClick={() => available && setStep(s.id)}
+                    disabled={!available}
+                    aria-current={current ? 'step' : undefined}
+                    title={available ? undefined : t.steps.locked}
+                  >
+                    <span className="stepper__num" aria-hidden="true">
+                      {i + 1}
+                    </span>
+                    <span className="stepper__label">{t.steps.labels[s.id]}</span>
+                    {!available ? <span className="sr-only">{t.steps.lockedSr}</span> : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
 
-          {step === 'rules' && plot ? (
-            <RulesStep
-              actor={actor}
-              plot={plot}
-              sheetPodiumLevels={prefill?.podiumLevels ?? null}
-              busy={busy}
-              onRun={async (body) => {
-                setBusy(true);
-                setError(null);
-                try {
-                  const result = await api.createRun(actor, body);
-                  setRun(result);
-                  setRequest(body);
-                  setGates((g) => ({ ...g, G2_RULES_ACKNOWLEDGED: true }));
-                  setStep('assumptions');
-                } catch (e) {
-                  if (e instanceof ApiError) setError(e);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-              onError={setError}
-            />
-          ) : null}
-
-          {step === 'assumptions' && run ? (
-            <AssumptionRegister
-              assumptions={run.assumptions}
-              acknowledged={gates['G3_ASSUMPTIONS_ACKNOWLEDGED'] === true}
-              onAcknowledge={() =>
-                acknowledge('G3_ASSUMPTIONS_ACKNOWLEDGED', hashOf(run.assumptions))
-              }
-              onEdit={async (parameterId, value) => {
-                if (!request) return;
-                // Editing an assumption re-runs the pipeline. §13.4 keeps the
-                // original run intact — this creates a new one rather than
-                // mutating what someone may already have exported.
-                const next = applyAssumptionEdit(request, parameterId, value);
-                setBusy(true);
-                try {
-                  const result = await api.createRun(actor, next);
-                  setRun(result);
-                  setRequest(next);
-                  setGates((g) => ({ ...g, G3_ASSUMPTIONS_ACKNOWLEDGED: false }));
-                } catch (e) {
-                  if (e instanceof ApiError) setError(e);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-              onInspect={inspect}
-            />
-          ) : null}
-
-          {step === 'capacity' && run ? (
-            <>
-              <ProvenanceLegend />
-              {/*
-                The assumption under the governing figure, picked out of the run's
-                own register rather than rebuilt. `parking.bay_area_factor` is the
-                divisor in `floor(available area ÷ factor)`, and that quotient is
-                what fixes Band C — so when PARKING binds, this is the assumption
-                the headline number rests on. It is passed only then: on a run
-                governed by the regulatory or geometric band the factor is not what
-                bound the answer, and showing it beside the figure would be amber
-                spent on a parameter that did not decide anything.
-              */}
-              <CapacityBands
-                capacity={run.capacity}
-                onInspect={inspect}
-                governingAssumption={
-                  run.capacity.governingBand === 'PARKING'
-                    ? run.assumptions.find((a) => a.parameterId === 'parking.bay_area_factor')
-                    : undefined
-                }
+        <div className={`layout${inspecting ? ' layout--with-panel' : ''}`}>
+          <div className="layout__main">
+            {step === 'intake' ? (
+              <AffectionPlanIntake
+                actor={actor}
+                onUse={(p) => {
+                  setPrefill(p);
+                  setStep('plot');
+                }}
+                onSkip={() => setStep('plot')}
               />
-              {plot ? (
-                <MassingPanel run={run} onInspect={inspect} />
-              ) : null}
-              <EnvelopePanel run={run} onInspect={inspect} />
-            </>
-          ) : null}
+            ) : null}
 
-          {step === 'parking' && run ? (
-            <ParkingStep run={run} plot={plot} onInspect={inspect} />
-          ) : null}
+            {step === 'plot' ? (
+              <PlotForm
+                actor={actor}
+                busy={busy}
+                prefill={prefill}
+                onCreated={(created, view) => {
+                  setPlot(view);
+                  setPlotHash(created.gateSubjectHash);
+                  setStep('parameters');
+                }}
+                onError={setError}
+                setBusy={setBusy}
+              />
+            ) : null}
 
-          {step === 'checks' && run ? <ChecksStep run={run} /> : null}
+            {step === 'parameters' && plot ? (
+              <ParametersStep
+                plot={plot}
+                confirmed={gates['G1_PLOT_CONFIRMED'] === true}
+                onConfirm={() => {
+                  setGates((g) => ({ ...g, G1_PLOT_CONFIRMED: true }));
+                  setStep('rules');
+                }}
+              />
+            ) : null}
 
-          {step === 'evidence' && run && plot ? (
-            <EvidenceStep run={run} plot={plot} onInspect={inspect} />
-          ) : null}
+            {step === 'rules' && plot ? (
+              <RulesStep
+                actor={actor}
+                plot={plot}
+                sheetPodiumLevels={prefill?.podiumLevels ?? null}
+                busy={busy}
+                onRun={async (body) => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    const result = await api.createRun(actor, body);
+                    setRun(result);
+                    setRequest(body);
+                    setGates((g) => ({ ...g, G2_RULES_ACKNOWLEDGED: true }));
+                    setStep('assumptions');
+                  } catch (e) {
+                    if (e instanceof ApiError) setError(e);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+                onError={setError}
+              />
+            ) : null}
 
-          {step === 'export' && run ? (
-            <ExportPanel
-              actor={actor}
-              run={run}
-              gates={gates}
-              onAcknowledge={acknowledge}
-              onGoToAssumptions={() => setStep('assumptions')}
-              onError={setError}
+            {step === 'assumptions' && run ? (
+              <AssumptionRegister
+                assumptions={run.assumptions}
+                acknowledged={gates['G3_ASSUMPTIONS_ACKNOWLEDGED'] === true}
+                onAcknowledge={() =>
+                  acknowledge('G3_ASSUMPTIONS_ACKNOWLEDGED', hashOf(run.assumptions))
+                }
+                onEdit={async (parameterId, value) => {
+                  if (!request) return;
+                  // Editing an assumption re-runs the pipeline. §13.4 keeps the
+                  // original run intact — this creates a new one rather than
+                  // mutating what someone may already have exported.
+                  const next = applyAssumptionEdit(request, parameterId, value);
+                  setBusy(true);
+                  try {
+                    const result = await api.createRun(actor, next);
+                    setRun(result);
+                    setRequest(next);
+                    setGates((g) => ({ ...g, G3_ASSUMPTIONS_ACKNOWLEDGED: false }));
+                  } catch (e) {
+                    if (e instanceof ApiError) setError(e);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+                onInspect={inspect}
+              />
+            ) : null}
+
+            {step === 'capacity' && run ? (
+              <>
+                <ProvenanceLegend />
+                {/*
+                  The assumption under the governing figure, picked out of the run's
+                  own register rather than rebuilt. `parking.bay_area_factor` is the
+                  divisor in `floor(available area ÷ factor)`, and that quotient is
+                  what fixes Band C — so when PARKING binds, this is the assumption
+                  the headline number rests on. It is passed only then: on a run
+                  governed by the regulatory or geometric band the factor is not what
+                  bound the answer, and showing it beside the figure would be amber
+                  spent on a parameter that did not decide anything.
+                */}
+                <CapacityBands
+                  capacity={run.capacity}
+                  onInspect={inspect}
+                  governingAssumption={
+                    run.capacity.governingBand === 'PARKING'
+                      ? run.assumptions.find((a) => a.parameterId === 'parking.bay_area_factor')
+                      : undefined
+                  }
+                />
+                {plot ? (
+                  <MassingPanel run={run} onInspect={inspect} />
+                ) : null}
+                <EnvelopePanel run={run} onInspect={inspect} />
+              </>
+            ) : null}
+
+            {step === 'parking' && run ? (
+              <ParkingStep run={run} plot={plot} onInspect={inspect} />
+            ) : null}
+
+            {step === 'checks' && run ? <ChecksStep run={run} /> : null}
+
+            {step === 'evidence' && run && plot ? (
+              <EvidenceStep run={run} plot={plot} onInspect={inspect} />
+            ) : null}
+
+            {step === 'export' && run ? (
+              <ExportPanel
+                actor={actor}
+                run={run}
+                gates={gates}
+                onAcknowledge={acknowledge}
+                onGoToAssumptions={() => setStep('assumptions')}
+                onError={setError}
+              />
+            ) : null}
+
+            {/* Below the step body, not above it: the way on is read after the step
+                has been read, and a control that moves as the body grows is a control
+                that is somewhere different on every step. */}
+            <StepFooter step={step} flow={flow} onGo={setStep} />
+          </div>
+
+          {inspecting ? (
+            <ProvenanceTree
+              tree={inspecting.tree}
+              loading={inspecting.tree === null}
+              onClose={() => setInspecting(null)}
             />
           ) : null}
-
-          {/* Below the step body, not above it: the way on is read after the step
-              has been read, and a control that moves as the body grows is a control
-              that is somewhere different on every step. */}
-          <StepFooter step={step} flow={flow} onGo={setStep} />
         </div>
-
-        {inspecting ? (
-          <ProvenanceTree
-            tree={inspecting.tree}
-            loading={inspecting.tree === null}
-            onClose={() => setInspecting(null)}
-          />
-        ) : null}
       </div>
 
       {/* The permanent sentence is NOT repeated here. It was hand-copied in three

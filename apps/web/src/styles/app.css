@@ -350,6 +350,102 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   color: var(--text-tertiary);
 }
 
+/* ==========================================================================
+ * THE FLOW: steps | canvas | inspector
+ *
+ * §5.1 of the plan asks for the category's three columns, and two of them were
+ * already here — `.layout--with-panel` has held the canvas and the provenance
+ * inspector since the inspector was built. What arrives is the first column: the
+ * stepper, turned from a horizontal strip of nine small targets into a rail.
+ *
+ * THE RAIL IS A WIDE-WIDTH ARRANGEMENT AND NOTHING ELSE. Below 64rem the stepper
+ * goes back to the horizontal scroller it has always been, which is tuned, which
+ * hides all but the current label at 40rem, and which is the shape that passes
+ * "no screen scrolls sideways on a phone". A vertical rail on a phone would spend
+ * a third of the viewport listing nine words nobody is reading yet.
+ *
+ * Two rails on one screen at once — the workspace sidebar and this — is a real
+ * cost and it is why the workspace one collapses. Collapsed, the pair is 64px +
+ * 216px, which leaves the canvas more room than the horizontal stepper did once
+ * its own 56px strip is counted.
+ * ======================================================================= */
+
+@media (min-width: 64rem) {
+  .flow {
+    display: grid;
+    grid-template-columns: var(--steprail-w) minmax(0, 1fr);
+    gap: var(--rhythm-block);
+    align-items: start;
+  }
+
+  /*
+    The strip's own chrome comes off: a rail is separated by a rule on its inline
+    edge, not by a heavy underline, and it does not scroll horizontally because
+    nothing in it is wide.
+  */
+  .stepper {
+    border-bottom: none;
+    border-inline-end: var(--border-width) solid var(--border-subtle);
+    background: transparent;
+    overflow-x: visible;
+    /* Sticky, so the steps stay reachable down a long capacity screen. `top` is
+       the masthead and the nav, which are above this and which it must not slide
+       under; the same offset the workspace rail uses. */
+    position: sticky;
+    top: var(--space-5);
+  }
+
+  .stepper ol {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-hair);
+    padding: 0 var(--space-3) 0 0;
+    min-width: 0;
+  }
+
+  .stepper li { display: flex; }
+
+  .stepper__step {
+    inline-size: 100%;
+    justify-content: flex-start;
+    /*
+      THE CURRENT MARKER MOVES EDGE, and it has to move rather than be added: a
+      3px border that appears on arrival shifts the label by 3px, and a navigation
+      that moves its own text when you reach it reads as broken. Transparent at
+      rest on the inline edge, and the block edge gives its width back.
+    */
+    border-bottom: none;
+    border-inline-start: var(--rail-w) solid transparent;
+    white-space: normal;   /* a phrase may take two lines in 13.5rem */
+    text-align: start;
+  }
+
+  .stepper__step.is-current {
+    border-inline-start-color: var(--accent);
+    /* No raised ground here. In the strip the current step was a TAB and lifted
+       to the plane of the panel below it; in a rail there is no panel below it to
+       join, and a raised block beside a page would read as the brightest thing on
+       a screen whose subject is a drawing. The inset ground and the marker carry
+       it, which is the same two channels the workspace rail uses. */
+    background-color: var(--surface-inset);
+  }
+
+  /* The footer's back/next is the rail's equivalent for a reader who is moving
+     one step at a time, so it keeps the canvas column rather than spanning. */
+  .flow .step-footer { margin-inline: 0; }
+}
+
+/*
+  THE BLOCK ABOVE SITS AFTER THE BASE STEP RULES, AND THAT IS LOAD-BEARING.
+
+  It was written immediately after `.stepper ol`, which is before
+  `.stepper__step.is-current` — so the base rule's `border-bottom-color` and its
+  raised ground won on equal specificity by coming later, and the rail rendered a
+  step with the strip's tab treatment: a lifted block with a blue line under it
+  and no marker on the edge the rail actually has. A screenshot caught it; the
+  media query was applying the whole time, which is why the layout looked right.
+*/
+
 /* --- The step footer ----------------------------------------------------- */
 
 /*

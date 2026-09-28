@@ -374,7 +374,7 @@ export default function Antechamber({ setActor, navigate, search }: PageProps): 
           <p>{t.closing.body}</p>
           <p>
             {t.closing.readiness.lead}
-            <Link to="/dashboard" navigate={navigate}>
+            <Link to="/readiness" navigate={navigate}>
               {t.closing.readiness.link}
             </Link>
             {t.closing.readiness.tail}

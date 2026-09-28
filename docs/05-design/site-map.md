@@ -33,7 +33,7 @@ competitor comparison — the only competitor material we hold is a machine tran
 private call. No accuracy figure, no time-saved figure, no "N% faster" — PRD §22.2's
 inter-architect variance study has not been run. No security or trust page with badges —
 accounts and per-run access are recent and nothing has audited them — no security review,
-no penetration test, no certification — so every badge would be false. No uptime page — nothing monitors availability, and `/dashboard` must never be
+no penetration test, no certification — so every badge would be false. No uptime page — nothing monitors availability, and `/readiness` must never be
 renamed in a way that implies it does. No team or about page and no terms or privacy policy
 — there is no legal entity, and drafting a legal instrument in-house is not a design task.
 No blog, no newsletter, no integrations page. Not one of these is declined for taste.
@@ -66,7 +66,7 @@ so `later` routes are absent from the tuple until the day they land.
 | `/` | ENVELOPE — development capacity | public | must | `apps/web/test/landing.test.tsx` |
 | `/parking` | Parking — ENVELOPE | public | must | `apps/web/test/parking-page.test.tsx` |
 | `/refusals` | What it refuses — ENVELOPE | public | must | `apps/web/test/refusals.test.tsx` |
-| `/dashboard` | Deployment readiness — ENVELOPE | public read; live when signed in | must | `apps/web/test/dashboard.test.tsx` |
+| `/readiness` | Deployment readiness — ENVELOPE | public read; live when signed in | must | `apps/web/test/readiness.test.tsx` |
 | `/app` | The engine — ENVELOPE | name prompt | must | `apps/web/test/antechamber.test.tsx` |
 | *(unmatched)* | That page is not here — ENVELOPE | public | must | `apps/web/test/not-found.test.tsx` |
 | `/worked-example` | One run, printed in full — ENVELOPE | public | should | `apps/web/test/worked-example-page.test.tsx` |
@@ -92,7 +92,7 @@ all reading `apps/web/src/routes.json` (§5):
 
 - `apps/web/test/route-coverage.test.ts` enumerates the route table and fails when a route has
   no `apps/web/test/<slug>.test.tsx`, when that file does not import `prohibitions.ts`, and
-  when a route is absent from `PAGES`. This is why `/dashboard` gets its own test file: while
+  when a route is absent from `PAGES`. This is why `/readiness` gets its own test file: while
   its assertions lived inside `landing.test.tsx`'s `describe('the status dashboard')` the rule
   could not be mechanised at all, because one route's coverage was invisibly supplied by
   another route's filename. Move the block, do not copy it.
@@ -143,7 +143,7 @@ multiplies once there are ten routes instead of three.
    **The recolour is `.stat--partial` (`landing.css:899`), and the first draft of this document
    missed it.** It is `border-left-color: var(--uncertain); background: var(--uncertain-surface)`
    and it is emitted by `Dashboard.tsx:386` for the invariants tile, which is hardcoded
-   `state="partial"`. Making `/dashboard` public therefore ships amber as a *readiness status*
+   `state="partial"`. Making `/readiness` public therefore ships amber as a *readiness status*
    on the site's most-forwarded page of numbers — the one thing R6 forbids, on the page the
    R6 audit did not read. The tile does not mean "assumed"; it means the rest of the checks had
    nothing to read, which is not-assessed. So it takes the deferred pair — `--deferred` and
@@ -397,7 +397,7 @@ working.
 | 5 | What holds the answer up | *(Renamed under R8; shipped heading is "Four things hold the answer up", `Landing.tsx:468`. It was also the more brittle of the two — a fifth card would have made the heading false.)* The largest and least-designed section today: four undifferentiated boxes. Recut to four one-sentence claims, each paired with a ≤3-element inline SVG and a link into `/method` — rules that generate rather than judge (an inward offset arrow); exact arithmetic on a declared integer grid (two edges resolving to one vertex); every value carries its derivation and a filled gap is amber (the existing zero-prop `ProvenanceLegend`, rendered verbatim); an independent layer that blocks emission rather than warning (a barred arrow). Under 80 words total. | none printed; diagrams are schematic and carry no dimension |
 | 6 | Exactly what we claim | The five-way claim statement in §16.5 order, verbatim, with the four glyph shapes — filled disc, half disc, hollow ring, crossed square — so it survives greyscale and CVD. `.lp-claim--never` stays the loudest element on the page. Ends: *what each status would take to change* → `/refusals`. | none |
 | 7 | What it does not do | All five items **with their paragraphs**, unchanged; the five substrings are load-bearing. §04's lede stops claiming to be *"longer than the feature list"* — it is longer by item count (5 vs 4) and shorter by word count (232 vs 251), and a self-description the page does not satisfy is a small dishonesty on the page that sells honesty. It becomes *"More of them than there are features, and deliberately so."* Then: *there are more, and three the software performs at runtime* → `/refusals`, with no count in the sentence (R8). | none |
-| 8 | Readiness band | The page's one colour inversion, spent on the not-approved paragraph. Both CTAs now resolve: *See the readiness numbers* → `/dashboard` (public), *Open the engine anyway* → `/app`. | counts live on `/dashboard`; this band states the condition in words |
+| 8 | Readiness band | The page's one colour inversion, spent on the not-approved paragraph. Both CTAs now resolve: *See the readiness numbers* → `/readiness` (public), *Open the engine anyway* → `/app`. | counts live on `/readiness`; this band states the condition in words |
 | 9 | Site footer | `SiteFooter`: four-column sitemap generated from `PAGES`, *What it does not claim* first; the permanent sentence from the one `DISCLAIMER` constant; engine and annex versions. | `SNAPSHOT.engineVersion`, `SNAPSHOT.readiness.annexVersion` |
 
 **Empty and error states.** `worked-example.json` is a build-time import — if it is missing
@@ -483,7 +483,7 @@ the page reads as behaviour rather than as caveats.
 | 11 | A file is not an integration | Exports travel as files. No live link, no round trip, no Revit connection, and a change made downstream does not come back. The 3D model is written as a glTF file, and it is a file like the others. **IFC is not produced by this engine** — if you have seen it listed against this product it was scope in an older document and it does not exist in the software. | none |
 | 12 | **What is not on this site, and why** | The highest belief-per-word section on the site. No accuracy percentage — the variance study has not been run. No customer count or logo wall — there are no customers. No case study — every real plot in the corpus belongs to someone else. No comparison table — we have evaluated no competitor. No price — nothing about the current engagement generalises. No certification badge — there is no certification. Closes on the rule that produced the list: no figure on this site is typed by a human, and a page that cannot cite a number does not print one. | none, by construction |
 | 13 | Which of these could change, and who changes them | Three groups, permanent first: permanent by design (the compliance claim, the realism band, the optimiser class); awaiting a named human (rule approval, annex signature, the variance study); outside Phase 0 (unit layouts, further code coverage). Nothing in the first group carries a date; nothing anywhere carries a promise. | none |
-| 14 | *(R5)* What this page did not prove | That the refusals above are the complete set. → `/dashboard`, `/rules`. | none |
+| 14 | *(R5)* What this page did not prove | That the refusals above are the complete set. → `/readiness`, `/rules`. | none |
 
 **Empty and error states.** If `readiness.json` is absent, §4's deferred list is replaced by a
 line saying the snapshot is missing — never by an empty list, which would read as *nothing is
@@ -495,12 +495,28 @@ specification document.
 
 ---
 
-### 4.4 `/dashboard` — deployment readiness
+### 4.4 `/readiness` — deployment readiness
+
+**It was `/dashboard` until 2026-09-28.** The page reports what is *not ready*; it has never
+been a dashboard, and §2 of this document already warned that it *"must never be named in a way
+that implies it monitors uptime"* — which is exactly what the old word implies to the reader
+who has met it anywhere else. The visible label had said *Readiness* for some time; the URL, the
+component, the stylesheet, the section ids and the test file had not caught up, and a name that
+is wrong in the code is a name that comes back.
+
+`/dashboard` is a permanent redirect, not a deletion: the delivered user guide links to it, and
+so does whatever has already been sent on. `apps/web/src/redirects.json` is the one record —
+`router.tsx` reads it for development and `scripts/deploy/build.mjs` writes it into `.htaccess`
+as a 301, so the server and the application cannot disagree about where the path went.
+
+**The API is still `GET /api/dashboard`.** A wire contract is renamed on its own schedule, with
+its own compatibility question, rather than as the tail of a client rename that happens to share
+a word with it.
 
 **Purpose:** show anyone, without signing in, exactly how much of this deployment is not
 ready, and name the human action that would change each number.
 
-**Route change.** `Root` dispatches `/dashboard` **above** the actor check. With an actor it
+**Route change.** `Root` dispatches `/readiness` **above** the actor check. With an actor it
 fetches live `GET /api/dashboard`; without one it renders a dated snapshot from
 `readiness.json`. This closes the funnel defect where two of the four landing CTAs land a
 visitor on *"Who is running this?"*. It does **not** fabricate an actor to reach the API at
@@ -578,11 +594,11 @@ unexplained name prompt, and keep the site's disclosure visible inside the produ
 | # | Section | Content |
 |---|---|---|
 | 1 | **The antechamber** (today's `ActorPrompt`, respecified as a public page) | It is the first screen behind every public CTA, so it is site copy and goes through the site's prohibitions test. Keeps the shared header, footer and theme toggle. Three lines above the fields: *why we ask* — the name is printed on the export and recorded against each gate, so a figure can always be traced to whoever entered it; *what the licence field is* — it is recorded, it is not verified, and it is not checked against the author, so signing your own run is something this deployment permits and records (R11, and `/refusals` §7 in full); *what this is not* — there is no password, no session and no token, so it is not authentication. A link to `/refusals` sits beside the submit button. **The first draft's version of the first line claimed the reviewer gate requires a person who is not the author.** It does not, and this is the first screen behind every public CTA, so it is the worst place on the site to assert a control. The button names its outcome rather than saying *Continue*, and no field is labelled by a placeholder. |
-| 2 | Shell continuity | The public header and the engine header become one component differing only by the actor badge. One `useTheme` owner in `Root` replaces three desynchronised instances — today toggling on `/dashboard` leaves the engine's toggle stale, so its first click on `/app` appears to do nothing. A skip link ships here (absent today). The second `<h1>ENVELOPE</h1>` inside the hidden engine DOM is removed. |
+| 2 | Shell continuity | The public header and the engine header become one component differing only by the actor badge. One `useTheme` owner in `Root` replaces three desynchronised instances — today toggling on `/readiness` leaves the engine's toggle stale, so its first click on `/app` appears to do nothing. A skip link ships here (absent today). The second `<h1>ENVELOPE</h1>` inside the hidden engine DOM is removed. |
 | 3 | Deep-link entry | Two query hints, and one mechanism. `?step=<id>` opens at that step when it is reachable, and otherwise at the earliest unreachable prerequisite with a line saying which. `?demo=worked-example` loads the recorded input — it is §4 below, reached by URL, and it is what the fold CTA carries (§4.1 §2). An **unrecognised** step id is not silently ignored: the engine opens at the earliest step and prints one line naming the steps that exist, because quietly serving a different screen from the one the URL asked for is the defect `/404` exists to refuse and it does not stop being that inside `/app`. **The hint has to be re-read, and the first draft did not say how.** `EngineApp` mounts once at first paint inside the always-present hidden div; a `location.search` read on mount never re-runs when the route changes, so an in-app click from `/parking` to `/app?step=parking` would land on whatever step was already open. `useRouter` therefore returns `search` alongside `route`, updated by both `navigate` and `popstate`, and `Root` passes it to `EngineApp` as a prop that an effect keys on. Still no router change beyond §5, no params, no dependency. The client-side ordering stays a convenience; the server enforces it for real. |
 | 4 | One-click demonstration | A button that loads the recorded worked-example input, so the visitor watches the engine return the number they read ninety seconds earlier. Beside it, *start from my own plot*. Reachable both as a button on the intake step and as `?demo=worked-example`. |
 | 5 | Disclosure inside the flow | Steps that refuse say so in the site's own words: the parameters step says the run is refused rather than defaulted; the assumptions step says amber means assumed and links to `/method`; the checks step reports *{ran} of {total} ran*, both interpolated from the run's own `checks.invariants` and neither typed (R8), and never a tick; evidence and export link to `/refusals` rather than restating it. |
-| 6 | Exit | The site nav stays reachable from every step, so a reader can re-read the claim statement mid-run without losing the run. **The first draft said this was already true because of the mounted-but-hidden strategy in `Root`. It is not.** `Root.tsx:56` is `if (route === '/') return <Landing navigate={navigate} />;`, which unmounts `EngineApp`, and the comment above it states that as intent. The hidden-div strategy spans `/app` ↔ `/dashboard` only, and this plan adds eight more public routes to lose a run on. Neither of the obvious answers is right: keeping the early return withdraws the promise, and deleting it makes every public page — including the ninety-second first impression — mount the engine and build a WebGL scene nobody asked for. So: **a latch.** `Root` holds `engineMounted`, false until the first navigation to `/app`, true forever after. Before that first visit there is no engine to unmount and no run to lose; after it, the hidden div is rendered on every route and the run survives every public navigation, which is the case the promise was made for. The `three` import is static and already in the bundle today, so what the latch saves is the mount, the scene and the WebGL context — not bytes. Lazy-loading `three` is a real and separate improvement and is not scoped here. After an export, a link to `/dashboard`; after a blocked run, a link to `/refusals` saying that a refusal to compute is designed behaviour rather than a failure. |
+| 6 | Exit | The site nav stays reachable from every step, so a reader can re-read the claim statement mid-run without losing the run. **The first draft said this was already true because of the mounted-but-hidden strategy in `Root`. It is not.** `Root.tsx:56` is `if (route === '/') return <Landing navigate={navigate} />;`, which unmounts `EngineApp`, and the comment above it states that as intent. The hidden-div strategy spans `/app` ↔ `/readiness` only, and this plan adds eight more public routes to lose a run on. Neither of the obvious answers is right: keeping the early return withdraws the promise, and deleting it makes every public page — including the ninety-second first impression — mount the engine and build a WebGL scene nobody asked for. So: **a latch.** `Root` holds `engineMounted`, false until the first navigation to `/app`, true forever after. Before that first visit there is no engine to unmount and no run to lose; after it, the hidden div is rendered on every route and the run survives every public navigation, which is the case the promise was made for. The `three` import is static and already in the bundle today, so what the latch saves is the mount, the scene and the WebGL context — not bytes. Lazy-loading `three` is a real and separate improvement and is not scoped here. After an export, a link to `/readiness`; after a blocked run, a link to `/refusals` saying that a refusal to compute is designed behaviour rather than a failure. |
 
 **Empty and error states.** Unchanged from today: the existing error banner, the existing
 blocked-run 422 rendering, the existing 409 explanation on an early export.
@@ -965,7 +981,7 @@ signatures (409, 409, 200), measured by `scripts/verify-worked-example.mjs`, and
 that measured it signed its own run — which is the page's evidence that G4 compares the
 signer with nobody. The degradation clause is moot: `verified.exports` is written by the
 same check that verifies the page, so there is no build in which the page has no lists.
-`/dashboard` gained the row the plan asked for from the same files: the cars the engine
+`/readiness` gained the row the plan asked for from the same files: the cars the engine
 placed, and the cars the drawing set, the DXF and the model file each draw.
 
 ---
@@ -1045,7 +1061,7 @@ moves out in two pieces, because one piece cannot serve both consumers:
 -/**
 - * Three routes, and no router dependency.
 - *
-- * `/` the landing page, `/app` the engine, `/dashboard` the portfolio view.
+- * `/` the landing page, `/app` the engine, `/readiness` the portfolio view.
 - * That is the whole surface, so a routing library would be ~15 kB and a set of
 - * concepts (loaders, nested outlets, actions) for a switch statement. If a
 - * fourth route ever needs params or nesting, swap this out — it is thirty lines
@@ -1233,7 +1249,7 @@ sentinel.
 **The hidden-div strategy changes, and "keep it untouched" was wrong.** The first draft said to
 keep it as it is, on the grounds that conditionally rendering `EngineApp` already threw away a
 plot, a run and four acknowledged gates once. Both halves of that are true and they do not
-combine into "untouched", because the strategy as written spans `/app` ↔ `/dashboard` only:
+combine into "untouched", because the strategy as written spans `/app` ↔ `/readiness` only:
 `Root.tsx:56` returns `<Landing />` early and unmounts the engine on `/`, and its own comment
 says that is deliberate. Leaving it there while adding eight public routes means §4.5 §6 and §7
 promise a run that survives navigation and the code discards it on the first click to `/`. The
@@ -1343,8 +1359,8 @@ edited apart. This module is also the file R1's hand-written-copy scan runs over
 | The five "does not" items and their paragraphs | `content/shared.tsx`, moved out of `Landing.tsx` | prose |
 | The IFC/glTF paragraph — `/refusals` §11 **and** `/exports` §7, word for word | `content/shared.tsx`, one exported constant | prose |
 | The optimiser / `TRADEOFF` refusal — `/parking` §11 **and** `/refusals` §8 | same | prose |
-| *Dormant is not a pass* — `/dashboard` §3 **and** `/method` §5 | same | prose |
-| The `SEED_RULES` vs `loadSeedRulesForDevelopment` argument — `/dashboard` §3, quoted from the handler's own docblock | same | prose |
+| *Dormant is not a pass* — `/readiness` §3 **and** `/method` §5 | same | prose |
+| The `SEED_RULES` vs `loadSeedRulesForDevelopment` argument — `/readiness` §3, quoted from the handler's own docblock | same | prose |
 | The generate-vs-check thesis | `README.md:15-22` | prose |
 | The refusal contract: 422, 409, 422-and-never-persisted | `README.md:167-170`, `apps/api/src/server.ts` | prose — status codes are identifiers, not measurements |
 | Gate names G1–G4 | `apps/web/src/App.tsx`, `apps/api/src/server.ts` | prose |
@@ -1392,7 +1408,7 @@ boots the API in-process and injects with a build-time actor header. It gains:
    rule inside the engine and serialised by nothing. Emit the clearance the layout actually
    charged, and the citation's `clauseReference`, `instrumentId`, `instrumentVersion` and
    `sourcePage` — never `sourceTextVerbatim`, which is code text this site does not republish.
-6. **`assumptionExposure[].maxRelativeEffect` becomes `string | null`.** `/dashboard` §6 says an
+6. **`assumptionExposure[].maxRelativeEffect` becomes `string | null`.** `/readiness` §6 says an
    unmeasured sensitivity renders *not measured* and never `0.0%`, and the handler makes that
    impossible: `const effect = a.sensitivity?.relativeEffect ?? '0'` collapses null into zero
    before the page sees either. Drop the `?? '0'`, let null through, and skip nulls in the
@@ -1485,7 +1501,7 @@ figures-come-from-the-fixture assertions. Three changes:
 
 **Primary nav** — five links and one button, generated from `PAGES` where `nav === 'primary'`,
 labelled from `navLabel`. *Parking* → `/parking`. *Method* → `/method`. *What it refuses* →
-`/refusals`. *Readiness* → `/dashboard`. *One run in full* → `/worked-example`. Then
+`/refusals`. *Readiness* → `/readiness`. *One run in full* → `/worked-example`. Then
 `[Run a plot]` → `/app?step=intake`. `/` is reached by the mark and carries `navLabel: null`.
 
 *What it refuses* occupies the slot a conventional B2B site gives to *Why us*, and that is the
@@ -1495,7 +1511,7 @@ the capability, never a governance claim (R10).
 **Footer** — four columns, generated from `PAGES.group` and labelled from `footerLabel`:
 
 1. **What it does not claim** *(first, deliberately)* — What it refuses `/refusals` ·
-   Deployment readiness `/dashboard` · The rule library `/rules`
+   Deployment readiness `/readiness` · The rule library `/rules`
 2. **The product** — The answer `/` · Parking `/parking` · What it needs from you `/inputs` ·
    What comes out `/exports` · Run a plot `/app`
 3. **How to check it** — Method `/method` · One run, printed in full `/worked-example`
@@ -1511,7 +1527,7 @@ only have been hand-typed back in — the one thing this section exists to stop.
 and the footer follows it: an empty slot is the correct state, and a greyed-out link to a page
 that does not exist is a promise with a date attached, which R2 forbids in words already.
 
-**Legal row**, full width, on every route including `/app` and `/dashboard`, rendered from the
+**Legal row**, full width, on every route including `/app` and `/readiness`, rendered from the
 one `DISCLAIMER` constant with a test asserting every route in `PAGES` emits it: the mark, then
 *"ENVELOPE · Phase 0 · Regulatory validity is never assessed and never claimed. This engine
 reports what its encoded rules imply. It is not a compliance check and no part of it
@@ -1530,7 +1546,7 @@ Below the nav, R13 governs: `/rules`'s table, `/worked-example`'s coordinate lis
 `noSidewaysScroll` fails on all four otherwise and a rule stated only here would be a rule
 nobody reads at the moment they need it.
 
-**Skip link.** `.lp-skip` ships on every route, including `/app` and `/dashboard`, which have
+**Skip link.** `.lp-skip` ships on every route, including `/app` and `/readiness`, which have
 none today. It targets `#main` and is off-screen until `:focus-visible`.
 
 **And `#main` has to be unique, which under the latch it would not have been.** `id="main"`
@@ -1550,10 +1566,10 @@ because *run this plot yourself* has to run this plot. The antechamber (§4.5) i
 screen behind all of them and explains why a name is asked for before asking for it. Leaving:
 the site nav is present on every step, so a reader can re-read the claim statement mid-run
 without losing the run — which the latch in §4.5 §6 is what makes true; after an export the
-terminal state links to `/dashboard`, and after a blocked run it links to `/refusals` to say
+terminal state links to `/readiness`, and after a blocked run it links to `/refusals` to say
 that a refusal to compute is designed behaviour rather than a failure.
 
-**Entering and leaving `/dashboard`.** Public, above the actor check. Signed out it renders the
+**Entering and leaving `/readiness`.** Public, above the actor check. Signed out it renders the
 snapshot and says so in its first line; signed in it fetches live and additionally shows the
 recent-runs table, which carries reviewer names. It exits to `/refusals` and to `/rules`, and
 it never links to itself as *status* in the availability sense.
@@ -1683,7 +1699,7 @@ the same object as a page that quietly absorbs a changed figure.
 - *"On a clean store the public tile is `null of 18`."* It is not: `Dashboard.tsx:122-129`
   already renders `—` when `invariantsRan === null`. The real defect is one layer along — the
   hardcoded `?? 18` denominator — and §4.4 §3 names that instead.
-- *"Signed-in `/dashboard` has no loading state."* It has one, at `Dashboard.tsx:62`. What the
+- *"Signed-in `/readiness` has no loading state."* It has one, at `Dashboard.tsx:62`. What the
   document adds is a prohibition on replacing it with a figure-shaped skeleton.
 - *"`coverageHeadroomM2` and the three parking figures render `undefined m²`."* They do not:
   `resolveJsonModule` types the fixture from its own contents, so reading an absent key is a

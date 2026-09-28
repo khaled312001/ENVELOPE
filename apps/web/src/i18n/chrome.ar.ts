@@ -82,7 +82,7 @@ export const AR: ChromeDictionary = {
     unreported: 'غير مُبلَّغ عنه',
     unsigned: 'غير موقَّع',
     /*
-      The same wording as the route description in `routes['/dashboard']` — one
+      The same wording as the route description in `routes['/readiness']` — one
       claim, one set of words. «زمن التشغيل» is uptime and «الإتاحة» is
       availability; collapsing the two would drop half the denial, and the sentence
       exists to deny both.
@@ -208,7 +208,7 @@ export const AR: ChromeDictionary = {
       navLabel: null,
       footerLabel: 'الإعدادات',
     },
-    '/dashboard': {
+    '/readiness': {
       title: 'جاهزية النشر — TOP.ai',
       description:
         'ما ليس جاهزًا في هذا النشر، والإجراء البشري الذي يُغيّر كل رقم منه. جاهزية، لا زمن تشغيل — لا شيء هنا يراقب الإتاحة.',

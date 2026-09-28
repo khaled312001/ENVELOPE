@@ -30,6 +30,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import REDIRECT_DATA from './redirects.json' with { type: 'json' };
+
 /**
  * ONLY ROUTES THAT ARE BUILT ENTER THIS TUPLE.
  *
@@ -48,7 +50,7 @@ export const ROUTES = [
   '/sign-in',
   '/sign-up',
   '/settings',
-  '/dashboard',
+  '/readiness',
 ] as const;
 export type Route = (typeof ROUTES)[number];
 
@@ -84,8 +86,41 @@ export type Href = Route | `${Route}?${string}` | `${Route}#${string}`;
  */
 export type Navigate = (to: Href, options?: { readonly replace?: boolean }) => void;
 
+/**
+ * Paths that have MOVED, and the route each one moved to.
+ *
+ * ---------------------------------------------------------------------------
+ * A RENAME WITHOUT ONE OF THESE IS A LINK ROT EVENT WITH A GOOD EXPLANATION.
+ *
+ * `/dashboard` became `/readiness` because the page reports what is NOT READY in
+ * a deployment and has never been a dashboard — `site-map.md` already warned it
+ * must never be named in a way that implies it monitors uptime, and `dashboard`
+ * is the word a reader reaches for when they mean exactly that. But the old path
+ * is in a user guide that has been delivered, in the client's browser history and
+ * in whatever he has already sent on. None of that is ours to break.
+ *
+ * IT IS A 301 IN PRODUCTION, and this is the fallback. `scripts/deploy/build.mjs`
+ * reads the same file and writes a permanent redirect into `.htaccess`, so a
+ * reader on the live site never loads the application to be told where to go. The
+ * code below is what happens in development, where Vite serves `index.html` for
+ * every path and there is no Apache to do it — and on the day a host's rewrite
+ * rules are wrong, which is not a day the address should 404.
+ *
+ * NOT IN `ROUTES`. A redirect is not a page: putting it there would give it a nav
+ * entry, a footer link, a sitemap row and a smoke walk, all pointing at somewhere
+ * that immediately sends the reader elsewhere.
+ */
+export const REDIRECTS: Readonly<Record<string, Route>> = REDIRECT_DATA as Readonly<
+  Record<string, Route>
+>;
+
+/** The path a URL should be at: itself, or where it moved to. */
+function resolve(path: string): string {
+  return REDIRECTS[path] ?? path;
+}
+
 export function currentRoute(): Location {
-  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  const path = resolve(window.location.pathname.replace(/\/+$/, '') || '/');
   return (ROUTES as readonly string[]).includes(path) ? (path as Route) : NOT_FOUND;
 }
 
@@ -140,6 +175,26 @@ export function useRouter(): {
 } {
   const [route, setRoute] = useState<Location>(currentRoute);
   const [search, setSearch] = useState<string>(() => window.location.search);
+
+  /*
+    THE ADDRESS IS CORRECTED, NOT ONLY THE RENDER.
+
+    `currentRoute` resolves a moved path, so `/dashboard` already DRAWS the
+    readiness page. Left there, the address bar would keep saying `/dashboard`
+    while the page said `/readiness` — which is the defect the 404 exists to
+    refuse, arrived at from the other direction: an address that names a page the
+    reader is not looking at. Anyone who then copied the URL would pass on the
+    dead one.
+
+    `replaceState`, not `pushState`: the moved path is not a place to go Back to.
+  */
+  useEffect(() => {
+    const from = window.location.pathname.replace(/\/+$/, '') || '/';
+    const to = REDIRECTS[from];
+    if (to !== undefined) {
+      window.history.replaceState({}, '', `${to}${window.location.search}${window.location.hash}`);
+    }
+  }, []);
 
   useEffect(() => {
     // Back and forward have to work. A single-page app that breaks the back

@@ -1,7 +1,7 @@
 /*
  * `/dashboard` — deployment readiness.
  *
- * OWNER: the `/dashboard` page agent.  CLASS PREFIX: `.db-`, plus the sole-owned
+ * OWNER: the `/dashboard` page agent.  CLASS PREFIX: `.rd-`, plus the sole-owned
  * `.stat*` family below.
  *
  * No selector outside those two may be declared here, and no rule in this file may
@@ -19,7 +19,7 @@
  * names `contrast` on purpose so `assertNoChromeOnBand` scans it. Nothing else here
  * is a chassis rule in disguise.
  *
- * The `.db-` rules are scoped under the page root `.db` so nothing here can reach a
+ * The `.rd-` rules are scoped under the page root `.db` so nothing here can reach a
  * sibling page's markup. The `.stat*` family is deliberately NOT scoped: it keeps the
  * names it arrived with, it is rendered on no other route, and `landing.css`'s print
  * block still names `.stat` for `break-inside`. Re-scoping it would have been a
@@ -28,7 +28,7 @@
  * ---
  *
  * THE `.stat*` FAMILY WAS MOVED HERE OUT OF `landing.css`, unchanged except for one
- * deletion. It is Dashboard's, and while it sat in the landing page's stylesheet two
+ * deletion. It is this page's, and while it sat in the landing page's stylesheet two
  * page agents owned one file — which is a merge conflict waiting for the first
  * parallel edit, and worse, an invitation for a landing-page change to restyle a
  * readiness tile.
@@ -43,7 +43,7 @@
  * `.stat--partial` HAS NOW BEEN RENAMED WITH ITS EMITTER. It came across still amber
  * and the foundation recoloured it in place, correctly refusing to rename a selector
  * whose emitter it did not own — a renamed selector with an unrenamed emitter is a
- * silent visual regression no gate can see. `Dashboard.tsx` now emits `dormant`, so
+ * silent visual regression no gate can see. `Readiness.tsx` now emits `dormant`, so
  * the name lands here in the same pass: the tile does not mean "assumed", it means
  * the rest of the checks had nothing to read, which is NOT ASSESSED, and a class
  * called `partial` invites the next amber.
@@ -204,14 +204,14 @@
 /* The dateline. It is the first thing on the page after the title, and it is set
    quiet: it says where the numbers came from, which is a provenance note rather
    than a claim. */
-.db-dateline {
+.rd-dateline {
   margin-block: var(--space-3) var(--rhythm-block);
   font-size: var(--text-sm);
   color: var(--text-secondary);
   max-inline-size: var(--measure-fine);
   text-wrap: pretty;
 }
-.db-ver {
+.rd-ver {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums lining-nums slashed-zero;
   letter-spacing: var(--tracking-normal);
@@ -221,14 +221,14 @@
 /* The blocking callout carries the section rhythm below it rather than a margin of
    its own: the chassis rule is that placement owns inset and a component never does,
    so the inset lives on this wrapper and not on `.callout`. */
-.db-blocking {
+.rd-blocking {
   margin-block-end: var(--space-2);
 }
 
 /* A section lede. `.section__head h2` is styled by the chassis; the paragraph under
    it is not, because the chassis leaves lede width to the page that knows its
    measure. */
-.db-lede {
+.rd-lede {
   margin-block-start: var(--space-4);
   font-size: var(--text-base);
   line-height: var(--leading-relaxed);
@@ -236,13 +236,13 @@
   max-inline-size: var(--measure-prose);
   text-wrap: pretty;
 }
-.db-subhead {
+.rd-subhead {
   font-size: var(--text-lg);
   font-weight: var(--weight-medium);
   letter-spacing: var(--tracking-tight);
 }
-.db-fine,
-.db-note {
+.rd-fine,
+.rd-note {
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
   color: var(--text-secondary);
@@ -252,7 +252,7 @@
 /* The serialiser note sits under the table it qualifies, on the datum rule, because
    a caveat set loose beneath a table reads as a footnote and a footnote is where a
    reader stops looking. */
-.db-note {
+.rd-note {
   padding-block-start: var(--space-4);
   border-block-start: var(--border-width) solid var(--border-strong);
 }
@@ -267,7 +267,7 @@
    plates with headings, and the heading level is what a reader navigates by here,
    not the list marker. The `<ol>` is kept because the order is the order of the
    tiles above it. */
-.db .db-plan {
+.db .rd-plan {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -275,7 +275,7 @@
 /* The owner label. Uppercase mono micro-label, one tracking token, `--text-tertiary`
    — the eyebrow's register without the eyebrow's hairline, because the plate's own
    ink cap already draws the horizontal. */
-.db-owner {
+.rd-owner {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
@@ -285,7 +285,7 @@
 }
 /* A plate in this grid is read top to bottom in one movement, so the internal gap
    closes between the owner and the title it belongs to. */
-.db .db-plan > .plate {
+.db .rd-plan > .plate {
   gap: var(--space-2);
 }
 
@@ -301,7 +301,7 @@
  * claim in anything but a value read from the data, because a rule edit that made a
  * different band bind would leave a coloured bar false with every gate still green.
  */
-.db-split {
+.rd-split {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -309,17 +309,17 @@
   margin: 0;
   padding: 0;
 }
-.db-split__row {
+.rd-split__row {
   display: grid;
   grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-4);
   font-size: var(--text-sm);
 }
-.db-split__label {
+.rd-split__label {
   font-weight: var(--weight-medium);
 }
-.db-split__count {
+.rd-split__count {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums lining-nums slashed-zero;
   white-space: nowrap;
@@ -329,17 +329,17 @@
    column. The count stays on the label's line, where the two figures a reader is
    comparing sit side by side. */
 @media (max-width: 40rem) {
-  .db-split__row {
+  .rd-split__row {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--space-2) var(--space-3);
   }
-  .db-split__label {
+  .rd-split__label {
     grid-column: 1;
   }
-  .db-split__count {
+  .rd-split__count {
     grid-column: 2;
   }
-  .db-split__row > .meter {
+  .rd-split__row > .meter {
     grid-column: 1 / -1;
   }
 }
@@ -355,18 +355,18 @@
  * is absent — an empty track would read as a measured zero, which is the exact
  * conflation this column was corrected for.
  */
-.db-swing {
+.rd-swing {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: var(--space-hair);
 }
-.db-swing__figure {
+.rd-swing__figure {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums lining-nums slashed-zero;
   white-space: nowrap;
 }
-.db-swing__bar {
+.rd-swing__bar {
   inline-size: 6rem;
   max-inline-size: 100%;
 }
@@ -394,36 +394,36 @@
  * content and 242px of column, so the floor is 15.5rem — measured against the same
  * face rather than restated.
  */
-.db .db-param {
+.db .rd-param {
   inline-size: auto;
   min-inline-size: 15.5rem;
 }
 /* The identifier and its state, as one grid item. `.chip`'s own leading margin is
    cancelled here because the row supplies a real gap — the same correction the
    deferred list makes, for the same reason. */
-.db-param__id {
+.rd-param__id {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   min-inline-size: 0;
 }
-.db-param__id > .chip {
+.rd-param__id > .chip {
   margin-inline-start: 0;
 }
 
 /* Below the fold the schedule becomes a stack of records, so the cell is a labelled
    row and the figure belongs at the start of it with everything else. */
 @media (max-width: 40rem) {
-  .db-swing {
+  .rd-swing {
     align-items: flex-start;
   }
-  .db-swing__bar {
+  .rd-swing__bar {
     inline-size: 100%;
   }
   /* The stacked record is a two-track grid whose first track is the re-emitted
      header, so a minimum meant for a table column would push the label out of it. */
-  .db .db-param {
+  .db .rd-param {
     min-inline-size: 0;
   }
 
@@ -470,26 +470,26 @@
  * line of provenance, and a four-column table of two-word cells is a table pretending
  * to have columns.
  */
-.db-rules {
+.rd-rules {
   display: flex;
   flex-direction: column;
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.db-rule {
+.rd-rule {
   padding-block: var(--space-4);
   border-block-start: var(--border-width) solid var(--border-subtle);
   break-inside: avoid;
 }
-.db-rule:last-child {
+.rd-rule:last-child {
   border-block-end: var(--border-width) solid var(--border-subtle);
 }
 /* Wrapping is the whole point of this rule. R9 puts the `draft · not sourced` chip
    in the same eyeful as the identifier, which means three chips beside a
    twenty-four-character id — and at 320px that is where this page would push the
    document sideways if the row refused to wrap. */
-.db-rule__head {
+.rd-rule__head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -501,10 +501,10 @@
    flex row with a real gap that same margin is a second gap, so it is cancelled
    here and nowhere else — the chips inside the schedule cells are inline, keep the
    margin, and would collide with the identifier beside them without it. */
-.db-rule__head > .chip {
+.rd-rule__head > .chip {
   margin-inline-start: 0;
 }
-.db-rule__meta {
+.rd-rule__meta {
   display: block;
   margin-block-start: var(--space-1);
   font-size: var(--text-xs);
@@ -570,10 +570,10 @@
  * `assertNoChromeOnBand` — which scans by SELECTOR TEXT for `contrast` — scans this
  * rule today rather than a year after somebody puts an accent on the band.
  */
-.db > .section[aria-labelledby='db-change'],
-.db > .section[aria-labelledby='db-exposure'],
+.db > .section[aria-labelledby='rd-change'],
+.db > .section[aria-labelledby='rd-exposure'],
 .db > .section--contrast,
-.db > .section[aria-labelledby='db-no-score'] {
+.db > .section[aria-labelledby='rd-no-score'] {
   max-inline-size: none;
   padding-inline: max(
     var(--page-gutter),
@@ -581,8 +581,8 @@
   );
 }
 
-.db > .section[aria-labelledby='db-change'],
-.db > .section[aria-labelledby='db-exposure'] {
+.db > .section[aria-labelledby='rd-change'],
+.db > .section[aria-labelledby='rd-exposure'] {
   background: var(--surface-sunken);
 }
 
@@ -596,7 +596,7 @@
  * is 1.05:1 in light, which is a highlight nobody can see.
  */
 @media (hover: hover) {
-  .db > .section[aria-labelledby='db-exposure'] .schedule tbody tr:not([data-state]):hover > * {
+  .db > .section[aria-labelledby='rd-exposure'] .schedule tbody tr:not([data-state]):hover > * {
     background-color: var(--surface-raised);
   }
 }
@@ -607,7 +607,7 @@
  * enumeration acquires a wrong one the first time somebody puts something new inside
  * it, and rebinding makes the three measured on-band pairs the pairs actually
  * painted rather than the pairs somebody remembered to declare. This is that block,
- * scoped, and it is a duplicate that should be deleted the moment `db-no-score` can
+ * scoped, and it is a duplicate that should be deleted the moment `rd-no-score` can
  * say `.section--contrast` for itself.
  *
  * On paper it inverts back with no print rule of its own: `--surface-contrast` is
@@ -617,7 +617,7 @@
  * in a token instead of being left to the ground.
  */
 .db > .section--contrast,
-.db > .section[aria-labelledby='db-no-score'] {
+.db > .section[aria-labelledby='rd-no-score'] {
   --surface-base: var(--surface-contrast);
   --surface-raised: var(--surface-contrast);
   --surface-sunken: var(--surface-contrast);
@@ -647,13 +647,13 @@
  * tokens, so nothing here can paint a colour the band is not measured for.
  */
 .db > .section--contrast .button,
-.db > .section[aria-labelledby='db-no-score'] .button {
+.db > .section[aria-labelledby='rd-no-score'] .button {
   background: transparent;
   color: var(--text-on-contrast);
   border-color: var(--border-on-contrast);
 }
 .db > .section--contrast .button:hover:not(:disabled),
-.db > .section[aria-labelledby='db-no-score'] .button:hover:not(:disabled) {
+.db > .section[aria-labelledby='rd-no-score'] .button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--text-on-contrast) 12%, transparent);
   border-color: var(--text-on-contrast);
 }
@@ -664,7 +664,7 @@
    it. Down two washes rather than up one: a press is deeper than a hover, which is
    the whole of what makes a control feel attached to a finger. */
 .db > .section--contrast .button:active:not(:disabled),
-.db > .section[aria-labelledby='db-no-score'] .button:active:not(:disabled) {
+.db > .section[aria-labelledby='rd-no-score'] .button:active:not(:disabled) {
   background: color-mix(in srgb, var(--text-on-contrast) 22%, transparent);
   border-color: var(--text-on-contrast);
 }
@@ -672,7 +672,7 @@
    off this surface. An outline composites correctly over any ground and needs no
    knowledge of what it sits on, so this is a colour swap and not a second ring. */
 .db > .section--contrast :focus-visible,
-.db > .section[aria-labelledby='db-no-score'] :focus-visible {
+.db > .section[aria-labelledby='rd-no-score'] :focus-visible {
   outline: var(--focus-width) solid var(--text-on-contrast);
   outline-offset: var(--focus-offset);
 }
@@ -755,9 +755,9 @@
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
     .db .stat,
-    .db .db-plan > .plate,
-    .db .db-rule,
-    .db .db-split__row {
+    .db .rd-plan > .plate,
+    .db .rd-rule,
+    .db .rd-split__row {
       animation: settle linear both;
       animation-timeline: view();
       animation-range: entry 0% entry 65%;
@@ -782,8 +782,8 @@
   .db .section {
     padding-block: var(--space-5) var(--space-4);
   }
-  .db-rule,
-  .db-split__row {
+  .rd-rule,
+  .rd-split__row {
     break-inside: avoid;
   }
 }

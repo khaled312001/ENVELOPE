@@ -15,7 +15,7 @@
  * the refusal. A design review that does any of those has failed, and only a presence
  * assertion says so.
  *
- * THE STATUS DASHBOARD IS NOT HERE. It moved to `dashboard.test.tsx`, and it was
+ * THE STATUS DASHBOARD IS NOT HERE. It moved to `readiness.test.tsx`, and it was
  * MOVED rather than copied: while its assertions lived in this file, `/dashboard`'s
  * coverage was invisibly supplied by `/`'s filename, so `route-coverage.test.ts`
  * could not tell a route with a test from a route without one.

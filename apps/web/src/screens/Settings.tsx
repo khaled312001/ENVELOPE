@@ -124,7 +124,7 @@ function Panel({
  * in a test. Everything a reader actually meets here — three forms, two
  * disclosures, twelve labels and the licence sentence — would be scanned by
  * nothing at all. `Work.tsx` exports `RunTable` for exactly this and
- * `Dashboard.tsx` exports `DashboardPanels`; the alternative is a page test that
+ * `Readiness.tsx` exports `ReadinessPanels`; the alternative is a page test that
  * measures the empty state and reports it as coverage.
  *
  * It takes the `account` as a prop rather than reading the session, so a test can

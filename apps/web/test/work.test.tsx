@@ -34,7 +34,7 @@
  * TWO RENDERS, AND THE SECOND ONE IS WHY `RunTable` IS EXPORTED. `renderToStaticMarkup`
  * runs no effects, so the page itself only ever reaches its signed-out branch here
  * and the table — six hand-written column headers and four hand-written qualifiers —
- * would be scanned by nothing at all. `Dashboard.tsx` already exports its panel set
+ * would be scanned by nothing at all. `Readiness.tsx` already exports its panel set
  * for the same reason and with the same justification: the alternative is a page
  * test that measures the empty state and reports it as coverage.
  *

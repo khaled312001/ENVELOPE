@@ -21,7 +21,7 @@ import { describe, expect, it } from 'vitest';
 
 import { PAGES } from '../src/pages.js';
 import ROUTE_DATA from '../src/routes.json' with { type: 'json' };
-import { ROUTES } from '../src/router.js';
+import { REDIRECTS, ROUTES } from '../src/router.js';
 
 /** `/` → `landing`, `/parking` → `parking-page`, and so on. */
 const SLUGS: Readonly<Record<string, string>> = {
@@ -41,7 +41,7 @@ const SLUGS: Readonly<Record<string, string>> = {
   '/sign-in': 'auth-pages',
   '/sign-up': 'auth-pages',
   '/settings': 'settings',
-  '/dashboard': 'dashboard',
+  '/readiness': 'readiness',
 };
 
 describe('route coverage', () => {
@@ -97,5 +97,48 @@ describe('route coverage', () => {
         `description "${spec.description}"`,
       );
     }
+  });
+});
+
+/**
+ * MOVED PATHS.
+ *
+ * `/dashboard` became `/readiness`, and the old path is in a user guide that has
+ * already been handed over. A rename without a redirect is link rot with a good
+ * explanation, and the failure is silent on both sides: nothing in the
+ * application knows the old path existed, and nothing in the guide knows it
+ * stopped.
+ *
+ * Three ways a redirect table can be wrong, and all three are here. It can point
+ * at a route that does not exist, which is a 404 with an extra hop. It can list a
+ * path that IS a route, which is a page that redirects to somewhere else and can
+ * never be reached. And the server's rules can disagree with the application's,
+ * which is the one that only shows up in production — so the generated
+ * `.htaccess` is read and checked against the same file.
+ */
+describe('redirects', () => {
+  it('sends every moved path to a route that exists', () => {
+    for (const [from, to] of Object.entries(REDIRECTS)) {
+      expect((ROUTES as readonly string[]).includes(to), `${from} → ${to}`).toBe(true);
+    }
+  });
+
+  it('never redirects a path that is itself a page', () => {
+    for (const from of Object.keys(REDIRECTS)) {
+      expect(
+        (ROUTES as readonly string[]).includes(from),
+        `${from} is both a route and a redirect, so it can never be reached`,
+      ).toBe(false);
+    }
+  });
+
+  it('is what the deployment writes into .htaccess', () => {
+    // The build reads `redirects.json`; this asserts it reads it into a rule with
+    // a 301 in it, rather than into a comment or a rewrite that serves the page
+    // at the old address. Read as source, because generating a release here would
+    // make a unit test build the site.
+    const build = readFileSync(new URL('../../../scripts/deploy/build.mjs', import.meta.url), 'utf8');
+    expect(build).toContain("redirects.json");
+    expect(build).toMatch(/R=301,L/);
   });
 });

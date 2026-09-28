@@ -1322,10 +1322,10 @@
 .lp-mark__inner { fill: var(--accent); }
 
 /* ---------------------------------------------------------------------------
- * Dashboard — the residue, and it is not this page's.
+ * Readiness — the residue, and it is not this page's.
  *
- * `.band-split` and `.exposure-table` are emitted by `screens/Dashboard.tsx` and by
- * nothing else. They belong in `dashboard.css`; they are kept here because deleting
+ * `.band-split` and `.exposure-table` are emitted by `screens/Readiness.tsx` and by
+ * nothing else. They belong in `readiness.css`; they are kept here because deleting
  * a rule another route depends on, in the same pass that rewrites this one, is a
  * silent visual regression no gate can see — typecheck is clean, every test passes,
  * and the dashboard simply loses its layout. Moving them is the `/dashboard` agent's

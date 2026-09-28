@@ -1,7 +1,7 @@
 /**
  * العربية — صفحة الجاهزية `/dashboard`.
  *
- * Held to `DashboardDictionary` by the type system, so this file cannot be missing a
+ * Held to `ReadinessDictionary` by the type system, so this file cannot be missing a
  * key and cannot grow one the English does not have. Every choice below is argued in
  * `docs/05-design/arabic-glossary.md`; the comments here record only what would
  * otherwise read as a mistranslation.
@@ -38,7 +38,7 @@
 
 import { createElement, Fragment, type ReactNode } from 'react';
 
-import type { DashboardDictionary } from './dashboard.en.js';
+import type { ReadinessDictionary } from './readiness.en.js';
 import { Verbatim } from './locale.js';
 
 /**
@@ -71,7 +71,7 @@ const SEED_RULES_BODY: ReactNode = createElement(
     'الرقم على هذه الصفحة.',
 );
 
-export const AR: DashboardDictionary = {
+export const AR: ReadinessDictionary = {
   /*
     The letters stay Latin. A، B، C are the engine's names for the three bands and
     they appear on the report and on every export; a reader matching this page

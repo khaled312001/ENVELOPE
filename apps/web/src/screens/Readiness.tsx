@@ -69,7 +69,7 @@
  *
  * TWO LANGUAGES, AND RULE 5 SURVIVES BOTH.
  *
- * Every sentence on this page comes from `i18n/dashboard.en.ts` or its Arabic
+ * Every sentence on this page comes from `i18n/readiness.en.ts` or its Arabic
  * counterpart, and the English module is the type the Arabic one is held to, so a
  * missing translation is a compile error rather than an English sentence rendering
  * under an Arabic frame.
@@ -87,11 +87,24 @@
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 
+/*
+  `DashboardView`, ON A SCREEN CALLED READINESS, AND THAT IS DELIBERATE.
+
+  The route, this component, its stylesheet, its ids and its test are all called
+  readiness now, because that is what the page reports and `dashboard` is the
+  word a reader reaches for when they mean uptime. The API's name for the same
+  payload did not change with them: `GET /api/dashboard` is a wire contract, and
+  a wire contract is renamed on its own schedule with its own compatibility
+  question, not as the tail end of a rename in the client that happens to share a
+  word with it. The mismatch is visible here on purpose rather than papered over
+  with a local alias, which would hide it at exactly the place somebody grepping
+  for the endpoint needs to find it.
+*/
 import { api, ApiError, type Actor, type DashboardView } from '../api/client.js';
 import { PageContents } from '../components/PageContents.js';
 import { Glyph } from '../components/SiteChrome.js';
-import { AR } from '../i18n/dashboard.ar.js';
-import { EN, type DashboardDictionary } from '../i18n/dashboard.en.js';
+import { AR } from '../i18n/readiness.ar.js';
+import { EN, type ReadinessDictionary } from '../i18n/readiness.en.js';
 import { useDict, Verbatim } from '../i18n/locale.js';
 // `Href`, not `Route`. Every CTA on this site carries a query — `/app?demo=…`,
 // `/app?step=…` — and a `Route`-only signature rejects all of them.
@@ -113,7 +126,7 @@ const CARS = WORKED.verified.exports.cars;
  * for is still a band the run reported, and inventing one would put a word on the
  * page that no rule produced.
  */
-const bandLabel = (t: DashboardDictionary, band: string): string =>
+const bandLabel = (t: ReadinessDictionary, band: string): string =>
   (t.bands as Record<string, string>)[band] ?? band;
 
 /**
@@ -122,7 +135,7 @@ const bandLabel = (t: DashboardDictionary, band: string): string =>
  * whole job is to say where it came from.
  *
  * The default is `snapshot`, which is the signed-out path and the only one
- * `pages.tsx` reaches `DashboardPanels` on directly.
+ * `pages.tsx` reaches `ReadinessPanels` on directly.
  */
 type Source = 'live' | 'snapshot';
 
@@ -176,7 +189,7 @@ const isUnsourced = (instrumentId: string): boolean => /PLACEHOLDER/i.test(instr
  * identity or a theme of its own; taking fewer props than the contract offers is
  * the one direction that is safe in both.
  */
-export function Dashboard({
+export function Readiness({
   actor,
   navigate,
 }: {
@@ -208,7 +221,7 @@ export function Dashboard({
 
   if (!actor) {
     return (
-      <DashboardPanels
+      <ReadinessPanels
         data={SNAPSHOT as DashboardView}
         navigate={navigate}
         source="snapshot"
@@ -253,7 +266,7 @@ export function Dashboard({
     );
   }
 
-  return <DashboardPanels data={data} navigate={navigate} source="live" />;
+  return <ReadinessPanels data={data} navigate={navigate} source="live" />;
 }
 
 /* =========================================================================
@@ -274,7 +287,7 @@ export function Dashboard({
  * renders no `<h1>` — `pages.tsx` opens the route with one, and two elements
  * claiming the top of the document is the same defect as two `#main`s.
  */
-export function DashboardPanels({
+export function ReadinessPanels({
   data,
   navigate,
   source = 'snapshot',
@@ -330,7 +343,7 @@ export function DashboardPanels({
         know whether they are looking at a live deployment or at a dated file, and
         every other sentence on the page depends on which.
       */}
-      {/* `.shell` is the column and `.db-dateline` is the measure. They are two
+      {/* `.shell` is the column and `.rd-dateline` is the measure. They are two
           elements rather than one class list: the shell centres its own box, so a
           paragraph carrying both had its 70-character measure centred inside the
           page column and read as centred text under a left-aligned title. */}
@@ -340,8 +353,8 @@ export function DashboardPanels({
             `unicode-bidi: isolate` so the full stop that ends this sentence cannot
             migrate to the wrong end of a version number on the Arabic page. The
             wrapper is outside the styled span rather than merged into it, so
-            `.db-ver` keeps the mono face it has always had. */}
-        <p className="db-dateline">
+            `.rd-ver` keeps the mono face it has always had. */}
+        <p className="rd-dateline">
           {source === 'live' ? (
             <>{t.dateline.live}</>
           ) : (
@@ -355,7 +368,7 @@ export function DashboardPanels({
           )}{' '}
           {t.dateline.engine}{' '}
           <Verbatim>
-            <span className="db-ver">{data.engineVersion}</span>
+            <span className="rd-ver">{data.engineVersion}</span>
           </Verbatim>
           .
         </p>
@@ -369,7 +382,7 @@ export function DashboardPanels({
         screen-reader user reading the page they asked for. Its prominence is
         carried by position, by the frame and by the drawn mark.
       */}
-      <div className="shell db-blocking">
+      <div className="shell rd-blocking">
         <div className="callout" data-state="variance">
           <span className="callout__mark">
             <Glyph name="never-claimed" />
@@ -396,15 +409,15 @@ export function DashboardPanels({
         </div>
       </div>
 
-      <PageContents entries={order.map((s) => ({ id: `db-${s.id}`, label: s.label }))} />
+      <PageContents entries={order.map((s) => ({ id: `rd-${s.id}`, label: s.label }))} />
 
       {/* --- 3. What is not ready ---------------------------------------- */}
-      <section className="shell section section--major railed" aria-labelledby="db-not-ready">
+      <section className="shell section section--major railed" aria-labelledby="rd-not-ready">
         {index('not-ready')}
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="db-not-ready">{t.notReady.title}</h2>
-            <p className="db-lede">
+            <h2 id="rd-not-ready">{t.notReady.title}</h2>
+            <p className="rd-lede">
               {t.notReady.ledeBefore} <em>{t.notReady.ledeEmphasis}</em>{' '}
               {t.notReady.ledeAfter}
             </p>
@@ -450,7 +463,7 @@ export function DashboardPanels({
                   <>
                     {t.notReady.definitions.annexLabel}{' '}
                     <Verbatim>
-                      <span className="db-ver">{r.annexVersion}</span>
+                      <span className="rd-ver">{r.annexVersion}</span>
                     </Verbatim>
                     {t.notReady.definitions.annexSeparator}
                     {r.annexSigned
@@ -512,28 +525,28 @@ export function DashboardPanels({
         AND THERE ARE NO DATES ON IT. An owner is a plan; a date is a promise, and
         this product does not make those — least of all on the page a funder reads.
       */}
-      <section className="shell section railed" aria-labelledby="db-change">
+      <section className="shell section railed" aria-labelledby="rd-change">
         {index('change')}
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="db-change">{t.change.title}</h2>
-            <p className="db-lede">{t.change.lede}</p>
+            <h2 id="rd-change">{t.change.title}</h2>
+            <p className="rd-lede">{t.change.lede}</p>
           </div>
 
           <div className="section__body">
-            <ol className="grid db-plan">
+            <ol className="grid rd-plan">
               <li className="plate">
-                <p className="db-owner">{t.change.architect.owner}</p>
+                <p className="rd-owner">{t.change.architect.owner}</p>
                 <h3 className="plate__title">{t.change.architect.title}</h3>
                 <p className="plate__subtitle">{t.change.architect.body}</p>
               </li>
               <li className="plate">
-                <p className="db-owner">{t.change.annex.owner}</p>
+                <p className="rd-owner">{t.change.annex.owner}</p>
                 <h3 className="plate__title">{t.change.annex.title}</h3>
                 <p className="plate__subtitle">{t.change.annex.body}</p>
               </li>
               <li className="plate">
-                <p className="db-owner">{t.change.schedule.owner}</p>
+                <p className="rd-owner">{t.change.schedule.owner}</p>
                 <h3 className="plate__title">{t.change.schedule.title}</h3>
                 <p className="plate__subtitle">{t.change.schedule.body}</p>
               </li>
@@ -543,12 +556,12 @@ export function DashboardPanels({
       </section>
 
       {/* --- 5. What has been run ---------------------------------------- */}
-      <section className="shell section railed" aria-labelledby="db-volume">
+      <section className="shell section railed" aria-labelledby="rd-volume">
         {index('volume')}
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="db-volume">{t.volume.title}</h2>
-            <p className="db-lede">
+            <h2 id="rd-volume">{t.volume.title}</h2>
+            <p className="rd-lede">
               {source === 'snapshot' ? (
                 <>{t.volume.ledeSnapshot}</>
               ) : (
@@ -582,8 +595,8 @@ export function DashboardPanels({
               <Stat label={t.volume.exported} value={String(volume.exported)} state="plain" />
             </div>
 
-            <h3 className="db-subhead">{t.volume.bindsTitle}</h3>
-            <p className="db-fine">{t.volume.bindsNote}</p>
+            <h3 className="rd-subhead">{t.volume.bindsTitle}</h3>
+            <p className="rd-fine">{t.volume.bindsNote}</p>
             {/* `runsShown` and not `runs`: the split is over the runs the payload
                 actually counted, and dividing by a larger total would draw three
                 bars that add up to less than the whole for no visible reason. */}
@@ -593,12 +606,12 @@ export function DashboardPanels({
       </section>
 
       {/* --- 6. Where the answers are least anchored ---------------------- */}
-      <section className="shell section railed" aria-labelledby="db-exposure">
+      <section className="shell section railed" aria-labelledby="rd-exposure">
         {index('exposure')}
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="db-exposure">{t.exposure.title}</h2>
-            <p className="db-lede">{t.exposure.lede}</p>
+            <h2 id="rd-exposure">{t.exposure.title}</h2>
+            <p className="rd-lede">{t.exposure.lede}</p>
           </div>
 
           <div className="section__body">
@@ -645,7 +658,7 @@ export function DashboardPanels({
                         </td>
                         <th
                           scope="row"
-                          className="db-param"
+                          className="rd-param"
                           data-label={t.exposure.columns.parameter}
                         >
                           {/* ONE ELEMENT, not two. Below the fold a schedule cell is
@@ -655,7 +668,7 @@ export function DashboardPanels({
                               identifier it qualifies. R9's rule is that the state is
                               in the same eyeful as the identifier; a wrapper is what
                               makes that survive the fold. */}
-                          <span className="db-param__id">
+                          <span className="rd-param__id">
                             {/* THE PARAMETER ID IS THE ENGINE'S. `rtl.css` isolates
                                 every `code` on an Arabic page, so the layout was
                                 already right — but only `Verbatim` carries
@@ -687,7 +700,7 @@ export function DashboardPanels({
                             so the fix for a basis that should not be public is always at
                             source and never a truncation on the page — an assumption
                             without a basis is not an assumption, it is a guess with a
-                            label. `apps/web/test/dashboard.test.tsx` scans the snapshot
+                            label. `apps/web/test/readiness.test.tsx` scans the snapshot
                             for the figures that may not reach a public page, which is
                             the same rule asserted from the other side.
 
@@ -729,7 +742,7 @@ export function DashboardPanels({
               comparison skips nulls. That is an API change, and it is not this
               page's to make.
             */}
-            <p className="db-note">
+            <p className="rd-note">
               {t.exposure.noteBefore}
               <Verbatim>
                 <span className="ident">apps/api</span>
@@ -741,12 +754,12 @@ export function DashboardPanels({
       </section>
 
       {/* --- 7. Applicable, and never assessed ---------------------------- */}
-      <section className="shell section railed" aria-labelledby="db-deferred">
+      <section className="shell section railed" aria-labelledby="rd-deferred">
         {index('deferred')}
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="db-deferred">{t.deferred.title}</h2>
-            <p className="db-lede">{t.deferred.lede}</p>
+            <h2 id="rd-deferred">{t.deferred.title}</h2>
+            <p className="rd-lede">{t.deferred.lede}</p>
           </div>
 
           <div className="section__body">
@@ -756,10 +769,10 @@ export function DashboardPanels({
                 <p>{t.deferred.emptyBody}</p>
               </div>
             ) : (
-              <ul className="db-rules">
+              <ul className="rd-rules">
                 {data.deferred.map((d) => (
-                  <li key={d.ruleId} className="db-rule">
-                    <p className="db-rule__head">
+                  <li key={d.ruleId} className="rd-rule">
+                    <p className="rd-rule__head">
                       {/* The rule id is the engine's, and it opens a line whose next
                           element is an Arabic chip. `Verbatim` outside the `code`,
                           for the same two reasons as the parameter id above: the
@@ -801,7 +814,7 @@ export function DashboardPanels({
                         is isolated as one run rather than three, so the two
                         separators stay between the same two identifiers on a
                         right-to-left page as on a left-to-right one. */}
-                    <p className="db-rule__meta">
+                    <p className="rd-rule__meta">
                       <Verbatim>
                         <span className="ident">{d.parameterId}</span> ·{' '}
                         {d.citation.clauseReference} ·{' '}
@@ -831,12 +844,12 @@ export function DashboardPanels({
         without that sentence would read as a check on the layout; they are a check on
         the drawings.
       */}
-      <section className="shell section railed" aria-labelledby="db-drawings">
+      <section className="shell section railed" aria-labelledby="rd-drawings">
         {index('drawings')}
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="db-drawings">{t.drawings.title}</h2>
-            <p className="db-lede">{t.drawings.lede}</p>
+            <h2 id="rd-drawings">{t.drawings.title}</h2>
+            <p className="rd-lede">{t.drawings.lede}</p>
           </div>
 
           <div className="section__body">
@@ -862,12 +875,12 @@ export function DashboardPanels({
         of anyone's to publish.
       */}
       {showRuns ? (
-        <section className="shell section railed" aria-labelledby="db-runs">
+        <section className="shell section railed" aria-labelledby="rd-runs">
           {index('runs')}
           <div className="railed__body">
             <div className="section__head">
-              <h2 id="db-runs">{t.runs.title}</h2>
-              <p className="db-lede">{t.runs.lede}</p>
+              <h2 id="rd-runs">{t.runs.title}</h2>
+              <p className="rd-lede">{t.runs.lede}</p>
             </div>
 
             <div className="section__body">
@@ -916,7 +929,7 @@ export function DashboardPanels({
                                 recorded them, with two separators between them. One
                                 isolate over the whole line, so the separators stay
                                 between the same two values in both directions. */}
-                            <span className="db-rule__meta">
+                            <span className="rd-rule__meta">
                               <Verbatim>
                                 {run.community} · {run.plotAreaM2} m²
                               </Verbatim>
@@ -927,7 +940,7 @@ export function DashboardPanels({
                               {bandLabel(t, run.governingBand)}
                             </span>
                             {/* The binding label is the engine's own words. */}
-                            <span className="db-rule__meta">
+                            <span className="rd-rule__meta">
                               <Verbatim>{run.bindingLabel}</Verbatim>
                             </span>
                           </td>
@@ -947,7 +960,7 @@ export function DashboardPanels({
                               nothing to check — the one conflation this whole product
                               refuses. Both figures come off the run.
                             */}
-                            <span className="db-rule__meta">
+                            <span className="rd-rule__meta">
                               {t.runs.ranOfTotal(
                                 String(run.invariants.ran ?? '—'),
                                 String(run.invariants.total),
@@ -977,7 +990,7 @@ export function DashboardPanels({
               )}
 
               {data.recentRuns.length > 0 && data.recentRuns.length < volume.runs ? (
-                <p className="db-fine">
+                <p className="rd-fine">
                   {t.runs.truncated(String(data.recentRuns.length), String(volume.runs))}
                 </p>
               ) : null}
@@ -992,11 +1005,11 @@ export function DashboardPanels({
         is the shape of the page itself — the thing it deliberately refuses to
         become.
       */}
-      <section className="shell section section--minor railed" aria-labelledby="db-no-score">
+      <section className="shell section section--minor railed" aria-labelledby="rd-no-score">
         {index('no-score')}
         <div className="railed__body">
           <div className="section__head">
-            <h2 id="db-no-score">{t.noScore.title}</h2>
+            <h2 id="rd-no-score">{t.noScore.title}</h2>
           </div>
 
           <div className="section__body">
@@ -1083,8 +1096,8 @@ function Swing({ effect }: { readonly effect: string }): JSX.Element {
   const pct = Number(effect) * 100;
   if (!Number.isFinite(pct) || pct <= 0) {
     return (
-      <span className="db-swing">
-        <span className="db-swing__figure" aria-hidden="true">
+      <span className="rd-swing">
+        <span className="rd-swing__figure" aria-hidden="true">
           —
         </span>
         <span className="sr-only">{t.exposure.noFigure}</span>
@@ -1093,10 +1106,10 @@ function Swing({ effect }: { readonly effect: string }): JSX.Element {
   }
   const width = Math.min(100, (pct / SWING_REFERENCE_PCT) * 100);
   return (
-    <span className="db-swing">
-      <span className="db-swing__figure">{pct.toFixed(1)}%</span>
+    <span className="rd-swing">
+      <span className="rd-swing__figure">{pct.toFixed(1)}%</span>
       <span
-        className="meter db-swing__bar"
+        className="meter rd-swing__bar"
         data-state="assumed"
         aria-hidden="true"
         style={{ '--meter-value': `${width.toFixed(2)}%` } as CSSProperties}
@@ -1134,15 +1147,15 @@ function BandSplit({
     );
   }
   return (
-    <ul className="db-split">
+    <ul className="rd-split">
       {/* The three bands in the dictionary's own key order, which is A, B, C in both
           languages: the letters are the engine's names for them. */}
       {Object.entries(t.bands).map(([key, label]) => {
         const n = bands[key] ?? 0;
         const pct = (n / total) * 100;
         return (
-          <li key={key} className="db-split__row">
-            <span className="db-split__label">{label}</span>
+          <li key={key} className="rd-split__row">
+            <span className="rd-split__label">{label}</span>
             <span
               className="meter"
               aria-hidden="true"
@@ -1150,7 +1163,7 @@ function BandSplit({
             >
               <span className="meter__fill" />
             </span>
-            <span className="db-split__count">
+            <span className="rd-split__count">
               {n} <span className="muted">{t.volume.split.of} {total}</span>
             </span>
           </li>

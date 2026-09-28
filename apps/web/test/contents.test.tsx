@@ -30,7 +30,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { StaticLocale } from '../src/i18n/locale.js';
-import { Dashboard } from '../src/screens/Dashboard.js';
+import { Readiness } from '../src/screens/Readiness.js';
 import Exports from '../src/screens/Exports.js';
 import { Landing } from '../src/screens/Landing.js';
 import Parking from '../src/screens/Parking.js';
@@ -46,7 +46,7 @@ const PAGES: readonly (readonly [string, () => ReactNode])[] = [
   ['/parking', () => <Parking {...pageProps()} />],
   ['/exports', () => <Exports {...pageProps()} />],
   ['/refusals', () => <Refusals {...pageProps()} />],
-  ['/dashboard', () => <Dashboard actor={null} navigate={() => {}} />],
+  ['/readiness', () => <Readiness actor={null} navigate={() => {}} />],
 ];
 
 const markupOf = (node: ReactNode): string => renderToStaticMarkup(<>{node}</>);
@@ -144,7 +144,7 @@ describe('the contents block', () => {
   it('is headed in Arabic on an Arabic page, with no English left in it', () => {
     const markup = renderToStaticMarkup(
       <StaticLocale locale="ar">
-        <Dashboard actor={null} navigate={() => {}} />
+        <Readiness actor={null} navigate={() => {}} />
       </StaticLocale>,
     );
     const nav = /<nav class="contents shell"[\s\S]*?<\/nav>/.exec(markup)?.[0] ?? '';

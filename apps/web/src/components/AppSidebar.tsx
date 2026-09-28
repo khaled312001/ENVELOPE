@@ -110,7 +110,7 @@ const GLYPH: Readonly<Record<Route, JSX.Element | null>> = {
   '/parking': null,
   '/exports': null,
   '/refusals': null,
-  '/dashboard': null,
+  '/readiness': null,
   '/sign-in': null,
   '/sign-up': null,
   '/app': (

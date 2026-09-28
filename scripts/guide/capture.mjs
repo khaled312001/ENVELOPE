@@ -212,14 +212,14 @@ const pub = await context();
     ['/parking', 'p05-parking'],
     ['/exports', 'p06-exports'],
     ['/refusals', 'p07-refusals'],
-    ['/dashboard', 'p08-readiness'],
+    ['/readiness', 'p08-readiness'],
     ['/no-such-page', 'p09-not-found'],
   ]) {
     await page.goto(url(path), { waitUntil: 'networkidle' });
     await shot(page, name, { top: true });
   }
-  await page.goto(url('/dashboard'), { waitUntil: 'networkidle' });
-  await shot(page, 'p08b-readiness-not-ready', { sel: 'section[aria-labelledby="db-not-ready"]' });
+  await page.goto(url('/readiness'), { waitUntil: 'networkidle' });
+  await shot(page, 'p08b-readiness-not-ready', { sel: 'section[aria-labelledby="rd-not-ready"]' });
 }
 await pub.ctx.close();
 
@@ -478,10 +478,10 @@ await step('the author sees the signature, and the readiness page', async () => 
   await A.goto(url(`/work?run=${runId}`), { waitUntil: 'networkidle' });
   await A.locator('.rn__file-list').waitFor();
   await shot(A, 'd10-author-after-review', { sel: 'section[aria-labelledby="rn-review"]' });
-  await A.goto(url('/dashboard'), { waitUntil: 'networkidle' });
-  await shot(A, 'd11-readiness-volume', { sel: 'section[aria-labelledby="db-volume"]' });
-  await shot(A, 'd12-readiness-exposure', { sel: 'section[aria-labelledby="db-exposure"]', maxH: 1100 });
-  await shot(A, 'd13-readiness-drawings', { sel: 'section[aria-labelledby="db-drawings"]' });
+  await A.goto(url('/readiness'), { waitUntil: 'networkidle' });
+  await shot(A, 'd11-readiness-volume', { sel: 'section[aria-labelledby="rd-volume"]' });
+  await shot(A, 'd12-readiness-exposure', { sel: 'section[aria-labelledby="rd-exposure"]', maxH: 1100 });
+  await shot(A, 'd13-readiness-drawings', { sel: 'section[aria-labelledby="rd-drawings"]' });
 });
 
 // ---------------------------------------------------------------------------

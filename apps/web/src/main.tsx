@@ -39,7 +39,7 @@ import './styles/landing.css';
 import './styles/parking-page.css';
 import './styles/exports-page.css';
 import './styles/refusals.css';
-import './styles/dashboard.css';
+import './styles/readiness.css';
 import './styles/not-found.css';
 import './styles/work.css';
 import './styles/antechamber.css';

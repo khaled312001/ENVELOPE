@@ -1226,7 +1226,7 @@ export function Landing({
           <p>{t.readiness.body}</p>
           <div className="cta lp-cta">
             {readinessHasNumbers ? (
-              <Link to="/dashboard" navigate={navigate} className="button button--primary">
+              <Link to="/readiness" navigate={navigate} className="button button--primary">
                 {t.readiness.numbers}
               </Link>
             ) : null}

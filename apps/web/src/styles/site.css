@@ -3,7 +3,7 @@
  *
  * Every structural rule the public pages hold in common lives here, and nowhere
  * else. A page stylesheet (`landing.css`, `parking-page.css`, `refusals.css`,
- * `dashboard.css`, `not-found.css`, `antechamber.css`) declares only selectors
+ * `readiness.css`, `not-found.css`, `antechamber.css`) declares only selectors
  * under its own class prefix and never adds a chassis rule — because six pages
  * each inventing a section rhythm is six section rhythms, and the misalignment
  * is read before a word of the copy is.

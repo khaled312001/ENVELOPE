@@ -108,7 +108,7 @@
     "shell": "workspace"
   },
   {
-    "path": "/dashboard",
+    "path": "/readiness",
     "title": "Deployment readiness — TOP.ai",
     "description": "What is not ready in this deployment, and the human action that would change each figure. Readiness, not uptime — nothing here monitors availability.",
     "navLabel": "Readiness",

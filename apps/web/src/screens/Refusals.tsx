@@ -270,7 +270,7 @@ function AsEmitted({ children }: { readonly children: ReactNode }): JSX.Element 
 /**
  * A file path, a status code or a type name, set as a specimen rather than as prose.
  *
- * `AsEmitted` sits OUTSIDE the `code`, as `Dashboard.tsx` does it, so `.rf-ident`
+ * `AsEmitted` sits OUTSIDE the `code`, as `Readiness.tsx` does it, so `.rf-ident`
  * keeps its mono face on both pages rather than inheriting `.verbatim`'s family.
  */
 function Ident({ children }: { readonly children: ReactNode }): JSX.Element {
@@ -740,7 +740,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
         <p>{t.unproven.authors}</p>
         <p>{t.unproven.readiness}</p>
         <div className="cta">
-          <Link to="/dashboard" navigate={navigate} className="button">
+          <Link to="/readiness" navigate={navigate} className="button">
             {t.unproven.cta}
           </Link>
           <p className="cta__note">{t.unproven.ctaNote}</p>

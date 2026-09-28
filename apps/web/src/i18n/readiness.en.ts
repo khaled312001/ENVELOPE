@@ -1,7 +1,7 @@
 /**
  * `/dashboard` — the readiness page, in English.
  *
- * `export type DashboardDictionary = typeof EN`, so this module IS the contract and
+ * `export type ReadinessDictionary = typeof EN`, so this module IS the contract and
  * `dashboard.ar.ts` is held to it. A missing Arabic key is a compile error rather
  * than a sentence that silently renders in the wrong language. NOTE THE ABSENCE OF
  * `as const`: with it every value would narrow to its own literal and the Arabic
@@ -382,4 +382,4 @@ export const EN = {
   },
 };
 
-export type DashboardDictionary = typeof EN;
+export type ReadinessDictionary = typeof EN;

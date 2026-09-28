@@ -26,7 +26,7 @@ import { describe, expect, it } from 'vitest';
 
 /*
   IMPORTED DIRECTLY, NOT THROUGH `PAGES`. This began as a workaround: `pages.tsx`
-  imports `Dashboard.tsx`, which imported `SiteChrome.tsx`, which imported
+  imports `Readiness.tsx`, which imported `SiteChrome.tsx`, which imported
   `pages.tsx` back — a cycle whose outcome depended on which module the runner
   reached first, and reaching `pages.tsx` first left `PAGES` undefined while
   `SiteChrome`'s module-scope `PRIMARY` was computed from it. The chrome now reads

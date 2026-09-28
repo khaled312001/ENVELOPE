@@ -82,7 +82,7 @@ interface WorkView {
 /**
  * A timestamp a reader can check, formatted without a locale.
  *
- * `Dashboard.tsx` makes this argument already and it holds here: `toLocaleString`
+ * `Readiness.tsx` makes this argument already and it holds here: `toLocaleString`
  * renders differently on the reader's machine than on the one the screenshot was
  * taken on, so a date in a bug report and a date on the screen stop matching. The
  * ISO date, sliced, is the same everywhere — and the same in both languages.

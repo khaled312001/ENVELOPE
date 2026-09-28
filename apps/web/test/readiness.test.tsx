@@ -37,7 +37,7 @@
   split, and the chrome now takes its nav labels from `page-meta.ts`, which imports no
   screen and therefore closes no loop.
 
-  The page is still rendered directly here. The ROUTE-level render — `PAGES['/dashboard'].component`
+  The page is still rendered directly here. The ROUTE-level render — `PAGES['/readiness'].component`
   inside the chrome, with the site-wide prohibitions over it — is covered by
   `shared-content.test.tsx`, which walks every route in `PAGES` and enters the graph
   through `App.js`. That is one route's coverage supplied by a file that covers all
@@ -47,7 +47,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import type { DashboardView } from '../src/api/client.js';
-import { Dashboard, DashboardPanels } from '../src/screens/Dashboard.js';
+import { Readiness, ReadinessPanels } from '../src/screens/Readiness.js';
 import SNAPSHOT from '../src/screens/readiness.json' with { type: 'json' };
 import WORKED from '../src/screens/worked-example.json' with { type: 'json' };
 import { expectSitewideProhibitions, stripTags } from './prohibitions.js';
@@ -166,7 +166,7 @@ const OTHER: DashboardView = {
 };
 
 const panels = (data: DashboardView = DASHBOARD, source: 'live' | 'snapshot' = 'live'): string =>
-  renderToStaticMarkup(<DashboardPanels data={data} navigate={() => {}} source={source} />);
+  renderToStaticMarkup(<ReadinessPanels data={data} navigate={() => {}} source={source} />);
 
 /**
  * The signed-out reading, from the build-time snapshot rather than from the
@@ -174,7 +174,7 @@ const panels = (data: DashboardView = DASHBOARD, source: 'live' | 'snapshot' = '
  * ships renders.
  */
 const signedOut = (): string =>
-  renderToStaticMarkup(<Dashboard actor={null} navigate={() => {}} />);
+  renderToStaticMarkup(<Readiness actor={null} navigate={() => {}} />);
 
 describe('the readiness page', () => {
   it('leads with readiness, not with volume', () => {
@@ -454,7 +454,7 @@ describe('the readiness route', () => {
     // obvious next move: a skeleton with placeholder figures in the tile positions,
     // because a grey rectangle where a count belongs is a number the reader
     // supplies themselves.
-    const markup = renderToStaticMarkup(<Dashboard actor={null} navigate={() => {}} />);
+    const markup = renderToStaticMarkup(<Readiness actor={null} navigate={() => {}} />);
     expect(markup).toContain('What is not ready');
     expect(markup).not.toContain('Reading the deployment');
     expect(markup).not.toMatch(/skeleton|placeholder-figure|shimmer/i);
@@ -465,7 +465,7 @@ describe('the readiness route', () => {
     // says so instead of rendering a dashboard of zeroes that look like
     // measurements.
     const markup = renderToStaticMarkup(
-      <Dashboard actor={{ id: 'k', name: 'Khaled Haggagy' }} navigate={() => {}} />,
+      <Readiness actor={{ id: 'k', name: 'Khaled Haggagy' }} navigate={() => {}} />,
     );
     expect(markup).toContain('Reading the deployment');
     expect(markup).not.toContain('What is not ready');

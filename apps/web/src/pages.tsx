@@ -30,7 +30,7 @@ import { NOT_FOUND_META, PAGE_META, type PageMeta } from './page-meta.js';
 import type { PageProps } from './Root.js';
 import type { Route } from './router.js';
 import Antechamber from './screens/Antechamber.js';
-import { Dashboard, DashboardPanels } from './screens/Dashboard.js';
+import { Readiness, ReadinessPanels } from './screens/Readiness.js';
 import Exports from './screens/Exports.js';
 import { Landing } from './screens/Landing.js';
 import NotFound from './screens/NotFound.js';
@@ -55,25 +55,25 @@ const COMPONENTS: Readonly<Record<Route, (p: PageProps) => JSX.Element>> = {
   '/sign-in': SignIn,
   '/sign-up': SignUp,
   '/settings': Settings,
-  /* `/dashboard` DISPATCHES ABOVE THE ACTOR CHECK — see `DashboardRoute` below,
+  /* `/dashboard` DISPATCHES ABOVE THE ACTOR CHECK — see `ReadinessRoute` below,
      which is a named component rather than an inline arrow because it reads the
      page heading out of the locale and an inline arrow cannot hold a hook. */
-  '/dashboard': (p) => <DashboardRoute {...p} />,
+  '/readiness': (p) => <ReadinessRoute {...p} />,
 };
 
 /**
  * `/dashboard`'s own opening, lifted out of the record so it can hold a hook.
  *
- * `DashboardPanels` opens on an `<h2>`, so this route shipped with no `<h1>` at all
+ * `ReadinessPanels` opens on an `<h2>`, so this route shipped with no `<h1>` at all
  * — a heading level skipped at the top of the document, on the page a reader is
- * most likely to have forwarded to them. It is here rather than in `Dashboard.tsx`
+ * most likely to have forwarded to them. It is here rather than in `Readiness.tsx`
  * because that component is a panel set reused by both the live and the snapshot
  * paths, and neither of them is "the page".
  *
  * THE HEADING IS READ FROM THE ROUTE RECORD, WHICH IS WHAT ITS FIRST COMMENT ALREADY
  * CLAIMED. It was typed instead, and the cost of that showed up the moment the
  * chrome learnt Arabic: every panel below rendered in Arabic under an English `<h1>`,
- * which is the largest string on the page. `t.routes['/dashboard'].footerLabel` is
+ * which is the largest string on the page. `t.routes['/readiness'].footerLabel` is
  * "Deployment readiness" in English — the same characters, from the record the
  * footer and the tab title already use — and «جاهزية النشر» in Arabic.
  *
@@ -88,17 +88,17 @@ const COMPONENTS: Readonly<Record<Route, (p: PageProps) => JSX.Element>> = {
  * never has to. Two of the landing page's calls to action used to land a visitor on
  * "Who is running this?", which asks for identity before giving anything.
  */
-function DashboardRoute(p: PageProps): JSX.Element {
+function ReadinessRoute(p: PageProps): JSX.Element {
   const t = useT();
   return (
     <div className="db">
       <section className="shell section section--opening">
-        <h1>{t.routes['/dashboard'].footerLabel}</h1>
+        <h1>{t.routes['/readiness'].footerLabel}</h1>
       </section>
       {p.actor ? (
-        <Dashboard actor={p.actor} navigate={p.navigate} />
+        <Readiness actor={p.actor} navigate={p.navigate} />
       ) : (
-        <DashboardPanels data={SNAPSHOT as DashboardView} navigate={p.navigate} />
+        <ReadinessPanels data={SNAPSHOT as DashboardView} navigate={p.navigate} />
       )}
     </div>
   );

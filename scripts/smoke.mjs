@@ -880,7 +880,7 @@ await step('the readiness page leads with what is not ready', async () => {
   // changed on purpose: `status` reads as uptime, and nothing here monitors
   // availability.
   await page.getByRole('link', { name: /^readiness$/i }).click();
-  await page.waitForURL('**/dashboard', { timeout: wait(8000) });
+  await page.waitForURL('**/readiness', { timeout: wait(8000) });
   await page.getByRole('heading', { name: /what is not ready/i }).waitFor({ timeout: wait(8000) });
 
   const t = await page.textContent('body');
@@ -989,7 +989,7 @@ await step('no screen scrolls sideways on a phone', async () => {
 
     await openNav();
     await page.getByRole('link', { name: /^readiness$/i }).click();
-    await page.waitForURL('**/dashboard', { timeout: wait(8000) });
+    await page.waitForURL('**/readiness', { timeout: wait(8000) });
     await page.waitForTimeout(300);
     await noSidewaysScroll(`readiness at ${width}px`);
     await nothingIsInvisible(`readiness at ${width}px`);
@@ -1283,7 +1283,7 @@ await step('every contents jump clears the sticky nav (WCAG 2.2 · 2.4.11)', asy
     Sampled at three points per page rather than one: the defect was uniform here,
     but a section that had opted out of the chassis would not be.
   */
-  for (const route of ['/', '/parking', '/exports', '/refusals', '/dashboard']) {
+  for (const route of ['/', '/parking', '/exports', '/refusals', '/readiness']) {
     await page.goto(new URL(route, BASE).href, { waitUntil: 'domcontentloaded' });
     // `domcontentloaded` is before React paints, and the list is React's.
     await page.locator('nav.contents').first().waitFor({ timeout: wait(10000) });
@@ -1462,6 +1462,32 @@ await step('the front page’s worked example opens as a run the visitor can mak
   }
 });
 
+/**
+ * THE OLD ADDRESS, WHICH IS IN A GUIDE THAT HAS ALREADY BEEN HANDED OVER.
+ *
+ * `/dashboard` became `/readiness`, and a rename without a working redirect is
+ * link rot with a good explanation. This is checked in a browser rather than by
+ * reading `redirects.json`, because there are two implementations of the same
+ * fact — a 301 in `.htaccess` for the live site and a `replaceState` in the router
+ * for development — and the failure mode is that one of them is right.
+ *
+ * THE ADDRESS IS ASSERTED, NOT JUST THE PAGE. Rendering readiness at the old URL
+ * would leave the address naming a page the reader is not looking at, and anyone
+ * who copied it would pass the dead one on.
+ */
+await step('a path that moved still arrives, and the address says where it went', async () => {
+  const moved = JSON.parse(
+    readFileSync(new URL('../apps/web/src/redirects.json', import.meta.url), 'utf8'),
+  );
+  for (const [from, to] of Object.entries(moved)) {
+    await page.goto(new URL(from, BASE).href, { waitUntil: 'domcontentloaded' });
+    await page.locator('main').first().waitFor({ timeout: wait(10000) });
+    const landed = new URL(page.url()).pathname.replace(/\/+$/, '') || '/';
+    if (landed !== to) throw new Error(`${from} landed at ${landed}, not ${to}`);
+    const body = await page.textContent('body');
+    if (/not here|404/i.test(body ?? '')) throw new Error(`${from} reached the 404 page`);
+  }
+});
 await browser.close();
 
 console.log(`\n${errors.length === 0 ? 'SMOKE PASSED' : `SMOKE FAILED — ${errors.length} problem(s)`}`);

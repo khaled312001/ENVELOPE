@@ -16,7 +16,7 @@ const ROUTES = [
   ['/parking', 'parking'],
   ['/exports', 'exports'],
   ['/refusals', 'refusals'],
-  ['/dashboard', 'dashboard'],
+  ['/readiness', 'dashboard'],
 ];
 
 mkdirSync(OUT, { recursive: true });

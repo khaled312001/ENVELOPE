@@ -163,6 +163,25 @@ writeFileSync(join(APP, 'tmp', 'restart.txt'), release + '\n');
 cpSync(join(ROOT, 'apps', 'web', 'dist'), WEB, { recursive: true });
 
 const routes = JSON.parse(readFileSync(join(ROOT, 'apps', 'web', 'src', 'routes.json'), 'utf8'));
+
+/*
+  MOVED PATHS, AS REAL 301s.
+
+  Read from the same `redirects.json` the router reads, so the server and the
+  application cannot disagree about where a moved path went. The router's copy is
+  the fallback for development and for a host whose rewrite rules are wrong; this
+  is the one a reader on the live site actually meets, and it is the one that
+  tells a search engine and a link checker that the move is permanent.
+
+  Emitted BEFORE the page rules below, because those rewrite every known path to
+  `index.html` with `[L]` and a redirect placed after them would never be reached.
+*/
+const redirects = JSON.parse(
+  readFileSync(join(ROOT, 'apps', 'web', 'src', 'redirects.json'), 'utf8'),
+);
+const redirectRules = Object.entries(redirects)
+  .map(([from, to]) => `  RewriteRule ^${from.replace(/^\//, '')}/?$ ${to} [R=301,L]`)
+  .join('\n');
 const pages = routes
   .map((r) => r.path)
   .filter((p) => p !== '/')
@@ -189,6 +208,9 @@ ${
 }
   # The engine is its own application, configured in api/.htaccess.
   RewriteRule ^api(/.*)?$ - [L]
+
+  # Paths that moved. Permanent, and before the page rules, which end in [L].
+${redirectRules}
 
   # A file that exists is served as it is.
   RewriteCond %{REQUEST_FILENAME} -f

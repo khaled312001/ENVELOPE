@@ -1506,7 +1506,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
               {t.unproven.clauses.before}
               <code>[NOT SOURCED]</code>
               {t.unproven.clauses.mid}{' '}
-              <Link to="/dashboard" navigate={navigate}>
+              <Link to="/readiness" navigate={navigate}>
                 {t.unproven.clauses.link}
               </Link>
               {t.unproven.clauses.after}

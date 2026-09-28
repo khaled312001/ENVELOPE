@@ -75,7 +75,7 @@ option, the binding band's letter.
 |---|---|---|
 | `/` | 6,241 px² → **1,696 px²** | 16.7× → **61.4×** |
 | `/work` | 50,829 px² → **0** | — |
-| `/parking`, `/refusals`, `/app`, `/dashboard` | 4,545 px² → **0** | — |
+| `/parking`, `/refusals`, `/app`, `/readiness` | 4,545 px² → **0** | — |
 
 §13.1 asks for amber to be the loudest thing on the page. Every chromatic pixel that is
 not amber competes with it, and the nav's call to action was the one that appeared on

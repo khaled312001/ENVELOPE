@@ -167,6 +167,19 @@ export const AR: ChromeDictionary = {
       navLabel: null,
       footerLabel: 'أعمالك',
     },
+    '/settings': {
+      title: 'الإعدادات — TOP.ai',
+      /*
+        The description carries the disclosure, not only the feature list. A reader
+        arriving from a search result is entitled to know that the licence field
+        records an assertion before they type a number into it — «تُسجَّل ولا
+        يُتحقَّق منها», the same words the page itself uses.
+      */
+      description:
+        'اسمك ورقم رخصتك وكلمة المرور — وما يفعله كلٌّ منها بتشغيلة توقّعها. الرخصة تُسجَّل ولا يُتحقَّق منها؛ وهذه الصفحة تقول ذلك عند الحقل الذي يُكتب فيه الرقم.',
+      navLabel: null,
+      footerLabel: 'الإعدادات',
+    },
     '/dashboard': {
       title: 'جاهزية النشر — TOP.ai',
       description:

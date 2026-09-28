@@ -242,6 +242,29 @@ const loginBody = z.object({
   password: z.string().min(1).max(PASSWORD_MAX),
 });
 
+/**
+ * The profile a reader may change about themselves.
+ *
+ * EMAIL IS NOT IN HERE. It is the account's identity, it is what a share is
+ * addressed to, and changing it without a mailer to confirm the new address would
+ * let somebody move an account to an inbox nobody proved they hold. The route that
+ * changes an email arrives with the mailer, and `/refusals` says so.
+ *
+ * A licence may be CLEARED, which is why the empty string is allowed where
+ * `registerBody` takes an optional. Someone who asserted a licence they no longer
+ * hold must be able to withdraw it, and an omitted field would mean "leave it" —
+ * two different intentions that one optional cannot carry.
+ */
+const profileBody = z.object({
+  name: z.string().trim().min(1).max(120),
+  licence: z.string().trim().max(120),
+});
+
+const passwordBody = z.object({
+  current: z.string().min(1).max(PASSWORD_MAX),
+  next: z.string().min(1).max(PASSWORD_MAX),
+});
+
 const draftBody = z.object({
   /* Opaque to this layer. The shape belongs to the form that wrote it. */
   payload: z.unknown(),
@@ -396,6 +419,67 @@ export function registerAuthRoutes(app: FastifyInstance, repo: AccountRepository
     if (!session) return reply.send({ account: null });
     const account = await repo.getAccountById(session.accountId);
     return reply.send({ account: account ? publicAccount(account) : null });
+  });
+
+  /**
+   * Change the name and the licence this account carries.
+   *
+   * THE LICENCE IS RECORDED AND NEVER VERIFIED, here as everywhere. Nothing on this
+   * route checks it against a registry, because no registry is integrated; the
+   * screen that offers this field says so in words, and `/refusals` says it again.
+   * A route that quietly accepted a licence number would be the place that claim
+   * started looking checked.
+   *
+   * The name change is retroactive to nothing. Every `USER_SET` value already
+   * emitted carries the name that was current when it was signed, and a run is
+   * never rewritten — §13.4. So a reader who changes their name here will see the
+   * old one on old runs, which is correct: it is what the signature said.
+   */
+  app.patch('/api/auth/me', async (request, reply) => {
+    const session = await sessionFrom(repo, request);
+    if (!session) return reply.code(401).send({ error: 'not signed in' });
+
+    const body = profileBody.parse(request.body);
+    await repo.updateProfile(session.accountId, body.name, body.licence === '' ? null : body.licence);
+
+    const account = await repo.getAccountById(session.accountId);
+    return reply.send({ account: account ? publicAccount(account) : null });
+  });
+
+  /**
+   * Change the password, and sign every other device out.
+   *
+   * THREE PROPERTIES, AND EACH ONE IS THE REASON THE ROUTE EXISTS RATHER THAN A
+   * REFINEMENT OF IT.
+   *
+   * 1. The current password is required. Without it, anyone who reaches an unlocked
+   *    browser takes the account permanently instead of borrowing it.
+   * 2. Every other session is destroyed. The commonest reason to change a password
+   *    is that somebody else may hold it, and a change that left their session alive
+   *    would be a security control that does nothing about the thing it was used
+   *    for. `deleteSessionsFor` then a fresh cookie: this device stays signed in,
+   *    every other one does not.
+   * 3. A wrong current password is 403 and says so plainly. There is nothing to
+   *    protect by being vague — the caller has already proved they hold the session.
+   */
+  app.post('/api/auth/password', async (request, reply) => {
+    const session = await sessionFrom(repo, request);
+    if (!session) return reply.code(401).send({ error: 'not signed in' });
+
+    const body = passwordBody.parse(request.body);
+    const account = await repo.getAccountById(session.accountId);
+    if (!account) return reply.code(401).send({ error: 'not signed in' });
+
+    if (!(await verifyPassword(body.current, account.passwordHash))) {
+      return reply.code(403).send({ error: 'that is not the current password' });
+    }
+    const problem = passwordProblem(body.next);
+    if (problem) return reply.code(400).send({ error: problem });
+
+    await repo.updatePasswordHash(account.accountId, await hashPassword(body.next));
+    await repo.deleteSessionsFor(account.accountId);
+    await setSession(reply, request, account.accountId);
+    return reply.send({ changed: true, otherSessionsEnded: true });
   });
 
   /* ======================================================================

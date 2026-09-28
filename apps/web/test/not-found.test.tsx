@@ -57,7 +57,7 @@ function renderAt(pathname: string): string {
   });
   try {
     return renderToStaticMarkup(
-      <Page navigate={() => {}} actor={null} setActor={() => {}} search="" />,
+      <Page navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />,
     );
   } finally {
     Reflect.deleteProperty(globalThis, 'window');
@@ -67,7 +67,7 @@ function renderAt(pathname: string): string {
 /** The page as a host with no `window` renders it: no address, and no chip. */
 const markup = (): string =>
   renderToStaticMarkup(
-    <Page navigate={() => {}} actor={null} setActor={() => {}} search="" />,
+    <Page navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />,
   );
 
 /** The specimen chip's text, or `null` when the page rendered no chip at all. */

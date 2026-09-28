@@ -102,7 +102,7 @@ const DICT_AR = stripped('../src/i18n/work.ar.ts');
  */
 const markup = (): string =>
   renderToStaticMarkup(
-    <Work navigate={() => {}} actor={null} setActor={() => {}} search="" />,
+    <Work navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />,
   );
 
 const text = (): string => stripTags(markup()).replace(/\s+/g, ' ');
@@ -376,7 +376,7 @@ describe('/work in Arabic', () => {
     renderToStaticMarkup(<StaticLocale locale="ar">{node}</StaticLocale>);
 
   const page = (): string =>
-    ar(<Work navigate={() => {}} actor={null} setActor={() => {}} search="" />);
+    ar(<Work navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />);
 
   /** Every qualifier a row can carry: signed and unsigned, shared, draft, a named band. */
   const ROWS: readonly RunRow[] = [

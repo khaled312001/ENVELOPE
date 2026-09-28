@@ -35,6 +35,7 @@ const SLUGS: Readonly<Record<string, string>> = {
      would turn the missing-file assertion below into the thing it is guarding
      against. */
   '/work': 'work',
+  '/settings': 'settings',
   '/dashboard': 'dashboard',
 };
 

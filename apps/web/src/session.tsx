@@ -46,6 +46,18 @@ interface SessionValue {
   }) => Promise<void>;
   readonly signOut: () => Promise<void>;
   readonly refresh: () => Promise<void>;
+  /**
+   * Change the name and the licence, and update the local copy in the same call.
+   *
+   * IT LIVES HERE RATHER THAN ON THE PAGE for the reason `setActor` lives on
+   * `Root`: the account name is rendered in three places at once — the rail, the
+   * header badge and the settings form — and a page that called the API directly
+   * would change the row while every other copy of the name went on showing the
+   * old one until a reload.
+   */
+  readonly updateProfile: (input: { name: string; licence: string }) => Promise<void>;
+  /** Change the password. Every other device is signed out; this one is not. */
+  readonly changePassword: (input: { current: string; next: string }) => Promise<void>;
 }
 
 const SessionContext = createContext<SessionValue>({
@@ -55,6 +67,8 @@ const SessionContext = createContext<SessionValue>({
   signUp: async () => {},
   signOut: async () => {},
   refresh: async () => {},
+  updateProfile: async () => {},
+  changePassword: async () => {},
 });
 
 export function SessionProvider({ children }: { readonly children: ReactNode }): JSX.Element {
@@ -114,9 +128,26 @@ export function SessionProvider({ children }: { readonly children: ReactNode }):
     }
   }, []);
 
+  const updateProfile = useCallback(async (input: { name: string; licence: string }) => {
+    const { account: saved } = await auth.updateProfile(input);
+    setAccount(saved);
+  }, []);
+
+  /*
+    THE PASSWORD CHANGE DOES NOT TOUCH `account`, AND THAT IS THE POINT.
+
+    Nothing about the account's public fields changes, so re-setting them would
+    only re-render three screens for no reason. What DOES change is every other
+    session — the server destroys them and hands this device a fresh cookie, which
+    the browser stores without anything here doing so.
+  */
+  const changePassword = useCallback(async (input: { current: string; next: string }) => {
+    await auth.changePassword(input);
+  }, []);
+
   const value = useMemo<SessionValue>(
-    () => ({ state, account, signIn, signUp, signOut, refresh }),
-    [state, account, signIn, signUp, signOut, refresh],
+    () => ({ state, account, signIn, signUp, signOut, refresh, updateProfile, changePassword }),
+    [state, account, signIn, signUp, signOut, refresh, updateProfile, changePassword],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

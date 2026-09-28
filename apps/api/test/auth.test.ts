@@ -271,3 +271,206 @@ describe('drafts', () => {
     expect(res.statusCode).toBeGreaterThanOrEqual(400);
   });
 });
+
+/* ==========================================================================
+ * CHANGING WHAT THE ACCOUNT SAYS
+ *
+ * Two routes that had no HTTP surface for a long time while the storage for
+ * both was already written and already covered by `store-contract`. That is the
+ * shape of a half-built feature: the hard part done, the reachable part missing,
+ * and nothing failing to say so.
+ * ======================================================================= */
+
+describe('editing the profile', () => {
+  it('changes the name, and says the new one back', async () => {
+    const up = await app.inject({ method: 'POST', url: '/api/auth/register', payload: GOOD });
+    const cookie = `envelope_session=${cookieFrom(up.headers)}`;
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/auth/me',
+      headers: { cookie },
+      payload: { name: 'Khaled Ahmed', licence: '' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().account.name).toBe('Khaled Ahmed');
+
+    // And it survives the round trip, rather than being echoed back unstored.
+    const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
+    expect(me.json().account.name).toBe('Khaled Ahmed');
+  });
+
+  it('lets a licence be cleared, not only replaced', async () => {
+    const up = await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { ...GOOD, licence: 'ENG-12345' },
+    });
+    const cookie = `envelope_session=${cookieFrom(up.headers)}`;
+    expect(up.json().account.licence).toBe('ENG-12345');
+
+    // The whole reason `profileBody.licence` is a required string that may be
+    // empty rather than an optional: somebody who asserted a licence they no
+    // longer hold must be able to withdraw the assertion. An optional field
+    // cannot express "clear it" — omitted would mean "leave it".
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/auth/me',
+      headers: { cookie },
+      payload: { name: 'Khaled', licence: '' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().account.licence ?? null).toBeNull();
+  });
+
+  it('refuses a signed-out caller', async () => {
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/auth/me',
+      payload: { name: 'Somebody Else', licence: '' },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('refuses an empty name rather than storing one', async () => {
+    const up = await app.inject({ method: 'POST', url: '/api/auth/register', payload: GOOD });
+    const cookie = `envelope_session=${cookieFrom(up.headers)}`;
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/auth/me',
+      headers: { cookie },
+      payload: { name: '   ', licence: '' },
+    });
+    // A blank name would erase the attribution on every `USER_SET` value this
+    // account signs from here on. 400 exactly: `server.ts` turns a ZodError into
+    // a 400 with the message, and a 500 here would mean the schema was not what
+    // rejected it.
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('cannot change the email — identity is not a profile field', async () => {
+    const up = await app.inject({ method: 'POST', url: '/api/auth/register', payload: GOOD });
+    const cookie = `envelope_session=${cookieFrom(up.headers)}`;
+    await app.inject({
+      method: 'PATCH',
+      url: '/api/auth/me',
+      headers: { cookie },
+      payload: { name: 'Khaled', licence: '', email: 'someone.else@example.com' },
+    });
+    const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
+    // Zod strips it; this asserts the STRIPPING, which is the security property.
+    // A share is addressed to an email, so moving one without proving the new
+    // inbox would hand somebody else's shared runs to whoever typed the address.
+    expect(me.json().account.email).toBe('khaled@example.com');
+  });
+});
+
+describe('changing the password', () => {
+  it('changes it, and the new one works while the old one does not', async () => {
+    const up = await app.inject({ method: 'POST', url: '/api/auth/register', payload: GOOD });
+    const cookie = `envelope_session=${cookieFrom(up.headers)}`;
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/password',
+      headers: { cookie },
+      payload: { current: GOOD.password, next: 'a different long secret' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().otherSessionsEnded).toBe(true);
+
+    const old = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: GOOD.email, password: GOOD.password },
+    });
+    expect(old.statusCode).toBe(401);
+
+    const fresh = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: GOOD.email, password: 'a different long secret' },
+    });
+    expect(fresh.statusCode).toBe(200);
+  });
+
+  it('ends every OTHER session and keeps this one', async () => {
+    const up = await app.inject({ method: 'POST', url: '/api/auth/register', payload: GOOD });
+    const first = `envelope_session=${cookieFrom(up.headers)}`;
+
+    // A second device.
+    const other = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: GOOD.email, password: GOOD.password },
+    });
+    const second = `envelope_session=${cookieFrom(other.headers)}`;
+
+    const changed = await app.inject({
+      method: 'POST',
+      url: '/api/auth/password',
+      headers: { cookie: second },
+      payload: { current: GOOD.password, next: 'a different long secret' },
+    });
+    expect(changed.statusCode).toBe(200);
+
+    // THE POINT OF THE ROUTE. The commonest reason to change a password is that
+    // somebody else may hold it; a change that left their session alive would be
+    // a security control that does nothing about the thing it was used for.
+    const stale = await app.inject({
+      method: 'GET',
+      url: '/api/auth/me',
+      headers: { cookie: first },
+    });
+    expect(stale.json().account).toBeNull();
+
+    // The device that did it stays signed in, on a fresh cookie.
+    const kept = `envelope_session=${cookieFrom(changed.headers)}`;
+    const still = await app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie: kept } });
+    expect(still.json().account.email).toBe('khaled@example.com');
+  });
+
+  it('refuses without the current password', async () => {
+    const up = await app.inject({ method: 'POST', url: '/api/auth/register', payload: GOOD });
+    const cookie = `envelope_session=${cookieFrom(up.headers)}`;
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/password',
+      headers: { cookie },
+      payload: { current: 'not the password', next: 'a different long secret' },
+    });
+    expect(res.statusCode).toBe(403);
+
+    // And the old password still works — a failed change changed nothing.
+    const still = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: GOOD.email, password: GOOD.password },
+    });
+    expect(still.statusCode).toBe(200);
+  });
+
+  it('holds the new password to the same length rule as a new account', async () => {
+    const up = await app.inject({ method: 'POST', url: '/api/auth/register', payload: GOOD });
+    const cookie = `envelope_session=${cookieFrom(up.headers)}`;
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/password',
+      headers: { cookie },
+      payload: { current: GOOD.password, next: 'short' },
+    });
+    // A change route with a weaker rule than the register route is a back door
+    // into a weak password, reachable by anyone who signs up and immediately
+    // changes it.
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('refuses a signed-out caller', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/password',
+      payload: { current: GOOD.password, next: 'a different long secret' },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+});

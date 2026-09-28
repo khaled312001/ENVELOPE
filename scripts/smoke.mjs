@@ -39,6 +39,8 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 let passingHostCheck = false;
+/** The one URL whose 4xx is being asked for right now, or null. */
+let expectedRefusal = null;
 page.on('console', (m) => {
   if (m.type() !== 'error') return;
   // The CDN's own browser check, answered once before the walk starts (see below).
@@ -48,6 +50,15 @@ page.on('console', (m) => {
   // 404 status (a dev server answers 200), and the browser logs that document load
   // as an error; it is asserted on below rather than counted here.
   if (/status of 404/.test(m.text()) && at.endsWith('/no-such-page')) return;
+  /*
+    A REFUSAL A STEP ASKED FOR IS NOT A DEFECT, and the allowance is narrow on
+    purpose: one URL, and only while a step has said it is about to provoke one.
+    The `/settings` steps drive a wrong current password and a short new one, both
+    of which the server must refuse — the browser logs each 4xx as a resource
+    error, and counting those would make "the refusal works" and "the page is
+    broken" the same result.
+  */
+  if (expectedRefusal && at.endsWith(expectedRefusal)) return;
   errors.push(`console: ${m.text()}${at ? ` (${at})` : ''}`);
 });
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
@@ -58,6 +69,9 @@ const step = async (label, fn) => {
 };
 
 const BASE = process.env.SMOKE_URL ?? 'http://localhost:5173/';
+
+/** The account the `/settings` steps at the end of this file make and then change. */
+const SMOKE_PASSWORD = 'a correct horse battery staple';
 
 /**
  * Every wait below was sized against a dev server on this machine. Pointed at a
@@ -1015,6 +1029,160 @@ await step('every route renders in Arabic, right to left, and says nothing in En
   await page.evaluate(() => localStorage.setItem('envelope.locale', 'en'));
   await page.setViewportSize({ width: 1440, height: 900 });
   if (found.length > 0) throw new Error(`${found.length} problem(s): ${found.join(' | ')}`);
+});
+
+/* ==========================================================================
+ * `/settings` — THE TWO MUTATIONS, DRIVEN.
+ *
+ * Last, and deliberately: this step registers an account, and every step above
+ * runs as an actor with no account. Running it earlier would put a name in the
+ * rail and a session cookie on the page for the whole walk, which is a different
+ * product from the one the rest of this file measures.
+ *
+ * It is here rather than only in `settings.test.tsx` because a render test cannot
+ * see either of the things that can actually be wrong: whether the PATCH reaches
+ * the server and comes back in the name the rail draws, and whether a refused
+ * password change leaves the account alone. Both are round trips.
+ * ======================================================================= */
+
+await step('the settings page saves a name, and the rail redraws with it', async () => {
+  // Registered through the API, not the account panel. This step is about the
+  // settings page; driving the sign-up form to reach it would make a failure in
+  // that form look like a failure here, and the antechamber has its own steps.
+  const email = `smoke-${Date.now()}@example.com`;
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+  const made = await page.evaluate(
+    async ([address, password]) => {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: address, password, name: 'Khaled Haggagy', licence: 'DM-1' }),
+      });
+      return res.status;
+    },
+    [email, SMOKE_PASSWORD],
+  );
+  if (made !== 201) throw new Error(`could not register a test account: ${made}`);
+
+  await page.goto(`${BASE.replace(/\/$/, '')}/settings`, { waitUntil: 'networkidle' });
+  await page.getByRole('heading', { name: /who you are|من أنت/i }).waitFor({ timeout: wait(8000) });
+
+  const name = page.getByLabel(/^Name$/);
+  await name.fill('Khaled A. Haggagy');
+  await page.getByRole('button', { name: /save name and licence/i }).click();
+  await page.getByText(/^Saved\.$/).waitFor({ timeout: wait(8000) });
+
+  // THE POINT OF THE ROUND TRIP: the rail is drawn from the SESSION, not from the
+  // form, so it only says the new name if the server stored it and the session
+  // picked the stored account back up.
+  const rail = page.getByRole('navigation', { name: /your workspace/i });
+  await rail.getByText('Khaled A. Haggagy').waitFor({ timeout: wait(8000) });
+
+  // And it survives a reload, which is the difference between stored and echoed.
+  await page.reload({ waitUntil: 'networkidle' });
+  const stored = await page.getByLabel(/^Name$/).inputValue();
+  if (stored !== 'Khaled A. Haggagy') throw new Error(`the name did not persist: "${stored}"`);
+});
+
+await step('a licence can be withdrawn, not only replaced', async () => {
+  await page.getByLabel(/licence number/i).fill('');
+  await page.getByRole('button', { name: /save name and licence/i }).click();
+  await page.getByText(/^Saved\.$/).waitFor({ timeout: wait(8000) });
+  await page.reload({ waitUntil: 'networkidle' });
+  const left = await page.getByLabel(/licence number/i).inputValue();
+  // Somebody who no longer holds a licence has to be able to withdraw the
+  // assertion. An optional field could not express it — omitted means "leave it".
+  if (left !== '') throw new Error(`the licence came back as "${left}"`);
+});
+
+expectedRefusal = '/api/auth/password';
+await step('a wrong current password is refused, in the server’s own sentence', async () => {
+  await page.getByLabel(/current password/i).fill('not the password');
+  await page.getByLabel(/^New password$/).fill('another long secret phrase');
+  await page.getByLabel(/new password again/i).fill('another long secret phrase');
+  await page.getByRole('button', { name: /^change password$/i }).click();
+  await page
+    .getByText(/that is not the current password/i)
+    .waitFor({ timeout: wait(8000) });
+});
+
+await step('the confirmation field is checked here, and the length is not', async () => {
+  await page.getByLabel(/current password/i).fill(SMOKE_PASSWORD);
+  await page.getByLabel(/^New password$/).fill('another long secret phrase');
+  await page.getByLabel(/new password again/i).fill('a different long secret');
+  await page.getByRole('button', { name: /^change password$/i }).click();
+  await page.getByText(/these two do not match/i).waitFor({ timeout: wait(4000) });
+
+  // A short password is refused BY THE SERVER, in the server's words — the form
+  // holds no second copy of the rule that could disagree with the one enforced.
+  await page.getByLabel(/^New password$/).fill('short');
+  await page.getByLabel(/new password again/i).fill('short');
+  await page.getByRole('button', { name: /^change password$/i }).click();
+  await page.getByText(/at least 12 characters/i).waitFor({ timeout: wait(8000) });
+});
+
+expectedRefusal = null;
+await step('changing the password says every other device was signed out', async () => {
+  await page.getByLabel(/current password/i).fill(SMOKE_PASSWORD);
+  await page.getByLabel(/^New password$/).fill('another long secret phrase');
+  await page.getByLabel(/new password again/i).fill('another long secret phrase');
+  await page.getByRole('button', { name: /^change password$/i }).click();
+  await page
+    .getByText(/every other device has been signed out/i)
+    .waitFor({ timeout: wait(10000) });
+
+  // This device is NOT signed out: the server hands it a fresh cookie, and the
+  // rail would lose the name if it had not.
+  const rail = page.getByRole('navigation', { name: /your workspace/i });
+  await rail.getByText('Khaled A. Haggagy').waitFor({ timeout: wait(5000) });
+});
+
+await step('the settings page offers no control the server cannot honour', async () => {
+  const email = page.getByLabel(/^Email$/);
+  // `!== null`, not truthiness: a boolean attribute renders as `readonly=""`, and
+  // the first version of this check read that empty string as "not present" —
+  // reporting an editable email on a field that is read-only.
+  if ((await email.getAttribute('readonly')) === null) {
+    throw new Error('the email field is editable');
+  }
+  // `readOnly`, not `disabled`: a disabled input is skipped by keyboard
+  // navigation, so a reader tabbing the form would never reach the sentence that
+  // explains it.
+  if (await email.isDisabled()) throw new Error('the email field is disabled, not read-only');
+
+  const body = (await page.locator('body').innerText()).toLowerCase();
+  for (const absent of ['two-factor', 'delete account', 'api key', 'billing']) {
+    if (body.includes(absent)) throw new Error(`/settings offers "${absent}"`);
+  }
+});
+
+await step('the settings page paints no amber', async () => {
+  // §13.1: amber is `ASSUMED` and nothing on this page is an assumed value. A
+  // stylesheet gate cannot see this — only a browser knows what was painted.
+  const amber = await page.evaluate(() => {
+    const ink = getComputedStyle(document.documentElement)
+      .getPropertyValue('--uncertain')
+      .trim()
+      .toLowerCase();
+    if (!ink) return 'no --uncertain token';
+    const hit = [...document.querySelectorAll('main *')].find((el) => {
+      const s = getComputedStyle(el);
+      return [s.color, s.backgroundColor, s.borderTopColor, s.borderLeftColor].some(
+        (v) => v && v !== 'rgba(0, 0, 0, 0)' && v.toLowerCase() === ink,
+      );
+    });
+    return hit ? hit.className || hit.tagName : null;
+  });
+  if (amber && amber !== 'no --uncertain token') {
+    throw new Error(`amber painted on /settings by "${amber}"`);
+  }
+});
+
+await step('the settings page signs out of everywhere', async () => {
+  await page.getByRole('button', { name: /sign out everywhere/i }).click();
+  // The page does not redirect; it redraws as the signed-out branch, which is the
+  // branch a stranger with the bookmark sees.
+  await page.getByText(/there is no account signed in/i).waitFor({ timeout: wait(8000) });
 });
 
 await browser.close();

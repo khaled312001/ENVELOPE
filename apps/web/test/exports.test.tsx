@@ -60,7 +60,7 @@ import {
 const X = WORKED.verified.exports;
 
 const markup = (): string =>
-  renderToStaticMarkup(<Exports navigate={() => {}} actor={null} setActor={() => {}} search="" />);
+  renderToStaticMarkup(<Exports navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />);
 
 /** What a reader reads: tags stripped, entities that matter decoded, whitespace collapsed. */
 const text = (): string =>
@@ -197,7 +197,7 @@ describe('/exports in Arabic', () => {
   const html = (): string =>
     renderToStaticMarkup(
       <StaticLocale locale="ar">
-        <Exports navigate={() => {}} actor={null} setActor={() => {}} search="" />
+        <Exports navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />
       </StaticLocale>,
     );
 

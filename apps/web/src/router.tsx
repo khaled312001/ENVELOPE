@@ -38,7 +38,16 @@ import { useCallback, useEffect, useState } from 'react';
  * own site list — both of which enumerate this tuple — so the five that are not
  * built stay out of it until the day they land.
  */
-export const ROUTES = ['/', '/parking', '/exports', '/refusals', '/app', '/work', '/dashboard'] as const;
+export const ROUTES = [
+  '/',
+  '/parking',
+  '/exports',
+  '/refusals',
+  '/app',
+  '/work',
+  '/settings',
+  '/dashboard',
+] as const;
 export type Route = (typeof ROUTES)[number];
 
 /**

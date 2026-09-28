@@ -51,7 +51,7 @@ import {
 
 const markup = (): string =>
   renderToStaticMarkup(
-    <Parking navigate={() => {}} actor={null} setActor={() => {}} search="" />,
+    <Parking navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />,
   );
 
 /** Rendered markup with tags stripped and whitespace flattened, as a person reads it. */
@@ -382,7 +382,7 @@ describe('/parking', () => {
 const arabic = (): string =>
   renderToStaticMarkup(
     <StaticLocale locale="ar">
-      <Parking navigate={() => {}} actor={null} setActor={() => {}} search="" />
+      <Parking navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />
     </StaticLocale>,
   );
 

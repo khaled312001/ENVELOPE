@@ -33,6 +33,18 @@ export interface PageProps {
   readonly setActor: (a: Actor | null) => void;
   /** The live query string. See `useRouter` for why it is state and not a read. */
   readonly search: string;
+  /**
+   * THE THEME, PASSED DOWN RATHER THAN READ.
+   *
+   * `/settings` needs a theme control, and the obvious way to build one is a
+   * second `useTheme()` inside that screen. There were three once and they
+   * desynchronised exactly as three copies of one fact do — the note on the hook
+   * call below records what that looked like. So the rule stands (one owner) and
+   * the value travels, which is what this pair is for. A page that only reads the
+   * chrome's toggle ignores both.
+   */
+  readonly theme: 'light' | 'dark';
+  readonly toggleTheme: () => void;
 }
 
 export type PageComponent = (p: PageProps) => JSX.Element;
@@ -156,7 +168,7 @@ export default function Root(): JSX.Element {
     document.title = title;
   }, [title]);
 
-  const pageProps: PageProps = { navigate, actor, setActor, search };
+  const pageProps: PageProps = { navigate, actor, setActor, search, theme, toggleTheme };
 
   /*
     THE RAIL, ON THE ROUTES WHOSE RECORD ASKS FOR ONE.

@@ -238,6 +238,12 @@ const ROUTES: Readonly<Record<string, Reach>> = {
   'POST /api/auth/logout-everywhere': 'open',
   'POST /api/plots': 'open',
   'GET /api/auth/me': 'own',
+  /* The two account-editing routes. `own` and not `open`: both refuse a caller
+     with no session, and both answer about the caller and nobody else. Neither
+     can name a run or a plot — the profile route cannot even name an email, which
+     is why `auth.test.ts` asserts that a posted `email` field is stripped. */
+  'PATCH /api/auth/me': 'own',
+  'POST /api/auth/password': 'own',
   'GET /api/drafts': 'own',
   'GET /api/drafts/:key': 'own',
   'PUT /api/drafts/:key': 'own',

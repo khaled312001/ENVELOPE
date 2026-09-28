@@ -48,6 +48,11 @@ const PROPS = {
   actor: null,
   setActor: () => {},
   search: '',
+  /* The chrome owns the theme and the page is handed it, so a page rendered
+     outside `Root` has to be handed one too. `light` because every assertion
+     below reads markup rather than colour. */
+  theme: 'light',
+  toggleTheme: () => {},
 } as const;
 
 /** One route, rendered the way `Root` renders it: the page inside the chrome. */

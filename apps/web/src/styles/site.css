@@ -2313,6 +2313,182 @@
 }
 
 /* ==========================================================================
+ * 20. SETTINGS — the account's own page
+ *
+ * Four panels in a two-column grid that collapses to one. It is a grid rather
+ * than a stack because the panels are INDEPENDENT: each has its own submit or
+ * none, and a single column makes "Appearance" look like a consequence of
+ * "Password" rather than a separate concern.
+ *
+ * `auto-fit` and not `auto-fill`. With four panels the difference never shows,
+ * but with three it does: `auto-fill` keeps an empty phantom track, so three
+ * panels cluster left with a void beside them.
+ *
+ * NO AMBER IN THIS SECTION, and nothing here may acquire any. Amber is `ASSUMED`
+ * and nothing on this page is an assumed value; a "you have unsaved changes"
+ * strip in amber would be the most effective way on the whole site to teach a
+ * reader that amber means "attention".
+ * ======================================================================= */
+
+.settings__title {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  margin-block-end: var(--space-3);
+}
+
+.settings__lede {
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-prose);
+}
+
+.settings__lede + .settings__lede { margin-block-start: var(--space-3); }
+
+.settings__panels {
+  display: grid;
+  /* `min(28rem, 100%)` and not a bare 28rem: below 448px the track would be
+     wider than the viewport and the page would scroll sideways on a phone,
+     which `pnpm smoke` fails on. */
+  grid-template-columns: repeat(auto-fit, minmax(min(28rem, 100%), 1fr));
+  gap: var(--rhythm-block);
+  align-items: start;
+}
+
+.settings__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.settings__panel-heading {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.settings__panel-lede {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  max-inline-size: var(--measure-prose);
+  margin-block-start: calc(var(--space-3) * -1 + var(--space-1));
+}
+
+/*
+ * THE SECOND-LAYER SENTENCE — the argument, not the instruction.
+ *
+ * `--text-tertiary` on an inset ground: it is the layer a reader reaches for
+ * after the lede, and it is where the two disclosures live (an old signature
+ * keeps its old name; there is no device list). Quieter than the lede, and
+ * never hidden behind a disclosure — a disclosure closed by default is where
+ * a screenshot of the first fold showed three blank sections, and the same
+ * mistake here would hide the honest half of the page.
+ */
+.settings__note {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  max-inline-size: var(--measure-prose);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-inset);
+  border-inline-start: var(--border-width) solid var(--border-default);
+}
+
+.settings__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/*
+ * AN ERROR ON THIS SITE IS NOT PAINTED RED, and this rule copies `.ac__error`
+ * rather than inventing its own treatment.
+ *
+ * `antechamber.css` carries the argument in full: `--variance` names NEVER
+ * CLAIMED and a discrepancy the engine found, and spending a provenance ink on
+ * a mistyped field would teach a reader that red on this site means "you got
+ * something wrong". The message is carried by the words, by the rail, by
+ * `aria-invalid` and by `role="alert"` — never by colour alone, which is also
+ * what WCAG 1.4.1 requires.
+ */
+.settings__error {
+  margin-block-start: var(--space-2);
+  padding-inline-start: var(--space-3);
+  border-inline-start: var(--rail-w) solid var(--border-strong);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  max-inline-size: var(--measure-prose);
+}
+
+/*
+ * "Saved." IS NOT GREEN, and that is a rule rather than a palette shortage.
+ *
+ * Green on this product reads as "passed", and the one thing no surface here
+ * may imply is that something was checked. A save is an acknowledgement, so it
+ * gets the primary ink and a bullet, which is enough to be seen beside the
+ * button that caused it and not enough to be read as a verdict.
+ */
+.settings__ok {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+  align-self: center;
+}
+
+.settings__ok::before {
+  content: '';
+  display: inline-block;
+  inline-size: 0.375rem;
+  block-size: 0.375rem;
+  margin-inline-end: var(--space-2);
+  vertical-align: 0.1em;
+  background: var(--action);
+}
+
+.settings__control-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+/*
+ * A BUTTON IN A FIELD IS NOT AN INPUT, AND MUST NOT LOOK LIKE ONE.
+ *
+ * `.field` is a flex column, so its default `align-items: stretch` gave the theme
+ * and language controls the full width of the panel — two buttons sitting exactly
+ * where an input sits, the same width as the inputs above them. A screenshot made
+ * that obvious and reading the CSS did not.
+ */
+.settings .field > button,
+.settings .field > .button {
+  align-self: start;
+}
+
+/*
+ * THE HELP TEXT MATCHES THE FIELD IT EXPLAINS.
+ *
+ * `app.css` caps `.field__help` at 34ch, which is right on the engine's dense
+ * two-column forms and wrong here: the panel is wider than that, so the help
+ * wrapped to four narrow lines beside a full-width input and read as a different
+ * column. A measure is a property of the column it sits in, not of the class.
+ */
+.settings .field__help {
+  max-width: none;
+  max-inline-size: var(--measure-prose);
+}
+
+/* A read-only input is still an input: it must not look disabled, because it is
+   reachable by keyboard and carries the sentence that explains it. Quieter
+   ground, same border, same text colour. */
+.settings .input[readonly] {
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+}
+
+.field__optional {
+  font-weight: var(--weight-normal);
+  color: var(--text-tertiary);
+}
+
+/* ==========================================================================
  * 19. PRINT — two independent locks on the same door
  * ======================================================================= */
 

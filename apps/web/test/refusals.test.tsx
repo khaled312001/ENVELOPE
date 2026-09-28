@@ -67,7 +67,7 @@ const Page = Refusals;
 
 const markup = (): string =>
   renderToStaticMarkup(
-    <Page navigate={() => {}} actor={null} setActor={() => {}} search="" />,
+    <Page navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />,
   );
 
 /** What a reader reads: tags stripped, whitespace collapsed. */
@@ -326,7 +326,7 @@ describe('/refusals', () => {
 const arabicMarkup = (): string =>
   renderToStaticMarkup(
     <StaticLocale locale="ar">
-      <Page navigate={() => {}} actor={null} setActor={() => {}} search="" />
+      <Page navigate={() => {}} actor={null} setActor={() => {}} search="" theme="light" toggleTheme={() => {}} />
     </StaticLocale>,
   );
 

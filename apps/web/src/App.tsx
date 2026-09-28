@@ -692,7 +692,7 @@ export function StepHintBanner({ hint }: { readonly hint: StepHint }): JSX.Eleme
  * this artifact is for: a capacity study that gets printed, screenshotted into a
  * deck, and read across a table.
  */
-type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark';
 
 export function useTheme(): [Theme, () => void] {
   const [theme, setTheme] = useState<Theme>(() => {

@@ -77,6 +77,26 @@ export const auth = {
 
   /** 200 with `account: null` when signed out — see the route's own note on why. */
   me: (): Promise<{ account: Account | null }> => call('/api/auth/me'),
+
+  /**
+   * Change the name and the licence.
+   *
+   * `licence` is a REQUIRED string that may be empty, mirroring the route. An
+   * optional would make "clear my licence" unexpressible: omitted means leave it,
+   * and somebody who no longer holds a licence has to be able to withdraw it.
+   *
+   * No `email` field, deliberately. Identity is what a share is addressed to, and
+   * moving it needs a mailer that can prove the new inbox.
+   */
+  updateProfile: (input: { name: string; licence: string }): Promise<{ account: Account }> =>
+    call('/api/auth/me', { method: 'PATCH', body: JSON.stringify(input) }),
+
+  /** Change the password. Every other device is signed out; this one is not. */
+  changePassword: (input: {
+    current: string;
+    next: string;
+  }): Promise<{ changed: boolean; otherSessionsEnded: boolean }> =>
+    call('/api/auth/password', { method: 'POST', body: JSON.stringify(input) }),
 };
 
 export interface Draft<T> {

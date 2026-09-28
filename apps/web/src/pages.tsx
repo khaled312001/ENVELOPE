@@ -37,6 +37,7 @@ import NotFound from './screens/NotFound.js';
 import Parking from './screens/Parking.js';
 import SNAPSHOT from './screens/readiness.json' with { type: 'json' };
 import Refusals from './screens/Refusals.js';
+import Settings from './screens/Settings.js';
 import Work from './screens/Work.js';
 
 export interface PageSpec extends PageMeta {
@@ -50,6 +51,7 @@ const COMPONENTS: Readonly<Record<Route, (p: PageProps) => JSX.Element>> = {
   '/refusals': Refusals,
   '/app': Antechamber,
   '/work': Work,
+  '/settings': Settings,
   /* `/dashboard` DISPATCHES ABOVE THE ACTOR CHECK — see `DashboardRoute` below,
      which is a named component rather than an inline arrow because it reads the
      page heading out of the locale and an inline arrow cannot hold a hook. */

@@ -47,7 +47,7 @@ const Page = Antechamber;
 
 const markup = (search = ''): string =>
   renderToStaticMarkup(
-    <Page navigate={() => {}} actor={null} setActor={() => {}} search={search} />,
+    <Page navigate={() => {}} actor={null} setActor={() => {}} search={search} theme="light" toggleTheme={() => {}} />,
   );
 
 /** The three states this page has, and every scan below runs over all three. */

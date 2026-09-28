@@ -72,6 +72,18 @@
     "shell": "workspace"
   },
   {
+    "path": "/settings",
+    "title": "Settings — TOP.ai",
+    "description": "Your name, your licence and your password — and what each one does to a run you sign. The licence is recorded and never verified; this page says so where the number is typed.",
+    "navLabel": null,
+    "footerLabel": "Settings",
+    "nav": "footer-only",
+    "group": "product",
+    "needsActor": false,
+    "arabic": "translated",
+    "shell": "workspace"
+  },
+  {
     "path": "/dashboard",
     "title": "Deployment readiness — TOP.ai",
     "description": "What is not ready in this deployment, and the human action that would change each figure. Readiness, not uptime — nothing here monitors availability.",

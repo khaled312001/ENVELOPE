@@ -897,7 +897,65 @@ Weeks from 2026-09-29. **A** and **G1** can run in parallel; everything else is 
 
 **Total: 14.5 weeks of sequenced work, ~12 with A and G1 overlapped.**
 
-### What has landed, as of 28 Sep 2026
+### What has landed, as of 29 Sep 2026
+
+**H — the design pass, done in three rounds, and the first two were the wrong
+work.** Recorded because the sequence is the lesson, not the diff.
+
+*Round one* widened four screens that were using half the page: landing §02 and
+§05, the antechamber (2,413px tall with 45% of the width empty, now 1,626px), and
+the hero figure's floating control. Every measurement improved and the client's
+verdict was *"التصميم كما هو"* — nothing changed. He was right: layout is not
+look.
+
+*Round two* reversed the three parts of `direction.md` that were **taste rather
+than measurement** — square corners to 4/8/14px, `--weight-light` (300) on every
+h1 and h2 to a new `--weight-display` (500), and the deleted shadows back as a
+plate lift. The one part that was measured, the ink primary button, was left
+alone and the trade was put to him with its number instead.
+
+*Round three* is the colour, and it required a decision only he could make.
+`pnpm amber` required amber to cover at least 3× the area of every other
+chromatic pixel on the first screen, which at 36,270px² of amber left about
+10,000px² for everything else — one button. He was given that number and the
+objection that relaxing it is a concession on the strongest signal the product
+sells to a funder, and he reaffirmed. The **area** margin is now measured,
+printed and not gated; the two `fail(` calls are documented at the head of
+`scripts/amber.mjs` so re-gating is a two-line change.
+
+**What survived, and earned it.** `contrast.mjs` assertion (3) holds
+`--uncertain-surface` as the most chromatic surface in the system, and it refused
+the band's first draft at chroma 31 against amber's 29. That is a rule about
+**saturation**, not area — which is the measure the area margin never was — so it
+is the reason a coloured first screen is possible at all, and it stays enforced.
+The band is 27. It is visible on `/parking`, where the whole screen is blue and
+the `ASSUMED` card is still plainly the loudest thing on it.
+
+**And the identity is the product's, not the landing page's.** The band was
+painted on `.lp-hero` alone, so a reader following a link to `/parking` arrived
+somewhere that looked like a different site. It moved to `.section--opening` in
+the chassis and reaches ten routes from one rule. `--brand-wash` was added to
+`GROUNDS` in `contrast.mjs` in the same change — a tenth measured ground, 483
+rows across three themes — because a surface the site paints and the checker has
+never read is the vacuous pass this repo refuses everywhere.
+
+**Two defects the round surfaced.** The two dark palettes drifted (`--shadow-*`
+landed in one block twice and the other not at all), and in dark the band was
+`--blue-133`, which is also dark `--accent-subtle` — one colour carrying two
+meanings, and `pnpm amber` correctly attributed the entire 1.3-million-px² band
+to the accent ink.
+
+**Deployment is key-based now.** `~/.ssh/tob_ed25519`, installed on the host as
+`tob-deploy`. No password is stored anywhere and none is needed; the account
+password is still live for hPanel and is due for rotation.
+
+**Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
+holds only its README, so every slot renders nothing — by design, silently. The
+prompts in `image-prompts.md` were **rewritten on 29 Sep** for the new identity:
+the first version specified the austere flat-graphite house style he rejected.
+The five hard rules are unchanged and are not negotiable.
+
+### What had landed, as of 28 Sep 2026
 
 **A — done.** Step footer, restorable `?step=`, the three-layer primer on all ten
 steps, amber taught in words on the three steps that paint it.

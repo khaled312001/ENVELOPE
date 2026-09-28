@@ -8,19 +8,37 @@
 
 ## 0 · House style block — prepend to every prompt
 
-> Technical editorial illustration for an engineering product. Flat vector, orthographic or
-> isometric, no perspective vanishing points. Straight corners only — no rounded corners
-> anywhere. No drop shadows, no glows, no gradients except a single flat two-stop wash where
-> named. Thin consistent line weight. Palette: graphite neutrals `#14161c`, `#2e3139`,
-> `#55555f`, `#84878e`, `#c8cbd3`, `#eef1f8`, `#f6f8fd`; one accent blue `#2b5cd9`; paper
-> white `#ffffff`. Absolutely no other hues. Restrained, precise, drafting-office feel —
-> closer to a survey drawing or an IBM technical manual than to a startup landing page.
+> **هذه الكتلة أُعيد كتابتها في 29 سبتمبر 2026.** النسخة الأولى كانت «رسم متجه مسطّح،
+> رماديات جرافيت، بلا تدرّجات، بلا ظلال، أقرب إلى رسم مساحي منه إلى موقع منتج» — وهو
+> الأسلوب الذي رفضتَه صراحةً بوصفه باهتًا وقديمًا. هذه النسخة ملوّنة وذات عمق، وتطابق
+> الهوية التي صارت على الموقع فعلًا: نطاق أزرق `#e0eafb` في الفاتح و`#182339` في الداكن،
+> ولون فاعل `#2b5cd9`، وزوايا مستديرة، ولوحات مرفوعة بظلّ خفيف. **القواعد الخمس الصارمة
+> أسفلها لم تتغيّر ولا تُناقش** — هي عن نزاهة المنتج لا عن ذوقه.
+
+> Modern technical illustration for an engineering product, in a cool blue identity.
+> Isometric or orthographic; perspective only where an entry says so. Rounded corners
+> (4–14px) on any panel or card shape. Soft, believable depth: one low-contrast ambient
+> shadow and gentle two-stop gradients are welcome; no hard drop shadows, no glows, no
+> bevels, no glass-morphism blur. Confident line weight, not hairline.
+>
+> **Palette — cool blues and graphite, and nothing else.** Deep navy `#182339`, ink
+> `#14161c`, slate `#2e3139`, grey `#55555f`, `#84878e`, `#c8cbd3`; band blue `#e0eafb`,
+> pale blue `#eaf0fd`, mid blue `#9dbaf8`, accent blue `#2b5cd9`, deep accent `#1f47b0`;
+> paper `#ffffff`. A single desaturated teal `#2f7f7a` is permitted as a secondary accent
+> where an entry asks for one. **No other hues.**
+>
+> Generous, even light. Materials may read as matte surfaces — paper, anodised metal,
+> frosted glass — never as chrome or plastic. Composition centred with generous margin,
+> or asymmetric where the entry says so.
+>
 > No text, no numerals, no labels, no legends, no captions, no watermarks, no logos, no
 > flags, no badges, no UI chrome, no browser frames, no device mockups, no human figures,
-> no faces. Nothing that reads as a screenshot of software. Centred composition with generous
-> margin. Transparent background unless the entry says otherwise.
+> no faces. Nothing that reads as a screenshot of software. Transparent background unless
+> the entry says otherwise.
 
 ### The five hard rules — a violation means the image is rejected
+
+**لم تتغيّر واحدة منها.** كل واحدة منها عن شيء يبيعه المنتج، لا عن شكل الصورة.
 
 1. **No legible digits, anywhere.** Not on a dimension line, not on an axis, not on a card,
    not blurred in the background. This product's entire claim is that every number on screen
@@ -31,6 +49,12 @@
    `.glb` file palette. Teaching a reader that amber is a decorative colour destroys the one
    signal the product cannot afford to lose (PRD §13.1). Only image **#12** may contain
    amber, and there it *is* the subject.
+
+   > هذه القاعدة صارت **أهمّ** بعد تلوين الموقع، لا أقلّ. `scripts/contrast.mjs` يفرض أن
+   > تكون أرضية الكهرماني أشدّ الأسطح إشباعًا في النظام كله — وقد رفض النطاق الأزرق فعلًا
+   > عند إشباع 31 مقابل 29 للكهرماني حتى خُفِّض إلى 27. صورةٌ فيها برتقالي تنقض ذلك من
+   > خارج ما يستطيع أي فاحص قياسه.
+
 3. **Nothing that implies approval, compliance or authority.** No stamps, no seals, no
    ticked checklists, no certificates, no municipality or government marks, no Dubai skyline
    that reads as an official endorsement. The product says `REGULATORY VALIDITY: NOT
@@ -43,10 +67,11 @@
 
 | | |
 |---|---|
-| Vector subjects (#3–#17, #19–#21, #23–#25) | **SVG** preferred. If the generator only emits raster: PNG, transparent, at the stated width **×3**. |
-| Raster-only subjects (#1, #2, #18, #22) | PNG at the stated width ×2 and ×3. I convert to AVIF + WebP with a PNG fallback. |
-| Dark variant | Only where the table says `dark: yes`. Same geometry, inverted grounds: paper `#0c0e11`, lines `#c8cbd3`, accent `#7ba3f5`. Name it `<filename>-dark.<ext>`. |
-| Where they land | `apps/web/public/img/` — the directory is empty today; the site currently ships **zero** imagery. |
+| Vector subjects (#3–#17, #19–#21, #23–#25) | **SVG** preferred — it scales, it is kilobytes, and it re-inks per theme. If the generator only emits raster: PNG, transparent, at the stated width **×3**. |
+| Raster-only subjects (#1, #2, #18, #22) | PNG or WebP at the stated width ×2 and ×3. I convert to AVIF + WebP with a PNG fallback. |
+| Dark variant | Only where the entry says `dark: yes`. Same geometry, re-grounded: paper `#0c0e11`, panels `#182339`, lines `#c8cbd3`, accent `#7ba3f5`. Name it `<filename>-dark.<ext>`. |
+| **Where they land** | **`apps/web/src/assets/img/`** — not `public/`. `src/img.tsx` globs that directory at build time, so a file dropped in is used and a name with no file renders **no element and makes no request**. There is no manifest to update and no 404 to chase. `og-cover.png` is the one exception and goes in `apps/web/public/`, because a link scraper needs a stable unhashed URL. |
+| Naming | Exactly the `filename` in each entry. The extension may be any of `svg png avif webp jpg`. |
 
 ---
 
@@ -63,7 +88,7 @@ is pasted into WhatsApp, Slack or LinkedIn. **Size:** 1200 × 630. **dark:** no.
 > sides indicating roads. Four small solid square tick marks sit on the parcel's corners.
 > Cool near-white ground `#f6f8fd`, a faint 10 mm graphite grid behind everything at very low
 > opacity. The parcel sits left of centre; the right third is empty for a title to be set over
-> it later. Flat, precise, no shading.
+> it later. Precise, with soft ambient depth and a gentle two-stop wash in the envelope fill.
 
 **alt (en):** A plot outline with the buildable envelope offset inside it.
 **alt (ar):** حدود قطعة أرض، وبداخلها الظرف البنائي مزاحًا للداخل.
@@ -118,7 +143,7 @@ carries its height across the other two.
 > rectangles standing perpendicular to a wide central aisle — parking bays. At one end, a
 > long tapering parallelogram crossing two of the rows at a shallow angle — a ramp. The bays
 > are thin outlines in graphite `#2e3139` with no fill. The aisle is an empty channel bounded
-> by two thin lines. The ramp is drawn in a distinctly different treatment: a thin outline
+> by two parallel lines. The ramp is drawn in a distinctly different treatment: an outline
 > with a sparse 45° hatch in `#84878e`. The plate's own boundary is a heavier line. No cars,
 > no arrows, no dimensions, no bay numbers.
 
@@ -137,7 +162,7 @@ crossing at a shallow angle.
 > A small directed graph, drawn as an acyclic tree that grows downward. One node at the top
 > drawn as a solid filled square in accent blue `#2b5cd9`; below it four nodes as empty
 > outlined squares; below those, seven smaller nodes, some outlined, some drawn with a dotted
-> stroke. Thin straight connectors, orthogonal only — horizontal and vertical runs with square
+> stroke. Straight connectors at a confident weight, orthogonal only — horizontal and vertical runs with square
 > elbows, never diagonals or curves. Every leaf node terminates in a short horizontal stub
 > that stops at a common vertical rule on the right, as if each one cites a source. No labels.
 
@@ -205,7 +230,7 @@ a small figure at the top of its panel that shows what the step is *for* before 
 read. **Size:** 480 × 320. **dark:** yes for all.
 
 ### #9 — `step-0-sheet.svg` — Sheet
-> A portrait sheet of paper seen flat, drawn as a thin outlined rectangle. Across its upper
+> A portrait sheet of paper seen flat, drawn as a confidently outlined rounded rectangle with a soft ambient shadow. Across its upper
 > half, four short horizontal rules of unequal length standing for lines of print. In its
 > lower half, a small parcel outline. To the right of the sheet, six small empty squares in a
 > vertical stack; four of them are connected back to a rule or to the parcel by a thin
@@ -276,10 +301,10 @@ non-colour cue.
 ---
 
 ### #13 — `step-5-capacity.svg` — Capacity
-> An axonometric stack of flat plates, each a thin outlined quadrilateral, lifted one above
+> An axonometric stack of plates, each a confidently outlined quadrilateral with a faint top-face wash, lifted one above
 > another on a shared vertical axis with even spacing. The lower three plates are larger and
 > share one footprint — a podium. The upper seven are smaller, share a different footprint,
-> and are inset from the podium's edge on two sides. Thin vertical lines connect the corners
+> and are inset from the podium's edge on two sides. Vertical lines connect the corners
 > of consecutive plates. **A vertical prism runs through every plate from the lowest to the
 > highest, in the same position on each — the core.** The core is drawn as a solid outlined
 > rectangle in accent blue `#2b5cd9` with a light fill. No ground, no sky, no context, no
@@ -373,7 +398,7 @@ pass nor a fail.
 ### #19 — `empty-projects.svg`
 **Where:** `/projects` with no projects. **Size:** 400 × 280. **dark:** yes.
 
-> An empty drawing sheet seen flat: a thin outlined rectangle with an inner border rule offset
+> An empty drawing sheet seen flat: a confidently outlined rounded rectangle, softly lifted, with an inner border rule offset
 > from it on all four sides, and a title-block grid ruled in the lower-right corner — four
 > empty cells, no content in any of them. Nothing else on the sheet. The sheet is clearly
 > ready to be drawn on rather than broken or missing.

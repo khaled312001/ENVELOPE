@@ -275,6 +275,19 @@
   --weight-medium:   500;
   --weight-semibold: 600;
 
+  /* THE DISPLAY WEIGHT, AND WHY IT IS NO LONGER `--weight-light`.
+     Every h1 and h2 on the site was set at 300. The argument above for that is
+     real — Plex's display move IS Light at 42px and up, and less total ink raises
+     amber's relative loudness — but the reading it produced was "unfinished", and
+     that is the judgement of the person whose product this is.
+
+     500 and not 600. The type-design objection is specifically to 600 at 61px,
+     which Carbon and Stripe both reject and which would be a heavier answer than
+     the complaint asks for; 500 is present without being chunky, and it adds less
+     ink than 600 would, so it costs §13.1 less. `--weight-light` stays declared as
+     a rung of the scale with no consumer, exactly as `--text-2xl` does. */
+  --weight-display:  500;
+
   /* --measure was 68ch applied at FOUR different font sizes, so "the measure"
      produced four physical columns spanning roughly 100px under one name — which is
      why a panel subtitle wrapped at ~430px inside an 1,150px panel and read as a
@@ -309,9 +322,20 @@
      consumer changes and a later direction can re-pitch them in one place; the
      pill is gone rather than zeroed, because a token called `pill` that draws a
      rectangle is a name that lies. */
-  --radius-sm: 0;
-  --radius-md: 0;
-  --radius-lg: 0;
+  /* AND THEN BACK OFF ZERO, ON THE CLIENT'S OWN JUDGEMENT. §1 above is a TASTE
+     argument — "a plate with a 4px corner beside a sheet with a square frame read
+     as two instruments on one desk" — and it had already reversed design-language
+     §1, which rejected zero for reading dated. Taste is the client's call and he
+     has made it: the square corners read to him as unfinished rather than as
+     drawn. The measured part of the direction is untouched; only this is.
+
+     The DRAWINGS keep square corners regardless. They are inked from
+     `packages/sheets/src/svg.ts`, which never reads a radius token — a bay, a
+     title block and a sheet frame are square because the thing they depict is,
+     and that was never what these three values controlled. */
+  --radius-sm: 0.25rem;   /* 4px  — chips, inputs, small controls */
+  --radius-md: 0.5rem;    /* 8px  — buttons, selects, callouts */
+  --radius-lg: 0.875rem;  /* 14px — plates and panels */
   --radius-round: 50%;    /* A circle is geometry, not rounding: the round counters
                              and status glyphs keep it. */
 
@@ -656,10 +680,21 @@
   --action-hover: var(--graphite-203);
   --text-on-action: var(--grey-1000);
 
-  /* No shadows (direction.md §2). Every edge in the language is a hairline or a
-     tonal cut, as on paper; the one shadow left — the nav's shade on scroll — is a
-     darker hairline now. The --shadow-* tokens are deleted rather than set to
-     `none`, because a token with no consumer is decoration in a token file. */
+  /* SHADOWS ARE BACK, AND THE RULE THEY WERE DELETED UNDER STILL HOLDS.
+     §2 deleted them; a plate is now lifted by one. Two things make that different
+     from simply reversing it:
+
+     `.plate` refuses an INSET highlight because its value is an `rgb()` that
+     `contrast.mjs` cannot resolve, and this repo counts unresolvable as a failure
+     rather than a skip. That objection is about a surface TEXT STANDS ON. A drop
+     shadow falls outside the box; nothing is ever read on it, so there is no pair
+     to measure and no measurement is being skipped. The inset highlight is still
+     refused.
+
+     And they still print as nothing — which is why the ink cap on `.plate` stays.
+     Hierarchy the paper never receives may not be the only thing carrying it. */
+  --shadow-sm: 0 1px 2px rgb(20 22 28 / 0.05), 0 2px 8px rgb(20 22 28 / 0.05);
+  --shadow-md: 0 2px 4px rgb(20 22 28 / 0.06), 0 12px 32px rgb(20 22 28 / 0.07);
 }
 
 /* ---------------------------------------------------------------------------
@@ -721,6 +756,11 @@
     --deferred-hatch: var(--graphite-543);
 
     --action: var(--graphite-948);
+    
+    /* Deeper and wider than the light pair: a black shade on a near-black
+       ground is almost nothing, and the plate would read as unlifted. */
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45), 0 2px 10px rgb(0 0 0 / 0.35);
+    --shadow-md: 0 2px 6px rgb(0 0 0 / 0.5), 0 14px 40px rgb(0 0 0 / 0.45);
     --action-hover: var(--graphite-817);
     --text-on-action: var(--graphite-82);
   }
@@ -786,6 +826,11 @@
   --deferred-hatch: var(--graphite-543);
 
   --action: var(--graphite-948);
+
+  /* Deeper and wider than the light pair: a black shade on a near-black ground is
+     almost nothing, and the plate would read as unlifted. */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45), 0 2px 10px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 2px 6px rgb(0 0 0 / 0.5), 0 14px 40px rgb(0 0 0 / 0.45);
   --action-hover: var(--graphite-817);
   --text-on-action: var(--graphite-82);
   }

@@ -608,7 +608,7 @@
 
 .section__head h2 {
   font-size: var(--text-3xl);
-  font-weight: var(--weight-light);
+  font-weight: var(--weight-display);
   line-height: var(--leading-head);
   letter-spacing: var(--tracking-display);
   text-wrap: balance;
@@ -864,6 +864,9 @@
   border-radius: var(--radius-lg);
   min-inline-size: 0;
   break-inside: avoid;
+  /* The lift. The ink cap above it is NOT redundant: a shadow prints as nothing,
+     and the cap is what carries the plate's edge onto paper. */
+  box-shadow: var(--shadow-sm);
   /* No box-shadow, and no inner highlight either. An `inset 0 1px 0 rgb(255 255
      255 / 0.06)` lift for the dark plate was considered and refused: the value is
      not a hex, so contrast.mjs's `rgb()` returns null, and this repo counts

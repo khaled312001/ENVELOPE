@@ -118,7 +118,7 @@
  */
 .rf h1 {
   font-size: var(--text-4xl);
-  font-weight: var(--weight-light);
+  font-weight: var(--weight-display);
   line-height: var(--leading-display);
   letter-spacing: var(--tracking-banner);
   max-inline-size: var(--measure-banner);

@@ -146,7 +146,7 @@
   /* Plex's characteristic display move is Light at 42px and above. 600 at 61px is
      the convention Carbon and Stripe both explicitly reject, and lowering the page's
      total ink weight is also what raises amber's relative loudness. */
-  font-weight: var(--weight-light);
+  font-weight: var(--weight-display);
   line-height: var(--leading-display);
   letter-spacing: var(--tracking-banner);
   /* 15ch caps the headline at desktop, where an uncapped 61px H1 would run the full
@@ -162,7 +162,7 @@
 
 .lp-hero__lede {
   font-size: var(--text-lg);
-  font-weight: var(--weight-light);
+  font-weight: var(--weight-display);
   line-height: var(--leading-relaxed);
   color: var(--text-secondary);
   max-inline-size: var(--measure-lede);
@@ -476,7 +476,7 @@
   color: var(--text-secondary);
   max-inline-size: var(--measure-lede);
   font-size: var(--text-lg);
-  font-weight: var(--weight-light);
+  font-weight: var(--weight-display);
   line-height: var(--leading-relaxed);
   text-wrap: pretty;
   margin-block-start: var(--space-3);
@@ -1395,7 +1395,7 @@
 }
 .lp-status-band h2 {
   font-size: var(--text-3xl);
-  font-weight: var(--weight-light);
+  font-weight: var(--weight-display);
   line-height: var(--leading-head);
   letter-spacing: var(--tracking-display);
   text-wrap: balance;

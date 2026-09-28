@@ -47,7 +47,7 @@
 
 .ac__title {
   font-size: var(--text-4xl);
-  font-weight: var(--weight-light);
+  font-weight: var(--weight-display);
   line-height: var(--leading-display);
   letter-spacing: var(--tracking-banner);
   /* Capped in characters rather than pixels, so the line count holds as the clamp

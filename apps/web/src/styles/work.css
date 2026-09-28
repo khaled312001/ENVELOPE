@@ -184,7 +184,7 @@
 /* The governing figure is the answer; everything else on the list qualifies it. */
 .rn__governing .value {
   font-size: var(--text-2xl);
-  font-weight: var(--weight-light);
+  font-weight: var(--weight-display);
 }
 
 .rn__model {

@@ -103,6 +103,24 @@ export const EN = {
     notAssessed: 'not assessed',
   },
 
+  /**
+   * The unit mix, disclosed before the run rather than after it.
+   *
+   * The basis is NOT here — it is posted to the engine and printed in the report,
+   * so it stays in the component in both languages, for the reason given at the
+   * head of this file.
+   */
+  mix: {
+    title: 'The unit mix this run will use',
+    subtitle:
+      'The unit count is the permitted floor area divided by what one unit takes. These are the areas it will be divided by.',
+    /** The share arrives already converted to a percentage. */
+    share: (percent: string): string => `${percent}% `,
+    area: (m2: string): string => ` at ${m2} m² net saleable`,
+    assumed: 'Assumed.',
+    userSet: 'Entered.',
+  },
+
   standard: {
     title: 'Build to a developer’s standard',
     subtitle:

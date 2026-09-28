@@ -510,6 +510,38 @@ await step('confirming the plot (G1)', async () => {
   await page.getByRole('heading', { name: /does parking count toward far/i }).waitFor({ timeout: wait(5000) });
 });
 
+/**
+ * THE ADDRESS BAR, WHICH USED TO BE READ AND NEVER WRITTEN.
+ *
+ * `?step=` was read on arrival and written by nobody, so from the second step
+ * onward the address named a screen the reader was not looking at. Three things
+ * followed, all of them live until now: Back left the flow entirely, because
+ * nine step changes had written no history at all; a reload returned to the
+ * start with the address still naming the step it was not showing; and a pasted
+ * link opened somewhere else.
+ *
+ * Only a browser can check any of this — it is history, not markup — and it is
+ * checked in both directions, because a Back that moves the address without
+ * moving the screen is the same defect wearing the opposite face.
+ */
+await step('the address names the open step, and Back walks the flow rather than leaving it', async () => {
+  if (!/[?&]step=rules(&|$)/.test(new URL(page.url()).search)) {
+    throw new Error(`confirming the plot left the address at ${page.url()}`);
+  }
+  await page.goBack();
+  await page.getByRole('heading', { name: /confirm the plot/i }).waitFor({ timeout: wait(8000) });
+  if (!/[?&]step=parameters(&|$)/.test(new URL(page.url()).search)) {
+    throw new Error(`Back moved the screen but not the address: ${page.url()}`);
+  }
+  await page.goForward();
+  await page
+    .getByRole('heading', { name: /does parking count toward far/i })
+    .waitFor({ timeout: wait(8000) });
+  if (!/[?&]step=rules(&|$)/.test(new URL(page.url()).search)) {
+    throw new Error(`Forward did not return to the rules step: ${page.url()}`);
+  }
+});
+
 await step('the sheet\'s podium count waits on the rules step to be confirmed', async () => {
   // The Warsan sheet prints G+2P+8. It used to be read at intake and dropped at
   // the composition root, so every massing showed one podium level in amber. It
@@ -882,7 +914,10 @@ await step('the status page ranks assumption exposure by measured effect', async
 
 await step('back returns to the engine with the run still there', async () => {
   await page.goBack();
-  await page.waitForURL('**/app', { timeout: wait(8000) });
+  // `**/app` no longer matches: the flow writes `?step=` on every move, so the
+  // entry this Back returns to is `/app?step=export`. Matching the path and
+  // letting the query be whatever the flow last wrote is what was meant here.
+  await page.waitForURL((u) => new URL(u).pathname === '/app', { timeout: wait(8000) });
   // Assert on something only a *completed* run puts on screen. The first
   // version of this checked for the word "Export", which the stepper prints
   // whether or not a run exists — so it passed while the run was being
@@ -1275,6 +1310,155 @@ await step('every contents jump clears the sticky nav (WCAG 2.2 · 2.4.11)', asy
         );
       }
     }
+  }
+});
+
+/**
+ * THE FRONT PAGE'S PRIMARY BUTTON, FOLLOWED THE WAY A VISITOR FOLLOWS IT.
+ *
+ * `run this plot yourself` links to `/app?demo=worked-example`. The antechamber
+ * carries that query across sign-in on purpose and documents why. `EngineApp`'s
+ * docblock said it acted on it. Nothing did — the word appeared in four comments,
+ * one type annotation and no code — so the strongest call to action on the site
+ * signed you in and dropped you on an empty intake form.
+ *
+ * IN A FRESH CONTEXT, because the walk above has a plot and a run in memory and
+ * the demo refuses to overwrite either. That guard is worth having and it would
+ * make this step pass without loading anything.
+ *
+ * WHAT IS ASSERTED IS THE INPUT, NOT THE BUTTON. A demo that filled in roughly
+ * this plot would hand a reader a different governing capacity from the one they
+ * had just read on the page they clicked from — the failure that matters here is
+ * silent, and it is a number.
+ */
+await step('the front page’s worked example opens as a run the visitor can make', async () => {
+  const fresh = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const visitor = await fresh.newPage();
+  try {
+    await visitor.goto(new URL('/', BASE).href, { waitUntil: 'domcontentloaded' });
+    await visitor.getByRole('link', { name: /run this plot yourself/i }).first().click();
+    await visitor.getByLabel('Your name').fill('Khaled Haggagy');
+    await visitor.getByRole('button', { name: /open the engine/i }).first().click();
+
+    // It opens at the plot, not at the sheet: there is no affection plan to drop.
+    await visitor.getByLabel(/plot number/i).waitFor({ timeout: wait(10000) });
+
+    // The query is an instruction and is spent. Left in history, Back would
+    // re-run it, and a Back button that re-deals the same hand is worse than one
+    // that does nothing.
+    const url = new URL(visitor.url());
+    if (url.searchParams.has('demo')) {
+      throw new Error(`the demo query was left in the address: ${visitor.url()}`);
+    }
+    if (url.searchParams.get('step') !== 'plot') {
+      throw new Error(`the demo did not open the plot step: ${visitor.url()}`);
+    }
+
+    // The recorded input, field by field, against the file the landing page reads
+    // every figure from and `pnpm example` re-runs against the real API.
+    const { input, verified } = JSON.parse(
+      readFileSync(new URL('../apps/web/src/screens/worked-example.json', import.meta.url), 'utf8'),
+    );
+    const xs = input.plot.vertices.map((v) => Number(v.x));
+    const ys = input.plot.vertices.map((v) => Number(v.y));
+    const expected = {
+      'Plot number': input.plot.plotNumber,
+      Community: input.plot.community,
+      Width: String(Math.max(...xs) - Math.min(...xs)),
+      Depth: String(Math.max(...ys) - Math.min(...ys)),
+    };
+    for (const [label, want] of Object.entries(expected)) {
+      const got = await visitor.getByLabel(new RegExp(`^${label}`, 'i')).first().inputValue();
+      if (got !== want) throw new Error(`${label} arrived as "${got}", not "${want}"`);
+    }
+
+    // Four edges classified, which is what makes the access recommendation say
+    // anything at all. Unclassified, the form refuses to submit and the demo has
+    // handed the visitor a dead end with a plot number in it.
+    // Counted off the live `value` of each <select>, which is a property and not
+    // an attribute: `select[value='']` matches nothing in any browser and would
+    // have made this assertion pass by measuring the wrong thing.
+    const classified = await visitor.evaluate(() =>
+      [...document.querySelectorAll('select')].filter(
+        (s) => s.value === 'ROAD' || s.value === 'ADJACENT_PLOT',
+      ).length,
+    );
+    if (classified < input.plot.edges.length) {
+      throw new Error(
+        `${classified} of ${input.plot.edges.length} edges arrived classified`,
+      );
+    }
+
+    // And it says where the values came from. A form that arrives filled in with
+    // no statement of who filled it is the same defect as a number with no
+    // provenance, on a product that exists to refuse exactly that.
+    const said = await visitor.textContent('body');
+    if (!/worked example/i.test(said)) {
+      throw new Error('the demo filled the form in and said nothing about it');
+    }
+
+    /*
+      AND THEN IT IS RUN, BECAUSE THE CLAIM ON SCREEN IS ABOUT A NUMBER.
+
+      The banner says: leave these as they are and the capacity you get is the
+      capacity that page quotes. That is checkable in about four clicks and it
+      is the only part of this feature that can fail silently — a demo carrying
+      a plot that is nearly right hands a visitor a different governing band
+      from the one they read a moment ago, and they would be right to conclude
+      the page was decorated.
+
+      Compared against `verified.governingGfaM2` in the same file the landing
+      page reads every figure from, so this cannot drift from the page: if the
+      engine's answer moves, `pnpm example` rewrites both and both move.
+    */
+    await visitor.getByRole('button', { name: /^Continue$/ }).click();
+    await visitor
+      .getByRole('heading', { name: /confirm the plot/i })
+      .waitFor({ timeout: wait(10000) });
+    await visitor.getByRole('button', { name: /this is the plot/i }).click();
+    await visitor
+      .getByRole('heading', { name: /does parking count toward far/i })
+      .waitFor({ timeout: wait(10000) });
+
+    // Nothing is typed here. Every question this screen asks was answered by
+    // the recorded run, which is the whole of what the demo is.
+    const compute = visitor.getByRole('button', { name: /compute capacity/i });
+    if (await compute.isDisabled()) {
+      throw new Error('the demo left a question unanswered on the rules step');
+    }
+    await compute.click();
+    await visitor
+      .getByRole('button', { name: /^Capacity$/ })
+      .first()
+      .click({ timeout: wait(20000) });
+    await visitor.locator('.governing__figure').waitFor({ timeout: wait(20000) });
+
+    /*
+      COMPARED AT THE PRECISION IT IS DISPLAYED AT, which took one failing run to
+      get right and is worth the four lines. The recorded figure is 6774.194; the
+      capacity screen sets the governing number at display size and prints
+      "6,774.2", while the landing page's expanded hero row prints all three
+      decimals. A substring test against the recorded value therefore FAILED on a
+      demo that had reproduced the run exactly — the first version of this step
+      did, and the honest reading of that failure was that the assertion was
+      wrong, not the feature.
+
+      So the on-screen token's own precision decides the comparison. A render hint
+      that changes how many decimals are shown does not fail this; a run that
+      returns a different number does.
+    */
+    const shown = (await visitor.locator('.governing__figure').first().textContent())
+      .replace(/,/g, '')
+      .match(/\d[\d.]*/)?.[0];
+    if (!shown) throw new Error('no figure in the governing block');
+    const places = (shown.split('.')[1] ?? '').length;
+    if (Number(shown).toFixed(places) !== Number(verified.governingGfaM2).toFixed(places)) {
+      throw new Error(
+        `the demo did not reproduce the page: got ${shown}, the page quotes ${verified.governingGfaM2}`,
+      );
+    }
+  } finally {
+    await fresh.close();
   }
 });
 

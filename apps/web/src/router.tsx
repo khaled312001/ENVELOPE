@@ -76,6 +76,14 @@ export type Location = Route | typeof NOT_FOUND;
  */
 export type Href = Route | `${Route}?${string}` | `${Route}#${string}`;
 
+/**
+ * What every screen is handed to move the address bar.
+ *
+ * Named so the one caller that passes `{ replace: true }` can say so in a type
+ * rather than widening its own prop and drifting from this signature.
+ */
+export type Navigate = (to: Href, options?: { readonly replace?: boolean }) => void;
+
 export function currentRoute(): Location {
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   return (ROUTES as readonly string[]).includes(path) ? (path as Route) : NOT_FOUND;
@@ -117,7 +125,18 @@ export function useRouter(): {
    * would open whatever step was already showing.
    */
   readonly search: string;
-  readonly navigate: (to: Href) => void;
+  /**
+   * `replace` rewrites the current history entry instead of adding one.
+   *
+   * There is one caller and one reason. `/app?demo=worked-example` is an
+   * *instruction*, not a place: the flow reads it, fills the worked example in and
+   * moves to the plot step. Pushing that move would leave the instruction sitting
+   * in history, so Back would re-run it — the reader would press Back expecting
+   * the landing page and get handed the demo again, once per press. Replacing it
+   * means the address ends up naming where they are, and Back goes where they came
+   * from.
+   */
+  readonly navigate: (to: Href, options?: { readonly replace?: boolean }) => void;
 } {
   const [route, setRoute] = useState<Location>(currentRoute);
   const [search, setSearch] = useState<string>(() => window.location.search);
@@ -137,7 +156,7 @@ export function useRouter(): {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  const navigate = useCallback((to: Href) => {
+  const navigate = useCallback((to: Href, options?: { readonly replace?: boolean }) => {
     const { path, search: nextSearch, hash } = parts(to);
     // Same route, same query, same hash: this used to early-return, which meant
     // clicking the masthead while already on `/` did nothing at all — not even
@@ -151,7 +170,9 @@ export function useRouter(): {
       restoreScroll(hash);
       return;
     }
-    window.history.pushState({}, '', `${path}${nextSearch}${hash}`);
+    const url = `${path}${nextSearch}${hash}`;
+    if (options?.replace === true) window.history.replaceState({}, '', url);
+    else window.history.pushState({}, '', url);
     setRoute(path);
     setSearch(nextSearch);
     restoreScroll(hash);

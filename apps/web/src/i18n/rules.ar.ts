@@ -100,6 +100,16 @@ export const AR: RulesDictionary = {
     notAssessed: 'لم يُقيَّم',
   },
 
+  mix: {
+    title: 'خليط الوحدات الذي ستستخدمه هذه التشغيلة',
+    subtitle:
+      'عدد الوحدات هو المساحة الطابقية المسموح بها مقسومةً على ما تشغله الوحدة الواحدة. وهذه هي المساحات التي سيُقسَم عليها.',
+    share: (percent: string): string => `${percent}% `,
+    area: (m2: string): string => ` بمساحة صافية قابلة للبيع ${m2} م²`,
+    assumed: 'مُفترَض.',
+    userSet: 'مُدخَل.',
+  },
+
   standard: {
     title: 'البناء وفق معيار المطوّر',
     subtitle:

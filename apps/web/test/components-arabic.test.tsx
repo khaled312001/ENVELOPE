@@ -52,6 +52,7 @@ import { NotAssessed, ProvenanceLegend, TracedValue, type TracedWire } from '../
 import { WorkedExampleModel } from '../src/components/WorkedExampleModel.js';
 import { StaticLocale } from '../src/i18n/locale.js';
 import { ChecksStep } from '../src/screens/ChecksStep.js';
+import { UnitMixSummary } from '../src/screens/RulesStep.js';
 import { EvidenceStep } from '../src/screens/EvidenceStep.js';
 import {
   arabicReadingText,
@@ -208,6 +209,33 @@ function variants(): Record<string, JSX.Element> {
   );
   out['tree/loading'] = <ProvenanceTree tree={null} loading onClose={noop} />;
   out['tree/none'] = <ProvenanceTree tree={null} loading={false} onClose={noop} />;
+  /*
+    THE UNIT MIX, BOTH CLASSES. The assumed one is the variant that matters: it
+    is the only place in the flow where an ASSUMED value is disclosed BEFORE the
+    run rather than in the register after it, and the amber has to survive the
+    translation there as it does everywhere else.
+  */
+  out['mix/assumed'] = (
+    <UnitMixSummary
+      mix={{
+        source: 'ASSUMED',
+        entries: [
+          { typeId: '1BED', label: '1 bedroom', share: '0.5', nsaM2: '70' },
+          { typeId: '2BED', label: '2 bedroom', share: '0.5', nsaM2: '110' },
+        ],
+        basis: 'a generic Dubai apartment mix, used because no developer standard was selected',
+      }}
+    />
+  );
+  out['mix/user-set'] = (
+    <UnitMixSummary
+      mix={{
+        source: 'USER_SET',
+        entries: [{ typeId: '1BED', label: '1 bedroom', share: '1', nsaM2: '70' }],
+        basis: 'the unit mix recorded with the worked example',
+      }}
+    />
+  );
   out['legend'] = <ProvenanceLegend />;
   out['not-assessed'] = <NotAssessed reason="No rule is loaded for this." />;
   out['worked-example'] = <WorkedExampleModel />;

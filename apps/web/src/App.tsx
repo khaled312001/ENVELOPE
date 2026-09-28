@@ -49,12 +49,13 @@ import { ChecksStep } from './screens/ChecksStep.js';
 import { EvidenceStep } from './screens/EvidenceStep.js';
 import { ParametersStep } from './screens/ParametersStep.js';
 import { PlotForm } from './screens/PlotForm.js';
-import { Link, type Href } from './router.js';
+import { Link, type Href, type Navigate } from './router.js';
 import { RulesStep } from './screens/RulesStep.js';
 import { AR } from './i18n/app.ar.js';
 import { EN } from './i18n/app.en.js';
 import { useDict, useLocale, Verbatim } from './i18n/locale.js';
 import { hashOf } from './gateHash.js';
+import { demoFrom, type Demo } from './demo.js';
 
 /*
   `gated` is DELETED. It was metadata nobody read: the flag said `plot` was gated
@@ -166,7 +167,7 @@ export function EngineApp({
   setActor,
   search,
 }: {
-  readonly navigate: (to: Href) => void;
+  readonly navigate: Navigate;
   /**
    * The identity, owned by `Root` rather than by this screen.
    *
@@ -200,6 +201,7 @@ export function EngineApp({
   const [step, setStep] = useState<StepId>('intake');
   const [stepHint, setStepHint] = useState<StepHint | null>(null);
   const [prefill, setPrefill] = useState<Prefill | null>(null);
+  const [demo, setDemo] = useState<Demo | null>(null);
   const [plot, setPlot] = useState<PlotView | null>(null);
   const [plotHash, setPlotHash] = useState<string | null>(null);
   const [run, setRun] = useState<RunView | null>(null);
@@ -219,6 +221,47 @@ export function EngineApp({
     /* eslint-disable-next-line react-hooks/exhaustive-deps -- `flow` is rebuilt every
        render from exactly these three, so depending on the object would defeat the memo. */
     [plot, run, gates],
+  );
+
+  /**
+   * Open a step, and put it in the address bar.
+   *
+   * ---------------------------------------------------------------------------
+   * THE URL IS THE STEP, AND IT USED TO BE READ-ONLY.
+   *
+   * `?step=` was read on arrival and never written. So the flow had an address
+   * that was right for exactly one moment — the click that entered it — and
+   * silently wrong from the next step onward. Three things follow from that, and
+   * all three were live:
+   *
+   *   BACK LEFT THE FLOW. Nine steps in, the browser's back button went to
+   *   whatever page preceded `/app`, because nine step changes had written no
+   *   history at all. There is no way to read that as anything but losing the
+   *   work, and it is the one thing `router.tsx` already says a single-page app
+   *   may not do.
+   *
+   *   A RELOAD WENT BACK TO THE START, with the address still naming the step it
+   *   was not showing. Copying that address and sending it to a colleague sent
+   *   them somewhere else again.
+   *
+   *   AND THE EFFECT BELOW COULD YANK THE READER BACKWARDS. It depends on
+   *   `reachable`, which grows the moment a run returns — so with the address
+   *   still saying `?step=rules`, finishing the run re-ran the effect and set the
+   *   step back to `rules` under a reader who had just been moved to
+   *   `assumptions`. Writing the URL on every move closes that by construction:
+   *   the two can no longer disagree, so there is nothing for the effect to
+   *   correct.
+   *
+   * `navigate` skips the history entry when the address is already the one being
+   * asked for, so this is safe to call with the step that is already open.
+   */
+  const goto = useCallback(
+    (id: StepId): void => {
+      setStep(id);
+      setStepHint(null);
+      navigate(`/app?step=${id}`);
+    },
+    [navigate],
   );
 
   /**
@@ -258,6 +301,36 @@ export function EngineApp({
     setStepHint(null);
     setStep(known.id);
   }, [search, reachable]);
+
+  /**
+   * `?demo=worked-example`, which until now was read by nobody.
+   *
+   * ---------------------------------------------------------------------------
+   * IT LOADS ONCE AND THE QUERY IS SPENT.
+   *
+   * The demo is an instruction, not a place: it fills the worked example into the
+   * plot form and the rules step and moves the reader to the plot. Once that has
+   * happened the address should name where they are, so the move REPLACES the
+   * history entry rather than pushing one. Pushed, Back would return to the
+   * instruction and run it again — a Back button that re-deals the same hand is
+   * worse than one that does nothing.
+   *
+   * IT OPENS AT THE PLOT, NOT AT THE SHEET. Step 0 reads an affection plan; the
+   * worked example is not one and there is no PDF to hand. Opening there would
+   * put an empty file-drop in front of somebody who came to see a plot run.
+   *
+   * IT NEVER OVERWRITES A PLOT THAT EXISTS. `plot === null` is the guard: a reader
+   * who has already entered their own plot and then pastes a demo link keeps their
+   * work, because the alternative is a URL that silently discards it.
+   */
+  useEffect(() => {
+    const wanted = demoFrom(search);
+    if (wanted === null || demo !== null || plot !== null) return;
+    setDemo(wanted);
+    setStep('plot');
+    setStepHint(null);
+    navigate('/app?step=plot', { replace: true });
+  }, [search, demo, plot, navigate]);
 
   const inspect = useCallback(
     async (nodeId: string) => {
@@ -322,6 +395,36 @@ export function EngineApp({
       ) : null}
 
       {/*
+        THE DEMO SAYS SO, AND KEEPS SAYING SO UNTIL THE RUN EXISTS.
+
+        A form that arrives filled in, with no statement of who filled it, is the
+        same defect as a number with no provenance — and this one fills in a plot
+        number, a shape, four edge classifications, a parking treatment, a level
+        count, an efficiency and a unit mix. `role="note"` rather than `alert`:
+        nothing is wrong, and an assertive announcement would interrupt the reader
+        to tell them the page did what their click asked for.
+
+        It goes once the run exists, because from the capacity step on, what is on
+        screen is the engine's output and the banner would be describing the
+        provenance of an input nobody is looking at any more.
+      */}
+      {/* A PLAIN BANNER, WITH NO STATE MODIFIER, AND THAT IS THE POINT. The three
+          that exist are danger, blocked and assumed; amber in particular belongs
+          to ASSUMED alone (§13.1). Nothing here is uncertain or wrong — it is a
+          neutral statement of where these values came from — so it takes the
+          neutral band rather than borrowing a colour that already means something
+          else on this screen. */}
+      {demo && !run ? (
+        <div className="banner" role="note">
+          <div>
+            <strong>{t.demo.title}</strong>
+            <p>{t.demo.body}</p>
+            <p className="fine-print">{t.demo.reproduces}</p>
+          </div>
+        </div>
+      ) : null}
+
+      {/*
         THE THREE COLUMNS §5.1 ASKS FOR: the steps as a rail, the canvas, and the
         provenance inspector — the last of which `.layout--with-panel` already
         owned, so this adds the first and nothing else moves.
@@ -352,7 +455,7 @@ export function EngineApp({
                     className={`stepper__step${current ? ' is-current' : ''}${
                       available ? '' : ' is-locked'
                     }`}
-                    onClick={() => available && setStep(s.id)}
+                    onClick={() => available && goto(s.id)}
                     disabled={!available}
                     aria-current={current ? 'step' : undefined}
                     title={available ? undefined : t.steps.locked}
@@ -376,9 +479,9 @@ export function EngineApp({
                 actor={actor}
                 onUse={(p) => {
                   setPrefill(p);
-                  setStep('plot');
+                  goto('plot');
                 }}
-                onSkip={() => setStep('plot')}
+                onSkip={() => goto('plot')}
               />
             ) : null}
 
@@ -387,10 +490,11 @@ export function EngineApp({
                 actor={actor}
                 busy={busy}
                 prefill={prefill}
+                demo={demo?.plot ?? null}
                 onCreated={(created, view) => {
                   setPlot(view);
                   setPlotHash(created.gateSubjectHash);
-                  setStep('parameters');
+                  goto('parameters');
                 }}
                 onError={setError}
                 setBusy={setBusy}
@@ -403,7 +507,7 @@ export function EngineApp({
                 confirmed={gates['G1_PLOT_CONFIRMED'] === true}
                 onConfirm={() => {
                   setGates((g) => ({ ...g, G1_PLOT_CONFIRMED: true }));
-                  setStep('rules');
+                  goto('rules');
                 }}
               />
             ) : null}
@@ -413,6 +517,7 @@ export function EngineApp({
                 actor={actor}
                 plot={plot}
                 sheetPodiumLevels={prefill?.podiumLevels ?? null}
+                demo={demo?.run ?? null}
                 busy={busy}
                 onRun={async (body) => {
                   setBusy(true);
@@ -422,7 +527,7 @@ export function EngineApp({
                     setRun(result);
                     setRequest(body);
                     setGates((g) => ({ ...g, G2_RULES_ACKNOWLEDGED: true }));
-                    setStep('assumptions');
+                    goto('assumptions');
                   } catch (e) {
                     if (e instanceof ApiError) setError(e);
                   } finally {
@@ -507,7 +612,7 @@ export function EngineApp({
                 run={run}
                 gates={gates}
                 onAcknowledge={acknowledge}
-                onGoToAssumptions={() => setStep('assumptions')}
+                onGoToAssumptions={() => goto('assumptions')}
                 onError={setError}
               />
             ) : null}
@@ -515,7 +620,7 @@ export function EngineApp({
             {/* Below the step body, not above it: the way on is read after the step
                 has been read, and a control that moves as the body grows is a control
                 that is somewhere different on every step. */}
-            <StepFooter step={step} flow={flow} onGo={setStep} />
+            <StepFooter step={step} flow={flow} onGo={goto} />
           </div>
 
           {inspecting ? (

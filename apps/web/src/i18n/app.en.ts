@@ -106,6 +106,24 @@ export const EN = {
       'This run used draft rules with placeholder citations. It demonstrates the engine; it does not measure this plot.',
   },
 
+  /**
+   * The worked-example demo, named on screen rather than applied in silence.
+   *
+   * The claim in `reproduces` is checkable and is checked: `pnpm example`
+   * re-runs the recorded input against the real API and diffs it against the
+   * figures the landing page prints. If it ever stopped being true the build
+   * would fail before this sentence could be read by anybody.
+   */
+  demo: {
+    title: 'This is the worked example from the front page.',
+    body:
+      'The plot, its four edges, the parking treatment, the level count, the saleable ' +
+      'efficiency and the unit mix are filled in from that run. Every one of them is ' +
+      'yours to change before anything is computed.',
+    reproduces:
+      'Leave them as they are and the capacity you get is the capacity that page quotes.',
+  },
+
   /** The build line under the engine. The versions are the run's. */
   build: {
     engine: 'Engine ',

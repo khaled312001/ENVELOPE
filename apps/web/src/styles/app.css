@@ -2311,3 +2311,67 @@ button.plot-legend__row:active {
   font-size: var(--text-xs);
   font-family: var(--font-mono);
 }
+
+/* ==========================================================================
+ * THE UNIT MIX, ON SCREEN
+ * ==========================================================================
+ *
+ * A list and not a table, because three rows of two fields each is a sentence
+ * with a shape — "half of them at 70 m², half at 110" — and a table would give
+ * that four column headers and a caption to read first.
+ *
+ * The row is `flex` with a wrap, not a grid with fixed tracks. The middle field is
+ * a developer's own unit label ("2 bedroom", «غرفتا نوم», or a scenario name three
+ * words long) and the areas either side are mono figures; a fixed track sized for
+ * the English would clip one of them and a track sized for the longest would leave
+ * the short ones adrift. Wrapping puts a long label on its own line and keeps the
+ * share and the area together, which is the pairing that carries the meaning.
+ */
+
+.mix-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: var(--border-width) solid var(--border-subtle);
+}
+
+.mix-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+  border-block-end: var(--border-width) solid var(--border-subtle);
+}
+
+/* The two figures are the engine's operands and are set as figures; the label
+   between them is prose and stays in the text face. */
+.mix-list__share,
+.mix-list__area {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.mix-list__label {
+  color: var(--text-primary);
+}
+
+.mix-basis {
+  margin-block: var(--space-3) 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/*
+ * The amber marker sits INSIDE the sentence that names the class, so the colour
+ * and the word "Assumed." arrive together. A reader meeting this palette for the
+ * first time — which is the reader this panel was written for — is not asked to
+ * infer the convention from a swatch in a legend somewhere above.
+ *
+ * No amber ground and no amber border: this is a line of prose, not a banner, and
+ * §13.1's amber belongs to the values themselves. The marker is the whole of it.
+ */
+.mix-basis--assumed .traced--assumed {
+  margin-inline-end: var(--space-2);
+}

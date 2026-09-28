@@ -87,6 +87,7 @@ import {
   RulesStep,
   SaleableEfficiency,
 } from '../src/screens/RulesStep.js';
+import { WORKED_EXAMPLE } from '../src/demo.js';
 import {
   arabicReadingText,
   expectNoBannedVocabulary,
@@ -373,6 +374,7 @@ const CASES: readonly Case[] = [
         actor={ACTOR}
         plot={plotView}
         sheetPodiumLevels={null}
+        demo={null}
         busy={false}
         onRun={noop}
         onError={noop}
@@ -386,7 +388,27 @@ const CASES: readonly Case[] = [
         actor={ACTOR}
         plot={plotView}
         sheetPodiumLevels={{ value: 2, raw: 'G+2P+8' }}
+        demo={null}
         busy={true}
+        onRun={noop}
+        onError={noop}
+      />
+    ),
+  },
+  {
+    /*
+      The rules step as `?demo=worked-example` hands it over: three questions
+      that have no default anywhere in this screen are answered, and the mix
+      the run will use is on screen instead of being posted unseen.
+    */
+    label: 'the rules step, filled from the worked example',
+    node: () => (
+      <RulesStep
+        actor={ACTOR}
+        plot={plotView}
+        sheetPodiumLevels={null}
+        demo={WORKED_EXAMPLE.run}
+        busy={false}
         onRun={noop}
         onError={noop}
       />
@@ -776,6 +798,7 @@ describe('the Arabic copy that carries the product’s refusals', () => {
           actor={ACTOR}
           plot={plotView}
           sheetPodiumLevels={null}
+          demo={null}
           busy={false}
           onRun={noop}
           onError={noop}

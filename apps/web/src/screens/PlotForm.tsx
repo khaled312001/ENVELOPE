@@ -81,6 +81,32 @@ export interface PlotFormProps {
     readonly community: string;
     readonly statedAreaM2: string;
   } | null;
+  /**
+   * The worked example, when the reader arrived by `?demo=worked-example`.
+   *
+   * A SECOND PROP RATHER THAN A WIDER `prefill`, because the two carry values of
+   * different kinds and the difference is the one this form is careful about.
+   * `prefill` comes from a *sheet*, which states an area and no frontage — hence
+   * the paragraph above refusing to infer a rectangle from it. A demo carries a
+   * shape that was surveyed, entered and run; it is the input of a run whose
+   * output is printed on the landing page. Folding it into `prefill` would have
+   * meant either deleting that refusal or writing an exception inside it, and an
+   * exception inside a rule is how the rule stops being read.
+   *
+   * It is applied at mount, to the same initial state a reader would have typed.
+   * Nothing here is locked: the banner above the form says where the values came
+   * from, and every field stays editable.
+   */
+  readonly demo?: {
+    readonly plotNumber: string;
+    readonly community: string;
+    readonly widthM: string;
+    readonly depthM: string;
+    readonly edges: readonly {
+      readonly classification: string;
+      readonly roadHierarchy: string;
+    }[];
+  } | null;
 }
 
 export function PlotForm({
@@ -90,19 +116,40 @@ export function PlotForm({
   onCreated,
   onError,
   prefill,
+  demo,
 }: PlotFormProps): JSX.Element {
   const t = useDict(EN, AR);
-  const [plotNumber, setPlotNumber] = useState(prefill?.plotNumber || '345-1234');
-  const [community, setCommunity] = useState(prefill?.community ?? '');
-  const [width, setWidth] = useState('80');
-  const [depth, setDepth] = useState('40');
+  const [plotNumber, setPlotNumber] = useState(
+    prefill?.plotNumber || demo?.plotNumber || '345-1234',
+  );
+  const [community, setCommunity] = useState(prefill?.community ?? demo?.community ?? '');
+  const [width, setWidth] = useState(demo?.widthM ?? '80');
+  const [depth, setDepth] = useState(demo?.depthM ?? '40');
   const [statedArea, setStatedArea] = useState(prefill?.statedAreaM2 ?? '');
-  const [edges, setEdges] = useState<EdgeDraft[]>([
-    { classification: '', roadHierarchy: '' },
-    { classification: '', roadHierarchy: '' },
-    { classification: '', roadHierarchy: '' },
-    { classification: '', roadHierarchy: '' },
-  ]);
+  const [edges, setEdges] = useState<EdgeDraft[]>(
+    /*
+      THE DEMO'S EDGES, OR FOUR UNCLASSIFIED ONES.
+
+      Unclassified is the honest default and the form refuses to submit on it —
+      which is the check the smoke walk exercises by name. The demo is the one case
+      where somebody did classify them: two roads of different rank and two
+      neighbours, which is what makes the worked example's access recommendation
+      say anything at all. The cast is safe by the same test that makes the
+      submission safe: an unrecognised string lands in the select as no selection,
+      and the form still refuses.
+    */
+    demo
+      ? demo.edges.map((e) => ({
+          classification: e.classification as Classification,
+          roadHierarchy: e.roadHierarchy as Hierarchy,
+        }))
+      : [
+          { classification: '', roadHierarchy: '' },
+          { classification: '', roadHierarchy: '' },
+          { classification: '', roadHierarchy: '' },
+          { classification: '', roadHierarchy: '' },
+        ],
+  );
 
   /*
     AUTOSAVE, AND THE ONE DECISION IN IT THAT MATTERS.

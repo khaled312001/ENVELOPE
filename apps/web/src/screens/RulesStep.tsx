@@ -90,6 +90,7 @@ export function RulesStep({
   actor,
   plot,
   sheetPodiumLevels,
+  demo,
   busy,
   onRun,
   onError,
@@ -98,6 +99,36 @@ export function RulesStep({
   readonly plot: PlotView;
   /** What the affection plan printed, if it was read at step 0. */
   readonly sheetPodiumLevels: { readonly value: number; readonly raw: string } | null;
+
+  /**
+   * The worked example, when the reader arrived by `?demo=worked-example`.
+   *
+   * Three of these four fields have no default anywhere in this screen, on
+   * purpose: the parking treatment, the saleable efficiency and the level count
+   * are questions the engine refuses to answer for anybody. The demo does not make
+   * them defaults — it answers them the way that run answered them, says so in the
+   * banner above, and leaves every control live.
+   *
+   * THE MIX IS THE ONE THAT MATTERS. Without it the run would silently fall back
+   * to the generic mix below, which is three unit types at 50/37.5/12.5 against
+   * the worked example's two at 50/50. The unit count would come out different
+   * from the one on the landing page, and nothing on screen would have explained
+   * why the page and the engine disagreed.
+   */
+  readonly demo: {
+    readonly parkingInFar: string;
+    readonly parkingLevelsAvailable: number;
+    readonly saleableEfficiency: string;
+    readonly unitMix: {
+      readonly entries: readonly {
+        readonly typeId: string;
+        readonly label: string;
+        readonly share: string;
+        readonly nsaM2: string;
+      }[];
+      readonly basis: string;
+    };
+  } | null;
   readonly busy: boolean;
   readonly onRun: (body: RunRequestBody) => void;
   readonly onError: (e: ApiError) => void;
@@ -107,8 +138,10 @@ export function RulesStep({
   const [rules, setRules] = useState<{ pending: readonly RuleSummary[]; warning: string } | null>(
     null,
   );
-  const [parkingInFar, setParkingInFar] = useState<RunRequestBody['parkingInFar'] | ''>('');
-  const [levels, setLevels] = useState(2);
+  const [parkingInFar, setParkingInFar] = useState<RunRequestBody['parkingInFar'] | ''>(
+    (demo?.parkingInFar as RunRequestBody['parkingInFar'] | undefined) ?? '',
+  );
+  const [levels, setLevels] = useState(demo?.parkingLevelsAvailable ?? 2);
   /*
     EMPTY MEANS "NOT ENTERED", NOT ZERO AND NOT ONE.
 
@@ -131,7 +164,7 @@ export function RulesStep({
    * metre of GFA as saleable and reported more units than any building holds.
    * Selecting a developer standard fills it from a cited target.
    */
-  const [efficiency, setEfficiency] = useState('');
+  const [efficiency, setEfficiency] = useState(demo?.saleableEfficiency ?? '');
 
   useEffect(() => {
     void api
@@ -154,24 +187,58 @@ export function RulesStep({
   const standard = standards?.standards[0];
   const scenario = standard?.scenarios.find((s) => s.scenarioId === scenarioId);
 
-  const body = (treatment: RunRequestBody['parkingInFar']): RunRequestBody => ({
-    plotId: plot.plotId,
-    parkingInFar: treatment,
-    unitMix: scenario
+  /**
+   * The mix this run will be computed on — decided once, posted and shown.
+   *
+   * IT USED TO BE DECIDED INSIDE THE REQUEST BUILDER AND SHOWN NOWHERE. The
+   * generic fallback is three unit types with areas nobody entered, and its own
+   * basis string says so — "Nobody entered these areas — they are a stand-in, and
+   * they move the unit count directly". That sentence was posted to the engine and
+   * printed in the report, and the reader on this screen, the one person who could
+   * have replaced it before it mattered, never saw it. A default that argues
+   * against itself in a place the decision-maker cannot read is a hidden default
+   * with a clear conscience.
+   *
+   * So it is a value now, `UnitMixSummary` prints it, and `body()` posts it. One
+   * source, two readers.
+   *
+   * THE DEMO'S MIX IS `USER_SET` BECAUSE THE RECORDED RUN'S WAS. Reproducing the
+   * landing page's figures means posting its input unchanged, and the class is
+   * part of the input. What is true — that the reader did not choose these areas —
+   * is carried where provenance is actually read, in the basis string, which names
+   * the worked example and says the count moves if the mix does.
+   */
+  const mix: RunRequestBody['unitMix'] = scenario
+    ? {
+        // USER_SET, because choosing to build to a developer's brief is a
+        // decision a person made. The areas inside it are quoted from a cited
+        // document, and the basis names it.
+        source: 'USER_SET',
+        entries: scenario.entries.map((e) => ({
+          typeId: e.typeId,
+          label: e.label,
+          share: e.share,
+          nsaM2: e.nsaM2,
+        })),
+        basis: scenario.basis,
+      }
+    : demo
       ? {
-          // USER_SET, because choosing to build to a developer's brief is a
-          // decision a person made. The areas inside it are quoted from a cited
-          // document, and the basis names it.
           source: 'USER_SET',
-          entries: scenario.entries.map((e) => ({
+          entries: demo.unitMix.entries.map((e) => ({
             typeId: e.typeId,
             label: e.label,
             share: e.share,
             nsaM2: e.nsaM2,
           })),
-          basis: scenario.basis,
+          basis: demo.unitMix.basis,
         }
-      : { source: 'ASSUMED', entries: DEFAULT_MIX, basis: DEFAULT_MIX_BASIS },
+      : { source: 'ASSUMED', entries: DEFAULT_MIX, basis: DEFAULT_MIX_BASIS };
+
+  const body = (treatment: RunRequestBody['parkingInFar']): RunRequestBody => ({
+    plotId: plot.plotId,
+    parkingInFar: treatment,
+    unitMix: mix,
     parkingLevelsAvailable: levels,
     ...(podium.trim() !== '' ? { podiumLevels: Number(podium) } : {}),
     parkingUsableFraction: {
@@ -356,6 +423,9 @@ export function RulesStep({
         }}
       />
 
+      {/* --- The mix the run will be computed on ------------------------- */}
+      <UnitMixSummary mix={mix} />
+
       {/* --- Saleable efficiency, which has no default ------------------- */}
       <SaleableEfficiency
         standard={standard}
@@ -453,6 +523,67 @@ export function RuleDisclosure({
       ) : (
         <p className="muted">{t.loading}</p>
       )}
+    </section>
+  );
+}
+
+/**
+ * The unit mix going into this run, printed before it goes.
+ *
+ * ---------------------------------------------------------------------------
+ * THE UNIT COUNT RESTS ON FOUR NUMBERS NOBODY WAS SHOWN.
+ *
+ * Units are GFA over area-per-unit, and the areas come from this mix. Selecting
+ * a developer standard fills it from a cited document and the picker prints what
+ * it filled — but selecting nothing, which is the state this screen opens in and
+ * the only state available at all when a deployment withholds the standards,
+ * posted a generic mix that appeared on no screen at any point. It reached the
+ * reader as a unit count and reached the report as a basis string, which is the
+ * wrong order: the moment to argue with an assumption is before it is computed.
+ *
+ * There is no edit control here yet. Entering a mix by hand is Phase D work and
+ * this is not a stand-in for it — it is the disclosure that should have been
+ * there either way, and `ASSUMED` is marked as ASSUMED, in amber, in words.
+ */
+export function UnitMixSummary({
+  mix,
+}: {
+  readonly mix: RunRequestBody['unitMix'];
+}): JSX.Element {
+  const t = useDict(EN, AR).mix;
+  const ltr = useVerbatim();
+  const assumed = mix.source === 'ASSUMED';
+  return (
+    <section className="panel" aria-labelledby="mix-heading">
+      <header className="panel__header">
+        <div>
+          <h2 id="mix-heading" className="panel__title">
+            {t.title}
+          </h2>
+          <p className="panel__subtitle">{t.subtitle}</p>
+        </div>
+      </header>
+
+      <ul className="mix-list">
+        {mix.entries.map((e) => (
+          <li key={e.typeId} className="mix-list__item">
+            <span className="mix-list__share">{t.share((Number(e.share) * 100).toFixed(1))}</span>
+            <span className="mix-list__label">{ltr(e.label)}</span>
+            <span className="mix-list__area">{t.area(e.nsaM2)}</span>
+          </li>
+        ))}
+      </ul>
+
+      {/* The class in words, not only in ink. A reader who has not yet learned the
+          palette is exactly the reader this panel exists for. */}
+      <p className={assumed ? 'mix-basis mix-basis--assumed' : 'mix-basis'}>
+        {assumed ? (
+          <span className="traced traced--assumed" aria-hidden="true">
+            <span className="traced__marker" />
+          </span>
+        ) : null}
+        <strong>{assumed ? t.assumed : t.userSet}</strong> {ltr(mix.basis)}
+      </p>
     </section>
   );
 }

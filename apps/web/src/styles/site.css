@@ -170,9 +170,40 @@
 }
 /* The first section after the frontispiece needs no rule: the masthead gave it
    one. */
+/*
+ * THE OPENING SECTION IS THE BRAND BAND, ON EVERY PAGE THAT HAS ONE.
+ *
+ * It was painted on `.lp-hero` alone, which made the identity a property of the
+ * landing page rather than of the product: a reader who followed a link from it to
+ * `/parking` or `/refusals` arrived somewhere that looked like a different site.
+ * One rule here reaches `/`, `/parking`, `/exports`, `/refusals` and `/app`,
+ * because all five already open on this class — which is why the band is declared
+ * where the class lives and not five times over in five page stylesheets.
+ *
+ * `--brand-wash` is a MEASURED GROUND. It is in `GROUNDS` in `contrast.mjs`, so
+ * every ink in the language is checked on it in three themes; and
+ * `assertAmberSurfaceMostChromatic` caps its saturation under the amber ground's,
+ * which is what keeps a coloured first screen from competing with ASSUMED. That
+ * check refused this band's first draft at chroma 31 against amber's 29.
+ *
+ * THE BLEED IS `max()` OVER A PERCENTAGE, NEVER `100vw`. `.shell` caps the element
+ * at 78rem, so a ground painted on it stops there and reads as a very wide card;
+ * this rebuilds the shell's own column out of padding and lets the ground run edge
+ * to edge behind it. `vw` includes the classic scrollbar, and `calc(50% - 50vw)` is
+ * the commonest way a page acquires a horizontal scrollbar at 320px — which is
+ * where every accessibility defect in this repository has been found.
+ */
 .section--opening {
   border-block-start: none;
   padding-block-start: var(--rhythm-block);
+  padding-block-end: var(--rhythm-block);
+  max-inline-size: none;
+  padding-inline: max(
+    var(--page-gutter),
+    calc(50% - var(--page-max) / 2 + var(--page-gutter))
+  );
+  background: var(--brand-wash);
+  border-block-end: var(--border-width) solid var(--border-subtle);
 }
 
 /* Zoning by ground, used sparingly and ALONGSIDE the datum rather than instead of

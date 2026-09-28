@@ -693,7 +693,10 @@ export function Landing({
       {/* ================================================================
           THE FOLD
           ============================================================= */}
-      <section className="shell lp-hero" aria-labelledby="lp-title">
+      {/* `section--opening` is what carries the brand band, and the landing page
+          wears it like every other page rather than painting its own: the chassis
+          owns the ground, `.lp-hero` owns only this section's geometry. */}
+      <section className="shell section--opening lp-hero" aria-labelledby="lp-title">
         {/*
           THE HEADLINE IS ITS OWN GRID AREA, AND THAT IS A MOBILE FIX.
 

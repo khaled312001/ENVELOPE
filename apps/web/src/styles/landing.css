@@ -103,35 +103,11 @@
     the governing figure and the amber assumption under it further down the page.
   */
   padding-block: var(--rhythm-minor) var(--rhythm-minor);
-  /*
-    THE FIRST SCREEN STANDS ON A COLOURED GROUND.
-
-    `--brand-wash` is a ground `contrast.mjs` MEASURES — it was added to its
-    `GROUNDS` array in the same change, so every ink that lands on this band — the headline,
-    the lede, the eyebrow, the fine print, the band figure, the amber chip — was
-    measured against it in three themes. A ground invented for this band and not
-    added to that array would have been a surface nothing had ever been checked
-    on, carrying the most-read text on the site.
-
-    It is a large chromatic area on the fold, which is the thing `pnpm amber`
-    used to refuse. That margin is no longer enforced; the note at the head of
-    `scripts/amber.mjs` records whose decision that was and what it cost.
-
-    THE BLEED IS `max()` OVER A PERCENTAGE, NEVER `100vw`. `.shell` caps this
-    element at 78rem, so a ground painted on it stops there and reads as a very
-    wide card; this rebuilds the shell's own column out of padding and lets the
-    ground run edge to edge behind it. `vw` includes the classic scrollbar, and
-    `calc(50% - 50vw)` is the commonest way a page acquires a horizontal scrollbar
-    at 320px — which is where every accessibility defect in this repository has
-    been found. Same construction as `antechamber.css`'s zoned band.
-  */
-  max-inline-size: none;
-  padding-inline: max(
-    var(--page-gutter),
-    calc(50% - var(--page-max) / 2 + var(--page-gutter))
-  );
-  background: var(--brand-wash);
-  border-block-end: var(--border-width) solid var(--border-subtle);
+  /* The coloured ground is the CHASSIS's now — `.section--opening` in `site.css`,
+     which every page that has an opening section wears. It lived here while it was
+     the landing page's alone, and an identity that is one page's is not one. The
+     hero keeps only its own geometry: the asymmetric columns, the three areas and
+     the minor rhythm at its head. */
 }
 .lp-hero__head {
   grid-area: head;

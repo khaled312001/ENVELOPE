@@ -116,6 +116,47 @@ const browser = await chromium.launch({
 });
 
 /**
+ * ONE CONTEXT FOR THE WHOLE RUN, AND THE HOST'S BROWSER CHECK PASSED ONCE IN IT.
+ *
+ * This file measured nothing at all against the live site and reported it as 124
+ * failures — every route, both themes, both folds, all with the same shape: the
+ * document carried no `data-theme` and not one palette token resolved to a colour.
+ * None of that was the release. Hostinger's CDN answers an automated browser's
+ * first request with its own "Checking your browser" page and lets it through a few
+ * seconds later on a cookie, and what this file was measuring was the area of amber
+ * on the CDN's interstitial, which is correctly zero.
+ *
+ * `smoke.mjs` has met this check since the first walk against the live site and
+ * passes it the way the host intends — by waiting. It gets away with one wait
+ * because it drives ONE page for the entire walk. This file opened
+ * `browser.newPage()` per route x theme x fold, and every one of those is a FRESH
+ * CONTEXT with its own cookie jar, so each of the forty met the challenge again.
+ * They are pages of one context now, the check is passed once before anything is
+ * measured, and the pages stay separate so a theme seeded in `localStorage` for one
+ * measurement is still overwritten before the next.
+ *
+ * WHAT WAS NOT DONE: launching a different browser. The bundled Chromium is not
+ * challenged and swapping to it would have turned 124 failures green in one line —
+ * and quietly changed which engine every local run of this gate measures, which is
+ * a worse thing to be wrong about than the thing it fixed.
+ *
+ * The 403 the check itself logs is the only error not counted, and every
+ * measurement below still loads its own route from the server.
+ */
+const REMOTE = !['localhost', '127.0.0.1'].includes(new URL(BASE).hostname);
+const context = await browser.newContext();
+if (REMOTE) {
+  /* Sized the way `smoke.mjs` sizes its waits: a deployment answers across a CDN
+     and a real uplink, and a gate that fails on the uploader's bandwidth reports
+     nothing about the release. The assertions do not move; only the patience. */
+  context.setDefaultTimeout(180000);
+  const warm = await context.newPage();
+  await warm.goto(BASE);
+  await warm.waitForSelector('#main', { timeout: 120000 });
+  await warm.close();
+}
+
+/**
  * Resolve the token values in the page, then sum the filled area of every element
  * whose painted background is one of them.
  *
@@ -328,7 +369,8 @@ const THEMES = ['light', 'dark'];
 for (const route of routes) {
  for (const theme of THEMES) {
   for (const { w, h } of FOLDS) {
-    const page = await browser.newPage({ viewport: { width: w, height: h } });
+    const page = await context.newPage();
+    await page.setViewportSize({ width: w, height: h });
     const label = `${route} @ ${w}x${h} ${theme}`;
     try {
       await page.addInitScript((t) => {
@@ -339,6 +381,11 @@ for (const route of routes) {
         }
       }, theme);
       await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle' });
+      /* `networkidle` says the transfers stopped, not that the application
+         mounted — and the theme attribute and every palette token are written by
+         the application. Against a deployment the two are far enough apart to
+         measure an empty document and call it zero amber. */
+      await page.waitForSelector('#main', { timeout: REMOTE ? 120000 : 15000 });
       const applied = await page.getAttribute('html', 'data-theme');
       if (applied !== theme) {
         fail(
@@ -436,6 +483,7 @@ for (const route of routes) {
  }
 }
 
+await context.close();
 await browser.close();
 
 if (notes.length > 0) {

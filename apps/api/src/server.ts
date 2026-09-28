@@ -83,6 +83,16 @@ import { buildRunReport } from './report.js';
 import { canReview, type Actor } from './identity.js';
 import { gateAck, plotInput, runRequest, shareRequest, type RunRequest } from './schemas.js';
 import { registerIntakeRoutes } from './intake-route.js';
+import {
+  AttachmentError,
+  bindSheet,
+  deserialiseSheet,
+  isRefusal,
+  readAttachedSheet,
+  serialiseSheet,
+  type StoredSheet,
+  type StoredSheetWire,
+} from './instrument.js';
 import { runDrawing, runDrawingSet, runGlb, runSheets, type DrawableRun } from './drawing.js';
 import { runWorkbookSpec, type ExportableRun } from './workbook.js';
 import { SqliteAccountRepository, type AccountRepository } from './account-store.js';
@@ -472,6 +482,32 @@ export async function build(
     // §14.1, enforced at the data layer rather than by convention.
     assertPhase0Shape(geometry.shapeClass);
 
+    /*
+      THE SHEET IS READ HERE, BY THIS SERVER, OR NOT AT ALL.
+
+      Parsed before the plot is built so an unreadable upload fails the request
+      rather than storing a plot whose sheet silently did not attach. A sheet that
+      merely omits every limit is NOT an error — it is a valid document and a
+      normal answer, and the plot is stored with what little it said.
+    */
+    let sheet: StoredSheet | undefined;
+    if (body.affectionPlan) {
+      try {
+        const read = await readAttachedSheet(body.affectionPlan);
+        sheet = {
+          limits: read.limits,
+          parcelId: read.parcelId ?? null,
+          issuedOn: read.issuedOn,
+          documentUri: read.documentUri,
+        };
+      } catch (error) {
+        if (error instanceof AttachmentError) {
+          return reply.code(error.statusCode).send({ error: error.message, detail: error.detail });
+        }
+        throw error;
+      }
+    }
+
     const stated = body.statedAreaM2 ? new Decimal(body.statedAreaM2) : undefined;
     // `FR-PLT-001 AC2` blocks at a 2% deviation. Reported rather than thrown, so
     // the UI can show both numbers and let the user decide which is wrong —
@@ -524,7 +560,7 @@ export async function build(
       areaMismatch,
       frontageCount: plot.frontageCount,
       shapeClass: plot.shapeClass,
-      plot: serialisePlot(plot),
+      plot: serialisePlot(plot, sheet),
     });
     reply.status(201);
     return {
@@ -547,6 +583,17 @@ export async function build(
       },
       frontageCount: plot.frontageCount,
       gateSubjectHash: subjectHash({ plot: body }),
+      /*
+        WHAT THE SHEET SAID, ANSWERED HERE RATHER THAN AT THE RUN.
+
+        The reader attaches the document on this screen, so this is where they
+        find out whether it was read and what it will bind. Reported through the
+        same function the run uses, so the two cannot describe one sheet
+        differently — and it is bound against this plot's number here too, which
+        is how a sheet for the wrong parcel is caught at upload rather than three
+        steps later.
+      */
+      sheet: sheetReport(sheet ? bindSheet(sheet, plot.plotNumber, actor.name) : undefined),
     };
   });
 
@@ -624,7 +671,25 @@ export async function build(
     const asOf = asOfNow(new Date().toISOString().slice(0, 10));
     const rules = store.load(asOf);
 
-    const input = runInputFrom(body, plot, rules, actor);
+    /*
+      THE PLOT'S OWN SHEET, APPLIED — THE HIGHEST-SEVERITY DEFECT IN THE PLAN.
+
+      Until this line the affection plan was read at intake, shown on screen, and
+      dropped before the engine saw it: the Warsan plot ran on the seed FAR of
+      5.00 while its own sheet printed 3.5. §11.5 step 1 gives a plot-specific
+      instrument precedence, so appending these to the rule set is all it takes —
+      `resolveParameter` does the rest and records the seed rule as superseded.
+
+      A refusal is NOT a failure. The run proceeds on the general rules exactly as
+      it did before, and `sheet` in the response names the document that was set
+      aside and why — a sheet that is attached and quietly ignored is worse than
+      no sheet at all.
+    */
+    const stored = await loadSheet(repo, body.plotId);
+    const bound = stored ? bindSheet(stored, plot.plotNumber, actor.name) : undefined;
+    const instrumentRules = bound && !isRefusal(bound) ? bound.rules : [];
+
+    const input = runInputFrom(body, plot, [...rules, ...instrumentRules], actor);
 
     // The baseline must be taken immediately before the run and read
     // immediately after, with no await between: the geometry counters are
@@ -685,7 +750,16 @@ export async function build(
       output,
       checks,
       register,
-      rules,
+      /*
+        The rules the run ACTUALLY resolved against, instrument included. §3.4
+        item 4 wants "rules considered and excluded with reasons", and a report
+        that listed only the library would omit the one record that beat it.
+
+        `ruleSetHash` is the library's hash and stays that: it identifies which
+        version of the rule base was loaded. What the sheet added is identified
+        by `sheet` on the payload, which names the document and its issue date.
+      */
+      rules: [...rules, ...instrumentRules],
       ruleSetHash,
       engineVersion: ENGINE_VERSION,
       draftRules: body.useDraftRules,
@@ -715,7 +789,7 @@ export async function build(
     });
 
     reply.header('X-Run-Id', runId).status(201);
-    return payload;
+    return { ...payload, sheet: sheetReport(bound) };
   });
 
   /**
@@ -1264,9 +1338,19 @@ interface PlotWire {
   readonly mbrDepthMm: number;
   readonly convexityRatio: string;
   readonly frontageCount: number;
+  /**
+   * The plot's own affection plan, as this server read it.
+   *
+   * A sibling of the plot rather than a field on `Plot`, which is a core domain
+   * type that travels into `geometry` and `capacity` — neither of which has any
+   * business knowing an instrument exists. It lives in the blob the repository
+   * already stores, so there is no migration and a row written before this
+   * existed simply has no sheet, which is the correct reading of it.
+   */
+  readonly sheet?: StoredSheetWire;
 }
 
-function serialisePlot(plot: Plot): string {
+function serialisePlot(plot: Plot, sheet: StoredSheet | undefined): string {
   const wire: PlotWire = {
     plotId: plot.plotId,
     tenantId: plot.tenantId,
@@ -1292,6 +1376,7 @@ function serialisePlot(plot: Plot): string {
     mbrDepthMm: plot.mbrDepthMm as number,
     convexityRatio: plot.convexityRatio.toString(),
     frontageCount: plot.frontageCount,
+    ...(sheet ? { sheet: serialiseSheet(sheet) } : {}),
   };
   return JSON.stringify(wire);
 }
@@ -1359,6 +1444,74 @@ function runInputFrom(
     realismDiscount: new Decimal(body.realismDiscount),
     ...(body.podiumLevels !== undefined ? { podiumLevels: body.podiumLevels } : {}),
   };
+}
+
+/**
+ * The plot's stored affection plan, if it has one.
+ *
+ * Separate from `loadPlot` because `Plot` does not carry it and must not: the
+ * engine resolves rules and knows nothing about instruments. This reads the same
+ * blob and takes the sibling field.
+ */
+/**
+ * What the plot's sheet did to this run, for the screen and the reader.
+ *
+ * Three states and all three are said out loud: no sheet attached, a sheet that
+ * was refused and why, or a sheet that bound — with every limit it bound AND
+ * every limit it did not. The last half is the one that matters: a response
+ * listing four rules from a sheet that states six would understate the
+ * instrument while looking complete.
+ */
+function sheetReport(
+  bound: ReturnType<typeof bindSheet> | undefined,
+): {
+  readonly attached: boolean;
+  readonly documentUri: string | null;
+  readonly issuedOn: string | null;
+  readonly refused: string | null;
+  readonly bound: readonly { readonly parameterId: string; readonly value: string; readonly unit: string; readonly clause: string }[];
+  readonly notBound: readonly { readonly field: string; readonly stated: string; readonly reason: string }[];
+} {
+  if (!bound) {
+    return {
+      attached: false,
+      documentUri: null,
+      issuedOn: null,
+      refused: null,
+      bound: [],
+      notBound: [],
+    };
+  }
+  if (isRefusal(bound)) {
+    return {
+      attached: true,
+      documentUri: bound.documentUri,
+      issuedOn: null,
+      refused: bound.reason,
+      bound: [],
+      notBound: [],
+    };
+  }
+  return {
+    attached: true,
+    documentUri: bound.documentUri,
+    issuedOn: bound.issuedOn,
+    refused: null,
+    bound: bound.rules.map((r) => ({
+      parameterId: r.parameterId,
+      value: String(r.evaluatorArgs['value']),
+      unit: r.unit,
+      clause: r.citation.sourceTextVerbatim,
+    })),
+    notBound: bound.notBound,
+  };
+}
+
+async function loadSheet(repo: RunRepository, plotId: string): Promise<StoredSheet | undefined> {
+  const stored = await repo.getPlot(plotId);
+  if (!stored) return undefined;
+  const w = JSON.parse(stored.plot) as PlotWire;
+  return w.sheet ? deserialiseSheet(w.sheet) : undefined;
 }
 
 async function loadPlot(repo: RunRepository, plotId: string): Promise<Plot> {

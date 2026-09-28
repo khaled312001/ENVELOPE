@@ -280,7 +280,32 @@ export function rulesFromInstrument(
 
   // --- Setbacks ------------------------------------------------------------
   if (limits.setbacks) {
-    const { podium, raw } = limits.setbacks.value;
+    const { podium, tower, raw } = limits.setbacks.value;
+
+    /*
+      THE TOWER SCHEDULE BINDS NOTHING, AND SAYING SO IS NOT OPTIONAL.
+
+      A real sheet states both: the Warsan plan prints "GF & Podium: 0m from all
+      sides | Tower: Front = 0m, Sides & Rear = 3m". The engine has ONE
+      `setback.road` and ONE `setback.adjacent_plot`, which together cut the
+      footprint the podium occupies; the tower above it is governed by
+      `tower_plate.max`, an area. So the podium row binds and the tower row
+      cannot — and a builder that read the podium and stayed quiet about the
+      tower would be dropping half of what the document says while returning a
+      complete-looking answer. That was the shape of the defect this whole module
+      exists to close, and repeating it one level down would be worse, not better.
+    */
+    const towerStates = [tower.front, tower.side, tower.rear].filter((v) => v !== undefined);
+    if (towerStates.length > 0) {
+      notBound.push({
+        field: 'setbacks.tower',
+        stated: raw,
+        reason:
+          'setback.road and setback.adjacent_plot cut the podium footprint, and the engine ' +
+          'holds one of each. The tower’s own setbacks are a second schedule this phase ' +
+          'does not model; the tower is capped by tower_plate.max, which is an area.',
+      });
+    }
 
     const setbackRule = (
       parameterId: string,

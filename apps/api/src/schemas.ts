@@ -13,6 +13,8 @@
 
 import { z } from 'zod';
 
+import { affectionPlanAttachment } from './instrument.js';
+
 /** A decimal carried as a string. Rejects anything a `Decimal` cannot parse. */
 export const decimalString = z
   .string()
@@ -76,6 +78,18 @@ export const plotInput = z
     edges: z.array(plotEdgeInput).min(3),
     /** Area as printed on the affection plan, for the 2% cross-check. */
     statedAreaM2: decimalString.optional(),
+    /**
+     * The affection plan itself, so the SERVER reads its limits.
+     *
+     * The PDF, not the numbers off it. A body carrying `{ far: 3.5 }` would
+     * produce a rule whose citation names a page and a bounding box in a
+     * document this server never opened — a number somebody typed wearing the
+     * evidence of a number somebody read. See `instrument.ts`.
+     *
+     * Optional, and a plot without one behaves exactly as it always has: step 0
+     * is not gated, because a plot whose sheet is not to hand is still a plot.
+     */
+    affectionPlan: affectionPlanAttachment.optional(),
   })
   .refine((p) => p.edges.length === p.vertices.length, {
     message: 'every edge needs a classification: edge count must equal vertex count',

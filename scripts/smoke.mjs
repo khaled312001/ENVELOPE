@@ -70,8 +70,25 @@ const step = async (label, fn) => {
 
 const BASE = process.env.SMOKE_URL ?? 'http://localhost:5173/';
 
-/** The account the `/settings` steps at the end of this file make and then change. */
+/*
+  THE ACCOUNT THE `/settings` STEPS USE, AND WHY IT IS ONE ACCOUNT AND NOT A NEW
+  ONE EACH RUN.
+
+  The first version keyed the address on `Date.now()`, which is fine against a dev
+  database and wrong against a deployment: every production smoke run would leave
+  another account behind, in the client's live database, and there is no route
+  that deletes one — deliberately, since this product has no delete-account
+  control and `/settings` says so.
+
+  So the address is FIXED and the run is idempotent. The account is registered on
+  the first run and signed into on every run after; the last step changes the
+  password and then changes it back, so the next run finds it where it left it.
+  `signIn` tries both passwords because a run that failed between those two
+  changes would otherwise poison every run after it.
+*/
+const SMOKE_EMAIL = 'smoke@example.com';
 const SMOKE_PASSWORD = 'a correct horse battery staple';
+const SMOKE_PASSWORD_ALT = 'another long secret phrase';
 
 /**
  * Every wait below was sized against a dev server on this machine. Pointed at a
@@ -1045,24 +1062,47 @@ await step('every route renders in Arabic, right to left, and says nothing in En
  * password change leaves the account alone. Both are round trips.
  * ======================================================================= */
 
+/*
+  A 409 FROM REGISTER IS THE IDEMPOTENCY WORKING, NOT A FAULT.
+
+  On every run after the first, the fixed account already exists and the register
+  call is answered "that address is taken" — which is what tells this step to sign
+  in instead. The browser logs it as a failed resource, and counting it would mean
+  the second run of a suite that passes always reports a problem.
+*/
+expectedRefusal = '/api/auth/register';
 await step('the settings page saves a name, and the rail redraws with it', async () => {
   // Registered through the API, not the account panel. This step is about the
   // settings page; driving the sign-up form to reach it would make a failure in
   // that form look like a failure here, and the antechamber has its own steps.
-  const email = `smoke-${Date.now()}@example.com`;
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-  const made = await page.evaluate(
-    async ([address, password]) => {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email: address, password, name: 'Khaled Haggagy', licence: 'DM-1' }),
+  const how = await page.evaluate(
+    async ([address, password, alternate]) => {
+      const post = (path, body) =>
+        fetch(path, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      const made = await post('/api/auth/register', {
+        email: address,
+        password,
+        name: 'Khaled Haggagy',
+        licence: 'DM-1',
       });
-      return res.status;
+      if (made.status === 201) return 'registered';
+      // Already there from a previous run. Either password may be the live one:
+      // the last step changes it and changes it back, and a run that died between
+      // the two left the alternate in place.
+      for (const candidate of [password, alternate]) {
+        const back = await post('/api/auth/login', { email: address, password: candidate });
+        if (back.ok) return candidate === password ? 'signed in' : 'signed in (alternate)';
+      }
+      return `register ${made.status}, and neither password signs in`;
     },
-    [email, SMOKE_PASSWORD],
+    [SMOKE_EMAIL, SMOKE_PASSWORD, SMOKE_PASSWORD_ALT],
   );
-  if (made !== 201) throw new Error(`could not register a test account: ${made}`);
+  if (!how.startsWith('registered') && !how.startsWith('signed in')) throw new Error(how);
 
   await page.goto(`${BASE.replace(/\/$/, '')}/settings`, { waitUntil: 'networkidle' });
   await page.getByRole('heading', { name: /who you are|من أنت/i }).waitFor({ timeout: wait(8000) });
@@ -1108,7 +1148,7 @@ await step('a wrong current password is refused, in the server’s own sentence'
 
 await step('the confirmation field is checked here, and the length is not', async () => {
   await page.getByLabel(/current password/i).fill(SMOKE_PASSWORD);
-  await page.getByLabel(/^New password$/).fill('another long secret phrase');
+  await page.getByLabel(/^New password$/).fill(SMOKE_PASSWORD_ALT);
   await page.getByLabel(/new password again/i).fill('a different long secret');
   await page.getByRole('button', { name: /^change password$/i }).click();
   await page.getByText(/these two do not match/i).waitFor({ timeout: wait(4000) });
@@ -1123,18 +1163,27 @@ await step('the confirmation field is checked here, and the length is not', asyn
 
 expectedRefusal = null;
 await step('changing the password says every other device was signed out', async () => {
-  await page.getByLabel(/current password/i).fill(SMOKE_PASSWORD);
-  await page.getByLabel(/^New password$/).fill('another long secret phrase');
-  await page.getByLabel(/new password again/i).fill('another long secret phrase');
-  await page.getByRole('button', { name: /^change password$/i }).click();
-  await page
-    .getByText(/every other device has been signed out/i)
-    .waitFor({ timeout: wait(10000) });
+  const change = async (from, to) => {
+    await page.getByLabel(/current password/i).fill(from);
+    await page.getByLabel(/^New password$/).fill(to);
+    await page.getByLabel(/new password again/i).fill(to);
+    await page.getByRole('button', { name: /^change password$/i }).click();
+    await page
+      .getByText(/every other device has been signed out/i)
+      .waitFor({ timeout: wait(10000) });
+  };
+
+  await change(SMOKE_PASSWORD, SMOKE_PASSWORD_ALT);
 
   // This device is NOT signed out: the server hands it a fresh cookie, and the
   // rail would lose the name if it had not.
   const rail = page.getByRole('navigation', { name: /your workspace/i });
   await rail.getByText('Khaled A. Haggagy').waitFor({ timeout: wait(5000) });
+
+  // AND BACK, so the next run finds the account where it left it. That also
+  // exercises the change a second time from a cookie the previous change issued,
+  // which is the one session the route is required not to have destroyed.
+  await change(SMOKE_PASSWORD_ALT, SMOKE_PASSWORD);
 });
 
 await step('the settings page offers no control the server cannot honour', async () => {

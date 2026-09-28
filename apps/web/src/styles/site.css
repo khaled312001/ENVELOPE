@@ -2664,6 +2664,192 @@
 }
 
 /* ==========================================================================
+ * 21. AUTH — sign in, create an account
+ *
+ * A split: the form column at a card measure, the offer-and-its-limit beside it.
+ * §6.2 specifies a 480px form column and an image panel; the image is absent
+ * until it is commissioned, so the panel is the ASIDE and the image sits behind
+ * it when it lands. That ordering is deliberate — a panel that was only an image
+ * would be an empty column today, and a layout that changes shape when an asset
+ * arrives is a layout nobody has seen.
+ * ======================================================================= */
+
+.auth__split {
+  display: grid;
+  /* `min(30rem, 100%)` so the form column can never be wider than the viewport;
+     a fixed 480px track is how a sign-in page scrolls sideways on a phone. */
+  grid-template-columns: min(30rem, 100%) minmax(0, 1fr);
+  gap: var(--rhythm-minor);
+  align-items: start;
+}
+
+@media (max-width: 60rem) {
+  /* One column, and the aside goes UNDER the form rather than above it: the
+     reader came here to sign in, and the argument about what an account is not
+     is what they read while the request is in flight. */
+  .auth__split { grid-template-columns: minmax(0, 1fr); }
+}
+
+.auth__title {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  margin-block-end: var(--space-3);
+}
+
+.auth__lede {
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-prose);
+}
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-block-start: var(--rhythm-block);
+}
+
+/*
+ * THE REVEAL BUTTON SITS INSIDE THE FIELD, and the input is padded out of its
+ * way rather than the button overlapping the text.
+ *
+ * `padding-inline-end` on the input is what makes a long password scroll behind
+ * the label instead of under it. The value is generous because the button carries
+ * a WORD, not an eye glyph — "Show the password" is the accessible name every
+ * icon-only reveal in the survey was missing, and a named control has a width.
+ */
+.auth__reveal-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth__reveal-input {
+  inline-size: 100%;
+  padding-inline-end: 6.5rem;
+}
+
+.auth__reveal {
+  position: absolute;
+  inset-inline-end: var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap-min);
+  padding-inline: var(--space-2);
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+.auth__reveal:hover,
+.auth__reveal:focus-visible { color: var(--text-primary); }
+
+/*
+ * THE LIVE REGION IS ALWAYS IN THE DOCUMENT, so it has no size of its own when
+ * it is empty. A region that appears at the same moment its content does is not
+ * announced by most screen readers — which is how an inline form error becomes
+ * silent while every test that checks the text is present still passes.
+ */
+.auth__live:empty { display: none; }
+
+/* An error is not painted red here either — `antechamber.css` carries the full
+   argument, and it is the same treatment. */
+.auth__error {
+  padding-inline-start: var(--space-3);
+  border-inline-start: var(--rail-w) solid var(--border-strong);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  max-inline-size: var(--measure-prose);
+}
+
+.auth__switch {
+  margin-block-start: var(--rhythm-block);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.auth__note {
+  margin-block-start: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-inset);
+  border-inline-start: var(--border-width) solid var(--border-default);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  max-inline-size: var(--measure-prose);
+}
+
+/*
+ * THE ASIDE: the offer, its limit, and what a guest is.
+ *
+ * `position: relative` with the image absolutely filling it, so the panel is the
+ * same shape with the illustration and without it. `object-fit: cover` and a
+ * `min-block-size` rather than an aspect ratio: the image is 960×1200 portrait
+ * and the column is whatever the form's height makes it.
+ */
+/*
+ * IT SIZES TO ITS CONTENT, and that is a correction rather than the first idea.
+ *
+ * `min-block-size: 100%` made the panel match the form column, which with no
+ * image is six hundred pixels of empty grey below three paragraphs — a screenshot
+ * of an unfinished layout. A panel is only worth stretching when there is
+ * something in it to stretch, so the grid's `align-items: start` decides the
+ * height and the image, when it lands, covers whatever that is.
+ */
+.auth__aside {
+  position: relative;
+  overflow: hidden;
+  padding: var(--rhythm-block);
+  background: var(--surface-inset);
+  border-inline-start: var(--border-width) solid var(--border-subtle);
+}
+
+/* The same correction the settings panels needed: `app.css` caps `.field__help`
+   at 34ch, which is right on the engine's dense two-column forms and wrong beside
+   a 480px input — the help wrapped to four narrow lines and read as a different
+   column. A measure belongs to the column it sits in, not to the class. */
+.auth .field__help {
+  max-width: none;
+  max-inline-size: var(--measure-prose);
+}
+
+/* The submit sits closer to the last field than the fields sit to each other:
+   `.cta` carries a block margin for the places it ends a section, and inside a
+   form that reads as a gap nobody put there. */
+.auth__form .cta { margin-block-start: 0; }
+
+.auth__panel-img {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  /* Behind the words, and quiet: the panel is a working surface, not a poster,
+     and the two paragraphs over it are the part that has to be read. */
+  opacity: 0.18;
+}
+
+.auth__aside-body {
+  position: relative;   /* above the image */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: flex-start;
+  max-inline-size: var(--measure-prose);
+}
+
+.auth__aside-body > p { margin: 0; }
+
+/* The refusal is the sentence this column exists for, so it is the one that is
+   set at full strength while the offer above it is secondary. */
+.auth__aside-body > p:first-child { color: var(--text-secondary); }
+.auth__aside-not { color: var(--text-primary); font-weight: var(--weight-medium); }
+.auth__aside-guest { color: var(--text-secondary); font-size: var(--text-sm); }
+
+/* ==========================================================================
  * 19. PRINT — two independent locks on the same door
  * ======================================================================= */
 

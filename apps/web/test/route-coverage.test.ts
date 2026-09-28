@@ -35,6 +35,11 @@ const SLUGS: Readonly<Record<string, string>> = {
      would turn the missing-file assertion below into the thing it is guarding
      against. */
   '/work': 'work',
+  /* Both auth routes share one test file, because they are one component: the
+     two forms differ by two fields and a verb, and the argument about what an
+     account is NOT is the part that must not drift between them. */
+  '/sign-in': 'auth-pages',
+  '/sign-up': 'auth-pages',
   '/settings': 'settings',
   '/dashboard': 'dashboard',
 };

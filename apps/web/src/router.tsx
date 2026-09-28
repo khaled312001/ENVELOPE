@@ -45,6 +45,8 @@ export const ROUTES = [
   '/refusals',
   '/app',
   '/work',
+  '/sign-in',
+  '/sign-up',
   '/settings',
   '/dashboard',
 ] as const;

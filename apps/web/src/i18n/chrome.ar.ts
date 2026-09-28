@@ -171,6 +171,22 @@ export const AR: ChromeDictionary = {
       navLabel: null,
       footerLabel: 'أعمالك',
     },
+    '/sign-in': {
+      title: 'تسجيل الدخول — TOP.ai',
+      description:
+        'سجّل الدخول لتُحفَظ تشغيلاتك كما حُسبت تمامًا. الحساب يغيّر شيئين ولا يراجع شيئًا: فالصلاحية التنظيمية لا تُقيَّم إطلاقًا، بحساب أو بغير حساب.',
+      navLabel: null,
+      footerLabel: 'تسجيل الدخول',
+    },
+    '/sign-up': {
+      title: 'إنشاء حساب — TOP.ai',
+      /* The description carries the refusal, not the invitation. A sign-up page
+         is where a translation is most tempted to promise. */
+      description:
+        'أنشئ حسابًا لتُحفَظ تشغيلاتك. وهو لا يجعل تشغيلةً مُراجَعةً ولا مُتحقَّقًا منها ولا معتمَدةً ولا مطابِقة، ورقم الرخصة الذي يُسجَّل لا يُتحقَّق منه في أيّ سجلّ.',
+      navLabel: null,
+      footerLabel: 'إنشاء حساب',
+    },
     '/settings': {
       title: 'الإعدادات — TOP.ai',
       /*

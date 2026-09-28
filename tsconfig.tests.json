@@ -42,5 +42,18 @@
       "@envelope/*": ["packages/*/dist/index.d.ts"]
     }
   },
-  "include": ["test-support/**/*.ts", "packages/*/test/**/*.ts", "packages/*/test/**/*.tsx", "apps/*/test/**/*.ts", "apps/*/test/**/*.tsx"]
+  /*
+    `apps/web/src/vite-env.d.ts` is listed because a web test reaches into
+    `apps/web/src`, and one module there reads `import.meta.glob`. An ambient
+    declaration is only in the program if something includes it, and nothing here
+    imports a `.d.ts`.
+  */
+  "include": [
+    "test-support/**/*.ts",
+    "packages/*/test/**/*.ts",
+    "packages/*/test/**/*.tsx",
+    "apps/*/test/**/*.ts",
+    "apps/*/test/**/*.tsx",
+    "apps/web/src/vite-env.d.ts"
+  ]
 }

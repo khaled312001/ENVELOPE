@@ -99,6 +99,11 @@ const WORKSPACE: readonly Route[] = ROUTES.filter((r) => PAGE_META[r].shell === 
  * 16×16, 1.5px stroke, `currentColor`, and `aria-hidden` — the label beside it is
  * the accessible name, and it stays in the accessibility tree when the rail
  * collapses because it is hidden visually rather than removed.
+ *
+ * THE RECORD IS EXHAUSTIVE OVER `Route`, NOT PARTIAL, and the `null`s are the
+ * point: a workspace route added without a glyph fails the build here, in the one
+ * place that knows a collapsed rail would render it as an empty 44px box. A
+ * `Partial` would compile and ship that box.
  */
 const GLYPH: Readonly<Record<Route, JSX.Element | null>> = {
   '/': null,
@@ -106,6 +111,8 @@ const GLYPH: Readonly<Record<Route, JSX.Element | null>> = {
   '/exports': null,
   '/refusals': null,
   '/dashboard': null,
+  '/sign-in': null,
+  '/sign-up': null,
   '/app': (
     <>
       <path d="M2.5 4.5 L5.5 2.5 L13.5 2.5 L13.5 13.5 L2.5 13.5 Z" />

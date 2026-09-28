@@ -72,6 +72,30 @@
     "shell": "workspace"
   },
   {
+    "path": "/sign-in",
+    "title": "Sign in — TOP.ai",
+    "description": "Sign in to keep your runs exactly as they were computed. An account changes two things and reviews nothing: regulatory validity is never assessed, with an account or without one.",
+    "navLabel": null,
+    "footerLabel": "Sign in",
+    "nav": "footer-only",
+    "group": "product",
+    "needsActor": false,
+    "arabic": "translated",
+    "shell": "site"
+  },
+  {
+    "path": "/sign-up",
+    "title": "Create an account — TOP.ai",
+    "description": "Create an account to keep your runs. It does not make a run reviewed, verified, approved or compliant, and the licence number it records is never checked against any registry.",
+    "navLabel": null,
+    "footerLabel": "Create an account",
+    "nav": "footer-only",
+    "group": "product",
+    "needsActor": false,
+    "arabic": "translated",
+    "shell": "site"
+  },
+  {
     "path": "/settings",
     "title": "Settings — TOP.ai",
     "description": "Your name, your licence and your password — and what each one does to a run you sign. The licence is recorded and never verified; this page says so where the number is typed.",

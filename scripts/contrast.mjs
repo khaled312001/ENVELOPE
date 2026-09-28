@@ -209,6 +209,13 @@ function ratio(fg, bg) {
  * not page grounds, and their one pair each is pushed explicitly below.
  */
 const GROUNDS = [
+  /* TEN NOW, and the tenth is the landing page's first screen. `--brand-wash` is
+     the ground the hero band paints, which makes it the surface the MOST-READ text
+     on the site sits on; a ground the site paints and this file has never read is
+     the vacuous pass counted as a failure everywhere else here. Adding it re-runs
+     every ink in `INKS` against it, in three themes, rather than trusting that a
+     pale blue behaves like the pale grey beside it. */
+  '--brand-wash',
   '--surface-raised',
   '--surface-base',
   '--surface-sunken',

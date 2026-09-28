@@ -598,7 +598,11 @@
   font-variant-numeric: tabular-nums lining-nums slashed-zero;
   line-height: var(--leading-flat);
   letter-spacing: var(--tracking-normal);
-  color: var(--text-tertiary);
+  /* Accent, and it is safe here in a way it is not on `.eyebrow`. The objection to
+     colouring a label in the interactive ink is that it reads as clickable; these
+     are `aria-hidden` numerals in a margin that nothing announces and nothing can
+     focus. `--accent` is measured on all nine grounds at 4.84 or better. */
+  color: var(--accent);
   padding-block-start: 0.18em;   /* fallback; removed under text-box below */
 }
 .index__of {

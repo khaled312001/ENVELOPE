@@ -459,19 +459,42 @@ for (const route of routes) {
         );
       }
 
+      /*
+        MEASURED AND PRINTED, NO LONGER GATED — the client's decision, 2026-09-29,
+        and it is recorded here rather than deleted so that reversing it is a
+        one-line change and not an archaeology problem.
+
+        WHAT WAS GIVEN UP, EXACTLY. Amber's MEANING and its TREATMENT are
+        untouched: it still marks `ASSUMED` and nothing else, `assertAmberExclusive`
+        in `contrast.mjs` still fails any other use of it, and no amber value was
+        dimmed. What is gone is the requirement that amber be the LOUDEST thing on
+        the first screen — the 3x area margin, and the rule that `/` must paint an
+        assumption above the fold.
+
+        WHY IT WAS ASKED FOR, AND THE OBJECTION AS IT WAS PUT. The margin made
+        large coloured surfaces structurally impossible: at the measured 36,270px2
+        of amber on the landing fold, the entire budget for every other chromatic
+        pixel was about 10,000px2, which is one button. The client's verdict on the
+        result was that the site is pale and reads as unfinished. The objection —
+        that this is a concession on the strongest signal the product sells to a
+        funder — was put to him with these numbers and he reaffirmed it. That is
+        his call to make and this is the record of it.
+
+        THE NUMBERS DO NOT STOP BEING COLLECTED. Every ratio is still computed and
+        still printed on every run, so the cost of a change is visible in the same
+        place it always was, and re-gating is restoring two `fail(` calls.
+      */
       if (MUST_SHOW_AMBER.includes(route) && m.amberArea === 0) {
-        fail(
-          `${label}: 0px2 of amber above the fold. This route must show an ` +
-            `assumption on its first screen — see the two blockers in this file's ` +
-            `header, both of which were green everywhere else.`,
+        notes.push(
+          `${label}: 0px2 of amber above the fold on a route that shows an ` +
+            `assumption in its document. Recorded, not failed.`,
         );
       }
       if (m.amberArea > 0 && ratio < MIN_RATIO) {
-        fail(
+        notes.push(
           `${label}: amber ${m.amberArea}px2 against accent ${m.accentArea}px2 is ` +
-            `${ratio.toFixed(2)}x, under the ${MIN_RATIO}x margin. Amber is no longer ` +
-            `the loudest thing on this surface. Move the accent, do not dim the amber ` +
-            `— §13.1 calls this "the most important UI decision in the product".`,
+            `${ratio.toFixed(2)}x, under the ${MIN_RATIO}x margin this file used to ` +
+            `enforce. Amber is not the loudest thing on this surface. Recorded.`,
         );
       }
     } catch (e) {

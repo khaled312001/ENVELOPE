@@ -668,7 +668,7 @@ export function Landing({
   );
 
   /**
-   * `/dashboard` renders a build-time snapshot when nobody is signed in, so the CTA
+   * `/readiness` renders a build-time snapshot when nobody is signed in, so the CTA
    * that points at it is only honest while the snapshot carries figures. A missing
    * `readiness.json` fails the build, exactly as `worked-example.json` does — an
    * empty one does not, and a call to action reading "see the readiness numbers"

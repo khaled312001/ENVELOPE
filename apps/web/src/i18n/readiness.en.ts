@@ -1,5 +1,5 @@
 /**
- * `/dashboard` — the readiness page, in English.
+ * `/readiness` — the readiness page, in English.
  *
  * `export type ReadinessDictionary = typeof EN`, so this module IS the contract and
  * `dashboard.ar.ts` is held to it. A missing Arabic key is a compile error rather

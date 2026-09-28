@@ -1,5 +1,5 @@
 /**
- * `/dashboard` — deployment readiness.
+ * `/readiness` — deployment readiness.
  *
  * A product dashboard almost always answers "how much are we doing" — runs this
  * week, plots added, a green ring at ninety-four per cent. This one answers
@@ -9,7 +9,7 @@
  *
  * It is READINESS, never uptime. Nothing on this page monitors availability, and
  * the word *status* does not appear on it in any sentence a reader could take for
- * one — `/dashboard` is the route the site map says "must never be renamed in a
+ * one — `/readiness` is the route the site map says "must never be renamed in a
  * way that implies it does".
  *
  * ---
@@ -180,7 +180,7 @@ const isUnsourced = (instrumentId: string): boolean => /PLACEHOLDER/i.test(instr
  * ====================================================================== */
 
 /**
- * `/dashboard` is dispatched ABOVE the actor check, so `actor` is nullable here
+ * `/readiness` is dispatched ABOVE the actor check, so `actor` is nullable here
  * and the signed-out reader is the normal case rather than the exception.
  *
  * The prop type is a subset of `PageProps` rather than `PageProps` itself, which

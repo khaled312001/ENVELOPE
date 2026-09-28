@@ -37,6 +37,11 @@ import {
   qArea,
   qRatio,
   type Citation,
+  type CoverageSchedule,
+  type HeightAllowance,
+  type SetbackFace,
+  type SetbackSchedule,
+  type SetbackValue,
   type Traced,
   type TracedDecimal,
   type Tracer,
@@ -54,54 +59,28 @@ import {
 // Shapes
 // ---------------------------------------------------------------------------
 
-/** `G+2P+8` decomposed. */
-export interface HeightAllowance {
-  /** Storeys above ground excluding podium and ground. `8` in `G+2P+8`. */
-  readonly typicalFloors: number;
-  /** Podium levels. `2` in `G+2P+8`; `0` in `G+11`. */
-  readonly podiumLevels: number;
-  /** Total built levels including ground: `1 + podium + typical`. */
-  readonly totalLevels: number;
-  readonly raw: string;
-}
-
-/**
- * A setback distance, or the reason it is not a single distance.
+/*
+ * THE SHAPES MOVED TO `core`, AND ARE RE-EXPORTED FROM HERE UNCHANGED.
  *
- * `DJAZ1TRE10RES022` prints "Side and rear setback is 0m to solid wall and 4.0m
- * to window wall" — the setback depends on whether the façade being set back has
- * openings, which is a design decision, not a datum. Collapsing that to one
- * number would silently pick the applicant's answer for them, so the conditional
- * case is preserved and marked as needing a decision.
+ * `HeightAllowance`, `SetbackValue`, `SetbackFace`, `SetbackSchedule` and
+ * `CoverageSchedule` were written here, because this is where they were first
+ * needed. They describe what an INSTRUMENT states, not how a PDF is read, and
+ * `@envelope/rules` now needs the same shapes to build the plot-specific records
+ * that §11.5 step 1 lets govern — while `check-boundaries.mjs` forbids
+ * `intake → rules` and the reverse edge would put a PDF parser under the rule
+ * store. See `packages/core/src/instrument.ts` for the argument in full.
+ *
+ * Re-exported rather than moved silently: every existing importer of
+ * `@envelope/intake` keeps working, and the type it gets is the same type the
+ * rule builder receives — one declaration, so they cannot drift.
  */
-export type SetbackValue =
-  | { readonly kind: 'FIXED'; readonly metres: Decimal }
-  | {
-      readonly kind: 'CONDITIONAL';
-      readonly options: readonly { readonly condition: string; readonly metres: Decimal }[];
-    };
-
-export interface SetbackFace {
-  readonly front?: SetbackValue;
-  readonly side?: SetbackValue;
-  readonly rear?: SetbackValue;
-}
-
-/** Setbacks differ between the podium mass and the tower above it. */
-export interface SetbackSchedule {
-  readonly podium: SetbackFace;
-  readonly tower: SetbackFace;
-  readonly raw: string;
-  /** True when any face came back `CONDITIONAL` and needs a user decision. */
-  readonly requiresDecision: boolean;
-}
-
-export interface CoverageSchedule {
-  /** Fraction of plot area, e.g. `1.00` for "100% of plot area". */
-  readonly podium?: Decimal;
-  readonly tower?: Decimal;
-  readonly raw: string;
-}
+export type {
+  CoverageSchedule,
+  HeightAllowance,
+  SetbackFace,
+  SetbackSchedule,
+  SetbackValue,
+} from '@envelope/core';
 
 /** A field the sheet does not print. Never filled in by this module. */
 export interface MissingField {

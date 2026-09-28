@@ -19,7 +19,7 @@
  * names `contrast` on purpose so `assertNoChromeOnBand` scans it. Nothing else here
  * is a chassis rule in disguise.
  *
- * The `.rd-` rules are scoped under the page root `.db` so nothing here can reach a
+ * The `.rd-` rules are scoped under the page root `.rd` so nothing here can reach a
  * sibling page's markup. The `.stat*` family is deliberately NOT scoped: it keeps the
  * names it arrived with, it is rendered on no other route, and `landing.css`'s print
  * block still names `.stat` for `break-inside`. Re-scoping it would have been a
@@ -189,12 +189,12 @@
  * IT IS DECLARED HERE AND IT SHOULD NOT BE. `content/shared.tsx` emits
  * `<code className="ident">` in two paragraphs that render on this route, on
  * `/parking` and on `/refusals`, and no stylesheet defines it — so the class is a
- * shared contract with no owner. Scoping it under `.db` fixes this page without
+ * shared contract with no owner. Scoping it under `.rd` fixes this page without
  * claiming the others; the honest fix is one rule in `site.css`, which this pass
  * does not own. Recorded rather than quietly generalised.
  */
-.db .ident,
-.db code.ident {
+.rd .ident,
+.rd code.ident {
   font-family: var(--font-mono);
   font-size: 0.92em;
   letter-spacing: var(--tracking-normal);
@@ -267,7 +267,7 @@
    plates with headings, and the heading level is what a reader navigates by here,
    not the list marker. The `<ol>` is kept because the order is the order of the
    tiles above it. */
-.db .rd-plan {
+.rd .rd-plan {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -285,7 +285,7 @@
 }
 /* A plate in this grid is read top to bottom in one movement, so the internal gap
    closes between the owner and the title it belongs to. */
-.db .rd-plan > .plate {
+.rd .rd-plan > .plate {
   gap: var(--space-2);
 }
 
@@ -394,7 +394,7 @@
  * content and 242px of column, so the floor is 15.5rem — measured against the same
  * face rather than restated.
  */
-.db .rd-param {
+.rd .rd-param {
   inline-size: auto;
   min-inline-size: 15.5rem;
 }
@@ -423,7 +423,7 @@
   }
   /* The stacked record is a two-track grid whose first track is the re-emitted
      header, so a minimum meant for a table column would push the label out of it. */
-  .db .rd-param {
+  .rd .rd-param {
     min-inline-size: 0;
   }
 
@@ -451,12 +451,12 @@
    * IT MIRRORS THE CHASSIS SELECTOR RATHER THAN SIMPLIFYING IT, and that is the
    * point: `:not()` takes the specificity of its argument, so the rule being
    * corrected is (0,3,1) — two classes inside the negations and one outside — and a
-   * clean `.db .schedule tbody th` at (0,2,2) loses to it silently. Carrying the
+   * clean `.rd .schedule tbody th` at (0,2,2) loses to it silently. Carrying the
    * same negations forward puts this at (0,4,2), which wins on specificity rather
    * than on the order two stylesheets happen to load in.
    */
-  .db .schedule tbody th:not(.schedule__fill):not(.schedule__rank),
-  .db .schedule tbody td:not(.schedule__fill):not(.schedule__rank) {
+  .rd .schedule tbody th:not(.schedule__fill):not(.schedule__rank),
+  .rd .schedule tbody td:not(.schedule__fill):not(.schedule__rank) {
     inline-size: 100%;
   }
 }
@@ -565,15 +565,15 @@
  * THE HONEST FIX IS ONE `className`. These sections want `.section--zoned` and
  * `.section--contrast`, which `site.css` already owns and already measures; they are
  * selected by their `aria-labelledby` here because this pass owns three stylesheets
- * and no markup. `.db > .section--contrast` is carried in the band's own selector so
+ * and no markup. `.rd > .section--contrast` is carried in the band's own selector so
  * that (a) the rule keeps working the moment the class lands, and (b)
  * `assertNoChromeOnBand` — which scans by SELECTOR TEXT for `contrast` — scans this
  * rule today rather than a year after somebody puts an accent on the band.
  */
-.db > .section[aria-labelledby='rd-change'],
-.db > .section[aria-labelledby='rd-exposure'],
-.db > .section--contrast,
-.db > .section[aria-labelledby='rd-no-score'] {
+.rd > .section[aria-labelledby='rd-change'],
+.rd > .section[aria-labelledby='rd-exposure'],
+.rd > .section--contrast,
+.rd > .section[aria-labelledby='rd-no-score'] {
   max-inline-size: none;
   padding-inline: max(
     var(--page-gutter),
@@ -581,8 +581,8 @@
   );
 }
 
-.db > .section[aria-labelledby='rd-change'],
-.db > .section[aria-labelledby='rd-exposure'] {
+.rd > .section[aria-labelledby='rd-change'],
+.rd > .section[aria-labelledby='rd-exposure'] {
   background: var(--surface-sunken);
 }
 
@@ -596,7 +596,7 @@
  * is 1.05:1 in light, which is a highlight nobody can see.
  */
 @media (hover: hover) {
-  .db > .section[aria-labelledby='rd-exposure'] .schedule tbody tr:not([data-state]):hover > * {
+  .rd > .section[aria-labelledby='rd-exposure'] .schedule tbody tr:not([data-state]):hover > * {
     background-color: var(--surface-raised);
   }
 }
@@ -616,8 +616,8 @@
  * then the only thing left saying a band was ever here, which is why they are drawn
  * in a token instead of being left to the ground.
  */
-.db > .section--contrast,
-.db > .section[aria-labelledby='rd-no-score'] {
+.rd > .section--contrast,
+.rd > .section[aria-labelledby='rd-no-score'] {
   --surface-base: var(--surface-contrast);
   --surface-raised: var(--surface-contrast);
   --surface-sunken: var(--surface-contrast);
@@ -646,14 +646,14 @@
  * The hover and the press are washes of the band's own ink rather than second ground
  * tokens, so nothing here can paint a colour the band is not measured for.
  */
-.db > .section--contrast .button,
-.db > .section[aria-labelledby='rd-no-score'] .button {
+.rd > .section--contrast .button,
+.rd > .section[aria-labelledby='rd-no-score'] .button {
   background: transparent;
   color: var(--text-on-contrast);
   border-color: var(--border-on-contrast);
 }
-.db > .section--contrast .button:hover:not(:disabled),
-.db > .section[aria-labelledby='rd-no-score'] .button:hover:not(:disabled) {
+.rd > .section--contrast .button:hover:not(:disabled),
+.rd > .section[aria-labelledby='rd-no-score'] .button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--text-on-contrast) 12%, transparent);
   border-color: var(--text-on-contrast);
 }
@@ -663,16 +663,16 @@
    Only the interpolation between the two grounds is guarded, and `app.css` guards
    it. Down two washes rather than up one: a press is deeper than a hover, which is
    the whole of what makes a control feel attached to a finger. */
-.db > .section--contrast .button:active:not(:disabled),
-.db > .section[aria-labelledby='rd-no-score'] .button:active:not(:disabled) {
+.rd > .section--contrast .button:active:not(:disabled),
+.rd > .section[aria-labelledby='rd-no-score'] .button:active:not(:disabled) {
   background: color-mix(in srgb, var(--text-on-contrast) 22%, transparent);
   border-color: var(--text-on-contrast);
 }
 /* The global focus ring is `--accent-focus`, which is chrome, and §3.3 keeps chrome
    off this surface. An outline composites correctly over any ground and needs no
    knowledge of what it sits on, so this is a colour swap and not a second ring. */
-.db > .section--contrast :focus-visible,
-.db > .section[aria-labelledby='rd-no-score'] :focus-visible {
+.rd > .section--contrast :focus-visible,
+.rd > .section[aria-labelledby='rd-no-score'] :focus-visible {
   outline: var(--focus-width) solid var(--text-on-contrast);
   outline-offset: var(--focus-offset);
 }
@@ -684,7 +684,7 @@
  * between a title and its dateline is the block interval, not the one that separates
  * two arguments.
  */
-.db > .section--opening {
+.rd > .section--opening {
   padding-block-end: var(--rhythm-block);
 }
 
@@ -706,7 +706,7 @@
  * themes, and on paper it is a 7% tint a laser dithers without banding. It runs
  * flush to the rail at both ends, like the cells it heads.
  */
-.db .schedule thead th {
+.rd .schedule thead th {
   background: var(--surface-inset);
 }
 /* A control is not a link, however it is marked up. `app.css` does not reset the UA
@@ -714,7 +714,7 @@
    this page are `<a>`s, because middle-click and "copy link address" have to work on
    them. `.nav` and `antechamber.css` each answer this for their own context, and
    this is the third — the honest fix is one rule in the file that owns the family. */
-.db a.button {
+.rd a.button {
   text-decoration: none;
 }
 /* ON THE ROW, NOT ON ITS CELLS, and the difference is a real defect rather than a
@@ -724,7 +724,7 @@
    On the row it is one rule at both widths — and in the collapsed border model the
    wider border wins, so it also beats the chassis's `> * { border-block-end: none }`
    on the wide layout without having to restate that selector. */
-.db .schedule tbody tr:last-child {
+.rd .schedule tbody tr:last-child {
   border-block-end: var(--border-width-emphasis) solid var(--border-strong);
 }
 
@@ -754,10 +754,10 @@
  */
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
-    .db .stat,
-    .db .rd-plan > .plate,
-    .db .rd-rule,
-    .db .rd-split__row {
+    .rd .stat,
+    .rd .rd-plan > .plate,
+    .rd .rd-rule,
+    .rd .rd-split__row {
       animation: settle linear both;
       animation-timeline: view();
       animation-range: entry 0% entry 65%;
@@ -776,10 +776,10 @@
  * paper except the exit, which is not a link a reader can follow off a page.
  */
 @media print {
-  .db .cta {
+  .rd .cta {
     display: none;
   }
-  .db .section {
+  .rd .section {
     padding-block: var(--space-5) var(--space-4);
   }
   .rd-rule,

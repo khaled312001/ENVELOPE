@@ -55,14 +55,14 @@ const COMPONENTS: Readonly<Record<Route, (p: PageProps) => JSX.Element>> = {
   '/sign-in': SignIn,
   '/sign-up': SignUp,
   '/settings': Settings,
-  /* `/dashboard` DISPATCHES ABOVE THE ACTOR CHECK — see `ReadinessRoute` below,
+  /* `/readiness` DISPATCHES ABOVE THE ACTOR CHECK — see `ReadinessRoute` below,
      which is a named component rather than an inline arrow because it reads the
      page heading out of the locale and an inline arrow cannot hold a hook. */
   '/readiness': (p) => <ReadinessRoute {...p} />,
 };
 
 /**
- * `/dashboard`'s own opening, lifted out of the record so it can hold a hook.
+ * `/readiness`'s own opening, lifted out of the record so it can hold a hook.
  *
  * `ReadinessPanels` opens on an `<h2>`, so this route shipped with no `<h1>` at all
  * — a heading level skipped at the top of the document, on the page a reader is
@@ -91,7 +91,7 @@ const COMPONENTS: Readonly<Record<Route, (p: PageProps) => JSX.Element>> = {
 function ReadinessRoute(p: PageProps): JSX.Element {
   const t = useT();
   return (
-    <div className="db">
+    <div className="rd">
       <section className="shell section section--opening">
         <h1>{t.routes['/readiness'].footerLabel}</h1>
       </section>

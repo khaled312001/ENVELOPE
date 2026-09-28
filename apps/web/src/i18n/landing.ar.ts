@@ -130,7 +130,7 @@ export const AR: LandingDictionary = {
     stamp: 'الصلاحية التنظيمية — لم تُقيَّم.',
     /*
       «عناصرُ نائبة» is the settled Arabic for placeholders, as in «تعريف نائب» on
-      /dashboard. The plural predicate after «كلُّها» is deliberate: the shorter
+      /readiness. The plural predicate after «كلُّها» is deliberate: the shorter
       «وكل إشارة إلى بند يحملها عنصرٌ نائب» also parses as "a placeholder carries
       it", which inverts who holds what.
     */
@@ -362,7 +362,7 @@ export const AR: LandingDictionary = {
     title: 'أين يقف هذا النشر فعليًّا',
     /*
       «ليس تقييمًا للطاقة التطويرية، ولا يجوز اقتباسه لطرف ثالث» — both halves of
-      the English denial, at the same pace, in the words /dashboard uses for the
+      the English denial, at the same pace, in the words /readiness uses for the
       same claim.
     */
     body:

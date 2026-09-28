@@ -4,4 +4,5 @@ export * from './provenance/classes.js';
 export * from './provenance/graph.js';
 export * from './provenance/traced.js';
 export * from './definitions/annex.js';
+export * from './instrument.js';
 export * from './building.js';

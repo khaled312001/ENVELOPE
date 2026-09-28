@@ -207,6 +207,16 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
       community: plot.community,
       shape_class: plot.shapeClass,
       frontage_count: plot.frontageCount,
+      /*
+        THE PLOT'S OWN NUMBER, WHICH ONLY ONE KIND OF RULE READS.
+
+        A rule built from this plot's affection plan is fenced to this plot by an
+        applicability term on this path (`rulesFromInstrument`). Without it the
+        term reads `undefined`, the rule matches nothing, and the sheet that was
+        supposed to bind the run silently binds nothing at all — the same defect
+        as before, one layer deeper and harder to see.
+      */
+      plot_number: plot.plotNumber,
     },
   };
 

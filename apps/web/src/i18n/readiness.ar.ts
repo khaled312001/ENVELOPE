@@ -1,5 +1,5 @@
 /**
- * العربية — صفحة الجاهزية `/dashboard`.
+ * العربية — صفحة الجاهزية `/readiness`.
  *
  * Held to `ReadinessDictionary` by the type system, so this file cannot be missing a
  * key and cannot grow one the English does not have. Every choice below is argued in

@@ -946,7 +946,7 @@ export function useTheme(): [Theme, () => void] {
  * happen to share a palette.
  *
  * `useTheme()` is GONE from here. There were three instances of it and they
- * desynchronised exactly as three copies of one fact do: toggling on `/dashboard`
+ * desynchronised exactly as three copies of one fact do: toggling on `/readiness`
  * left this one holding the old value, so its first click on `/app` set the theme to
  * what it already was and appeared to do nothing. `Root` owns the only one and
  * passes the control in as a child.

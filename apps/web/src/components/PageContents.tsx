@@ -8,7 +8,7 @@
  *   /refusals   13.0 screens
  *   /exports     8.5 screens
  *   /            7.7 screens, 5 sections
- *   /dashboard   7.1 screens, 7 sections
+ *   /readiness   7.1 screens, 7 sections
  *
  * Each already carries `01 / 07` in its rail gutter, so a reader eleven screens
  * down knows the ordinal of the thing in front of them — and has no way to learn

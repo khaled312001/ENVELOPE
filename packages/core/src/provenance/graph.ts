@@ -148,6 +148,46 @@ export class ProvenanceGraph {
     return seen;
   }
 
+  /**
+   * The citation a value reaches, or `undefined` when it reaches none.
+   *
+   * A `Traced<T>` names a node, not a clause: the citation hangs on the RULE node
+   * under the computation, which is what `hasKindBelow` already relies on. A caller
+   * holding a fact and needing the box it was read from — to turn it into a
+   * plot-specific `RuleRecord`, say — would otherwise walk `outgoing` by hand and
+   * get the walk subtly wrong.
+   *
+   * THE FIRST ONE IN REACHABLE ORDER, and that is deliberate rather than lazy. A
+   * value derived from several cited rules has several citations and no single
+   * "the" citation; a caller that needs all of them wants `derivationOf`, which
+   * keeps the structure. This is for the case the name describes — a value read
+   * straight out of one box on one page — and returning one citation for a value
+   * with three would be a quiet lie, so it returns the nearest and the caller that
+   * cares about the difference does not use it.
+   */
+  citationBelow(id: NodeId): Citation | undefined {
+    // Breadth-first, not `reachableFrom`, which is a stack and therefore returns
+    // depth-first order. On the shape this is used for the two agree; on a value
+    // with a cited rule and a deep chain of assumed inputs they do not, and the
+    // depth-first answer would be whichever branch happened to be pushed last.
+    const seen = new Set<NodeId>([id]);
+    let frontier: NodeId[] = [id];
+    while (frontier.length > 0) {
+      const next: NodeId[] = [];
+      for (const current of frontier) {
+        for (const e of this.outgoing(current)) {
+          if (seen.has(e.to)) continue;
+          seen.add(e.to);
+          const found = this.node(e.to).citation;
+          if (found) return found;
+          next.push(e.to);
+        }
+      }
+      frontier = next;
+    }
+    return undefined;
+  }
+
   /** Whether a node of the given kind appears anywhere below `id`. */
   hasKindBelow(id: NodeId, kind: NodeKind): boolean {
     for (const n of this.reachableFrom(id)) {

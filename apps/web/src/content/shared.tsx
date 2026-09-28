@@ -184,7 +184,7 @@ export const OPTIMISER_REFUSAL = {
 } as const;
 
 /**
- * `/dashboard` and `/method`.
+ * `/readiness` and `/method`.
  *
  * The sentence that stops a reader completing the row in their head. A check that
  * had nothing to read is not a check that passed, and the gap between those two
@@ -205,7 +205,7 @@ export const DORMANT_IS_NOT_A_PASS = {
 } as const;
 
 /**
- * `/dashboard`, quoted from the handler's own docblock.
+ * `/readiness`, quoted from the handler's own docblock.
  *
  * The failure this sentence exists to prevent already happened once: a deployment
  * whose real number of approved rules is zero reported every rule approved, because

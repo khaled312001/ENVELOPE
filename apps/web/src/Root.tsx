@@ -59,7 +59,7 @@ export default function Root(): JSX.Element {
    * THE ONLY `useTheme()` IN THE APPLICATION.
    *
    * There were three, and they desynchronised exactly as three copies of one fact
-   * do: toggling on `/dashboard` left the engine's toggle holding the old value, so
+   * do: toggling on `/readiness` left the engine's toggle holding the old value, so
    * its first click on `/app` set the theme to what it already was and appeared to
    * do nothing. One owner, passed down.
    */

@@ -93,6 +93,7 @@ import {
 } from '../content/shared.ar.js';
 import { AR } from '../i18n/refusals.ar.js';
 import { EN, type RefusalsDictionary } from '../i18n/refusals.en.js';
+import { PageContents } from '../components/PageContents.js';
 import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
@@ -291,6 +292,33 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
   const files = useDict<SharedParagraph>(IFC_GLTF, IFC_GLTF_AR);
   const optimiser = useDict<SharedParagraph>(OPTIMISER_REFUSAL, OPTIMISER_REFUSAL_AR);
 
+  /*
+    ONE RECORD FOR THE ORDER, THE ORDINALS AND THE CONTENTS LIST — see the same
+    note on `/exports`. `professional` is the one entry whose heading is assembled
+    in the markup rather than taken whole from a dictionary, so the label is
+    assembled the same way here: the contents line and the `<h2>` are two renders
+    of one sentence rather than two sentences that happen to agree today.
+  */
+  const order: readonly { readonly id: string; readonly label: string }[] = [
+    { id: 'contract', label: t.contract.title },
+    { id: 'draw', label: limit('draw').heading },
+    { id: 'life-safety', label: limit('life-safety').heading },
+    { id: 'realistic', label: limit('realistic').heading },
+    { id: 'parking-in-far', label: limit('parking-in-far').heading },
+    {
+      id: 'professional',
+      label: `${limit('professional').heading} ${t.professional.titleAnd}`,
+    },
+    { id: 'optimiser', label: optimiser.heading },
+    { id: 'standards', label: t.standards.title },
+    { id: 'coverage', label: t.coverage.title },
+    { id: 'files', label: files.heading },
+    { id: 'not-on-this-site', label: t.notOnSite.title },
+    { id: 'who-changes', label: t.whoChanges.title },
+    { id: 'unproven', label: t.unproven.title },
+  ];
+  const idx = (id: string): number => order.findIndex((s) => s.id === id) + 1;
+
   return (
     <div className="rf">
       {/* ================= HERO ========================================= */}
@@ -301,7 +329,9 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
       </section>
 
       {/* ================= 01 · THE REFUSAL CONTRACT ==================== */}
-      <Section index={1} id="contract" major title={t.contract.title} lede={t.contract.lede}>
+      <PageContents entries={order} />
+
+      <Section index={idx('contract')} id="contract" major title={t.contract.title} lede={t.contract.lede}>
         {/* R13: a wide table scrolls inside its own container rather than pushing
             the document sideways, and a scroller is keyboard-reachable because
             2.1.1 applies to a scroll region the same way it applies to a control.
@@ -390,7 +420,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
       </Section>
 
       {/* ================= 02 · IT DOES NOT DRAW A BUILDING ============= */}
-      <Section index={2} id="draw" title={limit('draw').heading} lede={limit('draw').body}>
+      <Section index={idx('draw')} id="draw" title={limit('draw').heading} lede={limit('draw').body}>
         <p>{t.draw.model}</p>
         <h3 className="rf-sub" id="not-drawn">
           {t.draw.notDrawnTitle}
@@ -409,7 +439,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
 
       {/* ================= 03 · IT DOES NOT CHECK LIFE SAFETY =========== */}
       <Section
-        index={3}
+        index={idx('life-safety')}
         id="life-safety"
         title={limit('life-safety').heading}
         lede={limit('life-safety').body}
@@ -495,7 +525,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
 
       {/* ================= 04 · REALISTICALLY ACHIEVABLE ================ */}
       <Section
-        index={4}
+        index={idx('realistic')}
         id="realistic"
         title={limit('realistic').heading}
         lede={limit('realistic').body}
@@ -519,7 +549,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
 
       {/* ================= 05 · THE PARKING-IN-FAR QUESTION ============= */}
       <Section
-        index={5}
+        index={idx('parking-in-far')}
         id="parking-in-far"
         title={limit('parking-in-far').heading}
         lede={limit('parking-in-far').body}
@@ -536,7 +566,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
 
       {/* ================= 06 · A PROFESSIONAL, AND THE REVIEWER ======== */}
       <Section
-        index={6}
+        index={idx('professional')}
         id="professional"
         major
         title={
@@ -578,7 +608,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
       </Section>
 
       {/* ================= 07 · THE OPTIMISER =========================== */}
-      <Section index={7} id="optimiser" title={optimiser.heading} lede={optimiser.body}>
+      <Section index={idx('optimiser')} id="optimiser" title={optimiser.heading} lede={optimiser.body}>
         {/* The shared paragraph states the mechanism; this page says what an optimiser
             would have had to claim in order to answer at all. The two do not overlap,
             which is the test for whether a page-side paragraph has earned its place
@@ -587,7 +617,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
       </Section>
 
       {/* ================= 08 · DEVELOPER STANDARDS ===================== */}
-      <Section index={8} id="standards" title={t.standards.title} lede={t.standards.lede}>
+      <Section index={idx('standards')} id="standards" title={t.standards.title} lede={t.standards.lede}>
         <p>
           {t.standards.mechanism(
             <Ident>DeveloperStandard</Ident>,
@@ -599,19 +629,19 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
       </Section>
 
       {/* ================= 09 · NOT THE WHOLE CODE ====================== */}
-      <Section index={9} id="coverage" title={t.coverage.title} lede={t.coverage.lede}>
+      <Section index={idx('coverage')} id="coverage" title={t.coverage.title} lede={t.coverage.lede}>
         <p>{t.coverage.families}</p>
         <p>{t.coverage.noPageCount}</p>
       </Section>
 
       {/* ================= 10 · A FILE IS NOT AN INTEGRATION ============ */}
-      <Section index={10} id="files" title={files.heading} lede={files.body}>
+      <Section index={idx('files')} id="files" title={files.heading} lede={files.body}>
         <p>{t.files.behaviour}</p>
       </Section>
 
       {/* ================= 11 · NOT ON THIS SITE ======================== */}
       <Section
-        index={11}
+        index={idx('not-on-this-site')}
         id="not-on-this-site"
         major
         title={t.notOnSite.title}
@@ -658,7 +688,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
 
       {/* ================= 12 · WHAT COULD CHANGE ======================= */}
       <Section
-        index={12}
+        index={idx('who-changes')}
         id="who-changes"
         title={t.whoChanges.title}
         lede={t.whoChanges.lede}
@@ -702,7 +732,7 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
 
       {/* ================= 13 · WHAT THIS PAGE DID NOT PROVE ============ */}
       <Section
-        index={13}
+        index={idx('unproven')}
         id="unproven"
         title={t.unproven.title}
         lede={<>{t.unproven.lede}</>}

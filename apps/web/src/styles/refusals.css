@@ -481,37 +481,45 @@
  * interpolation is inside the motion guard.
  *
  * `:not(.button)` excludes the CTA, which is a control and takes the control
- * family's treatment. `.rf` contains no nav and no colophon, so this reaches
- * exactly the prose links on this page.
+ * family's treatment. `.rf` holds no colophon, so with the contents nav excluded
+ * this reaches exactly the prose links on this page.
+ *
+ * THE EXCLUSION IS NOT TIDINESS. This rule used to say `.rf` contained no nav,
+ * which was true until one was put at the head of the page — and because
+ * `.rf a:not(.button)` outranks `.contents__link` on specificity, every entry
+ * in the contents came out as underlined prose blue while the identical block
+ * on the other four pages rendered correctly. A page-scoped element selector
+ * silently outranks the component it later contains; that is the whole reason
+ * the chassis is written in classes.
  */
-.rf a:not(.button) {
+.rf a:not(.button, .contents__link) {
   color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 0.2em;
   text-decoration-thickness: var(--border-width);
 }
 @media (hover: hover) {
-  .rf a:not(.button):hover {
+  .rf a:not(.button, .contents__link):hover {
     text-decoration-thickness: var(--border-width-emphasis);
   }
 }
-.rf a:not(.button):focus-visible {
+.rf a:not(.button, .contents__link):focus-visible {
   text-decoration-thickness: var(--border-width-emphasis);
 }
 /* The press ground is read through the shared vocabulary with a fallback rather
    than written directly, so a link inside the inverted band takes the band's own
    press tone from the same declaration that gives its button one. */
-.rf a:not(.button):active {
+.rf a:not(.button, .contents__link):active {
   background-color: var(--response-ground-press, var(--surface-inset));
   text-decoration-thickness: var(--border-width-emphasis);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .rf a:not(.button) {
+  .rf a:not(.button, .contents__link) {
     transition:
       background-color var(--duration-fast) var(--ease-standard),
       text-decoration-thickness var(--duration-fast) var(--ease-standard);
   }
-  .rf a:not(.button):active {
+  .rf a:not(.button, .contents__link):active {
     transition-duration: var(--duration-instant);
   }
 }

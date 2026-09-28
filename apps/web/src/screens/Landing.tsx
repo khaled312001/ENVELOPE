@@ -106,6 +106,7 @@ import { LIMITS_AR } from '../content/shared.ar.js';
 import { LIMITS } from '../content/shared.js';
 import { AR } from '../i18n/landing.ar.js';
 import { EN } from '../i18n/landing.en.js';
+import { PageContents } from '../components/PageContents.js';
 import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 // `Href`, not `Route`. Every CTA on this site carries a query — `/app?demo=…` — and a
 // `Route`-only signature rejects all of them.
@@ -634,6 +635,29 @@ export function Landing({
    * put it away — but the shipped state is open.
    */
   const t = useDict(EN, AR);
+
+  /*
+    THE FIVE NUMBERED SECTIONS, AS ONE RECORD.
+
+    The ordinals were typed into each section's margin — `01` … `05` — and the
+    headings live in the dictionary, so the page's outline existed nowhere at all.
+    The contents list reads this and so do the margin numerals; neither can now be
+    edited without the other following.
+
+    The closing status band is deliberately NOT here. It carries no ordinal on the
+    page, so listing it would make the outline run to six over a page that counts
+    to five — and a reader who finds the two disagreeing has no way to tell which
+    of them is the mistake.
+  */
+  const order: readonly { readonly id: string; readonly label: string }[] = [
+    { id: 'capacities', label: t.capacities.title },
+    { id: 'parking-number', label: t.parking.title },
+    { id: 'guarantees', label: t.guarantees.title },
+    { id: 'claims', label: t.claims.title },
+    { id: 'limits', label: t.limits.title },
+  ];
+  const idx = (id: string): string =>
+    String(order.findIndex((s) => s.id === id) + 1).padStart(2, '0');
   /* The five refusals `/refusals` also renders, from the one module each language has. */
   const limits = useDict(LIMITS, LIMITS_AR);
   const [heroOpen, setHeroOpen] = useState(true);
@@ -830,6 +854,8 @@ export function Landing({
         </figure>
       </section>
 
+      <PageContents entries={order} />
+
       {/* ================================================================
           01 — THE THREE CAPACITIES
           ============================================================= */}
@@ -840,7 +866,7 @@ export function Landing({
       >
         {/* `aria-hidden`, because "01" read out before a heading is noise. */}
         <p className="index railed__margin" aria-hidden="true">
-          01
+          {idx('capacities')}
         </p>
         <div className="railed__body">
           <div className="section__head">
@@ -893,7 +919,7 @@ export function Landing({
         aria-labelledby="lp-parking"
       >
         <p className="index railed__margin" aria-hidden="true">
-          02
+          {idx('parking-number')}
         </p>
         <div className="railed__body">
           <div className="section__head">
@@ -982,7 +1008,7 @@ export function Landing({
         aria-labelledby="lp-guarantees"
       >
         <p className="index railed__margin" aria-hidden="true">
-          03
+          {idx('guarantees')}
         </p>
         <div className="railed__body">
           <div className="section__head">
@@ -1064,7 +1090,7 @@ export function Landing({
         aria-labelledby="lp-claims"
       >
         <p className="index railed__margin" aria-hidden="true">
-          04
+          {idx('claims')}
         </p>
         <div className="railed__body">
           <div className="section__head">
@@ -1149,7 +1175,7 @@ export function Landing({
         aria-labelledby="lp-limits"
       >
         <p className="index railed__margin" aria-hidden="true">
-          05
+          {idx('limits')}
         </p>
         <div className="railed__body">
           <div className="section__head">

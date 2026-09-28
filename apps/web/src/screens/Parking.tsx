@@ -72,6 +72,7 @@ import { Glyph } from '../components/SiteChrome.js';
 import { WorkedExampleModel } from '../components/WorkedExampleModel.js';
 import { OPTIMISER_REFUSAL_AR, type SharedParagraph } from '../content/shared.ar.js';
 import { OPTIMISER_REFUSAL } from '../content/shared.js';
+import { PageContents } from '../components/PageContents.js';
 import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 import { AR } from '../i18n/parking.ar.js';
 import { EN, type ParkingDictionary } from '../i18n/parking.en.js';
@@ -170,6 +171,18 @@ const answered = (side: FarSide): side is FarLeg => 'regulatoryGfaM2' in side;
 const levelPlan: typeof V.levelPlan | undefined = V.levelPlan;
 const levelPlanRefusal: string | null = V.levelPlanRefusal;
 const parkingInFar: typeof V.parkingInFar | undefined = V.parkingInFar;
+
+/*
+  WHETHER THE FAR SECTION IS DRAWN AT ALL, decided HERE rather than inside the
+  component that draws it. `ParkingInFar` returns null when neither leg of the
+  declaration was answered, and while that decision lived only inside the
+  component nothing outside could know whether the section existed — which is
+  exactly what a contents list and a section ordinal both have to know. A guard
+  only the guarded code can see makes every count around it a guess.
+*/
+const FAR_SHOWN: boolean =
+  parkingInFar !== undefined &&
+  (answered(parkingInFar.countsTowardFar) || answered(parkingInFar.excludedFromFar));
 
 /* -------------------------------------------------------------------------
  * THE ASSUMPTIONS THE SUPPLY MODEL RESTS ON.
@@ -691,6 +704,42 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
   const access = V.access;
   const drawable = plan !== undefined && refusal === null;
 
+  /*
+    ONE RECORD FOR THE ORDER, THE ORDINALS AND THE CONTENTS.
+
+    The ordinals used to be typed into each `<Section index="NN">`, which is how
+    two sections both came to be `04` — they are alternatives, so on any one
+    reading only one renders and the duplicate never showed. The same property
+    made every number after a SUPPRESSED section wrong: with no level plan the
+    page printed 02, then 11, then 12. Those were positions in a page somebody
+    had in mind, not in the page being read.
+
+    Derived, they are positions in what is actually on screen, and the contents
+    list cannot offer a link to a section that was never drawn.
+  */
+  const order: readonly { readonly id: string; readonly label: string }[] = [
+    { id: 'pk-chain', label: t.chain.title },
+    ...(plan !== undefined ? [{ id: 'pk-demand', label: t.demand.title }] : []),
+    ...(plan !== undefined && refusal !== null
+      ? [{ id: 'pk-refused', label: t.refused.title }]
+      : []),
+    ...(drawable
+      ? [
+          { id: 'pk-level', label: t.level.title },
+          { id: 'pk-cost', label: t.cost.title },
+          { id: 'pk-pack', label: t.pack.title },
+          { id: 'pk-dims', label: t.dims.title },
+          ...(ramp ? [{ id: 'pk-ramp', label: t.ramp.title }] : []),
+          { id: 'pk-access', label: t.access.title },
+        ]
+      : []),
+    ...(FAR_SHOWN ? [{ id: 'pk-far', label: t.far.title }] : []),
+    { id: 'pk-not', label: t.not.title },
+    { id: 'pk-unproven', label: t.unproven.title },
+  ];
+  const idx = (id: string): string =>
+    String(order.findIndex((s) => s.id === id) + 1).padStart(2, '0');
+
   /* R10: which band binds is templated from the fixture and asserted against it.
      `pnpm example` diffs values and not the claims wrapped around them, so a
      rule edit that made another band bind would leave a hand-typed sentence
@@ -748,9 +797,11 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
         </div>
       </section>
 
+      <PageContents entries={order} />
+
       {/* --- 2. Where the governing number comes from ---------------------- */}
       <Section
-        index="02"
+        index={idx('pk-chain')}
         id="pk-chain"
         title={t.chain.title}
         tally={<Tally count={SUPPLY_ASSUMPTIONS.length} />}
@@ -841,7 +892,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
       {/* --- 3. Demand and supply are different numbers -------------------- */}
       {plan !== undefined ? (
         <Section
-          index="03"
+          index={idx('pk-demand')}
           id="pk-demand"
           title={t.demand.title}
           lede={<>{t.demand.lede}</>}
@@ -883,7 +934,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
       {/* --- 4 to 8: the drawing, or the refusal that replaces it ---------- */}
       {plan !== undefined && refusal !== null ? (
         <Section
-          index="04"
+          index={idx('pk-refused')}
           id="pk-refused"
           title={t.refused.title}
           lede={<>{t.refused.lede}</>}
@@ -906,7 +957,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
         <>
           {/* --- 4. The level, drawn -------------------------------------- */}
           <Section
-            index="04"
+            index={idx('pk-level')}
             id="pk-level"
             title={t.level.title}
             lede={<>{t.level.lede}</>}
@@ -1016,7 +1067,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
 
           {/* --- 5. What the drawing costs the assumption ----------------- */}
           <Section
-            index="05"
+            index={idx('pk-cost')}
             id="pk-cost"
             title={t.cost.title}
             tally={<Tally count={SUPPLY_ASSUMPTIONS.length} />}
@@ -1136,7 +1187,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
 
           {/* --- 6. Packed inside the podium ------------------------------ */}
           <Section
-            index="06"
+            index={idx('pk-pack')}
             id="pk-pack"
             title={t.pack.title}
             lede={<>{t.pack.lede}</>}
@@ -1169,7 +1220,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
 
           {/* --- 7. The dimensions this run was cut to -------------------- */}
           <Section
-            index="07"
+            index={idx('pk-dims')}
             id="pk-dims"
             title={t.dims.title}
             lede={<>{t.dims.lede}</>}
@@ -1222,7 +1273,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
           {/* --- 8. The ramp ---------------------------------------------- */}
           {ramp ? (
             <Section
-              index="08"
+              index={idx('pk-ramp')}
               id="pk-ramp"
               title={t.ramp.title}
               lede={<>{t.ramp.lede}</>}
@@ -1251,7 +1302,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
 
           {/* --- 9. Where the cars get in --------------------------------- */}
           <Section
-            index="09"
+            index={idx('pk-access')}
             id="pk-access"
             title={t.access.title}
             lede={<>{t.access.lede}</>}
@@ -1393,13 +1444,17 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
       ) : null}
 
       {/* --- 10. The declaration with no default -------------------------- */}
-      {parkingInFar !== undefined ? (
-        <ParkingInFar data={parkingInFar} declared={IN.run.parkingInFar} />
+      {FAR_SHOWN && parkingInFar !== undefined ? (
+        <ParkingInFar
+          data={parkingInFar}
+          declared={IN.run.parkingInFar}
+          index={idx('pk-far')}
+        />
       ) : null}
 
       {/* --- 11. What it does not do here --------------------------------- */}
       <Section
-        index="11"
+        index={idx('pk-not')}
         id="pk-not"
         title={t.not.title}
         minor
@@ -1427,7 +1482,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
 
       {/* --- 12. What this page did not prove ----------------------------- */}
       <Section
-        index="12"
+        index={idx('pk-unproven')}
         id="pk-unproven"
         title={t.unproven.title}
         minor
@@ -1479,9 +1534,11 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
 function ParkingInFar({
   data,
   declared,
+  index,
 }: {
   readonly data: NonNullable<typeof parkingInFar>;
   readonly declared: string;
+  readonly index: string;
 }): JSX.Element | null {
   const t = useDict(EN, AR);
   /* The array is annotated rather than inferred, and that is not decoration. A
@@ -1505,7 +1562,7 @@ function ParkingInFar({
   if (!answered(counts) && !answered(excluded)) return null;
 
   return (
-    <Section index="10" id="pk-far" title={t.far.title} lede={<>{t.far.lede}</>}>
+    <Section index={index} id="pk-far" title={t.far.title} lede={<>{t.far.lede}</>}>
       <div className="pk-compare">
         {sides.map((s) => (
           <div

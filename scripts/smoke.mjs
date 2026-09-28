@@ -1234,6 +1234,50 @@ await step('the settings page signs out of everywhere', async () => {
   await page.getByText(/there is no account signed in/i).waitFor({ timeout: wait(8000) });
 });
 
+await step('every contents jump clears the sticky nav (WCAG 2.2 · 2.4.11)', async () => {
+  /*
+    THE FAILURE THIS CATCHES IS INVISIBLE TO EVERY OTHER GATE.
+
+    `.nav` is sticky, so a fragment jump has to clear it, and `.section` carries a
+    `scroll-margin-block-start` that does. Four of the five contents lists anchor
+    to the section; `/dashboard` anchors to the heading `aria-labelledby` already
+    named, and its headings landed 61px UNDER the nav — on every entry, on a page
+    whose whole job is being read. No stylesheet check can see it: both rules were
+    valid, both tokens resolved, and the two elements were simply not the same one.
+
+    Sampled at three points per page rather than one: the defect was uniform here,
+    but a section that had opted out of the chassis would not be.
+  */
+  for (const route of ['/', '/parking', '/exports', '/refusals', '/dashboard']) {
+    await page.goto(new URL(route, BASE).href, { waitUntil: 'domcontentloaded' });
+    // `domcontentloaded` is before React paints, and the list is React's.
+    await page.locator('nav.contents').first().waitFor({ timeout: wait(10000) });
+    const links = page.locator('nav.contents a');
+    const n = await links.count();
+    if (n < 2) throw new Error(`${route} renders no contents list`);
+    for (const i of [0, Math.floor(n / 2), n - 1]) {
+      const href = await links.nth(i).getAttribute('href');
+      await page.evaluate((h) => {
+        window.location.hash = h;
+      }, href);
+      await page.waitForTimeout(400);
+      const clearance = await page.evaluate((h) => {
+        const el = document.querySelector(h);
+        const nav = document.querySelector('.nav');
+        if (!el) return null;
+        const navBottom = nav ? nav.getBoundingClientRect().bottom : 0;
+        return el.getBoundingClientRect().top - navBottom;
+      }, href);
+      if (clearance === null) throw new Error(`${route} lists ${href}, which is not in the page`);
+      if (clearance < 0) {
+        throw new Error(
+          `${route} ${href} lands ${Math.round(-clearance)}px under the sticky nav`,
+        );
+      }
+    }
+  }
+});
+
 await browser.close();
 
 console.log(`\n${errors.length === 0 ? 'SMOKE PASSED' : `SMOKE FAILED — ${errors.length} problem(s)`}`);

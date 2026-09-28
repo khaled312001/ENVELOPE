@@ -88,6 +88,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 
 import { api, ApiError, type Actor, type DashboardView } from '../api/client.js';
+import { PageContents } from '../components/PageContents.js';
 import { Glyph } from '../components/SiteChrome.js';
 import { AR } from '../i18n/dashboard.ar.js';
 import { EN, type DashboardDictionary } from '../i18n/dashboard.en.js';
@@ -296,20 +297,27 @@ export function DashboardPanels({
     exactly one of the two readings and right on the other, which is the shape of
     error nobody notices.
   */
-  const order = [
-    'not-ready',
-    'change',
-    'volume',
-    'exposure',
-    'deferred',
-    'drawings',
-    ...(showRuns ? ['runs'] : []),
-    'no-score',
+  /*
+    ONE RECORD, READ THREE WAYS: the margin ordinal, the denominator, and the
+    contents list at the head of the page. The heading text sits here beside the
+    id so the outline and the `<h2>` cannot say different things — the section
+    order and the section names were two lists before, and the only reason they
+    agreed was that nobody had edited one of them yet.
+  */
+  const order: readonly { readonly id: string; readonly label: string }[] = [
+    { id: 'not-ready', label: t.notReady.title },
+    { id: 'change', label: t.change.title },
+    { id: 'volume', label: t.volume.title },
+    { id: 'exposure', label: t.exposure.title },
+    { id: 'deferred', label: t.deferred.title },
+    { id: 'drawings', label: t.drawings.title },
+    ...(showRuns ? [{ id: 'runs', label: t.runs.title }] : []),
+    { id: 'no-score', label: t.noScore.title },
   ];
   const pad = (n: number): string => String(n).padStart(2, '0');
   const index = (id: string): JSX.Element => (
     <p className="index railed__margin" aria-hidden="true">
-      {pad(order.indexOf(id) + 1)}
+      {pad(order.findIndex((s) => s.id === id) + 1)}
       <span className="index__of"> / {pad(order.length)}</span>
     </p>
   );
@@ -387,6 +395,8 @@ export function DashboardPanels({
           </div>
         </div>
       </div>
+
+      <PageContents entries={order.map((s) => ({ id: `db-${s.id}`, label: s.label }))} />
 
       {/* --- 3. What is not ready ---------------------------------------- */}
       <section className="shell section section--major railed" aria-labelledby="db-not-ready">

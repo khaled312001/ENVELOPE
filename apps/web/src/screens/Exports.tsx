@@ -48,6 +48,7 @@ import { IFC_GLTF } from '../content/shared.js';
 import { IFC_GLTF_AR, type SharedParagraph } from '../content/shared.ar.js';
 import { AR } from '../i18n/exports.ar.js';
 import { EN } from '../i18n/exports.en.js';
+import { PageContents } from '../components/PageContents.js';
 import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
@@ -140,6 +141,25 @@ function Ident({ children }: { readonly children: ReactNode }): JSX.Element {
 export default function Exports({ navigate }: PageProps): JSX.Element {
   const t = useDict(EN, AR);
   const ifc = useDict<SharedParagraph>(IFC_GLTF, IFC_GLTF_AR);
+
+  /*
+    ONE RECORD FOR THE ORDER, THE ORDINALS AND THE CONTENTS LIST. The ordinals
+    were typed into each `<Section index={n}>`; a section inserted in the middle
+    renumbered by hand is a renumbering somebody eventually does not finish, and
+    the contents would then disagree with the page in the one place a reader
+    checks it against.
+  */
+  const order: readonly { readonly id: string; readonly label: string }[] = [
+    { id: 'drawing', label: t.drawing.title },
+    { id: 'model', label: t.model.title },
+    { id: 'workbook', label: t.workbook.title },
+    { id: 'json', label: t.json.title },
+    { id: 'stamped', label: t.stamped.title },
+    { id: 'gates', label: t.gates.title },
+    { id: 'files', label: ifc.heading },
+    { id: 'not-proved', label: t.notProved.title },
+  ];
+  const idx = (id: string): number => order.findIndex((s) => s.id === id) + 1;
   const unsigned = X.gateSequence[0];
 
   const fileName = (id: string): string => (t.fileNames as Readonly<Record<string, string>>)[id] ?? id;
@@ -169,8 +189,10 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
       </section>
 
       {/* ================= 01 · THE DRAWING ============================== */}
+      <PageContents entries={order} />
+
       <Section
-        index={1}
+        index={idx('drawing')}
         id="drawing"
         title={t.drawing.title}
         lede={
@@ -279,7 +301,7 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
 
       {/* ================= 02 · THE MODEL FILE =========================== */}
       <Section
-        index={2}
+        index={idx('model')}
         id="model"
         title={t.model.title}
         lede={
@@ -320,7 +342,7 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
       </Section>
 
       {/* ================= 03 · THE WORKBOOK ============================= */}
-      <Section index={3} id="workbook" title={t.workbook.title} lede={<>{t.workbook.lede}</>}>
+      <Section index={idx('workbook')} id="workbook" title={t.workbook.title} lede={<>{t.workbook.lede}</>}>
         <div className="schedule" role="region" aria-label={t.workbook.region} tabIndex={0}>
           <table>
             <caption className="sr-only">{t.workbook.caption}</caption>
@@ -359,7 +381,7 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
       </Section>
 
       {/* ================= 04 · THE RUN AS DATA, AND THE REPORT ========== */}
-      <Section index={4} id="json" title={t.json.title} lede={<>{t.json.lede}</>}>
+      <Section index={idx('json')} id="json" title={t.json.title} lede={<>{t.json.lede}</>}>
         <p>{t.json.fields}</p>
         <ul className="ex-fields">
           {X.jsonFields.map((f) => (
@@ -382,7 +404,7 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
 
       {/* ================= 05 · WHAT EVERY FILE CARRIES =================== */}
       <Section
-        index={5}
+        index={idx('stamped')}
         id="stamped"
         title={t.stamped.title}
         lede={
@@ -404,7 +426,7 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
       </Section>
 
       {/* ================= 06 · THE GATES ================================ */}
-      <Section index={6} id="gates" title={t.gates.title} lede={<>{t.gates.lede}</>}>
+      <Section index={idx('gates')} id="gates" title={t.gates.title} lede={<>{t.gates.lede}</>}>
         <div className="schedule" role="region" aria-label={t.gates.region} tabIndex={0}>
           <table>
             <caption className="sr-only">{t.gates.caption}</caption>
@@ -455,7 +477,7 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
       </Section>
 
       {/* ================= 07 · A FILE IS NOT AN INTEGRATION ============= */}
-      <Section index={7} id="files" title={ifc.heading} lede={ifc.body}>
+      <Section index={idx('files')} id="files" title={ifc.heading} lede={ifc.body}>
         <p>
           {t.files.before}
           {DXF_RELEASE}
@@ -464,7 +486,7 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
       </Section>
 
       {/* ================= 08 · WHAT THIS PAGE DID NOT PROVE ============= */}
-      <Section index={8} id="not-proved" title={t.notProved.title}>
+      <Section index={idx('not-proved')} id="not-proved" title={t.notProved.title}>
         <p>{t.notProved.first}</p>
         <p>{t.notProved.second}</p>
         <div className="cta">

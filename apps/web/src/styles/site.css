@@ -138,6 +138,26 @@
   scroll-margin-block-start: calc(var(--control-h-lg) + var(--space-4));
 }
 
+/*
+ * WCAG 2.2 · 2.4.11 FOCUS NOT OBSCURED, for every fragment and not only for the
+ * ones that happen to be a `.section`.
+ *
+ * `.nav` is sticky at the top of every route, so a jump has to clear it, and the
+ * rule above clears it for any target that is a section element. Four of the five
+ * contents lists anchor to the `<section>`; `/dashboard` anchors to the `<h2>`,
+ * because that is the element `aria-labelledby` already named and adding a second
+ * id to the section would have been a second name for one thing. So its headings
+ * landed 61px UNDER the nav — measured on all three sampled entries, on a page
+ * whose entire job is being read.
+ *
+ * `:target` is the selector that does not care which element the fragment names.
+ * It is the general form of the rule above rather than a patch beside it: anchor
+ * to a figure, a table or a paragraph tomorrow and it is already correct.
+ */
+:target {
+  scroll-margin-block-start: calc(var(--control-h-lg) + var(--space-4));
+}
+
 /* The tier is assigned by ARGUMENT WEIGHT, not by position. The five-way claim
    statement and "what it does not do" take the major tier, because those are the
    two sections a reader must not skim — which is the opposite of the SaaS
@@ -2379,7 +2399,10 @@
  * second one happens again.
  */
 @media (prefers-reduced-motion: no-preference) {
-  .lp { scroll-behavior: smooth; }
+  /* Every page that carries a contents list anchor-navigates, not just the
+     landing page — `.site` is the wrapper all five render inside. Inside
+     `no-preference`, so a reader who asked for stillness gets a jump. */
+  .site { scroll-behavior: smooth; }
 
   /* The boundary is drawn first, then what the rules leave. 240 is the plot
      perimeter in the drawing's own units — 2 × (80 + 40) — so the dash runs the
@@ -2848,6 +2871,141 @@
 .auth__aside-body > p:first-child { color: var(--text-secondary); }
 .auth__aside-not { color: var(--text-primary); font-weight: var(--weight-medium); }
 .auth__aside-guest { color: var(--text-secondary); font-size: var(--text-sm); }
+
+/* ==========================================================================
+ * 22. CONTENTS — the outline of a long page, at the head of it
+ * ======================================================================= */
+
+/*
+ * FIVE PAGES RUN BETWEEN SEVEN AND FOURTEEN SCREENS. Each carries `01 / 07` in
+ * its rail gutter, which tells a reader the ordinal of the thing in front of them
+ * and nothing about the other six. This is the other half.
+ *
+ * `PageContents.tsx` argues the two designs this replaced — a sticky rail beside
+ * the page, which the 78rem measure leaves no gutter for, and a second sticky bar
+ * under the masthead, which would crowd the one line on this site that may never
+ * be crowded.
+ *
+ * NOTHING HERE IS A NEW VISUAL IDEA. The row is the workspace rail's item — a
+ * transparent inline-start border that fills on response, over an inset ground —
+ * which is now the one active/hover language on this site, used by the workspace
+ * rail, the flow rail and this. A fourth invention would be a fourth thing to
+ * learn for no gain.
+ */
+
+.contents {
+  /* Padding, not margin: `.shell` places this and placement owns inset. */
+  padding-block: var(--rhythm-minor) 0;
+}
+
+/*
+ * THE TITLE IS SET AS A LABEL, NOT AS A HEADING, and that is deliberate on a page
+ * whose `<h2>`s are 2rem. This is navigation; the argument starts below it. Giving
+ * it display weight would make the outline compete with the thing it is an outline
+ * of, and put the largest words on the page above the first sentence of it.
+ */
+.contents__title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/*
+ * TWO COLUMNS WHERE THEY FIT, FLOWING ACROSS. Nine rows in one column is a
+ * quarter of the first screen spent before the argument starts. `auto-fit` rather
+ * than `auto-fill` — with three entries `auto-fill` keeps an empty third track and
+ * the list clusters left of a void. `min()` inside `minmax` is what stops a 20rem
+ * minimum overflowing a 320px phone.
+ */
+.contents__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  column-gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;   /* the numeral is drawn; see below */
+}
+
+/*
+  EACH CELL CLOSES ITSELF, and the list opens the block. The first arrangement
+  was the other way round — a rule above every item and one closing rule under
+  the whole grid — and with thirteen entries over three columns the last row
+  holds one cell, so that closing rule ran the full width with two thirds of it
+  floating under nothing. Row one is the only row guaranteed full, so it is the
+  only edge the list itself may draw.
+*/
+.contents__list { border-block-start: var(--border-width) solid var(--border-subtle); }
+.contents__item {
+  border-block-end: var(--border-width) solid var(--border-subtle);
+}
+
+.contents__link {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-2);
+  /* 44px, which is the target minimum. The whole row is the target: a reader
+     aiming at a two-word label should not have to hit the two words. */
+  min-block-size: var(--control-h);
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: var(--border-width-emphasis) solid transparent;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.contents__link:hover,
+.contents__link:focus-visible {
+  background-color: var(--surface-inset);
+  border-inline-start-color: var(--action);
+  color: var(--text-primary);
+}
+.contents__link:focus-visible {
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.contents__num {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+.contents__link:hover .contents__num,
+.contents__link:focus-visible .contents__num {
+  color: var(--text-secondary);
+}
+
+.contents__label {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  text-wrap: pretty;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .contents__link {
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
+  }
+}
+
+/*
+ * ON PAPER THE LINKS ARE NOT LINKS. A printed contents list with a hover colour
+ * and an inline-start border is ink spent on an affordance the page cannot offer.
+ * The ordinals and the labels stay, because on paper they are the one way to tell
+ * how much is left.
+ */
+@media print {
+  .contents__link {
+    border-inline-start-color: transparent;
+    padding-inline: 0;
+    color: var(--text-primary);
+  }
+}
 
 /* ==========================================================================
  * 19. PRINT — two independent locks on the same door

@@ -78,6 +78,18 @@ export const EN = {
    * that hid which of the two you are — and the difference is not cosmetic: a
    * guest's runs live behind a key in one browser and are lost when it is cleared.
    */
+  /*
+   * THE CONTENTS OF A LONG PAGE. Shared, because five pages carry one — and a
+   * heading each page wrote for itself would be five wordings for one thing.
+   *
+   * "On this page" rather than "Contents": the reader is already on the page, and
+   * the phrase says what the list covers AND what it does not, which "Contents"
+   * at the top of a site leaves open.
+   */
+  contents: {
+    title: 'On this page',
+  },
+
   rail: {
     label: 'Your workspace',
     heading: 'Workspace',

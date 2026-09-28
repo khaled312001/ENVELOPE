@@ -126,6 +126,19 @@ describe('signing in', () => {
     expect(cookieFrom(wrong.headers)).toBeNull();
   });
 
+  /*
+    THE TIMEOUT IS EXPLICIT, AND IT IS NOT A WORKAROUND FOR A SLOW TEST.
+
+    Twelve sequential sign-in attempts are twelve scrypt verifications, and the
+    route hashes a decoy even when the account does not exist so that a missing
+    account and a wrong password take the same time. Both facts are deliberate:
+    the cost IS the defence. Run alone this finishes in well under a second, but
+    under the full suite's CPU contention twelve of them crossed the default
+    five-second budget and the file failed on a timeout that read as a throttle
+    that had stopped working — which is the most alarming way a green suite can
+    lie. A password hash that fits comfortably inside a default test timeout is a
+    password hash that is too cheap.
+  */
   it('throttles repeated failures rather than answering forever', async () => {
     let last = 0;
     for (let i = 0; i < 12; i++) {
@@ -137,7 +150,7 @@ describe('signing in', () => {
       last = r.statusCode;
     }
     expect(last).toBe(429);
-  });
+  }, 30_000);
 });
 
 describe('the session', () => {

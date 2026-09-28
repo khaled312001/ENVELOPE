@@ -191,173 +191,204 @@ export default function Antechamber({ setActor, navigate, search }: PageProps): 
 
   return (
     <div className="ac">
+      {/*
+        THE TITLE AND THE TERMS, SIDE BY SIDE, BECAUSE THEY ARE ONE STATEMENT.
+
+        Stacked, they spent 743px of the first screen running down the left third
+        of it to say one sentence and three paragraphs. And the stack asserted a
+        sequence that is not there: the title is not a claim the lede goes on to
+        support, it is the name of the thing whose terms the lede states. A reader
+        who has met the title alone has been told nothing yet.
+      */}
       <section className="shell section section--opening">
-        <h1 className="ac__title">{t.hero.title}</h1>
+        <div className="ac-split">
+          <h1 className="ac__title">{t.hero.title}</h1>
 
-        <div className="ac__lede">
-          <p>{t.hero.lede.record}</p>
-          {/* "NOT VERIFIED", IN THOSE WORDS. The sentence used to read "not confirmed
-              with any authority", which is true and reads softer: verification is the
-              control a reader assumes a licence field implies, so the denial has to use
-              the reader's own word or it is answering a question nobody asked.
-              `scripts/smoke.mjs` asserts the phrase on this screen for the same reason —
-              it is the first screen behind every public call to action, and so the worst
-              place on the site to imply a control the software does not have. */}
-          <p>{t.hero.lede.licence}</p>
-          {/*
-            THIS PARAGRAPH USED TO SAY "THERE IS NO PASSWORD, NO SESSION AND NO
-            TOKEN. THIS IS NOT AUTHENTICATION." IT WAS TRUE AND IT IS NOW FALSE.
+          <div className="ac__lede">
+            <p>{t.hero.lede.record}</p>
+            {/* "NOT VERIFIED", IN THOSE WORDS. The sentence used to read "not confirmed
+                with any authority", which is true and reads softer: verification is the
+                control a reader assumes a licence field implies, so the denial has to use
+                the reader's own word or it is answering a question nobody asked.
+                `scripts/smoke.mjs` asserts the phrase on this screen for the same reason —
+                it is the first screen behind every public call to action, and so the worst
+                place on the site to imply a control the software does not have. */}
+            <p>{t.hero.lede.licence}</p>
+            {/*
+              THIS PARAGRAPH USED TO SAY "THERE IS NO PASSWORD, NO SESSION AND NO
+              TOKEN. THIS IS NOT AUTHENTICATION." IT WAS TRUE AND IT IS NOW FALSE.
 
-            There is a password, a session and a token, and leaving the old sentence
-            standing would have been the same defect as an unverified licence field
-            one register louder: copy asserting the ABSENCE of a control the software
-            has, on the screen where a reader decides whether to believe the rest of
-            the site.
+              There is a password, a session and a token, and leaving the old sentence
+              standing would have been the same defect as an unverified licence field
+              one register louder: copy asserting the ABSENCE of a control the software
+              has, on the screen where a reader decides whether to believe the rest of
+              the site.
 
-            What has NOT changed is the pair of refusals either side of it, and they
-            are restated here rather than assumed to carry over. An account proves
-            who holds the account. It proves nothing about the licence, and it
-            enforces nothing about who signs.
-          */}
-          <p>{t.hero.lede.account}</p>
+              What has NOT changed is the pair of refusals either side of it, and they
+              are restated here rather than assumed to carry over. An account proves
+              who holds the account. It proves nothing about the licence, and it
+              enforces nothing about who signs.
+            */}
+            <p>{t.hero.lede.account}</p>
+          </div>
         </div>
       </section>
 
       {/*
-        THE ACCOUNT PANEL SITS ABOVE THE NAME, AND THAT ORDER IS THE OFFER.
+        THE TWO WAYS IN, BESIDE EACH OTHER, BECAUSE THEY ARE A CHOICE.
 
-        Reading down: here is what an account does, here is the form for one, and
-        here — below it — is the name field that opens the engine without one. A
-        reader who wants neither scrolls past a panel; a reader who wants one never
-        has to hunt for it. The reverse order would have made the account look like
-        an afterthought bolted under a form, which is the opposite of what it is.
+        They used to be stacked, and the note that stood here argued the order:
+        the account panel first so it could not read as an afterthought bolted
+        under a form, the name field below it for the reader who wants neither.
+        The ordering argument was right about what was at stake and wrong about
+        what fixes it. A stack says FIRST DO THIS, THEN THAT — and these are not
+        two steps, they are two answers to one question, and only one of them is
+        ever taken. Beside each other, neither is subordinate and neither has to
+        be scrolled past to reach the other.
+
+        Reading order still puts the account first, and in Arabic it is first on
+        the right, because the grid follows the document rather than the page.
+
+        ONE BAND, NOT TWO SECTIONS. The zoned ground was painted on the name form
+        alone, which left the account plate floating white on the page ground
+        above it — two grounds for one act. Now the band IS the act: the argument
+        above it, the limit below it, and everything a reader does on this page
+        inside it. And the section says `section--zoned` for itself, which the
+        stylesheet has been asking for in a comment since it was written.
       */}
-      <section className="shell section section--minor">
-        <AccountPanel />
-      </section>
+      <section className="shell section section--minor section--zoned">
+        <div className="ac-choice">
+          <AccountPanel />
 
-      <section className="shell section section--minor" aria-labelledby={formHeadingId}>
-        {/* `.section__head` rather than a rule of this page's own: the chassis owns
-            the h2's size, weight, tracking and cap-line trim, and a second
-            declaration of them here is a second answer to a question already
-            settled. There is no index numeral — this is a form, not a numbered
-            movement of an argument. */}
-        <div className="section__head">
-          <h2 id={formHeadingId}>{t.form.heading}</h2>
-        </div>
+          {/*
+            `noValidate`, with `required` kept on the input.
 
-        {/*
-          `noValidate`, with `required` kept on the input.
+            The constraint is real and belongs in the markup, but a native
+            validation bubble is a transient tooltip that vanishes on the next
+            keystroke and is not a persistent description of the field. The reason
+            is stated in text, associated by `aria-describedby`, and it stays on
+            the page.
 
-          The constraint is real and belongs in the markup, but a native validation
-          bubble is a transient tooltip that vanishes on the next keystroke and is
-          not a persistent description of the field. The reason is stated in text,
-          associated by `aria-describedby`, and it stays on the page.
-        */}
-        <form className="plate ac__form" onSubmit={submit} noValidate>
-          <div className="field">
-            <label htmlFor={nameId}>{t.form.name.label}</label>
-            <input
-              id={nameId}
-              ref={nameRef}
-              className="input"
-              type="text"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (nameMissing) setNameMissing(false);
-              }}
-              autoComplete="name"
-              required
-              aria-required="true"
-              {...(nameMissing ? { 'aria-invalid': true as const } : {})}
-              aria-describedby={nameMissing ? `${nameHelpId} ${nameErrorId}` : nameHelpId}
-            />
-            <p className="field__help" id={nameHelpId}>
-              {t.form.name.help}
-            </p>
-            {nameMissing ? (
-              <p className="ac__error" id={nameErrorId}>
-                <strong>{t.form.name.error.lead}</strong> {t.form.name.error.body}
+            The heading moved INSIDE the form and dropped to the account panel's
+            size. It was an h2 in a `.section__head`, which set it at the size the
+            chassis gives a movement of an argument — and beside a panel whose own
+            heading is `--text-lg`, that size would have made one of two equal
+            choices look like the section the other one sits in.
+          */}
+          <form
+            className="plate ac__form"
+            onSubmit={submit}
+            noValidate
+            aria-labelledby={formHeadingId}
+          >
+            <h2 className="ac__form-heading" id={formHeadingId}>
+              {t.form.heading}
+            </h2>
+
+            <div className="field">
+              <label htmlFor={nameId}>{t.form.name.label}</label>
+              <input
+                id={nameId}
+                ref={nameRef}
+                className="input"
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (nameMissing) setNameMissing(false);
+                }}
+                autoComplete="name"
+                required
+                aria-required="true"
+                {...(nameMissing ? { 'aria-invalid': true as const } : {})}
+                aria-describedby={nameMissing ? `${nameHelpId} ${nameErrorId}` : nameHelpId}
+              />
+              <p className="field__help" id={nameHelpId}>
+                {t.form.name.help}
               </p>
-            ) : null}
-          </div>
-
-          <div className="field">
-            <label htmlFor={licenceId}>{t.form.licence.label}</label>
-            <input
-              id={licenceId}
-              className="input"
-              type="text"
-              value={licence}
-              onChange={(e) => setLicence(e.target.value)}
-              autoComplete="off"
-              aria-describedby={licenceHelpId}
-            />
-            {/* The reader who skips the prose above still meets the fact at the
-                field, in one clause, because the field is where the assertion is
-                made. */}
-            <p className="field__help" id={licenceHelpId}>
-              {t.form.licence.help}
-            </p>
-          </div>
-
-          {askedForDemo || unknownStep !== null ? (
-            <div className="ac__hints">
-              {askedForDemo ? (
-                /*
-                  WHAT THIS LINE MAY CLAIM, AND WHERE IT STOPS.
-
-                  The hint is carried through untouched — that is this screen's own
-                  behaviour and it is verifiable here. What happens next is
-                  `EngineApp`'s, and its effect reads `step` only: nothing in
-                  `App.tsx` parses `demo` today. So the sentence describes the
-                  request and the pass-through, and stops short of promising that
-                  the recorded run loads. Promising it would be the exact class of
-                  defect this product exists to prevent, on the page where a reader
-                  is deciding whether to believe the rest of the site.
-                */
-                <p className="callout">
-                  <span className="callout__body">{t.form.hints.demo}</span>
-                </p>
-              ) : null}
-
-              {unknownStep !== null ? (
-                /* An unrecognised step id is not silently ignored anywhere in this
-                   flow. Quietly serving a different screen from the one the address
-                   asked for is what `/404` exists to refuse, and it does not stop
-                   being that inside `/app`.
-
-                   The id is the VISITOR's text and the list is the ENGINE's, so
-                   neither is translated and the sentence is written around them —
-                   `lead`, `between` and `tail` in the dictionary. */
-                <p className="callout">
-                  <span className="callout__body">
-                    {t.form.hints.unknownStep.lead}
-                    {ltr(unknownStep)}
-                    {t.form.hints.unknownStep.between}
-                    {ltr(STEP_IDS.join(', '))}
-                    {t.form.hints.unknownStep.tail}
-                  </span>
+              {nameMissing ? (
+                <p className="ac__error" id={nameErrorId}>
+                  <strong>{t.form.name.error.lead}</strong> {t.form.name.error.body}
                 </p>
               ) : null}
             </div>
-          ) : null}
 
-          <div className="cta">
-            {/* The button names its outcome. "Continue" names the click. */}
-            <button type="submit" className="button button--primary">
-              {t.form.cta.submit}
-            </button>
-            {/* Beside the button and never under it: this is the reader most likely
-                to want the licence-and-authorship material, and it is §7 of that
-                page. */}
-            <Link to="/refusals" className="button" navigate={navigate}>
-              {t.form.cta.refusals}
-            </Link>
-            <span className="cta__note">{t.form.cta.note}</span>
-          </div>
-        </form>
+            <div className="field">
+              <label htmlFor={licenceId}>{t.form.licence.label}</label>
+              <input
+                id={licenceId}
+                className="input"
+                type="text"
+                value={licence}
+                onChange={(e) => setLicence(e.target.value)}
+                autoComplete="off"
+                aria-describedby={licenceHelpId}
+              />
+              {/* The reader who skips the prose above still meets the fact at the
+                  field, in one clause, because the field is where the assertion is
+                  made. */}
+              <p className="field__help" id={licenceHelpId}>
+                {t.form.licence.help}
+              </p>
+            </div>
+
+            {askedForDemo || unknownStep !== null ? (
+              <div className="ac__hints">
+                {askedForDemo ? (
+                  /*
+                    WHAT THIS LINE MAY CLAIM, AND WHERE IT STOPS.
+
+                    The hint is carried through untouched — that is this screen's own
+                    behaviour and it is verifiable here. What happens next is
+                    `EngineApp`'s, and its effect reads `step` only: nothing in
+                    `App.tsx` parses `demo` today. So the sentence describes the
+                    request and the pass-through, and stops short of promising that
+                    the recorded run loads. Promising it would be the exact class of
+                    defect this product exists to prevent, on the page where a reader
+                    is deciding whether to believe the rest of the site.
+                  */
+                  <p className="callout">
+                    <span className="callout__body">{t.form.hints.demo}</span>
+                  </p>
+                ) : null}
+
+                {unknownStep !== null ? (
+                  /* An unrecognised step id is not silently ignored anywhere in this
+                     flow. Quietly serving a different screen from the one the address
+                     asked for is what `/404` exists to refuse, and it does not stop
+                     being that inside `/app`.
+
+                     The id is the VISITOR's text and the list is the ENGINE's, so
+                     neither is translated and the sentence is written around them —
+                     `lead`, `between` and `tail` in the dictionary. */
+                  <p className="callout">
+                    <span className="callout__body">
+                      {t.form.hints.unknownStep.lead}
+                      {ltr(unknownStep)}
+                      {t.form.hints.unknownStep.between}
+                      {ltr(STEP_IDS.join(', '))}
+                      {t.form.hints.unknownStep.tail}
+                    </span>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="cta">
+              {/* The button names its outcome. "Continue" names the click. */}
+              <button type="submit" className="button button--primary">
+                {t.form.cta.submit}
+              </button>
+              {/* Beside the button and never under it: this is the reader most likely
+                  to want the licence-and-authorship material, and it is §7 of that
+                  page. */}
+              <Link to="/refusals" className="button" navigate={navigate}>
+                {t.form.cta.refusals}
+              </Link>
+              <span className="cta__note">{t.form.cta.note}</span>
+            </div>
+          </form>
+        </div>
       </section>
 
       {/*
@@ -367,18 +398,24 @@ export default function Antechamber({ setActor, navigate, search }: PageProps): 
         does not buy them.
       */}
       <section className="shell section section--minor reveal">
-        <div className="section__head">
-          <h2>{t.closing.heading}</h2>
-        </div>
-        <div className="ac__lede">
-          <p>{t.closing.body}</p>
-          <p>
-            {t.closing.readiness.lead}
-            <Link to="/readiness" navigate={navigate}>
-              {t.closing.readiness.link}
-            </Link>
-            {t.closing.readiness.tail}
-          </p>
+        {/* The same split as the opening, and the rhyme is the point: the page
+            begins on a heading and the terms beside it, and ends on a heading and
+            the limit beside it. What a reader met on the way in is the shape the
+            last word arrives in. */}
+        <div className="ac-split">
+          <div className="section__head">
+            <h2>{t.closing.heading}</h2>
+          </div>
+          <div className="ac__lede">
+            <p>{t.closing.body}</p>
+            <p>
+              {t.closing.readiness.lead}
+              <Link to="/readiness" navigate={navigate}>
+                {t.closing.readiness.link}
+              </Link>
+              {t.closing.readiness.tail}
+            </p>
+          </div>
         </div>
       </section>
     </div>

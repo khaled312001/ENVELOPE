@@ -697,7 +697,23 @@ export function BuildingViewer({
 
   return (
     <div className={`massing${figure ? ' massing--figure' : ''}`} data-focus={focusLevelId ? 'level' : undefined}>
-      {tools}
+      {/*
+        A FIGURE'S CONTROL SITS UNDER THE PICTURE, BESIDE THE SENTENCE THAT
+        EXPLAINS IT. The full viewer's tools stay above, where a toolbar belongs.
+
+        As a figure it was one checkbox alone on a row above the model, and the
+        sentence that says what it is for — "it stays still until you turn it on, so
+        scrolling over it moves the page" — was four hundred pixels below it under
+        the picture. A lone control with its explanation out of sight is the thing
+        `ux-writing` asks for and this did not have. It also cost the model a whole
+        row of the plate on the busiest screen on the site.
+
+        IT MOVED IN THE DOCUMENT, NOT IN A STYLESHEET. `order` would have put the
+        control after the picture on screen and left it before it for a keyboard and
+        a screen reader, which is 1.3.2 and 2.4.3 traded for a layout — on a control
+        whose entire job is to tell a reader what the picture will do next.
+      */}
+      {figure ? null : tools}
 
       <div
         className="massing-viewer"
@@ -727,9 +743,18 @@ export function BuildingViewer({
             ))
           : null}
       </div>
-      <p id={hintId} className="fine-print">
-        {hint}
-      </p>
+      {figure ? (
+        <div className="massing-figure__foot">
+          <p id={hintId} className="fine-print">
+            {hint}
+          </p>
+          {tools}
+        </div>
+      ) : (
+        <p id={hintId} className="fine-print">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

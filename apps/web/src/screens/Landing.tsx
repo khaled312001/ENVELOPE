@@ -694,10 +694,23 @@ export function Landing({
           THE FOLD
           ============================================================= */}
       <section className="shell lp-hero" aria-labelledby="lp-title">
-        <div className="lp-hero__copy">
-          {/* Each direct child carries its own `--motion-order`. The stagger is bound
-              to the property and not to `:nth-child`, so inserting a paragraph does
-              not silently re-time the hero. */}
+        {/*
+          THE HEADLINE IS ITS OWN GRID AREA, AND THAT IS A MOBILE FIX.
+
+          `.lp-hero__figure` used to take `order: -1` under 64rem, on the argument
+          that "the artefact goes first on a phone — it is the thing that proves the
+          claim". That argument was written when the artefact was a PLOT DRAWING. It
+          is now an interactive 3D model, and what a phone actually opened on was a
+          disabled viewer captioned "turn and zoom the model" above a table of
+          dimensions: a widget, with nothing on the first screen saying what the
+          product is or what the figures are of. The headline never appeared at all.
+
+          So the head is lifted out of the copy column into an area of its own, and
+          the phone order is head → artefact → argument. The reader still meets the
+          drawing before the three paragraphs — which is what the original note was
+          protecting — but they now know what they are looking at first.
+        */}
+        <div className="lp-hero__head">
           <p className="eyebrow" style={{ '--motion-order': 0 } as React.CSSProperties}>
             {t.eyebrow(PHASE)}
           </p>
@@ -709,7 +722,12 @@ export function Landing({
           >
             {t.title}
           </h1>
+        </div>
 
+        <div className="lp-hero__copy">
+          {/* Each direct child carries its own `--motion-order`. The stagger is bound
+              to the property and not to `:nth-child`, so inserting a paragraph does
+              not silently re-time the hero. */}
           {/*
             THE ANSWER COMES BEFORE THE LEDE, and that is the site map's own description
             of this fold rather than a liberty taken with it: "the fold carries one
@@ -926,76 +944,80 @@ export function Landing({
             <h2 id="lp-parking">{t.parking.title}</h2>
           </div>
 
-          <p className="lp-prose">
-            {t.parking.proseBefore}
-            <em>{t.parking.proseEmphasis}</em>
-            {t.parking.proseAfter}
-          </p>
+          <div className="lp-made">
+            <div className="lp-made__argument">
+              <p className="lp-prose">
+                {t.parking.proseBefore}
+                <em>{t.parking.proseEmphasis}</em>
+                {t.parking.proseAfter}
+              </p>
 
-          {/*
-            THE LEVEL PLAN IS NOT DRAWN HERE, and the degradation rule is written into
-            the page rather than into a risk register: this section renders no
-            rectangle, on any fixture. A hand-drawn parking diagram on this site would
-            be the exact defect the product exists to prevent, committed on the page
-            that sells the prevention. The drawing lives on `/parking`, where it is the
-            engine's own placed rectangles.
+              <p className="lp-prose lp-made__link">
+                <Link to="/parking" navigate={navigate}>
+                  {t.parking.link}
+                </Link>
+              </p>
+            </div>
 
-            The two figures below are the ones the placed level actually produced.
-            `verified.totalBays` is NEVER among them: that is demand at the probe
-            scheme, not supply, and the engine says so itself.
-          */}
-          <dl className="lp-costed">
-            {/* Each row names its own provenance class, interpolated from the fixture
-                rather than typed, so the amber row and the two derived rows are
-                distinguished by a word as well as by a colour. The first is the same
-                figure as the one in the fold, in the same treatment: a reader who meets
-                it twice must not meet it once as an assumption and once as a fact. */}
-            <div>
-              <dt>
-                {t.parking.costed.assumed}{' '}
-                <span className="lp-costed__class">
-                  <AsEmitted>{V.bayAreaFactorClass}</AsEmitted>
-                </span>
-              </dt>
-              <dd>
-                <span className="traced traced--assumed">
-                  <span className="value">
-                    {V.bayAreaFactorM2}
-                    <span className="value__unit">m²/bay</span>
+            {/*
+              THE LEVEL PLAN IS NOT DRAWN HERE, and the degradation rule is written into
+              the page rather than into a risk register: this section renders no
+              rectangle, on any fixture. A hand-drawn parking diagram on this site would
+              be the exact defect the product exists to prevent, committed on the page
+              that sells the prevention. The drawing lives on `/parking`, where it is the
+              engine's own placed rectangles.
+
+              The two figures below are the ones the placed level actually produced.
+              `verified.totalBays` is NEVER among them: that is demand at the probe
+              scheme, not supply, and the engine says so itself.
+            */}
+            <dl className="lp-costed">
+              {/* Each row names its own provenance class, interpolated from the fixture
+                  rather than typed, so the amber row and the two derived rows are
+                  distinguished by a word as well as by a colour. The first is the same
+                  figure as the one in the fold, in the same treatment: a reader who meets
+                  it twice must not meet it once as an assumption and once as a fact. */}
+              <div>
+                <dt>
+                  {t.parking.costed.assumed}{' '}
+                  <span className="lp-costed__class">
+                    <AsEmitted>{V.bayAreaFactorClass}</AsEmitted>
                   </span>
-                  <span className="traced__marker" aria-hidden="true" />
-                </span>
-              </dd>
-            </div>
-            <div>
-              <dt>
-                {t.parking.costed.measured}{' '}
-                <span className="lp-costed__class">
-                  <AsEmitted>{V.levelPlan.areaPerBayM2.provenanceClass}</AsEmitted>
-                </span>
-              </dt>
-              <dd>
-                <span className="value">{V.levelPlan.areaPerBayM2.value}</span> m²/bay
-              </dd>
-            </div>
-            <div>
-              <dt>
-                {t.parking.costed.bays}{' '}
-                <span className="lp-costed__class">
-                  <AsEmitted>{V.levelPlan.bayCount.provenanceClass}</AsEmitted>
-                </span>
-              </dt>
-              <dd>
-                <span className="value">{V.levelPlan.bayCount.value}</span>
-              </dd>
-            </div>
-          </dl>
-
-          <p className="lp-prose">
-            <Link to="/parking" navigate={navigate}>
-              {t.parking.link}
-            </Link>
-          </p>
+                </dt>
+                <dd>
+                  <span className="traced traced--assumed">
+                    <span className="value">
+                      {V.bayAreaFactorM2}
+                      <span className="value__unit">m²/bay</span>
+                    </span>
+                    <span className="traced__marker" aria-hidden="true" />
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  {t.parking.costed.measured}{' '}
+                  <span className="lp-costed__class">
+                    <AsEmitted>{V.levelPlan.areaPerBayM2.provenanceClass}</AsEmitted>
+                  </span>
+                </dt>
+                <dd>
+                  <span className="value">{V.levelPlan.areaPerBayM2.value}</span> m²/bay
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  {t.parking.costed.bays}{' '}
+                  <span className="lp-costed__class">
+                    <AsEmitted>{V.levelPlan.bayCount.provenanceClass}</AsEmitted>
+                  </span>
+                </dt>
+                <dd>
+                  <span className="value">{V.levelPlan.bayCount.value}</span>
+                </dd>
+              </div>
+            </dl>
+          </div>
         </div>
       </section>
 
@@ -1186,25 +1208,36 @@ export function Landing({
         </div>
 
         {/*
-          Composed from `.railed--rows` and the refusal's typography rather than from
-          `.refusal` itself. `.refusal` draws its own 2px datum and `.railed--rows`
-          already draws the row rule, and two horizontals for one boundary is exactly
-          the double-start the section rhythm exists to remove.
+          A CATALOGUE GRID, WHICH IS THE ONE PLACE THE DIRECTION RESERVED IT FOR.
 
-          The five items come from `content/shared.tsx`, or its Arabic twin
-          `content/shared.ar.tsx`. They are the same paragraphs `/refusals` renders, and a
-          second copy here would be a second copy to edit — in either language.
+          `direction.md` considered teenage engineering's ruled grid and refused it on
+          §03 — "§03 is a connected chain because its four stages run in sequence, and
+          vertical rules would turn a sequence into four parallel items" — and then
+          said where it does belong: "kept for a grid of genuinely parallel things".
+          These five are that. They are five independent refusals; none follows from
+          the one above it, and any of them could be read alone.
+
+          As a single stacked column they ran 1,377px tall inside 700px of a 1,440px
+          page, so the section that is deliberately longer than the feature list was
+          also the emptiest thing on the site — which reads as unfinished rather than
+          as candid, on the section where candour is the whole point.
+
+          The ordinal moves into the cell. In a single column it could sit in the
+          margin rail; across three columns a margin ordinal would be a fourth
+          column of numbers with nothing under them.
+
+          The five items still come from `content/shared.tsx`, or its Arabic twin.
+          They are the same paragraphs `/refusals` renders, and a second copy here
+          would be a second copy to edit — in either language.
         */}
-        <ol className="railed__full railed railed--rows lp-limits">
+        <ol className="railed__full lp-limits">
           {limits.map((limit, i) => (
-            <li className="railed__row lp-limit reveal" key={limit.id}>
-              <p className="railed__margin index" aria-hidden="true">
+            <li className="lp-limit reveal" key={limit.id}>
+              <p className="lp-limit__index" aria-hidden="true">
                 {String(i + 1).padStart(2, '0')}
               </p>
-              <div className="railed__body">
-                <strong className="lp-limit__title">{limit.heading}</strong>
-                <p>{limit.body}</p>
-              </div>
+              <strong className="lp-limit__title">{limit.heading}</strong>
+              <p>{limit.body}</p>
             </li>
           ))}
         </ol>

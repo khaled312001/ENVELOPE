@@ -54,7 +54,10 @@
      grows the face. */
   max-inline-size: var(--measure-banner);
   text-wrap: balance;
-  margin-block-end: var(--rhythm-block);
+  /* The gap below the title belongs to the OPENING GRID now, and only in the
+     stacked case: beside the lede there is nothing under the title to be spaced
+     from, and a block margin there would misalign the two column tops. */
+  margin-block-end: 0;
 }
 /* A text box is taller than the caps inside it, so a heading aligned to the box
    sits visibly low against the rule above it. The chassis trims its h2s the same
@@ -68,6 +71,45 @@
   color: var(--text-secondary);
 }
 .ac__lede > p + p { margin-block-start: var(--space-4); }
+
+/* `.section__head` carries the gap between a heading and what follows it. In a
+   column nothing follows it, so the gap is a margin against the bottom of the
+   grid — and it pushes the closing section 27px taller than it reads. */
+.ac-split > .section__head { margin-block-end: 0; }
+
+/*
+ * HEADING LEFT, PROSE RIGHT — the page's two bookends.
+ *
+ * It opens on the title and the terms of the thing it names, and it closes on a
+ * heading and the limit under it, and both were stacked: 743px of the first screen
+ * and 361px of the last, each spent running down the left third to say one
+ * sentence and a paragraph. Opening and closing take the same shape ON PURPOSE.
+ * They are the two ends of one page and the reader meets the second knowing the
+ * first, so repeating the shape is a rhyme; the band between them is two plates and
+ * looks nothing like either, which is what keeps it from being a metronome.
+ *
+ * The columns are EXPLICIT rather than `auto-fit`: which side each lands on is the
+ * whole point, and `auto-fit` would let a width nobody tested reorder them.
+ *
+ * `align-items: start` and not `baseline`. On the opening the heading is
+ * `--text-4xl` and the prose `--text-base`, so a shared baseline would drop the
+ * whole right column by the difference and leave the first paragraph floating a
+ * third of the way down a heading it is level with in the document.
+ */
+.ac-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: var(--space-7);
+  align-items: start;
+}
+/* 64rem. Below it the shell is one measure wide and two columns would be two
+   gutters. The title keeps its place at the top and takes its gap back. */
+@media (max-width: 64rem) {
+  .ac-split {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--rhythm-block);
+  }
+}
 
 /* Inline links in body copy. `.button` is excluded: an anchor wearing the control
    family keeps the control family's ink. */
@@ -149,11 +191,16 @@
  * in the language on the smallest surface that could carry it, and the device is only
  * strong while it is rare.
  *
- * `[aria-labelledby]` is the selector because the form section is the only one on
- * this page that has a heading to point at — the opening is a frontispiece and the
- * closing section's h2 is unreferenced. It is a stand-in: the section wants
- * `.section--zoned`, which `site.css` already owns and already measures, and this
- * pass owns three stylesheets and no markup.
+ * THE STAND-IN IS GONE. This rule used to select `[aria-labelledby]` — the form
+ * section was the only one on the page with a heading to point at — because the
+ * pass that wrote it owned three stylesheets and no markup, and said so. The markup
+ * now says `.section--zoned`, which is what it wanted: `site.css` owns that class
+ * and measures its ground. What stays here is the one thing the chassis rule does
+ * not do, which is the bleed.
+ *
+ * And the band is now the WHOLE act rather than half of it. The account plate used
+ * to stand white on the page ground above a zoned form — two grounds for one
+ * decision, which read as two decisions.
  *
  * The bleed is `max()` over a PERCENTAGE and never `100vw`. Every section here
  * carries `.shell`, so a ground painted on one stops at 78rem and reads as a very
@@ -162,7 +209,7 @@
  * is the commonest way a page acquires a horizontal scrollbar at 320px — which is
  * where every accessibility defect in this repository has been found.
  */
-.ac > .section[aria-labelledby] {
+.ac > .section--zoned {
   max-inline-size: none;
   padding-inline: max(
     var(--page-gutter),
@@ -171,7 +218,49 @@
   background: var(--surface-sunken);
 }
 
-.ac__form { max-inline-size: var(--measure-lede); }
+/*
+ * THE CHOICE, IN TWO COLUMNS.
+ *
+ * An account, or a name and nothing else. Only one of them is ever taken, so they
+ * are alternatives rather than steps, and a stack said otherwise — it also meant a
+ * reader who wanted the second had to scroll past the first to find out it existed.
+ *
+ * NEITHER PLATE CARRIES ITS OWN WIDTH CAP ANY MORE. `.ac-account` capped itself at
+ * `--measure-prose` and `.ac__form` at `--measure-lede`, which is two answers to a
+ * question the grid now settles once: side by side the column is the cap, and
+ * stacked the cap comes back below. Two plates of visibly different widths sitting
+ * beside each other would have ranked them, and they are not ranked.
+ *
+ * `align-items: start` so the shorter plate does not stretch to the taller one.
+ * They are separate offers and a plate that grows to match its neighbour is
+ * claiming to be the same size as it.
+ */
+.ac-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: var(--space-7);
+  align-items: start;
+}
+@media (max-width: 64rem) {
+  .ac-choice {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-7);
+  }
+  /* Stacked, each is back to a measure — a form the full width of the shell is a
+     line of fields a reader has to sweep their eyes across. */
+  .ac-choice > * { max-inline-size: var(--measure-prose); }
+}
+
+/* The name form's heading, at the account panel's size and not the chassis's. It
+   sits inside the plate exactly as the panel's does: beside a `--text-lg` heading,
+   a section-sized h2 would have made one of two equal choices look like the
+   section the other one is in. */
+.ac__form-heading {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+  margin: 0;
+}
 
 /*
  * The 44px floor, as a PROPERTY of each control rather than as an overlay.
@@ -245,13 +334,6 @@
  * shared plate cannot know: how wide a form should be, how its actions sit, and
  * what a panel looks like while it does not yet know who you are.
  */
-
-.ac-account {
-  /* The lede above it is set to a measure; a form that ran the full shell width
-     beside it would read as a different page rather than the next thing on this
-     one. */
-  max-inline-size: var(--measure-prose);
-}
 
 .ac-account__heading {
   font-size: var(--text-lg);

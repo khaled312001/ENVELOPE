@@ -68,6 +68,18 @@
 .lp-hero {
   display: grid;
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  /*
+    THREE AREAS, NOT TWO COLUMNS OF CHILDREN.
+
+    The head sits in its own area so the phone can put it above the artefact while
+    the desktop keeps it at the top of the argument column — see the note on
+    `.lp-hero__head` in `Landing.tsx` for what a phone was opening on before.
+    The figure spans both rows, which is what it did implicitly as one of two
+    children and now does by name.
+  */
+  grid-template-areas:
+    'head figure'
+    'copy figure';
   gap: clamp(var(--space-5), 4vw, var(--space-8));
   /*
     `start`, and the hero pattern says `center`. The pattern was written for a copy
@@ -92,9 +104,29 @@
   */
   padding-block: var(--rhythm-minor) var(--rhythm-minor);
 }
+.lp-hero__head {
+  grid-area: head;
+}
+.lp-hero__copy {
+  grid-area: copy;
+}
+.lp-hero__figure {
+  grid-area: figure;
+}
+.lp-hero__head,
 .lp-hero__copy,
 .lp-hero__figure {
   min-inline-size: 0;
+}
+/* The eyebrow to its headline, at the same step the copy column uses between blocks. */
+.lp-hero__head > * + * {
+  margin-block-start: var(--space-5);
+}
+/* The head and the column under it are one block of argument, so the step between
+   them is the same one, set here because they are now siblings rather than
+   parent and child. */
+.lp-hero__head + .lp-hero__copy {
+  margin-block-start: var(--space-5);
 }
 /*
   And a tighter block rhythm than a body section, for the reason the `align-items`
@@ -332,11 +364,34 @@
   .lp-plan__label .lp-plan__label-v { font-size: 4.4px; }
 }
 
-/* THE ARTEFACT GOES FIRST ON A PHONE. It is the thing that proves the claim, and a
-   reader who has scrolled past three paragraphs to reach it has already decided. */
+/*
+  ON A PHONE: THE SENTENCE, THEN THE ARTEFACT, THEN THE ARGUMENT.
+
+  This rule used to be `.lp-hero__figure { order: -1 }` alone, on the note that "the
+  artefact goes first on a phone — it is the thing that proves the claim, and a
+  reader who has scrolled past three paragraphs to reach it has already decided".
+  The note is still right about the three paragraphs and it is kept: the copy column
+  still follows the figure. What changed underneath it is the artefact. It was a plot
+  drawing when that was written and it is an interactive 3D model now, so a phone
+  opened on a disabled viewer reading "turn and zoom the model" over a table of
+  dimensions, with the headline entirely below the fold. A drawing proves a claim the
+  reader has just read; a widget with no claim above it is furniture.
+
+  The head is one line of eyebrow and a headline — it costs the artefact about a
+  third of a screen and buys the reader the sentence the page exists to make.
+*/
 @media (max-width: 64rem) {
-  .lp-hero { grid-template-columns: minmax(0, 1fr); }
-  .lp-hero__figure { order: -1; }
+  .lp-hero {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'head'
+      'figure'
+      'copy';
+  }
+  /* The figure is a sibling of both now, so the step above the copy is its own. */
+  .lp-hero__head + .lp-hero__copy {
+    margin-block-start: 0;
+  }
 }
 
 /* ==========================================================================
@@ -811,9 +866,48 @@
  * time, because a layout decision is the one way §13.1 can be undone without any
  * amber value being edited.
  */
-.lp-costed {
+/* --------------------------------------------------------------------------
+ * 02 — THE ARGUMENT AND THE FIGURES IT IS ARGUING ABOUT, SIDE BY SIDE
+ *
+ * THIS SECTION USED TO STACK, AND STACKING COST IT HALF THE PAGE. A paragraph
+ * capped at `--measure-prose`, then a plate of three rows capped at
+ * `--measure-fine`, one under the other down the left edge — which at the page's
+ * own width left about 45% of every row of this section empty. On the section
+ * that makes the product's central claim, that the parking number is PLACED and
+ * not factored, and whose own numbers are the evidence for it.
+ *
+ * So the argument reads on the left and the three figures sit beside it on the
+ * right, where a reader holds both at once: the sentence saying a factor is an
+ * assumption, and the assumption itself wearing its amber. They were never two
+ * blocks — one is the claim and the other is what the claim is about, and the
+ * vertical stack was asserting a sequence that does not exist.
+ *
+ * THE COLUMNS ARE EXPLICIT, NOT `auto-fit`. Which side each lands on is the
+ * whole point: prose left, figures right, at every width above the fold-down.
+ * `auto-fit` would let a narrow viewport reorder them silently.
+ * ----------------------------------------------------------------------- */
+.lp-made {
   margin-block-start: var(--rhythm-block);
-  max-inline-size: var(--measure-fine);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: var(--space-7);
+  align-items: start;
+}
+/* The link to the drawn level sits under the argument it follows from, not
+   under the plate: the plate is figures, and a figure is not a destination. */
+.lp-made__link {
+  margin-block-start: var(--space-5);
+}
+/* 64rem. Below this the body column is one measure wide and two of them would
+   be two gutters. The argument stays first: it is what the figures are for. */
+@media (max-width: 64rem) {
+  .lp-made {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-6);
+  }
+}
+
+.lp-costed {
   padding-inline: var(--space-5);
   background: var(--surface-raised);
   border: var(--border-width) solid var(--border-default);
@@ -1060,32 +1154,93 @@
  * horizontals for one boundary is the double-start the section rhythm exists to
  * remove. Composed rather than copied, and said here rather than discovered later.
  */
+/*
+ * THE FIVE REFUSALS, AS A CATALOGUE GRID.
+ *
+ * `direction.md` refused the ruled grid on §03 — a connected chain, where vertical
+ * rules would turn a sequence into parallel items — and reserved it for "a grid of
+ * genuinely parallel things". These five are that: five independent refusals, none
+ * following from the one above, any readable alone.
+ *
+ * WHAT IT REPLACED, AND WHY. One column of `.railed--rows`, 1,377px tall inside
+ * 700px of a 1,440px page. The section the site map makes deliberately longer than
+ * the feature list was also the emptiest thing on it, and 42% of the page beside it
+ * was blank — which reads as unfinished rather than as candid, on the one section
+ * where candour is the point.
+ *
+ * COLUMN COUNTS ARE EXPLICIT, NOT `auto-fit`. The rules are drawn per cell, so the
+ * stylesheet has to know which cell starts a row; `auto-fit` decides that at layout
+ * time and `:nth-child` cannot follow it. Three tracks, then two, then one.
+ */
 .lp-limits {
   margin: 0;
   padding: 0;
   list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: var(--space-6);
+  row-gap: 0;
 }
+
 /*
- * THE ROW RULES MOVE UP A TOKEN, BECAUSE THE CHAPTER MOVED DOWN A RUNG.
+ * The rule sits on the cell, not on the row.
  *
- * `.railed--rows` draws its dividers in `--border-subtle`, which is correct on the
- * page ground and is a measured house pair there. On the sunken chapter this
- * section now sits on it is about 1.15:1 — a schedule whose rules have gone, which
- * is a list. `--border-default` is the one that IS floored on this ground (1.40,
- * "plate edge on a zoned section"), so the schedule keeps its structure without
- * anything being raised to 3:1 — the temptation §2.6 names, which would turn every
- * hairline on the page into a wireframe.
- *
- * It is scoped to this list rather than written against `.railed--rows`, because
- * that class belongs to the chassis and four other pages use it on the page ground
- * where the subtle rule is right.
+ * Three short rules with the column gaps showing through, rather than one rule
+ * across the page: the gap is what says these are five separate statements and not
+ * five rows of one table. On the sunken chapter this section sits on,
+ * `--border-subtle` measures about 1.15:1 — a schedule whose rules have gone, which
+ * is a list. `--border-default` is the pair that IS floored on this ground (1.40,
+ * "plate edge on a zoned section"), and it is what the row version used for the
+ * same reason.
  */
-.lp-limits > .railed__row {
-  border-block-start-color: var(--border-default);
+.lp-limit {
+  border-block-start: 1px solid var(--border-default);
+  padding-block: var(--space-5) var(--space-7);
+  min-inline-size: 0;
 }
-.lp-limits > .railed__row:last-child {
-  border-block-end-color: var(--border-default);
+
+/*
+ * The ordinal, in the cell rather than in the margin rail.
+ *
+ * Across three columns a margin ordinal would be a fourth column of numbers with
+ * nothing under them. It sits directly above the title it numbers.
+ *
+ * IT DOES NOT WEAR `.index`, AND THE DECLARATIONS ARE RESTATED RATHER THAN SHARED.
+ * It did, and `contents.test.tsx` failed the moment it was written: that test reads
+ * `<p class="index…">` as A SECTION'S RAIL ORDINAL and checks the page numbers its
+ * sections 01, 02, 03 … consecutively, against the contents block built from the
+ * same `order` array. Five item numbers wearing the section class made the landing
+ * page read 1 2 3 4 5 1 2 3 4 5.
+ *
+ * The collision is the real thing and the test is right about it. These are the
+ * numerals of an ordered list INSIDE section 05; those are the numerals OF the
+ * sections. A page that spells them the same way has told a scanner — and a reader
+ * skimming the left margin — that section 05 contains five more sections. So the
+ * class is its own, the treatment is copied deliberately, and the six lines below
+ * are the price of not overloading a name the chassis owns.
+ */
+.lp-limit__index {
+  margin-block: 0 var(--space-2);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+  line-height: var(--leading-flat);
+  letter-spacing: var(--tracking-normal);
+  color: var(--text-tertiary);
+  padding-block-start: 0.18em;   /* fallback; removed under text-box below */
 }
+/* The cap-line trim the chassis gives `.index`, for the same reason: a text box is
+   taller than the caps in it, so an untrimmed numeral sits visibly low against the
+   rule above it — and here that rule is the top of the cell. */
+@supports (text-box: trim-both cap alphabetic) {
+  .lp-limit__index {
+    padding-block-start: 0;
+    text-box: trim-both cap alphabetic;
+  }
+}
+
 .lp-limit__title {
   display: block;
   font-size: var(--text-lg);
@@ -1094,16 +1249,31 @@
   text-wrap: balance;
   margin-block-end: var(--space-2);
 }
-.lp-limit p {
+.lp-limit p:not(.lp-limit__index) {
   font-size: var(--text-sm);
   color: var(--text-secondary);
   line-height: var(--leading-relaxed);
-  max-inline-size: var(--measure-fine);
+  /* No `--measure-fine` here: the track IS the measure now, and a 70ch cap inside a
+     400px track is inert on desktop and would only bite if a track ever got wider
+     than it — at which point the grid, not a cap, is the thing to change. */
   text-wrap: pretty;
 }
 .lp-limit p em {
   color: var(--text-primary);
   font-style: italic;
+}
+
+/* Two tracks on a tablet, one on a phone. Five items read 3+2, then 2+2+1, then
+   straight down — and the rule above each cell keeps working at every count. */
+@media (max-width: 64rem) {
+  .lp-limits {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 40rem) {
+  .lp-limits {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ==========================================================================

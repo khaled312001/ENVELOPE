@@ -19,9 +19,15 @@ export type ModelFigureProps = Omit<BuildingViewerProps, 'variant'>;
 /** The plate's box before the viewer arrives, so the page does not move when it does. */
 export function ModelFigurePlaceholder({ level }: { readonly level?: boolean }): JSX.Element {
   return (
+    /* The box in the order the loaded figure uses it — viewer, then the footer row
+       that holds the sentence and the control. A placeholder whose rows are in the
+       other order reserves the right height and still moves the picture when the
+       viewer arrives, which is the jump it exists to prevent. */
     <div className="massing massing--figure" data-focus={level ? 'level' : undefined} aria-hidden="true">
-      <div className="massing-tools" />
       <div className="massing-viewer" />
+      <div className="massing-figure__foot">
+        <div className="massing-tools" />
+      </div>
     </div>
   );
 }

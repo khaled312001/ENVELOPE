@@ -897,6 +897,42 @@ Weeks from 2026-09-29. **A** and **G1** can run in parallel; everything else is 
 
 **Total: 14.5 weeks of sequenced work, ~12 with A and G1 overlapped.**
 
+### What has landed, as of 28 Sep 2026
+
+**A — done.** Step footer, restorable `?step=`, the three-layer primer on all ten
+steps, amber taught in words on the three steps that paint it.
+
+**G1 — mostly done.** Platform sidebar, the flow's rail, auth screens, settings,
+the worked example as the first-open demo, and `/dashboard` → `/readiness` as a
+real 301 generated from the same `redirects.json` the router reads. **Not done:**
+the `/app/*` route map, which is held back deliberately — most of its rows are
+screens that do not exist, and §6.1's own rule is that a route enters
+`routes.json` only when it is built.
+
+**D §4.3 — done, and it was the highest-severity item here.** The plot's own
+affection plan now binds the run it describes. `rulesFromInstrument` turns the
+sheet's limits into `PLOT:`-jurisdiction `RuleRecord`s carrying its citation;
+§11.5 step 1 gives them precedence and records the seed rule as superseded rather
+than absent. The server parses the PDF — the browser sends the file, never the
+numbers off it — and the plot-limits panel reports every limit that bound and
+every limit that did not.
+
+Three limits this closed that were being dropped in silence, not one: the sheet's
+FAR, and then — found by reading the real Warsan sheet against the builder — its
+stated GFA and its *tower* setback schedule, which the engine cannot express and
+now says so instead of ignoring.
+
+**D §4.5 — not done.** Saleable GFA as an area rather than a ratio. It carries a
+question this document does not settle and should: **which GFA the entered area is
+divided by.** The efficiency is consumed before the bands are computed and it
+feeds band C through the unit count, so dividing by the *governing* GFA is
+circular. Dividing by the gross permitted GFA — FAR × plot area, the figure the
+affection plan prints and the one a developer's brief is written against — is
+well-defined and available early, and is the intended reading. It needs writing
+down before it is built, because the two answers differ on any plot where parking
+or geometry governs, and a reader would have no way to tell which they were shown.
+
+
 **Phase E is last on purpose.** It is the largest single piece and it is the one gated on
 material we do not have. Everything else can proceed while the affection-plan corpus is
 gathered — and the extraction review screen (E) is what makes the parser's accuracy stop being

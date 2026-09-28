@@ -1765,6 +1765,12 @@ button.plot-legend__row:active {
 .dropzone__text { display: flex; flex-direction: column; gap: var(--space-1); }
 
 .reading { display: flex; flex-direction: column; gap: var(--space-5); margin-top: var(--space-5); }
+
+/* The plain sentence that opens "What this sheet does not say", above the gaps and
+   above the argument. A reading measure for the same reason the assumption
+   explainer takes one: it is the paragraph a reader told us they could not follow,
+   and a 120-character line is a strange answer to that. */
+.reading__lead { margin: 0; max-inline-size: var(--measure-prose); }
 /* A field the sheet did not print. Deliberately not styled as an error — an
    incomplete affection plan is a normal document, and the consequence is stated
    in the list below rather than shouted here. */

@@ -91,6 +91,14 @@
   --rail: 4.5rem;
   --label-col: 9rem;   /* the re-emitted header column in a stacked schedule */
 
+  /* THE WORKSPACE SIDEBAR. Not to be confused with --rail above, which is a column
+     inside a section's grid; this is the navigation region beside the page.
+     16rem expanded is where this category has settled — below about 14rem the
+     labels truncate and above 19rem the rail starts taxing the content column. The
+     collapsed width is a 24px glyph with 20px of air on each side. */
+  --sidebar-w: 16rem;
+  --sidebar-w-collapsed: 4rem;
+
   /* --- Sizing. There was no sizing scale at all: control height was 2.5rem in
      three rules, 2rem in one, 3rem in one and 44px in two, and the horizontal
      meter — one conceptual object — existed at four heights, four radii, two fill

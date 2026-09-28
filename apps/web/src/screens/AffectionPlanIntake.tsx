@@ -412,6 +412,18 @@ export function Reading({
             {t.missingTitle}
             <span className="chip chip--warn">{f.missing.length}</span>
           </h4>
+          {/*
+            THE FACT AND THE ACTION, BEFORE THE LIST AND BEFORE THE ARGUMENT.
+
+            This heading is the one the client singled out — «وفي حجات موجوده مش
+            مفهومه بالنسبالي». Nothing here was wrong; the reader simply met a red
+            paragraph about borrowed plot ratios before anyone had said, plainly,
+            what the list under the heading was. So the plain sentence comes first,
+            the gaps come second in the engine's own words, and the argument sits
+            behind a closed disclosure — it earns its place and it does not earn the
+            first eyeful.
+          */}
+          <p className="reading__lead">{t.missingLead}</p>
           <ul className="reason-list reason-list--uncertain">
             {f.missing.map((m) => (
               <li key={m.field}>
@@ -419,6 +431,10 @@ export function Reading({
               </li>
             ))}
           </ul>
+          <details className="disclosure">
+            <summary>{t.missingWhySummary}</summary>
+            <p>{t.missingWhy}</p>
+          </details>
         </>
       ) : null}
 

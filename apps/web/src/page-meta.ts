@@ -84,6 +84,27 @@ export interface PageMeta {
    * engine by marking that one subtree `dir="ltr" lang="en"` with the notice above it.
    */
   readonly arabic: 'translated' | 'partial' | 'untranslated';
+
+  /**
+   * WHICH CHROME THIS ROUTE WEARS.
+   *
+   * `site` is the public frame: masthead, nav, colophon. `workspace` is the same
+   * frame with a rail down the inline-start edge — the account's own pages, which
+   * are a different product from the pages that argue what the product refuses.
+   *
+   * THE NAV DOES NOT GO AWAY ON A WORKSPACE ROUTE, and that is deliberate rather
+   * than an oversight. `Root.tsx` records why the engine was moved inside the
+   * chrome in the first place: it used to be a separate document, so a reader who
+   * clicked "Run a plot" left the site and could not re-read the claim statement
+   * without losing the run. A sidebar that replaced the nav would put that back.
+   * The top bar keeps the global context and the rail adds the workspace, which is
+   * also what every product in this category does.
+   *
+   * It is a field rather than a list in the chrome for the usual reason: a
+   * hand-kept list of which routes get a rail drifts the first time one lands
+   * without being added to it, and drifts silently.
+   */
+  readonly shell: 'site' | 'workspace';
 }
 
 type RouteRecord = PageMeta & { readonly path: Route };
@@ -100,6 +121,7 @@ export const PAGE_META: Record<Route, PageMeta> = Object.fromEntries(
       group: r.group,
       needsActor: r.needsActor,
       arabic: r.arabic,
+      shell: r.shell,
     },
   ]),
 ) as Record<Route, PageMeta>;
@@ -124,4 +146,8 @@ export const NOT_FOUND_META: PageMeta = {
      requires: `NotFound.tsx` reads `useDict(EN, AR)` and its site list reads the
      chrome's own route labels. */
   arabic: 'translated',
+  /* A 404 keeps the address the visitor asked for and cannot know whose it was, so
+     it wears the public frame. Rendering a workspace rail beside "that page is not
+     here" would assert an account the request never proved. */
+  shell: 'site',
 };

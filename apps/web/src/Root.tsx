@@ -13,6 +13,7 @@ import { EngineApp, Header, useTheme } from './App.js';
 import { LanguageToggle, useLocale, useT } from './i18n/locale.js';
 import { useSession } from './session.js';
 import type { Actor } from './api/client.js';
+import { AppSidebar } from './components/AppSidebar.js';
 import { SiteChrome, UntranslatedNotice } from './components/SiteChrome.js';
 import { NOT_FOUND_PAGE, PAGES } from './pages.js';
 import { NOT_FOUND, useRouter, type Href } from './router.js';
@@ -157,6 +158,30 @@ export default function Root(): JSX.Element {
 
   const pageProps: PageProps = { navigate, actor, setActor, search };
 
+  /*
+    THE RAIL, ON THE ROUTES WHOSE RECORD ASKS FOR ONE.
+
+    Read from `spec.shell` rather than from a list here, so a workspace page that
+    lands tomorrow gets its rail by being declared rather than by somebody
+    remembering this line. The 404 is `site` for a reason of its own: it keeps the
+    address the visitor asked for and cannot know whose it was, so drawing a
+    workspace beside it would assert an account the request never proved.
+
+    THE NAME COMES FROM THE SESSION, NOT FROM `actor`. An actor is a name somebody
+    typed and it is what a `USER_SET` value carries; an account is who the server
+    says you are. The rail is reporting the second, so a reader who typed a name
+    without signing in is told they are a guest — which is true, and which is the
+    fact whose consequences they need.
+  */
+  const sidebar =
+    spec.shell === 'workspace' ? (
+      <AppSidebar
+        route={route}
+        navigate={navigate}
+        {...(sessionState === 'signed-in' && session ? { accountName: session.name } : {})}
+      />
+    ) : null;
+
   // `/app` is the one route behind the name prompt, and the antechamber renders
   // INSIDE the chrome rather than replacing the page: a screen with no nav and no
   // colophon is a dead end, and this is the first screen behind every public CTA.
@@ -211,6 +236,7 @@ export default function Root(): JSX.Element {
         toggle moved into the nav, a public page's header row was empty markup
         painting an empty band across the top of every page.
       */
+      {...(sidebar ? { sidebar } : {})}
       {...(actor
         ? {
             aside: (

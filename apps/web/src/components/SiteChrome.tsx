@@ -425,6 +425,7 @@ export function SiteChrome({
   children,
   aside,
   tool,
+  sidebar,
   engineVersion,
   annexVersion,
   rulesApproved,
@@ -441,6 +442,17 @@ export function SiteChrome({
   readonly aside?: React.ReactNode;
   /** The theme toggle, which lives in the nav on every route. */
   readonly tool?: React.ReactNode;
+  /**
+   * The workspace rail, on the routes whose record says `shell: 'workspace'`.
+   *
+   * It is passed in rather than built here, because it needs the account and this
+   * component deliberately knows nothing about identity. What this component owns
+   * is that the rail and `<main>` share one grid and that there is still exactly
+   * ONE `#main` and one skip link on the page — `shared-content.test.tsx` asserts
+   * the first on every route, and a second landmark region is the easiest way to
+   * break it.
+   */
+  readonly sidebar?: React.ReactNode;
   readonly engineVersion?: string | undefined;
   readonly annexVersion?: string | undefined;
   readonly rulesApproved?: string | undefined;
@@ -492,10 +504,21 @@ export function SiteChrome({
       />
       <Nav route={route} navigate={navigate} tool={tool} />
       {aside}
-      <main id="main" {...(bodyIsEnglish ? { dir: 'ltr' as const, lang: 'en' } : {})}>
-        {bodyIsEnglish ? <UntranslatedNotice /> : null}
-        {children}
-      </main>
+      {/*
+        THE RAIL AND THE PAGE ARE ONE GRID, and the rail comes first in the DOM
+        because it comes first on the page — a rail placed after `<main>` and moved
+        with `order` reads in the wrong sequence to everyone not using a mouse.
+
+        The skip link still targets `#main`, so a reader who takes it skips the
+        rail as well as the nav, which is the point of it.
+      */}
+      <div className={sidebar ? 'shell-grid shell-grid--railed' : 'shell-grid'}>
+        {sidebar}
+        <main id="main" {...(bodyIsEnglish ? { dir: 'ltr' as const, lang: 'en' } : {})}>
+          {bodyIsEnglish ? <UntranslatedNotice /> : null}
+          {children}
+        </main>
+      </div>
       <Colophon
         navigate={navigate}
         {...(engineVersion !== undefined ? { engineVersion } : {})}

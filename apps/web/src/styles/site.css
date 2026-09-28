@@ -244,6 +244,177 @@
 }
 
 /* ==========================================================================
+ * 3B. THE WORKSPACE SHELL — the rail beside the page
+ * ======================================================================= */
+
+/*
+  ONE GRID FOR THE RAIL AND THE PAGE, and a plain block when there is no rail.
+
+  `.shell-grid` wraps `<main>` on every route. Without a rail it is a pass-through
+  and `<main>` behaves exactly as it did before — the public pages' markup is
+  unchanged in effect, which is what makes this safe to apply globally rather than
+  conditionally in six places.
+
+  `minmax(0, 1fr)` on the content column, never `1fr` alone: a grid item defaults
+  to `min-width: auto` and refuses to shrink below its content, so one wide table
+  or one long unbroken identifier pushes the whole column past the viewport and
+  takes the rail with it. This file has paid for that lesson once already in `.kv`.
+*/
+.shell-grid { display: block; }
+
+.shell-grid--railed {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  align-items: start;
+}
+
+/*
+  THE RAIL ITSELF.
+
+  Sticky rather than fixed: fixed takes it out of flow, and a fixed rail beside a
+  page whose footer is a four-column colophon ends up overlapping it. Sticky keeps
+  it in the grid, so the colophon pushes past it and nothing overlaps.
+
+  `top` is the masthead plus the nav, both of which are above this element and both
+  of which this rail must not slide under.
+*/
+/*
+  THE RULE RUNS THE HEIGHT OF THE PAGE; THE LIST STICKS.
+
+  These are two different elements on purpose. A border on the sticky element stops
+  where the list stops, which draws a vertical line ending two thirds of the way
+  down the screen and reads as a layout that failed to finish. So `<nav>` stretches
+  the grid row and owns the rule, and `__inner` is the part that follows the scroll.
+
+  Sticky rather than fixed for the inner: fixed leaves the flow, and a fixed rail
+  beside a page whose footer is a four-column colophon ends up painted over it.
+*/
+.sidebar {
+  align-self: stretch;
+  border-inline-end: var(--border-width) solid var(--border-subtle);
+  /* The rail is chrome and the page is content, so the rail sits back. A raised
+     surface here would make the navigation the brightest thing on a screen whose
+     subject is a drawing. */
+  background: transparent;
+}
+
+.sidebar__inner {
+  position: sticky;
+  top: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--rhythm-block) var(--space-5);
+}
+
+.sidebar__eyebrow {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+}
+
+.sidebar__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+
+/*
+  A NAV ITEM, AND ITS CURRENT STATE IN TWO CHANNELS.
+
+  The ground alone would be colour-only, which fails 1.4.1 and — worse here — would
+  spend an attention channel on chrome. So the current item also carries a 3px
+  inline-start border. `aria-current="page"` carries it for a reader who sees
+  neither.
+
+  The border is declared TRANSPARENT at rest rather than added on current, so the
+  label does not shift by 3px when a route becomes current. A navigation that moves
+  its own text when you arrive is a navigation that feels broken.
+*/
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--tap-min);
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: var(--border-width-emphasis) solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: var(--weight-medium);
+}
+.sidebar__item:hover,
+.sidebar__item:focus-visible {
+  background-color: var(--surface-inset);
+  color: var(--text-primary);
+}
+.sidebar__item[aria-current='page'] {
+  background-color: var(--surface-inset);
+  border-inline-start-color: var(--action);
+  color: var(--text-primary);
+}
+
+/* Who this is, at the foot of the rail. The guest sentence is prose and takes the
+   fine measure; the signed-in pair is a label over a name. */
+.sidebar__who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-hair);
+  padding-block-start: var(--space-4);
+  border-block-start: var(--border-width) solid var(--border-subtle);
+  font-size: var(--text-sm);
+}
+.sidebar__who-label {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+}
+.sidebar__who-name { color: var(--text-primary); font-weight: var(--weight-medium); }
+.sidebar__guest { margin: 0; color: var(--text-secondary); }
+
+/*
+  BELOW 60rem THE RAIL GOES ABOVE THE PAGE, not into a drawer.
+
+  A drawer is a focus trap, an escape key, a backdrop and an exit animation — four
+  states nobody has designed here — and `SiteChrome`'s nav already carries a real
+  disclosure for the site links. With three items the rail costs less as a row of
+  chips than it would cost as a component.
+
+  It becomes a scrollable row rather than a wrapping column so it never pushes the
+  page's own heading below the fold on a phone.
+*/
+@media (max-width: 60rem) {
+  .shell-grid--railed { display: block; }
+  .sidebar {
+    border-inline-end: none;
+    border-block-end: var(--border-width) solid var(--border-subtle);
+  }
+  .sidebar__inner {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    padding: var(--space-4) var(--page-gutter);
+  }
+  .sidebar__eyebrow { inline-size: 100%; }
+  .sidebar__list { flex-direction: row; flex-wrap: wrap; gap: var(--space-2); }
+  .sidebar__item {
+    border-inline-start: none;
+    border-block-end: var(--border-width-emphasis) solid transparent;
+  }
+  .sidebar__item[aria-current='page'] {
+    border-inline-start-color: transparent;
+    border-block-end-color: var(--action);
+  }
+  .sidebar__who {
+    inline-size: 100%;
+    padding-block-start: var(--space-2);
+    border-block-start: none;
+  }
+}
+
+/* ==========================================================================
  * 4. SECTION HEAD — eyebrow and margin index
  * ======================================================================= */
 

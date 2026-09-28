@@ -66,6 +66,25 @@ export const EN = {
     toLight: 'Switch to the light theme',
   },
 
+  /**
+   * THE WORKSPACE RAIL.
+   *
+   * `label` is its landmark name and is deliberately not "Navigation": the page
+   * already has one nav called "Site", and two landmarks with the same name is a
+   * screen reader listing two identical entries and no way to tell them apart.
+   *
+   * `guest` is the short form of a refusal `/refusals` carries in full. A rail that
+   * looked the same signed in and signed out would be the one element on this site
+   * that hid which of the two you are — and the difference is not cosmetic: a
+   * guest's runs live behind a key in one browser and are lost when it is cleared.
+   */
+  rail: {
+    label: 'Your workspace',
+    heading: 'Workspace',
+    signedInAs: 'Signed in as',
+    guest: 'You are working as a guest. This browser holds the key to these runs; clearing it loses them, and no other device can reach them.',
+  },
+
   masthead: {
     validity: 'REGULATORY VALIDITY — NOT ASSESSED',
     rulesApproved: 'Rules approved',

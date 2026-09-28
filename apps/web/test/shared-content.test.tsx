@@ -25,6 +25,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { EngineApp } from '../src/App.js';
+import { AppSidebar } from '../src/components/AppSidebar.js';
 import { SiteChrome } from '../src/components/SiteChrome.js';
 import {
   DISCLAIMER,
@@ -34,6 +35,7 @@ import {
   OPTIMISER_REFUSAL,
 } from '../src/content/shared.js';
 import { NOT_FOUND_PAGE, PAGES } from '../src/pages.js';
+import { PAGE_META } from '../src/page-meta.js';
 import { NOT_FOUND, ROUTES, type Location } from '../src/router.js';
 import {
   BANNED_IN_HAND_WRITTEN_COPY,
@@ -134,6 +136,101 @@ describe('the site chrome', () => {
     const markup = page('/parking');
     expect(markup).toContain('TOP.ai');
     expect(stripTags(markup)).not.toMatch(/\bENVELOPE\b/);
+  });
+});
+
+/**
+ * THE WORKSPACE SHELL.
+ *
+ * A rail is the most-repeated element on a signed-in page, so the properties worth
+ * holding are the ones that would rot invisibly: that it appears exactly where the
+ * route record says and nowhere else, that adding a second navigation region did
+ * not break the one `#main` the skip link resolves to, that it never lists a route
+ * that does not exist, and that it says which of the two identities you are.
+ */
+describe('the workspace shell', () => {
+  const railed = (route: Location, accountName?: string): string =>
+    renderToStaticMarkup(
+      <SiteChrome
+        route={route}
+        navigate={() => {}}
+        sidebar={
+          <AppSidebar
+            route={route}
+            navigate={() => {}}
+            {...(accountName === undefined ? {} : { accountName })}
+          />
+        }
+      >
+        <p>a page</p>
+      </SiteChrome>,
+    );
+
+  it('is asked for by the route record, not by a list in the chrome', () => {
+    const workspace = ROUTES.filter((r) => PAGE_META[r].shell === 'workspace');
+    const site = ROUTES.filter((r) => PAGE_META[r].shell === 'site');
+    expect(workspace.length).toBeGreaterThan(0);
+    expect(site.length).toBeGreaterThan(0);
+    // A 404 keeps the visitor's address and cannot know whose it was.
+    expect(NOT_FOUND_PAGE.shell).toBe('site');
+  });
+
+  it('draws no rail on a route that did not ask for one', () => {
+    for (const route of [...ROUTES, NOT_FOUND] as Location[]) {
+      expect(page(route), `${String(route)} drew a rail`).not.toContain('class="sidebar"');
+    }
+  });
+
+  it('keeps exactly one #main and one skip link with the rail beside the page', () => {
+    const markup = railed('/work', 'A Person');
+    expect(ids(markup).filter((id) => id === 'main').length).toBe(1);
+    expect((markup.match(/class="skip-link"/g) ?? []).length).toBe(1);
+    // The rail precedes the page it belongs to, in the DOM and not only visually.
+    expect(markup.indexOf('class="sidebar"')).toBeLessThan(markup.indexOf('id="main"'));
+  });
+
+  it('lists only routes that exist, and marks the current one in two channels', () => {
+    const markup = railed('/work', 'A Person');
+    const hrefs = [...markup.matchAll(/class="sidebar__item"[^>]*/g)].length;
+    const links = [...markup.matchAll(/<a href="([^"]+)"[^>]*class="sidebar__item"/g)].map(
+      (m) => m[1] ?? '',
+    );
+    expect(links.length).toBe(hrefs);
+    expect(links.length).toBeGreaterThan(0);
+    for (const href of links) expect(ROUTES).toContain(href);
+    // `aria-current` for a reader who sees no colour; the border is the stylesheet's
+    // half of the same fact and is asserted by `pnpm contrast`, not here.
+    expect(markup).toMatch(/href="\/work"[^>]*aria-current="page"/);
+  });
+
+  it('gives the rail a landmark name of its own, not the nav’s', () => {
+    const markup = railed('/app', 'A Person');
+    const labels = [...markup.matchAll(/<nav[^>]*aria-label="([^"]+)"/g)].map((m) => m[1] ?? '');
+    expect(labels.length).toBeGreaterThan(1);
+    expect(new Set(labels).size, `two landmarks share a name: ${labels.join(', ')}`).toBe(
+      labels.length,
+    );
+  });
+
+  /* A guest's runs live behind a key in one browser. A rail that looked the same
+     either way would be the one element on this site hiding which you are. */
+  it('says what a guest is, and stops saying it once there is an account', () => {
+    const guest = stripTags(railed('/work'));
+    expect(guest).toContain('You are working as a guest.');
+    expect(guest).toContain('clearing it loses them');
+
+    const signedIn = stripTags(railed('/work', 'Mona Architect'));
+    expect(signedIn).toContain('Signed in as');
+    expect(signedIn).toContain('Mona Architect');
+    expect(signedIn).not.toContain('You are working as a guest.');
+  });
+
+  /* §13.1. A rail is chrome, and chrome painted in the uncertainty colour teaches a
+     reader that amber means nothing in particular. */
+  it('paints no amber', () => {
+    const markup = railed('/app', 'A Person');
+    const rail = markup.slice(markup.indexOf('class="sidebar"'), markup.indexOf('id="main"'));
+    expect(rail).not.toMatch(/assumed|uncertain|traced--/);
   });
 });
 

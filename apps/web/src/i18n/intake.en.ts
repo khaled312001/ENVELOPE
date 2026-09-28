@@ -117,13 +117,35 @@ export const EN = {
 
   missingTitle: 'What this sheet does not say',
 
+  /**
+   * THE THREE LAYERS — fact, then consequence, then argument — and the reason the
+   * panel was restructured is a line in the client's reply: *"وفي حجات موجوده مش
+   * مفهومه بالنسبالي"*.
+   *
+   * The panel was correct and unreadable. It opened on a heading, listed the gaps,
+   * and then put the whole of the argument inside a red banner's closing sentence —
+   * so the first thing a reader met was a paragraph about borrowed plot ratios,
+   * before they had been told in plain words what the list underneath them was.
+   *
+   * `missingLead` is the fact and the action. `missingWhy` is the argument, behind
+   * a disclosure that is closed by default: it is worth reading and it is not worth
+   * blocking on. `blocked.after` keeps only the sentence that names what the reader
+   * can do next — it used to carry the argument too, in a `role="alert"`, which is
+   * the worst place on the screen to put a paragraph.
+   */
+  missingLead:
+    'These are limits this sheet is silent on. The engine will not fill them in. You can enter each one from the regulation that governs this plot, or attach a document that states it.',
+  missingWhySummary: 'Why the engine will not fill a gap in a sheet',
+  missingWhy:
+    'Because the obvious way to fill it is to take the figure from a plot next door, and that is the precise mistake this product exists to prevent. Two plots in one community routinely carry different limits, and a borrowed plot ratio produces a building that is plausible, well drawn, fully costed and not permitted. A gap that is named costs an afternoon; a gap that is filled in silence is found by a regulator.',
+
   blocked: {
     title: 'This sheet cannot drive a capacity run.',
     /** The labels of the missing limits sit between these, as `packages/intake` names them. */
     before: ' It omits ',
     labelSeparator: ', ',
     after:
-      '. Those are not values this engine will supply — a limit borrowed from a neighbouring plot is the precise mistake this product exists to prevent. You can still create the plot and enter the limits from the governing regulation yourself.',
+      '. You can still create the plot and enter those limits yourself, from the regulation that governs it.',
   },
 
   use: 'Use these values',

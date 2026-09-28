@@ -15,6 +15,9 @@
  * regressions that look like nothing on screen and undo the product.
  */
 
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
 
@@ -33,7 +36,7 @@ import { composeSheets, sheetSvg } from '@envelope/sheets';
 
 import { runChecks } from '../../api/src/checks.js';
 import { ENGINE_VERSION, presentRun } from '../../api/src/present.js';
-import type { PlotView, RunView } from '../src/api/client.js';
+import type { AffectionPlanRead, PlotView, RunView } from '../src/api/client.js';
 import { CapacityBands } from '../src/components/CapacityBands.js';
 import { DrawingSet, SheetView } from '../src/components/DrawingSet.js';
 import { AssumptionRegister } from '../src/components/AssumptionRegister.js';
@@ -41,6 +44,8 @@ import { formatTraced } from '../src/components/TracedValue.js';
 import { MassingPanel } from '../src/components/MassingPanel.js';
 import { ParkingPlan, VehicleAccessPanel } from '../src/components/ParkingPlan.js';
 import { StepFooter, type FlowState } from '../src/App.js';
+import { Reading } from '../src/screens/AffectionPlanIntake.js';
+import { readAffectionPlan } from '../../api/src/intake-route.js';
 import { ChecksStep } from '../src/screens/ChecksStep.js';
 import { EvidenceStep } from '../src/screens/EvidenceStep.js';
 
@@ -654,5 +659,106 @@ describe('StepFooter', () => {
     const out = html(<StepFooter step="plot" flow={state({ plot: plotView })} onGo={() => {}} />);
     expect(out).toContain('aria-label="Move between steps"');
     expect(out).not.toContain('aria-label="Steps"');
+  });
+});
+
+/**
+ * The affection-plan reading, rendered against two real sheets.
+ *
+ * `Reading` is the most involved panel in the intake screen and it had **no render
+ * test at all** — not in English, not in the Arabic matrix, which rendered only the
+ * empty screen and the error banner. So the panel the client actually complained
+ * about was the one panel nothing watched.
+ *
+ * TWO SHEETS, BECAUSE ONE OF THEM CANNOT EXERCISE IT. The Warsan sheet the user
+ * guide is built on is COMPLETE — it prints every limit the parser looks for, so
+ * "What this sheet does not say" never renders for it, and a test that used it
+ * alone would have passed while asserting nothing. `DJAZ1MED12RES011` prints G+11
+ * and no plot ratio, no permitted area, no setback and no coverage; it is the sheet
+ * `CLAUDE.md` names as the reason the product exists, and it is the one that makes
+ * this panel appear.
+ *
+ * The facts come from `readAffectionPlan`, the route's own function, serialised the
+ * way the route serialises: what is asserted is what the API sends, not a literal
+ * someone typed to match it.
+ */
+describe('the affection-plan reading', () => {
+  const SHEETS = {
+    complete: 'docs/00-source/samples/affection-plan/IC1-CTYL-16_011-warsan1-621.pdf',
+    incomplete: 'docs/00-source/developer-standards/azizi/Plot DJAZ1MED12RES011-178.pdf',
+  } as const;
+
+  const readings: Record<keyof typeof SHEETS, AffectionPlanRead> = {} as never;
+
+  beforeAll(async () => {
+    for (const [key, rel] of Object.entries(SHEETS)) {
+      const path = fileURLToPath(new URL(`../../../${rel}`, import.meta.url));
+      const bytes = new Uint8Array(await readFile(path));
+      readings[key as keyof typeof SHEETS] = (await readAffectionPlan(
+        bytes,
+        rel.split('/').pop() ?? rel,
+      )) as AffectionPlanRead;
+    }
+  }, 120_000);
+
+  it('says nothing is missing when the sheet states everything', () => {
+    const read = readings.complete;
+    expect(read.facts.missing.length).toBe(0);
+    const out = html(<Reading read={read} onUse={() => {}} />);
+    // No heading, no lead, no argument — an empty section would be a heading over
+    // nothing, which reads as a finding the sheet did not produce.
+    expect(out).not.toContain('What this sheet does not say');
+    expect(out).not.toContain('These are limits this sheet is silent on.');
+  });
+
+  it('names every gap in the engine’s own words', () => {
+    const read = readings.incomplete;
+    expect(read.facts.missing.length).toBeGreaterThan(0);
+    const out = html(<Reading read={read} onUse={() => {}} />);
+    expect(out).toContain('What this sheet does not say');
+    for (const gap of read.facts.missing) {
+      expect(out).toContain(gap.label);
+      expect(out).toContain(gap.consequence);
+    }
+  });
+
+  /*
+    THE THREE LAYERS, in order. The client's line was «وفي حجات موجوده مش مفهومه
+    بالنسبالي» — the panel was correct and unreadable, because the argument arrived
+    before the plain sentence, inside a red banner. Order is the assertion.
+  */
+  it('states the fact and the action before the argument, and keeps the argument closed', () => {
+    const out = html(<Reading read={readings.incomplete} onUse={() => {}} />);
+    const lead = out.indexOf('These are limits this sheet is silent on.');
+    const why = out.indexOf('Why the engine will not fill a gap in a sheet');
+    expect(lead).toBeGreaterThan(-1);
+    expect(why).toBeGreaterThan(lead);
+    expect(out).toMatch(/<details[^>]*class="disclosure"/);
+    expect(out).not.toMatch(/<details[^>]*\sopen[\s>]/);
+    // The argument left the alert; an alert is the worst place on the screen for a
+    // paragraph, and it is where this one used to live.
+    expect(out).not.toMatch(/role="alert"[\s\S]{0,400}borrowed/);
+  });
+
+  /* A sheet that cannot drive a run says so, and says what the reader can still do.
+     The gap labels inside the banner are the engine's, not the screen's. */
+  it('refuses the run on a sheet missing a binding limit, and offers the way round it', () => {
+    const read = readings.incomplete;
+    expect(read.facts.blocking.length).toBeGreaterThan(0);
+    const out = html(<Reading read={read} onUse={() => {}} />);
+    expect(out).toContain('This sheet cannot drive a capacity run.');
+    expect(out).toContain('You can still create the plot and enter those limits yourself');
+    for (const gap of read.facts.blocking) expect(out).toContain(gap.label);
+  });
+
+  /* Said on every reading, not only on an incomplete one — and it is the API's
+     sentence, so a screen that stopped rendering it would be dropping a disclosure
+     rather than editing copy. */
+  it('carries the disclaimer the API wrote, verbatim, on both sheets', () => {
+    for (const read of [readings.complete, readings.incomplete]) {
+      const out = html(<Reading read={read} onUse={() => {}} />);
+      expect(read.disclaimer).toContain('REGULATORY VALIDITY: NOT ASSESSED');
+      expect(out).toContain(read.disclaimer);
+    }
   });
 });

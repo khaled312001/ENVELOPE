@@ -8,7 +8,8 @@
     "nav": "footer-only",
     "group": "product",
     "needsActor": false,
-    "arabic": "translated"
+    "arabic": "translated",
+    "shell": "site"
   },
   {
     "path": "/parking",
@@ -19,7 +20,8 @@
     "nav": "primary",
     "group": "product",
     "needsActor": false,
-    "arabic": "translated"
+    "arabic": "translated",
+    "shell": "site"
   },
   {
     "path": "/exports",
@@ -30,7 +32,8 @@
     "nav": "footer-only",
     "group": "product",
     "needsActor": false,
-    "arabic": "translated"
+    "arabic": "translated",
+    "shell": "site"
   },
   {
     "path": "/refusals",
@@ -41,7 +44,8 @@
     "nav": "primary",
     "group": "claim",
     "needsActor": false,
-    "arabic": "translated"
+    "arabic": "translated",
+    "shell": "site"
   },
   {
     "path": "/app",
@@ -52,7 +56,8 @@
     "nav": "footer-only",
     "group": "product",
     "needsActor": true,
-    "arabic": "translated"
+    "arabic": "translated",
+    "shell": "workspace"
   },
   {
     "path": "/work",
@@ -63,7 +68,8 @@
     "nav": "footer-only",
     "group": "product",
     "needsActor": false,
-    "arabic": "translated"
+    "arabic": "translated",
+    "shell": "workspace"
   },
   {
     "path": "/dashboard",
@@ -74,6 +80,7 @@
     "nav": "primary",
     "group": "claim",
     "needsActor": false,
-    "arabic": "translated"
+    "arabic": "translated",
+    "shell": "site"
   }
 ]

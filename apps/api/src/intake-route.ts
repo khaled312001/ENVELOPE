@@ -136,10 +136,9 @@ export function registerIntakeRoutes(
       });
     }
 
-    const tracer = new Tracer(new ProvenanceGraph());
     let facts: AffectionPlanFacts;
     try {
-      facts = await parseAffectionPlan(bytes, { documentUri: body.filename, tracer });
+      facts = await parseAffectionPlan(bytes, { documentUri: body.filename, tracer: newTracer() });
     } catch (error) {
       return reply.code(422).send({
         error: 'the PDF could not be read',
@@ -147,14 +146,56 @@ export function registerIntakeRoutes(
       });
     }
 
-    return {
-      filename: body.filename,
-      facts: present(facts),
-      // Said on every response, not only where a gap exists. A reader who sees
-      // a full set of numbers is exactly the reader most likely to forget.
-      disclaimer:
-        'REGULATORY VALIDITY: NOT ASSESSED. These are the values printed on the sheet, ' +
-        're-read and re-checked. Confirm each against the document before use.',
-    };
+    return readingOf(body.filename, facts);
   });
+}
+
+/** A tracer per parse. The graph is the parse's own and outlives nothing. */
+function newTracer(): Tracer {
+  return new Tracer(new ProvenanceGraph());
+}
+
+/**
+ * The response body, as one function, so the screen can be tested against what the
+ * route actually sends.
+ *
+ * `Reading` in `apps/web` renders this shape and had no render test at all — the
+ * most involved panel in the intake screen, covered by nothing. A test could have
+ * built a literal of the shape instead, and that is the fixture failure this
+ * repository has already paid for once: a shape frozen at the moment it was
+ * captured goes on proving the screen works against something the API no longer
+ * sends. So the boundary moved here rather than a fixture being written there.
+ */
+export function readingOf(filename: string, facts: AffectionPlanFacts): unknown {
+  return {
+    filename,
+    facts: present(facts),
+    // Said on every response, not only where a gap exists. A reader who sees
+    // a full set of numbers is exactly the reader most likely to forget.
+    disclaimer:
+      'REGULATORY VALIDITY: NOT ASSESSED. These are the values printed on the sheet, ' +
+      're-read and re-checked. Confirm each against the document before use.',
+  };
+}
+
+/**
+ * Parse a sheet and return exactly what a client receives.
+ *
+ * THE JSON ROUND TRIP IS NOT CEREMONY. `present` passes the structured values —
+ * setbacks, coverage — through with their `Decimal` operands intact, and a Decimal
+ * only becomes the string the wire type declares when something serialises it.
+ * Over HTTP, Fastify does. In process, nothing does, and a screen handed the
+ * unserialised object throws `Objects are not valid as a React child` on a value
+ * whose type says `string`.
+ *
+ * That was found by giving `Reading` its first render test, which is the argument
+ * for the test in one line. The round trip here is the boundary the route crosses,
+ * made explicit, so what a test renders is what a browser is sent.
+ */
+export async function readAffectionPlan(
+  bytes: Uint8Array,
+  filename: string,
+): Promise<unknown> {
+  const facts = await parseAffectionPlan(bytes, { documentUri: filename, tracer: newTracer() });
+  return JSON.parse(JSON.stringify(readingOf(filename, facts))) as unknown;
 }

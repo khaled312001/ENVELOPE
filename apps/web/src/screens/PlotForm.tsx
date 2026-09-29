@@ -21,6 +21,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAutosave } from '../useAutosave.js';
+import { rectangleLegs, walkTraverse } from '../traverse.js';
 import { useSession } from '../session.js';
 
 import {
@@ -57,16 +58,43 @@ type Hierarchy = 'ARTERIAL' | 'COLLECTOR' | 'LOCAL' | 'ACCESS' | '';
 interface PlotDraft {
   readonly plotNumber: string;
   readonly community: string;
+  readonly shape: Shape;
   readonly width: string;
   readonly depth: string;
   readonly statedArea: string;
   readonly edges: EdgeDraft[];
 }
 
+/**
+ * HOW THE SHAPE IS ENTERED, and it is a mode rather than a replacement.
+ *
+ * A rectangle is a shortcut and it is the right one for the plots that are
+ * rectangles. It is not a model of a plot: the client's second point was that
+ * real ones carry several dimensions, fractions and curves. So the rectangle
+ * stays and the traverse is the other way in — the boundaries as the affection
+ * plan states them, a length and a direction each, with the corners computed.
+ *
+ * Arcs are still not entered. `plot.why` in the step primer says so on the
+ * screen; this mode is the straight-edged half of that answer.
+ */
+type Shape = 'rectangle' | 'edges';
+
 interface EdgeDraft {
   readonly classification: Classification;
   readonly roadHierarchy: Hierarchy;
+  /** Traverse mode only. Metres, as typed; blank in rectangle mode. */
+  readonly lengthM: string;
+  /** Traverse mode only. Degrees clockwise from north, along the boundary. */
+  readonly bearingDeg: string;
 }
+
+/** The four blank boundaries a form with no demo behind it opens on. */
+const BLANK_EDGE: EdgeDraft = {
+  classification: '',
+  roadHierarchy: '',
+  lengthM: '',
+  bearingDeg: '',
+};
 
 export interface PlotFormProps {
   readonly actor: Actor;
@@ -149,16 +177,48 @@ export function PlotForm({
     */
     demo
       ? demo.edges.map((e) => ({
+          ...BLANK_EDGE,
           classification: e.classification as Classification,
           roadHierarchy: e.roadHierarchy as Hierarchy,
         }))
-      : [
-          { classification: '', roadHierarchy: '' },
-          { classification: '', roadHierarchy: '' },
-          { classification: '', roadHierarchy: '' },
-          { classification: '', roadHierarchy: '' },
-        ],
+      : [BLANK_EDGE, BLANK_EDGE, BLANK_EDGE, BLANK_EDGE],
   );
+  const [shape, setShape] = useState<Shape>('rectangle');
+
+  /*
+    SWITCHING TO EDGE ENTRY SEEDS THE BOXES WITH THE RECTANGLE THAT WAS THERE.
+
+    An empty table is a form that has thrown away what the reader already typed
+    and asks them to type it again. Seeding is not a hidden default: the four
+    numbers are the four they entered, and every one of them is on screen and
+    editable the moment they arrive. The banner above the table says where they
+    came from.
+
+    Switching BACK leaves the traverse alone. The width and depth are still in
+    their own state, and a reader who flips modes to look at something should not
+    lose the boundaries they typed by doing it.
+  */
+  /*
+    A NEW BOUNDARY IS BLANK, and it is added at the end of the walk.
+
+    Not a copy of the last one: a duplicated length and bearing is a plot a
+    reader did not enter, sitting in the boxes looking entered. Blank makes the
+    traverse unusable until it is filled, which is the correct state for a
+    boundary nobody has described yet.
+  */
+  const addEdge = (): void => setEdges((prev) => [...prev, BLANK_EDGE]);
+
+  const toEdges = (): void => {
+    const legs = rectangleLegs(width, depth);
+    setEdges((prev) =>
+      prev.map((edge, i) => ({
+        ...edge,
+        lengthM: edge.lengthM || legs[i]?.lengthM || '',
+        bearingDeg: edge.bearingDeg || legs[i]?.bearingDeg || '',
+      })),
+    );
+    setShape('edges');
+  };
 
   /*
     AUTOSAVE, AND THE ONE DECISION IN IT THAT MATTERS.
@@ -208,11 +268,11 @@ export function PlotForm({
        "not asked yet" are the same value, and recording during that window is what
        overwrote the draft while its own banner was on screen. */
     if (!draft.ready || draft.recovered) return;
-    draft.record({ plotNumber, community, width, depth, statedArea, edges });
+    draft.record({ plotNumber, community, shape, width, depth, statedArea, edges });
     /* `draft.record` is a stable callback and the values are what changed; listing
        the callback here would re-record on every render of a memo boundary. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plotNumber, community, width, depth, statedArea, edges, draft.recovered, draft.ready]);
+  }, [plotNumber, community, shape, width, depth, statedArea, edges, draft.recovered, draft.ready]);
 
   const applyRecovered = (): void => {
     const p = draft.recovered?.payload;
@@ -222,29 +282,54 @@ export function PlotForm({
     setWidth(p.width);
     setDepth(p.depth);
     setStatedArea(p.statedArea);
+    /* A draft written before this form had two modes has no `shape`; it was a
+       rectangle, because that is all there was. */
+    setShape(p.shape === 'edges' ? 'edges' : 'rectangle');
     /* The edge count is whatever was saved, because a plot is not always four-sided
        and a restore that silently kept four would be inventing a shape. */
     if (Array.isArray(p.edges) && p.edges.length >= 3) setEdges(p.edges);
     draft.acceptRecovered();
   };
 
-  const vertices = useMemo(
-    () => [
-      { x: '0', y: '0' },
-      { x: width || '0', y: '0' },
-      { x: width || '0', y: depth || '0' },
-      { x: '0', y: depth || '0' },
-    ],
-    [width, depth],
+  /*
+    THE WALK IS COMPUTED WHATEVER THE MODE, because the panel under the table
+    reports on it and a reader switching modes should not see it appear blank for
+    a frame. It costs four sines.
+  */
+  const walk = useMemo(
+    () => walkTraverse(edges.map((e) => ({ lengthM: e.lengthM, bearingDeg: e.bearingDeg }))),
+    [edges],
   );
 
-  const complete = edges.every(
+  const vertices = useMemo(
+    () =>
+      shape === 'edges'
+        ? walk.corners
+        : [
+            { x: '0', y: '0' },
+            { x: width || '0', y: '0' },
+            { x: width || '0', y: depth || '0' },
+            { x: '0', y: depth || '0' },
+          ],
+    [shape, walk, width, depth],
+  );
+
+  const classified = edges.every(
     (e) => e.classification !== '' && (e.classification !== 'ROAD' || e.roadHierarchy !== ''),
   );
+  /* In edge mode the shape itself can be incomplete, and a traverse that cannot
+     be walked has no corners to send. */
+  const complete = classified && (shape === 'rectangle' || walk.usable);
   const unclassified = edges.filter((e) => e.classification === '').length;
 
   const computedArea =
-    Number(width) > 0 && Number(depth) > 0 ? (Number(width) * Number(depth)).toFixed(2) : null;
+    shape === 'edges'
+      ? walk.usable
+        ? walk.areaM2
+        : null
+      : Number(width) > 0 && Number(depth) > 0
+        ? (Number(width) * Number(depth)).toFixed(2)
+        : null;
 
   const submit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -355,9 +440,46 @@ export function PlotForm({
         </div>
       </div>
 
+      <fieldset className="field-group pf-shape">
+        <legend className="field-group__legend">{t.shape.legend}</legend>
+        {/* A radio pair rather than a segmented button: these are two answers to
+            one question, the reader can be on only one of them, and a radio group
+            is the control a screen reader already knows how to say that about. */}
+        <div className="pf-shape__choices">
+          <label className="pf-shape__choice">
+            <input
+              type="radio"
+              name="plot-shape"
+              value="rectangle"
+              checked={shape === 'rectangle'}
+              onChange={() => setShape('rectangle')}
+            />
+            <span>
+              <strong>{t.shape.rectangle}</strong>
+              <span className="field__help">{t.shape.rectangleHelp}</span>
+            </span>
+          </label>
+          <label className="pf-shape__choice">
+            <input
+              type="radio"
+              name="plot-shape"
+              value="edges"
+              checked={shape === 'edges'}
+              onChange={toEdges}
+            />
+            <span>
+              <strong>{t.shape.edges}</strong>
+              <span className="field__help">{t.shape.edgesHelp}</span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
       <div className="field-group">
         <p className="field-group__legend">{t.size.legend}</p>
         <div className="grid grid--2">
+        {shape === 'rectangle' ? (
+        <>
         <div className="field">
           <label htmlFor="width">{t.size.width}</label>
           <input
@@ -381,6 +503,8 @@ export function PlotForm({
             required
           />
         </div>
+        </>
+        ) : null}
 
         <div className="field">
           <label htmlFor="stated-area">
@@ -427,6 +551,43 @@ export function PlotForm({
                 {i + 1}
               </span>
               <div className="edge-list__controls">
+                {shape === 'edges' ? (
+                  <>
+                    <div className="field field--compact">
+                      <label htmlFor={`edge-${i}-length`}>{t.traverse.length}</label>
+                      <input
+                        id={`edge-${i}-length`}
+                        className="input input--num"
+                        inputMode="decimal"
+                        value={edge.lengthM}
+                        onChange={(e) =>
+                          setEdges((prev) =>
+                            prev.map((p, j) => (j === i ? { ...p, lengthM: e.target.value } : p)),
+                          )
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="field field--compact">
+                      <label htmlFor={`edge-${i}-bearing`}>{t.traverse.bearing}</label>
+                      <input
+                        id={`edge-${i}-bearing`}
+                        className="input input--num"
+                        inputMode="decimal"
+                        value={edge.bearingDeg}
+                        onChange={(e) =>
+                          setEdges((prev) =>
+                            prev.map((p, j) =>
+                              j === i ? { ...p, bearingDeg: e.target.value } : p,
+                            ),
+                          )
+                        }
+                        required
+                      />
+                      {i === 0 ? <p className="field__help">{t.traverse.bearingHelp}</p> : null}
+                    </div>
+                  </>
+                ) : null}
                 <div className="field field--compact">
                   <label htmlFor={`edge-${i}-class`}>{t.edges.faces(String(i + 1))}</label>
                   <select
@@ -438,6 +599,7 @@ export function PlotForm({
                         prev.map((p, j) =>
                           j === i
                             ? {
+                                ...p,
                                 classification: e.target.value as Classification,
                                 roadHierarchy:
                                   e.target.value === 'ROAD' ? p.roadHierarchy : '',
@@ -481,6 +643,23 @@ export function PlotForm({
                     <p className="field__help">{t.edges.roadHelp}</p>
                   </div>
                 ) : null}
+                {shape === 'edges' && edges.length > 3 ? (
+                  /*
+                    THE ACCESSIBLE NAME NAMES THE BOUNDARY, and the visible word
+                    is inside it, which is what 2.5.3 requires: five buttons
+                    reading "Remove" are five identical rows in a screen reader's
+                    control list, and the one that removes boundary 4 is not
+                    findable among them.
+                  */
+                  <button
+                    type="button"
+                    className="button button--sm edge-list__remove"
+                    aria-label={t.traverse.removeEdge(String(i + 1))}
+                    onClick={() => setEdges((prev) => prev.filter((_, j) => j !== i))}
+                  >
+                    {t.traverse.remove}
+                  </button>
+                ) : null}
               </div>
             </li>
           ))}
@@ -492,11 +671,62 @@ export function PlotForm({
             seq,
             classification: (e.classification || 'OTHER') as 'OTHER',
             roadHierarchy: e.roadHierarchy || null,
-            lengthM: seq % 2 === 0 ? width : depth,
+            /*
+              THE LENGTH DRAWN, NOT THE LENGTH TYPED. They differ on the last
+              boundary of a traverse that does not close, and labelling the
+              drawing with the typed figure would put a number on a line that is
+              not that long.
+            */
+            lengthM:
+              shape === 'edges'
+                ? (walk.drawnLengthsM[seq] ?? e.lengthM)
+                : seq % 2 === 0
+                  ? width
+                  : depth,
           }))}
           areaM2={computedArea ?? '0'}
         />
       </div>
+
+      <div className="pf-traverse">
+        {shape === 'edges' ? (
+          <>
+            <button type="button" className="button button--sm" onClick={addEdge}>
+              {t.traverse.add}
+            </button>
+            {/*
+              THE CLOSURE, REPORTED AND NEVER ADJUSTED.
+
+              Every survey package offers to distribute a misclose across the
+              legs, which changes numbers a person typed to make a figure look
+              clean. `walkTraverse` does not, and this is where the consequence
+              is said in words: the ring closes the last boundary back to the
+              first corner, so that boundary is drawn at a length nobody
+              entered. Stating the residue without stating that would be
+              showing the arithmetic and hiding what was done with it.
+
+              `role="status"` rather than an alert: a traverse in progress does
+              not close, and a reader typing the second of five boundaries is
+              not making a mistake.
+            */}
+            <p className="pf-traverse__closure" role="status">
+              {!walk.usable
+                ? edges.length < 3
+                  ? t.traverse.tooFew
+                  : t.traverse.unusable
+                : walk.closureRatio === null
+                  ? t.traverse.closes
+                  : t.traverse.misclose(walk.miscloseM, walk.closureRatio)}
+            </p>
+            {walk.usable && walk.closureRatio !== null ? (
+              <p className="pf-traverse__consequence">
+                {t.traverse.lastLeg(walk.lastLegM, edges[edges.length - 1]?.lengthM ?? '')}
+              </p>
+            ) : null}
+          </>
+        ) : null}
+        </div>
+
 
       <footer className="panel__footer">
         <button type="submit" className="button button--primary" disabled={!complete || busy}>

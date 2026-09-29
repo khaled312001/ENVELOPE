@@ -481,6 +481,52 @@ await step('the form refuses to continue with unclassified edges', async () => {
   if (!(await cont.isDisabled())) throw new Error('Continue was enabled with edges unset');
 });
 
+await step('a plot can be entered boundary by boundary, and the misclose is stated', async () => {
+  /*
+    THE CLIENT'S SECOND POINT, ON SCREEN. Plots carry several dimensions,
+    fractions and curves; they are not only rectangles. The engine always took an
+    arbitrary ring - only the form was a rectangle.
+
+    WHAT IS ACTUALLY BEING CHECKED HERE is the refusal, not the arithmetic.
+    `traverse.test.ts` owns the sines. A browser is the only place that can show
+    that a fifth boundary can be added, that the closure is reported rather than
+    adjusted away, and that the sentence saying what was done with the residue is
+    on the page a reader is looking at.
+  */
+  // The frontage read off the sheet, and the depth its area implies at that
+  // frontage. Entered here because the traverse is seeded from them.
+  await page.getByLabel('Width (m)').fill('50.85');
+  await page.getByLabel('Depth (m)').fill('26.85');
+  await page.getByLabel(/Boundary by boundary/i).check();
+  await page.locator('#edge-0-length').waitFor({ timeout: wait(5000) });
+
+  // The rectangle that was there arrives as four boundaries, already filled.
+  const first = await page.locator('#edge-0-length').inputValue();
+  if (first !== '50.85') throw new Error(`the rectangle did not carry over: ${first}`);
+
+  await page.getByRole('button', { name: /add a boundary/i }).click();
+  await page.locator('#edge-4-length').fill('9');
+  await page.locator('#edge-4-bearing').fill('205');
+
+  const open = await page.textContent('body');
+  if (!/do not return to the corner they started from/i.test(open)) {
+    throw new Error('the misclose was not reported');
+  }
+  if (!/Nothing has been adjusted/i.test(open)) {
+    throw new Error('the page does not say what was done with the misclose');
+  }
+  // A boundary with no length makes the shape unusable rather than being dropped.
+  await page.locator('#edge-4-length').fill('');
+  if (!(await page.getByRole('button', { name: /^Continue$/ }).isDisabled())) {
+    throw new Error('Continue was enabled with a boundary that has no length');
+  }
+
+  // Back to the rectangle, which is what the rest of this walk runs on.
+  await page.getByRole('button', { name: /remove boundary 5/i }).click();
+  await page.getByLabel(/A rectangle/i).check();
+  await page.getByLabel('Width (m)').waitFor({ timeout: wait(5000) });
+});
+
 await step('classifying every edge and submitting the plot', async () => {
   // The frontage read off the sheet, and the depth its area implies at that
   // frontage — which is what an architect would type, and which the 2% check

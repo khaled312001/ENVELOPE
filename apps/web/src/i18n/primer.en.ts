@@ -83,8 +83,9 @@ export const EN: { readonly steps: Readonly<Record<PrimerStep, Primer>> } = {
       fact: 'This is the plot’s shape, and what each of its edges faces.',
       means:
         'Every edge needs a classification, because the setback on an edge is chosen by what that edge faces and there is no default for it. The area your dimensions compute is then checked against the area the sheet prints, and a disagreement larger than the tolerance is reported rather than absorbed.',
-      whySummary: 'Why it takes a rectangle, and what that costs',
-      why: 'This version takes a frontage and a depth. Real plots are not all rectangles — they have chamfered corners, curves, and more than four sides — and entering one as the rectangle nearest to it is an approximation, which is why the computed area is checked against the printed one rather than trusted. Where the two agree, the rectangle is a fair stand-in for the purpose it is used for; where they do not, you are told, and told by how much. Entering a plot by its survey points is the next piece of work on this screen, and until it lands the area check is what keeps the approximation honest.',
+      whySummary: 'Why the shape is entered and not traced',
+      why:
+        'This version takes a plot two ways: a frontage and a depth, or a length and a direction for each boundary, as the affection plan states them. The second is what a plot of more than four sides needs, and the corners are computed from those numbers rather than traced over a satellite tile — a hand trace lands a few per cent out, which is enough to fail the area check the trace was meant to satisfy. Nothing is adjusted to make the boundaries close: where they do not return to the corner they started from, the gap is reported, the last boundary is drawn at the length that closes it, and both figures are on screen. Curved boundaries are still entered as the straight line between their ends, and the area your dimensions compute, checked against the area the sheet prints, is what keeps that approximation honest.',
     },
 
     parameters: {

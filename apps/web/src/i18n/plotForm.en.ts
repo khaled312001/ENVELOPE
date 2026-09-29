@@ -93,6 +93,54 @@ export const EN = {
     roadHelp: 'The setback table is keyed on this.',
   },
 
+  /**
+   * HOW THE SHAPE IS ENTERED, and the sentence under it is the whole argument.
+   *
+   * A rectangle is a shortcut, not a model of a plot. The client's own words:
+   * plots carry several dimensions, fractions and curves, and are not only
+   * rectangles or squares. The second mode takes the boundaries as the document
+   * states them - a length and a direction each - and computes the corners.
+   *
+   * NO DIGIT IN HERE. The edge count, the misclose and the closure ratio are all
+   * the form's own measurements and arrive as arguments.
+   */
+  shape: {
+    legend: 'How the plot is shaped',
+    rectangle: 'A rectangle',
+    edges: 'Boundary by boundary',
+    rectangleHelp: 'A frontage and a depth. Quickest when the plot really is a rectangle.',
+    edgesHelp:
+      'A length and a direction for each boundary, as the affection plan states them. The corners are computed from them.',
+    switched:
+      'Your rectangle is in the boxes below as four boundaries. Change any of them, and add or remove boundaries as the plot needs.',
+  },
+
+  traverse: {
+    length: 'Length (m)',
+    bearing: 'Direction (°)',
+    bearingHelp: 'Clockwise from north, along the boundary. North is zero and east is a quarter turn.',
+    add: 'Add a boundary',
+    remove: 'Remove',
+    removeEdge: (edge: string): string => `Remove boundary ${edge}`,
+    /** The count is the form's own; three is the fewest a polygon can have. */
+    tooFew: 'A plot needs at least three boundaries.',
+    unusable:
+      'Every boundary needs a length greater than zero and a direction between zero and a full turn. Nothing is computed until they all do.',
+    closes: 'The boundaries return to the corner they started from.',
+    /** Both figures are measured by the form and arrive here. */
+    misclose: (metres: string, ratio: string): string =>
+      `The boundaries do not return to the corner they started from: they end ${metres} m away, which is one part in ${ratio} of the way round.`,
+    /*
+      THE CONSEQUENCE, IN WORDS, and it is the sentence this whole panel exists
+      for. Nothing is adjusted to hide the gap, so the shape that is submitted
+      closes the last boundary back to the first corner - and that boundary is
+      then drawn at a length nobody typed. Saying the misclose without saying
+      this would be stating the residue and hiding what was done with it.
+    */
+    lastLeg: (drawn: string, entered: string): string =>
+      `Nothing has been adjusted. The shape that will be submitted closes the last boundary back to the first corner, so it measures ${drawn} m rather than the ${entered} m entered for it.`,
+  },
+
   submit: {
     busy: 'Checking the boundary…',
     idle: 'Continue',

@@ -1367,3 +1367,83 @@ describe('a plot is stored counter-clockwise however it was walked', () => {
     expect(JSON.stringify(res.json())).toMatch(/different boundary/);
   });
 });
+
+/**
+ * A PLOT THAT IS NOT FOUR-SIDED, END TO END.
+ *
+ * `Plot.ring` has always been an arbitrary closed ring and this API has always
+ * taken three or more vertices — the rectangle was never the engine's limit, only
+ * the form's. So the claim this makes is narrow and worth making anyway: the path
+ * a traverse produces reaches capacity and comes back with an answer, rather than
+ * being a shape the API accepts and the engine then refuses.
+ *
+ * Five sides and convex. A reflex corner is `COMPLEX` and `assertPhase0Shape`
+ * refuses it by name, which is §14.1 and not a gap to fill here.
+ */
+describe('a five-sided plot', () => {
+  const PENTAGON = {
+    ...SQUARE_80x40,
+    plotNumber: '345-1234-5',
+    vertices: [
+      { x: '0', y: '0' },
+      { x: '80', y: '0' },
+      { x: '80', y: '30' },
+      { x: '40', y: '52' },
+      { x: '0', y: '30' },
+    ],
+    edges: [
+      { seq: 0, classification: 'ROAD' as const, roadHierarchy: 'LOCAL' as const },
+      { seq: 1, classification: 'ADJACENT_PLOT' as const },
+      { seq: 2, classification: 'OPEN_SPACE' as const },
+      { seq: 3, classification: 'OPEN_SPACE' as const },
+      { seq: 4, classification: 'ROAD' as const, roadHierarchy: 'COLLECTOR' as const },
+    ],
+  };
+
+  it('is stored with five boundaries, each classified as it was entered', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/plots',
+      headers: ACTOR,
+      payload: PENTAGON,
+    });
+    expect(created.statusCode).toBe(201);
+
+    const view = await app.inject({
+      method: 'GET',
+      url: `/api/plots/${created.json().plotId}`,
+      headers: ACTOR,
+    });
+    const body = view.json();
+    expect(body.vertices).toHaveLength(5);
+    expect(body.edges.map((e: { classification: string }) => e.classification)).toEqual([
+      'ROAD',
+      'ADJACENT_PLOT',
+      'OPEN_SPACE',
+      'OPEN_SPACE',
+      'ROAD',
+    ]);
+    // Shoelace over those five corners, to the centimetre.
+    expect(body.computedAreaM2).toBe('3280.00');
+  });
+
+  it('reaches an answer rather than being accepted and then refused', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/plots',
+      headers: ACTOR,
+      payload: { ...PENTAGON, plotNumber: '345-1234-5b' },
+    });
+    const run = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: created.json().plotId },
+    });
+    expect(run.statusCode).toBe(201);
+    expect(run.json().capacity.governingGfa.value).toBeTruthy();
+    expect(['REGULATORY', 'GEOMETRIC', 'PARKING']).toContain(
+      run.json().capacity.governingBand,
+    );
+  });
+});

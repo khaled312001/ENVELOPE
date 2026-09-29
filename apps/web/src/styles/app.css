@@ -2326,6 +2326,84 @@ button.plot-legend__row:active {
  * means "a notice", which is exactly what the reservation exists to prevent.
  */
 
+/*
+ * HOW THE PLOT IS SHAPED — two answers to one question, as radios.
+ *
+ * A segmented button would have looked tidier and said less: these are two ways
+ * of describing the same plot, only one can be true at a time, and a radio group
+ * is the control a screen reader already knows how to announce that about. The
+ * help text sits inside the label, so the whole card is the hit area rather than
+ * a 16px circle beside it.
+ */
+.pf-shape {
+  border: none;
+  padding: 0;
+  margin: 0 0 var(--space-5);
+}
+.pf-shape__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.pf-shape__choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: 1 1 18rem;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border-default);
+  cursor: pointer;
+}
+.pf-shape__choice:has(input:checked) {
+  border-color: var(--border-strong);
+  background: var(--surface-inset);
+}
+/* The ring is on the card, because the card is what the pointer hits and what
+   the eye reads; leaving it on the 16px circle would put the focus indicator on
+   the smallest part of the control. */
+.pf-shape__choice:has(input:focus-visible) {
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: var(--focus-offset);
+}
+.pf-shape__choice input { margin-block-start: 0.2rem; flex: none; }
+.pf-shape__choice > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.pf-shape__choice .field__help { margin: 0; }
+
+/*
+ * THE CLOSURE REPORT.
+ *
+ * It holds its line whether or not the traverse closes: a status that appears
+ * and disappears reflows the boundary table under the cursor of somebody typing
+ * numbers off a document, which is the one screen where that is worst.
+ */
+.pf-traverse {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+}
+.pf-traverse__closure {
+  min-block-size: 1.5em;
+  margin: 0;
+  max-inline-size: var(--measure-prose);
+  color: var(--text-secondary);
+}
+/* The consequence of not adjusting: the last boundary is drawn at a length
+   nobody typed. Body ink, not secondary — it is the sentence a reader must not
+   skim past, and quieting it would be softening the one thing this panel is for. */
+.pf-traverse__consequence {
+  margin: 0;
+  max-inline-size: var(--measure-prose);
+  color: var(--text-primary);
+}
+
+.edge-list__remove { align-self: flex-start; }
+
 .pf-draft {
   display: flex;
   flex-wrap: wrap;

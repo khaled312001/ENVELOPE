@@ -1546,6 +1546,43 @@ or pointing at a drawing `image-prompts.md` does not commission. The theme
 reaches `Illustration` through a provider that publishes `Root`'s single
 `useTheme()` rather than holding one of its own.
 
+**B, first half — the plot is entered boundary by boundary, and the misclose is
+reported.** Mohamed's second point: *«الاراضي عموما كتير بتكون فيها كذا مقاس و
+كسور وكيرفات مش بتكون مستطيلله او مربعه بس»*. The engine was never the
+limitation — `Plot.ring` has always been an arbitrary closed ring and the API has
+always taken three or more vertices. Only the way in was a rectangle.
+
+The form now offers two ways to describe a plot: a frontage and a depth, or a
+length and a direction for each boundary, as the affection plan states them.
+Switching seeds the table with the rectangle that was there, so nothing a reader
+typed is thrown away and every seeded number is on screen and editable.
+
+**THE MISCLOSE IS REPORTED AND NEVER ADJUSTED.** Every survey package offers to
+distribute the residue across the legs — Bowditch, Crandall, transit — and every
+one of them changes numbers a person typed to make a figure look clean. So the
+polygon submitted is the corners as walked, closed by returning the last one to
+the first, and the screen says so in words: the gap, the closure ratio, and the
+length that last boundary actually measures beside the one entered for it. No
+tolerance is invented, because a surveyor's 1:5000 is a professional standard and
+not a rule of this product; what refuses is the check that was already there, the
+computed area against the area the sheet prints.
+
+**And it found a live defect on the way in.** `outwardBearingDeg` assumes a
+counter-clockwise ring and nothing enforced it, so a plot walked the other way
+would have stored every outward normal pointing INWARD — the setback on the wrong
+side of each boundary, the vehicle entrance offered furthest from the road, and
+the area, the shape class and the drawing all correct. It was unreachable while
+the only client emitted one rectangle, anticlockwise, every time. `orientRing`
+turns the ring and carries each edge's classification to wherever its boundary
+landed; the API test, doctored to skip it, reports the east and west boundaries
+with each other's normals. Two smaller things fell out of the same test: `seq`
+is now checked as a permutation rather than a count, and a boundary facing due
+north reported 360.00 instead of 0.
+
+**Still to do in B:** arcs stored exactly, the editable canvas, and DXF/LandXML
+import. A curved boundary is entered as the straight line between its ends, and
+the step primer says so on the screen rather than in a note here.
+
 **T — nineteen of the twenty-five slots are wired, and the brief is the
 authority for all of them.** `ImageName`, the size table and the two alt-text
 dictionaries are transcriptions of `image-prompts.md`, and `imagery.test.ts`

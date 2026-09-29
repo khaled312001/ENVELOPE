@@ -177,7 +177,7 @@
     "levelPlan": {
       "bayCount": {
         "value": "46",
-        "node": "n140",
+        "node": "n136",
         "parameterId": "parking.laid_out_bays",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -185,7 +185,7 @@
       },
       "areaPerBayM2": {
         "value": "41.68",
-        "node": "n142",
+        "node": "n138",
         "parameterId": "parking.area_per_bay_m2",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -214,6 +214,28 @@
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
         "unit": "m²"
+      },
+      "orientation": {
+        "value": "modules along the width",
+        "node": "n132",
+        "parameterId": "parking.module_orientation",
+        "provenanceClass": "DERIVED",
+        "renderHint": "NEUTRAL_WITH_CITATION"
+      },
+      "losses": {
+        "reserved": {
+          "areaM2": "288",
+          "bays": 13
+        },
+        "circulation": {
+          "areaM2": "0",
+          "bays": 0,
+          "strandedBays": 0
+        },
+        "footprint": {
+          "areaM2": "0",
+          "bays": 0
+        }
       },
       "standard": {
         "angle": "DEG_90",
@@ -1437,7 +1459,7 @@
           },
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-          "node": "n146",
+          "node": "n150",
           "provenanceClass": "DERIVED"
         },
         "candidates": [
@@ -1496,6 +1518,8 @@
       "notAssessed": [
         "A 6 m × 25.08 m ramp strip is reserved down one edge, and the bay runs are packed into the remaining width. Gradient, transitions and headroom under B.7.2.2 are NOT ASSESSED — only the plan area is reserved.",
         "8.08 m of depth is left unused — too shallow for a bay (5.5 m) plus its aisle (6 m). It is reported rather than quietly filled.",
+        "The runs are laid modules along the width: 46 bays against 42 the other way round, in the same rectangle. Both were packed.",
+        "The 288 m² reserved for cores, plant and the ramp landing costs about 13 bays at 21.25 m² each — the area one more bay takes inside a module, not the gross area per bay.",
         "Whether a T junction sits opposite the chosen opening (B.7.2.1: \"Vehicle access shall not be located opposite a T junction\"). That needs the surrounding road network, which no affection plan carries.",
         "RTA approval. B.7.2.1 defers the location to RTA requirements and the Dubai access management manual; nothing here substitutes for that.",
         "Whether a traffic impact study is required for this development."
@@ -1520,7 +1544,7 @@
         },
         "rank": 1,
         "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-        "node": "n146",
+        "node": "n150",
         "provenanceClass": "DERIVED"
       },
       "candidates": [

@@ -301,6 +301,42 @@ export const EN = {
   },
 
   /** §6 — packed inside the podium, never its bounding box. */
+  losses: {
+    title: 'Where the bays went, and to what',
+    lede:
+      'Three different losses, kept apart. One efficiency percentage would hide which ' +
+      'of them you can do something about, and they are three different arguments with ' +
+      'three different people.',
+    regionLabel: 'What the level gave up',
+    caption: 'Bays and area given up on this level, by cause.',
+    cause: 'Where it went',
+    why: 'Why',
+    bays: 'Bays',
+    area: 'Area',
+    reserved: 'Cores, plant and the ramp landing',
+    reservedNote:
+      'Taken off the level before a bay was placed. It moves with the usable ' +
+      'fraction you set on the rules step.',
+    circulation: 'The cross aisle',
+    circulationNote:
+      'What it costs for a car to reach every bay. Without it the modules past the ' +
+      'first one have no way in, and their bays would be counted anyway.',
+    footprint: 'The corner a rectangle cannot reach',
+    footprintNote:
+      'Only where the podium is not a rectangle. A layout drawn on the true boundary ' +
+      'would hold more, and this engine does not attempt one.',
+    orientationTitle: 'Both ways round were packed.',
+    orientationBefore: ' The runs were laid ',
+    orientationAfter:
+      ', because that way places more bays in this rectangle. Which way round the ' +
+      'modules run is the only thing searched here — never where the ramp or the core ' +
+      'goes.',
+    strandedTitle: 'Not every bay that was placed was kept.',
+    strandedBody:
+      ' of them had no aisle a car can reach past the open end, so they are not ' +
+      'counted and not drawn. A bay that cannot be reached is not a bay, however ' +
+      'neatly it fits.',
+  },
   pack: {
     title: 'Packed inside the podium, never its bounding box',
     lede:

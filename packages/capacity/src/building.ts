@@ -650,11 +650,19 @@ function parkingOf(plan: LevelPlan): NonNullable<ModelLevel['parking']> {
     .sort(byScan)
     .map((r) => {
       const [a, b, c, d] = r.world as readonly [Pt, Pt, Pt, Pt];
+      /*
+        The centre line runs along the aisle, and an aisle no longer always runs
+        along the packing rectangle's local x: the cross aisle runs across it,
+        and the orientation sweep can lay every module aisle the other way. Taken
+        from corners 0–3 and 1–2 regardless, the arrow on the cross aisle pointed
+        through the parked cars instead of down the driveway.
+      */
+      const alongX = r.widthM.gte(r.heightM);
       return {
         outline: r.world.map(pt),
-        // The aisle runs along the packing rectangle's local x: its short sides are
-        // corners 0–3 and 1–2, and the centre line joins their midpoints.
-        centreLine: [midpoint(a, d), midpoint(b, c)] as const,
+        centreLine: (alongX
+          ? [midpoint(a, d), midpoint(b, c)]
+          : [midpoint(a, b), midpoint(d, c)]) as readonly [ModelPoint, ModelPoint],
         twoWay,
         label,
       };

@@ -50,8 +50,8 @@ packages/
                largest inscribed rectangle
   rules/       typed rule records · 12 evaluators · bitemporal store · resolution ·
                developer standards and project briefs (a *separate* type, see below)
-  capacity/    envelope · setback↔floor fixpoint · parking · layout · access ·
-               level plan · massing · core · bands A/B/C
+  capacity/    envelope · setback↔floor fixpoint · parking · layout · circulation ·
+               access · level plan · massing · core · bands A/B/C
   invariants/  18 checks. Depends on `core` ONLY. ✗ never capacity, geometry, rules
   validation/  independent validation + five-way claim statement. ✗ never capacity/geometry
   sheets/      the drawing set, composed from the engine's BuildingModel: site plan, one
@@ -119,7 +119,7 @@ and [`apps/api/src/report.ts`](apps/api/src/report.ts). Two rules govern those f
 |---|---|
 | `pnpm boundaries` | Someone re-adding a forbidden dependency. |
 | `pnpm contrast` | A colour pair below WCAG 2.2. An **unresolvable** pair counts as a failure, not a skip — a checker reporting "0 failures" over pairs it never measured is the vacuous pass this codebase refuses everywhere else. It also reads `packages/sheets/src/svg.ts`, because the drawings are inked from a stylesheet held in a string that no `.css` scan would find: every `var(--token, #hex)` fallback there must equal the light palette's value, and amber may sit only on `.sh-c-assumed`. The .glb's file palette (`packages/massing/src/palette.ts`) is read the same way, with amber allowed on its `assumed:` ink alone. |
-| `pnpm parity` | A renderer dropping, doubling or misplacing a bay while the others stay right. Over four plots it counts cars and bays in the React sheet, the SVG sheet, each sheet's DXF and the whole-building DXF (per level, by layer), against the engine's own figure — and checks the screen draws the paper's geometry path for path. The 3D view is counted too, without a browser: each level's instanced cars against the engine's count, each car at the sheet's point and heading for the same bay, at its level's floor. And the .glb is written by the real writer and read back by three's loader. Part of `pnpm test`; named so it can be run alone. |
+| `pnpm parity` | A renderer dropping, doubling or misplacing a bay while the others stay right. Over four plots it counts cars and bays in the React sheet, the SVG sheet, each sheet's DXF and the whole-building DXF (per level, by layer), against the engine's own figure — and checks the screen draws the paper's geometry path for path. The 3D view is counted too, without a browser: each level's instanced cars against the engine's count, each car at the sheet's point and heading for the same bay, at its level's floor. And the .glb is written by the real writer and read back by three's loader. It also **re-measures circulation on the drawn model** — arbitrary quadrilaterals in plot millimetres, against the engine's axis-aligned rectangles in level-local metres: every level's aisles are one network and every drawn bay's open end is on one. Delete the cross aisle from that model and the level must fall into one island per aisle, which is asserted, because a reachability check that cannot fail is worth nothing. Part of `pnpm test`; named so it can be run alone. |
 | `pnpm dxf` | The file a user actually downloads being wrong. It boots the real API, computes three runs (the landing page's worked example among them), signs the gates, downloads the building and every sheet, and has `dxf-parser` — a reader that never saw our writer — check each: it parses, every layer and block is declared, text is ASCII, both sentences are inside, `$INSUNITS` is metres, and the cars are the engine's bays at the level's height. It was made to fail on a doctored file before it was trusted. |
 | `pnpm test` | The engine, the API contract, and the screens rendered against **real engine output** rather than a fixture. |
 | `pnpm typecheck` | Both the sources *and* `tsconfig.tests.json`. Test files sit outside every package's `rootDir`, so for a long time nothing typechecked them — and the web render fixture had been structurally not a `Plot` for as long as it existed. It surfaced only when the access placement read `edge.start.x` and got `undefined`. A fixture that has drifted from the type it claims to be goes on proving the screens work against a shape the API never sends. |
@@ -295,6 +295,29 @@ is a defect even when it makes something easier.
 - **The parking level is packed into the largest rectangle *inside* the podium, never its
   bounding box.** `largestInscribedRectangle` errs by containment, so the bay count is a
   floor. On a non-rectangular podium the shortfall is reported in m², not hidden in a ratio.
+- **A bay nobody can drive to is not a bay, and the engine may not count one.**
+  The aisles were the right width from the start — 6.00 m, Table B.11 — and nothing
+  checked they *connect*: modules stacked up a level share no boundary, so every bay
+  past the first module was counted, drawn, exported and unreachable. So a **cross
+  aisle** now joins every module aisle to the way in, `circulation.ts` builds the
+  network as a graph and floods it from **one** entry — the ramp, or the aisle the
+  driveway lands on, never "any aisle that touches the perimeter", which would make
+  the check vacuous — and a bay whose open end does not lie *wholly* against a
+  reachable aisle is dropped rather than reported. Two rules that look like details
+  and are not: an opening narrower than the driveway it serves is not a way through,
+  and a bay half on an aisle has something parked across the other half. The price is
+  published as **three separate losses** — the reserved zone, the cross aisle, the
+  corner a rectangle cannot reach — in bays and in m², because one efficiency
+  percentage hides which of the three a reader can argue with. And because a
+  reachability check that cannot fail is worth nothing, two tests delete the cross
+  aisle and assert the level falls apart: once in the engine, once in the model the
+  renderers draw.
+- **The orientation is swept; the design is not.** Runs along a level's width and runs
+  along its depth place different numbers of bays in the same rectangle. Both are
+  packed, the better is kept, and the loser's count is in the formula. Two candidates,
+  both reported, reproducible — an *orientation*. Searching where the ramp or the core
+  goes is the optimiser of 34:37, a `TRADEOFF` value, and `PHASE_0_CLASSES` refuses to
+  emit one by construction. Do not let the first grow into the second.
 - **The massing is built in the engine, not the renderer.** A 3D view is the most persuasive
   surface in the product; a massing assembled by a viewer would be a building nobody
   computed, drawn convincingly. `@envelope/massing` takes a `BuildingModel` and nothing

@@ -180,6 +180,29 @@ export function presentRun(
           deductionsM2: toWire(levelPlan.deductionsM2),
           moduleDepthM: toWire(levelPlan.layout.moduleDepthM),
           usableAreaM2: toWire(levelPlan.layout.usableAreaM2),
+          orientation: toWire(levelPlan.layout.orientation),
+          /*
+            Three losses, never one efficiency. A reader who is short of parking
+            needs to know which of the three to argue with, and "84% efficient"
+            tells them none of it: the reserved zone is the usable fraction's to
+            answer for, the cross aisle is the price of every bay being
+            reachable, and the footprint loss belongs to the plot's own shape.
+          */
+          losses: {
+            reserved: {
+              areaM2: levelPlan.losses.reserved.areaM2.toFixed(0),
+              bays: levelPlan.losses.reserved.bays,
+            },
+            circulation: {
+              areaM2: levelPlan.losses.circulation.areaM2.toFixed(0),
+              bays: levelPlan.losses.circulation.bays,
+              strandedBays: levelPlan.losses.circulation.strandedBays,
+            },
+            footprint: {
+              areaM2: levelPlan.losses.footprint.areaM2.toFixed(0),
+              bays: levelPlan.losses.footprint.bays,
+            },
+          },
           standard: {
             angle: levelPlan.layout.standard.angle,
             driveway: levelPlan.layout.standard.driveway,

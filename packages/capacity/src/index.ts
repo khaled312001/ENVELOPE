@@ -1,6 +1,7 @@
 export * from './fixpoint.js';
 export * from './envelope.js';
 export * from './parking.js';
+export * from './circulation.js';
 export * from './layout.js';
 export * from './access.js';
 export * from './level-plan.js';

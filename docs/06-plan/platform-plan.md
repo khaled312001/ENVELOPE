@@ -418,6 +418,10 @@ two-way per Table B.11 and corroborated by his own AutoCAD drawings. What is mis
 **nothing checks they connect.** A bay can currently be placed in a run whose aisle never
 reaches the ramp, and the layout will still report the bay.
 
+**Done, 29 Sep 2026 — see §4.8**, except for the word *invariant*: the check changes the
+bay count, and `packages/invariants` reports rather than changes. It sits in the engine,
+and the independent re-check is in `pnpm parity`. What follows is the plan as written.
+
 **What we will do, §4.8 — a circulation graph, and a new invariant.** Build the aisle network as
 a graph, connect the ramp to it at its landing, and assert that **every placed bay touches an
 aisle that reaches the ramp**. A bay that fails is not drawn and not counted, and the shortfall
@@ -425,7 +429,9 @@ is reported in m² and in bays — never quietly absorbed. This is the same tech
 `ucalyptus/ParkSolver` uses for aisle connectivity and that `archlang` uses for room reachability,
 and it is exactly the kind of check this codebase already runs everywhere else.
 
-Also in §4.8, and cheap: **a stripe-angle sweep.** Today the modules run on the footprint's
+Also in §4.8, and cheap: **a stripe-angle sweep.** *Built as a two-candidate orientation
+sweep — runs along the width against runs along the depth — because the packer is
+axis-aligned by design and a free angle would be a layout nobody had checked.* Today the modules run on the footprint's
 principal axis. Trying the module direction at several angles and keeping the arrangement that
 places the most bays is a *deterministic* improvement — it searches an orientation, not a
 design, so it does not become a `TRADEOFF` value. The angle tried and the angle chosen are both
@@ -700,14 +706,70 @@ file states a core area or a core ratio. A branch that reads a figure no documen
 branch that would one day read the wrong one, so there are two sources — `USER_SET` and
 `ASSUMED` — and `CoreInput` says why in its own docblock.
 
-### 4.8 Parking circulation
+### 4.8 Parking circulation — **done, 29 Sep 2026**
 
-- The aisle graph and the reachability invariant (§2.10c).
-- The stripe-angle sweep, reported as `DERIVED`.
-- Bays lost to the core, to reachability, and to the non-rectangular shortfall reported
-  separately in bays and m² — three different losses, three different numbers.
-- The ramp connected to the aisle network at its landing, its run length checked against its
-  gradient and the floor-to-floor it serves.
+The other half of §2.10, and the half that was a live defect rather than an omission:
+*"و الاهم ال core لازم يكون في الحسبه و **ممر الي ماشي فيه السيارات مظبوط**"*.
+
+**The defect.** The aisles were the right width all along — 6.00 m two-way, Table B.11,
+corroborated by the client's own drawings. What nothing checked is that they **connect**.
+`layout.ts` stacked double-loaded modules up the level, each with its own aisle running the
+full width, and no two of those aisles touched: between the aisle of module 1 and the aisle
+of module 2 stood eleven metres of parked cars. Every bay in module 3 was counted, drawn,
+exported to DXF and stood up in the 3D view, and no car could reach any of them.
+
+That is the same argument the whole module rests on, one step later. A bay count that cannot
+be laid out is not a bay count; a bay that is laid out and cannot be reached is not one either.
+
+**What is built.**
+
+1. **A cross aisle**, running the packed depth down one side, joining every module aisle to
+   the ramp or to the slab edge where the driveway lands. Reserved only when there are two or
+   more aisles to join — with a single module there is nothing to connect and nothing is
+   charged.
+2. **A circulation graph** (`packages/capacity/src/circulation.ts`). Aisles and the ramp are
+   nodes; two are joined when they share an edge **at least as long as the driveway is wide**,
+   because a 400 mm gap is a drafting artifact and not a way through. Exactly one node is the
+   way onto the level. A bay is served when its **open end** — its short side — lies *wholly*
+   against a reachable node; a bay half on the aisle has something parked across the other
+   half. A bay that fails is dropped: not counted, not drawn, and said in words.
+3. **An orientation sweep.** Runs along the level's width and runs along its depth place
+   different numbers of bays in the same rectangle, often by a whole run. Both are packed and
+   the better is kept, `DERIVED`, with the loser's count in the formula. This searches an
+   *orientation* — two candidates, both reported, reproducible — and is emphatically not the
+   ramp-and-core optimiser of 34:37, which is a `TRADEOFF` value `PHASE_0_CLASSES` refuses by
+   construction.
+4. **Three losses, never one efficiency.** The reserved zone, the cross aisle, and the corner
+   a rectangle cannot reach, each in bays and in square metres, on the parking step and
+   through the API. They answer to three different people: the usable fraction, this module,
+   and the plot's own shape. "84% efficient" is a score a reader stops at and tells them none
+   of that. The bays figure divides by the **marginal** area a bay costs inside a module
+   (half a module depth × one charged bay width), not by the gross area per bay — the right
+   divisor for "how many bays did that cost", and independent of the count it explains.
+5. The **ramp is a node in the graph**, so the landing has to meet an aisle for anything on
+   the level to be reachable at all. Its gradient against the floor-to-floor it serves was
+   already computed in `building.ts` and is still `NOT ASSESSED` against B.7.2.2, which is
+   not encoded.
+
+**Why this is not a nineteenth invariant.** `packages/invariants` carries the PRD's
+INV-01…INV-18 and *reports*; it does not change a number. Reachability has to change the
+number — an unreachable bay is not counted, which is the entire point — so it belongs in the
+engine, before the count is emitted. The independent re-check lives in `pnpm parity`, which
+re-measures the property on the model the renderers actually draw: arbitrary quadrilaterals in
+plot millimetres rotated by whatever angle the inscribed rectangle sits at, against the
+engine's axis-aligned rectangles in level-local metres. Different representation, different
+code, same property.
+
+**And it was made to fail first.** Two doctored cases, because a reachability check that
+cannot say no is the vacuous pass this codebase refuses everywhere else:
+`packages/capacity/test/circulation.test.ts` deletes the cross aisle from a real level and
+asserts that more than half the bays strand; `apps/web/test/parity.test.tsx` deletes it from
+the drawn model and asserts the level falls into **one island per aisle**.
+
+**What it cost the worked example: nothing, and the reason is worth keeping.** The cross aisle
+took a bay run of width off the 46-bay level, and the sweep — laying the runs the other way —
+gave exactly that run back. The engine now reports both figures, so the next reader can see it
+was a trade and not a wash by luck.
 
 ### 4.9 Drawings and exports
 
@@ -1195,6 +1257,16 @@ plot canvas, the sheets and the DXF alike — ranked by pen weight as well as by
 ink, scaled together on a small plot so the ranking survives, and captioned in
 both languages with the sentence that matters: it ranks, it does not measure.
 An unclassified edge gets none. The full argument is in §4.3b.
+
+**N — §4.8 parking circulation, done.** The aisles were the right width and
+nothing checked they connect; three modules stacked up a level shared no
+boundary, and every bay past the first was counted, drawn, exported and
+unreachable. A cross aisle joins them, a graph proves it, an unreachable bay is
+dropped rather than reported, and the price is published as one of three
+separate losses instead of an efficiency percentage. Both orientations are
+packed and the better kept — an orientation, never a design. Proved by deleting
+the cross aisle and watching the level fall apart, in the engine and again in
+the drawn model. The full argument is in §4.8.
 
 **Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The

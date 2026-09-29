@@ -103,6 +103,23 @@ export interface LevelPlan {
   } | undefined;
   readonly bayCount: Traced<number>;
   readonly areaPerBayM2: TracedDecimal;
+  /**
+   * Three separate losses, in bays and in square metres — never one efficiency.
+   *
+   * The reserved zone and the cross aisle come from the packer; the footprint
+   * loss is this module's, because only here is the true boundary known. A
+   * reader who is short of parking needs to know which of the three to argue
+   * with, and a single percentage tells them none of it.
+   */
+  readonly losses: {
+    readonly reserved: { readonly areaM2: Decimal; readonly bays: number };
+    readonly circulation: {
+      readonly areaM2: Decimal;
+      readonly bays: number;
+      readonly strandedBays: number;
+    };
+    readonly footprint: { readonly areaM2: Decimal; readonly bays: number };
+  };
   /** What was taken off the level before packing, and where the number came from. */
   readonly deductionsM2: TracedDecimal;
   /**
@@ -235,21 +252,38 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     ? toWorld({ ...layout.reserved, kind: 'OBSTRUCTION', row: -1 })
     : undefined;
   const rampRect = layout.rects.find((r) => r.kind === 'RAMP');
+  /*
+    The ramp climbs along its LONG axis, and since the orientation sweep landed
+    the strip runs down either local edge. Reading the foot off `y` regardless
+    would, on a level packed the other way round, hand the section a ramp 6 m
+    long and 30 m wide, climbing sideways.
+  */
+  const rampRuns = rampRect ? rampRect.height.gte(rampRect.width) : false;
   const rampStrip =
     rampRect && layout.ramp
       ? {
           world: toWorld(rampRect),
-          foot: [local(rampRect.x, rampRect.y), local(rampRect.x.plus(rampRect.width), rampRect.y)] as const,
-          head: [
-            local(rampRect.x, rampRect.y.plus(rampRect.height)),
-            local(rampRect.x.plus(rampRect.width), rampRect.y.plus(rampRect.height)),
-          ] as const,
+          foot: (rampRuns
+            ? [local(rampRect.x, rampRect.y), local(rampRect.x.plus(rampRect.width), rampRect.y)]
+            : [local(rampRect.x, rampRect.y), local(rampRect.x, rampRect.y.plus(rampRect.height))]
+          ) as readonly [Pt, Pt],
+          head: (rampRuns
+            ? [
+                local(rampRect.x, rampRect.y.plus(rampRect.height)),
+                local(rampRect.x.plus(rampRect.width), rampRect.y.plus(rampRect.height)),
+              ]
+            : [
+                local(rampRect.x.plus(rampRect.width), rampRect.y),
+                local(rampRect.x.plus(rampRect.width), rampRect.y.plus(rampRect.height)),
+              ]) as readonly [Pt, Pt],
           widthM: layout.ramp.widthM,
           runM: layout.ramp.runM,
         }
       : undefined;
 
   const notAssessed = [...layout.notes, ...access.notAssessed];
+  const marginal = layout.losses.marginalAreaPerBayM2;
+  let footprintLostM2 = new Decimal(0);
   if (!rect.exact) {
     // Stated as a shortfall in square metres, not only as a ratio: "94% of the
     // podium" reads as a good score, "48 m² of the podium could not be laid out
@@ -257,12 +291,16 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     const podiumAreaM2 = rect.coverage.isZero()
       ? new Decimal(0)
       : widthM.times(depthM).div(rect.coverage);
-    const lostM2 = podiumAreaM2.minus(widthM.times(depthM));
+    footprintLostM2 = podiumAreaM2.minus(widthM.times(depthM));
+    const lostBays = marginal.isZero()
+      ? 0
+      : footprintLostM2.div(marginal).floor().toNumber();
     notAssessed.push(
       `The setback-permitted footprint is not a rectangle, so the level was packed into ` +
         `the largest rectangle inside it — ${widthM.toFixed(2)} × ${depthM.toFixed(2)} m, ` +
         `${rect.coverage.times(100).toFixed(1)}% of the footprint. ` +
-        `${lostM2.toFixed(0)} m² was left unpacked. The bay count is therefore a floor: ` +
+        `${footprintLostM2.toFixed(0)} m² was left unpacked, about ${lostBays} bays. ` +
+        `The bay count is therefore a floor: ` +
         `a bespoke layout on the true boundary would hold more, and this engine does ` +
         `not attempt one.`,
     );
@@ -289,6 +327,14 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     rampStrip,
     bayCount: layout.bayCount,
     areaPerBayM2: layout.areaPerBayM2,
+    losses: {
+      reserved: layout.losses.reserved,
+      circulation: layout.losses.circulation,
+      footprint: {
+        areaM2: footprintLostM2,
+        bays: marginal.isZero() ? 0 : footprintLostM2.div(marginal).floor().toNumber(),
+      },
+    },
     deductionsM2: deductionsTraced,
     notAssessed,
   };

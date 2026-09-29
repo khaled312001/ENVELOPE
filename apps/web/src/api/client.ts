@@ -313,6 +313,18 @@ export interface LevelPlanView {
   readonly deductionsM2: TracedWire;
   readonly moduleDepthM: TracedWire;
   readonly usableAreaM2: TracedWire;
+  /** Which way round the runs were laid, of the two the engine packed. */
+  readonly orientation: TracedWire;
+  /** Three separate losses, in bays and in square metres. Never one efficiency. */
+  readonly losses: {
+    readonly reserved: { readonly areaM2: string; readonly bays: number };
+    readonly circulation: {
+      readonly areaM2: string;
+      readonly bays: number;
+      readonly strandedBays: number;
+    };
+    readonly footprint: { readonly areaM2: string; readonly bays: number };
+  };
   readonly standard: {
     readonly angle: string;
     readonly driveway: string;

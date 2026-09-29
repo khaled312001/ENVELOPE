@@ -732,6 +732,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
           { id: 'pk-level', label: t.level.title },
           { id: 'pk-cost', label: t.cost.title },
           { id: 'pk-pack', label: t.pack.title },
+          { id: 'pk-losses', label: t.losses.title },
           { id: 'pk-dims', label: t.dims.title },
           ...(ramp ? [{ id: 'pk-ramp', label: t.ramp.title }] : []),
           { id: 'pk-access', label: t.access.title },
@@ -1222,7 +1223,97 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
             )}
           </Section>
 
-          {/* --- 7. The dimensions this run was cut to -------------------- */}
+          {/* --- 7. What the level gave up ------------------------------- */}
+          <Section
+            index={idx('pk-losses')}
+            id="pk-losses"
+            title={t.losses.title}
+            lede={<>{t.losses.lede}</>}
+          >
+            <div
+              className="schedule"
+              role="region"
+              aria-label={t.losses.regionLabel}
+              tabIndex={0}
+            >
+              <table>
+                <caption className="sr-only">{t.losses.caption}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">{t.losses.cause}</th>
+                    <th scope="col" className="schedule__fill">
+                      {t.losses.why}
+                    </th>
+                    <th scope="col" className="schedule__num">
+                      {t.losses.bays}
+                    </th>
+                    <th scope="col" className="schedule__num">
+                      {t.losses.area}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    {
+                      k: t.losses.reserved,
+                      why: t.losses.reservedNote,
+                      n: plan.losses.reserved.bays,
+                      a: plan.losses.reserved.areaM2,
+                    },
+                    {
+                      k: t.losses.circulation,
+                      why: t.losses.circulationNote,
+                      n: plan.losses.circulation.bays,
+                      a: plan.losses.circulation.areaM2,
+                    },
+                    {
+                      k: t.losses.footprint,
+                      why: t.losses.footprintNote,
+                      n: plan.losses.footprint.bays,
+                      a: plan.losses.footprint.areaM2,
+                    },
+                  ].map((l) => (
+                    <tr key={l.k}>
+                      <th scope="row" data-label={t.losses.cause}>
+                        {l.k}
+                      </th>
+                      <td className="schedule__fill" data-label={t.losses.why}>
+                        <p>{l.why}</p>
+                      </td>
+                      <td className="schedule__num" data-label={t.losses.bays}>
+                        <span className="value">{String(l.n)}</span>
+                      </td>
+                      <td className="schedule__num" data-label={t.losses.area}>
+                        <span className="value">
+                          {l.a}
+                          <span className="value__unit">m²</span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* The orientation, in the engine's own words. Two candidates were
+                packed and the better kept — an orientation, never a design. */}
+            <p className="pk-verdict">
+              <strong>{t.losses.orientationTitle}</strong>
+              {t.losses.orientationBefore}
+              <Engine>{plan.orientation.value}</Engine>
+              {t.losses.orientationAfter}
+            </p>
+
+            {plan.losses.circulation.strandedBays > 0 ? (
+              <p className="pk-verdict">
+                <strong>{t.losses.strandedTitle}</strong>{' '}
+                {String(plan.losses.circulation.strandedBays)}
+                {t.losses.strandedBody}
+              </p>
+            ) : null}
+          </Section>
+
+          {/* --- 8. The dimensions this run was cut to -------------------- */}
           <Section
             index={idx('pk-dims')}
             id="pk-dims"
@@ -1274,7 +1365,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
             </div>
           </Section>
 
-          {/* --- 8. The ramp ---------------------------------------------- */}
+          {/* --- 9. The ramp ---------------------------------------------- */}
           {ramp ? (
             <Section
               index={idx('pk-ramp')}
@@ -1304,7 +1395,7 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
             </Section>
           ) : null}
 
-          {/* --- 9. Where the cars get in --------------------------------- */}
+          {/* --- 10. Where the cars get in -------------------------------- */}
           <Section
             index={idx('pk-access')}
             id="pk-access"

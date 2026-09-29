@@ -47,6 +47,101 @@ const PALETTE: ScenePalette = {
   car: '#9a9ca3',
 };
 
+
+// --- circulation, re-measured on the drawn model ---------------------------
+/*
+  THE INDEPENDENT RE-CHECK. `packages/capacity/src/circulation.ts` decides which
+  bays are reachable and drops the rest; this measures the same property again on
+  the model the renderers actually draw, in a different representation and with
+  different code. There it is axis-aligned rectangles in level-local metres; here
+  it is arbitrary quadrilaterals in plot millimetres, rotated by whatever angle
+  the inscribed rectangle sits at. A defect that survives both is not an
+  arithmetic slip in one of them.
+
+  And it is entry-free on purpose. Which node a car enters through is the
+  engine's judgement; whether the network hangs together at all is a fact about
+  the drawing, and it is the fact that failed: three module aisles eleven metres
+  apart with nothing joining them, every bay counted.
+*/
+type XY = { readonly x: number; readonly y: number };
+
+const segments = (ring: readonly XY[]): (readonly [XY, XY])[] =>
+  ring.map((p, i) => [p, ring[(i + 1) % ring.length]!] as const);
+
+/**
+ * Length of the collinear overlap of two segments, in mm. 0 when they share none.
+ *
+ * The longer segment is always the reference. Every corner here is a millimetre
+ * rounding of a rotated exact point, so a direction taken off a 2.5 m bay edge
+ * and extended 49 m down an aisle drifts 3 mm — enough to read two edges of the
+ * same line as parallel and apart. Measured the other way round, off the long
+ * edge, the same pair is 0.15 mm out.
+ */
+function sharedRun(a: readonly [XY, XY], b: readonly [XY, XY]): number {
+  const la = Math.hypot(a[1].x - a[0].x, a[1].y - a[0].y);
+  const lb = Math.hypot(b[1].x - b[0].x, b[1].y - b[0].y);
+  const [s, t] = la >= lb ? [a, b] : [b, a];
+  const length = Math.max(la, lb);
+  if (length === 0) return 0;
+  const ux = (s[1].x - s[0].x) / length;
+  const uy = (s[1].y - s[0].y) / length;
+  // The kernel is on a 1 mm grid, so 2 mm off the line is off the line.
+  for (const q of t) {
+    if (Math.abs((q.x - s[0].x) * -uy + (q.y - s[0].y) * ux) > 2) return 0;
+  }
+  const b0 = (t[0].x - s[0].x) * ux + (t[0].y - s[0].y) * uy;
+  const b1 = (t[1].x - s[0].x) * ux + (t[1].y - s[0].y) * uy;
+  return Math.max(0, Math.min(length, Math.max(b0, b1)) - Math.max(0, Math.min(b0, b1)));
+}
+
+/** The widest opening between two outlines, in mm. */
+const contactMm = (a: readonly XY[], b: readonly XY[]): number =>
+  Math.max(
+    0,
+    ...segments(a).flatMap((e) => segments(b).map((f) => sharedRun(e, f))),
+  );
+
+/** How many connected components the drivable outlines form at this opening. */
+function components(nodes: readonly (readonly XY[])[], minOpeningMm: number): number {
+  const seen = new Set<number>();
+  let found = 0;
+  for (let i = 0; i < nodes.length; i += 1) {
+    if (seen.has(i)) continue;
+    found += 1;
+    const queue = [i];
+    seen.add(i);
+    while (queue.length > 0) {
+      const at = queue.pop()!;
+      for (let j = 0; j < nodes.length; j += 1) {
+        if (!seen.has(j) && contactMm(nodes[at]!, nodes[j]!) >= minOpeningMm) {
+          seen.add(j);
+          queue.push(j);
+        }
+      }
+    }
+  }
+  return found;
+}
+
+/** A bay is served when one of its short ends lies wholly on a drivable outline. */
+function served(bay: readonly XY[], nodes: readonly (readonly XY[])[]): boolean {
+  const ends = segments(bay)
+    .map((s) => ({ s, length: Math.hypot(s[1].x - s[0].x, s[1].y - s[0].y) }))
+    .sort((a, b) => a.length - b.length)
+    .slice(0, 2);
+  return ends.some(({ s, length }) =>
+    nodes.some((n) => segments(n).some((f) => sharedRun(s, f) >= length - 2)),
+  );
+}
+
+/**
+ * 6 m of two-way driveway, less a centimetre of rounding: an opening narrower
+ * than that is not a way through. The centimetre is not slack in the rule — it
+ * is the difference between an exact 6.000 m opening and the integer
+ * millimetres a rotated corner lands on.
+ */
+const AISLE_MM = 6000 - 10;
+
 const CASES = [
   { name: '80 x 40', ring: RECT_80x40, podiumLevels: undefined },
   { name: '80 x 40, two podium levels', ring: RECT_80x40, podiumLevels: 2 },
@@ -222,6 +317,34 @@ describe.each(CASES)('$name', ({ ring, podiumLevels }) => {
     }
   });
 
+
+  it('joins every aisle it draws into one network, on every parking level', () => {
+    const model = out().building;
+    let checked = 0;
+    for (const level of model.levels) {
+      if (!level.parking) continue;
+      const nodes = [
+        ...level.parking.aisles.map((a) => a.outline),
+        ...(level.parking.rampStrip ? [level.parking.rampStrip] : []),
+      ];
+      expect(nodes.length, `${level.id} draws bays and no aisle`).toBeGreaterThan(0);
+      expect(components(nodes, AISLE_MM), `${level.id} draws ${nodes.length} aisles`).toBe(1);
+      checked += 1;
+    }
+    expect(checked, 'no parking level was measured, so nothing was proved').toBeGreaterThan(0);
+  });
+
+  it('draws no bay whose open end is not on an aisle', () => {
+    const model = out().building;
+    for (const level of model.levels) {
+      if (!level.parking) continue;
+      const nodes = level.parking.aisles.map((a) => a.outline);
+      for (const bay of level.parking.bays) {
+        expect(served(bay.outline, nodes), `${level.id} bay ${bay.number}`).toBe(true);
+      }
+    }
+  });
+
   it('draws the same geometry on screen as on paper, path for path', () => {
     const model = out().building;
     for (const sheet of composeSheets(model, META)) {
@@ -229,5 +352,37 @@ describe.each(CASES)('$name', ({ ring, podiumLevels }) => {
       const react = renderToStaticMarkup(<SheetView sheet={sheet} idPrefix="p" onInspect={() => {}} />);
       expect(d(react), sheet.number).toEqual(d(sheetSvg(sheet, 'p')));
     }
+  });
+});
+
+/*
+  The doctored model. `packages/capacity/test/circulation.test.ts` proves the
+  engine drops an unreachable bay; this proves the property is visible in the
+  model the renderers draw, and that measuring it here can say no. Only the
+  120 x 80 fixture stacks more than one module per level, so it is named rather
+  than looped over — a skip that read as a pass is the vacuous gate this
+  codebase refuses.
+*/
+describe('the cross aisle, removed', () => {
+  it('leaves the level in islands, which is the defect it was added to end', () => {
+    const model = runPipeline(runInput(RECT_120x80, {})).building;
+    let doctored = 0;
+    for (const level of model.levels) {
+      if (!level.parking) continue;
+      const nodes = level.parking.aisles.map((a) => a.outline);
+      expect(nodes.length, `${level.id} stacks one module, so nothing is joined`).toBeGreaterThan(
+        1,
+      );
+      // The cross aisle is the one that meets the most other aisles.
+      const meets = nodes.map(
+        (n, i) => nodes.filter((m, j) => j !== i && contactMm(n, m) >= AISLE_MM).length,
+      );
+      const without = nodes.filter((_, i) => i !== meets.indexOf(Math.max(...meets)));
+      expect(components(without, AISLE_MM), `${level.id} without its cross aisle`).toBe(
+        without.length,
+      );
+      doctored += 1;
+    }
+    expect(doctored, 'no parking level was doctored, so nothing was proved').toBeGreaterThan(0);
   });
 });

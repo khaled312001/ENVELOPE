@@ -107,7 +107,11 @@ describe('layoutParkingLevel', () => {
 
   it('fits three modules into 51 m of depth and reports nothing left over', () => {
     const r = run('40', '51'); // exactly 3 × 17 m
-    const rows = new Set(r.rects.filter((x) => x.kind === RectKind.AISLE).map((x) => x.row));
+    // Module rows only: the cross aisle serves every module and carries a row of
+    // its own, so counting it here would report four modules in 51 m of depth.
+    const rows = new Set(
+      r.rects.filter((x) => x.kind === RectKind.AISLE && x.row >= 0).map((x) => x.row),
+    );
     expect(rows.size).toBe(3);
     expect(r.notes.join(' ')).not.toMatch(/left unused/);
   });

@@ -30,6 +30,21 @@ export const Role = {
   PLOT: 'plot',
   /** An edge's classification, written along it: "ROAD SIDE", "NEIGHBOUR". */
   EDGE_LABEL: 'edge-label',
+  /**
+   * The band ranking a boundary — Eng. Mohamed, 2026-09-28, who asked for a
+   * symbol for the road and its type.
+   *
+   * Four roles rather than one with a variant, because the four are inked and
+   * weighted differently and the legend names them separately. A single role
+   * carrying its hierarchy in a field would put the branch in every renderer.
+   */
+  BAND_ARTERIAL: 'band-arterial',
+  BAND_COLLECTOR: 'band-collector',
+  BAND_LOCAL: 'band-local',
+  BAND_ACCESS: 'band-access',
+  /** A party boundary, and open space. Not roads; not ranked. */
+  BAND_NEIGHBOUR: 'band-neighbour',
+  BAND_OPEN_SPACE: 'band-open-space',
   SETBACK: 'setback',
   DIMENSION: 'dimension',
   PODIUM: 'podium',

@@ -1,6 +1,7 @@
 export * from './types.js';
 export * from './plane.js';
 export * from './strip.js';
+export * from './edges.js';
 export * from './symbols.js';
 export * from './cars.js';
 export * from './compose.js';

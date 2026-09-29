@@ -38,6 +38,17 @@ export interface RoleStyle {
 export const ROLE_STYLE: Readonly<Record<Role, RoleStyle>> = {
   plot: { strokeMm: 0.5, fill: 'none' },
   'edge-label': { strokeMm: 0, fill: 'none' },
+  /*
+    THE FOUR ROAD BANDS, WEIGHTED AS THEY ARE RANKED. The pen is the ranking, so
+    a reader who cannot separate the inks still reads the hierarchy off the
+    drawing — the same 1.4.1 ruling that gave each edge class its own dash.
+  */
+  'band-arterial': { strokeMm: 0.6, fill: 'tint' },
+  'band-collector': { strokeMm: 0.45, fill: 'tint' },
+  'band-local': { strokeMm: 0.3, fill: 'tint' },
+  'band-access': { strokeMm: 0.18, fill: 'none' },
+  'band-neighbour': { strokeMm: 0.18, fill: 'hatch' },
+  'band-open-space': { strokeMm: 0.18, dash: '1 2', fill: 'none' },
   setback: { strokeMm: 0.35, dash: '3 1.2', fill: 'none' },
   dimension: { strokeMm: 0.18, fill: 'none' },
   podium: { strokeMm: 0.35, fill: 'tint' },
@@ -157,6 +168,12 @@ export function fillFor(role: Role, hatchId: string): string | undefined {
 /** Stroke and fill by role, as token references. Shapes and legend swatches share them. */
 const INK: Readonly<Partial<Record<Role, { stroke: string; fill?: string }>>> = {
   plot: { stroke: 'var(--text-primary, #14161c)' },
+  'band-arterial': { stroke: 'var(--accent, #2b5cd9)', fill: 'var(--accent-subtle, #eaf0fd)' },
+  'band-collector': { stroke: 'var(--accent, #2b5cd9)', fill: 'var(--accent-subtle, #eaf0fd)' },
+  'band-local': { stroke: 'var(--accent, #2b5cd9)', fill: 'var(--accent-subtle, #eaf0fd)' },
+  'band-access': { stroke: 'var(--accent, #2b5cd9)' },
+  'band-neighbour': { stroke: 'var(--text-secondary, #55555f)' },
+  'band-open-space': { stroke: 'var(--derived, #1f6b45)' },
   setback: { stroke: 'var(--text-secondary, #55555f)' },
   dimension: { stroke: 'var(--text-tertiary, #656571)' },
   podium: { stroke: 'var(--text-primary, #14161c)', fill: 'var(--surface-sunken, #eef1f8)' },

@@ -28,6 +28,7 @@
  * Everything in it is plain JSON: the API sends it as it is.
  */
 
+import type { EdgeClassification, RoadHierarchy } from './domain.js';
 import type { Mm } from './numeric.js';
 import type { ProvenanceClass } from './provenance/classes.js';
 import type { NodeId } from './provenance/graph.js';
@@ -212,6 +213,19 @@ export interface ModelEdge {
   readonly label: string;
   /** The setback applied to this edge, when one was. */
   readonly setbackM: string | null;
+  /**
+   * What the plot form says this edge is, and how the road is ranked.
+   *
+   * Carried on the model rather than re-read from the plot, because the drawings
+   * cannot see a `Plot`: they read this and nothing else. The label above is the
+   * WORDS; these are the FACTS the words were written from, and a band drawn
+   * from a parsed label would be a symbol derived from a string.
+   *
+   * `roadHierarchy` is null on every edge that is not a road, and on a road
+   * nobody has ranked yet — which is a real state and not a missing field.
+   */
+  readonly classification: EdgeClassification;
+  readonly roadHierarchy: RoadHierarchy | null;
 }
 
 export interface ModelAccess {

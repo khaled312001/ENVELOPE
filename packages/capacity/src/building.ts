@@ -477,6 +477,8 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
         end: pt(e.end),
         label: EDGE_LABEL[e.classification],
         setbackM: setbackBySeq.get(e.seq)?.toFixed(2) ?? null,
+        classification: e.classification,
+        roadHierarchy: e.roadHierarchy ?? null,
       })),
     },
     setbackLine: envelope.setbackRing.map(pt),

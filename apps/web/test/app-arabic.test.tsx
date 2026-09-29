@@ -715,6 +715,21 @@ const CASES: readonly Case[] = [
     ),
   },
   {
+    label: 'the plot drawing, an arterial and an access road',
+    node: () => (
+      <PlotCanvas
+        vertices={SQUARE}
+        edges={[
+          { seq: 0, classification: 'ROAD', roadHierarchy: 'ARTERIAL', lengthM: '80', setbackM: '4.5' },
+          { seq: 1, classification: 'ROAD', roadHierarchy: 'ACCESS', lengthM: '40', setbackM: '7.5' },
+          { seq: 2, classification: 'ADJACENT_PLOT', roadHierarchy: null, lengthM: '80' },
+          { seq: 3, classification: 'OTHER', roadHierarchy: null, lengthM: '40' },
+        ]}
+        areaM2="3200"
+      />
+    ),
+  },
+  {
     label: 'the plot drawing, nothing to draw',
     node: () => <PlotCanvas vertices={[]} edges={[]} areaM2="0" />,
   },
@@ -1139,6 +1154,58 @@ describe('the English copy, as it was written inline', () => {
     expect(render('en', <CoreArea area="" valid={true} onChange={noop} />)).not.toContain(
       'role="alert"',
     );
+  });
+
+  /*
+    THE BOUNDARY BANDS — Eng. Mohamed, 2026-09-28: there is a road field and a
+    road-type field, and they need a symbol. It was the most consequential field
+    on the plot form — it drives the vehicle-access recommendation under B.7.2.1
+    — and nothing drew it.
+  */
+  it('draws a band beside each classified boundary, and none beside an unclassified one', () => {
+    const markup = render(
+      'en',
+      <PlotCanvas vertices={SQUARE} edges={EDGES} areaM2="3200" />,
+    );
+    // Three of the four fixture edges take a band; the OTHER one does not,
+    // because an unclassified edge is a question and a band would answer it.
+    const bands = markup.match(/<polygon[^>]*aria-hidden="true"/g) ?? [];
+    expect(bands).toHaveLength(3);
+  });
+
+  it('ranks the road hierarchy by width, so the ranking is not carried by colour alone', () => {
+    const markup = render(
+      'en',
+      <PlotCanvas
+        vertices={SQUARE}
+        edges={[
+          { seq: 0, classification: 'ROAD', roadHierarchy: 'ARTERIAL', lengthM: '80' },
+          { seq: 1, classification: 'ROAD', roadHierarchy: 'ACCESS', lengthM: '40' },
+          { seq: 2, classification: 'OTHER', roadHierarchy: null, lengthM: '80' },
+          { seq: 3, classification: 'OTHER', roadHierarchy: null, lengthM: '40' },
+        ]}
+        areaM2="3200"
+      />,
+    );
+    // The two swatches, arterial then access: the key shows the ranking rather
+    // than only naming it. 1.4.1, the same ruling that gave each class a dash.
+    const heights = [...markup.matchAll(/<rect[^>]*height="([\d.]+)"[^>]*stroke-width="0.4"/g)].map(
+      (m) => Number(m[1]),
+    );
+    expect(heights).toHaveLength(2);
+    expect(heights[0]!).toBeGreaterThan(heights[1]!);
+  });
+
+  it('says the band ranks rather than measures, wherever one is drawn', () => {
+    const text = en(<PlotCanvas vertices={SQUARE} edges={EDGES} areaM2="3200" />);
+    expect(text).toContain('not a carriageway width');
+    expect(text).toContain('nothing is computed from it');
+  });
+
+  it('says nothing about bands on a plot that has none', () => {
+    const noBands = EDGES.map((e) => ({ ...e, classification: 'OTHER' as const, roadHierarchy: null }));
+    const text = en(<PlotCanvas vertices={SQUARE} edges={noBands} areaM2="3200" />);
+    expect(text).not.toContain('not a carriageway width');
   });
 
   it('quotes the developer’s own range when a standard fills the efficiency', () => {

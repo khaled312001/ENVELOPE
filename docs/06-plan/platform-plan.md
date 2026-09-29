@@ -183,6 +183,9 @@ percentage.
 under B.7.2.1 — it is the most consequential field on the plot form and it is currently a
 dropdown with no visual presence at all.
 
+**Done, 29 Sep 2026 — see §4.3b**, which took the symbol set out of §4.2 because it does
+not need the N-gon work in front of it. What follows is the plan as written.
+
 **What we will do, §4.2.** One symbol set, drawn **in code** in
 `packages/sheets/src/symbols.ts` beside the symbols already there, so that the screen, the A3
 sheet, the PDF and the DXF all draw the same glyph from the same source:
@@ -516,6 +519,49 @@ Each area lists the change, the files, and how it is verified. Nothing here ship
   are shown and the tighter binds.
 - A `plot-limits` panel: every limit, its source (sheet / brief / regulation / you), and its
   value, in one table.
+
+### 4.3b Boundary symbols — **done, 29 Sep 2026**
+
+The road-symbol half of §2.4, which §4.2 was carrying and which does not need the N-gon work
+in front of it. `packages/sheets/src/edges.ts` computes a **band** along each classified
+boundary, and the plot canvas, the A3 site plan, the parking sheets and the DXF all draw the
+same strip from the same numbers.
+
+| | |
+|---|---|
+| **Arterial** | 6 m band, heaviest pen |
+| **Collector** | 4.5 m |
+| **Local** | 3 m |
+| **Access** | 1.8 m, no fill |
+| **Adjacent plot** | 1.2 m, hatched |
+| **Open space** | 1.2 m, dotted |
+| **Unclassified** | *no band* — an unclassified edge is a question, and a band would answer it in ink |
+
+**The band ranks; it does not measure, and it says so.** An affection plan states a road's
+hierarchy and never its width, so a strip drawn at a real carriageway width would be asserting
+a dimension nobody read off a document. `BAND_NOTE` is printed on every sheet that draws one and
+in both languages under the plot canvas.
+
+**Four decisions that were not obvious.**
+
+1. **Outside the plot, and the side comes from the ring's own winding.** Inward, a band lies on
+   the setback strip and reads as another limit. The direction is derived from the signed area
+   rather than from an assumed counter-clockwise ring — a fixture that happened to be clockwise
+   would otherwise draw every band through the building, and `edges.test.ts` runs both windings.
+2. **The ranking is not carried by colour alone (1.4.1)** — the same ruling that already gave
+   each edge class its own dash. The four road bands are one accent at four widths and four pen
+   weights, and the legend swatch draws the band at its own ranking rather than only naming it.
+3. **Every band scales by one factor on a small plot.** Six metres beside a 20 m plot is a third
+   of the drawing and would run through the frame and the dimension strings, so the widest band
+   is capped at 6% of the plot's span — and because all of them scale together, an arterial stays
+   wider than a collector at every size.
+4. **The 3D DXF draws them once, at grade.** Every plan sheet carries the plot context, which is
+   right on paper; stacked into one file it would put a copy of the street through each parking
+   level, so the band roles joined `SITE_ROLES` the day they were written.
+
+`ModelEdge` gained `classification` and `roadHierarchy` to make this possible: the drawings
+cannot see a `Plot`, and a band derived by parsing the edge's printed label would be a symbol
+computed from a string.
 
 ### 4.4 The level schedule — **done, 29 Sep 2026**
 
@@ -1141,6 +1187,14 @@ against the two inputs that already carry it, rather than deducted. Unstated it
 is `ASSUMED` at 18% of the plate with a *measured* sensitivity of zero. The third
 source this plan asked for — a developer standard — states no core figure
 anywhere on file, so that branch was not written. The full argument is in §4.7.
+
+**M — §4.3b boundary symbols, done.** Road hierarchy drove the vehicle-access
+recommendation under B.7.2.1 and nothing drew it. Each classified boundary now
+carries a band — one width table in `packages/sheets/src/edges.ts`, read by the
+plot canvas, the sheets and the DXF alike — ranked by pen weight as well as by
+ink, scaled together on a small plot so the ranking survives, and captioned in
+both languages with the sentence that matters: it ranks, it does not measure.
+An unclassified edge gets none. The full argument is in §4.3b.
 
 **Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The

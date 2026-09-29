@@ -50,6 +50,8 @@
  * Each class now also has a dash pattern, and the legend swatch draws the same one.
  */
 
+import { bandWidthM } from '@envelope/sheets';
+import type { RoadHierarchy } from '@envelope/core';
 import { useId, type ReactNode } from 'react';
 
 import { AR } from '../i18n/plotCanvas.ar.js';
@@ -78,6 +80,29 @@ export interface PlotCanvasProps {
   readonly onSelectEdge?: (seq: number) => void;
   readonly selectedEdge?: number | null;
 }
+
+/**
+ * The band's fill and stroke by road hierarchy — Eng. Mohamed, 2026-09-28:
+ * *"في road , road type … بس لازم رمز ليهم"*.
+ *
+ * The WIDTH comes from `@envelope/sheets`, so the strip beside a road here is
+ * the strip beside the same road on the A3 sheet and in the DXF. Only the ink is
+ * decided here, because only this drawing has a stylesheet; the sheet's own
+ * palette carries the same ranking in pen weight.
+ *
+ * And the ranking is not carried by colour alone — 1.4.1, the same ruling that
+ * gave each edge class its dash. The bands are the same accent at four widths,
+ * so a reader who cannot separate the inks still reads the hierarchy off the
+ * width, and the legend prints the hierarchy in words as well.
+ */
+const BAND_FILL: Record<string, string> = {
+  ARTERIAL: 'var(--accent-subtle)',
+  COLLECTOR: 'var(--accent-subtle)',
+  LOCAL: 'var(--accent-subtle)',
+  ACCESS: 'var(--accent-subtle)',
+  ADJACENT_PLOT: 'var(--surface-sunken)',
+  OPEN_SPACE: 'var(--surface-sunken)',
+};
 
 const EDGE_COLOUR: Record<PlotEdgeView['classification'], string> = {
   ROAD: 'var(--accent)',
@@ -636,6 +661,40 @@ export function PlotCanvas({
             })
           : null}
 
+        {/* ---- THE BOUNDARY BANDS ---------------------------------------- */}
+        {/*
+          Under the edges, and OUTSIDE the plot — where the road is. Inward they
+          would lie on the setback strip and read as another limit. The width is
+          `@envelope/sheets`'s, so this strip and the A3 sheet's are one strip.
+        */}
+        {geom.map((g, i) => {
+          const edge = edges[i];
+          if (!edge) return null;
+          const kind = edge.classification === 'ROAD' ? edge.roadHierarchy : edge.classification;
+          const width = bandWidthM(
+            edge.classification,
+            (edge.roadHierarchy ?? null) as RoadHierarchy | null,
+            span,
+          );
+          if (width <= 0 || !kind) return null;
+          const pts = [
+            g.p,
+            g.q,
+            { x: g.q.x + g.n.x * width, y: g.q.y + g.n.y * width },
+            { x: g.p.x + g.n.x * width, y: g.p.y + g.n.y * width },
+          ];
+          return (
+            <polygon
+              key={`band${edge.seq}`}
+              points={pts.map((p) => `${p.x},${p.y}`).join(' ')}
+              fill={BAND_FILL[kind] ?? 'var(--surface-sunken)'}
+              stroke={EDGE_COLOUR[edge.classification]}
+              strokeWidth={ink.dim}
+              aria-hidden="true"
+            />
+          );
+        })}
+
         {/* ---- THE EDGES THEMSELVES -------------------------------------- */}
         {geom.map((g, i) => {
           const edge = edges[i];
@@ -855,6 +914,23 @@ export function PlotCanvas({
                 viewBox="0 0 18 8"
                 aria-hidden="true"
               >
+                {/* The band, at the same ranking it is drawn at on the plot: an
+                    arterial reads heavier than an access road here too, so the
+                    key teaches the drawing rather than merely naming it. */}
+                {swatchBand(e) > 0 ? (
+                  <rect
+                    x="1"
+                    y={4 - swatchBand(e)}
+                    width="16"
+                    height={swatchBand(e)}
+                    fill={
+                      BAND_FILL[e.classification === 'ROAD' ? (e.roadHierarchy ?? '') : e.classification] ??
+                      'var(--surface-sunken)'
+                    }
+                    stroke={EDGE_COLOUR[e.classification]}
+                    strokeWidth="0.4"
+                  />
+                ) : null}
                 <line
                   x1="1"
                   y1="4"
@@ -905,8 +981,30 @@ export function PlotCanvas({
           );
         })}
       </ol>
+      {/*
+        SAID WHEREVER A BAND IS DRAWN: the band ranks, it does not measure.
+        An affection plan states a road's hierarchy and never its width, and a
+        strip that looked like a carriageway would be asserting a dimension
+        nobody read off a document.
+      */}
+      {edges.some((e) => swatchBand(e) > 0) ? (
+        <p className="fine-print">{words.legend.bandNote}</p>
+      ) : null}
     </div>
   );
+}
+
+/**
+ * The band's height in the 18x8 legend swatch.
+ *
+ * The same ranking the drawing uses, scaled to the box: three units for the
+ * widest band. A key that showed every band at one height would name the
+ * hierarchy without showing it, which is the half of the distinction 1.4.1 says
+ * is not enough on its own.
+ */
+function swatchBand(e: PlotEdgeView): number {
+  const w = bandWidthM(e.classification, (e.roadHierarchy ?? null) as RoadHierarchy | null);
+  return w === 0 ? 0 : (w / 6) * 3;
 }
 
 /**

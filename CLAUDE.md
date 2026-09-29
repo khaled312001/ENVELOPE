@@ -258,6 +258,21 @@ is a defect even when it makes something easier.
   the `TRADEOFF` optimiser `PHASE_0_CLASSES` refuses by construction. Only its area is
   a quantity: no lift, stair, riser or core wall is placed, and `notModelled` says so
   under every drawing.
+- **A boundary symbol ranks; it does not measure.** Eng. Mohamed asked for a symbol for
+  the road and its type — the field that drives the vehicle-access recommendation under
+  B.7.2.1 and had no visual presence at all — and the honest version of it is narrow: an
+  affection plan states a road's *hierarchy* and never its width, so the band
+  `packages/sheets/src/edges.ts` draws beside each classified edge is a drafting
+  convention, heavier for higher, and `BAND_NOTE` says exactly that under every drawing
+  that carries one. Nothing is computed from it. Three things follow. It is drawn
+  **outside** the plot, on the side the ring's own winding gives rather than an assumed
+  one, because inward it would lie on the setback strip and read as another limit. The
+  hierarchy is carried by **width and pen weight as well as by ink** (1.4.1, the same
+  ruling that gave each edge class its dash), and the legend swatch draws each band at
+  its own ranking instead of only naming it. And an **unclassified edge gets no band** —
+  that edge is a question, and a band would answer it in ink. One width table, read by
+  the plot canvas, the A3 sheets and the DXF alike; the 3D DXF draws them once at grade
+  through `SITE_ROLES`, or every parking level would carry a copy of the street.
 - **A developer standard is not a rule, and the type system says so.** `DeveloperStandard`
   and `ProjectBrief` live in `packages/rules/src/standards/` and are deliberately *not*
   `RuleRecord`s: a `RuleRecord` is resolvable by `resolveParameter` and can bind the
@@ -285,7 +300,8 @@ is a defect even when it makes something easier.
   computed, drawn convincingly. `@envelope/massing` takes a `BuildingModel` and nothing
   else: every object is one element of it, coloured by the provenance class of the value
   that element names, and a click on it opens that value's derivation. It draws no slab
-  thickness, core or façade, because the model has none; `notModelled` says so under the
+  thickness or façade, and nothing inside the core but its outline, because the
+  model has none of them; `notModelled` says so under the
   picture. The podium/tower split is not derivable from a run — the affection plan states
   it — so an unentered podium level count is `ASSUMED`, amber, and said in words as well.
 - **Degenerate geometry raises.** Slivers, self-intersections and near-tangent offsets throw

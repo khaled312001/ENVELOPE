@@ -1636,6 +1636,18 @@
             "assumedInk": false
           },
           {
+            "name": "ENV-SITE-BAND-LOCAL",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-SITE-BAND-NEIGHBOUR",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-SITE-BAND-COLLECTOR",
+            "assumedInk": false
+          },
+          {
             "name": "ENV-SITE-EDGE-LABEL",
             "assumedInk": false
           },

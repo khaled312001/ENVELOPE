@@ -58,6 +58,16 @@ export const EN = {
     separator: ' · ',
     setback: 'setback ',
     unresolved: 'setback not yet resolved',
+    /*
+      The band beside each boundary — Eng. Mohamed, 2026-09-28, who asked for a
+      symbol for the road and its type. It ranks; it does not measure, and
+      saying so is the difference between a drawing and a claim.
+    */
+    bandNote:
+      'The band beside each boundary ranks what the affection plan says about that ' +
+      'edge: a heavier band is a higher road hierarchy. It is a drafting convention ' +
+      'and not a carriageway width — the sheet states a hierarchy and no width — and ' +
+      'nothing is computed from it.',
   },
 };
 

@@ -21,6 +21,7 @@ import {
   asMm,
   type BuildingModel,
   type ElementSource,
+  type ModelEdge,
   type ModelLevel,
   type ModelPoint,
   type ModelRing,
@@ -28,6 +29,7 @@ import {
   type TracedWire,
 } from '@envelope/core';
 
+import { BAND_NOTE, bandWidthM, edgeBand } from './edges.js';
 import {
   angleOf,
   boxOf,
@@ -134,10 +136,81 @@ export function composeSheets(model: BuildingModel, meta: SheetMeta): Sheet[] {
 // The plot, drawn the same way on every plan
 // ---------------------------------------------------------------------------
 
+/**
+ * The role a boundary's band is drawn in — Eng. Mohamed's *"لازم رمز ليهم"*.
+ *
+ * Null where no band is drawn: an unclassified edge, and a road nobody has
+ * ranked. An unclassified edge is a question, and a band for it would answer the
+ * question in ink.
+ */
+export function bandRole(edge: ModelEdge): Role | null {
+  if (edge.classification === 'ROAD') {
+    switch (edge.roadHierarchy) {
+      case 'ARTERIAL':
+        return Role.BAND_ARTERIAL;
+      case 'COLLECTOR':
+        return Role.BAND_COLLECTOR;
+      case 'LOCAL':
+        return Role.BAND_LOCAL;
+      case 'ACCESS':
+        return Role.BAND_ACCESS;
+      default:
+        return null;
+    }
+  }
+  if (edge.classification === 'ADJACENT_PLOT') return Role.BAND_NEIGHBOUR;
+  if (edge.classification === 'OPEN_SPACE') return Role.BAND_OPEN_SPACE;
+  return null;
+}
+
+/** What a band's legend row is called. The words on the plot form, ranked. */
+export const BAND_LEGEND: Readonly<Partial<Record<Role, string>>> = {
+  [Role.BAND_ARTERIAL]: 'Arterial road',
+  [Role.BAND_COLLECTOR]: 'Collector road',
+  [Role.BAND_LOCAL]: 'Local road',
+  [Role.BAND_ACCESS]: 'Access road',
+  [Role.BAND_NEIGHBOUR]: 'Neighbouring plot',
+  [Role.BAND_OPEN_SPACE]: 'Open space',
+};
+
+/** Every band on this plot, deduplicated, in hierarchy order — for a legend. */
+export function bandLegend(model: BuildingModel): LegendEntry[] {
+  const order: readonly Role[] = [
+    Role.BAND_ARTERIAL,
+    Role.BAND_COLLECTOR,
+    Role.BAND_LOCAL,
+    Role.BAND_ACCESS,
+    Role.BAND_NEIGHBOUR,
+    Role.BAND_OPEN_SPACE,
+  ];
+  const present = new Set(model.plot.edges.map(bandRole).filter((r): r is Role => r !== null));
+  return order.filter((r) => present.has(r)).map((role) => ({ role, label: BAND_LEGEND[role]! }));
+}
+
 /** Boundary, edge words, setback line — the context every plan sheet stands on. */
 function plotContext(model: BuildingModel, s: number, withDimensions: boolean): ModelItem[] {
   const ring = model.plot.outline;
   const items: ModelItem[] = [shape(Role.PLOT, ring, true, { name: 'Plot boundary' })];
+  /*
+    THE BANDS FIRST, so the boundary and its dimensions sit over them. They are
+    drawn on the OUTSIDE of the plot, where the road is: inward they would lie on
+    the setback strip and read as another limit.
+  */
+  for (const edge of model.plot.edges) {
+    const role = bandRole(edge);
+    if (!role) continue;
+    const box = boxOf(ring);
+    const spanM = Math.max(box.maxX - box.minX, box.maxY - box.minY) / 1000;
+    const band = edgeBand(
+      ring,
+      edge.start,
+      edge.end,
+      bandWidthM(edge.classification, edge.roadHierarchy, spanM),
+    );
+    if (band) {
+      items.push(shape(role, band, true, { name: `${BAND_LEGEND[role]!}, edge ${edge.seq + 1}` }));
+    }
+  }
   for (const edge of model.plot.edges) {
     const n = inwardNormal(edge.start, edge.end, ring);
     const mid = midpointOf(edge.start, edge.end);
@@ -259,6 +332,9 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
   ];
   const legend: LegendEntry[] = [
     { role: Role.PLOT, label: 'Plot boundary' },
+    // Every boundary kind this plot actually has, ranked. A legend listing the
+    // four road classes on a plot with one road is a key to a drawing nobody made.
+    ...bandLegend(model),
     { role: Role.SETBACK, provenanceClass: model.setbackSource.provenanceClass, label: 'Setback line, from each cited setback' },
     ...(ground ? [{ role: Role.PODIUM, provenanceClass: ground.outlineSource.provenanceClass, label: 'Podium footprint' }] : []),
     ...(tower ? [{ role: Role.TOWER, provenanceClass: tower.outlineSource.provenanceClass, label: 'Tower plate' }] : []),
@@ -279,6 +355,8 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
     paperItems: paperFurniture({ title: 'Site plan', number: 'A-001', scale: s, meta, facts, legend, north: true }),
     facts,
     notes: [
+      // Said wherever a band is drawn: the band ranks, it does not measure.
+      ...(bandLegend(model).length > 0 ? [BAND_NOTE] : []),
       ...model.placements.map((p) => p.statement),
       ...model.sections.map((x) => `Section ${x.id}-${x.id}: ${x.taken}`),
     ],

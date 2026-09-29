@@ -513,7 +513,29 @@ export function sheetDxf(sheet: Sheet, meta: DxfMeta): string {
 }
 
 /** Roles that belong to the site and are drawn once, at grade — not on every level. */
-const SITE_ROLES: ReadonlySet<Role> = new Set<Role>(['plot', 'edge-label', 'setback', 'dimension']);
+/**
+ * Roles the 3D file draws ONCE, at grade, on the site layer.
+ *
+ * Every plan sheet carries the plot context for reference, which is right on
+ * paper — a parking plan with no boundary on it is a plan of nothing. Stacked
+ * into one 3D file it is wrong: a boundary, a setback line and a road band
+ * repeated at every parking level's floor put five copies of the street through
+ * the car park.
+ *
+ * The bands joined this list the day they were added, for exactly that reason.
+ */
+const SITE_ROLES: ReadonlySet<Role> = new Set<Role>([
+  'plot',
+  'edge-label',
+  'setback',
+  'dimension',
+  'band-arterial',
+  'band-collector',
+  'band-local',
+  'band-access',
+  'band-neighbour',
+  'band-open-space',
+]);
 
 /**
  * The whole building in one DXF, in three dimensions.

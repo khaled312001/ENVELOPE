@@ -62,6 +62,14 @@ export interface BandsInput {
   readonly grossPermittedGfaM2: Decimal;
   /** `FR-DEF-002`. Recorded on Band A so `INV-18` can check the composition. */
   readonly parkingInFar: 'COUNTS_TOWARD_FAR' | 'EXCLUDED_FROM_FAR';
+  /**
+   * The same treatment as a traced value, so band A's derivation reaches it.
+   *
+   * Band A's formula already says which way the question went. What it could not
+   * say is on whose authority — and a 15–35% swing whose source is a word inside
+   * a formula string is a number a reader cannot follow anywhere.
+   */
+  readonly parkingInFarTraced: Traced<'COUNTS_TOWARD_FAR' | 'EXCLUDED_FROM_FAR'>;
   readonly parkingAreaM2: Decimal;
   readonly farMax: Decimal;
   readonly plotAreaM2: Decimal;
@@ -125,6 +133,7 @@ export function computeBands(input: BandsInput): CapacityResult {
       : `FAR ${input.farMax.toString()} × plot area ${input.plotAreaM2.toFixed(2)} m² ` +
         `(parking excluded from FAR)`,
     unit: 'm²',
+    uses: { parkingInFar: input.parkingInFarTraced },
     detail: {
       band: 'A',
       question: 'What do FAR and the area caps permit?',

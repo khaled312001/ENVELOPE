@@ -54,6 +54,15 @@ export const EN = {
   */
   saleableArea: 'Saleable area',
   saleableShare: 'Saleable share of GFA',
+  /*
+    FR-DEF-002's blocking question, as a row a reader can open.
+
+    Band A's formula says which way it went. This says on whose authority — the
+    person running the study, or the named practitioner whose recorded statement
+    the rules step pre-filled it from. It is the single input that moves capacity
+    most, so it is the one whose source should take the fewest clicks to reach.
+  */
+  parkingInFarTreatment: 'Parking in FAR',
 
   assumed: 'Assumed',
   /** Around the two governing figures the perturbation moved it between. */

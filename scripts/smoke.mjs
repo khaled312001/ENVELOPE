@@ -600,6 +600,36 @@ await step('the parking question has no pre-selected answer', async () => {
   if (!(await compute.isDisabled())) throw new Error('Compute was enabled before the question was answered');
 });
 
+/*
+  THE ANSWER ON FILE IS OFFERED, AND TAKING IT IS AN ACT.
+
+  The client answered `FR-DEF-002` in writing on 2026-09-28. The plan asked for
+  that answer to arrive pre-selected; the step above is why it does not, and this
+  step is what replaced it. A recorded statement, with his words and the edge of
+  his claim on it, and a button — so the 15–35% swing still belongs to somebody
+  after the click, which a checked radio could never guarantee.
+
+  All four parts of the panel are asserted, because the panel is the entire
+  difference between this and the hidden default the requirement forbids.
+*/
+await step('the answer on file is offered with its source, and taking it is one click', async () => {
+  const t = await page.textContent('body');
+  if (!/This is not a regulation/.test(t)) {
+    throw new Error('the statement is not marked as something other than a regulation');
+  }
+  if (!/Eng\. Mohamed/.test(t)) throw new Error('the statement does not say whose it is');
+  // His own words, which are the evidence for the sentence above them.
+  if (!/الباركنج/.test(t)) throw new Error('the statement is not quoted verbatim');
+  // Where the claim stops — the field this kind of record exists to carry.
+  if (!/15–35%/.test(t)) throw new Error('the statement does not say where it stops');
+
+  await page.getByRole('button', { name: /use this answer/i }).click();
+  const checked = await page.locator('input[name="parking-far"]:checked').count();
+  if (checked !== 1) throw new Error('taking the answer did not answer the question');
+  const value = await page.locator('input[name="parking-far"]:checked').getAttribute('value');
+  if (value !== 'EXCLUDED_FROM_FAR') throw new Error(`took "${value}", not the recorded answer`);
+});
+
 /**
  * A deployment may withhold the developer standards — `DEVELOPER_STANDARDS=off`, the
  * production default, because they are a client's brief given in confidence. Then
@@ -679,6 +709,12 @@ await step('the governing band is named, and the binding one is marked', async (
   const t = await page.textContent('body');
   if (!/Governing capacity/.test(t)) throw new Error('no governing capacity on screen');
   if (!/binds/.test(t)) throw new Error('the binding band is not marked');
+  /*
+    The 15–35% question, one click from the figure it moves. It reached the graph
+    as a `detail` field on band A until it had a node of its own, which meant the
+    largest single lever on the number above could not be opened from it.
+  */
+  if (!/Parking in FAR/.test(t)) throw new Error('the parking-in-FAR treatment is not reported');
   // §15.3 — the field does not exist, and neither does the word.
   if (/realistic/i.test(t)) throw new Error('a "realistic" band appeared');
 });

@@ -706,6 +706,16 @@ const AMBER_OK = [
   //  else: AssumptionRegister renders the bar only
   //  inside `entry.sensitivity`, i.e. only inside
   //  an assumption row.
+  /\.statement__verbatim/, //           a practitioner's quoted words inside the
+  //  amber statement banner, and the rail is the
+  //  banner's own border colour rather than a
+  //  second ink. It is admitted on the same
+  //  ruling as `.banner--assumed`, which already
+  //  paints the ground it sits on: the panel says
+  //  "this is not a regulation" and the quotation
+  //  is the evidence for that sentence. A rail in
+  //  a neutral ink here would read as a citation,
+  //  which is the one thing it is not.
 ];
 
 function assertAmberExclusive() {

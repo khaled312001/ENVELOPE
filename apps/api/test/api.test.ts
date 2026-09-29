@@ -363,6 +363,110 @@ describe('runs', () => {
     expect(Number(body.capacity.saleableEfficiency.value)).toBeLessThanOrEqual(1);
   });
 
+  /*
+    THE PRE-FILLED ANSWER TO FR-DEF-002, AND THE ATTRIBUTION THAT MAKES IT LEGAL.
+
+    The client answered the parking-in-FAR question in writing on 2026-09-28. A
+    run may cite that statement, and then the 15–35% swing is recorded under HIS
+    name rather than under the runner's. What a run may never do is name the
+    statement and send a different answer — that would put its own treatment
+    under somebody else's name, in a provenance tree built to be trusted.
+  */
+  it('serves the practice statement with the edge of the claim on it', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/statements', headers: ACTOR });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.parkingInFar).toBe('STMT-PARKING-IN-FAR-2026-09-28');
+    const stmt = body.statements.find(
+      (s: { statementId: string }) => s.statementId === body.parkingInFar,
+    );
+    expect(stmt.value).toBe('EXCLUDED_FROM_FAR');
+    // The words, kept. A translation is offered beside them, never instead.
+    expect(stmt.verbatim).toContain('FAR');
+    expect(stmt.translation).toMatch(/not counted/i);
+    // The field this type exists for: where the claim stops.
+    expect(stmt.limits).toMatch(/15–35%/);
+    expect(stmt.limits).toMatch(/not a clause of the Dubai Building Code/i);
+    expect(body.disclaimer).toMatch(/NOT ASSESSED/);
+  });
+
+  it('records the treatment under the name of whoever answered it', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: {
+        ...RUN_BODY,
+        plotId: plot.plotId,
+        parkingInFar: 'EXCLUDED_FROM_FAR',
+        parkingInFarStatementId: 'STMT-PARKING-IN-FAR-2026-09-28',
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    /*
+      USER_SET, never DERIVED. DERIVED in this system means the value reached a
+      cited regulatory instrument, and a practitioner saying what the practice is
+      has not done that. `FR-DEF-002` asks for "USER_SET by a named person" and
+      that is exactly what this is — the named person simply is not the runner.
+    */
+    expect(body.capacity.parkingInFarTreatment.value).toBe('EXCLUDED_FROM_FAR');
+    expect(body.capacity.parkingInFarTreatment.provenanceClass).toBe('USER_SET');
+
+    // His name is on the graph, reachable from the value, not buried in a string.
+    const nodes = body.provenance.nodes as { kind: string; label: string; id: string }[];
+    const users = nodes.filter((n) => n.kind === 'USER').map((n) => n.label);
+    expect(users).toContain('Eng. Mohamed');
+    // And the quotation reached the node, so a reader can see what was said.
+    expect(nodes.some((n) => n.label.includes('الباركنج'))).toBe(true);
+  });
+
+  it('refuses a run that names the statement and sends a different answer', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: {
+        ...RUN_BODY,
+        plotId: plot.plotId,
+        parkingInFar: 'COUNTS_TOWARD_FAR',
+        parkingInFarStatementId: 'STMT-PARKING-IN-FAR-2026-09-28',
+      },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().message).toMatch(/may not put its own answer under somebody/);
+  });
+
+  it('refuses a statement id nobody holds', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: plot.plotId, parkingInFarStatementId: 'STMT-INVENTED' },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().message).toMatch(/no statement on file/);
+  });
+
+  it('answers under the runner’s own name when no statement is cited', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: plot.plotId },
+    });
+    expect(res.statusCode).toBe(201);
+    const nodes = res.json().provenance.nodes as { kind: string; label: string }[];
+    // Nobody else's name appears on a run nobody else answered.
+    expect(nodes.filter((n) => n.kind === 'USER').map((n) => n.label)).not.toContain(
+      'Eng. Mohamed',
+    );
+  });
+
   it('serves the derivation of any single value — §20.2 click-through', async () => {
     const plot = await createPlot();
     const run = (

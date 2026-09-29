@@ -235,21 +235,50 @@ land-use slice, and a hidden `EXCLUDED_FROM_FAR` would silently produce a 15–3
 on the one plot where it happens not to hold — which is precisely the failure that would be
 found by a regulator and not by us.
 
-**What we will do, §4.3.** Three changes, all of which take his answer seriously without
-laundering it into an assumption:
+**What we did, §4.3 — landed 29 Sep 2026.** Three changes, all of which take his answer
+seriously without laundering it into an assumption. **Two of the three landed as written and one
+did not; the one that did not is the important one.**
 
-1. **`EXCLUDED_FROM_FAR` becomes the first option and is pre-selected**, because it is the
-   common case and because he said so.
-2. **His statement becomes a citable source.** A `RuleRecord` in the store with him named as its
-   author and the date of this reply, so a run that takes it resolves `DERIVED` and the
-   provenance tree shows *whose* statement it is. A named person's stated practice is a real
-   citation; a default is not.
+1. **`EXCLUDED_FROM_FAR` is the first option — and it is *not* pre-selected.** This paragraph
+   originally said pre-selected. It cannot be, and the repository said so before a reviewer did:
+   `scripts/smoke.mjs` has carried *"the parking question has no pre-selected answer"* since the
+   flow was first driven in a browser, and it failed the moment the pre-selection landed.
+
+   The gate is right. A checked radio beside an enabled Compute button **is** a default however
+   it is captioned, because a reader can click past it having decided nothing — and then the
+   15–35% reaches a pro forma owned by no one. That is the entire failure `FR-DEF-002` names.
+
+   So the answer is **offered**, not applied: a panel above the choice carrying his words, the
+   date, and where the claim stops, with one button on it — *"Use this answer"*. One click, the
+   answer is his, the run carries his name. That is everything the pre-selection was for, minus
+   the part that made it a default.
+2. **His statement is a citable source — and a `PracticeStatement`, not a `RuleRecord`, and
+   `USER_SET`, not `DERIVED`.** This paragraph originally said both of the other things, and
+   both were wrong in the same direction:
+   - A `RuleRecord` is resolvable by `resolveParameter` and can bind the envelope. Nothing
+     sourced to a practitioner's reply may do either — the same argument that keeps a developer
+     standard out of the rule store, at higher stakes.
+   - `DERIVED` in this system means a value reached a **cited regulatory instrument**. A
+     practitioner saying what the practice is has not done that. `FR-DEF-002` asks for
+     *"`USER_SET` by a named person"*, and that is exactly what this is; the named person is
+     simply not the runner. Marking it `DERIVED` would have been the single most consequential
+     piece of laundering available in this codebase, on the one number where it would matter
+     most.
+
+   `packages/rules/src/statements/` holds the type and the record. It is served from
+   `/api/statements`, never merged into `/api/rules`, and a run that names the statement while
+   sending a different treatment is refused at the boundary — a run may not put its own answer
+   under somebody else's name.
 3. **The one-click dual comparison stays** (`AC4`) — the screen still shows what the answer
    would be under the other reading, because on the day a community turns out to differ, that
-   number is the one that matters.
+   number is the one that matters. The attribution is **dropped** inside the comparison: it runs
+   the pipeline under both treatments, and carrying his name into the arm he did not answer
+   would be the same defect as (2) by a side door.
 
-He will still see one click, pre-answered, with his own name under it. What changes is that the
-run can say where the answer came from.
+**And the treatment is now a traced value.** It reached the graph as a `detail` field on band A,
+which no report could cite and no reader could open — on the largest single lever in the
+product. `capacity.parking_in_far` is a node of its own, on the capacity screen, one click from
+the figure it moves.
 
 ---
 
@@ -479,7 +508,9 @@ Each area lists the change, the files, and how it is verified. Nothing here ship
 
 ### 4.3 Rules and parameters
 
-- `EXCLUDED_FROM_FAR` first and pre-selected, sourced to a named `RuleRecord` (§2.6).
+- `EXCLUDED_FROM_FAR` first and **offered** — never pre-selected — sourced to a named
+  `PracticeStatement`, `USER_SET` by him. **Done, 29 Sep 2026; see §2.6 for the two parts of
+  this line that were wrong as written and what the smoke gate did about the first of them.**
 - The sheet's FAR, GFA, setbacks, coverage and height bind the run, with the sheet as the
   citation, and **the sheet's limit wins over a draft seed rule**. Where the two disagree, both
   are shown and the tighter binds.
@@ -993,6 +1024,15 @@ is the envelope's own GFA, `plate × levels`, which comes out of a solve that
 never reads the efficiency and so is not the circularity that entry feared. The
 argument in full is in §4.5; the entry below is left standing rather than edited,
 because a plan that quietly rewrites its own reasoning teaches nobody anything.
+
+**J — §2.6 parking-in-FAR, done, and a gate caught the plan.** The client's
+answer of 28 Sep is recorded as a `PracticeStatement` — a third instrument type,
+weaker than a developer standard and deliberately not a `RuleRecord` — served
+from `/api/statements`, quoted verbatim on the rules step with the edge of the
+claim beside it, and taken with one button rather than pre-selected. `pnpm smoke`
+failed the pre-selection this plan asked for, correctly: a checked radio beside
+an enabled Compute button is the default `FR-DEF-002` forbids, whatever is
+written above it. The full argument is in §2.6.
 
 **Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The

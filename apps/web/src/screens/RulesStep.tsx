@@ -31,9 +31,11 @@ import {
   type DeveloperStandardView,
   type ParkingComparison,
   type PlotView,
+  type PracticeStatementView,
   type RuleSummary,
   type RunRequestBody,
   type StandardsView,
+  type StatementsView,
 } from '../api/client.js';
 import { AR } from '../i18n/rules.ar.js';
 import { EN } from '../i18n/rules.en.js';
@@ -158,6 +160,16 @@ export function RulesStep({
     sheetPodiumLevels ? String(sheetPodiumLevels.value) : '',
   );
   const [comparison, setComparison] = useState<ParkingComparison | null>(null);
+  /**
+   * The recorded statements, and which of them is still answering for the reader.
+   *
+   * `fromStatement` holds the id while the pre-filled answer is untouched, and
+   * is cleared by any click. It is what decides whether the run is attributed to
+   * a named practitioner or to the person running it — and the rule is simply
+   * whose answer it actually is.
+   */
+  const [statements, setStatements] = useState<StatementsView | null>(null);
+  const [fromStatement, setFromStatement] = useState<string | null>(null);
   const [standards, setStandards] = useState<StandardsView | null>(null);
   const [scenarioId, setScenarioId] = useState<string>('');
   /**
@@ -192,6 +204,30 @@ export function RulesStep({
         if (e instanceof ApiError) onError(e);
       });
   }, [actor, onError]);
+
+  /*
+    THE STATEMENT IS OFFERED, NOT APPLIED — and the difference is the requirement.
+
+    The plan asked for this answer to arrive pre-selected. It cannot, and
+    `scripts/smoke.mjs` says so in a browser: `FR-DEF-002` forbids a default on
+    this question, and a checked radio beside an enabled Compute button is a
+    default whatever is written above it. A reader can click past it having
+    decided nothing, and the 15–35% then reaches a pro forma unowned.
+
+    So the statement arrives as an offer with a button on it. One click, the
+    answer is his, and the run carries his name — which is everything the plan
+    wanted from a pre-selection except the part that made it a default.
+  */
+  useEffect(() => {
+    void api
+      .statements(actor)
+      .then(setStatements)
+      .catch((e) => {
+        // A statement that will not load leaves the question unanswered, which
+        // is the state the product is designed for. It is not an error to show.
+        if (!(e instanceof ApiError)) throw e;
+      });
+  }, [actor]);
 
   useEffect(() => {
     void api
@@ -256,6 +292,17 @@ export function RulesStep({
   const body = (treatment: RunRequestBody['parkingInFar']): RunRequestBody => ({
     plotId: plot.plotId,
     parkingInFar: treatment,
+    /*
+      THE ID TRAVELS ONLY WHEN THE ANSWER IS STILL THE STATEMENT'S.
+
+      Both conditions are needed. `fromStatement` says the reader has not touched
+      the control; the equality says the treatment being sent is the one the
+      statement records — which matters because this same `body()` builds the
+      one-click comparison, and that call names a treatment of its own.
+    */
+    ...(fromStatement && treatment === parkingInFar
+      ? { parkingInFarStatementId: fromStatement }
+      : {}),
     unitMix: mix,
     parkingLevelsAvailable: levels,
     ...(podium.trim() !== '' ? { podiumLevels: Number(podium) } : {}),
@@ -317,8 +364,50 @@ export function RulesStep({
           </div>
         </header>
 
+        <StatementNote
+          statement={statements?.statements.find(
+            (s) => s.statementId === statements.parkingInFar,
+          )}
+          used={fromStatement !== null}
+          onUse={(statement) => {
+            setParkingInFar(statement.value as RunRequestBody['parkingInFar']);
+            setFromStatement(statement.statementId);
+          }}
+        />
+
         <fieldset className="choice-set">
           <legend className="sr-only">{t.parkingInFar.legend}</legend>
+
+          {/*
+            EXCLUDED IS FIRST BECAUSE IT IS THE ANSWER ON FILE, not because it is
+            the safe one — it is the opposite of the safe one, since it produces
+            the larger building. Putting the answer the file offers anywhere but
+            first would make a reader hunt for the option the panel above just
+            described to them.
+
+            It is NOT pre-checked. See the effect above: a checked radio here is
+            a default, and this is the one question that may not have one.
+          */}
+          <label className={`choice ${parkingInFar === 'EXCLUDED_FROM_FAR' ? 'is-selected' : ''}`}>
+            <input
+              type="radio"
+              name="parking-far"
+              value="EXCLUDED_FROM_FAR"
+              checked={parkingInFar === 'EXCLUDED_FROM_FAR'}
+              onChange={() => {
+                setParkingInFar('EXCLUDED_FROM_FAR');
+                // Their click, their answer — even when it agrees with the file.
+                setFromStatement(null);
+              }}
+            />
+            <span>
+              <strong>{t.parkingInFar.excluded.label}</strong>
+              <span className="choice__detail">{t.parkingInFar.excluded.detail}</span>
+              {fromStatement ? (
+                <span className="choice__detail">{t.parkingInFar.statement.badge}</span>
+              ) : null}
+            </span>
+          </label>
 
           <label className={`choice ${parkingInFar === 'COUNTS_TOWARD_FAR' ? 'is-selected' : ''}`}>
             <input
@@ -326,25 +415,14 @@ export function RulesStep({
               name="parking-far"
               value="COUNTS_TOWARD_FAR"
               checked={parkingInFar === 'COUNTS_TOWARD_FAR'}
-              onChange={() => setParkingInFar('COUNTS_TOWARD_FAR')}
+              onChange={() => {
+                setParkingInFar('COUNTS_TOWARD_FAR');
+                setFromStatement(null);
+              }}
             />
             <span>
               <strong>{t.parkingInFar.counts.label}</strong>
               <span className="choice__detail">{t.parkingInFar.counts.detail}</span>
-            </span>
-          </label>
-
-          <label className={`choice ${parkingInFar === 'EXCLUDED_FROM_FAR' ? 'is-selected' : ''}`}>
-            <input
-              type="radio"
-              name="parking-far"
-              value="EXCLUDED_FROM_FAR"
-              checked={parkingInFar === 'EXCLUDED_FROM_FAR'}
-              onChange={() => setParkingInFar('EXCLUDED_FROM_FAR')}
-            />
-            <span>
-              <strong>{t.parkingInFar.excluded.label}</strong>
-              <span className="choice__detail">{t.parkingInFar.excluded.detail}</span>
             </span>
           </label>
 
@@ -356,7 +434,10 @@ export function RulesStep({
               name="parking-far"
               value="OPEN_REGULATORY_QUESTION"
               checked={parkingInFar === 'OPEN_REGULATORY_QUESTION'}
-              onChange={() => setParkingInFar('OPEN_REGULATORY_QUESTION')}
+              onChange={() => {
+                setParkingInFar('OPEN_REGULATORY_QUESTION');
+                setFromStatement(null);
+              }}
             />
             <span>
               <strong>{t.parkingInFar.open.label}</strong>
@@ -505,6 +586,99 @@ export function RulesStep({
         ) : null}
       </div>
     </>
+  );
+}
+
+/**
+ * The recorded statement behind a pre-filled answer.
+ *
+ * `FR-DEF-002` forbids a default on the parking-in-FAR question, and this screen
+ * now arrives with it answered. The difference between that and a default is
+ * entirely on this panel: whose answer it is, in the words it was given in,
+ * dated, with the edge of the claim written down. Take the panel away and what
+ * is left is the hidden default the requirement exists to prevent.
+ *
+ * Amber, in the same banner the developer-standard notice uses, because it is
+ * the same caution: a thing that is not a regulation, sitting where a reader
+ * expects one. It renders nothing at all when no statement is on file — the
+ * question is then simply unanswered, which is a state this product is built for.
+ *
+ * Exported for the same reason the panels below are: it renders only after
+ * `/api/statements` has answered, which happens in an effect, and a static
+ * render runs no effects.
+ */
+export function StatementNote({
+  statement,
+  used = false,
+  onUse,
+}: {
+  readonly statement: PracticeStatementView | undefined;
+  /** True once this statement is the answer, which turns the offer into a record. */
+  readonly used?: boolean;
+  readonly onUse?: (statement: PracticeStatementView) => void;
+}): JSX.Element | null {
+  const t = useDict(EN, AR).parkingInFar.statement;
+  const ltr = useVerbatim();
+  if (!statement) return null;
+  return (
+    <div className="banner banner--assumed" role="note">
+      <div>
+        <strong>{t.notARule}</strong>
+        <p>
+          {t.prefilledBefore}
+          {ltr(statement.statedBy.name)}
+          {t.prefilledBetween}
+          {ltr(statement.statedBy.role)}
+          {t.prefilledAfter}
+          {ltr(statement.statedOn)}
+          {t.prefilledEnd}
+        </p>
+        {/*
+          HIS OWN WORDS, MARKED AS ARABIC AND RIGHT-TO-LEFT WHATEVER THE PAGE IS.
+
+          The quotation is Arabic. On the Arabic page that is the page's own
+          direction and the attributes change nothing; on the English page they
+          are what stops a right-to-left sentence being laid out left-to-right,
+          which reorders its clauses and its punctuation. A quotation that has
+          been re-ordered is not a quotation.
+        */}
+        <p className="fine-print">
+          <strong>{t.saidLabel}</strong>
+        </p>
+        <blockquote className="statement__verbatim" lang="ar" dir="rtl">
+          {statement.verbatim}
+        </blockquote>
+        <p className="fine-print">
+          <strong>{t.translationLabel}</strong> {ltr(statement.translation)}
+        </p>
+        <p className="fine-print">
+          <strong>{t.limitsLabel}</strong> {ltr(statement.limits)}
+        </p>
+        {/*
+          THE OFFER, AND IT IS A BUTTON RATHER THAN A CHECKED RADIO.
+
+          `FR-DEF-002` forbids a default here, and a pre-checked option beside an
+          enabled Compute button is a default however it is captioned. This is
+          one click and it is unmistakably an act: after it, the answer is the
+          statement's and the run carries the name of whoever made it.
+
+          Once taken it becomes a sentence rather than a control. Leaving a
+          button that has already been pressed offers a reader a second press
+          that would do nothing, and the radio below is where they change it.
+        */}
+        {used ? (
+          <p className="fine-print">
+            <strong>{t.inUse}</strong>
+          </p>
+        ) : onUse ? (
+          <p>
+            <button type="button" className="button" onClick={() => onUse(statement)}>
+              {t.use}
+            </button>
+          </p>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

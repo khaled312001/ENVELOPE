@@ -47,6 +47,10 @@ import {
   scenariosFor,
   SEED_RULES,
   SEED_RULES_WARNING,
+  PRACTICE_STATEMENTS,
+  statementById,
+  statementFor,
+  StatementSubject,
 } from '@envelope/rules';
 import {
   buildAssumptionRegister,
@@ -362,6 +366,47 @@ export async function build(
         'No rule in this deployment is approved. A licensed architect must author ' +
         'and approve every rule before the engine can produce an assessment. ' +
         SEED_RULES_WARNING,
+    };
+  });
+
+  /**
+   * Practice statements — the third kind of instrument, and the weakest.
+   *
+   * Its own endpoint for the same reason `/api/standards` is: a regulation, a
+   * developer's brief and a practitioner's recorded reply are three different
+   * kinds of thing, and the separation has to survive the wire or it will not
+   * survive the screen. Merging any two of these lists is the first step to
+   * showing them in the same ink.
+   *
+   * Served on every deployment. Unlike a developer's brief this is not anybody's
+   * confidential commercial expectation — it is a sentence the client asked us
+   * to act on, and the whole point of recording it is that a reader can see it.
+   *
+   * `disclaimer` travels with the list rather than being left to the client to
+   * add, because a client that forgets it ships a practitioner's opinion looking
+   * like a regulation.
+   */
+  app.get('/api/statements', async (request) => {
+    await who(request);
+    const parking = statementFor(StatementSubject.PARKING_IN_FAR);
+    return {
+      statements: PRACTICE_STATEMENTS.map((s) => ({
+        statementId: s.statementId,
+        subject: s.subject,
+        value: s.value,
+        statedBy: s.statedBy,
+        statedOn: s.statedOn,
+        source: s.source,
+        verbatim: s.verbatim,
+        translation: s.translation,
+        limits: s.limits,
+      })),
+      /** The one the rules step pre-fills from, named so a client need not search. */
+      parkingInFar: parking ? parking.statementId : null,
+      disclaimer:
+        'A practice statement is what a named practitioner says the practice is. It is ' +
+        'not a clause of any code and it has not been checked against one. REGULATORY ' +
+        'VALIDITY: NOT ASSESSED.',
     };
   });
 
@@ -1448,17 +1493,63 @@ function serialisePlot(plot: Plot, sheet: StoredSheet | undefined): string {
  * state when nobody entered it, and was, until this function, the ONLY state:
  * the affection plan's `G+2P+8` was read at intake and then dropped here.
  */
+/**
+ * The statement a run was answered with, checked against what it actually says.
+ *
+ * Two refusals, and the second is the one that matters. An id nobody holds is an
+ * obvious client error. An id whose recorded answer is **not** the answer being
+ * sent is an attribution attack in miniature: it would put the sender's own
+ * treatment under a named practitioner's name, in a provenance tree built to be
+ * trusted. Both are refused at the boundary rather than reconciled.
+ */
+function statementOn(body: RunRequest): RunInput['parkingInFarStatement'] {
+  if (body.parkingInFarStatementId === undefined) return undefined;
+  const stmt = statementById(body.parkingInFarStatementId);
+  if (!stmt) {
+    throw Object.assign(
+      new Error(
+        `no statement on file with id "${body.parkingInFarStatementId}". A run may cite a ` +
+          'recorded statement or answer for itself, not both and not neither.',
+      ),
+      { statusCode: 400 },
+    );
+  }
+  if (stmt.value !== body.parkingInFar) {
+    throw Object.assign(
+      new Error(
+        `statement "${stmt.statementId}" records "${stmt.value}", and this run sends ` +
+          `"${body.parkingInFar}". A run may not put its own answer under somebody ` +
+          'else’s name. Send the answer the statement records, or send no statement.',
+      ),
+      { statusCode: 400 },
+    );
+  }
+  return {
+    statementId: stmt.statementId,
+    statedBy: stmt.statedBy.name,
+    statedOn: stmt.statedOn,
+    verbatim: stmt.verbatim,
+  };
+}
+
 function runInputFrom(
   body: RunRequest,
   plot: Plot,
   rules: RunInput['rules'],
   actor: Actor,
 ): RunInput {
+  /*
+    THE ATTRIBUTION IS RESOLVED HERE, at the composition root, never in the
+    engine. `@envelope/capacity` takes the quotation as data; giving it a lookup
+    would make the engine's answer depend on a table it does not own.
+  */
+  const statement = statementOn(body);
   return {
     plot,
     rules,
     actor: { id: actor.id, name: actor.name },
     parkingInFar: body.parkingInFar,
+    ...(statement ? { parkingInFarStatement: statement } : {}),
     unitMix: {
       source: body.unitMix.source,
       entries: body.unitMix.entries.map(

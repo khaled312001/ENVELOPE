@@ -57,6 +57,36 @@ export const EN = {
       'The comparison runs the pipeline twice, so it needs the saleable share of GFA below first.',
     ifCounts: 'If it counts',
     ifExcluded: 'If it is excluded',
+
+    /*
+      THE PRE-FILLED ANSWER, AND THE WORDS IT CAME FROM.
+
+      `FR-DEF-002` forbids a default on this question. A pre-filled answer is not
+      a default only if the reader can see whose answer it is, read it in the
+      words it was given in, and see where the claim stops — so all three are on
+      the screen, above the choice, before anything is selected.
+
+      Held to the same discipline as the developer-standard picker: it is not a
+      regulation, and the screen says so first.
+    */
+    statement: {
+      notARule: 'This is not a regulation.',
+      /** The stator's name and role follow. */
+      prefilledBefore: 'The answer below is pre-filled from what ',
+      prefilledBetween: ', ',
+      /** The date follows. */
+      prefilledAfter: ', told us on ',
+      prefilledEnd: '. Change it and it becomes your answer, recorded under your name.',
+      saidLabel: 'In his words',
+      translationLabel: 'Translation',
+      limitsLabel: 'Where this stops',
+      /** The offer. One click, and the answer below becomes the statement's. */
+      use: 'Use this answer',
+      /** After it has been taken. A pressed button that does nothing is not left on screen. */
+      inUse: 'This is the answer below, recorded under his name. Change it and it becomes yours.',
+      /** On the choice itself, while his answer is the one selected. */
+      badge: 'From the statement above',
+    },
   },
 
   levels: {

@@ -38,6 +38,14 @@ export interface CapacityView {
    */
   readonly saleableEfficiency: TracedWire;
   readonly saleableAreaM2: TracedWire;
+  /**
+   * The parking-in-FAR treatment, with the name of whoever answered it.
+   *
+   * `USER_SET` always — by the person running the study, or by the named
+   * practitioner whose recorded statement the rules step pre-filled it from.
+   * Never `DERIVED`: no regulatory instrument has been read for it.
+   */
+  readonly parkingInFarTreatment: TracedWire;
   readonly explanation: string;
 }
 
@@ -160,6 +168,21 @@ export function CapacityBands({
               <dt>{t.saleableShare}</dt>
               <dd>
                 <TracedValue traced={capacity.saleableEfficiency} onInspect={onInspect} />
+              </dd>
+            </div>
+            {/*
+              THE 15–35% QUESTION, ONE CLICK FROM THE FIGURE IT MOVES.
+
+              `FR-DEF-002`'s blocking question reached the graph as a `detail`
+              field on band A, which a reader cannot open and a report cannot
+              cite. It is the largest single lever on the number above it and it
+              is answered by a person, never by a rule — so the name on it is
+              part of the answer, not metadata about it.
+            */}
+            <div>
+              <dt>{t.parkingInFarTreatment}</dt>
+              <dd>
+                <TracedValue traced={capacity.parkingInFarTreatment} onInspect={onInspect} />
               </dd>
             </div>
           </dl>

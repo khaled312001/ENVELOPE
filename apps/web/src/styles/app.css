@@ -1849,6 +1849,25 @@ button.plot-legend__row:active {
 .prov-clause blockquote { margin: 0; font-size: var(--text-sm); }
 .prov-clause figcaption { margin-top: var(--space-2); font-size: var(--text-xs); color: var(--text-tertiary); }
 
+/*
+  A practitioner's own words, quoted inside the amber statement banner.
+
+  The rail is on the inline start, so it mirrors with the quotation rather than
+  with the page: the blockquote carries `dir="rtl"` of its own, and a logical
+  property follows the element it is set on. A left border here would sit on the
+  wrong side of an Arabic sentence on the Arabic page and on the right side of it
+  on the English one, which is the same bug twice.
+
+  No ground of its own. It already sits on `--uncertain-surface`, and a second
+  tinted ground inside an amber banner is two grounds arguing about one meaning.
+*/
+.statement__verbatim {
+  margin: var(--space-2) 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: var(--rail-w) solid var(--uncertain-border);
+  font-size: var(--text-sm);
+}
+
 /* --- Misc ---------------------------------------------------------------- */
 
 .disclosure {

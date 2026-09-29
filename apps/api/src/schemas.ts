@@ -114,6 +114,18 @@ export const unitMixEntry = z.object({
 export const runRequest = z.object({
   plotId: z.string().min(1),
   parkingInFar: z.enum(['COUNTS_TOWARD_FAR', 'EXCLUDED_FROM_FAR', 'OPEN_REGULATORY_QUESTION']),
+  /*
+    WHICH RECORDED STATEMENT THE ANSWER CAME FROM, when it came from one.
+
+    Optional, and its absence means the answer is the runner's own — the
+    ordinary case, and the one `FR-DEF-002` already contemplates. When it is
+    present the server looks the statement up in `@envelope/rules` and refuses
+    an id it does not hold, or one whose recorded answer is not the answer being
+    sent. A client that could name a statement and then send a different
+    treatment could put its own answer under somebody else's name, which is the
+    one thing an attribution must not allow.
+  */
+  parkingInFarStatementId: z.string().min(1).optional(),
   unitMix: z
     .object({
       source: z.enum(['USER_SET', 'ASSUMED']),

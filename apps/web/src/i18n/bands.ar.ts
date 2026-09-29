@@ -47,6 +47,7 @@ export const AR: BandsDictionary = {
   lostToFloors: 'المفقود بحساب الطوابق كاملةً',
   saleableArea: 'المساحة القابلة للبيع',
   saleableShare: 'حصّة القابل للبيع من إجمالي المساحة الطابقية',
+  parkingInFarTreatment: 'المواقف في معامل البناء',
 
   assumed: 'مُفترَض',
   perturbedBefore: (perturbation: string): string =>

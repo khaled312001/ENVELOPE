@@ -113,6 +113,35 @@ export interface RunInput {
    * is `OPEN_REGULATORY_QUESTION`, because the answer moves capacity 15–35%.
    */
   readonly parkingInFar: ParkingInFar;
+  /**
+   * WHO ANSWERED IT, when the answer came from somebody other than the runner.
+   *
+   * `FR-DEF-002` permits this value to be `USER_SET` **by a named person**. The
+   * named person is usually whoever is running the study, and then this is
+   * absent and `input.actor` is the name on the node.
+   *
+   * It is present when the screen pre-filled the answer from a practice
+   * statement on file — a named practitioner's recorded reply, held in
+   * `@envelope/rules` as a `PracticeStatement`. Then the name on the node is
+   * **theirs**, because that is where the value came from, and a run that
+   * attributed it to the person who merely did not change it would be recording
+   * a decision nobody made.
+   *
+   * It is deliberately NOT a route to `DERIVED`. `DERIVED` means the value
+   * reached a cited regulatory instrument; a practitioner saying what the
+   * practice is has not done that, and dressing it as though it had is the one
+   * piece of laundering that would matter most on this particular number.
+   *
+   * The engine takes the quotation as data and does not look it up. `rules` is
+   * not a dependency of anything that would let this become a lookup, and the
+   * composition root is where a statement id is turned into these fields.
+   */
+  readonly parkingInFarStatement?: {
+    readonly statementId: string;
+    readonly statedBy: string;
+    readonly statedOn: string;
+    readonly verbatim: string;
+  };
   readonly unitMix: {
     readonly source: 'USER_SET' | 'ASSUMED';
     readonly entries: readonly UnitTypeMix[];
@@ -209,6 +238,14 @@ export interface RunOutput {
   readonly saleableEfficiency: Traced<Decimal>;
   readonly saleableAreaM2: Traced<Decimal>;
   /**
+   * The parking-in-FAR treatment, as a value a reader can click.
+   *
+   * `FR-DEF-002`'s blocking question, answered, with the name of whoever
+   * answered it on the node. Band A's formula says which way it went; this says
+   * on whose authority.
+   */
+  readonly parkingInFarTreatment: Traced<ParkingInFar>;
+  /**
    * The parking level, drawn.
    *
    * `parking` answers "how many bays does this scheme need and can the levels
@@ -285,6 +322,31 @@ export function runPipeline(input: RunInput): RunOutput {
       frontage_count: input.plot.frontageCount,
     },
   };
+
+  /*
+    THE TREATMENT ITSELF IS A TRACED VALUE, not only a word in band A's formula.
+
+    `FR-DEF-002` calls this the question with no default; until now the answer
+    reached the graph as a `detail` field on band A, which a reader cannot click
+    and a report cannot cite. It is the single input that moves capacity most, so
+    it gets a node of its own, carrying the name of whoever answered it.
+
+    USER_SET either way — by the person running the study, or by the named
+    practitioner whose recorded statement the screen pre-filled it from. Never
+    DERIVED: no regulatory instrument has been read for it.
+  */
+  const treatmentTraced = tracer.userSet('capacity.parking_in_far', input.parkingInFar, {
+    actor: input.parkingInFarStatement
+      ? {
+          id: input.parkingInFarStatement.statementId,
+          name: input.parkingInFarStatement.statedBy,
+        }
+      : input.actor,
+    label: input.parkingInFarStatement
+      ? `parking in FAR — stated ${input.parkingInFarStatement.statedOn}: ` +
+        `"${input.parkingInFarStatement.verbatim}"`
+      : 'parking in FAR',
+  });
 
   const envelope = solveEnvelope({ plot: input.plot, rules: input.rules, tracer, context });
 
@@ -521,6 +583,7 @@ export function runPipeline(input: RunInput): RunOutput {
     permittedGfaM2: availableGfaM2,
     grossPermittedGfaM2: grossPermittedGfa,
     parkingInFar: input.parkingInFar,
+    parkingInFarTraced: treatmentTraced,
     parkingAreaM2,
     farMax: farMaxOf(envelope),
     plotAreaM2: plotAreaOf(input.plot),
@@ -653,6 +716,7 @@ export function runPipeline(input: RunInput): RunOutput {
     demandAtGoverningBays,
     saleableEfficiency: efficiencyTraced,
     saleableAreaM2: saleableAreaTraced,
+    parkingInFarTreatment: treatmentTraced,
     levelPlan,
     levelPlanRefusal,
     massing,
@@ -870,7 +934,16 @@ export function compareParkingInFar(input: RunInput): {
 } {
   const attempt = (treatment: ParkingInFar): RunOutput | Error => {
     try {
-      return runPipeline({ ...input, parkingInFar: treatment });
+      /*
+        THE ATTRIBUTION IS DROPPED FOR THE COMPARISON, and it has to be.
+
+        The comparison runs the pipeline under BOTH treatments so a reader can
+        see what each is worth. A statement records one of them. Carrying it into
+        the other arm would put a named practitioner's name on an answer he did
+        not give — which is exactly what the attribution exists to prevent.
+      */
+      const { parkingInFarStatement: _unattributed, ...unsourced } = input;
+      return runPipeline({ ...unsourced, parkingInFar: treatment });
     } catch (e) {
       return e instanceof Error ? e : new Error(String(e));
     }

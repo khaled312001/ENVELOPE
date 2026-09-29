@@ -86,6 +86,7 @@ import {
   RuleDisclosure,
   RulesStep,
   SaleableEfficiency,
+  StatementNote,
 } from '../src/screens/RulesStep.js';
 import { WORKED_EXAMPLE } from '../src/demo.js';
 import {
@@ -251,6 +252,29 @@ const EDGES: readonly PlotEdgeView[] = [
   { seq: 2, classification: 'OPEN_SPACE', roadHierarchy: null, lengthM: '80' },
   { seq: 3, classification: 'OTHER', roadHierarchy: null, lengthM: '40' },
 ];
+
+/**
+ * The practice statement, shaped as the API serves it.
+ *
+ * Hand-written rather than read from `@envelope/rules`, and deliberately: this
+ * file asserts what the SCREEN says, and a fixture that imported the record
+ * would pass on a screen that rendered none of it. The Arabic here is the
+ * client's own sentence, which is the one string on this panel that must never
+ * be translated, softened or re-ordered.
+ */
+const STATEMENT = {
+  statementId: 'STMT-PARKING-IN-FAR-2026-09-28',
+  subject: 'PARKING_IN_FAR',
+  value: 'EXCLUDED_FROM_FAR',
+  statedBy: { name: 'Eng. Mohamed', role: 'the architect this engine is being built for' },
+  statedOn: '2026-09-28',
+  source: 'written reply to the Phase 0 walkthrough, 28 September 2026',
+  verbatim: 'الباركنج مش بيتحسب في ال FAR دا منفصل',
+  translation: 'Parking is not counted in the FAR — it is separate.',
+  limits:
+    'A practitioner’s statement of how this is treated in the work he has done. It is not a ' +
+    'clause of the Dubai Building Code and it has not been checked against one.',
+};
 
 interface Case {
   readonly label: string;
@@ -436,6 +460,14 @@ const CASES: readonly Case[] = [
         onUnitChange={noop}
       />
     ),
+  },
+  {
+    label: 'the answer on file, offered',
+    node: () => <StatementNote statement={STATEMENT} onUse={noop} />,
+  },
+  {
+    label: 'the answer on file, taken',
+    node: () => <StatementNote statement={STATEMENT} used={true} onUse={noop} />,
   },
   {
     label: 'the saleable figure asked in square metres',
@@ -805,6 +837,70 @@ describe('the English copy, as it was written inline', () => {
     expect(text).toContain('An area above zero, in square metres.');
     // Never the share's sentence, which names a bound the reader is not under.
     expect(text).not.toContain('Above 1 would mean the building sells more area');
+  });
+
+  /*
+    FR-DEF-002 FORBIDS A DEFAULT, AND THE SCREEN NOW ARRIVES ANSWERED.
+
+    The difference between those two facts is entirely this panel. Take it away
+    and what is left is the hidden default the requirement exists to prevent, so
+    each of its four parts is asserted by name: that it is not a regulation, who
+    said it, in what words, and where the claim stops.
+  */
+  it('says whose answer the pre-filled one is, and that it is not a regulation', () => {
+    const text = en(<StatementNote statement={STATEMENT} />);
+    expect(text).toContain('This is not a regulation.');
+    expect(text).toContain('Eng. Mohamed');
+    expect(text).toContain('2026-09-28');
+    expect(text).toContain('Change it and it becomes your answer, recorded under your name.');
+  });
+
+  it('quotes him verbatim, marked as Arabic and right-to-left', () => {
+    const out = render('en', <StatementNote statement={STATEMENT} />);
+    expect(out).toContain(STATEMENT.verbatim);
+    /*
+      On the English page the quotation is a right-to-left sentence inside
+      left-to-right prose. Without these it is laid out left-to-right, which
+      reorders its clauses and its punctuation — and a quotation that has been
+      reordered is not a quotation.
+    */
+    expect(out).toMatch(/lang="ar"/);
+    expect(out).toMatch(/dir="rtl"/);
+  });
+
+  it('prints where the claim stops, which is the part that makes it usable', () => {
+    const text = en(<StatementNote statement={STATEMENT} />);
+    expect(text).toContain('not a clause of the Dubai Building Code');
+  });
+
+  it('renders nothing when no statement is on file, rather than an empty frame', () => {
+    expect(render('en', <StatementNote statement={undefined} />)).toBe('');
+  });
+
+  /*
+    FR-DEF-002 FORBIDS A DEFAULT, AND A PRE-CHECKED RADIO IS ONE.
+
+    The plan asked for this answer to arrive selected. `scripts/smoke.mjs` says
+    in a browser that it may not: a checked option beside an enabled Compute
+    button lets a reader click past the largest single lever in the product
+    having decided nothing. So it is offered with a button, and taking it is an
+    act — which is everything the pre-selection was for, minus the part that
+    made it a default.
+  */
+  it('offers the answer as an act, not as a pre-selection', () => {
+    const out = render('en', <StatementNote statement={STATEMENT} onUse={noop} />);
+    expect(out).toContain('Use this answer');
+    // No control here decides anything on its own.
+    expect(out).not.toMatch(/<input/);
+  });
+
+  it('stops offering once the answer has been taken, and says whose it now is', () => {
+    const text = en(<StatementNote statement={STATEMENT} used={true} onUse={noop} />);
+    expect(text).toContain('recorded under his name');
+    // A pressed button that would do nothing is not left on the screen.
+    expect(render('en', <StatementNote statement={STATEMENT} used={true} onUse={noop} />)).not.toContain(
+      'Use this answer',
+    );
   });
 
   it('quotes the developer’s own range when a standard fills the efficiency', () => {

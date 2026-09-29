@@ -586,6 +586,35 @@ export interface DeveloperStandardView {
   }[];
 }
 
+/**
+ * A practice statement — what a named practitioner says the practice is.
+ *
+ * The third kind of instrument, and the weakest. A regulation says what may be
+ * built; a developer's brief says what a client will pay for; this says what one
+ * architect has seen done. It travels on its own endpoint so the three can never
+ * be shown in the same ink by accident.
+ */
+export interface PracticeStatementView {
+  readonly statementId: string;
+  readonly subject: string;
+  readonly value: string;
+  readonly statedBy: { readonly name: string; readonly role: string };
+  readonly statedOn: string;
+  readonly source: string;
+  /** Their own words, in their own language. Rendered verbatim, never translated away. */
+  readonly verbatim: string;
+  readonly translation: string;
+  /** Where the claim stops. The field a reader needs and a practitioner offers last. */
+  readonly limits: string;
+}
+
+export interface StatementsView {
+  readonly statements: readonly PracticeStatementView[];
+  /** The id of the parking-in-FAR statement, or null if the file holds none. */
+  readonly parkingInFar: string | null;
+  readonly disclaimer: string;
+}
+
 export interface StandardsView {
   readonly standards: readonly DeveloperStandardView[];
   /** The brief for this plot, when the file holds one. */
@@ -611,6 +640,14 @@ export interface StandardsView {
 export interface RunRequestBody {
   readonly plotId: string;
   readonly parkingInFar: 'COUNTS_TOWARD_FAR' | 'EXCLUDED_FROM_FAR' | 'OPEN_REGULATORY_QUESTION';
+  /**
+   * The recorded statement this answer came from, when it came from one.
+   *
+   * Sent only when the answer is the one the statement records and the reader
+   * left it as it was pre-filled. Send it with a different treatment and the
+   * server refuses: a run may not put its own answer under somebody else's name.
+   */
+  readonly parkingInFarStatementId?: string;
   readonly unitMix: {
     readonly source: 'USER_SET' | 'ASSUMED';
     readonly entries: readonly {
@@ -712,6 +749,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ gate, subjectHash }),
     }),
+
+  statements: (actor: Actor) => call<StatementsView>('/api/statements', { actor }),
 
   standards: (actor: Actor, plotNumber?: string) =>
     call<StandardsView>(

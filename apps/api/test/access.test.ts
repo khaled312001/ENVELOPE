@@ -233,6 +233,7 @@ const ROUTES: Readonly<Record<string, Reach>> = {
   'GET /api/definitions': 'open',
   'GET /api/rules': 'open',
   'GET /api/standards': 'open',
+  'GET /api/statements': 'open',
   'POST /api/intake/affection-plan': 'open',
   'POST /api/auth/register': 'open',
   'POST /api/auth/login': 'open',

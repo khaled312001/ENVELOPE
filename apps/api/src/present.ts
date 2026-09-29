@@ -282,6 +282,15 @@ export function presentRun(
        */
       saleableEfficiency: toWire(output.saleableEfficiency),
       saleableAreaM2: toWire(output.saleableAreaM2),
+      /**
+       * `FR-DEF-002`'s blocking question, as a value a reader can click.
+       *
+       * Band A's formula says which way it went; this says on whose authority.
+       * It is the single input that moves capacity most — 15–35% — and until it
+       * had a node of its own the answer reached the graph as a `detail` field
+       * that no report could cite and no reader could open.
+       */
+      parkingInFarTreatment: toWire(output.parkingInFarTreatment),
       explanation: explainGoverningBand(capacity),
     },
 

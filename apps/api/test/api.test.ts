@@ -1447,3 +1447,175 @@ describe('a five-sided plot', () => {
     );
   });
 });
+
+/**
+ * A plot with a curved boundary.
+ *
+ * *«الاراضي عموما كتير بتكون فيها كذا مقاس و كسور و كيرفات»* — the half of Eng.
+ * Mohamed's second point that a traverse table on its own does not answer. What
+ * is at risk here is not the trigonometry but the two things a curve can get
+ * silently wrong end to end: which SIDE it bows toward, and whether the area it
+ * adds survives the tessellation the polygonal kernel forces.
+ */
+describe('a plot whose frontage curves', () => {
+  /*
+    The 80 × 40 rectangle with its south frontage bowed onto a 200 m radius.
+    Walked anticlockwise, so the interior is north of that boundary and a
+    right-hand bow is outward: the plot GAINS the circular segment.
+
+    Closed form, independent of anything in this repository:
+      θ = 2·asin(40 / 200) = 0.4027 rad
+      segment = ½ × 200² × (θ − sin θ) = 215.9497 m²
+      arc length = 200 × θ = 80.543 m
+  */
+  const CURVED = {
+    ...SQUARE_80x40,
+    plotNumber: '345-1234-c',
+    edges: [
+      {
+        seq: 0,
+        classification: 'ROAD' as const,
+        roadHierarchy: 'LOCAL' as const,
+        arc: { radiusM: '200', bulgesRight: true },
+      },
+      ...SQUARE_80x40.edges.slice(1),
+    ],
+  };
+
+  const create = (payload: Record<string, unknown>) =>
+    app.inject({ method: 'POST', url: '/api/plots', headers: ACTOR, payload });
+
+  it('reports the area of the curved plot, not of the polygon standing in for it', async () => {
+    const created = await create(CURVED);
+    expect(created.statusCode).toBe(201);
+    // 3200 m² of rectangle plus 215.95 m² of circular segment. The tessellated
+    // polygon alone comes out short of this, and the shortfall is two orders of
+    // magnitude above the centimetre this figure is printed to.
+    expect(created.json().computedAreaM2).toBe('3415.95');
+  });
+
+  it('keeps the boundary a boundary, however many vertices it took', async () => {
+    const created = await create({ ...CURVED, plotNumber: '345-1234-c2' });
+    const view = await app.inject({
+      method: 'GET',
+      url: `/api/plots/${created.json().plotId}`,
+      headers: ACTOR,
+    });
+    const body = view.json();
+    // Four boundaries, as entered — and many more vertices than that, because
+    // the kernel is integer and polygonal and has no curve primitive.
+    expect(body.edges).toHaveLength(4);
+    expect(body.vertices.length).toBeGreaterThan(10);
+    expect(body.edges[0].ringSpan).toBeGreaterThan(10);
+    expect(body.edges.slice(1).map((e: { ringSpan: number }) => e.ringSpan)).toEqual([1, 1, 1]);
+    // Every span begins where the one before it ends, and together they are the
+    // whole ring. Without that the classifications drift along the curve.
+    let at = 0;
+    for (const edge of body.edges) {
+      expect(edge.ringFrom).toBe(at);
+      at += edge.ringSpan;
+    }
+    expect(at).toBe(body.vertices.length);
+    // The figures the affection plan prints, back out of the bulge that was stored.
+    expect(body.edges[0].arc.arcLengthM).toBe('80.543');
+    expect(body.edges[0].arc.radiusM).toBe('200.000');
+    expect(body.edges[0].arc.bulgesRight).toBe(true);
+    expect(body.edges[0].lengthM).toBe('80.000');
+    expect(body.edges[1].arc).toBeNull();
+  });
+
+  it('stores the same plot whichever way round it was walked', async () => {
+    /*
+      THE SIDE IS A STATEMENT ABOUT THE WALK, so reversing the walk inverts it.
+
+      The same plot entered clockwise: the curved frontage is now boundary 2,
+      travelled west, and the bow that was to the right is to the left. If the
+      server flipped the ring and kept the side, this plot would come back 431 m²
+      smaller — the segment subtracted instead of added — and would still be a
+      perfectly plausible plot.
+    */
+    const reversed = await create({
+      ...SQUARE_80x40,
+      plotNumber: '345-1234-cr',
+      vertices: [...SQUARE_80x40.vertices].reverse(),
+      edges: [
+        { seq: 0, classification: 'ROAD' as const, roadHierarchy: 'LOCAL' as const },
+        { seq: 1, classification: 'ADJACENT_PLOT' as const },
+        {
+          seq: 2,
+          classification: 'ROAD' as const,
+          roadHierarchy: 'LOCAL' as const,
+          arc: { radiusM: '200', bulgesRight: false },
+        },
+        { seq: 3, classification: 'ADJACENT_PLOT' as const },
+      ],
+    });
+    expect(reversed.statusCode).toBe(201);
+    expect(reversed.json().computedAreaM2).toBe('3415.95');
+  });
+
+  it('refuses a radius too small to span its own boundary, and says so', async () => {
+    const refused = await create({
+      ...CURVED,
+      plotNumber: '345-1234-cx',
+      edges: [
+        {
+          seq: 0,
+          classification: 'ROAD' as const,
+          roadHierarchy: 'LOCAL' as const,
+          arc: { radiusM: '30', bulgesRight: true },
+        },
+        ...SQUARE_80x40.edges.slice(1),
+      ],
+    });
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json().message).toMatch(/at least half of it/);
+  });
+
+  it('refuses a curve that bows into the plot, by the rule that was already there', async () => {
+    // A boundary bowing inward makes the plot re-entrant, and §14.1 has refused
+    // re-entrant plots by name since before curves existed. No second refusal
+    // was written for this: the shape classifier simply sees what is there.
+    const refused = await create({
+      ...CURVED,
+      plotNumber: '345-1234-ci',
+      edges: [
+        {
+          seq: 0,
+          classification: 'ROAD' as const,
+          roadHierarchy: 'LOCAL' as const,
+          arc: { radiusM: '200', bulgesRight: false },
+        },
+        ...SQUARE_80x40.edges.slice(1),
+      ],
+    });
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json().error).toBe('UnsupportedShapeError');
+    expect(refused.json().message).toMatch(/it is refused/);
+  });
+
+  it('sets every piece of the curve back by the setback its own frontage carries', async () => {
+    const created = await create({ ...CURVED, plotNumber: '345-1234-cs' });
+    const run = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: created.json().plotId },
+    });
+    expect(run.statusCode).toBe(201);
+    expect(run.json().capacity.governingGfa.value).toBeTruthy();
+    /*
+      The setback footprint has to be SMALLER than the plot and larger than the
+      one the straight rectangle gives, because the curve added area outside the
+      original frontage and the offset follows the curve inward.
+
+      This is the assertion that fails if the insets are pushed one per boundary
+      rather than one per ring edge: the tessellated pieces of the curve would
+      take whichever setback happened to share their index, and on this plot
+      that is the 3 m party boundary rather than the road's.
+    */
+    const footprint = Number(run.json().envelope.setbackPermittedFootprint.value);
+    expect(footprint).toBeLessThan(3415.95);
+    expect(footprint).toBeGreaterThan(0);
+  });
+});

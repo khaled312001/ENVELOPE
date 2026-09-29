@@ -46,6 +46,8 @@ export const AR: PlotCanvasDictionary = {
     edge: (n: number, label: string, lengthM: string): string =>
       `الضلع ${n}، ${label}، طوله ${lengthM} متر`,
     setback: (setbackM: string): string => `، والارتداد ${setbackM} متر`,
+    curve: (radiusM: string, arcLengthM: string): string =>
+      `، ينحني بنصف قطر ${radiusM} متر، وطوله على امتداد القوس ${arcLengthM} متر`,
     edgeSeparator: '. ',
     footprint: (areaM2: string): string => `. مسطّح البناء المتاح ${areaM2} متر مربع.`,
     scale: (gridM: number): string =>
@@ -60,6 +62,8 @@ export const AR: PlotCanvasDictionary = {
     separator: ' · ',
     setback: 'الارتداد ',
     unresolved: 'لم يُحسَم الارتداد بعد',
+    curve: (radiusM: string, arcLengthM: string): string =>
+      `نق ${radiusM} م · ${arcLengthM} م على القوس`,
     bandNote:
       'الشريط الملاصق لكلّ حدّ يُرتّب ما يقوله مخطّط الأثر عن ذلك الحدّ: فكلّما ثقل الشريط ' +
       'علا تصنيف الطريق. وهو عُرف رسوميّ لا عرض مسار — إذ يذكر المخطّط تصنيفًا ولا يذكر ' +

@@ -26,14 +26,17 @@ import {
   mm2ToM2,
   mmToM,
   type Plot,
+  ringSpanOf,
   type Traced,
   type Tracer,
   toMm,
 } from '@envelope/core';
 import {
+  arcFromBulge,
   offsetPerEdge,
   scaleToArea,
   verifiedArea,
+  type BoundaryArc,
   type EdgeInset,
   type Ring,
 } from '@envelope/geometry';
@@ -345,7 +348,16 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
         kind: value.kind,
       });
     }
-    insets.push({ seq: edge.seq, insetMm: toMm(value.value) });
+    // One inset per *ring* edge, not per boundary. A curved boundary is one
+    // entry in `plot.edges` and many vertices in `plot.ring` — the kernel is
+    // polygonal — so the setback the reader set for that frontage is applied to
+    // every straight piece the curve became. Pushing one inset per boundary
+    // would silently leave the tessellated pieces of the curve at the setback
+    // of whichever boundary happened to share their index.
+    const span = ringSpanOf(edge);
+    for (let k = 0; k < span.count; k += 1) {
+      insets.push({ seq: span.from + k, insetMm: toMm(value.value) });
+    }
 
     // One traced node per edge, emitted unconditionally.
     //
@@ -382,7 +394,31 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     }
   }
 
-  const offset = offsetPerEdge(plot.ring, insets);
+  /*
+    A CURVED BOUNDARY GOES TO THE KERNEL AS A CIRCLE, NOT AS ITS PIECES.
+
+    `offsetPerEdge` carries the argument in full: intersecting the shifted lines
+    of two consecutive pieces of a 200 m arc is intersecting two lines six
+    thousandths of a radian apart, and on the millimetre grid that lands the
+    offset vertex up to eighty millimetres from where it belongs. The concentric
+    arc is exact and well conditioned, and the centre is recovered from the
+    bulge the plot stores rather than being carried as a fourth copy of it.
+  */
+  const arcs: BoundaryArc[] = [];
+  for (const edge of plot.edges) {
+    if (!edge.arc) continue;
+    const span = ringSpanOf(edge);
+    const circle = arcFromBulge(edge.start, edge.end, edge.arc.bulge);
+    arcs.push({
+      from: span.from,
+      count: span.count,
+      centreX: circle.centreX,
+      centreY: circle.centreY,
+      radiusMm: circle.radiusMm,
+    });
+  }
+
+  const offset = offsetPerEdge(plot.ring, insets, arcs);
   const setbackFootprintM2 = mm2ToM2(offset.areaMm2);
 
   const setbackRule = appliedSetbacks[0];

@@ -70,6 +70,75 @@ export interface PlotEdgeView {
   readonly lengthM: string;
   readonly setbackM?: string;
   readonly ruleId?: string;
+  /*
+    WHERE THIS BOUNDARY LIVES IN `vertices`, WHEN THE TWO ARE NOT THE SAME LIST.
+
+    The kernel is polygonal, so a curved boundary is one entry here and many
+    vertices there. Without the span, boundary 3's classification would be drawn
+    on whichever tessellated chord of the curve happened to be third — the plot
+    would be the right shape, every band would be on the wrong piece of it, and
+    the drawing would look entirely reasonable.
+
+    Absent means the lists agree, which is every plot with no curve in it.
+  */
+  readonly ringFrom?: number;
+  readonly ringSpan?: number;
+  /**
+   * The curve's own figures, where the boundary curves.
+   *
+   * The shape is already in `vertices` — the ring arrives tessellated — so
+   * nothing here is drawn from these. They are what an affection plan prints,
+   * carried so the legend and the spoken description can quote the document
+   * instead of the polygon standing in for it.
+   */
+  readonly arc?: {
+    readonly radiusM: string;
+    readonly arcLengthM: string;
+    readonly sweepDeg: string;
+    readonly bulgesRight: boolean;
+  } | null;
+}
+
+/**
+ * Which boundary owns each ring vertex.
+ *
+ * The inverse of the spans: `ringOf(edges, n)[k]` is the `seq` of the boundary
+ * whose run contains ring vertex `k`. Absent spans mean the two lists already
+ * agree, which is every plot with no curve in it.
+ */
+function ringOf(edges: readonly PlotEdgeView[], ringLength: number): readonly number[] {
+  const owner = new Array<number>(ringLength).fill(0);
+  for (const edge of edges) {
+    const from = edge.ringFrom ?? edge.seq;
+    for (let k = 0; k < (edge.ringSpan ?? 1); k += 1) owner[(from + k) % ringLength] = edge.seq;
+  }
+  return owner;
+}
+
+/**
+ * A polyline pushed outward by a constant width, each point along its own
+ * normal — the average of the two segments meeting there, so a band round a
+ * curve keeps its width instead of pinching at every vertex.
+ */
+function offsetRun(run: readonly Pt[], width: number): readonly Pt[] {
+  const segments = run.slice(0, -1).map((a, k) => {
+    const b = run[k + 1]!;
+    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    return { x: -(b.y - a.y) / len, y: (b.x - a.x) / len };
+  });
+  return run.map((p, k) => {
+    const before = segments[k - 1];
+    const after = segments[k];
+    const n = before && after
+      ? (() => {
+          const x = before.x + after.x;
+          const y = before.y + after.y;
+          const len = Math.hypot(x, y) || 1;
+          return { x: x / len, y: y / len };
+        })()
+      : (before ?? after ?? { x: 0, y: 0 });
+    return { x: p.x + n.x * width, y: p.y + n.y * width };
+  });
 }
 
 export interface PlotCanvasProps {
@@ -300,13 +369,39 @@ export function PlotCanvas({
   // The setback footprint, built by inset-per-edge in view space. This is a
   // faithful redraw of what the kernel produced for a convex plot; it is drawn
   // only when every edge has a setback, so it can never show a partial answer.
-  const insets = edges.map((e) => (e.setbackM ? Number(e.setbackM) : null));
+  /*
+    ONE SETBACK PER RING VERTEX, NOT PER BOUNDARY.
+
+    `insetPolygon` shifts every straight piece of the ring, and a curved boundary
+    is many of those. Handing it one inset per boundary would leave the pieces of
+    a curve indexed against whichever boundary shares their position — which is
+    the same expansion `packages/capacity/src/envelope.ts` does before it calls
+    the real offset kernel, for the same reason.
+  */
+  const insets = ringOf(edges, svgPts.length).map((seq) => {
+    const setback = edges[seq]?.setbackM;
+    return setback ? Number(setback) : null;
+  });
   const complete = insets.length === svgPts.length && insets.every((v) => v !== null);
   const footprint = complete ? insetPolygon(svgPts, insets as number[]) : null;
 
-  /** Per-edge frame: unit tangent, outward unit normal, midpoint, readable angle. */
-  const geom = svgPts.map((p, i) => {
-    const q = svgPts[(i + 1) % svgPts.length]!;
+  /**
+   * Per-BOUNDARY frame: the two corners, the chord's tangent and outward normal,
+   * a readable angle — and the run of ring vertices the boundary actually
+   * occupies, which is what gets stroked.
+   *
+   * The frame stays the chord's on purpose. A dimension string measures between
+   * two corners and a witness line stands at each of them; both are statements
+   * about where the boundary begins and ends, not about how it travels.
+   */
+  const ringN = svgPts.length;
+  const geom = edges.map((edge) => {
+    const from = edge.ringFrom ?? edge.seq;
+    const count = edge.ringSpan ?? 1;
+    const run: Pt[] = [];
+    for (let k = 0; k <= count; k += 1) run.push(svgPts[(from + k) % ringN]!);
+    const p = run[0]!;
+    const q = run[run.length - 1]!;
     const dx = q.x - p.x;
     const dy = q.y - p.y;
     const len = Math.hypot(dx, dy) || 1;
@@ -319,7 +414,32 @@ export function PlotCanvas({
     // anchor changes only which way the glyphs face.
     if (angle > 90) angle -= 180;
     if (angle < -90) angle += 180;
-    return { p, q, u, n, len, mid: { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }, angle };
+    /*
+      HOW FAR THE BOUNDARY GETS FROM ITS OWN CHORD, outward.
+
+      Zero on a straight boundary, and the crown height on a curved one. The
+      dimension string clears it: measured from the chord, a curved frontage's
+      figure and its witness lines land INSIDE the plot, printed over the shape
+      they are dimensioning. Pushed out by the bow they sit clear of it, and
+      the measurement is unchanged — a dimension string measures between two
+      corners whichever side of it the line is drawn on.
+    */
+    const bow = run.reduce(
+      (most, r) => Math.max(most, (r.x - p.x) * n.x + (r.y - p.y) * n.y),
+      0,
+    );
+    return {
+      p,
+      q,
+      u,
+      n,
+      len,
+      run,
+      bow,
+      path: run.map((r) => `${r.x},${r.y}`).join(' '),
+      mid: { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 },
+      angle,
+    };
   });
 
   const gridId = `dwg-grid-${uid}`;
@@ -392,6 +512,7 @@ export function PlotCanvas({
             .map(
               (e) =>
                 words.figure.edge(e.seq + 1, EDGE_LABEL[e.classification], e.lengthM) +
+                (e.arc ? words.figure.curve(e.arc.radiusM, e.arc.arcLengthM) : '') +
                 (e.setbackM ? words.figure.setback(e.setbackM) : ''),
             )
             .join(words.figure.edgeSeparator) +
@@ -531,26 +652,26 @@ export function PlotCanvas({
         {geom.map((g, i) => {
           const edge = edges[i];
           if (!edge) return null;
-          const a = add(g.p, g.n, dim.off);
-          const b = add(g.q, g.n, dim.off);
+          const a = add(g.p, g.n, dim.off + g.bow);
+          const b = add(g.q, g.n, dim.off + g.bow);
           const tick = { x: (g.u.x + g.n.x) / Math.SQRT2, y: (g.u.y + g.n.y) / Math.SQRT2 };
-          const t = add(g.mid, g.n, dim.off + type.dim * 0.62);
+          const t = add(g.mid, g.n, dim.off + g.bow + type.dim * 0.62);
           return (
             <g key={`dim-${edge.seq}`} className="dwg-dim">
               <line
                 className="dwg-dim__witness"
-                x1={add(g.p, g.n, dim.gap).x}
-                y1={add(g.p, g.n, dim.gap).y}
-                x2={add(g.p, g.n, dim.off + dim.over).x}
-                y2={add(g.p, g.n, dim.off + dim.over).y}
+                x1={add(g.p, g.n, dim.gap + g.bow).x}
+                y1={add(g.p, g.n, dim.gap + g.bow).y}
+                x2={add(g.p, g.n, dim.off + g.bow + dim.over).x}
+                y2={add(g.p, g.n, dim.off + g.bow + dim.over).y}
                 strokeWidth={ink.dim}
               />
               <line
                 className="dwg-dim__witness"
-                x1={add(g.q, g.n, dim.gap).x}
-                y1={add(g.q, g.n, dim.gap).y}
-                x2={add(g.q, g.n, dim.off + dim.over).x}
-                y2={add(g.q, g.n, dim.off + dim.over).y}
+                x1={add(g.q, g.n, dim.gap + g.bow).x}
+                y1={add(g.q, g.n, dim.gap + g.bow).y}
+                x2={add(g.q, g.n, dim.off + g.bow + dim.over).x}
+                y2={add(g.q, g.n, dim.off + g.bow + dim.over).y}
                 strokeWidth={ink.dim}
               />
               <line
@@ -677,12 +798,12 @@ export function PlotCanvas({
             span,
           );
           if (width <= 0 || !kind) return null;
-          const pts = [
-            g.p,
-            g.q,
-            { x: g.q.x + g.n.x * width, y: g.q.y + g.n.y * width },
-            { x: g.p.x + g.n.x * width, y: g.p.y + g.n.y * width },
-          ];
+          /* The strip FOLLOWS the boundary. On a straight one these four points
+             are the rectangle this always drew; on a curve, offsetting the two
+             corners alone would lay a flat band across a bent road and leave a
+             wedge of it inside the plot. */
+          const outer = offsetRun(g.run, width);
+          const pts = [...g.run, ...[...outer].reverse()];
           return (
             <polygon
               key={`band${edge.seq}`}
@@ -703,22 +824,22 @@ export function PlotCanvas({
           const dash = EDGE_DASH[edge.classification];
           return (
             <g key={edge.seq} className={selected ? 'plot-edge plot-edge--selected' : 'plot-edge'}>
-              <line
-                x1={g.p.x}
-                y1={g.p.y}
-                x2={g.q.x}
-                y2={g.q.y}
+              {/* A polyline, not a line: one boundary may be many straight
+                  pieces, and a curve stroked corner to corner is a chord drawn
+                  over the shape it is standing in for. With no curve the points
+                  are the same two and this renders identically. */}
+              <polyline
+                points={g.path}
+                fill="none"
                 stroke={EDGE_COLOUR[edge.classification]}
                 strokeWidth={selected ? ink.edgeSelected : ink.edge}
                 strokeLinecap="butt"
                 {...(dash ? { strokeDasharray: dash.map((d) => d * U).join(' ') } : {})}
               />
               {onSelectEdge ? (
-                <line
-                  x1={g.p.x}
-                  y1={g.p.y}
-                  x2={g.q.x}
-                  y2={g.q.y}
+                <polyline
+                  points={g.path}
+                  fill="none"
                   stroke="transparent"
                   strokeWidth={U * 4}
                   className="plot-edge__hit"
@@ -727,6 +848,7 @@ export function PlotCanvas({
                   role="button"
                   aria-label={
                     words.hit(edge.seq + 1, EDGE_LABEL[edge.classification], edge.lengthM) +
+                    (edge.arc ? words.figure.curve(edge.arc.radiusM, edge.arc.arcLengthM) : '') +
                     (edge.setbackM ? words.figure.setback(edge.setbackM) : '')
                   }
                   onKeyDown={(e) => {
@@ -742,12 +864,15 @@ export function PlotCanvas({
         })}
 
         {/* ---- STATIONS AND EDGE TAGS ------------------------------------ */}
-        {svgPts.map((p, i) => (
+        {/* A station stands at a CORNER, which is a surveyed point. The vertices
+            a curve was tessellated into are not corners — seventy dots along one
+            boundary would read as seventy of them. */}
+        {geom.map((g, i) => (
           <circle
             key={`v${i}`}
             className="dwg-vertex"
-            cx={p.x}
-            cy={p.y}
+            cx={g.p.x}
+            cy={g.p.y}
             r={U * 0.9}
             strokeWidth={ink.vertex}
           />
@@ -951,7 +1076,17 @@ export function PlotCanvas({
                 {EDGE_LABEL[e.classification]}
                 {e.roadHierarchy ? hierarchyNote(e.roadHierarchy) : ''}
               </span>
-              <span className="plot-legend__value value">{e.lengthM} m</span>
+              <span className="plot-legend__value value">
+                {e.lengthM} m
+                {/* The chord is what the drawing measures; the arc length is what
+                    the sheet prints. Both, because a reader checking one document
+                    against another needs the figure that is on the document. */}
+                {e.arc ? (
+                  <span className="plot-legend__note">
+                    {words.legend.curve(e.arc.radiusM, e.arc.arcLengthM)}
+                  </span>
+                ) : null}
+              </span>
               {e.setbackM ? (
                 <span className="plot-legend__setback">
                   {words.legend.setback}

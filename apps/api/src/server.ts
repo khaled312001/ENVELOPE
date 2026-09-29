@@ -23,13 +23,16 @@ import {
   type Mm,
   pendingApproval,
   type Plot,
+  ringSpanOf,
   toMm,
   toWire,
   type UnitTypeMix,
 } from '@envelope/core';
 import {
   analysePlot,
+  arcFromBulge,
   assertPhase0Shape,
+  bulgeFromRadius,
   geometryCheckBaseline,
   geometryChecksSince,
   initGeometry,
@@ -544,8 +547,36 @@ export async function build(
     const oriented = orientRing(
       body.vertices.map((v) => ({ x: toMm(v.x) as Mm, y: toMm(v.y) as Mm })),
     );
-    const ring: Ring = oriented.ring;
-    const geometry = analysePlot(ring);
+    const corners: Ring = oriented.ring;
+    const boundaries = inputEdgesByRingIndex(body.edges, oriented.order);
+
+    /*
+      A CURVED BOUNDARY IS RESOLVED HERE AND NOWHERE ELSE.
+
+      The sheet states a radius and a side; the engine stores a bulge. Both
+      describe the same arc, but only one of them survives a reversal without
+      thinking: reversing the ring reverses the way every boundary is walked,
+      and "bows to the right" is a statement about that walk. So the side is
+      flipped with the ring, before the bulge exists, rather than the bulge's
+      sign being flipped afterwards by somebody who remembers to.
+
+      `bulgeFromRadius` refuses a radius too small to span its own boundary, in
+      those words, and the handler turns it into a 422.
+    */
+    const bulges = boundaries.map((edge, seq) => {
+      if (!edge.arc) return undefined;
+      const start = corners[seq]!;
+      const end = corners[(seq + 1) % corners.length]!;
+      const chordMm = new Decimal(Math.hypot(end.x - start.x, end.y - start.y));
+      const bulgesRight = oriented.reversed ? !edge.arc.bulgesRight : edge.arc.bulgesRight;
+      return bulgeFromRadius(chordMm, new Decimal(edge.arc.radiusM).times(1000), bulgesRight);
+    });
+
+    const geometry = analysePlot(corners, bulges);
+    // The polygon, with every curve tessellated. One shape for the offset
+    // kernel, the drawings, the DXF and the 3D view — never a curve on screen
+    // and a chord in the file.
+    const ring: Ring = geometry.ring;
 
     // §14.1, enforced at the data layer rather than by convention.
     assertPhase0Shape(geometry.shapeClass);
@@ -591,9 +622,12 @@ export async function build(
       community: body.community,
       landUse: 'RESIDENTIAL_MULTI',
       ring,
-      edges: inputEdgesByRingIndex(body.edges, oriented.order).map((e, seq) => {
-        const start = ring[seq]!;
-        const end = ring[(seq + 1) % ring.length]!;
+      edges: boundaries.map((e, seq) => {
+        const start = corners[seq]!;
+        const end = corners[(seq + 1) % corners.length]!;
+        const span = geometry.spans[seq]!;
+        const bulge = bulges[seq];
+        const arc = bulge === undefined ? undefined : arcFromBulge(start, end, bulge);
         return {
           seq,
           start,
@@ -602,6 +636,18 @@ export async function build(
           ...(e.roadHierarchy ? { roadHierarchy: e.roadHierarchy } : {}),
           lengthMm: asMm(Math.round(Math.hypot(end.x - start.x, end.y - start.y))),
           bearingDeg: outwardBearingDeg(start, end),
+          ...(arc === undefined
+            ? {}
+            : {
+                arc: {
+                  bulge: bulge!,
+                  radiusMm: asMm(Math.round(arc.radiusMm.toNumber())),
+                  sweepDeg: arc.sweepDeg,
+                  arcLengthMm: asMm(Math.round(arc.arcLengthMm.toNumber())),
+                },
+              }),
+          ringFrom: span.from,
+          ringSpan: span.count,
         };
       }),
       shapeClass: geometry.shapeClass,
@@ -718,13 +764,38 @@ export async function build(
         x: new Decimal(p.x).div(1000).toFixed(3),
         y: new Decimal(p.y).div(1000).toFixed(3),
       })),
-      edges: plot.edges.map((e) => ({
-        seq: e.seq,
-        classification: e.classification,
-        roadHierarchy: e.roadHierarchy ?? null,
-        lengthM: new Decimal(e.lengthMm).div(1000).toFixed(3),
-        bearingDeg: e.bearingDeg.toFixed(2),
-      })),
+      edges: plot.edges.map((e) => {
+        /*
+          THE SPAN TRAVELS WITH THE BOUNDARY.
+
+          `vertices` above is the ring, and a curved boundary is one entry here
+          and many vertices there. A client that paired the two lists by index
+          would draw every classification, every band and every setback label
+          one boundary out from the moment a plot had a curve in it — and the
+          plot would still be exactly the right shape.
+        */
+        const span = ringSpanOf(e);
+        return {
+          seq: e.seq,
+          classification: e.classification,
+          roadHierarchy: e.roadHierarchy ?? null,
+          lengthM: new Decimal(e.lengthMm).div(1000).toFixed(3),
+          bearingDeg: e.bearingDeg.toFixed(2),
+          ringFrom: span.from,
+          ringSpan: span.count,
+          /* The figures an affection plan prints for a curve, so a reader can
+             check the plot against the document rather than against a radius
+             they typed into a box three steps ago. */
+          arc: e.arc
+            ? {
+                radiusM: new Decimal(e.arc.radiusMm).div(1000).toFixed(3),
+                arcLengthM: new Decimal(e.arc.arcLengthMm).div(1000).toFixed(3),
+                sweepDeg: e.arc.sweepDeg.toFixed(2),
+                bulgesRight: e.arc.bulge.isPositive(),
+              }
+            : null,
+        };
+      }),
       computedAreaM2: new Decimal(plot.computedAreaMm2).div(1_000_000).toFixed(2),
       areaMismatch: plot.areaMismatch,
     };
@@ -1467,6 +1538,25 @@ interface PlotWire {
     readonly roadHierarchy?: string;
     readonly lengthMm: number;
     readonly bearingDeg: string;
+    /*
+      THE CURVE AND ITS SPAN TRAVEL WITH THE ROW.
+
+      A plot is stored as this blob and read back from it, and a field the
+      serialiser drops is a field the engine never sees again. Left out, a
+      curved plot came back with the right ring and every boundary spanning one
+      vertex of it — which put each frontage's setback on the wrong piece of the
+      curve and then failed the offset, three layers from the omission. A row
+      written before curves existed has neither field, and `ringSpanOf` reads
+      that as the straight plot it is.
+    */
+    readonly arc?: {
+      readonly bulge: string;
+      readonly radiusMm: number;
+      readonly sweepDeg: string;
+      readonly arcLengthMm: number;
+    };
+    readonly ringFrom?: number;
+    readonly ringSpan?: number;
   }[];
   readonly shapeClass: string;
   readonly statedAreaM2: string | null;
@@ -1523,6 +1613,18 @@ function serialisePlot(plot: Plot, sheet: StoredSheet | undefined): string {
       ...(e.roadHierarchy ? { roadHierarchy: e.roadHierarchy } : {}),
       lengthMm: e.lengthMm as number,
       bearingDeg: e.bearingDeg.toString(),
+      ...(e.arc
+        ? {
+            arc: {
+              bulge: e.arc.bulge.toString(),
+              radiusMm: e.arc.radiusMm as number,
+              sweepDeg: e.arc.sweepDeg.toString(),
+              arcLengthMm: e.arc.arcLengthMm as number,
+            },
+          }
+        : {}),
+      ...(e.ringFrom === undefined ? {} : { ringFrom: e.ringFrom }),
+      ...(e.ringSpan === undefined ? {} : { ringSpan: e.ringSpan }),
     })),
     shapeClass: plot.shapeClass,
     statedAreaM2: plot.statedAreaM2?.toString() ?? null,
@@ -1763,6 +1865,18 @@ async function loadPlot(repo: RunRepository, plotId: string): Promise<Plot> {
         : {}),
       lengthMm: asMm(e.lengthMm),
       bearingDeg: new Decimal(e.bearingDeg),
+      ...(e.arc
+        ? {
+            arc: {
+              bulge: new Decimal(e.arc.bulge),
+              radiusMm: asMm(e.arc.radiusMm),
+              sweepDeg: new Decimal(e.arc.sweepDeg),
+              arcLengthMm: asMm(e.arc.arcLengthMm),
+            },
+          }
+        : {}),
+      ...(e.ringFrom === undefined ? {} : { ringFrom: e.ringFrom }),
+      ...(e.ringSpan === undefined ? {} : { ringSpan: e.ringSpan }),
     })),
     shapeClass: w.shapeClass as Plot['shapeClass'],
     statedAreaM2: w.statedAreaM2 === null ? undefined : new Decimal(w.statedAreaM2),

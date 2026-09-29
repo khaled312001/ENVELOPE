@@ -69,6 +69,28 @@ export interface Point {
 /** A closed ring. First vertex is not repeated at the end. */
 export type Ring = readonly Point[];
 
+/**
+ * A boundary that is an arc rather than a straight line.
+ *
+ * Stored as the DXF `LWPOLYLINE` bulge — `tan(sweep / 4)`, signed — because that
+ * is the one number a radius, a sweep and a side all fall out of, and the only
+ * representation a drawing file and this engine already agree on. Everything
+ * beside it is derived from that bulge and the chord, and kept here so that a
+ * screen, a schedule and a title block quote one figure rather than three
+ * roundings of it.
+ *
+ * A positive bulge bows to the **right** of the direction the boundary is
+ * walked. `packages/geometry/src/arcs.ts` carries the argument in full.
+ */
+export interface EdgeArc {
+  readonly bulge: Decimal;
+  readonly radiusMm: Mm;
+  /** Included angle, degrees, always positive. */
+  readonly sweepDeg: Decimal;
+  /** Along the curve, which is longer than `PlotEdge.lengthMm`. */
+  readonly arcLengthMm: Mm;
+}
+
 export interface PlotEdge {
   readonly seq: number;
   readonly start: Point;
@@ -77,9 +99,35 @@ export interface PlotEdge {
   readonly classification: EdgeClassification;
   /** Required when `classification === 'ROAD'`; forbidden otherwise. */
   readonly roadHierarchy?: RoadHierarchy;
+  /**
+   * The straight distance from `start` to `end`. On a curved boundary this is
+   * the chord, and `arc.arcLengthMm` is what the affection plan prints.
+   */
   readonly lengthMm: Mm;
-  /** Bearing of the outward normal, degrees clockwise from grid north. */
+  /**
+   * Bearing of the outward normal, degrees clockwise from grid north. On a
+   * curved boundary it is the **chord's** normal, because a curve has a
+   * different one at every point; it orients the boundary and binds nothing.
+   */
   readonly bearingDeg: Decimal;
+  /** Present only where the boundary curves. */
+  readonly arc?: EdgeArc;
+  /**
+   * Where this boundary starts in `Plot.ring`.
+   *
+   * A curved boundary is one entry here and many vertices there — the kernel is
+   * integer and polygonal and has no curve primitive — so the two indices part
+   * company as soon as one plot has an arc. Absent means they have not:
+   * `ringFrom` is `seq` and `ringSpan` is one.
+   */
+  readonly ringFrom?: number;
+  /** How many straight ring edges this boundary became. */
+  readonly ringSpan?: number;
+}
+
+/** The run of `Plot.ring` that one entered boundary occupies. */
+export function ringSpanOf(edge: PlotEdge): { readonly from: number; readonly count: number } {
+  return { from: edge.ringFrom ?? edge.seq, count: edge.ringSpan ?? 1 };
 }
 
 export interface Plot {

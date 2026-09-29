@@ -21,7 +21,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAutosave } from '../useAutosave.js';
-import { rectangleLegs, walkTraverse } from '../traverse.js';
+import { type LegArc, rectangleLegs, walkTraverse } from '../traverse.js';
 import { useSession } from '../session.js';
 
 import {
@@ -74,8 +74,11 @@ interface PlotDraft {
  * stays and the traverse is the other way in — the boundaries as the affection
  * plan states them, a length and a direction each, with the corners computed.
  *
- * Arcs are still not entered. `plot.why` in the step primer says so on the
- * screen; this mode is the straight-edged half of that answer.
+ * A boundary may curve, which is the rest of the same answer. The corners do
+ * not move: the length and the bearing stay the chord's, and a radius and a
+ * side say how the boundary leaves that chord between them. That is how an
+ * affection plan states a curve, and it is the only description of one that
+ * survives being read off a document rather than dragged on a screen.
  */
 type Shape = 'rectangle' | 'edges';
 
@@ -86,6 +89,13 @@ interface EdgeDraft {
   readonly lengthM: string;
   /** Traverse mode only. Degrees clockwise from north, along the boundary. */
   readonly bearingDeg: string;
+  /**
+   * Which way the boundary bows, walking it in the direction of its bearing.
+   * Blank means straight, which every boundary is until a reader says otherwise.
+   */
+  readonly curve: '' | 'right' | 'left';
+  /** Metres, as typed. Read only when `curve` is set. */
+  readonly radiusM: string;
 }
 
 /** The four blank boundaries a form with no demo behind it opens on. */
@@ -94,7 +104,18 @@ const BLANK_EDGE: EdgeDraft = {
   roadHierarchy: '',
   lengthM: '',
   bearingDeg: '',
+  curve: '',
+  radiusM: '',
 };
+
+/**
+ * A draft written before boundaries could curve has neither field.
+ *
+ * Restoring it as-is would put `undefined` into a select's `value` and make the
+ * control uncontrolled halfway through a session, which React warns about and a
+ * reader experiences as a box that stops responding.
+ */
+const asEdgeDraft = (e: EdgeDraft): EdgeDraft => ({ ...BLANK_EDGE, ...e });
 
 export interface PlotFormProps {
   readonly actor: Actor;
@@ -144,6 +165,21 @@ export interface PlotFormProps {
       readonly roadHierarchy: string;
     }[];
   } | null;
+}
+
+/**
+ * One line under a radius: what it draws, or why it cannot.
+ *
+ * A refusal is the same sentence the engine would send back as a 422, said
+ * before the request rather than after it — the form already knows the chord,
+ * so there is nothing to learn from a round trip except a delay.
+ */
+function arcNote(t: typeof EN, arc: LegArc | null | undefined): string {
+  if (!arc) return '';
+  if (arc.refusal === 'radius-too-small') return t.traverse.radiusTooSmall;
+  if (arc.refusal === 'too-gentle') return t.traverse.curveTooGentle;
+  if (arc.refusal === 'no-radius') return t.traverse.radiusHelp;
+  return t.traverse.arcNote(arc.arcLengthM, arc.riseM, arc.sweepDeg);
 }
 
 export function PlotForm({
@@ -287,7 +323,7 @@ export function PlotForm({
     setShape(p.shape === 'edges' ? 'edges' : 'rectangle');
     /* The edge count is whatever was saved, because a plot is not always four-sided
        and a restore that silently kept four would be inventing a shape. */
-    if (Array.isArray(p.edges) && p.edges.length >= 3) setEdges(p.edges);
+    if (Array.isArray(p.edges) && p.edges.length >= 3) setEdges(p.edges.map(asEdgeDraft));
     draft.acceptRecovered();
   };
 
@@ -297,7 +333,15 @@ export function PlotForm({
     a frame. It costs four sines.
   */
   const walk = useMemo(
-    () => walkTraverse(edges.map((e) => ({ lengthM: e.lengthM, bearingDeg: e.bearingDeg }))),
+    () =>
+      walkTraverse(
+        edges.map((e) => ({
+          lengthM: e.lengthM,
+          bearingDeg: e.bearingDeg,
+          curve: e.curve,
+          radiusM: e.radiusM,
+        })),
+      ),
     [edges],
   );
 
@@ -344,6 +388,21 @@ export function PlotForm({
           seq,
           classification: d.classification,
           ...(d.classification === 'ROAD' ? { roadHierarchy: d.roadHierarchy } : {}),
+          /*
+            THE CURVE IS SENT AS THE SHEET STATES IT — a radius and a side — and
+            the server turns it into the bulge it stores. Sending the bulge from
+            here would mean the browser had decided what shape the boundary is,
+            and the browser is the one party in this exchange whose arithmetic
+            nothing re-checks.
+
+            Only in traverse mode, and only where the curve resolves: a radius
+            too small to span its own boundary already has the form refusing to
+            submit, and sending it anyway would trade a sentence on the screen
+            for a 422 from the API.
+          */
+          ...(shape === 'edges' && d.curve !== '' && walk.arcs[seq]?.refusal === null
+            ? { arc: { radiusM: d.radiusM, bulgesRight: d.curve === 'right' } }
+            : {}),
         })),
         ...(statedArea ? { statedAreaM2: statedArea } : {}),
         /*
@@ -586,6 +645,75 @@ export function PlotForm({
                       />
                       {i === 0 ? <p className="field__help">{t.traverse.bearingHelp}</p> : null}
                     </div>
+                    {/*
+                      THE SIDE IS A WORD, NOT A SIGN.
+
+                      `bulge = tan(sweep / 4)` is what the engine stores and what
+                      a DXF file carries, and its sign is the side. A sign is
+                      also the thing a reader inverts without noticing, and an
+                      inverted curve is a plot that is the right size and the
+                      wrong shape — which passes the area check. So the question
+                      is asked the way somebody standing on the boundary would
+                      answer it, and the conversion happens on the server.
+                    */}
+                    <div className="field field--compact">
+                      <label htmlFor={`edge-${i}-curve`}>{t.traverse.curve}</label>
+                      <select
+                        id={`edge-${i}-curve`}
+                        className="input"
+                        value={edge.curve}
+                        onChange={(e) =>
+                          setEdges((prev) =>
+                            prev.map((p, j) =>
+                              j === i
+                                ? {
+                                    ...p,
+                                    curve: e.target.value as EdgeDraft['curve'],
+                                    radiusM: e.target.value === '' ? '' : p.radiusM,
+                                  }
+                                : p,
+                            ),
+                          )
+                        }
+                      >
+                        <option value="">{t.traverse.straight}</option>
+                        <option value="right">{t.traverse.bowsRight}</option>
+                        <option value="left">{t.traverse.bowsLeft}</option>
+                      </select>
+                      {i === 0 ? <p className="field__help">{t.traverse.curveHelp}</p> : null}
+                    </div>
+                    {edge.curve === '' ? null : (
+                      <div className="field field--compact">
+                        <label htmlFor={`edge-${i}-radius`}>{t.traverse.radius}</label>
+                        <input
+                          id={`edge-${i}-radius`}
+                          className="input input--num"
+                          inputMode="decimal"
+                          value={edge.radiusM}
+                          onChange={(e) =>
+                            setEdges((prev) =>
+                              prev.map((p, j) =>
+                                j === i ? { ...p, radiusM: e.target.value } : p,
+                              ),
+                            )
+                          }
+                          required
+                        />
+                        {/*
+                          WHAT THE RADIUS IMPLIES, BESIDE IT.
+
+                          The sheet prints the arc's length; this form asks for
+                          the radius, so the arc length is the figure a reader
+                          checks one against the other. Printed to the millimetre
+                          next to the box rather than left for the plot summary,
+                          because a mistyped radius is cheapest to catch in the
+                          second it was mistyped.
+                        */}
+                        <p className="field__help" role="status">
+                          {arcNote(t, walk.arcs[i])}
+                        </p>
+                      </div>
+                    )}
                   </>
                 ) : null}
                 <div className="field field--compact">
@@ -666,7 +794,16 @@ export function PlotForm({
         </ul>
 
         <PlotCanvas
-          vertices={vertices}
+          /*
+            THE DRAWING STROKES THE RING; THE FORM SUBMITS THE CORNERS.
+
+            They are the same list until a boundary curves, and then the drawing
+            has to hold the pieces the curve was broken into while the request
+            still carries the two surveyed corners and a radius. Sending the
+            pieces would be this browser deciding the shape of the boundary and
+            the server agreeing with it.
+          */
+          vertices={shape === 'edges' ? walk.drawnRing : vertices}
           edges={edges.map((e, seq) => ({
             seq,
             classification: (e.classification || 'OTHER') as 'OTHER',
@@ -683,6 +820,22 @@ export function PlotForm({
                 : seq % 2 === 0
                   ? width
                   : depth,
+            /* The legend quotes the curve, and only once the radius resolves —
+               a half-typed one would flick figures in and out on every
+               keystroke. The shape itself comes from `drawnRing` above. */
+            ...(shape === 'edges' && e.curve !== '' && walk.arcs[seq]?.refusal === null
+              ? {
+                  arc: {
+                    radiusM: e.radiusM,
+                    arcLengthM: walk.arcs[seq]!.arcLengthM,
+                    sweepDeg: walk.arcs[seq]!.sweepDeg,
+                    bulgesRight: e.curve === 'right',
+                  },
+                }
+              : {}),
+            ...(shape === 'edges' && walk.spans[seq]
+              ? { ringFrom: walk.spans[seq]!.from, ringSpan: walk.spans[seq]!.count }
+              : {}),
           }))}
           areaM2={computedArea ?? '0'}
         />

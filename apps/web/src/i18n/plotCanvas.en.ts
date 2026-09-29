@@ -42,6 +42,9 @@ export const EN = {
     edge: (n: number, label: string, lengthM: string): string =>
       `Edge ${n}, ${label}, ${lengthM} metres`,
     setback: (setbackM: string): string => `, setback ${setbackM} metres`,
+    /** Spoken after the chord, because the chord is what the drawing measures. */
+    curve: (radiusM: string, arcLengthM: string): string =>
+      `, curving on a radius of ${radiusM} metres and ${arcLengthM} metres along the curve`,
     edgeSeparator: '. ',
     footprint: (areaM2: string): string => `. Buildable footprint ${areaM2} square metres.`,
     scale: (gridM: number): string =>
@@ -58,6 +61,8 @@ export const EN = {
     separator: ' · ',
     setback: 'setback ',
     unresolved: 'setback not yet resolved',
+    curve: (radiusM: string, arcLengthM: string): string =>
+      `R ${radiusM} m · ${arcLengthM} m on the curve`,
     /*
       The band beside each boundary — Eng. Mohamed, 2026-09-28, who asked for a
       symbol for the road and its type. It ranks; it does not measure, and

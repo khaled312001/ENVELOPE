@@ -11,6 +11,7 @@
  * lose a digit in transport. `Decimal` parses the string exactly.
  */
 
+import { Decimal } from '@envelope/core';
 import { z } from 'zod';
 
 import { affectionPlanAttachment } from './instrument.js';
@@ -37,6 +38,33 @@ export const plotEdgeInput = z
     seq: z.number().int().nonnegative(),
     classification: edgeClassification,
     roadHierarchy: roadHierarchy.optional(),
+    /*
+      A CURVED BOUNDARY, AS THE SHEET STATES IT.
+
+      A radius and a side, because that is what an affection plan prints — not a
+      bulge, which is what the engine stores, and not a string of coordinates,
+      which is what a hand trace produces. The engine turns the radius into the
+      bulge against the chord the two corners already give it, so nothing here
+      can disagree with the geometry it describes.
+
+      The minor arc only. A boundary taking the long way round a circle is
+      re-entrant, and §14.1 refuses re-entrant plots by name already.
+    */
+    arc: z
+      .object({
+        radiusM: decimalString,
+        /**
+         * Which way the boundary bows, as somebody walking it from its first
+         * corner to its second would say. Named rather than signed: a sign
+         * convention is a thing a reader gets wrong silently.
+         */
+        bulgesRight: z.boolean(),
+      })
+      .refine((a) => new Decimal(a.radiusM).gt(0), {
+        message: 'a curved boundary needs a radius greater than zero',
+        path: ['radiusM'],
+      })
+      .optional(),
   })
   .refine((e) => e.classification !== 'ROAD' || e.roadHierarchy !== undefined, {
     message:

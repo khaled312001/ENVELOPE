@@ -507,7 +507,7 @@ Each area lists the change, the files, and how it is verified. Nothing here ship
 
 | | |
 |---|---|
-| **Type** | `PlotEdge` gains an optional `arc: { radius, rotation, bulge }`. `Ring` gains a parallel bulge array. Exact until the Clipper boundary; chord tolerance recorded as a traced derivation. |
+| **Type** | ~~`PlotEdge` gains an optional `arc`~~ **done, 29 Sep 2026.** It carries the bulge, the radius, the sweep and the arc length, plus the run of `Plot.ring` the boundary occupies. The area is exact — corners plus circular segments in closed form — rather than the tessellation's. |
 | **Traverse table** | One row per edge: classification, road hierarchy, bearing, distance — or radius + arc length for a curve. Add/remove/reorder rows. Live misclose distance and ratio. Compass-rule adjustment offered explicitly, producing an `ASSUMED` record. |
 | **Canvas** | `PlotCanvas` becomes editable: drag a vertex, pull an edge into an arc, click an edge to classify it. Every hand-moved point `USER_SET`. |
 | **Import** | DXF `LWPOLYLINE` (bulge-aware) and LandXML `<Curve>`. |
@@ -1582,6 +1582,53 @@ north reported 360.00 instead of 0.
 **Still to do in B:** arcs stored exactly, the editable canvas, and DXF/LandXML
 import. A curved boundary is entered as the straight line between its ends, and
 the step primer says so on the screen rather than in a note here.
+
+**B, second half — a boundary may curve, and the setback of a curve is a curve.**
+The rest of *«كيرفات»*. A boundary is entered as a radius and the side it bows
+toward — which is how an affection plan states one — and its length along the curve,
+how far it leaves the chord, and the area it adds are derived and shown beside the box
+the radius was typed into. A curve is stored as its DXF bulge, `tan(sweep / 4)`, which
+is the one number a radius, a sweep and a side all fall out of and the only
+representation a drawing file and this engine already agree on.
+
+**The area is the curved plot's, not the tessellation's.** Clipper is integer and
+polygonal and has no curve primitive, so the ring the kernel works on is the corners
+with every arc broken into pieces no more than a millimetre off the true curve. The
+AREA is not taken from that polygon: it is shoelace over the corners plus each circular
+segment in closed form, `½r²(θ − sin θ)`. Refining the tessellation therefore moves the
+drawing and never moves the number — which matters because that number is the one
+`FR-PLT-001 AC2` compares against the area the sheet prints, and the polygon on its own
+comes up short by two orders of magnitude more than the centimetre it is printed to.
+
+**And the obvious way to set a curve back does not work.** Letting the pieces arrive as
+sixty independent boundaries and shifting each one's supporting line is one line of
+code and it fails: two consecutive pieces of a 200 m arc meet at about 0.006 radians,
+and the intersection of two lines that nearly parallel moves by `ε / sin φ` when one of
+them moves by ε. On the millimetre grid that puts the offset vertex up to eighty
+millimetres from where it belongs, and a run of sixty of them reorders the ring and
+trips the self-intersection gate — on a plot with a perfectly ordinary footprint.
+Refining makes it worse; coarsening to where it is well conditioned costs a quarter of
+a metre of accuracy. So `offsetPerEdge` now takes the arcs as circles: each vertex
+inside a run is pulled to the concentric circle `r − setback`, each corner is a
+closed-form intersection of the two offset shapes, and what is left of the curve beyond
+a neighbour's own setback is trimmed against the convex intersection the footprint
+already is. `packages/geometry/test/arcs.test.ts` runs the naive version first and
+asserts that it fails, because a refusal that cannot say no is the vacuous pass this
+codebase refuses everywhere else.
+
+**Three things fell out.** The stored plot was dropping the span and the arc on the way
+through the repository blob, so a curved plot came back with the right ring and every
+boundary claiming one vertex of it — each frontage's setback on the wrong piece of the
+curve, failing three layers from the omission. `PlotCanvas` paired `vertices[i]` with
+`edges[i]`, which is only true while nothing curves; it now walks the span, strokes a
+polyline rather than a chord, follows the curve with the road band, puts a station at a
+corner rather than at all sixty-seven, and pushes a dimension string clear of the bow
+so a curved frontage's figure does not print over the shape it measures. And a boundary
+bowing INTO the plot needed no new refusal: it makes the plot re-entrant, and §14.1 has
+refused those by name since before curves existed.
+
+**Still to do in B:** the editable canvas and DXF/LandXML import. A major arc — the long
+way round a circle — is not offered, for the same reason: it is re-entrant.
 
 **T — nineteen of the twenty-five slots are wired, and the brief is the
 authority for all of them.** `ImageName`, the size table and the two alt-text

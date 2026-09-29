@@ -4,8 +4,18 @@
  * not by convention".
  */
 
-import { asMm, Decimal, type Mm, type Mm2, mm2ToM2, mmToM } from '@envelope/core';
+import {
+  asMm,
+  asMm2,
+  Decimal,
+  DegenerateGeometryError,
+  type Mm,
+  type Mm2,
+  mm2ToM2,
+  mmToM,
+} from '@envelope/core';
 
+import { arcAreaCorrectionMm2, type RingSpan, tessellateRing } from './arcs.js';
 import {
   area,
   isConvex,
@@ -271,18 +281,58 @@ export interface PlotGeometry {
   readonly principalAxisDeg: Decimal;
   readonly convexityRatio: Decimal;
   readonly extent: ReturnType<typeof extent>;
+  /**
+   * The polygon everything above was measured on: the corners as entered, with
+   * every curved boundary tessellated inside `MAX_SAGITTA_MM`. It is the ring
+   * the offset kernel, the drawings and the 3D view all work from, so that one
+   * plot is one shape everywhere rather than a curve on screen and a chord in
+   * the file.
+   */
+  readonly ring: Ring;
+  /** One entry per entered boundary, naming its run of {@link PlotGeometry.ring}. */
+  readonly spans: readonly RingSpan[];
 }
 
-export function analysePlot(ring: Ring): PlotGeometry {
-  const ccw = toCounterClockwise(ring);
-  const a = area(ccw);
+/**
+ * Analyse a plot from its corners, and optionally a bulge per boundary.
+ *
+ * **The area is the curved plot's, not the tessellation's.** Shoelace over the
+ * corners plus each arc's circular segment in closed form — so refining the
+ * tessellation moves the drawing and never moves the number. Getting this the
+ * other way round would have put a silent tenth of a square metre into the one
+ * figure `FR-PLT-001 AC2` compares against the affection plan's own.
+ *
+ * A curved plot must arrive counter-clockwise, because the side a bulge bows
+ * toward is only meaningful against a known winding. Straight rings are still
+ * re-wound here, as they always were.
+ */
+export function analysePlot(
+  ring: Ring,
+  bulges?: readonly (Decimal | undefined)[],
+): PlotGeometry {
+  const curved = bulges !== undefined && bulges.some((b) => b !== undefined);
+  if (curved && !isCounterClockwise(ring)) {
+    throw new DegenerateGeometryError(
+      'a plot with a curved boundary must be analysed counter-clockwise: which way a curve bows is a statement about the winding',
+      { vertices: ring.length },
+    );
+  }
+  const corners = curved ? ring : toCounterClockwise(ring);
+  const perBoundary = curved
+    ? bulges!
+    : corners.map<Decimal | undefined>(() => undefined);
+  const { ring: tessellated, spans } = tessellateRing(corners, perBoundary);
+  const exactMm2 = new Decimal(area(corners)).plus(arcAreaCorrectionMm2(corners, perBoundary));
+  const a = asMm2(exactMm2.toDecimalPlaces(0, Decimal.ROUND_HALF_UP).toNumber());
   return {
-    shapeClass: classifyShape(ccw),
+    shapeClass: classifyShape(tessellated),
     areaMm2: a,
     areaM2: mm2ToM2(a),
-    mbr: minimumBoundingRectangle(ccw),
-    principalAxisDeg: principalAxisDeg(ccw),
-    convexityRatio: convexityRatio(ccw),
-    extent: extent(ccw),
+    mbr: minimumBoundingRectangle(tessellated),
+    principalAxisDeg: principalAxisDeg(tessellated),
+    convexityRatio: convexityRatio(tessellated),
+    extent: extent(tessellated),
+    ring: tessellated,
+    spans,
   };
 }

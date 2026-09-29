@@ -181,3 +181,101 @@ describe('the corners the API is given', () => {
     expect(Number(walk.areaM2)).toBeGreaterThan(0);
   });
 });
+
+/**
+ * A curved boundary.
+ *
+ * The risk here is not the trigonometry either — it is the SIGN. "Bows to the
+ * right" is a sentence, and a sentence that silently inverts gives a plot of
+ * very nearly the right area and the wrong shape, which is exactly the class of
+ * error the stated-against-computed area check cannot catch. So the two cases
+ * that matter most below are the ones that pin which way a curve bends and what
+ * that does to the area.
+ */
+describe('a boundary that curves', () => {
+  /** The south frontage of the rectangle, bowed out onto a 200 m radius. */
+  const curved = (curve: '' | 'right' | 'left', radiusM = '200'): readonly TraverseLeg[] =>
+    RECTANGLE.map((leg, i) => (i === 0 ? { ...leg, curve, radiusM } : leg));
+
+  it('derives what the sheet prints from the radius that was typed', () => {
+    const walk = walkTraverse(curved('right'));
+    const arc = walk.arcs[0];
+    expect(arc).not.toBeNull();
+    expect(arc?.refusal).toBeNull();
+    // r·θ where θ = 2·asin(40/200), against an 80 m chord.
+    expect(arc?.arcLengthM).toBe('80.543');
+    expect(arc?.sweepDeg).toBe('23.1');
+    // How far the boundary leaves the straight line between its corners.
+    expect(arc?.riseM).toBe('4.041');
+    expect(arc?.areaM2).toBe('215.95');
+  });
+
+  it('adds the area outward and takes it away inward, on the same radius', () => {
+    const out = walkTraverse(curved('right'));
+    const into = walkTraverse(curved('left'));
+    // The rectangle is walked anticlockwise, so the interior is on the left of
+    // every boundary and a right-hand bow is outward. 3200 m² ± the segment.
+    expect(out.areaM2).toBe('3415.95');
+    expect(into.areaM2).toBe('2984.05');
+  });
+
+  it('leaves the corners exactly where the traverse put them', () => {
+    const straight = walkTraverse(RECTANGLE);
+    const walk = walkTraverse(curved('right'));
+    expect(walk.corners).toEqual(straight.corners);
+    expect(walk.miscloseM).toBe(straight.miscloseM);
+    expect(walk.perimeterM).toBe(straight.perimeterM);
+  });
+
+  it('breaks the curve into straight pieces for the drawing, and only there', () => {
+    const walk = walkTraverse(curved('right'));
+    expect(walk.spans.map((s) => s.count).slice(1)).toEqual([1, 1, 1]);
+    expect(walk.spans[0]!.count).toBeGreaterThan(10);
+    expect(walk.drawnRing).toHaveLength(walk.spans.reduce((n, s) => n + s.count, 0));
+    // Every span starts where the one before it ended, and the corners are
+    // still in the ring at the positions the spans name.
+    expect(walk.drawnRing[walk.spans[1]!.from]).toEqual(walk.corners[1]);
+    expect(walk.drawnRing[walk.spans[2]!.from]).toEqual(walk.corners[2]);
+    // The pieces of the south boundary all lie south of it.
+    const crown = walk.drawnRing
+      .slice(1, walk.spans[0]!.count)
+      .reduce((deep, p) => Math.min(deep, Number(p.y)), 0);
+    expect(crown).toBeLessThan(-4);
+    expect(crown).toBeGreaterThan(-4.05);
+  });
+
+  it('leaves a straight traverse with no pieces and no correction', () => {
+    const walk = walkTraverse(RECTANGLE);
+    expect(walk.arcs).toEqual([null, null, null, null]);
+    expect(walk.spans.map((s) => s.count)).toEqual([1, 1, 1, 1]);
+    expect(walk.drawnRing).toEqual(walk.corners);
+    expect(walk.areaM2).toBe('3200.00');
+  });
+});
+
+describe('a curve the form will not submit', () => {
+  const curved = (radiusM: string): readonly TraverseLeg[] =>
+    RECTANGLE.map((leg, i) => (i === 0 ? { ...leg, curve: 'right' as const, radiusM } : leg));
+
+  it('refuses a radius that cannot reach across its own boundary', () => {
+    const walk = walkTraverse(curved('30'));
+    expect(walk.arcs[0]?.refusal).toBe('radius-too-small');
+    expect(walk.usable).toBe(false);
+  });
+
+  it('refuses a curve that leaves its chord by less than the grid', () => {
+    // 80 m of boundary on a 100 km radius rises by 8 mm; on a 10 000 km one, by
+    // a fraction of a millimetre, which is a straight boundary drawn expensively.
+    expect(walkTraverse(curved('10000000')).arcs[0]?.refusal).toBe('too-gentle');
+    expect(walkTraverse(curved('100000')).arcs[0]?.refusal).toBeNull();
+  });
+
+  it('refuses a curve with no radius, rather than drawing the chord', () => {
+    const walk = walkTraverse(curved(''));
+    expect(walk.arcs[0]?.refusal).toBe('no-radius');
+    expect(walk.usable).toBe(false);
+    // And the ring it would draw is the straight one, so nothing half-typed
+    // reaches the canvas as a shape nobody described.
+    expect(walk.drawnRing).toEqual(walk.corners);
+  });
+});

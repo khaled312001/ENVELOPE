@@ -515,6 +515,41 @@ await step('a plot can be entered boundary by boundary, and the misclose is stat
   if (!/Nothing has been adjusted/i.test(open)) {
     throw new Error('the page does not say what was done with the misclose');
   }
+  /*
+    AND A BOUNDARY MAY CURVE, which is the other half of the same point:
+    *«و كيرفات»*. The corners do not move — the length and the bearing
+    stay the chord's — and a radius and a side say how the boundary travels
+    between them.
+
+    WHAT IS BEING CHECKED HERE is that the radius is turned into the figure the
+    affection plan prints, on the screen, beside the box it was typed into.
+    `traverse.test.ts` owns the trigonometry; only a browser can show that the
+    reader sees it.
+  */
+  await page.locator('#edge-0-curve').selectOption('right');
+  await page.locator('#edge-0-radius').fill('200');
+  const curved = await page.textContent('body');
+  // 200 m of radius across a 50.85 m chord: 50.988 m along the curve, leaving
+  // the straight line by 1.623 m at its deepest.
+  if (!/50\.988 m along the curve/.test(curved ?? '')) {
+    throw new Error('the curve did not report what the radius implies');
+  }
+  if (!/1\.623 m at its deepest/.test(curved ?? '')) {
+    throw new Error('the curve did not report how far it leaves the chord');
+  }
+
+  // A circle too small to reach across the boundary is refused here rather than
+  // by the API, and the form will not submit on it.
+  await page.locator('#edge-0-radius').fill('9');
+  const tooSmall = await page.textContent('body');
+  if (!/at least half the length above/.test(tooSmall ?? '')) {
+    throw new Error('a radius that cannot span its own boundary was accepted');
+  }
+  if (!(await page.getByRole('button', { name: /^Continue$/ }).isDisabled())) {
+    throw new Error('Continue was enabled with a curve that cannot be drawn');
+  }
+  await page.locator('#edge-0-curve').selectOption('');
+
   // A boundary with no length makes the shape unusable rather than being dropped.
   await page.locator('#edge-4-length').fill('');
   if (!(await page.getByRole('button', { name: /^Continue$/ }).isDisabled())) {

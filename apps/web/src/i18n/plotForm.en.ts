@@ -139,6 +139,30 @@ export const EN = {
     */
     lastLeg: (drawn: string, entered: string): string =>
       `Nothing has been adjusted. The shape that will be submitted closes the last boundary back to the first corner, so it measures ${drawn} m rather than the ${entered} m entered for it.`,
+
+    /*
+      A CURVE, ASKED FOR THE WAY SOMEBODY STANDING ON IT WOULD ANSWER.
+
+      The engine stores `tan(sweep / 4)`, signed, and the sign is the side. A
+      reader cannot be asked for a sign: an inverted curve is a plot of very
+      nearly the right area and the wrong shape, which is exactly the class of
+      error the area check does not catch.
+    */
+    curve: 'Shape',
+    straight: 'Straight',
+    bowsRight: 'Curves to the right',
+    bowsLeft: 'Curves to the left',
+    curveHelp:
+      'Left and right as you walk the boundary in the direction above. The corners stay where they are; the curve is how the boundary travels between them.',
+    radius: 'Radius (m)',
+    radiusHelp: 'The radius as the affection plan prints it.',
+    /** Three figures, every one of them measured off the radius that was typed. */
+    arcNote: (arcLength: string, rise: string, sweep: string): string =>
+      `${arcLength} m along the curve, leaving the straight line by ${rise} m at its deepest, across ${sweep}°.`,
+    radiusTooSmall:
+      'A circle this small cannot reach across the boundary. Its radius has to be at least half the length above.',
+    curveTooGentle:
+      'This curve leaves the straight line by less than a millimetre, which is the grid every drawing here is made on. Enter it as a straight boundary.',
   },
 
   submit: {

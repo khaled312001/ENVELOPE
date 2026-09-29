@@ -29,6 +29,7 @@ import { DISCLAIMER } from '../content/shared.js';
   down with it before they collected a single assertion. `page-meta.ts` carries the
   full account.
 */
+import { GROUP_GLYPH, Icon, ROUTE_GLYPH } from '../icons.js';
 import { useLocale, useT } from '../i18n/locale.js';
 import { NOT_FOUND_META, PAGE_META, type PageMeta } from '../page-meta.js';
 import { Link, ROUTES, type Href, type Location, type Route } from '../router.js';
@@ -293,6 +294,9 @@ function Nav({
                 navigate={navigate}
                 {...(route === r ? { 'aria-current': 'page' as const } : {})}
               >
+                {/* The mark is `aria-hidden` and the label beside it is the
+                    accessible name, so the destination is announced once. */}
+                <Icon glyph={ROUTE_GLYPH[r]} className="nav__glyph" />
                 {t.routes[r].navLabel ?? PAGE_META[r].navLabel}
               </Link>
             ))}
@@ -351,11 +355,15 @@ function Colophon({
             if (members.length === 0 && !isReference) return null;
             return (
               <div className="colophon__group" key={group}>
-                <h2>{t.colophon.groups[group]}</h2>
+                <h2>
+                  <Icon glyph={GROUP_GLYPH[group]} className="colophon__glyph" />
+                  {t.colophon.groups[group]}
+                </h2>
                 <ul>
                   {members.map((r) => (
                     <li key={r}>
                       <Link to={r} navigate={navigate}>
+                        <Icon glyph={ROUTE_GLYPH[r]} className="colophon__mark" />
                         {t.routes[r].footerLabel}
                       </Link>
                     </li>

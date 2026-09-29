@@ -1,0 +1,208 @@
+/*
+ * THE MARKS AND THE WAY THINGS ANSWER THE POINTER.
+ *
+ * ---------------------------------------------------------------------------
+ * ONE STYLESHEET FOR THE ICONS, BECAUSE THEY ARE ONE SET.
+ *
+ * `src/icons.tsx` draws twelve route marks and four group marks in one hand, at
+ * 16 on a 1.5px square cap. They are placed in three chromes — the nav, the rail
+ * and the colophon — and every one of those already had its own rules for the
+ * link that now holds a mark. What a mark needs is the same everywhere: a gap,
+ * a rest weight, and the ink of the text beside it. That is this file.
+ *
+ * A MARK IS QUIETER THAN ITS LABEL AT REST. `opacity` rather than a dimmer ink:
+ * the mark takes `currentColor`, which is the whole reason it follows the theme
+ * and the hover and the inverted band without a rule of its own, and a second
+ * colour token here would break that and would also need its own measured pair
+ * on nine grounds. Opacity costs no row and cannot disagree with the palette.
+ *
+ * NOT ON A CONTROL WITH NO LABEL. There is no icon-only control on this site;
+ * every mark sits beside the text that names its destination, which is what
+ * lets them all be `aria-hidden` and announced once.
+ *
+ * ---------------------------------------------------------------------------
+ * THE MOTION IS SHORT, GUARDED, AND CARRIES A MEANING.
+ *
+ * Everything here interpolates `--duration-fast` on `--ease-standard`, the two
+ * tokens the rest of the language already spends on a state change, and every
+ * one sits inside `prefers-reduced-motion: no-preference`. The reduced-motion
+ * reader gets the same end state immediately — never a missing state, which is
+ * the failure a motion guard usually ships.
+ *
+ * AND NOTHING ANIMATES `opacity` FROM ZERO. `landing.css` records why: a
+ * scroll-driven reveal that starts transparent holds its start state for
+ * anything that has never entered a viewport, and three sections printed blank.
+ * The marks start visible and change weight; a print or a screenshot shows them.
+ */
+
+/* ==========================================================================
+ * 1. THE MARKS
+ * ======================================================================= */
+
+.nav__glyph,
+.colophon__glyph,
+.colophon__mark {
+  flex: none;
+  /* The mark is the label's, so it must not set its own line box: `block` stops
+     an inline SVG sitting on the text baseline and adding descender space, which
+     is what makes a 16px icon push a 44px tap target to 48. */
+  display: block;
+  color: inherit;
+  opacity: 0.72;
+}
+
+/* The gap is the mark's, not the link's. Several of these links are also used
+   without a mark — the colophon's build line is an `<li>` with no anchor — and a
+   gap on the link would indent those by the width of an icon that is not there. */
+.nav__glyph,
+.colophon__mark {
+  margin-inline-end: var(--space-2);
+}
+.colophon__glyph {
+  margin-inline-end: var(--space-2);
+}
+
+/* A group heading is a label, and the mark under a label is quieter still. */
+.colophon__group h2 {
+  display: flex;
+  align-items: center;
+}
+
+/* Under the pointer, and when the route is the one being read, the mark comes up
+   to the full weight of the ink beside it. It is the same event the link's own
+   colour already answers; this adds weight to it rather than a second signal. */
+.nav a:hover .nav__glyph,
+.nav a:focus-visible .nav__glyph,
+.nav a[aria-current] .nav__glyph,
+.colophon__group a:hover .colophon__mark,
+.colophon__group a:focus-visible .colophon__mark {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav__glyph,
+  .colophon__mark {
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+}
+
+/* ==========================================================================
+ * 2. THE NAV LINK BECOMES A BOX
+ * ======================================================================= */
+
+/*
+ * The nav already answers the pointer with an underline and the press with a
+ * ground, both argued in `site.css` and both kept — the underline still carries
+ * "under the pointer" and `--accent` still carries "you are here", and this adds
+ * no third meaning. What it adds is INSET, so the ground the press paints has a
+ * shape rather than being a rectangle the width of the words.
+ *
+ * Square corners. `docs/05-design/direction.md` argues them and a pill here
+ * would be the only radius in the chrome, beside a masthead of drawing rules.
+ */
+.nav a:not(.button) {
+  padding-inline: var(--space-3);
+  /* The underline is the link's edge, so the inset must not push it off the
+     text it underlines: the border stays on the box and the box is now wider
+     than the words by one step either side, which is what a tap target wants. */
+}
+
+/* ==========================================================================
+ * 3. A PANEL THAT ANSWERS THE POINTER
+ * ======================================================================= */
+
+/*
+ * `.panel-interactive` is for a block that is itself a link or holds one — a
+ * cost in the limits list, a route in a sitemap card. It is NOT applied to the
+ * guarantee chain: `landing.css` argues at length that those four are stages of
+ * one mechanism and that drawing them as four bordered cards throws the order
+ * away, which is exactly what this class would do.
+ *
+ * NO SHADOW. Not austerity for its own sake — a shadow is the one decoration on
+ * this list that does not survive print, and every panel here is inside a
+ * document that is meant to be printed. The lift is a BORDER change and a 1px
+ * rise, both of which a laser reproduces and neither of which moves the layout:
+ * `translate` is composited and cannot reflow the block under it.
+ */
+.panel-interactive {
+  position: relative;
+  border: var(--border-width) solid var(--border-subtle);
+  background-color: var(--surface-raised);
+  padding: var(--space-4);
+}
+.panel-interactive:hover {
+  border-color: var(--accent);
+  background-color: var(--accent-subtle);
+}
+.panel-interactive:focus-within {
+  border-color: var(--accent);
+  background-color: var(--accent-subtle);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel-interactive {
+    transition:
+      border-color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard),
+      translate var(--duration-fast) var(--ease-standard);
+  }
+  .panel-interactive:hover {
+    translate: 0 -1px;
+  }
+}
+
+/* On paper a hover has never happened, and the interactive ground is a tint a
+   laser dithers. The border stays, because it is what makes the panel a panel. */
+@media print {
+  .panel-interactive {
+    background-color: transparent;
+  }
+}
+
+/* ==========================================================================
+ * 4. THE COLOPHON COLUMNS ARE COLUMNS
+ * ======================================================================= */
+
+/*
+ * A sitemap of three columns on one ground is three lists a reader has to
+ * separate by reading them. A rule down the inline-start edge of each does it
+ * before they read anything, and it is the same device the workspace rail uses
+ * — a rule the height of the thing it belongs to — rather than a fourth kind of
+ * container. Not a full border: a boxed column in a footer reads as three cards
+ * of links, which is a shape that promises each column is a destination.
+ */
+.colophon__group {
+  border-inline-start: var(--border-width) solid var(--border-subtle);
+  padding-inline-start: var(--space-4);
+}
+
+/* ==========================================================================
+ * 5. THE SECTION HEAD IS A PANEL
+ * ======================================================================= */
+
+/*
+ * FIVE SECTIONS THAT LOOKED LIKE ONE.
+ *
+ * Every landing section opens with a heading, a lede and a figure, laid on the
+ * page ground with nothing around them, so the page ran from the fold to the
+ * colophon as a single column of prose with drawings in it. The head is the one
+ * part of a section that is the same shape in all five, which makes it the right
+ * thing to put in a container: the argument below it keeps its own shape —
+ * the guarantee chain is still a chain, and `landing.css` argues at length why
+ * that must not become four cards.
+ *
+ * It is `--surface-raised` on a page that is `--surface-base`, so the panel is
+ * the lighter thing and the page is the ground. On the two zoned sections the
+ * step is larger, which is the rhythm doing its job rather than an inconsistency.
+ */
+.lp-section .section__head.figured {
+  border: var(--border-width) solid var(--border-subtle);
+  background-color: var(--surface-raised);
+  padding: var(--space-6);
+}
+
+/* Inside a panel the figure's own hairline is a second frame a few pixels in
+   from the first. The drawing keeps its mount and loses the outline. */
+.lp-section .section__head.figured .figured__figure {
+  border: none;
+}

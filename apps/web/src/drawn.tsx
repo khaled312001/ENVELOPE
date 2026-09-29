@@ -212,8 +212,23 @@ const sheet: Drawing = ({ title }) => (
     <line className="drawn__hair" x1="20" y1="54" x2="140" y2="54" />
     <line className="drawn__hair" x1="20" y1="66" x2="118" y2="66" />
     <line className="drawn__hair" x1="20" y1="78" x2="134" y2="78" />
+    {/* THE TWO ENTRIES THE ALT TEXT SAYS ARE LEFT UNCONNECTED, and they take the
+        dormant node — the symbol this set already uses for a thing with no data
+        behind it — rather than a mark of their own. `.drawn__read` was a class
+        name with no rule anywhere, and an SVG rect with no fill declared is
+        BLACK: the two entries rendered as redaction bars on the first screen of
+        the flow. `drawing-classes.test.ts` now refuses a class the stylesheet
+        does not define, because that failure is silent in every direction —
+        nothing warns, nothing throws, and the drawing is simply wrong. */}
     {[54, 78].map((y) => (
-      <rect key={y} className="drawn__read" x="150" y={y - 10} width="64" height="16" />
+      <rect
+        key={y}
+        className="drawn__node drawn__node--dormant"
+        x="150"
+        y={y - 10}
+        width="64"
+        height="16"
+      />
     ))}
     <rect className="drawn__node drawn__node--cite" x="20" y="96" width="194" height="44" />
     <line className="drawn__hair" x1="32" y1="112" x2="150" y2="112" />

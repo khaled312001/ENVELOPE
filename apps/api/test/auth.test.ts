@@ -378,6 +378,26 @@ describe('editing the profile', () => {
   });
 });
 
+/*
+ * THE TWO HEAVIEST TESTS IN THE SUITE GET AN EXPLICIT CLOCK, AND ONLY A CLOCK.
+ *
+ * A password here is hashed by a deliberately slow KDF — that slowness is the
+ * control, not an inefficiency — and these two are the only tests that run FOUR
+ * of them end to end: a register, a change, and two logins. Every sibling runs
+ * one or two and finishes well inside the 5s default. Under any load the four
+ * cross it, and the suite then fails on a stopwatch while asserting nothing
+ * about the product: the failure count moved between 1 and 2 across consecutive
+ * runs of the same unchanged code, which is what a flake looks like and what a
+ * regression never does.
+ *
+ * NOT ONE ASSERTION IS RELAXED. The timeout is the third argument to `it`, the
+ * bodies are untouched, and a real failure still fails — which is the only
+ * version of this change worth making. Raising the global timeout instead would
+ * buy the same seconds for the 1,480 tests that do not need them and would hide
+ * the next genuinely slow route behind them.
+ */
+const KDF_HEAVY = 30_000;
+
 describe('changing the password', () => {
   it('changes it, and the new one works while the old one does not', async () => {
     const up = await app.inject({ method: 'POST', url: '/api/auth/register', payload: GOOD });
@@ -405,7 +425,7 @@ describe('changing the password', () => {
       payload: { email: GOOD.email, password: 'a different long secret' },
     });
     expect(fresh.statusCode).toBe(200);
-  });
+  }, KDF_HEAVY);
 
   it('ends every OTHER session and keeps this one', async () => {
     const up = await app.inject({ method: 'POST', url: '/api/auth/register', payload: GOOD });
@@ -441,7 +461,7 @@ describe('changing the password', () => {
     const kept = `envelope_session=${cookieFrom(changed.headers)}`;
     const still = await app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie: kept } });
     expect(still.json().account.email).toBe('khaled@example.com');
-  });
+  }, KDF_HEAVY);
 
   it('refuses without the current password', async () => {
     const up = await app.inject({ method: 'POST', url: '/api/auth/register', payload: GOOD });

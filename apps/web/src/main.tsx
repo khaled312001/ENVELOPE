@@ -29,6 +29,12 @@ import { WorkspaceProvider } from './workspace.js';
  */
 import './styles/tokens.css';
 import './styles/site.css';
+/* Straight after the chassis, because it ADDS to the chrome's own link rules
+   rather than replacing them — the nav's underline and press are `site.css`'s
+   and stay its; this puts the mark beside the label and gives a panel a way to
+   answer the pointer. Anything that must win over it is a page stylesheet, and
+   every one of those is imported below. */
+import './styles/marks.css';
 import './styles/app.css';
 /* After `app.css` on purpose: the sheet's rules are additions to the plot figure
    that file already defines, not a replacement for it. Nothing here DEPENDS on the

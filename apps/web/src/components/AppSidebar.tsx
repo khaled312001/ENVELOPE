@@ -76,6 +76,7 @@
  * signed-in page, and amber means `ASSUMED`.
  */
 
+import { Icon, ROUTE_GLYPH } from '../icons.js';
 import { useT } from '../i18n/locale.js';
 import { PAGE_META } from '../page-meta.js';
 import { Link, ROUTES, type Href, type Location, type Route } from '../router.js';
@@ -109,73 +110,17 @@ const WORKSPACE: readonly Route[] = ROUTES.filter((r) => PAGE_META[r].shell === 
  * the accessible name, and it stays in the accessibility tree when the rail
  * collapses because it is hidden visually rather than removed.
  *
- * THE RECORD IS EXHAUSTIVE OVER `Route`, NOT PARTIAL, and the `null`s are the
- * point: a workspace route added without a glyph fails the build here, in the one
- * place that knows a collapsed rail would render it as an empty 44px box. A
- * `Partial` would compile and ship that box.
+ * THE TABLE MOVED TO `src/icons.tsx` AND THE NULLS ARE DRAWN. It was exhaustive
+ * over `Route` with seven entries `null`, on the argument — still right — that a
+ * `Partial` compiles and ships an empty 44px box in a collapsed rail. What the
+ * argument did not cover is that the nav and the colophon draw the same routes
+ * and drew nothing, so three places were free to disagree about what a route
+ * looks like. One record, still exhaustive, still not `Partial`.
  */
-const GLYPH: Readonly<Record<Route, JSX.Element | null>> = {
-  '/': null,
-  '/parking': null,
-  '/exports': null,
-  '/refusals': null,
-  '/readiness': null,
-  '/sign-in': null,
-  '/sign-up': null,
-  '/accept-invite': null,
-  '/app': (
-    <>
-      <path d="M2.5 4.5 L5.5 2.5 L13.5 2.5 L13.5 13.5 L2.5 13.5 Z" />
-      <path d="M5.5 7.5 L10.5 7.5 M5.5 10.5 L10.5 10.5" />
-    </>
-  ),
-  '/work': (
-    <>
-      <path d="M2.5 5.5 L9.5 5.5 L9.5 13.5 L2.5 13.5 Z" />
-      <path d="M5.5 5.5 L5.5 2.5 L12.5 2.5 L12.5 10.5 L9.5 10.5" />
-    </>
-  ),
-  /*
-    workspace  three figures on one baseline — people, not a building. The rail's
-               other two marks are drawings of the subject matter; this one is
-               drawn in the same hand rather than borrowed from an icon set, for
-               the reason the record above gives.
-  */
-  '/workspace': (
-    <>
-      <path d="M8 3.5 a1.6 1.6 0 1 1 0 3.2 a1.6 1.6 0 1 1 0 -3.2" />
-      <path d="M3.5 12.5 v-1 a2 2 0 0 1 2 -2 h5 a2 2 0 0 1 2 2 v1" />
-      <path d="M2.5 7.5 h1.5 M12 7.5 h1.5" />
-    </>
-  ),
-  '/settings': (
-    <>
-      <path d="M2.5 5.5 L13.5 5.5 M2.5 10.5 L13.5 10.5" />
-      <path d="M5.5 3.5 L5.5 7.5 M10.5 8.5 L10.5 12.5" />
-    </>
-  ),
-};
+const GLYPH = ROUTE_GLYPH;
 
-function Glyph({ route }: { readonly route: Route }): JSX.Element | null {
-  const mark = GLYPH[route];
-  if (!mark) return null;
-  return (
-    <svg
-      className="sidebar__glyph"
-      viewBox="0 0 16 16"
-      width="16"
-      height="16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="square"
-      strokeLinejoin="miter"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {mark}
-    </svg>
-  );
+function Glyph({ route }: { readonly route: Route }): JSX.Element {
+  return <Icon glyph={GLYPH[route]} className="sidebar__glyph" />;
 }
 
 /** The chevron on the collapse control. It points the way the rail will move. */

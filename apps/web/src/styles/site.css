@@ -350,9 +350,24 @@
   */
   max-inline-size: 28rem;
   block-size: auto;
+  /*
+    CENTRED WHEN IT STACKS. Below the query the figure takes a 100% basis and
+    the cap then pins it to the left, so a step primer — whose container is
+    about 55rem inside the workspace rail — drew a 448px figure with 430px of
+    empty column beside it. The auto margins do nothing at all in the row above
+    the query, where the figure is `flex: none` against the text.
+  */
+  margin-inline: auto;
   border: var(--border-width) solid var(--border-subtle);
 }
-@container (min-width: 64rem) {
+/*
+  60rem, not 64. The higher breakpoint was set while `.figured__text` still
+  carried a 62ch flex BASIS and the row wrapped; with the text on a zero basis
+  the only question left is how much prose the figure leaves, and at 60rem it
+  leaves about 46ch — inside the measure a paragraph wants, and low enough that
+  a step primer in the workspace goes side by side instead of stacking.
+*/
+@container (min-width: 60rem) {
   /*
     `flex: 1 1 0`, not a `--measure-prose` BASIS. A 62ch basis plus a 28rem
     figure plus the block gap is wider than the railed body at 1440, so the row

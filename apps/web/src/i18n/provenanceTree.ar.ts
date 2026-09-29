@@ -14,28 +14,29 @@ import type { ProvenanceTreeDictionary } from './provenanceTree.en.js';
 
 export const AR: ProvenanceTreeDictionary = {
   title: 'من أين جاء هذا الرقم',
-  close: 'أغلق الاشتقاق',
-  loading: 'جارٍ تحميل الاشتقاق…',
-  none: 'لم يُسجَّل اشتقاق لهذه القيمة.',
+  close: 'إغلاق الاشتقاق',
+  loading: 'جاري تحميل الاشتقاق…',
+  none: 'لا اشتقاق مسجلا لهذه القيمة.',
   footer:
-    'كل قيمة في هذه التشغيلة تعود إلى قاعدة، أو افتراض، أو شخص. ولا شيء يعود إلى ' +
-    '«قرّر النظام».',
+    'كل قيمة في هذه الدراسة تعود إلى قاعدة، أو افتراض، أو شخص. ولا شيء يعود إلى ' +
+    '«قرر النظام».',
 
   edges: {
-    derivedFrom: 'يُحسَب على أنه',
+    derivedFrom: 'يحسب على أنه',
     uses: 'باستخدام',
-    citedIn: 'مُستشهَد به في',
+    citedIn: 'مستشهد به في',
     enteredBy: 'أدخله',
-    justifiedBy: 'لأنّ',
-    boundedBy: 'يحدّه',
+    justifiedBy: 'لأن',
+    boundedBy: 'يحده',
     sourcedFrom: 'مصدره',
-    sensitiveTo: 'حسّاس تجاه',
-    supersededBy: 'حلّ محلّه',
+    sensitiveTo: 'يتأثر بـ',
+    supersededBy: 'حل محله',
   },
 
-  collapse: (label: string): string => `اطوِ ${label}`,
-  expand: (label: string): string => `وسِّع ${label}`,
+  /* Masdar on both, so neither reads as a past-tense verb without its marks. */
+  collapse: (label: string): string => `طي ${label}`,
+  expand: (label: string): string => `فتح ${label}`,
 
-  assumed: 'مُفترَض',
-  binding: 'مُلزِم',
+  assumed: 'مفترض',
+  binding: 'ملزم',
 };

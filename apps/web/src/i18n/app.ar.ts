@@ -1,5 +1,5 @@
 /**
- * العربية — `/app`: غلاف المحرّك، وشريط الخطوات، واللوحات التي يكتبها `App.tsx` بنفسه.
+ * العربية — `/app`: غلاف المحرك، وشريط الخطوات، واللوحات التي يكتبها `App.tsx` بنفسه.
  *
  * Held to `AppDictionary` by the type system, so this file cannot be missing a key
  * and cannot grow one the English does not have. Every choice is argued in
@@ -7,10 +7,9 @@
  * otherwise read as a mistranslation.
  *
  * THE STEP LABELS are the glossary's own terms, so a step and the page that talks
- * about it do not call one thing by two names: «القطعة»، «الطاقة»، «المواقف»،
- * «الفحوص» — the words `dashboard.ar.ts` already uses for the same columns.
- * «الوسائط» for Parameters is the dashboard's word for a parameter, kept for the
- * same reason.
+ * about it do not call one thing by two names: «القطعة»، «السعة»، «المواقف»،
+ * «الفحوصات». §5b replaced «الطاقة» with «السعة» — «الطاقة» is energy first, and
+ * «السعة التطويرية» is the term that appears in a feasibility study.
  *
  * NO DIGIT BELOW, in either script. Where the English helper takes a figure — the
  * threshold in "within 1%", the paper in "(A3)", the "3D" and the format version —
@@ -21,6 +20,11 @@
  * an assessment, the licence is recorded and not verified — carry no «قد» and no
  * «ربما». And no «نحن»: "We record it; we cannot verify it" becomes the software
  * speaking of itself in the third person, as §3 of the glossary requires.
+ *
+ * NO DIACRITICS, per §5. Where a word needed a mark to be read — «حُسبت», «وُزِّع»,
+ * «وقِّع» — the word itself was changed rather than propped up: «زمن الحساب»,
+ * «بعد توزيع المواقف», «أضف توقيعك». A mark is a way of rescuing a word that is
+ * not carrying its own meaning.
  */
 
 import type { AppDictionary } from './app.en.js';
@@ -29,38 +33,40 @@ export const AR: AppDictionary = {
   steps: {
     nav: 'الخطوات',
     labels: {
-      /* The step reads the affection plan sheet. «المخطّط» is that sheet; the
+      /* The step reads the affection plan sheet. «المخطط» is that sheet; the
          step's own heading names the instrument in full on first use. */
-      intake: 'المخطّط',
+      intake: 'المخطط',
       plot: 'القطعة',
-      parameters: 'الوسائط',
+      /* «المعطيات», not «الوسائط». A consultant calls the figures he is handed
+         «معطيات المشروع»; «وسائط» reads first as media. */
+      parameters: 'المعطيات',
       rules: 'القواعد',
       assumptions: 'الافتراضات',
-      capacity: 'الطاقة',
+      capacity: 'السعة',
       parking: 'المواقف',
-      checks: 'الفحوص',
-      evidence: 'الأدلّة',
+      checks: 'الفحوصات',
+      evidence: 'الأدلة',
       export: 'التصدير',
     },
-    locked: 'أكمل الخطوات السابقة أولًا',
+    locked: 'أكمل الخطوات السابقة أولا',
     lockedSr: ' (غير متاحة بعد)',
 
     /*
-      THE FOOTER. «رجوع إلى» و«تابِع إلى» يسبقان اسم الخطوة، والاسم مقروء من `labels`
-      أعلاه — فالشريط والتذييل يسمّيان الخطوة نفسها بالكلمة نفسها.
+      THE FOOTER. «رجوع إلى» و«المتابعة إلى» يسبقان اسم الخطوة، والاسم مقروء من
+      `labels` أعلاه — فالشريط والتذييل يسميان الخطوة نفسها بالكلمة نفسها.
 
       لا كلمة اتجاه هنا: «يمين» و«يسار» تنقلبان بين اللغتين، والسهم زخرفة يقلبها
-      `app.css`. والجملة في `needs` تسمّي الفعل الذي يفتح الخطوة، لا سبب المنع — زرّ
-      معطّل بلا جملة هو طريق مسدود، وهو الرفض الوحيد الذي لا يجوز لهذا المنتج أن يقدّمه.
+      `app.css`. والجملة في `needs` تسمي الفعل الذي يفتح الخطوة، لا سبب المنع — زر
+      معطل بلا جملة طريق مسدود، وهو الرفض الوحيد الذي لا يجوز لهذا المنتج أن يقدمه.
     */
     footer: {
-      nav: 'التنقّل بين الخطوات',
+      nav: 'التنقل بين الخطوات',
       backBefore: 'رجوع إلى ',
-      nextBefore: 'تابِع إلى ',
+      nextBefore: 'المتابعة إلى ',
       needs: {
-        plot: 'أنشئ القطعة أولًا، وتُفتَح هذه الخطوة.',
-        confirm: 'أكّد القطعة أولًا، وتُفتَح هذه الخطوة.',
-        run: 'شغّل المحرّك في خطوة القواعد أولًا، وتُفتَح هذه الخطوة.',
+        plot: 'أدخل القطعة أولا، وتفتح هذه الخطوة.',
+        confirm: 'أكد بيانات القطعة أولا، وتفتح هذه الخطوة.',
+        run: 'ابدأ الحساب في خطوة القواعد أولا، وتفتح هذه الخطوة.',
       },
       end: 'هذه آخر خطوة.',
     },
@@ -75,70 +81,71 @@ export const AR: AppDictionary = {
     unknownLead: 'لا توجد خطوة اسمها «',
     unknownBetween: '». والخطوات هي: ',
     unknownTail: '.',
-    lockedLead: 'لا تُفتَح خطوة «',
+    lockedLead: 'لا تفتح خطوة «',
     lockedTail: '» إلا حين يصير لدى الخطوات التي قبلها ما تقرؤه.',
   },
 
   draft: {
-    title: 'هذه الأرقام ليست تقييمًا.',
+    title: 'هذه الأرقام ليست تقييما.',
     fallback:
-      'استخدمت هذه التشغيلة قواعد مسوّدة باستشهادات نائبة. إنها تعرض عمل المحرّك، ولا تقيس هذه القطعة.',
+      'قامت هذه الدراسة على قواعد مسودة بمراجع نائبة. وهي تعرض عمل المحرك، ولا تقيس هذه القطعة.',
   },
 
   demo: {
     title: 'هذا هو المثال المحسوب المعروض في الصفحة الرئيسية.',
     body:
-      'القطعة وأضلاعها الأربعة، ومعالجة المواقف في معامل البناء، وعدد المستويات، ' +
-      'وكفاءة المساحة القابلة للبيع، وخليط الوحدات — كلها مملوءة من تلك التشغيلة، ' +
-      'ولك أن تغيّر أيًّا منها قبل أن يُحسب أي شيء.',
-    reproduces:
-      'اتركها كما هي، وستكون الطاقة الناتجة هي نفسها التي تنشرها تلك الصفحة.',
+      'القطعة وحدودها الأربعة، ومعالجة المواقف في معامل البناء، وعدد الأدوار، ' +
+      'وكفاءة المساحة القابلة للبيع، وخليط الوحدات — كلها مملوءة من تلك الدراسة، ' +
+      'ولك أن تغير أيا منها قبل أن يحسب أي شيء.',
+    reproduces: 'اتركها كما هي، وتكون السعة الناتجة هي نفسها التي تنشرها تلك الصفحة.',
   },
 
   /* The chrome's own words for the same two facts, from `chrome.ar.ts`. */
   build: {
-    engine: 'المحرّك ',
+    engine: 'المحرك ',
     annex: ' · ملحق التعريفات',
-    unreported: 'غير مُبلَّغ عنه',
-    unsigned: 'غير موقَّع',
+    unreported: 'غير معلن',
+    unsigned: 'غير موقع',
   },
 
   header: {
-    computedIn: (ms: string): string => `حُسبت في ${ms} ملّي ثانية`,
+    /* «زمن الحساب», not «حُسبت في»: unvowelled, «حسبت» is read as the active
+       «حَسَبت», which puts the reader in the sentence instead of the engine. */
+    computedIn: (ms: string): string => `زمن الحساب ${ms} ملي ثانية`,
     /* The unit symbol stays Latin on the chip, as m and m² do everywhere. */
     elapsed: (ms: string): string => `${ms} ms`,
-    change: 'غيِّر',
+    change: 'تعديل',
   },
 
   /*
-    «توقّف المحرّك هنا» — the engine's refusal is the product working, stated as a
+    «توقف المحرك هنا» — the engine's refusal is the product working, stated as a
     fact about the engine and not as a failure to apologise for. The sentence under
     it is the API's own and is rendered as the API wrote it.
   */
   error: {
-    blocked: 'توقّف المحرّك هنا',
+    blocked: 'توقف المحرك هنا',
     failed: 'حدث خطأ ما',
-    blockedAt: 'أُوقِف عند: ',
+    blockedAt: 'توقف عند: ',
     dismiss: 'إغلاق',
   },
 
   envelope: {
     title: 'الغلاف البنائي',
-    subtitle: 'كل بُعد يُسمّي القيد الذي أنتجه.',
+    subtitle: 'كل بعد يسمي القيد الذي أنتجه.',
     fields: {
-      setbackPermittedFootprint: 'مسطّح البناء الذي تسمح به الارتدادات',
-      coverageCap: 'حدّ نسبة التغطية',
-      podiumFootprint: 'مسطّح المصطبة',
-      towerPlate: 'لوح البرج',
-      heightCeiling: 'حدّ الارتفاع',
-      levelsByHeight: 'الطوابق وفق حدّ الارتفاع',
+      setbackPermittedFootprint: 'مسطح البناء الذي تسمح به الارتدادات',
+      coverageCap: 'حد نسبة التغطية',
+      podiumFootprint: 'مسطح البوديوم',
+      towerPlate: 'مسطح البرج',
+      heightCeiling: 'حد الارتفاع',
+      levelsByHeight: 'عدد الأدوار وفق حد الارتفاع',
     },
-    /* «يُلزِم» and «القيد المُلزِم» — the binding LIMIT. «الحاكم» is kept for the
-       governing BAND and the two are not collapsed into «المحدِّد». */
-    bindsTitle: 'ما الذي يُلزِم كل بُعد',
+    /* «يلزم» and «القيد الملزم» — the binding LIMIT. «الحاكم» is kept for the
+       governing BAND and the two are not collapsed into «المحدد». */
+    bindsTitle: 'ما الذي يلزم كل بعد',
     columns: {
-      dimension: 'البُعد',
-      binding: 'القيد المُلزِم',
+      dimension: 'البعد',
+      binding: 'القيد الملزم',
       value: 'القيمة',
       nextClosest: 'الأقرب بعده',
     },
@@ -149,36 +156,36 @@ export const AR: AppDictionary = {
       shown as the engine wrote it, never guessed at.
     */
     dimensions: {
-      podium_footprint: 'مسطّح المصطبة',
-      tower_plate: 'لوح البرج',
-      levels: 'الطوابق',
-      governing_capacity: 'الطاقة الحاكمة',
+      podium_footprint: 'مسطح البوديوم',
+      tower_plate: 'مسطح البرج',
+      levels: 'عدد الأدوار',
+      governing_capacity: 'السعة الحاكمة',
     },
     runnerUpAt: ' عند ',
     within: (threshold: string): string => `ضمن ${threshold}`,
     /*
       A LABEL AND A COUNT, NOT A COUNTED NOUN. Arabic agreement between a numeral
-      and «تكرار» changes form at one, two, three-to-ten and eleven-plus, and the
+      and «دورة» changes form at one, two, three-to-ten and eleven-plus, and the
       count here is the run's. A counted noun would need all four forms to be
       right; the label form is right for every count.
     */
     iterations: (count: number, converged: boolean): string =>
-      `تكرارات حلّ الارتدادات: ${count}${converged ? '' : '، ولم يتقارب الحلّ'}`,
+      `عدد دورات حل الارتدادات: ${count}${converged ? '' : '، ولم يستقر الحل'}`,
     fixpointNote:
-      'يتوقّف ارتداد الحدّ على عدد الطوابق، ويتوقّف عدد الطوابق على مسطّح البناء، ويتوقّف مسطّح البناء على الارتداد. يبدأ الحلّال بعدد الطوابق عند أشدّ قيمة معقولة تقييدًا، ويُكرّر حتى تكفّ القواعد المنطبقة وقيمها المحسومة عن التغيّر.',
+      'ارتداد الحد يتوقف على عدد الأدوار، وعدد الأدوار يتوقف على مسطح البناء، ومسطح البناء يتوقف على الارتداد. يبدأ المحرك من أشد عدد أدوار معقول تقييدا، ويعيد الدورة حتى تستقر القواعد المنطبقة وقيمها على حال واحدة.',
   },
 
   parking: {
     title: 'المواقف',
-    subtitle: 'الطلب، ثم العرض، ثم ما يستطيع العرض أن يحمله فعلًا.',
+    subtitle: 'الطلب، ثم المعروض، ثم ما يستطيع المعروض أن يخدمه فعلا.',
     fields: {
-      residentBays: 'مواقف السكّان',
-      visitorBays: 'مواقف الزوّار',
+      residentBays: 'مواقف السكان',
+      visitorBays: 'مواقف الزوار',
       totalBays: 'مجموع المواقف',
       areaPerBay: 'المساحة لكل موقف',
       areaRequired: 'المساحة المطلوبة',
-      levelsRequired: 'الطوابق المطلوبة',
-      levelsAvailable: 'الطوابق المتاحة',
+      levelsRequired: 'الأدوار المطلوبة',
+      levelsAvailable: 'الأدوار المتاحة',
       unitsCarried: 'الوحدات التي تكفيها المواقف',
     },
   },
@@ -186,99 +193,97 @@ export const AR: AppDictionary = {
   parkingStep: {
     drawingsTitle: 'الرسومات',
     /*
-      «مُفترَض» for the factor — the assumed divisor the supply figure rests on. The
+      «مفترض» for the factor — the assumed divisor the supply figure rests on. The
       sentence exists to say the headline parking figure was NOT this drawing, and
       it keeps both halves: the drawing is real, and it is not what fixed the
       answer.
     */
     drawingsSubtitle:
-      'كل طابق مواقف بمواقفه مُرقَّمةً وفي كل موقف سيارة، ومخطّط الموقع، والطابق المتكرّر، ومقطعان، وكلها مرسومة من المبنى الواحد الذي حسبه المحرّك. عدد المواقف الذي لا يمكن توزيعه ليس عدد مواقف — لكنّ رقم العرض الذي ثبّت الطاقة الحاكمة لم يكن هذا الرسم. كان مساحةً متاحة مقسومةً على معامل مُفترَض، حُسبت قبل أن يُوزَّع الطابق أصلًا. ويُقارَن بينهما في صفحة المواقف.',
-    levelAsPacked: 'الطابق كما وُزِّع',
-    noLevelTitle: 'لم يُوزَّع أي طابق مواقف لهذه القطعة.',
-    noReason: 'لم يُبلِّغ المحرّك عن سبب، وهذا في حدّ ذاته أمر يستحقّ أن يُثار.',
+      'كل دور مواقف بمواقفه مرقمة وفي كل موقف سيارة، ومخطط الموقع، والدور المتكرر، ومقطعان، وكلها مرسومة من المبنى الواحد الذي حسبه المحرك. وعدد مواقف لا يمكن توزيعه على الدور ليس عدد مواقف. غير أن رقم المعروض الذي ثبت السعة الحاكمة لم يأت من هذا الرسم: جاء من مساحة متاحة مقسومة على معامل مفترض، حسبت قبل توزيع الدور أصلا. والفارق بين الاثنين معروض في صفحة المواقف.',
+    levelAsPacked: 'الدور بعد توزيع المواقف',
+    noLevelTitle: 'لا يوجد دور مواقف موزع لهذه القطعة.',
+    noReason: 'لم يذكر المحرك سببا، وهذا في حد ذاته أمر يستحق أن يثار.',
     noLevelTail: 'أرقام الطلب أعلاه قائمة — الناقص هو الرسم، لا الحساب.',
   },
 
   export: {
     title: 'التصدير',
     subtitle:
-      'لا بدّ أن يتحقّق أمران قبل أن يخرج أيّ شيء: أن تكون قرأت الافتراضات، وأن يكون أحدٌ وضع اسمه عليه.',
+      'لا يخرج أي ملف قبل أمرين: أن تكون قد اطلعت على الافتراضات، وأن يكون أحد قد وضع اسمه على الناتج.',
 
-    assumptionsRead: 'قُرئت الافتراضات',
+    assumptionsRead: 'الاطلاع على الافتراضات',
     /* A label and a count, for the reason `envelope.iterations` gives. */
-    assumptionCount: (count: number): string => `عدد الافتراضات في هذه التشغيلة: ${count}.`,
-    readThem: 'اقرأها في سجلّ الافتراضات',
+    assumptionCount: (count: number): string => `عدد الافتراضات في هذه الدراسة: ${count}.`,
+    readThem: 'اقرأها في سجل الافتراضات',
 
-    signedBy: 'موقَّع من مراجِع مُسمّى',
-    reviewerBefore: 'سيُسجَّل ',
-    reviewerAfter: ' بصفته المراجِع.',
+    signedBy: 'موقع من مراجع محدد بالاسم',
+    reviewerBefore: 'يسجل ',
+    reviewerAfter: ' بصفته المراجع.',
     /*
-      «ولا تستطيع هذه البرمجية التحقّق منه» — the English "we cannot verify it",
+      «ولا تستطيع هذه البرمجية التحقق منه» — the English "we cannot verify it",
       said in the third person because the product does not say «نحن». The denial
-      uses the reader's own word, «التحقّق», as the antechamber does: softer here
+      uses the reader's own word, «التحقق», as the antechamber does: softer here
       would answer a question nobody asked.
     */
     noLicence:
-      'أضف رقم رخصتك المهنية لتوقّع. يُسجَّل الرقم، ولا تستطيع هذه البرمجية التحقّق منه.',
-    sign: 'وقِّع هذا المُخرَج',
+      'أضف رقم رخصتك المهنية حتى توقع. يسجل الرقم، ولا تستطيع هذه البرمجية التحقق منه.',
+    sign: 'أضف توقيعك على هذا الناتج',
 
-    preparing: 'جارٍ الإعداد…',
-    exportReport: 'صدِّر التقرير',
+    preparing: 'جاري الإعداد…',
+    exportReport: 'تصدير التقرير',
     notReady:
-      'لا بدّ أن يتحقّق الأمران أعلاه أولًا. وليس أيٌّ منهما إجراءً شكليًّا: أحدهما يُسجّل أنّ شخصًا قرأ ما اضطُرّ المحرّك إلى افتراضه، والآخر يُسجّل من وضع اسمه على الناتج.',
+      'لا بد من استيفاء الأمرين أعلاه أولا. وليس أي منهما إجراء شكليا: أحدهما يسجل أن شخصا اطلع على ما افترضه المحرك حيث لا تحسم قاعدة، والآخر يسجل من وضع اسمه على الناتج.',
 
-    fixedBefore: 'التشغيلة ',
-    fixedAfter:
-      ' ثابتة على حالها. وتعديل افتراضٍ من هنا يُنشئ تشغيلة جديدة ويترك هذه كما هي.',
+    fixedBefore: 'الدراسة ',
+    fixedAfter: ' ثابتة على حالها. وتعديل افتراض من هنا ينشئ دراسة جديدة ويترك هذه كما هي.',
 
-    runFingerprint: 'بصمة التشغيلة',
+    runFingerprint: 'بصمة الدراسة',
     runFingerprintNote: ' — المدخلات والإصدارات ومجموعة القواعد',
     reportFingerprint: 'بصمة التقرير',
     reportFingerprintBefore: '— بخوارزمية ',
     reportFingerprintAfter: ' على المحتوى',
 
-    annexTitle: 'ملحق تعريفات المقاييس غير موقَّع.',
+    annexTitle: 'ملحق تعريفات المقاييس غير موقع.',
 
     openReport: 'افتح التقرير',
     openDrawingSet: (paper: string): string => `افتح مجموعة الرسومات (${paper})`,
     printReport: 'احفظ التقرير بصيغة PDF',
-    printDrawingSet: (paper: string): string =>
-      `احفظ مجموعة الرسومات بصيغة PDF (${paper})`,
+    printDrawingSet: (paper: string): string => `احفظ مجموعة الرسومات بصيغة PDF (${paper})`,
     pdfNote:
-      'يكتب متصفّحك ملف PDF من المستند الذي أنتجه الخادم — اختر «الحفظ بصيغة PDF» ' +
-      'في نافذة الطباعة. مقاس الورق والهوامش ومواضع قطع الصفحات كلّها داخل المستند أصلاً. ' +
-      'الصفحة تُرصّ مرّة واحدة لا مرّتين: كاتب ثانٍ على الخادم كان سيرصّ التقرير نفسه بمحرّك مختلف، ' +
-      'ويوم يختلفان تكون النسخة التي حفظتها هي التي لم يقرأها أحد.',
-    openJson: 'افتح مُخرَج JSON',
-    downloadDxf: 'نزِّل رسم CAD (DXF)',
-    downloadModel: (): string => 'نزِّل النموذج ثلاثي الأبعاد (glTF)',
-    downloadXlsx: 'نزِّل المصنَّف (XLSX)',
+      'متصفحك هو الذي يكتب ملف PDF من المستند نفسه — اختر «الحفظ بصيغة PDF» في نافذة ' +
+      'الطباعة. مقاس الورق والهوامش ومواضع قطع الصفحات كلها داخل المستند أصلا، فتخرج ' +
+      'الصفحة بترتيب واحد لا اثنين: كاتب ثان على الخادم كان سيرتب التقرير نفسه بمحرك ' +
+      'مختلف، ويوم يختلف المحركان تكون النسخة التي حفظتها هي التي لم يقرأها أحد.',
+    openJson: 'افتح مخرجات JSON',
+    downloadDxf: 'نزل رسم CAD (DXF)',
+    downloadModel: (): string => 'نزل النموذج ثلاثي الأبعاد (glTF)',
+    downloadXlsx: 'نزل المصنف (XLSX)',
 
     cad: {
       lead: (): string =>
-        'رسم CAD هو المبنى كاملًا: كل طابق مواقف على منسوبه وفي كل موقف سيارة، والمنحدرات سطوحًا مائلة بين الطوابق، والكتلة البنائية مُقامةً وجوهًا ثلاثية الأبعاد. ولكل طابق طبقاته — ',
+        'رسم CAD هو المبنى كاملا: كل دور مواقف على منسوبه وفي كل موقف سيارة، والمنحدرات (الرامبات) سطوحا مائلة بين الأدوار، وكتلة المبنى بأوجهها الثلاثية الأبعاد. ولكل دور طبقاته — ',
       between: '، ',
       afterLayers:
-        ' — فيستطيع المراجِع أن يُطفئ طابقًا واحدًا، أو نوعًا واحدًا من العناصر فيه. أمّا Revit وIFC فهما ',
+        ' — فيستطيع المراجع أن يطفئ دورا واحدا، أو نوعا واحدا من العناصر فيه. أما Revit وIFC فهما ',
       /* «غير» carries the emphasis the English puts on "not". */
       not: 'غير',
       tail:
-        ' مُضمَّنين: فنقل IFC ذهابًا وإيابًا دون فقدٍ عملٌ قائم بذاته لم تُسعِّره هذه المرحلة، والملف الرديء البنية أسوأ من غيابه.',
+        ' مدرجين: فتبادل ملفات IFC ذهابا وإيابا دون فقد عمل قائم بذاته لم تدرجه هذه المرحلة في نطاقها، والملف الرديء البنية أسوأ من غيابه.',
     },
 
     glb: {
-      lead: (): string => 'النموذج ثلاثي الأبعاد هو العرض ثلاثي الأبعاد في خطوة الطاقة، في ملف ',
+      lead: (): string => 'النموذج ثلاثي الأبعاد هو العرض ثلاثي الأبعاد في خطوة السعة، في ملف ',
       /*
         "extension" is a glTF extension, not a file extension — «امتدادات الصيغة»
-        says which. The two sentences are the permanent pair every export
-        carries, and «نفسيهما» keeps them the same two.
+        says which. The two sentences are the permanent pair every export carries,
+        and «نفسهما» keeps them the same two.
       */
       tail: (_threeD: string, format: string): string =>
-        `: بصيغة ${format} الثنائية، دون أي امتداد من امتدادات الصيغة يُلزَم القارئ بدعمه. ووحدته المتر، مقيسًا من منتصف القطعة، وفيه عقدةٌ لكل طابق ولسياراته. ويحمل الجملتين نفسيهما في بياناته الوصفية، لأنّ الملف ثلاثي الأبعاد لا خانة عنوان فيه تُطبَعان فيها.`,
+        `: بصيغة ${format} الثنائية، دون أي امتداد من امتدادات الصيغة يلزم القارئ بدعمه. ووحدته المتر، مقيسا من منتصف القطعة، وفيه عقدة لكل دور ولسياراته. ويحمل الجملتين نفسهما في بياناته الوصفية، لأن الملف ثلاثي الأبعاد لا خانة عنوان فيه تطبعان فيها.`,
     },
 
-    oneSheet: 'ورقة واحدة في كل مرّة',
-    sheetBefore: 'نزِّل ',
+    oneSheet: 'لوحة واحدة في كل مرة',
+    sheetBefore: 'نزل ',
     sheetBetween: ': ',
     sheetAfter: ' (DXF)',
   },

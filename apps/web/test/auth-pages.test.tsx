@@ -99,8 +99,8 @@ describe('/sign-in and /sign-up', () => {
 
   it('says it in Arabic too', () => {
     const t = arabicReadingText(arabic());
-    expect(t).toContain('ولا يجعل تشغيلةً مُراجَعةً');
-    expect(t).toContain('لا تُقيَّم إطلاقًا');
+    expect(t).toContain('ولا يجعل الدراسة مراجعة');
+    expect(t).toContain('لا تخضع للتقييم إطلاقا');
     // «الرخصة», never «الترخيص» — that word is TRAKHEES, and using the
     // authority's name for the field would read as though the number had been
     // checked with them.
@@ -114,7 +114,7 @@ describe('/sign-in and /sign-up', () => {
     const t = text(signUp());
     expect(t).toMatch(/never verified/i);
     expect(t).toMatch(/no registry is connected/i);
-    expect(arabicReadingText(arabic())).toContain('ولا يُتحقَّق منه إطلاقًا');
+    expect(arabicReadingText(arabic())).toContain('ولا يتحقق منه أحد إطلاقا');
   });
 
   /* ------------------------------------------------------------------------

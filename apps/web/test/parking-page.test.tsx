@@ -461,8 +461,8 @@ describe('/parking in Arabic', () => {
     const carriers = /data-state="assumed"|traced--assumed/g;
     const amber = [...html.matchAll(carriers)].length;
     expect(amber).toBe([...markup().matchAll(carriers)].length);
-    // «مُفترَض» is the label and `ASSUMED` the engine's token; either says it.
-    const said = [...stripTags(html).matchAll(/مُفترَض|\bASSUMED\b/g)].length;
+    // «مفترض» is the label and `ASSUMED` the engine's token; either says it.
+    const said = [...stripTags(html).matchAll(/مفترض|\bASSUMED\b/g)].length;
     expect(said, 'amber appears more often than the word does').toBeGreaterThanOrEqual(amber);
   });
 

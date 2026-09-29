@@ -15,23 +15,23 @@ import type { DrawingSetDictionary } from './drawingSet.en.js';
 
 export const AR: DrawingSetDictionary = {
   stored:
-    'حُسِبت هذه التشغيلة قبل أن تُصنَع الرسومات من نموذج المبنى، فلا شيء يُرسَم. احسب ' +
-    'التشغيلة من جديد لترى لوحاتها.',
-  none: 'لم يرسم المحرّك أي لوحة لهذه التشغيلة.',
+    'حسبت هذه الدراسة قبل أن تصنع الرسومات من نموذج المبنى، فلا شيء يرسم. أعد حساب ' +
+    'الدراسة لترى لوحاتها.',
+  none: 'لم يرسم المحرك أي لوحة لهذه الدراسة.',
   tabs: 'اللوحات في مجموعة الرسومات هذه',
 
   zoomGroup: (sheet: string): string => `التكبير، ${sheet}`,
-  zoomOut: 'صغِّر',
-  zoomIn: 'كبِّر',
-  fitted: 'مُلاءَمة للعرض',
-  zoomed: (percent: string): string => `${percent}% من الملاءَمة`,
-  fit: 'لائِم العرض',
+  zoomOut: 'تصغير',
+  zoomIn: 'تكبير',
+  fitted: 'ملائمة للعرض',
+  zoomed: (percent: string): string => `${percent}% من الملائمة`,
+  fit: 'ملاءمة العرض',
   scroller: (number: string, title: string): string => `${number} ${title}، قابلة للتمرير`,
   drawing: (number: string, title: string, scale: string): string =>
-    `${number} ${title}، مرسومة بمقياس ${scale}. القيم التي تذكرها مُدرَجة أسفل الرسم.`,
+    `${number} ${title}، مرسومة بمقياس ${scale}. والقيم التي تذكرها مدرجة أسفل الرسم.`,
   hint:
-    'اختر موقفًا، أو لوح طابق، أو خطّ ارتداد لترى مصدره. وكل ما يذكره شريط العنوان مُدرَج ' +
-    'أيضًا أدناه.',
+    'اختر موقفا، أو مسطح دور، أو خط ارتداد لترى مصدره. وكل ما يذكره شريط العنوان مدرج ' +
+    'أيضا أدناه.',
 
   notes: 'ملاحظات على هذه اللوحة',
   factLabel: (label: string, value: string, description: string, action: string): string =>

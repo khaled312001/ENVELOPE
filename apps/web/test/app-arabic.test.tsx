@@ -1303,7 +1303,7 @@ describe('the Arabic copy that carries the product’s refusals', () => {
     );
     // The API's disclaimer beneath it is the API's, and stays as it was sent.
     expect(markup).toMatch(
-      /<div class="banner banner--assumed" role="note"><div><strong>هذا ليس لائحةً تنظيمية\.<\/strong><p><span dir="ltr" lang="en" class="verbatim">/,
+      /<div class="banner banner--assumed" role="note"><div><strong>هذا ليس لائحة تنظيمية\.<\/strong><p><span dir="ltr" lang="en" class="verbatim">/,
     );
     expect(visibleText(markup)).toContain(standards['the general standard']!.disclaimer);
   });
@@ -1322,7 +1322,7 @@ describe('the Arabic copy that carries the product’s refusals', () => {
         />,
       ),
     );
-    expect(rulesStep).toContain('لا قيمة افتراضية، ولن يفترض المحرّك واحدة.');
+    expect(rulesStep).toContain('لا قيمة افتراضية له، ولن يفترض المحرك واحدة.');
     expect(rulesStep).toContain('لا قيمة افتراضية هنا');
   });
 
@@ -1342,7 +1342,7 @@ describe('the Arabic copy that carries the product’s refusals', () => {
     const canvas = visibleText(
       ar(<PlotCanvas vertices={SQUARE} edges={EDGES} areaM2="3200" footprintAreaM2="1917.5" />),
     );
-    expect(canvas).toContain('الضلع 1 · طريق (محلّي)80 mالارتداد 4.5 m');
-    expect(canvas).toContain('لم يُحسَم الارتداد بعد');
+    expect(canvas).toContain('الحد 1 · طريق (محلي)80 mالارتداد 4.5 m');
+    expect(canvas).toContain('الارتداد لم يحسم بعد');
   });
 });

@@ -283,8 +283,8 @@ describe('/exports in Arabic', () => {
     const text = page();
     for (const step of X.gateSequence) expect(text).toContain(String(step.status));
     // The correction the English carries — the check signed its own run — in Arabic.
-    expect(text).toContain('وقّع تشغيلته هو');
-    for (const falsehood of [/شخصين|شخصان/, /مراجِع ليس هو المُنشئ|غير المُنشئ/, /رخصة مُتحقَّق منها|رخصة موثَّقة/]) {
+    expect(text).toContain('وقع دراسته هو');
+    for (const falsehood of [/شخصين|شخصان/, /مراجع ليس هو المنشئ|غير المنشئ/, /رخصة متحقق منها|رخصة موثقة/]) {
       expect(text, `/exports (ar) says ${falsehood}`).not.toMatch(falsehood);
     }
   });

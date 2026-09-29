@@ -12,20 +12,25 @@ export const AR: ChromeDictionary = {
   switchTo: 'English',
   switchToLabel: 'تحويل الموقع إلى الإنجليزية، من اليسار إلى اليمين',
 
-  skipTo: (page: string): string => `تخطَّ إلى ${page}`,
+  skipTo: (page: string): string => `انتقل إلى ${page}`,
   navLabel: 'الموقع',
   sections: 'الأقسام',
   close: 'إغلاق',
-  runAPlot: 'شغِّل قطعة',
+  /*
+    «ابدأ دراسة» rather than «شغّل قطعة». A consultant runs a STUDY on a plot —
+    that is the word on the fee proposal — and «شغّل» is what you do to a machine.
+    The old label also needed a shadda to be read at all. See glossary §5b.
+  */
+  runAPlot: 'ابدأ دراسة',
 
   /*
-    «السمة» for a visual theme, not «الموضوع» — which is a subject — and not
-    «الثيم». «الداكنة» and «الفاتحة» are what the market writes for dark and light.
-    The imperative matches «شغِّل قطعة» beside it: a button commands.
+    «الوضع» for a visual mode, not «السمة» — which a reader meets first as a
+    character trait — and not «الثيم». «الداكن» and «الفاتح» are what the market
+    writes. «التبديل إلى» rather than the imperative «حوّل», which needed a shadda.
   */
   themeToggle: {
-    toDark: 'حوِّل إلى السمة الداكنة',
-    toLight: 'حوِّل إلى السمة الفاتحة',
+    toDark: 'التبديل إلى الوضع الداكن',
+    toLight: 'التبديل إلى الوضع الفاتح',
   },
 
   /*
@@ -47,14 +52,14 @@ export const AR: ChromeDictionary = {
   rail: {
     label: 'مساحة عملك',
     heading: 'مساحة العمل',
-    signedInAs: 'داخل باسم',
-    filingUnder: 'تُحفَظ الأعمال تحت',
-    personal: 'وحدي',
-    /* «اطوِ» و«افرد» — فعلان صريحان. The name changes with the state for the
+    signedInAs: 'مسجل الدخول باسم',
+    filingUnder: 'تحفظ الأعمال باسم',
+    personal: 'حسابي الشخصي',
+    /* «طي» و«فتح» — مصدران بلا تشكيل. The name changes with the state for the
        reason the English carries. */
-    collapse: 'اطوِ شريط مساحة العمل',
-    expand: 'افرد شريط مساحة العمل',
-    guest: 'أنت تعمل كضيف. هذا المتصفّح يحمل مفتاح هذه التشغيلات؛ مسحُه يفقدها، ولا يبلغها جهاز آخر.',
+    collapse: 'طي شريط مساحة العمل',
+    expand: 'فتح شريط مساحة العمل',
+    guest: 'أنت تعمل كضيف. هذا المتصفح وحده يحمل مفتاح هذه الدراسات: إذا مسحت بياناته فقدتها، ولا يمكن الوصول إليها من جهاز آخر.',
   },
 
   masthead: {
@@ -67,29 +72,29 @@ export const AR: ChromeDictionary = {
       has not reached one. Translating a refusal to judge into an adverse judgement
       is a stronger claim than the affirmative one it refuses to make.
     */
-    validity: 'الصلاحية التنظيمية — لم تُقيَّم',
+    validity: 'الصلاحية التنظيمية — لم تخضع للتقييم',
     rulesApproved: 'القواعد المعتمدة',
-    definitionsSigned: 'التعريفات الموقَّعة',
+    definitionsSigned: 'التعريفات الموقعة',
   },
 
   colophon: {
     groups: {
-      claim: 'ما لا يدَّعيه',
+      claim: 'ما لا يؤكده',
       product: 'المنتج',
-      method: 'كيف تتحقّق منه',
-      reference: 'هذا النشر',
+      method: 'كيف تتحقق منه',
+      reference: 'هذا الإصدار',
     },
-    engineVersion: 'المحرّك',
+    engineVersion: 'المحرك',
     annexVersion: 'ملحق التعريفات',
-    unreported: 'غير مُبلَّغ عنه',
-    unsigned: 'غير موقَّع',
+    unreported: 'غير معلن',
+    unsigned: 'غير موقع',
     /*
       The same wording as the route description in `routes['/readiness']` — one
       claim, one set of words. «زمن التشغيل» is uptime and «الإتاحة» is
       availability; collapsing the two would drop half the denial, and the sentence
       exists to deny both.
     */
-    readinessNote: 'جاهزية، لا زمن تشغيل — لا شيء هنا يراقب الإتاحة.',
+    readinessNote: 'جاهزية النظام، لا زمن التشغيل — لا شيء هنا يراقب توفر الخدمة.',
   },
 
   disclaimer: {
@@ -102,23 +107,23 @@ export const AR: ChromeDictionary = {
       أبدًا reads as "always" in some registers and this is the one sentence on the
       site that may not be ambiguous.
     */
-    emphasis: 'الصلاحية التنظيمية لا تُقيَّم إطلاقًا ولا يُدَّعى بها.',
+    emphasis: 'الصلاحية التنظيمية لا تخضع للتقييم إطلاقا ولا يؤكدها هذا النظام.',
     /*
       مطابقة appears here, negated, and that is the only place it may appear. The
       glossary makes any Arabic sentence that predicates مطابق of an output a defect
       of the same class as an untraced value.
     */
     body:
-      ' يُبلِّغ هذا المحرّك بما تقتضيه قواعده المُرمَّزة. وهو ليس فحص مطابقة، ولا يُغني أيُّ جزء منه ' +
+      ' يعرض هذا المحرك ما تقتضيه القواعد المسجلة فيه. وهو ليس فحص مطابقة، ولا يغني أي جزء منه ' +
       'عن المراجعة المهنية.',
   },
 
   verbatimNotice:
-    'ما ينتجه المحرّك — أساسٌ أو صيغةٌ أو مرجع قاعدة — يُعرض كما أصدره، دون ترجمة.',
+    'ما ينتجه المحرك — أساس الافتراض أو المعادلة أو مرجع القاعدة — يعرض كما أصدره، دون ترجمة.',
 
   untranslated: {
-    title: 'هذه الصفحة لم تُترجَم بعد',
-    body: 'إطارها بالعربية ونصّها ما زال بالإنجليزية. المحرّك وكل رقم يعملان بالطريقة نفسها في اللغتين.',
+    title: 'هذه الصفحة لم تترجم بعد',
+    body: 'إطارها بالعربية ونصها ما زال بالإنجليزية. المحرك وكل رقم يعملان بالطريقة نفسها في اللغتين.',
   },
 
   /*
@@ -131,43 +136,43 @@ export const AR: ChromeDictionary = {
     language costs a line and closes that gap. It is the same instinct as
     `REGULATORY VALIDITY: NOT ASSESSED` being permanent rather than contextual.
   */
-  governingLanguage: 'النصّ الإنجليزي هو النصّ الحاكم عند أي اختلاف.',
+  governingLanguage: 'النص الإنجليزي هو النص الحاكم عند أي اختلاف.',
 
   routes: {
     '/': {
-      title: 'TOP.ai — الطاقة التطويرية',
+      title: 'TOP.ai — السعة التطويرية',
       description:
-        'يُبلِّغ TOP.ai بما تقتضيه القواعد المُرمَّزة لقطعة أرض، وباشتقاق كل رقم يقول ذلك. الصلاحية التنظيمية لا تُقيَّم إطلاقًا ولا يُدَّعى بها.',
+        'يعرض TOP.ai ما تقتضيه القواعد المسجلة فيه لقطعة أرض، ومعه اشتقاق كل رقم. الصلاحية التنظيمية لا تخضع للتقييم إطلاقا ولا يؤكدها هذا النظام.',
       navLabel: null,
       footerLabel: 'الإجابة',
     },
     '/parking': {
       title: 'المواقف — TOP.ai',
       description:
-        'كيف يُصنع رقم المواقف فعليًّا: معامل مساحة مُفترَض أولًا، ثم طابق مرسوم بمواقفه، والفارق بينهما يُقاس لا يُخفى.',
+        'كيف يتكون رقم المواقف فعليا: معامل مساحة مفترض أولا، ثم دور مرسوم بمواقفه، والفارق بين الاثنين يقاس ولا يخفى.',
       navLabel: 'المواقف',
       footerLabel: 'المواقف',
     },
     '/exports': {
-      title: 'ما يخرج منه — TOP.ai',
+      title: 'المخرجات — TOP.ai',
       description:
-        'الملفات التي يكتبها المحرّك — الرسم، وملف النموذج، والمصنَّف، والتشغيلة بياناتٍ، والتقرير — وما يحمله كلٌّ منها. كل اسم في الصفحة مقروء من ملف، ولا يخرج أيُّ ملف قبل توقيع بوّابتين.',
+        'الملفات التي يكتبها المحرك — اللوحات، والنموذج ثلاثي الأبعاد، وجدول الكميات، وبيانات الدراسة، والتقرير — وما يحمله كل منها. كل اسم في الصفحة مقروء من ملف حقيقي، ولا يخرج أي ملف قبل استيفاء بوابتين.',
       navLabel: null,
-      footerLabel: 'ما يخرج منه',
+      footerLabel: 'المخرجات',
     },
     '/refusals': {
       title: 'ما يرفضه — TOP.ai',
       description:
-        'كل ما لن يفعله هذا المحرّك، بادئًا بما يرفضه أثناء التشغيل. إن كنت تبحث عن الادّعاء الزائد، فابدأ من هنا.',
+        'كل ما لن يفعله هذا المحرك، بدءا بما يرفضه أثناء الحساب. إن كنت تبحث عن المبالغة في الادعاء، فابدأ من هنا.',
       navLabel: 'ما يرفضه',
       footerLabel: 'ما يرفضه',
     },
     '/app': {
-      title: 'المحرّك — TOP.ai',
+      title: 'المحرك — TOP.ai',
       description:
-        'مرِّر قطعة أرض عبر المحرّك، وراقب كل خطوة وهي ترفض أو تفترض أو تشتقّ في العلن.',
+        'أدخل قطعة أرض في المحرك، وتابع كل خطوة وهي ترفض أو تفترض أو تشتق أمامك.',
       navLabel: null,
-      footerLabel: 'شغِّل قطعة',
+      footerLabel: 'ابدأ دراسة',
     },
     '/work': {
       title: 'أعمالك — TOP.ai',
@@ -177,14 +182,14 @@ export const AR: ChromeDictionary = {
         result is entitled to know what this list refuses to be before they open it.
       */
       description:
-        'كل تشغيلة أنشأها هذا الحساب، محفوظة كما حُسبت تمامًا، ومعها ما حكمها وما افترضته. لا مجاميع ولا متوسّطات: متوسّط طاقتين حاكمتين لقطعتين مختلفتين ليس حقيقةً عن شيء.',
+        'كل دراسة أنشأها هذا الحساب، محفوظة كما حسبت تماما، ومعها ما حكمها وما افترضته. لا مجاميع ولا متوسطات: متوسط سعتين حاكمتين لقطعتين مختلفتين لا يصف شيئا.',
       navLabel: null,
       footerLabel: 'أعمالك',
     },
     '/sign-in': {
       title: 'تسجيل الدخول — TOP.ai',
       description:
-        'سجّل الدخول لتُحفَظ تشغيلاتك كما حُسبت تمامًا. الحساب يغيّر شيئين ولا يراجع شيئًا: فالصلاحية التنظيمية لا تُقيَّم إطلاقًا، بحساب أو بغير حساب.',
+        'سجل الدخول لتحفظ دراساتك كما حسبت تماما. الحساب يغير شيئين ولا يراجع شيئا: فالصلاحية التنظيمية لا تخضع للتقييم إطلاقا، بحساب أو بغير حساب.',
       navLabel: null,
       footerLabel: 'تسجيل الدخول',
     },
@@ -193,7 +198,7 @@ export const AR: ChromeDictionary = {
       /* The description carries the refusal, not the invitation. A sign-up page
          is where a translation is most tempted to promise. */
       description:
-        'أنشئ حسابًا لتُحفَظ تشغيلاتك. وهو لا يجعل تشغيلةً مُراجَعةً ولا مُتحقَّقًا منها ولا معتمَدةً ولا مطابِقة، ورقم الرخصة الذي يُسجَّل لا يُتحقَّق منه في أيّ سجلّ.',
+        'أنشئ حسابا لتحفظ دراساتك. وهو لا يجعل الدراسة مراجعة ولا موثقة ولا معتمدة ولا مطابقة، ورقم الرخصة الذي يسجل لا يتم التحقق منه في أي سجل.',
       navLabel: null,
       footerLabel: 'إنشاء حساب',
     },
@@ -206,30 +211,30 @@ export const AR: ChromeDictionary = {
         يُتحقَّق منها», the same words the page itself uses.
       */
       description:
-        'اسمك ورقم رخصتك وكلمة المرور — وما يفعله كلٌّ منها بتشغيلة توقّعها. الرخصة تُسجَّل ولا يُتحقَّق منها؛ وهذه الصفحة تقول ذلك عند الحقل الذي يُكتب فيه الرقم.',
+        'اسمك ورقم رخصتك وكلمة المرور — وأثر كل منها على الدراسة التي توقعها. الرخصة تسجل ولا يتم التحقق منها، وهذه الصفحة تقول ذلك عند الحقل الذي يكتب فيه الرقم.',
       navLabel: null,
       footerLabel: 'الإعدادات',
     },
     '/workspace': {
       title: 'مساحة العمل — TOP.ai',
       description:
-        'مكتبٌ ومَن فيه وما يحقّ لكلٍّ منهم. لا يتحقّق أحد من شيء هنا: الاسم لافتةٌ اختارها أعضاؤه، ورقم الرخصة على المراجعة يُسجَّل ولا يُتحقَّق منه.',
+        'المكتب ومن فيه وصلاحية كل منهم. لا يتم التحقق من شيء هنا: الاسم لافتة اختارها الأعضاء، ورقم الرخصة على المراجعة يسجل ولا يتم التحقق منه.',
       navLabel: null,
       footerLabel: 'مساحة العمل',
     },
     '/accept-invite': {
       title: 'دعوة — TOP.ai',
       description:
-        'الطرف الآخر من دعوة مساحة عمل. الرابط يعمل لحسابٍ واحد، ولا يقول شيئًا عن سبب رفضه.',
+        'الطرف الآخر من دعوة مساحة العمل. الرابط يصلح لحساب واحد، ولا يذكر سبب الرفض إن رفض.',
       navLabel: null,
       footerLabel: 'دعوة',
     },
     '/readiness': {
-      title: 'جاهزية النشر — TOP.ai',
+      title: 'جاهزية النظام — TOP.ai',
       description:
-        'ما ليس جاهزًا في هذا النشر، والإجراء البشري الذي يُغيّر كل رقم منه. جاهزية، لا زمن تشغيل — لا شيء هنا يراقب الإتاحة.',
+        'ما ليس جاهزا في هذا الإصدار، والإجراء البشري الذي يغير كل رقم منه. جاهزية النظام، لا زمن التشغيل — لا شيء هنا يراقب توفر الخدمة.',
       navLabel: 'الجاهزية',
-      footerLabel: 'جاهزية النشر',
+      footerLabel: 'جاهزية النظام',
     },
   },
 

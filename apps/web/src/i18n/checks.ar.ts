@@ -1,48 +1,49 @@
 /**
- * العربية — الخطوة 7، الفحوص.
+ * العربية — الخطوة 7، الفحوصات.
  *
  * Held to `ChecksDictionary`. This screen carries three refusals, and the Arabic
  * holds each of them in the words rather than trusting the layout to:
  *
- * 1. «لم يُقيَّم» for NOT ASSESSED, everywhere — the absence of an act. Never
+ * 1. «لم يخضع للتقييم» for NOT ASSESSED, everywhere — the absence of an act. Never
  *    «غير صالح» and never «غير مطابق»: both are verdicts, and either would turn a
- *    refusal to assess into an adverse finding.
- * 2. «لا يُدَّعى إطلاقًا» for NEVER CLAIMED — present tense, because it is a
+ *    refusal to assess into an adverse finding. It replaced «لم يُقيَّم», which §5
+ *    retired: unvowelled that phrase reads as "he did not stay".
+ * 2. «لا يؤكده النظام إطلاقا» for NEVER CLAIMED — present tense, because it is a
  *    permanent property of the product and not a fact about this run, and
- *    «إطلاقًا» rather than «أبدًا», which in some registers reads as "always".
- * 3. «مطابقة» appears once, negated: «وليس مطابقةً إطلاقًا». Agreement between the
+ *    «إطلاقا» rather than «أبدا», which in some registers reads as "always".
+ * 3. «مطابقة» appears once, negated: «وليس مطابقة إطلاقا». Agreement between the
  *    validator and the generator is self-consistency and nothing more.
  *
- * No «نحن»: "what we checked" becomes the passive «ما فُحِص», which is also closer
- * to what happened — a module checked it, not a team.
+ * No «نحن»: "what we checked" becomes «ما جرى فحصه», which is also closer to what
+ * happened — a module checked it, not a team.
  *
- * COUNTS TAKE A COLON. Arabic number–noun agreement changes with the figure, and the
- * figure is the run's; «اجتاز: 10» is right for every count.
+ * COUNTS TAKE A COLON. Arabic number-noun agreement changes with the figure, and
+ * the figure is the run's; «اجتاز: 10» is right for every count.
  */
 
 import type { ChecksDictionary } from './checks.en.js';
 
 export const AR: ChecksDictionary = {
   claims: {
-    selfConsistency: 'الاتّساق الذاتي',
+    selfConsistency: 'الاتساق الذاتي',
     ruleCoverage: 'تغطية القواعد',
     geometricValidity: 'الصلاحية الهندسية',
-    professionalAgreement: 'الاتّفاق مع الحكم المهني',
+    professionalAgreement: 'التوافق مع الحكم المهني',
     regulatoryValidity: 'الصلاحية التنظيمية',
   },
 
   status: {
-    SUPPORTED: 'مدعوم',
-    MEASURED: 'مَقيس',
+    SUPPORTED: 'مؤكد',
+    MEASURED: 'مقيس',
     PARTIAL: 'جزئي',
-    NOT_ASSESSED: 'لم يُقيَّم',
-    NEVER_CLAIMED: 'لا يُدَّعى إطلاقًا',
+    NOT_ASSESSED: 'لم يخضع للتقييم',
+    NEVER_CLAIMED: 'لا يؤكده النظام إطلاقا',
   },
 
-  title: 'ما فُحِص، وما لم يُفحَص',
+  title: 'ما جرى فحصه، وما لم يفحص',
   subtitle:
-    'خمسة أسئلة مختلفة، يُجاب عن كلٍّ منها على حدة. ليست سؤالًا واحدًا، وواحدٌ منها فقط ' +
-    'يتعلّق بالجهة التنظيمية.',
+    'خمسة أسئلة مختلفة، لكل منها إجابته على حدة. وليست سؤالا واحدا، وواحد منها فقط ' +
+    'يتعلق بالجهة التنظيمية.',
   independence: 'ما تعنيه الاستقلالية هنا وما لا تعنيه',
 
   footer: {
@@ -53,56 +54,59 @@ export const AR: ChecksDictionary = {
   },
 
   invariants: {
-    title: 'فحوص الحفظ الحسابي',
+    title: 'فحوصات الحفظ الحسابي',
     subtitle:
-      'حسابٌ يجب أن ينغلق أيًّا كان ما تقوله القواعد. الإخفاق هنا يحجب التشغيلة — ولا يكون ' +
-      'تحذيرًا إطلاقًا.',
+      'حساب يجب أن ينغلق أيا كان ما تقوله القواعد. والإخفاق هنا يحجب الدراسة — ولا ' +
+      'يكون تحذيرا إطلاقا.',
     passed: (count: string): string => `اجتاز: ${count}`,
     failed: (count: string): string => `أخفق: ${count}`,
-    notAssessed: (count: string): string => `لم يُقيَّم: ${count}`,
+    notAssessed: (count: string): string => `لم يخضع للتقييم: ${count}`,
     ran: (
       ran: string,
       total: string,
       dormant: string,
     ): { readonly before: string; readonly emphasis: string; readonly after: string } => ({
       before:
-        `جرى من فحوص الفهرس ${ran} من ${total} على هذا المُخرَج. ولم يجد ${dormant} منها ` +
+        `جرى من فحوصات الفهرس ${ran} من ${total} على هذا الناتج. ولم يجد ${dormant} منها ` +
         `ما يفحصه، وهي `,
-      emphasis: 'لا تُحتسب اجتيازات',
+      emphasis: 'لا تحتسب اجتيازات',
       after: '.',
     }),
-    caption: 'نتائج ثوابت التحقُّق، مع القيمة المرصودة والمتوقَّعة لكلٍّ منها',
+    caption: 'نتائج فحوصات الحفظ، ومعها القيمة المرصودة والمتوقعة لكل منها',
     columns: {
       check: 'الفحص',
       statement: 'المنطوق',
       observed: 'المرصود',
-      expected: 'المتوقَّع',
+      expected: 'المتوقع',
       tolerance: 'التفاوت المسموح',
     },
-    hideDormant: 'أخفِ الفحوص التي لم تجد ما تفحصه',
-    showDormant: (count: string): string => `اعرض الفحوص التي لم تجد ما تفحصه (${count})`,
+    hideDormant: 'إخفاء الفحوصات التي لم تجد ما تفحصه',
+    showDormant: (count: string): string => `إظهار الفحوصات التي لم تجد ما تفحصه (${count})`,
     pass: 'اجتاز',
     fail: 'أخفق',
-    notAssessedChip: 'لم يُقيَّم',
+    notAssessedChip: 'لم يخضع للتقييم',
   },
 
   outcomes: {
-    title: 'الإجابة، يُعاد فحصها مقابل القواعد',
+    title: 'الإجابة، بعد إعادة فحصها أمام القواعد',
     subtitle:
-      'تفحصها وحدةٌ لا ترى الوحدة التي أنتجتها. الاتّفاق اتّساقٌ ذاتيّ — وليس مطابقةً ' +
-      'إطلاقًا.',
-    satisfiedCount: (count: string): string => `مُستوفاة: ${count}`,
-    violatedCount: (count: string): string => `مُخالَفة: ${count}`,
-    notEvaluableCount: (count: string): string => `تعذّر تقييمها: ${count}`,
-    satisfied: 'مُستوفى',
-    violated: 'مُخالَف',
-    notEvaluable: 'تعذّر تقييمه',
+      // «وليس مطابقة» stays on ONE source line: `arabic.test.ts` reads the raw
+      // module text, so a string break between the negation and the word it negates
+      // hides the negation from the check that the word is never predicated.
+      'تفحصها وحدة لا ترى الوحدة التي أنتجتها. والاتفاق بينهما اتساق ذاتي — ' +
+      'وليس مطابقة إطلاقا.',
+    satisfiedCount: (count: string): string => `مستوفاة: ${count}`,
+    violatedCount: (count: string): string => `مخالفة: ${count}`,
+    notEvaluableCount: (count: string): string => `تعذر تقييمها: ${count}`,
+    satisfied: 'مستوفى',
+    violated: 'مخالف',
+    notEvaluable: 'تعذر تقييمه',
     lifeSafety: 'سلامة الأرواح',
-    deferredTitle: 'منطبقة، ولم تُقيَّم ',
+    deferredTitle: 'منطبقة، ولم تخضع للتقييم ',
     lifeSafetyCount: (count: string): string => `سلامة الأرواح: ${count}`,
     deferredNote:
-      'مُعلَنة في كل مُخرَج. ما لم يُفحَص يجب أن يكون ظاهرًا لا غائبًا — فالفحص المحذوف ' +
-      'يُقرأ فحصًا ناجحًا.',
-    notAssessed: 'لم يُقيَّم',
+      'معلنة في كل ناتج. وما لم يفحص يجب أن يكون ظاهرا لا غائبا — فالفحص المحذوف يقرأ ' +
+      'فحصا ناجحا.',
+    notAssessed: 'لم يخضع للتقييم',
   },
 };

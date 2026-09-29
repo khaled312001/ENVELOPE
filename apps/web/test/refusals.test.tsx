@@ -396,9 +396,9 @@ describe('/refusals in Arabic', () => {
     // or merged these would pass every prohibition, and the reader it fails is the
     // one who cannot check it against the English. Both denials keep their own verb.
     const t = arabicText();
-    expect(t).toContain('لا تتحقّق من الرخصة لدى أيّ جهة');
-    expect(t).toContain('ولا تُقارن الشخص الذي يوقّع بالشخص الذي أنشأ التشغيلة');
-    expect(t).toContain('الفصل بين المهامّ ضابطٌ لا يملكه هذا البرنامج');
+    expect(t).toContain('لا تتحقق من الرخصة لدى أي جهة');
+    expect(t).toContain('ولا تقارن الشخص الذي يوقع بالشخص الذي أنشأ الدراسة');
+    expect(t).toContain('الفصل بين المهام ضابط لا يملكه هذا البرنامج');
   });
 
   it('renders every engine string as the engine emitted it, inside Verbatim', () => {

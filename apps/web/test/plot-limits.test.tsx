@@ -170,6 +170,6 @@ describe('prohibitions', () => {
 
   it('carries the refusal sentence under the tables, both languages', () => {
     expect(visible(paint(BOUND))).toContain('never assessed and never claimed');
-    expect(visible(paint(BOUND, 'ar'))).toContain('لا تُقيَّم المطابقة التنظيمية');
+    expect(visible(paint(BOUND, 'ar'))).toContain('الصلاحية التنظيمية لا تخضع للتقييم إطلاقا');
   });
 });

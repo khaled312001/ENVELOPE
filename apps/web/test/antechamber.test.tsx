@@ -363,7 +363,7 @@ describe('the account form carries a licence', () => {
   it('says what the number is for, and that nobody confirms it', () => {
     expect(ANTE_EN.account.fields.licence.help).toMatch(/sign a review/);
     expect(ANTE_EN.account.fields.licence.help).toMatch(/not confirmed with anybody/);
-    expect(ANTE_AR.account.fields.licence.help).toContain('لا يُؤكَّد لدى أحد');
+    expect(ANTE_AR.account.fields.licence.help).toContain('ولا يؤكده أحد');
     expect(ANTE_AR.account.fields.licence.label).toContain('الرخصة');
   });
 

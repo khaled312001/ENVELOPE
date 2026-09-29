@@ -91,7 +91,7 @@ is pasted into WhatsApp, Slack or LinkedIn. **Size:** 1200 × 630. **dark:** no.
 > it later. Precise, with soft ambient depth and a gentle two-stop wash in the envelope fill.
 
 **alt (en):** A plot outline with the buildable envelope offset inside it.
-**alt (ar):** حدود قطعة أرض، وبداخلها الظرف البنائي مزاحًا للداخل.
+**alt (ar):** حدود قطعة أرض، وبداخلها الغلاف البنائي مزاحا إلى الداخل.
 
 ---
 
@@ -132,7 +132,7 @@ hero. **Size:** 640 × 480 unless stated. **dark:** yes for all five.
 
 **alt (en):** Three bands of different heights; the shortest one is picked out, and a line
 carries its height across the other two.
-**alt (ar):** ثلاثة نطاقات بارتفاعات مختلفة؛ الأقصر مميّز، وخط يمدّ ارتفاعه عبر الاثنين الآخرين.
+**alt (ar):** ثلاثة نطاقات بارتفاعات مختلفة؛ أقصرها مميز، وخط يمد ارتفاعه عبر الاثنين الآخرين.
 
 ---
 
@@ -152,7 +152,7 @@ and headroom are NOT ASSESSED. It must not be amber and it must not match the ba
 
 **alt (en):** A parking level in plan: two rows of bays either side of an aisle, with a ramp
 crossing at a shallow angle.
-**alt (ar):** مستوى مواقف في المسقط: صفّا مواقف على جانبَي ممر، ومنحدر يعبره بزاوية ضحلة.
+**alt (ar):** دور مواقف في المسقط: صفا مواقف على جانبي ممر، ومنحدر يعبره بزاوية ضحلة.
 
 ---
 
@@ -168,7 +168,7 @@ crossing at a shallow angle.
 
 **alt (en):** A value at the top of a graph, resolving downward through the values it was
 derived from until every branch reaches a citation.
-**alt (ar):** قيمة في أعلى مخطّط، تتفرّع نزولًا عبر القيم المشتقّة منها حتى يبلغ كل فرع مرجعه.
+**alt (ar):** قيمة في أعلى مخطط، تتفرع نزولا عبر القيم المشتقة منها حتى يبلغ كل فرع مرجعه.
 
 ---
 
@@ -198,7 +198,7 @@ derived from until every branch reaches a citation.
 
 **alt (en):** A filled region inside a boundary that is open on one side; beyond the opening
 the field thins out.
-**alt (ar):** منطقة ممتلئة داخل حدّ مفتوح من جهة؛ وراء الفتحة يخفّ المجال حتى ينتهي.
+**alt (ar):** منطقة ممتلئة داخل حد مفتوح من جهة؛ وراء الفتحة يخف المجال حتى ينتهي.
 
 ---
 
@@ -239,7 +239,7 @@ read. **Size:** 480 × 320. **dark:** yes for all.
 
 **alt (en):** A sheet with some of its values traced out to a list, and two entries in the list
 left unconnected.
-**alt (ar):** صفحة تتفرّع منها قيم إلى قائمة، واثنتان في القائمة بلا مصدر.
+**alt (ar):** صفحة تتفرع منها قيم إلى قائمة، واثنتان في القائمة بلا مصدر.
 
 ---
 
@@ -256,7 +256,7 @@ form currently accepts.
 
 **alt (en):** An irregular plot of eight edges, one of them curved, with roads on two sides and
 a neighbouring plot on a third.
-**alt (ar):** قطعة غير منتظمة من ثمانية أضلاع، أحدها منحنٍ، وطريقان على جانبين وجار على ثالث.
+**alt (ar):** قطعة غير منتظمة من ثمانية حدود، أحدها منحن، وطريقان على جانبين وجار على ثالث.
 
 ---
 
@@ -273,7 +273,7 @@ default. See the plan, §3.3.
 
 **alt (en):** A measured band subdivided into parts, and a second band below it, detached and
 outside the measure.
-**alt (ar):** نطاق مقيس مقسّم إلى أجزاء، ونطاق ثانٍ تحته منفصل وخارج القياس.
+**alt (ar):** نطاق مقيس مقسم إلى أجزاء، ونطاق ثان تحته منفصل وخارج القياس.
 
 ---
 
@@ -296,7 +296,7 @@ report is printed and taken into rooms.
 
 **alt (en):** A list of values in which two are marked as assumed, by colour and by a second
 non-colour cue.
-**alt (ar):** قائمة قيم، اثنتان منها موسومتان كافتراض، باللون وبعلامة ثانية غير لونية.
+**alt (ar):** قائمة قيم، اثنتان منها موسومتان بأنهما افتراض، باللون وبعلامة ثانية غير لونية.
 
 ---
 
@@ -316,7 +316,7 @@ the plan, not before. See the plan, §3.6.
 
 **alt (en):** A stack of floor plates with a podium below and a tower above, and a core running
 through every level.
-**alt (ar):** رصّة بلاطات أدوار: قاعدة بالأسفل وبرج بالأعلى، ونواة تخترق كل المستويات.
+**alt (ar):** رصة مسطحات أدوار: قاعدة بالأسفل وبرج بالأعلى، ونواة تخترق الأدوار كلها.
 
 ---
 
@@ -331,7 +331,7 @@ through every level.
 
 **alt (en):** A parking level: rows of bays, two aisles meeting in a T, a ramp entering from
 one edge, and cars standing in one row.
-**alt (ar):** مستوى مواقف: صفوف مواقف، وممرّان يلتقيان على شكل T، ومنحدر يدخل من أحد الأطراف، وسيارات في أحد الصفوف.
+**alt (ar):** دور مواقف: صفوف مواقف، وممران يلتقيان على شكل T، ومنحدر يدخل من أحد الأطراف، وسيارات في أحد الصفوف.
 
 ---
 
@@ -347,7 +347,7 @@ invariants need a unit schedule Phase 0 does not generate, and a `DORMANT` check
 pass nor a fail.
 
 **alt (en):** Eighteen checks; ten are solid and eight are dotted and empty.
-**alt (ar):** ثمانية عشر فحصًا؛ عشرة ممتلئة وثمانية منقّطة وفارغة.
+**alt (ar):** ثمانية عشر فحصا؛ عشرة ممتلئة وثمانية منقطة وفارغة.
 
 ---
 
@@ -373,7 +373,7 @@ pass nor a fail.
 > kind, no folded corners, no arrows, no download glyphs.
 
 **alt (en):** Six files a finished run produces.
-**alt (ar):** ستة ملفات يُخرجها التشغيل المكتمل.
+**alt (ar):** ستة ملفات تخرج من دراسة مكتملة.
 
 ---
 
@@ -407,7 +407,7 @@ pass nor a fail.
 value → first action. A ruled sheet with a title block says *this is where a project goes*.
 
 **alt (en):** An empty drawing sheet with a ruled, unfilled title block.
-**alt (ar):** ورقة رسم فارغة بخانة عنوان مسطّرة بلا محتوى.
+**alt (ar):** ورقة رسم فارغة بخانة عنوان مسطرة بلا محتوى.
 
 ---
 
@@ -422,7 +422,7 @@ value → first action. A ruled sheet with a title block says *this is where a p
 > no plus signs.
 
 **alt (en):** A signature block with one line used and two waiting.
-**alt (ar):** خانة توقيعات: سطر مستعمَل وسطران في انتظار.
+**alt (ar):** خانة توقيعات: سطر مستعمل وسطران في انتظار.
 
 ---
 
@@ -435,7 +435,7 @@ value → first action. A ruled sheet with a title block says *this is where a p
 > Both sheets are blank.
 
 **alt (en):** Two sheets with an unmade connection between them.
-**alt (ar):** ورقتان بينهما صِلة لم تُنشأ بعد.
+**alt (ar):** ورقتان بينهما صلة لم تنشأ بعد.
 
 ---
 
@@ -486,7 +486,7 @@ real and were not run, which is a different fact from their not existing.
 
 **alt (en):** A pipeline stopped at its third stage; the stages after it are drawn but not
 reached.
-**alt (ar):** خطّ معالجة توقّف عند مرحلته الثالثة؛ المراحل بعده مرسومة لكنها لم تُبلَغ.
+**alt (ar):** خط معالجة توقف عند مرحلته الثالثة؛ المراحل بعده مرسومة ولم تبلغ.
 
 ---
 
@@ -509,7 +509,7 @@ one ink — so no tint may sit below about 8% or between 8% and 20% where a lase
 drop it.
 
 **alt (en):** A plot with its envelope, and a parking level drawn beneath it.
-**alt (ar):** قطعة أرض وظرفها البنائي، ومستوى مواقف مرسوم تحتها.
+**alt (ar):** قطعة أرض وغلافها البنائي، ودور مواقف مرسوم تحتها.
 
 ---
 

@@ -158,7 +158,7 @@ describe('/settings', () => {
 
   it('says in Arabic that the licence is recorded and never verified', () => {
     const t = arabicReadingText(panelsAr());
-    expect(t).toContain('ولا يُتحقَّق منه');
+    expect(t).toContain('ولا يتحقق منه أحد');
     // «الرخصة», never «الترخيص» — that word is TRAKHEES, and using the
     // authority's name for the field would read as though the number had been
     // checked with them. `work.ar.ts` and `antechamber.ar.ts` carry the argument.
@@ -169,12 +169,12 @@ describe('/settings', () => {
     const t = text(panels());
     expect(t).toMatch(/does not change a run you have already signed/i);
     expect(t).toMatch(/never rewritten/i);
-    expect(arabicReadingText(panelsAr())).toContain('لا يُعاد كتابة تشغيلة');
+    expect(arabicReadingText(panelsAr())).toContain('ولا يعاد كتابة دراسة إطلاقا');
   });
 
   it('says that changing the password ends every other session', () => {
     expect(text(panels())).toMatch(/signs out every other device/i);
-    expect(arabicReadingText(panelsAr())).toContain('يُسجّل الخروج من كل جهاز آخر');
+    expect(arabicReadingText(panelsAr())).toContain('يسجل الخروج من كل جهاز آخر');
   });
 
   it('says there is no device list, and why, rather than showing an empty one', () => {

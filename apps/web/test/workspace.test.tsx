@@ -193,7 +193,7 @@ describe('/workspace', () => {
   it('says the workspace name is verified by nobody', () => {
     const t = text(panels());
     expect(t).toMatch(/Nothing checked that a firm by this name exists/i);
-    expect(arabicReadingText(panelsAr())).toMatch(/لا شيء تحقّق من وجود مكتب بهذا الاسم/);
+    expect(arabicReadingText(panelsAr())).toMatch(/لا شيء تحقق من وجود مكتب بهذا الاسم/);
   });
 
   it('says members read each other’s work, and what that includes', () => {
@@ -208,7 +208,7 @@ describe('/workspace', () => {
     const t = text(panels());
     expect(t).toMatch(/recorded and never verified/i);
     expect(t).toMatch(/no registry is connected/i);
-    expect(arabicReadingText(panelsAr())).toMatch(/يُسجَّل ولا يُتحقَّق منه/);
+    expect(arabicReadingText(panelsAr())).toMatch(/يسجل ولا يتحقق منه أحد/);
   });
 
   it('says nothing stops an author signing their own review', () => {
@@ -217,8 +217,8 @@ describe('/workspace', () => {
     const t = text(panels());
     expect(t).toMatch(/nothing here stops the person who computed a run from signing it themselves/i);
     expect(t).toMatch(/A role is not a second pair of eyes/i);
-    expect(arabicReadingText(panelsAr())).toMatch(/لا شيء هنا يمنع من حسب التشغيلة أن يوقّعها بنفسه/);
-    expect(arabicReadingText(panelsAr())).toMatch(/الدور ليس عينًا ثانية/);
+    expect(arabicReadingText(panelsAr())).toMatch(/لا شيء هنا يمنع من حسب الدراسة أن يوقعها بنفسه/);
+    expect(arabicReadingText(panelsAr())).toMatch(/الدور ليس عينا ثانية/);
   });
 
   it('says what every role may do, so a role name is never a bare word', () => {
@@ -290,7 +290,7 @@ describe('/workspace', () => {
   it('says an invitation is a link this product does not email', () => {
     const t = text(panels());
     expect(t).toMatch(/TOP\.ai sends no email and does not claim to/i);
-    expect(arabicReadingText(panelsAr())).toMatch(/لا يُرسل TOP\.ai بريدًا ولا يدّعي ذلك/);
+    expect(arabicReadingText(panelsAr())).toMatch(/لا يرسل TOP\.ai بريدا ولا يقول إنه يرسله/);
   });
 
   it('says the link is shown once — over the dictionary, where the sentence lives', () => {
@@ -301,7 +301,7 @@ describe('/workspace', () => {
       reason a reader copies it now rather than closing the tab.
     */
     expect(DICT).toMatch(/It is not stored and cannot be shown again/i);
-    expect(DICT_AR).toContain('لا يُخزَّن ولا يمكن إظهاره ثانية');
+    expect(DICT_AR).toContain('لا يخزن ولا يمكن إظهاره ثانية');
   });
 
   /* ---------------------------------------------------------------------- log */
@@ -353,8 +353,8 @@ describe('/workspace', () => {
     // deleted from one language and kept in the other is invisible to every
     // reviewer who reads only the other.
     for (const phrase of [
-      'لا يتحقّق أحد',
-      'يُسجَّل ولا يُتحقَّق منه',
+      'لا يتحقق أحد',
+      'يسجل ولا يتحقق منه أحد',
       'لا شيء هنا يمنع',
       'الافتراضات التي أدخلها أحدهم بيده',
     ]) {

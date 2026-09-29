@@ -5,74 +5,78 @@
  * `docs/05-design/arabic-glossary.md`; the comments here record only what would
  * otherwise look like a mistranslation.
  *
- * «ولا قيمة افتراضية له» — the one place «افتراضي» may appear, negated, meaning
- * "default" and denying one. Where the English says "A default here would
- * silently change the footprint" the Arabic says «تصنيف تلقائي» instead: the
- * sentence is not denying a default there, it is describing one, and «افتراضي»
- * outside a denial is the word the glossary forbids.
+ * «تصنيف تلقائي», never «افتراضي». Where the English says "A default here would
+ * silently change the footprint" the sentence is describing a default rather than
+ * denying one, and «افتراضي» outside a denial is the word the glossary forbids.
  *
- * THE ROAD TYPES are the glossary's: «طريق تجميعي», «طريق محلّي». A road type is
- * a trade term and a consultant who met «طريق جامع» would conclude the product
- * does not know the field.
+ * «الحد», not «الضلع» — §5b. A polygon has sides; an affection plan prints
+ * «الحدود», and this form is filled from an affection plan.
  *
- * "we compare it" — the product does not say «نحن», so the comparison is stated
- * in the passive: «تُقارَن».
+ * THE ROAD TYPES are the glossary's: «طريق تجميعي», «طريق محلي». A road type is a
+ * trade term and a consultant who met «طريق جامع» would conclude the product does
+ * not know the field.
+ *
+ * "we compare it" — the product does not say «نحن», and §5 no longer allows the
+ * vowelled passive «تُقارَن» that used to stand in for it, so the sentence names
+ * the actor: «يقارنها النظام».
  */
 
 import type { PlotFormDictionary } from './plotForm.en.js';
 
 export const AR: PlotFormDictionary = {
   draft: {
-    title: 'كنت بدأت إدخال قطعة أرض.',
-    savedBefore: ' حُفظت في ',
-    savedAfter: '. ولم يتغيّر شيء أدناه.',
-    restore: 'استرجِعها',
-    discard: 'احذفها',
+    title: 'كنت قد بدأت إدخال قطعة أرض.',
+    savedBefore: ' آخر حفظ في ',
+    savedAfter: '. ولم يتغير شيء أدناه.',
+    /* Masdar on both buttons, so neither can be read as a past-tense verb once the
+       marks come off: «استرجعها» would otherwise be "he retrieved it". */
+    restore: 'استرجاعها',
+    discard: 'حذفها',
   },
 
   save: {
-    saving: 'جارٍ الحفظ…',
-    saved: (time: string): string => `حُفظ في ${time}`,
-    localOnly: 'محفوظ على هذا الجهاز فقط — سجِّل الدخول فيتبعك أينما كنت.',
+    saving: 'جاري الحفظ…',
+    saved: (time: string): string => `آخر حفظ في ${time}`,
+    localOnly: 'محفوظ على هذا الجهاز وحده — ادخل إلى حسابك فينتقل معك إلى أي جهاز.',
     error: 'لم يصل آخر حفظ إلى الخادم.',
   },
 
   title: 'قطعة الأرض',
-  subtitle: 'أدخل الأبعاد من مخطّط الأفكشن (Affection Plan).',
+  subtitle: 'أدخل الأبعاد من مخطط الأفكشن (Affection Plan).',
 
   carried: {
-    title: 'نُقلت من المخطّط الذي رفعته.',
+    title: 'منقولة من المخطط الذي رفعته.',
     body: (tolerance: string): string =>
-      ` رقم القطعة والمجتمع العمراني والمساحة المذكورة مملوءة. أمّا العرض والعمق فلا: المخطّط يذكر مساحةً لا واجهة، والمستطيل المستنتَج من مساحةٍ سيجتاز عندئذٍ فحص الـ${tolerance} مقابل الرقم الذي استُنتج منه.`,
+      ` رقم القطعة والمجتمع العمراني والمساحة المذكورة مملوءة. أما العرض والعمق فلا: المخطط يذكر مساحة ولا يذكر واجهة، ومستطيل يستخرج من مساحة يجتاز فحص الـ${tolerance} أمام الرقم نفسه الذي خرج منه.`,
   },
 
   which: {
-    legend: 'أيّ قطعة',
+    legend: 'أي قطعة',
     plotNumber: 'رقم القطعة',
     community: 'المجتمع العمراني',
     /* A community's name as issued, in the script the affection plan prints it. */
-    communityPlaceholder: 'مثلًا Business Bay',
+    communityPlaceholder: 'مثلا Business Bay',
     communityHelp:
-      'لائحة ضبط التطوير تخصّ كل مجتمع عمراني على حدة، فهذا الحقل يحدّد القواعد التي تنطبق.',
+      'لائحة ضبط التطوير تختلف من مجتمع عمراني إلى آخر، وهذا الحقل يحدد القواعد التي تنطبق.',
   },
 
   size: {
     legend: 'ما حجمها',
     width: 'العرض (m)',
     depth: 'العمق (m)',
-    stated: 'المساحة في مخطّط الأفكشن (m²) ',
+    stated: 'المساحة في مخطط الأفكشن (m²) ',
     optional: 'اختياري',
     statedHelp: (tolerance: string): string =>
-      `إن أدخلتها، تُقارَن بالمساحة المحسوبة من أبعادك، وتُبلَّغ إن اختلفتا بأكثر من ${tolerance}.`,
+      `إن أدخلتها، يقارنها النظام بالمساحة المحسوبة من أبعادك، ويعلن الفارق إن تجاوز ${tolerance}.`,
     computed: 'المساحة المحسوبة',
   },
 
   edges: {
-    title: 'الأضلاع',
+    title: 'الحدود',
     unclassified: (count: string): string => `${count} دون تصنيف بعد`,
-    allClassified: 'صُنِّفت كلها',
-    /* The select's label; its options complete the sentence — «يطلّ على طريق». */
-    faces: (edge: string): string => `الضلع ${edge} يطلّ على`,
+    allClassified: 'كلها مصنفة',
+    /* The select's label; its options complete the sentence — «يطل على طريق». */
+    faces: (edge: string): string => `الحد ${edge} يطل على`,
     choose: 'اختر…',
     classes: {
       ROAD: 'طريق',
@@ -84,66 +88,66 @@ export const AR: PlotFormDictionary = {
     hierarchy: {
       ARTERIAL: 'طريق شرياني',
       COLLECTOR: 'طريق تجميعي',
-      LOCAL: 'طريق محلّي',
-      ACCESS: 'طريق وصول',
+      LOCAL: 'طريق محلي',
+      ACCESS: 'طريق خدمة',
     },
-    roadHelp: 'يُقرأ جدول الارتدادات بحسب هذا الاختيار.',
+    roadHelp: 'يقرأ المحرك جدول الارتدادات بحسب هذا الاختيار.',
   },
 
   /**
-   * كيف تُدخَل صورة القطعة. انظر `plotForm.en.ts` للحجّة كاملة.
+   * كيف تدخل صورة القطعة. انظر `plotForm.en.ts` للحجة كاملة.
    *
-   * «مِسَاحة» لا «بوصلة»: الاتجاه هنا هو اتجاه السير على الضلع بالدرجات من
-   * الشمال مع عقارب الساعة، وهو ما ينصّ عليه مخطّط الأفكشن. والمحرّك هو من
-   * يحسب العمود الخارج من الضلع، فلا يُطلب من القارئ أن يطرح تسعين درجة ذهنيًّا.
+   * «مساحية» لا «بوصلة»: الاتجاه هنا اتجاه السير على الحد بالدرجات من الشمال مع
+   * عقارب الساعة، وهو ما ينص عليه مخطط الأفكشن. والمحرك هو من يحسب العمود الخارج
+   * من الحد، فلا يطلب من القارئ أن يطرح تسعين درجة في ذهنه.
    */
   shape: {
     legend: 'شكل القطعة',
     rectangle: 'مستطيل',
-    edges: 'ضلعًا ضلعًا',
-    rectangleHelp: 'واجهة وعمق. أسرع طريق حين تكون القطعة مستطيلة فعلًا.',
-    edgesHelp:
-      'طول واتجاه لكل ضلع كما ينصّ عليهما مخطّط الأفكشن، وتُحسب الأركان منهما.',
+    edges: 'حدا بعد حد',
+    rectangleHelp: 'واجهة وعمق. أسرع طريق حين تكون القطعة مستطيلة فعلا.',
+    edgesHelp: 'طول واتجاه لكل حد كما ينص عليهما مخطط الأفكشن، ومنهما تحسب الأركان.',
     switched:
-      'مستطيلك الآن في الحقول أدناه بوصفه أربعة أضلاع. غيِّر ما تشاء منها، وأضِف ضلعًا أو احذفه بحسب القطعة.',
+      'مستطيلك الآن في الحقول أدناه بأربعة حدود. عدل ما تشاء منها، وأضف حدا أو احذفه بحسب القطعة.',
   },
 
   traverse: {
     length: 'الطول (م)',
     bearing: 'الاتجاه (°)',
-    bearingHelp: 'بالدرجات من الشمال مع عقارب الساعة على امتداد الضلع: الشمال صفر، والشرق ربع دورة.',
-    add: 'أضِف ضلعًا',
-    remove: 'احذف',
-    removeEdge: (edge: string): string => `احذف الضلع ${edge}`,
-    tooFew: 'القطعة تحتاج إلى ثلاثة أضلاع على الأقل.',
+    bearingHelp:
+      'بالدرجات من الشمال مع عقارب الساعة على امتداد الحد: الشمال صفر، والشرق ربع دورة.',
+    add: 'أضف حدا',
+    remove: 'حذف',
+    removeEdge: (edge: string): string => `حذف الحد ${edge}`,
+    tooFew: 'القطعة تحتاج إلى ثلاثة حدود على الأقل.',
     unusable:
-      'كل ضلع يحتاج إلى طول أكبر من صفر واتجاه بين الصفر والدورة الكاملة. ولا يُحسب شيء قبل أن يكتمل ذلك.',
-    closes: 'تعود الأضلاع إلى الركن الذي بدأت منه.',
+      'كل حد يحتاج إلى طول أكبر من صفر واتجاه بين الصفر والدورة الكاملة. ولا يحسب شيء قبل أن يكتمل ذلك.',
+    closes: 'تعود الحدود إلى الركن الذي بدأت منه.',
     misclose: (metres: string, ratio: string): string =>
-      `لا تعود الأضلاع إلى الركن الذي بدأت منه: تنتهي على بُعد ${metres} م، أي جزء واحد من ${ratio} من محيط القطعة.`,
+      `لا تعود الحدود إلى الركن الذي بدأت منه: تنتهي على بعد ${metres} م، أي جزء واحد من ${ratio} من محيط القطعة.`,
     lastLeg: (drawn: string, entered: string): string =>
-      `لم يُعدَّل شيء. الشكل الذي سيُرسَل يُغلق الضلع الأخير عائدًا إلى الركن الأول، فيصير طوله ${drawn} م بدل ${entered} م المُدخَلة له.`,
+      `لم يعدل النظام شيئا. الشكل الذي يرسل إلى المحرك يغلق الحد الأخير عائدا إلى الركن الأول، فيصير طوله ${drawn} م بدل ${entered} م التي أدخلتها له.`,
 
-    curve: 'هيئة الضلع',
+    curve: 'هيئة الحد',
     straight: 'مستقيم',
     bowsRight: 'ينحني إلى اليمين',
     bowsLeft: 'ينحني إلى اليسار',
     curveHelp:
-      'اليمين واليسار وأنت تمشي على الضلع بالاتجاه المذكور أعلاه. الأركان تبقى في مواضعها، والانحناء هو طريقة سير الضلع بينهما.',
+      'اليمين واليسار وأنت تمشي على الحد بالاتجاه المذكور أعلاه. الأركان تبقى في مواضعها، والانحناء هو طريقة سير الحد بينهما.',
     radius: 'نصف القطر (م)',
-    radiusHelp: 'نصف القطر كما يطبعه مخطّط الأفكشن.',
+    radiusHelp: 'نصف القطر كما يطبعه مخطط الأفكشن.',
     arcNote: (arcLength: string, rise: string, sweep: string): string =>
-      `${arcLength} م على امتداد القوس، يبتعد عن الخطّ المستقيم ${rise} م في أقصى نقطة، عبر ${sweep}°.`,
+      `${arcLength} م على امتداد القوس، يبتعد عن الخط المستقيم ${rise} م في أقصى نقطة، عبر ${sweep}°.`,
     radiusTooSmall:
-      'دائرة بهذا الصِّغَر لا تبلغ طرفي الضلع. لا بدّ أن يكون نصف قطرها نصف الطول المذكور أعلاه على الأقلّ.',
+      'دائرة بهذا الصغر لا تبلغ طرفي الحد. لا بد أن يكون نصف قطرها نصف الطول المذكور أعلاه على الأقل.',
     curveTooGentle:
-      'هذا الانحناء يبتعد عن الخطّ المستقيم بأقلّ من ملّيمتر، وهو المقياس الذي تُرسم عليه كلّ المخططات هنا. أدخِله ضلعًا مستقيمًا.',
+      'هذا الانحناء يبتعد عن الخط المستقيم بأقل من مليمتر، وهو المقياس الذي ترسم عليه كل المخططات هنا. أدخله حدا مستقيما.',
   },
 
   submit: {
-    busy: 'جارٍ فحص الحدود…',
-    idle: 'تابِع',
+    busy: 'جاري فحص الحدود…',
+    idle: 'متابعة',
     incomplete:
-      'صنِّف كل ضلع للمتابعة. فلو وُضع هنا تصنيف تلقائي لغيَّر مسطّح البناء دون أن يراه أحد.',
+      'حدد تصنيف كل حد للمتابعة. فلو وضع هنا تصنيف تلقائي لغير مسطح البناء دون أن يراه أحد.',
   },
 };

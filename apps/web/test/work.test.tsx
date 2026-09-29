@@ -243,7 +243,7 @@ describe('/work', () => {
       'لا توجد في هذا النشر شركات ولا مشاريع، بل حسابات فقط',
     );
     expect(DICT_AR, 'the Arabic drops "recorded but never checked"').toContain(
-      'تُسجَّل ولا يُتحقَّق منها إطلاقًا',
+      'تسجل ولا يتحقق منها أحد إطلاقا',
     );
     // The link names the page in the words the site names it with, so the sentence
     // and the page it opens are not two names for one thing.
@@ -340,8 +340,8 @@ describe('the run page', () => {
     }
     // In Arabic: the same denial, and none of the words a comparison would need —
     // difference, best, improvement — nor a claim that anything is secured or verified.
-    expect(dictAr).toContain('لا شيء هنا يُحسَب بينها');
-    for (const claim of [/فرق|الفارق/, /أفضل/, /تحسُّن|تحسّن|تحسين/, /آمن|مُؤمَّن|محمي/, /مُتحقَّق منه/]) {
+    expect(dictAr).toContain('لا شيء هنا يحسب بينها');
+    for (const claim of [/فرق|الفارق/, /أفضل/, /تحسن|تحسين/, /آمن|مؤمن|محمي/, /متحقق منه/]) {
       expect(dictAr, `runPage.ar.ts says ${claim}`).not.toMatch(claim);
     }
   });
@@ -354,7 +354,7 @@ describe('the run page', () => {
     // One kind for both, so there is no second sentence to reach for: the page can
     // only say "missing or not shared", or "could not be loaded".
     expect(Object.keys(RUN_EN.error).sort()).toEqual(['failed', 'missing']);
-    expect(dictAr).toContain('فإمّا أنها غير موجودة، وإمّا أنها لم تُشارَك معك');
+    expect(dictAr).toContain('فإما أنها غير موجودة، وإما أنها لم تشارك معك');
   });
 
   it('does not say whether an account uses the address it shared with', () => {
@@ -362,9 +362,9 @@ describe('the run page', () => {
     expect(both).not.toMatch(/no account (uses|has) that/i);
     // The Arabic opens on a condition and closes on the same refusal, and says
     // nothing in between that reads as "found" or "not found".
-    expect(dictAr).toContain('إن كان حسابٌ يستخدم العنوان');
-    expect(dictAr).toContain('لا تقول هذه الصفحة ما إذا كان حسابٌ يستخدمه');
-    expect(dictAr).not.toMatch(/لا يوجد حساب|لا حساب يستخدم|وُجد الحساب|الحساب موجود/);
+    expect(dictAr).toContain('إن كان حساب يستخدم العنوان');
+    expect(dictAr).toContain('لا تقول هذه الصفحة ما إذا كان حساب يستخدمه');
+    expect(dictAr).not.toMatch(/لا يوجد حساب|لا حساب يستخدم|وجد الحساب|الحساب موجود/);
   });
 });
 
@@ -459,22 +459,22 @@ describe('/work in Arabic', () => {
   it('states no aggregate over runs', () => {
     const scan = `${arabicReadingText(page())} ${arabicReadingText(rows(ROWS))} ${DICT_AR}`;
     for (const aggregate of [
-      /متوسّط|متوسط/,
+      /متوسط/,
       /مجموع/,
       /إجمالي/,
       /محفظة/,
       /هذا الشهر|هذا الأسبوع|هذا الربع/,
-      /اتّجاه|اتجاه/,
+      /اتجاه/,
     ]) {
       expect(scan, `/work (ar) states an aggregate: ${aggregate}`).not.toMatch(aggregate);
     }
   });
 
   it('never describes the account as securing or verifying anything', () => {
-    // «يتحقّق» appears in this dictionary only negated — «ولا يتحقّق من رخصة أحد».
-    // The participle «مُتحقَّق منه» would be the claim.
+    // «يتحقق» appears in this dictionary only negated — «ولا يتحقق من رخصة أحد».
+    // The participle «متحقق منه» would be the claim.
     const text = arabicReadingText(page());
-    for (const claim of [/آمن/, /مُؤمَّن|مؤمن/, /محمي/, /مُتحقَّق منه|متحقق منه/, /موثَّق/]) {
+    for (const claim of [/آمن/, /مؤمن/, /محمي/, /متحقق منه/, /موثق/]) {
       expect(text, `/work (ar) claims ${claim} of an account`).not.toMatch(claim);
       expect(DICT_AR, `work.ar.ts claims ${claim}`).not.toMatch(claim);
     }
@@ -583,7 +583,7 @@ describe('the review panel', () => {
     expect(buttons(states[0]!).map((b) => b.replace(/\s/g, ''))).toEqual([
       `${RUN_AR.review.signBefore}G4${RUN_AR.review.signAfter}`.replace(/\s/g, ''),
     ]);
-    expect(RUN_AR.review.signNote).toContain('لا يفحص أحدٌ الرخصة');
-    expect(RUN_AR.review.signNote).toContain('توقيع تشغيلته بنفسه');
+    expect(RUN_AR.review.signNote).toContain('ولا يفحص أحد الرخصة');
+    expect(RUN_AR.review.signNote).toContain('توقيع دراسته بنفسه');
   });
 });

@@ -356,7 +356,7 @@ describe('the ASSUMED treatment', () => {
     expect(seen, 'no variant carried the treatment, so nothing was checked').toBeGreaterThan(10);
   });
 
-  it('says «مُفترَض — لك أن تُعدِّله» where the English says an assumption can be edited', () => {
+  it('says «مفترض — ولك أن تعدله» where the English says an assumption can be edited', () => {
     const traced = inArabic(
       <TracedValue
         traced={{ value: '32', node: 'n1', parameterId: 'parking.bay_area_factor', provenanceClass: 'ASSUMED', renderHint: '', unit: 'm²/bay' }}
@@ -365,18 +365,18 @@ describe('the ASSUMED treatment', () => {
       />,
     );
     expect(traced).toContain('class="traced traced--assumed"');
-    expect(traced).toContain('مُفترَض — لا تحكمه قاعدة. لك أن تُعدِّله.');
-    expect(traced).toContain('<span class="sr-only"> (مُفترَض)</span>');
+    expect(traced).toContain('مفترض — لا تحكمه قاعدة. ولك أن تعدله.');
+    expect(traced).toContain('<span class="sr-only"> (مفترض)</span>');
     // The pencil marker is the stylesheet's, on the same element in both languages.
     expect(traced).toContain('<span class="traced__marker" aria-hidden="true"></span>');
     // The parameter id and the figure are the engine's, and are not translated.
     expect(traced).toMatch(/aria-label="parking\.bay_area_factor: 32 m²\/bay\./);
 
     const legend = inArabic(<ProvenanceLegend />);
-    expect(legend).toContain('مُفترَض — لك أن تُعدِّله');
-    expect(legend).toContain('من قاعدة مُستشهَد بها');
+    expect(legend).toContain('مفترض — لك أن تعدله');
+    expect(legend).toContain('من قاعدة مستشهد بها');
     expect(legend).toContain('أنت أدخلته');
-    expect(legend).toContain('لم يُقيَّم');
+    expect(legend).toContain('لم يخضع للتقييم');
   });
 });
 
@@ -428,7 +428,7 @@ describe('the drawings', () => {
 
   it('name themselves in Arabic, because a name is copy and the drawing is not', () => {
     const plan = inArabic(<ParkingPlan levelPlan={rect.levelPlan!} onInspect={noop} />);
-    expect(plan).toMatch(/aria-label="المواقف الموزّعة: \d+،/);
+    expect(plan).toMatch(/aria-label="المواقف الموزعة: \d+،/);
     const sheet = composeSheets(rect.building!, { plotNumber: rect.plot.plotNumber, community: rect.plot.community, runId: rect.runId, issuedAt: ISSUED })[0]!;
     const view = inArabic(<SheetView sheet={sheet} idPrefix="t" onInspect={noop} />);
     expect(view).toContain(`${sheet.number} ${escaped(sheet.title)}، مرسومة بمقياس 1:${sheet.view.scale}.`);
@@ -467,18 +467,18 @@ describe("the engine's own words", () => {
   it('Checks: the five claims in §16.5’s order, regulatory validity never claimed, and nothing not assessed called a verdict', () => {
     const markup = inArabic(<ChecksStep run={rect} />);
     const order = [
-      'الاتّساق الذاتي',
+      'الاتساق الذاتي',
       'تغطية القواعد',
       'الصلاحية الهندسية',
-      'الاتّفاق مع الحكم المهني',
+      'التوافق مع الحكم المهني',
       'الصلاحية التنظيمية',
     ].map((t) => markup.indexOf(t));
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(markup).toContain('claim--never');
-    expect(markup).toContain('لا يُدَّعى إطلاقًا');
-    expect(markup).toContain('لم يُقيَّم');
-    expect(markup).toContain('لا تُحتسب اجتيازات');
+    expect(markup).toContain('لا يؤكده النظام إطلاقا');
+    expect(markup).toContain('لم يخضع للتقييم');
+    expect(markup).toContain('لا تحتسب اجتيازات');
     const { ran, total } = rect.checks.invariants;
     expect(markup).toContain(`${ran} من ${total}`);
     expect(markup).not.toContain(`${total} من ${total}`);
@@ -529,7 +529,7 @@ describe("the engine's own words", () => {
     for (const run of [rect, skewed, podium]) {
       const plan = inArabic(<ParkingPlan levelPlan={run.levelPlan!} onInspect={noop} />);
       expect(plan).toContain('<span dir="ltr" lang="en" class="verbatim">B.7.2.2</span>');
-      expect(plan).toContain('لم تُقيَّم');
+      expect(plan).toContain('لم تخضع للتقييم');
       const access = inArabic(<VehicleAccessPanel levelPlan={run.levelPlan!} onInspect={noop} />);
       for (const r of run.levelPlan!.access.rejected) verbatim(access, r.reason, `frontage ${r.edgeSeq}`);
       for (const n of run.levelPlan!.notAssessed) verbatim(access, n, 'not assessed');

@@ -1277,3 +1277,93 @@ describe('the dashboard leads with what is not ready', () => {
     for (const r of d.deferred) expect(r.citation).toBeTruthy();
   });
 });
+
+/**
+ * THE DIRECTION THE BOUNDARY WAS WALKED IN.
+ *
+ * Until a plot could be entered edge by edge, every ring this API received came
+ * from one form that emitted one rectangle, counter-clockwise. `outwardBearingDeg`
+ * assumes that and nothing enforced it, so a plot walked the other way would have
+ * stored every outward normal pointing INWARD: the setback on the wrong side of
+ * each boundary and the vehicle entrance offered furthest from the road, with the
+ * area, the shape class and the drawing all correct.
+ *
+ * The two payloads below are the SAME PLOT with the same four classifications on
+ * the same four boundaries, walked in opposite directions. They must produce the
+ * same four edges.
+ */
+describe('a plot is stored counter-clockwise however it was walked', () => {
+  /** The 80 x 40, walked the other way, with each boundary keeping its class. */
+  const CLOCKWISE = {
+    ...SQUARE_80x40,
+    plotNumber: '345-1234-CW',
+    vertices: [...SQUARE_80x40.vertices].reverse(),
+    edges: [
+      // Input edge 0 is now (0,40)->(80,40): the northern boundary.
+      { seq: 0, classification: 'ROAD' as const, roadHierarchy: 'LOCAL' as const },
+      { seq: 1, classification: 'ADJACENT_PLOT' as const },
+      { seq: 2, classification: 'ROAD' as const, roadHierarchy: 'LOCAL' as const },
+      { seq: 3, classification: 'ADJACENT_PLOT' as const },
+    ],
+  };
+
+  const read = async (payload: unknown) => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/plots',
+      headers: ACTOR,
+      payload: payload as object,
+    });
+    expect(created.statusCode).toBe(201);
+    const view = await app.inject({
+      method: 'GET',
+      url: `/api/plots/${created.json().plotId}`,
+      headers: ACTOR,
+    });
+    expect(view.statusCode).toBe(200);
+    return view.json() as {
+      computedAreaM2: string;
+      edges: readonly { seq: number; classification: string; bearingDeg: string; lengthM: string }[];
+    };
+  };
+
+  it('gives the same four boundaries the same four outward bearings', async () => {
+    const [anticlockwise, clockwise] = await Promise.all([read(SQUARE_80x40), read(CLOCKWISE)]);
+    expect(clockwise.computedAreaM2).toBe(anticlockwise.computedAreaM2);
+    expect(clockwise.edges.map((e) => e.bearingDeg)).toEqual(
+      anticlockwise.edges.map((e) => e.bearingDeg),
+    );
+    expect(clockwise.edges.map((e) => e.classification)).toEqual(
+      anticlockwise.edges.map((e) => e.classification),
+    );
+    expect(clockwise.edges.map((e) => e.lengthM)).toEqual(anticlockwise.edges.map((e) => e.lengthM));
+  });
+
+  it('points every outward normal away from the plot', async () => {
+    const { edges } = await read(CLOCKWISE);
+    // A convex ring's four outward normals are the four compass quarters, once
+    // each. An inward-pointing set is the same four numbers - so the test that
+    // catches the defect is the one above, and this one guards the weaker
+    // property that nothing is duplicated or lost.
+    expect(new Set(edges.map((e) => e.bearingDeg)).size).toBe(4);
+  });
+
+  /*
+    `seq` INDEXES THE RING. Two edges naming the same boundary left another with
+    none, and the reader would have been shown a setback derived from a
+    classification nobody entered for that edge.
+  */
+  it('refuses two edges that name the same boundary', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/plots',
+      headers: ACTOR,
+      payload: {
+        ...SQUARE_80x40,
+        edges: SQUARE_80x40.edges.map((e) => ({ ...e, seq: 0 })),
+      },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(JSON.stringify(res.json())).toMatch(/different boundary/);
+  });
+});

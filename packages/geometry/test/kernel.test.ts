@@ -18,10 +18,13 @@ import {
   clipperArea,
   initGeometry,
   isConvex,
+  isCounterClockwise,
   isRectilinear,
   isSimple,
   offsetPerEdge,
   offsetUniform,
+  orientRing,
+  outwardBearingDeg,
   ShapeClass,
   signedArea2Shoelace,
   signedArea2Trapezoid,
@@ -246,5 +249,81 @@ describe('deck slide 05 — reconciliation of the published example', () => {
     for (const k of rest) {
       expect(Math.abs(k - first!)).toBeGreaterThan(0.02);
     }
+  });
+});
+
+/**
+ * THE DIRECTION A BOUNDARY IS WALKED IN, AND WHY IT USED TO MATTER SILENTLY.
+ *
+ * `outwardBearingDeg` computes `(dy, -dx)` on the stated assumption that the
+ * ring is counter-clockwise. Nothing enforced it, and on a clockwise ring every
+ * outward normal points inward — the setback on the wrong side of each edge.
+ * Area, shape class and the bounding rectangle are all orientation-independent,
+ * so no existing measurement would have caught it.
+ *
+ * A POSITIVE case (already counter-clockwise, nothing moves), a BOUNDARY case
+ * (the reversal, where the renumbering is the whole difficulty) and a NEGATIVE
+ * case (the bearings a clockwise ring produces if the ring is NOT oriented,
+ * which is what the defect looked like).
+ */
+describe('orientRing — a ring is stored counter-clockwise, and its edges come with it', () => {
+  // 80 x 40, walked anticlockwise: south edge, east edge, north edge, west edge.
+  const CCW: Ring = [
+    { x: asMm(0), y: asMm(0) },
+    { x: asMm(80_000), y: asMm(0) },
+    { x: asMm(80_000), y: asMm(40_000) },
+    { x: asMm(0), y: asMm(40_000) },
+  ];
+  const CW: Ring = [...CCW].reverse();
+
+  it('leaves a counter-clockwise ring exactly as it found it', () => {
+    const oriented = orientRing(CCW);
+    expect(oriented.reversed).toBe(false);
+    expect(oriented.ring).toBe(CCW);
+    expect(oriented.order).toEqual([0, 1, 2, 3]);
+  });
+
+  it('turns a clockwise ring and says where each edge went', () => {
+    const oriented = orientRing(CW);
+    expect(oriented.reversed).toBe(true);
+    expect(isCounterClockwise(oriented.ring)).toBe(true);
+    // Reversing `v0..v3` puts input edge k at `(n - 2 - k) mod n`.
+    expect(oriented.order).toEqual([2, 1, 0, 3]);
+  });
+
+  /*
+    THE ASSERTION THAT MATTERS. Every input edge must still be the same two
+    endpoints after the ring is turned, in one order or the other. A helper that
+    reversed the ring and left `order` as the identity would pass every test
+    above and move every classification one boundary along.
+  */
+  it('keeps each edge on the boundary it was given for', () => {
+    const oriented = orientRing(CW);
+    const n = CW.length;
+    for (let k = 0; k < n; k++) {
+      const before = [CW[k]!, CW[(k + 1) % n]!];
+      const at = oriented.order[k]!;
+      const after = [oriented.ring[at]!, oriented.ring[(at + 1) % n]!];
+      expect(new Set(after.map((p) => `${p.x},${p.y}`))).toEqual(
+        new Set(before.map((p) => `${p.x},${p.y}`)),
+      );
+    }
+  });
+
+  it('points the outward normal outward, which an unoriented clockwise ring does not', () => {
+    // The southern boundary of this plot. Its outward normal faces south: 180.
+    const south = orientRing(CCW);
+    expect(outwardBearingDeg(south.ring[0]!, south.ring[1]!).toNumber()).toBe(180);
+
+    // Walked the other way, the same boundary is edge 2 of the input, and read
+    // straight off the unoriented ring it reports 0 - due north, into the plot.
+    expect(outwardBearingDeg(CW[2]!, CW[3]!).toNumber()).toBe(0);
+
+    // Oriented, it is south again, and `order` is what finds it.
+    const turned = orientRing(CW);
+    const at = turned.order[2]!;
+    expect(
+      outwardBearingDeg(turned.ring[at]!, turned.ring[(at + 1) % 4]!).toNumber(),
+    ).toBe(180);
   });
 });

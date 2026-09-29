@@ -33,6 +33,7 @@ import {
   geometryCheckBaseline,
   geometryChecksSince,
   initGeometry,
+  orientRing,
   outwardBearingDeg,
   type Ring,
 } from '@envelope/geometry';
@@ -528,7 +529,22 @@ export async function build(
     const actor = await who(request);
     const body = plotInput.parse(request.body);
 
-    const ring: Ring = body.vertices.map((v) => ({ x: toMm(v.x) as Mm, y: toMm(v.y) as Mm }));
+    /*
+      THE RING IS STORED COUNTER-CLOCKWISE, AND THE EDGES COME WITH IT.
+
+      `outwardBearingDeg` assumes a counter-clockwise ring and nothing enforced
+      it, so a plot walked the other way stored every outward normal pointing
+      inward — the setback on the wrong side of each edge, and the vehicle
+      entrance offered on the boundary furthest from the road. It never happened
+      because the only client emitted one rectangle, counter-clockwise, every
+      time; a traverse entered by hand is the first input that can walk either
+      way. `orientRing` carries each edge's classification to wherever its
+      boundary landed, which is the part a reversal gets wrong on its own.
+    */
+    const oriented = orientRing(
+      body.vertices.map((v) => ({ x: toMm(v.x) as Mm, y: toMm(v.y) as Mm })),
+    );
+    const ring: Ring = oriented.ring;
     const geometry = analysePlot(ring);
 
     // §14.1, enforced at the data layer rather than by convention.
@@ -575,11 +591,11 @@ export async function build(
       community: body.community,
       landUse: 'RESIDENTIAL_MULTI',
       ring,
-      edges: body.edges.map((e) => {
-        const start = ring[e.seq]!;
-        const end = ring[(e.seq + 1) % ring.length]!;
+      edges: inputEdgesByRingIndex(body.edges, oriented.order).map((e, seq) => {
+        const start = ring[seq]!;
+        const end = ring[(seq + 1) % ring.length]!;
         return {
-          seq: e.seq,
+          seq,
           start,
           end,
           classification: e.classification,
@@ -1471,6 +1487,24 @@ interface PlotWire {
    * existed simply has no sheet, which is the correct reading of it.
    */
   readonly sheet?: StoredSheetWire;
+}
+
+/**
+ * The submitted edges, in the order the STORED ring walks them.
+ *
+ * `orientRing` may have reversed the ring, which renumbers its edges; this puts
+ * each classification back on the boundary it was given for. The schema has
+ * already established that `seq` is a permutation of `0..n-1`, so every slot is
+ * filled exactly once and the non-null assertion below is the schema's
+ * guarantee rather than a hope.
+ */
+function inputEdgesByRingIndex<T extends { readonly seq: number }>(
+  edges: readonly T[],
+  order: readonly number[],
+): readonly T[] {
+  const placed = new Array<T | undefined>(edges.length);
+  for (const edge of edges) placed[order[edge.seq]!] = edge;
+  return placed.map((e) => e!);
 }
 
 function serialisePlot(plot: Plot, sheet: StoredSheet | undefined): string {

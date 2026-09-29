@@ -94,7 +94,26 @@ export const plotInput = z
   .refine((p) => p.edges.length === p.vertices.length, {
     message: 'every edge needs a classification: edge count must equal vertex count',
     path: ['edges'],
-  });
+  })
+  /*
+    `seq` INDEXES THE RING, so it has to be a permutation of `0..n-1` and not
+    merely a non-negative integer of the right count. Two edges carrying `seq: 0`
+    passed the count check, left one boundary unclassified, and read
+    `ring[e.seq]` past the end for the boundary nobody claimed. Checked here
+    because this is the only place that knows both lengths.
+  */
+  .refine(
+    (p) => {
+      const seen = new Set(p.edges.map((e) => e.seq));
+      return seen.size === p.edges.length && p.edges.every((e) => e.seq < p.vertices.length);
+    },
+    {
+      message:
+        'each edge must name a different boundary: seq runs 0 to one less than the ' +
+        'vertex count, once each',
+      path: ['edges'],
+    },
+  );
 
 export const unitMixEntry = z.object({
   typeId: z.string().min(1),

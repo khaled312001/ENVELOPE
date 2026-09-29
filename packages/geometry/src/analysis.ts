@@ -9,6 +9,7 @@ import { asMm, Decimal, type Mm, type Mm2, mm2ToM2, mmToM } from '@envelope/core
 import {
   area,
   isConvex,
+  isCounterClockwise,
   isRectilinear,
   isSimple,
   lengthSquared,
@@ -183,8 +184,77 @@ export function outwardBearingDeg(p: Pt, q: Pt): Decimal {
   const nx = new Decimal(q.y - p.y);
   const ny = new Decimal(p.x - q.x);
   const bearing = new Decimal(90).minus(Decimal.atan2(ny, nx).times(180).div(Decimal.acos(-1)));
-  const wrapped = bearing.mod(360);
-  return (wrapped.isNegative() ? wrapped.plus(360) : wrapped).toDecimalPlaces(2);
+  /*
+    ROUNDED BEFORE IT IS WRAPPED, and zero is returned as zero.
+
+    A boundary whose outward normal faces due north used to report 360.00. The
+    arc functions land it a fraction below zero - `atan2` against an irrational
+    pi is not going to give a clean 90 - and wrapping that residue added a whole
+    turn before the rounding could take it away. 360 is not a bearing: this field
+    is documented as degrees clockwise from grid north, which runs 0 to 359.99,
+    and a reader comparing a north-facing edge against 0 found nothing.
+
+    `lt(0)` rather than `isNegative()`, because the rounding produces negative
+    zero and `isNegative()` is true for it - which would have moved the fix one
+    step along rather than made it.
+  */
+  const wrapped = bearing.toDecimalPlaces(2).mod(360);
+  const positive = wrapped.lt(0) ? wrapped.plus(360) : wrapped;
+  return positive.isZero() ? new Decimal(0) : positive;
+}
+
+/**
+ * A ring turned counter-clockwise, and where each of its edges went.
+ *
+ * ---------------------------------------------------------------------------
+ * THE DEFECT THIS EXISTS TO CLOSE.
+ *
+ * `outwardBearingDeg` above says "Ring is CCW" and computes `(dy, -dx)` on that
+ * assumption. Nothing enforced it. `analysePlot` normalises internally for its
+ * own measurements, so area, shape class and the bounding rectangle were right
+ * either way — but the stored ring and every edge bearing were whatever the
+ * caller sent, and on a CLOCKWISE ring every outward normal points INWARD.
+ *
+ * It was invisible because the only client was a form that emitted one
+ * rectangle, counter-clockwise, every time. The first plot walked the other way
+ * would have put the setback on the wrong side of each edge and offered the
+ * vehicle entrance on the boundary furthest from the road, and no gate in this
+ * repository would have said a word: the area is the same, the shape class is
+ * the same, and the drawing looks right because the polygon IS right.
+ *
+ * ---------------------------------------------------------------------------
+ * THE EDGES TRAVEL WITH IT, WHICH IS THE WHOLE POINT.
+ *
+ * Reversing a ring renumbers its edges, so a helper that returned only the ring
+ * would silently move every classification onto a different boundary — a worse
+ * defect than the one it fixed. `order[k]` is where input edge `k` lands, and a
+ * caller that ignores it has not used this function.
+ *
+ * Reversing `v0..v(n-1)` gives `v(n-1)..v0`, in which edge `j` is the reverse of
+ * input edge `n-2-j`; inverting that gives `j = (n - 2 - k) mod n`.
+ *
+ * NOTHING A READER STATED IS CHANGED. Each edge keeps its endpoints and its
+ * classification; only the direction the boundary is walked in is normalised,
+ * which is a representation and not a value. The direction a surveyor walks is
+ * not an error to report back to them.
+ */
+export interface OrientedRing {
+  readonly ring: Ring;
+  /** Where input edge `k` sits in `ring`. Identity when nothing moved. */
+  readonly order: readonly number[];
+  readonly reversed: boolean;
+}
+
+export function orientRing(ring: Ring): OrientedRing {
+  const n = ring.length;
+  if (isCounterClockwise(ring)) {
+    return { ring, order: ring.map((_, i) => i), reversed: false };
+  }
+  return {
+    ring: [...ring].reverse(),
+    order: ring.map((_, k) => (n - 2 - k + n) % n),
+    reversed: true,
+  };
 }
 
 /** Edge length in metres, for the plot summary. */

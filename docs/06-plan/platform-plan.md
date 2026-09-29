@@ -295,12 +295,23 @@ efficiency the Azizi brief states as a market expectation (*"Expectations are be
 (SA / GFA)"*) and it is the right input when the GFA is not yet known. An absolute area is the
 right input when he is working from a brief that states one.
 
-**What we will do, §4.5.** One field, two units, one radio pair:
+**What we did, §4.5 — landed 29 Sep 2026.** One field, two units, one radio pair:
 
-- **As a ratio** — `0.95` — exactly as today.
-- **As an area** — `2000 m²` — and the engine divides it by the GFA it computed to get the same
-  ratio, publishes **both** as traced values, and shows the implied ratio next to the entered
-  area so a typo is visible immediately.
+- **As a ratio** — `0.95` — exactly as before.
+- **As an area** — `2000 m²` — and the engine divides it by the GFA this envelope yields,
+  publishes **both** as traced values, and shows both on the results screen beside the governing
+  figure so a typo is visible immediately.
+
+Two decisions inside that are worth stating, because both look like details and neither is:
+
+- **The box is cleared when the unit changes.** `0.93` read as `0.93 m²` is a building that
+  sells one square metre; `6000` read as a share fails validation and looks like a broken field.
+  Converting it silently would be worse than either — it would put a figure in the box that the
+  reader did not type, on the one screen whose whole proposition is that nothing is quietly
+  substituted.
+- **The refusal names the field the reader is looking at.** Telling somebody who chose square
+  metres to "enter the saleable share of GFA" sends them hunting for a control that is not on
+  the screen.
 
 And his other point — *"المفروض ال سيستم يعرفها من ال affection plan"* — is half true, and the
 half that is false matters. **An affection plan does not state saleable efficiency.** It states
@@ -482,9 +493,34 @@ The structured schedule in §2.7, threaded through `pipeline.ts`, `massing.ts`, 
 its integer and renders with a note saying which schedule it was computed under — never
 re-interpreted, because that would change a stored answer.
 
-### 4.5 Saleable GFA — ratio or area
+### 4.5 Saleable GFA — ratio or area — **done, 29 Sep 2026**
 
-One field, two units, both published as traced values, the implied ratio shown live (§2.8).
+One field, two units, both published as traced values and both shown on the results screen
+(§2.8). `SaleableEfficiencyInput` takes a ratio **or** an area, exactly one, enforced by the
+type rather than by a runtime check; the API schema refuses a body carrying both or neither.
+
+**The divisor is the envelope's own GFA — `plate × levels` — not FAR × plot area, and this
+reverses what §9's 28 Sep entry intended.** The reasons, in order of weight:
+
+1. **FAR × plot area is not always available.** `DJAZ1MED12RES011` prints `G+11` and no FAR at
+   all. A divisor that is undefined on a real plot in the corpus is not a divisor.
+2. **The permitted GFA overstates efficiency wherever the envelope binds below FAR.** A share
+   taken against a GFA the scheme never reaches reports an efficiency the scheme does not have.
+3. **It is not circular.** The worry in the 28 Sep entry was about the *governing* GFA, which is
+   computed after the efficiency is consumed. `plate × levels` is not: it comes out of the
+   envelope solve, which does not read the efficiency at all.
+4. **The objection that argued for FAR × plot area is answered a different way.** That entry's
+   real complaint was that "a reader would have no way to tell which they were shown". They can:
+   both figures are published, and the formula on the provenance node names the divisor in full
+   — `6 000.00 m² saleable ÷ 17 920.00 m² GFA`.
+
+What this means for a reader, said in the engine's own docblock: an area entered here is the
+saleable area of the **full envelope**, so where a band below geometry governs, the saleable
+area falls with it. The share is what carries through to the unit count in both directions.
+
+An area larger than the envelope's GFA is refused in a sentence naming both figures — a brief
+written for a larger plot, or square feet read as square metres, are the two ways it happens —
+rather than reported as a ratio above 1 the reader never typed.
 
 ### 4.6 Comprehension — the writing pass
 
@@ -949,6 +985,15 @@ to the accent ink.
 `tob-deploy`. No password is stored anywhere and none is needed; the account
 password is still live for hPanel and is due for rotation.
 
+**I — §4.5 saleable GFA, done, and it reversed the divisor this document
+intended.** The 28 Sep entry below argued for FAR × plot area. It is wrong on a
+plot that prints no FAR — `DJAZ1MED12RES011` prints `G+11` and nothing else —
+and it overstates efficiency wherever the envelope binds below FAR. The divisor
+is the envelope's own GFA, `plate × levels`, which comes out of a solve that
+never reads the efficiency and so is not the circularity that entry feared. The
+argument in full is in §4.5; the entry below is left standing rather than edited,
+because a plan that quietly rewrites its own reasoning teaches nobody anything.
+
 **Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The
 prompts in `image-prompts.md` were **rewritten on 29 Sep** for the new identity:
@@ -980,9 +1025,10 @@ FAR, and then — found by reading the real Warsan sheet against the builder —
 stated GFA and its *tower* setback schedule, which the engine cannot express and
 now says so instead of ignoring.
 
-**D §4.5 — not done.** Saleable GFA as an area rather than a ratio. It carries a
-question this document does not settle and should: **which GFA the entered area is
-divided by.** The efficiency is consumed before the bands are computed and it
+**D §4.5 — not done as of 28 Sep; done 29 Sep, on a different divisor. See
+item I above before reading this.** Saleable GFA as an area rather than a ratio.
+It carries a question this document does not settle and should: **which GFA the
+entered area is divided by.** The efficiency is consumed before the bands are computed and it
 feeds band C through the unit count, so dividing by the *governing* GFA is
 circular. Dividing by the gross permitted GFA — FAR × plot area, the figure the
 affection plan prints and the one a developer's brief is written against — is

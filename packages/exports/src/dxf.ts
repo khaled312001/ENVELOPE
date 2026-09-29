@@ -582,6 +582,40 @@ export function buildingDxf(model: BuildingModel, sheets: readonly Sheet[], meta
         });
       }
     }
+
+    /*
+      THE CORE AS A SHAFT, on the same layer its plan outline is on.
+
+      The parking sheets already put the core's outline in this file, because the
+      DXF walks their display list — but a plan outline at one elevation is not a
+      shaft, and above the parking there is no sheet to walk at all. So the walls
+      are written here, level by level, exactly as the 3D view builds them. A
+      file that orbits in AutoCAD showing a tower with nothing running up it is
+      the drawing this work exists to stop.
+    */
+    if (model.core && model.core.levelIds.includes(level.id)) {
+      const coreLayer = layerName(level.id, 'core');
+      layers.set(coreLayer, CLASS_ACI[model.core.source.provenanceClass]);
+      const shaft = model.core.outline;
+      shaft.forEach((p, i) => {
+        const q = shaft[(i + 1) % shaft.length]!;
+        entities.push({
+          kind: '3dface',
+          layer: coreLayer,
+          corners: [
+            { x: p.x, y: p.y, z: z0 },
+            { x: q.x, y: q.y, z: z0 },
+            { x: q.x, y: q.y, z: z1 },
+            { x: p.x, y: p.y, z: z1 },
+          ],
+        });
+      });
+      // Above the parking there is no sheet to draw the plan outline, so it is
+      // written here too. On a parking level it is the same ring the sheet drew.
+      if (!level.parking) {
+        entities.push({ kind: 'polyline', layer: coreLayer, points: shaft, closed: true, z: z0 });
+      }
+    }
   }
 
   for (const ramp of model.ramps) {

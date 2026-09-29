@@ -261,6 +261,33 @@ const DEFINITIONS: readonly MetricDefinition[] = [
       'PRD Appendix A selects 1,060 m² with no stated derivation while its own ' +
       'printed computation gives 1,280 — see open-questions.md.',
   },
+  {
+    metricId: 'CORE_AREA',
+    name: 'Core Area',
+    unit: UnitType.AREA_M2,
+    formulaStatement:
+      'Gross plan area of the vertical circulation and services core on a typical ' +
+      'tower level, measured to the outside face of the core walls.',
+    inclusions: [
+      'Lift shafts and lift lobby',
+      'Escape stairs and their lobbies',
+      'Riser ducts and service shafts',
+      'Core walls, to their outside face',
+    ],
+    exclusions: [
+      'Corridors outside the core enclosure',
+      'Plant rooms not inside the core',
+      'The ramp and its landing, which are parking circulation',
+    ],
+    version: ANNEX_VERSION,
+    approvalStatus: PENDING,
+    note:
+      'A core is INSIDE GFA and OUTSIDE saleable area, so this term is already ' +
+      'inside the saleable efficiency the run is given. The engine reports the ' +
+      'core against that efficiency and against the parking usable fraction; it ' +
+      'does not subtract it a second time. Double-deducting a term two inputs ' +
+      'already carry is the failure this note exists to prevent.',
+  },
 ];
 
 const BY_ID: ReadonlyMap<string, MetricDefinition> = new Map(

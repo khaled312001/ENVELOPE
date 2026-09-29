@@ -174,6 +174,49 @@ export function MassingPanel({
         </div>
       ) : null}
 
+      {/*
+        THE CORE — Eng. Mohamed, 2026-09-28, the one thing he called "الاهم".
+
+        It leads with what the core does NOT do. The obvious reading of "the core
+        is in the calculation" is that the floor area was reduced for it, and it
+        was not: a core is inside GFA and outside saleable area, so the saleable
+        figure this run was given already carries it. A reader who assumes it was
+        subtracted will take the capacity figure above as 18% too low.
+
+        Not a banner. The core's own class is on its figure, where it belongs —
+        wrapping the block in amber would paint a paragraph about arithmetic in
+        the colour reserved for one specific thing.
+      */}
+      {run.core ? (
+        <>
+          <h3 className="panel__subheading">{t.core.title}</h3>
+          <p>{t.core.body}</p>
+          <dl className="kv">
+            <div>
+              <dt>{t.core.areaLabel}</dt>
+              <dd>
+                <TracedValue traced={run.core.areaM2} onInspect={onInspect} />
+              </dd>
+            </div>
+            <div>
+              <dt>{t.core.shareLabel}</dt>
+              <dd>
+                <TracedValue traced={run.core.plateShare} onInspect={onInspect} />
+              </dd>
+            </div>
+          </dl>
+          {/* The engine's two comparisons, word for word. */}
+          <ul className="sheet-facts__notes">
+            {run.core.reconciliation.map((line) => (
+              <li key={line}>
+                <EngineText>{line}</EngineText>
+              </li>
+            ))}
+          </ul>
+          <p className="fine-print">{t.core.shape}</p>
+        </>
+      ) : null}
+
       {model ? (
         <table className="data-table">
           <caption className="sr-only">{t.levels.caption(VIEW)}</caption>

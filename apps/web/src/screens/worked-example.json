@@ -1704,6 +1704,10 @@
             "assumedInk": false
           },
           {
+            "name": "ENV-B1-CORE",
+            "assumedInk": true
+          },
+          {
             "name": "ENV-G-SLAB",
             "assumedInk": false
           },
@@ -1740,6 +1744,10 @@
             "assumedInk": false
           },
           {
+            "name": "ENV-G-CORE",
+            "assumedInk": true
+          },
+          {
             "name": "ENV-G-ACCESS",
             "assumedInk": false
           },
@@ -1764,11 +1772,19 @@
             "assumedInk": false
           },
           {
+            "name": "ENV-P1-CORE",
+            "assumedInk": true
+          },
+          {
             "name": "ENV-L02-SLAB",
             "assumedInk": true
           },
           {
             "name": "ENV-L02-MASS",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L02-CORE",
             "assumedInk": true
           },
           {
@@ -1780,6 +1796,10 @@
             "assumedInk": true
           },
           {
+            "name": "ENV-L03-CORE",
+            "assumedInk": true
+          },
+          {
             "name": "ENV-L04-SLAB",
             "assumedInk": true
           },
@@ -1788,11 +1808,19 @@
             "assumedInk": true
           },
           {
+            "name": "ENV-L04-CORE",
+            "assumedInk": true
+          },
+          {
             "name": "ENV-L05-SLAB",
             "assumedInk": true
           },
           {
             "name": "ENV-L05-MASS",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L05-CORE",
             "assumedInk": true
           },
           {
@@ -1910,12 +1938,13 @@
         "units": "metres, Y up",
         "notModelled": [
           "Columns. With a structural grid the layout charges Table B.11's 300 mm clearance per bay, but it places no column, and drawing one would be drawing structure nobody checked against the bays.",
-          "Cores, stairs and lifts as rooms. The run declares how much of each parking level they take — drawn as the reserved zone — not where each one goes; on the tower floors their position is not determined at all.",
+          "Stairs and lifts as rooms, and plant. The run declares how much of each parking level they take — drawn as the reserved zone — not where each one goes.",
           "Slab thickness. Levels are planes at their floor level. The engine computes no slab depth, and a drawn thickness would be an invented one.",
           "Façades, windows, balconies and units. The engine computes none of them.",
           "Neighbouring buildings and the road. The run knows which edges of the plot face a road and which face a neighbour — the site plan writes that on the boundary — but not what stands beyond them, so neither is drawn.",
           "Pedestrian entrance, refuse room and escape distances — NOT ASSESSED until their rules are encoded.",
-          "Ramp transitions, headroom and the approach from the street — NOT ASSESSED (DBC B.7.2.2). Only the gradient over the reserved run is computed."
+          "Ramp transitions, headroom and the approach from the street — NOT ASSESSED (DBC B.7.2.2). Only the gradient over the reserved run is computed.",
+          "The core, as a layout. Its outline is the tower plate scaled to the core area, and only that area is a computed quantity: no lift, stair, riser or core wall is placed, and the engine does not claim a core layout."
         ]
       },
       "jsonFields": [

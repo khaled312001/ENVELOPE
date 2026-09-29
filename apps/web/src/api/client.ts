@@ -233,6 +233,25 @@ export interface RunView {
   /** Why no level was laid out. Present only when `levelPlan` is null. */
   readonly levelPlanRefusal: string | null;
   readonly capacity: CapacityView;
+  /**
+   * The core — its area, its share of the plate, and what that share says about
+   * the two inputs that already carry it.
+   *
+   * Beside the capacity rather than inside it, because nothing above is
+   * subtracted for it: a core is inside GFA and inside the saleable efficiency,
+   * and on a parking level it is inside what the usable fraction deducts. The
+   * reconciliation is the point of the block.
+   *
+   * Optional for the same reason `building` is: a run stored before the engine
+   * sized a core has none, and one inferred now from its stored numbers would be
+   * a core nobody entered.
+   */
+  readonly core?: {
+    readonly areaM2: TracedWire;
+    readonly plateShare: TracedWire;
+    readonly placement: TracedWire;
+    readonly reconciliation: readonly string[];
+  };
   readonly assumptions: readonly AssumptionEntry[];
   readonly checks: ChecksView;
   readonly gates?: Record<string, { readonly actorName: string; readonly at: string }>;
@@ -680,6 +699,18 @@ export interface RunRequestBody {
     readonly podiumAboveGround: number;
     readonly podiumParkingLevels: number;
   };
+  /**
+   * The core's plan area on a typical level, m².
+   *
+   * Omitted, the engine assumes 18% of the tower plate, in amber, with a basis
+   * and a measured sensitivity. Sent, it is `USER_SET` by the actor.
+   *
+   * **It subtracts from nothing.** A core is inside GFA and outside saleable
+   * area, so the saleable figure sent below already carries it; on a parking
+   * level it is inside what the usable fraction deducts. The engine draws it and
+   * reconciles it against both, and never charges for it twice.
+   */
+  readonly coreAreaM2?: string;
   readonly parkingUsableFraction: {
     readonly value: string;
     readonly source: 'DERIVED' | 'ASSUMED';

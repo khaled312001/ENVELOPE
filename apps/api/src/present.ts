@@ -295,6 +295,22 @@ export function presentRun(
     },
 
     /**
+     * The core — its area, its share of the plate, and what that share says
+     * about the two inputs that already carry it.
+     *
+     * It is published beside the capacity and not inside it, because it is not
+     * a capacity figure: a core is inside GFA and inside the saleable
+     * efficiency, so nothing here is subtracted from anything above. The
+     * reconciliation is the point of the block.
+     */
+    core: {
+      areaM2: toWire(output.core.areaM2),
+      plateShare: toWire(output.core.plateShare),
+      placement: toWire(output.core.placement),
+      reconciliation: output.core.reconciliation,
+    },
+
+    /**
      * The level schedule, and the height code it writes as — `2B+G+3P+35`.
      *
      * Null on a run computed from the two integers, which is every run stored

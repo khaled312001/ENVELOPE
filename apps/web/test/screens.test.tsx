@@ -532,10 +532,48 @@ describe('MassingPanel', () => {
     const model = run.building!;
     const out = html(<MassingPanel run={run} onInspect={() => {}} />);
     for (const p of model.placements.filter((x) => x.source.provenanceClass === 'ASSUMED')) {
-      expect(out).toContain(p.statement);
+      // Escaped, as the two assertions below already do it: React escapes an
+      // apostrophe to `&#x27;`, and this loop passed only for as long as no
+      // engine sentence it reached contained one. The core's placement does.
+      expect(out).toContain(p.statement.replace(/'/g, '&#x27;'));
     }
     expect(out).toContain('Not in this model');
     for (const n of model.notModelled) expect(out).toContain(n.replace(/'/g, '&#x27;'));
+  });
+
+  /*
+    THE CORE — Eng. Mohamed, 2026-09-28, the one thing he called الاهم.
+
+    The panel's first job is to stop a reader concluding that the capacity figure
+    above it was reduced by the size of the core. It was not, and could not be
+    without being wrong twice: a core is inside GFA, and it is inside the
+    saleable efficiency the run was given.
+  */
+  it('shows the core, and says that nothing above it was reduced for it', () => {
+    const out = html(<MassingPanel run={run} onInspect={() => {}} />);
+    expect(out).toContain('The core');
+    expect(out).toContain('no figure above it is reduced for it');
+    expect(out).toContain(`data-full="${run.core!.areaM2.value}"`);
+    expect(out).toContain(`data-full="${run.core!.plateShare.value}"`);
+  });
+
+  it('prints the engine\u2019s two comparisons word for word, not a rendering of them', () => {
+    const out = html(<MassingPanel run={run} onInspect={() => {}} />);
+    expect(run.core!.reconciliation).toHaveLength(2);
+    for (const line of run.core!.reconciliation) {
+      expect(out).toContain(line.replace(/'/g, '&#x27;'));
+    }
+  });
+
+  it('says the outline is an area rather than a laid-out core', () => {
+    const out = html(<MassingPanel run={run} onInspect={() => {}} />);
+    expect(out).toContain('no lift, stair, riser or core wall is placed');
+  });
+
+  it('draws no core block for a run stored before the engine sized one', () => {
+    const { core: _drop, ...stored } = run;
+    const out = html(<MassingPanel run={stored} onInspect={() => {}} />);
+    expect(out).not.toContain('no figure above it is reduced for it');
   });
 
   it("says how much of the stack is the answer's, and does not draw the rest as if it were", () => {

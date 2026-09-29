@@ -82,6 +82,7 @@ import { ParametersStep } from '../src/screens/ParametersStep.js';
 import { PlotForm } from '../src/screens/PlotForm.js';
 import {
   ComparisonResult,
+  CoreArea,
   DeveloperStandardPanel,
   LevelSchedulePanel,
   RuleDisclosure,
@@ -465,6 +466,18 @@ const CASES: readonly Case[] = [
   {
     label: 'the answer on file, offered',
     node: () => <StatementNote statement={STATEMENT} onUse={noop} />,
+  },
+  {
+    label: 'the core, unanswered',
+    node: () => <CoreArea area="" valid={true} onChange={noop} />,
+  },
+  {
+    label: 'the core, stated',
+    node: () => <CoreArea area="180" valid={true} onChange={noop} />,
+  },
+  {
+    label: 'the core, refused for being zero or below',
+    node: () => <CoreArea area="-1" valid={false} onChange={noop} />,
   },
   {
     label: 'the level schedule',
@@ -1085,6 +1098,47 @@ describe('the English copy, as it was written inline', () => {
     */
     expect(markup).toContain('data-state="blocked"');
     expect(markup).not.toMatch(/assumed/i);
+  });
+
+  /*
+    THE CORE — Eng. Mohamed, 2026-09-28, the one thing he called الاهم.
+
+    Three things are asserted and the first is the important one: that the panel
+    says the core is NOT subtracted. "The core is in the calculation" reads as
+    "the floor area was reduced for it", and a reader who believes that reads the
+    capacity figure as wrong by the size of the core.
+  */
+  it('says the core subtracts from nothing, which is the part a reader gets wrong', () => {
+    const text = en(<CoreArea area="" valid={true} onChange={noop} />);
+    expect(text).toContain('Nothing above is reduced for the core.');
+    expect(text).toContain('inside GFA and outside saleable area');
+    // And where the comparison does happen, so the sentence is not a dead end.
+    expect(text).toContain('on the results screen');
+  });
+
+  it('arrives empty, and says what the engine will assume if it stays that way', () => {
+    const markup = render('en', <CoreArea area="" valid={true} onChange={noop} />);
+    // FR-DEF-002's discipline, applied to a field it does not name: a figure in
+    // the box on arrival is a default nobody chose.
+    expect(markup).toMatch(/id="core-area"[^>]*value=""/);
+    const text = visibleText(markup);
+    expect(text).toContain('Left empty, the engine takes');
+    expect(text).toContain('18%');
+    expect(text).toContain('recorded as yours');
+  });
+
+  it('refuses a core area that is not a positive number, in words and in state', () => {
+    const markup = render('en', <CoreArea area="-1" valid={false} onChange={noop} />);
+    expect(visibleText(markup)).toContain('A core area is a number greater than zero.');
+    expect(markup).toContain('role="alert"');
+    // BLOCKED, not ASSUMED: a refused figure is not a value at all.
+    expect(markup).toContain('data-state="blocked"');
+  });
+
+  it('says nothing about a refusal while the box is empty', () => {
+    expect(render('en', <CoreArea area="" valid={true} onChange={noop} />)).not.toContain(
+      'role="alert"',
+    );
   });
 
   it('quotes the developer’s own range when a standard fills the efficiency', () => {

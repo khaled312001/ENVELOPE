@@ -95,6 +95,39 @@ export interface ModelReservedZone {
   readonly label: string;
 }
 
+/**
+ * The vertical core, as the engine sized and placed it.
+ *
+ * One footprint for the whole stack: the core is the same rectangle of plan on
+ * every level it passes through, which is what makes it a core rather than a
+ * room that moves. `levelIds` says which levels those are, so a sheet can draw
+ * it without deciding for itself.
+ *
+ * **Only the area is a quantity.** The outline is the tower plate scaled about
+ * its centre to that area, because the area fixes how much plate the core takes
+ * and says nothing about where it stands. No lift, stair, riser or core wall is
+ * placed inside it, and `notModelled` says so under every drawing.
+ */
+export interface ModelCore {
+  readonly outline: ModelRing;
+  readonly areaM2: TracedWire;
+  /** Core ÷ tower plate, traced — the figure the reconciliations are made on. */
+  readonly plateShare: TracedWire;
+  /** The area's own value: the element's ink and its click target. */
+  readonly source: ElementSource;
+  readonly label: string;
+  /** Every level the core passes through, bottom to top. */
+  readonly levelIds: readonly string[];
+  /**
+   * What the core says about the two inputs that already account for it.
+   *
+   * A core is inside GFA and outside saleable area, and on a parking level it is
+   * inside what the usable fraction deducts. So it is never subtracted twice —
+   * it is compared, and these are those comparisons in words. Neither blocks.
+   */
+  readonly reconciliation: readonly string[];
+}
+
 export interface ModelLevel {
   /** `B1`, `P1`, `L01` — what the sheets and the section call it. */
   readonly id: string;
@@ -263,6 +296,14 @@ export interface BuildingModel {
     readonly source: ElementSource;
     readonly statement: string;
   }[];
+  /**
+   * The vertical core, when the run sized one.
+   *
+   * Null on a run stored before the core existed, which is the only way it is
+   * null: every run computed since has one, stated or assumed. A reader of such
+   * a run sees a note rather than a core inferred from its numbers.
+   */
+  readonly core: ModelCore | null;
   /** Empty only when no line through the scheme crosses the plot — said in `notModelled`. */
   readonly sections: readonly ModelSection[];
   /** What this model does not contain, and why. Shown with every drawing of it. */

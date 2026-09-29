@@ -292,6 +292,28 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
 
     if (level.parking) addParking(group, level, level.parking);
 
+    /*
+      THE CORE, AS A SHAFT — Eng. Mohamed's *"الاهم"*.
+
+      Walls rather than a floor patch, so it reads as one thing running up the
+      building instead of a room repeated on every storey. Its footprint is
+      identical on every level it passes through, which is what makes it a core;
+      the model says which levels those are, so nothing here decides.
+
+      Inked in the class of the value that SIZED it, like every other element:
+      an unstated core is amber on every level of the picture, which is §13.1
+      doing exactly what it is for. Nobody has said how big it is.
+    */
+    if (model.core && model.core.levelIds.includes(level.id)) {
+      const core = model.core;
+      const coreColour = colourOf(core.source.provenanceClass, palette);
+      const shaft = new THREE.Mesh(track(walls(core.outline, at, 0, storeyM)), surface(coreColour, 0.3, false));
+      shaft.name = `${level.id} core`;
+      pickable(shaft, { node: core.areaM2.node, rank: 4, name: core.label });
+      group.add(shaft);
+      group.add(named(new THREE.LineLoop(track(ringLine(core.outline, at, 0)), ink(coreColour)), `${level.id} core outline`));
+    }
+
     // Every level is named; three are named in the whole-building view — the lowest,
     // the first above the parking, and the top — and the rest when shown on their own.
     const top = index === model.levels.length - 1 || model.levels[index + 1]?.placed === false;

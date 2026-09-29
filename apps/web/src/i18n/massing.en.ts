@@ -15,10 +15,15 @@
 
 export const EN = {
   title: 'Massing',
+  /*
+    THIS USED TO SAY THERE WAS NO CORE. There is one now — sized, placed and run
+    up every level — so what survives is the part still true: its area is a
+    quantity and its layout is not.
+  */
   subtitle:
     'The building the engine laid out, level by level, inside the envelope the rules ' +
-    'permit. Nothing here is designed: there are no façades, cores or units, because the ' +
-    'engine computes none of them.',
+    'permit. Nothing here is designed: there are no façades and no units, because the ' +
+    'engine computes neither, and the core is an area rather than a laid-out core.',
   stored: (view: string): string =>
     `This run was computed before the engine built a model of the whole building, so there ` +
     `is no ${view} view of it. Compute the run again to see its levels, bays and ramp stood up.`,
@@ -97,6 +102,31 @@ export const EN = {
     totalNote:
       'Built height. The height ceiling this was derived from is a planning limit, not a ' +
       'structural or aviation one — neither is assessed.',
+  },
+
+  /*
+    THE CORE — Eng. Mohamed, 2026-09-28, and the one thing he called *"الاهم"*.
+
+    The panel leads with what the core does NOT do, because the obvious reading
+    of "the core is in the calculation" is that it was subtracted, and it was
+    not: a core is inside GFA and outside saleable area, so the saleable figure
+    this run was given already carries it. Saying so is the difference between a
+    reader trusting the figure above and re-checking it.
+  */
+  core: {
+    title: 'The core',
+    body:
+      'The core is drawn on every level it passes through, and no figure above it is ' +
+      'reduced for it. A core is inside GFA and outside saleable area, so the saleable ' +
+      'figure this run was given already accounts for it, and on a parking level it is ' +
+      'inside what the usable fraction deducts. Subtracting it again would charge you ' +
+      'twice for one wall. What the engine does instead is compare:',
+    areaLabel: 'Core area',
+    shareLabel: 'Share of the tower plate',
+    /** Said under the two comparisons, every time. */
+    shape:
+      'Its outline is the tower plate scaled to that area. Only the area is a computed ' +
+      'quantity: no lift, stair, riser or core wall is placed.',
   },
 
   notModelled: 'Not in this model',

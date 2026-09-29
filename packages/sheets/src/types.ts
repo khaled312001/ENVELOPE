@@ -47,6 +47,16 @@ export const Role = {
   RAMP: 'ramp',
   RAMP_ARROW: 'ramp-arrow',
   RESERVED: 'reserved',
+  /**
+   * The vertical core, drawn through every level it passes.
+   *
+   * Its own role rather than another obstruction: the reserved zone is an AREA
+   * the run declared and did not place, and the core is a footprint the engine
+   * did place. They read differently on paper because they mean different
+   * things, and a reader who cannot tell them apart learns that the engine laid
+   * out the plant room too.
+   */
+  CORE: 'core',
   ACCESS: 'access',
   ACCESS_ARROW: 'access-arrow',
   CUT_LINE: 'cut-line',

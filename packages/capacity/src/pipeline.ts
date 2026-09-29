@@ -40,6 +40,7 @@ import {
   ProvenanceGraph,
   type ProvenanceClass,
   type Traced,
+  type TracedDecimal,
   Tracer,
   type UnitTypeMix,
 } from '@envelope/core';
@@ -52,6 +53,7 @@ import {
 
 import { computeBands, type BandSource } from './bands.js';
 import { buildBuildingModel } from './building.js';
+import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './core.js';
 import { solveEnvelope, type EnvelopeSolution } from './envelope.js';
 import { planParkingLevel, type LevelPlan } from './level-plan.js';
 import { buildMassing, type MassingResult } from './massing.js';
@@ -234,6 +236,20 @@ export interface RunInput {
    * building is, not how the allowance treats it.
    */
   readonly levelSchedule?: LevelSchedule;
+  /**
+   * The core's plan area on a typical level, m² — Eng. Mohamed's *"الاهم"*.
+   *
+   * Absent is a real state and not a missing input: nobody has said, and the
+   * engine declares an assumption at 18% of the tower plate rather than drawing
+   * a tower with nothing in it. Present, it is `USER_SET` by `actor`.
+   *
+   * **It subtracts from nothing.** A core is inside GFA and outside saleable
+   * area, so the saleable figure this run was given already carries it, and on a
+   * parking level it is inside what the usable fraction deducts. The engine
+   * draws it and reconciles it against both; it never charges for it twice. The
+   * argument in full is at the top of `core.ts`.
+   */
+  readonly coreAreaM2?: Decimal;
   readonly context?: EvalContext;
 }
 
@@ -296,6 +312,20 @@ export interface RunOutput {
     readonly schedule: LevelSchedule;
     readonly code: string;
   } | null;
+  /**
+   * The core: its area, its share of the plate, and what that share says about
+   * the two inputs already carrying it.
+   *
+   * Never null on a run this engine computes. The *model's* core is nullable,
+   * because a run stored before the core existed has none and one inferred now
+   * from its stored numbers would be a core nobody entered.
+   */
+  readonly core: {
+    readonly areaM2: TracedDecimal;
+    readonly plateShare: TracedDecimal;
+    readonly placement: Traced<string>;
+    readonly reconciliation: readonly string[];
+  };
   /**
    * The parking level, drawn.
    *
@@ -761,11 +791,42 @@ export function runPipeline(input: RunInput): RunOutput {
       : { podiumLevels: { value: podiumFootprint, actor: input.actor } }),
   });
 
+  /*
+    THE CORE — sized here and drawn everywhere, never subtracted.
+
+    It is solved after the massing because it needs the plate the massing stands
+    on, and before the model because every level draws it. A stated area that
+    cannot be a core of this plate is refused in the caller's own words rather
+    than clamped.
+  */
+  let core: CoreResult;
+  try {
+    core = solveCore({
+      tracer,
+      plateRing: envelope.plateRing,
+      plateAreaM2: envelope.towerPlateCap,
+      ...(input.coreAreaM2 === undefined
+        ? {}
+        : { stated: { areaM2: input.coreAreaM2, actor: input.actor } }),
+    });
+  } catch (error) {
+    if (error instanceof CoreRefusedError) throw new RunBlockedError(error.message, 'G2:core');
+    throw error;
+  }
+  const coreReconciliation = reconcileCore({
+    plateShare: core.plateShare.value,
+    coreAreaM2: core.areaM2.value,
+    saleableEfficiency: efficiencyTraced.value,
+    parkingUsableFraction: parking.usableFraction.value,
+    parkingLevelAreaM2: envelope.podiumFootprint.value,
+  });
+
   const building = buildBuildingModel({
     tracer,
     plot: input.plot,
     envelope,
     massing,
+    core: { result: core, reconciliation: coreReconciliation },
     parkingLevels: parking.levelsAvailable,
     levelPlan,
     levelPlanRefusal,
@@ -794,6 +855,12 @@ export function runPipeline(input: RunInput): RunOutput {
     levelSchedule: schedule
       ? { schedule, code: levelCode(schedule, massing.towerLevels.value) }
       : null,
+    core: {
+      areaM2: core.areaM2,
+      plateShare: core.plateShare,
+      placement: core.placement,
+      reconciliation: coreReconciliation,
+    },
     levelPlan,
     levelPlanRefusal,
     massing,
@@ -847,7 +914,14 @@ export interface AssumptionEntry {
 /** Which assumptions the pipeline can currently perturb, and how. */
 type Perturbable = {
   readonly parameterId: string;
-  readonly apply: (input: RunInput, factor: Decimal) => RunInput;
+  /**
+   * The perturbed input.
+   *
+   * `base` is the run as computed, because an ASSUMED value is by definition
+   * not in the input — the engine put it there. Moving it 10% means moving the
+   * number the engine chose, and the output is the only place that number is.
+   */
+  readonly apply: (input: RunInput, factor: Decimal, base: RunOutput) => RunInput;
 };
 
 const PERTURBABLE: readonly Perturbable[] = [
@@ -861,6 +935,22 @@ const PERTURBABLE: readonly Perturbable[] = [
         // perturbation understates sensitivity rather than overstating it.
         value: Decimal.min(new Decimal(1), input.parkingUsableFraction.value.times(factor)),
       },
+    }),
+  },
+  {
+    /*
+      The core moves no capacity figure, by construction — it is inside GFA and
+      inside the saleable efficiency. Perturbing it anyway produces a MEASURED
+      zero, which is a far more useful row in the register than the `null` an
+      unperturbable assumption gets: "we moved it 10% and the answer did not
+      change" is an answer; "not measured" is not.
+    */
+    parameterId: 'building.core_area_m2',
+    apply: (input, factor, base) => ({
+      ...input,
+      // From the output, not the input: unstated, the area the run used is the
+      // one `solveCore` assumed, and the input holds nothing at all.
+      coreAreaM2: base.core.areaM2.value.times(factor),
     }),
   },
   {
@@ -925,8 +1015,8 @@ export function buildAssumptionRegister(
 
     let sensitivity: AssumptionEntry['sensitivity'] = null;
     if (spec) {
-      const low = safeGoverning(spec.apply(input, new Decimal('0.9')));
-      const high = safeGoverning(spec.apply(input, new Decimal('1.1')));
+      const low = safeGoverning(spec.apply(input, new Decimal('0.9'), output));
+      const high = safeGoverning(spec.apply(input, new Decimal('1.1'), output));
       if (low && high) {
         const spread = high.minus(low).abs();
         sensitivity = {

@@ -98,6 +98,45 @@ export const EN = {
     the ground floor carries the vehicle entrance, a podium level is bound by the
     podium setback — and one integer flattened all three.
   */
+  /*
+    THE CORE — Eng. Mohamed, 2026-09-28: the core must be in the calculation, and
+    it is the one thing he called الاهم.
+
+    The copy leads with what the core does NOT do. "In the calculation" reads as
+    "subtracted from the floor area", and it is not subtracted: a core is inside
+    GFA and outside saleable area, so the saleable figure one panel up already
+    carries it. A reader who assumes otherwise will take the capacity figure as
+    wrong by the size of the core.
+
+    And the field arrives EMPTY on purpose. An empty box here means "I have not
+    said", which the engine answers with an assumption it declares in amber, with
+    a basis and a measured sensitivity. A number in the box on arrival would be
+    the hidden default this product refuses everywhere else.
+  */
+  core: {
+    title: 'The core',
+    subtitle:
+      'Lifts, escape stairs, risers and the lift lobby, as one area on a typical floor. ' +
+      'Leave it empty and the engine assumes one, in amber, and says what it assumed.',
+    label: 'Core area on a typical floor (m²)',
+    placeholder: (example: string): string => `e.g. ${example}`,
+    /** The assumed share sits between these. */
+    help: {
+      before: 'Left empty, the engine takes ',
+      after:
+        ' of the tower plate — the middle of what a residential tower core takes — and ' +
+        'marks it as assumed wherever it appears. Enter a figure and it is recorded as ' +
+        'yours. It is refused only if it cannot be a core of this plate, and the refusal ' +
+        'names both areas.',
+    },
+    invalid: 'A core area is a number greater than zero.',
+    notSubtracted:
+      'Nothing above is reduced for the core. A core is inside GFA and outside saleable ' +
+      'area, so the saleable figure you gave already accounts for it, and on a parking ' +
+      'level it is inside what the usable fraction deducts. The engine draws the core and ' +
+      'compares it against both, on the results screen.',
+  },
+
   levels: {
     title: 'The levels',
     subtitle:

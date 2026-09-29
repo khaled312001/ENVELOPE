@@ -17,14 +17,15 @@
  * growing a plausible grid.
  */
 
-import type {
-  BuildingModel,
-  ElementSource,
-  ModelLevel,
-  ModelPoint,
-  ModelRing,
-  ModelSection,
-  TracedWire,
+import {
+  asMm,
+  type BuildingModel,
+  type ElementSource,
+  type ModelLevel,
+  type ModelPoint,
+  type ModelRing,
+  type ModelSection,
+  type TracedWire,
 } from '@envelope/core';
 
 import {
@@ -175,6 +176,28 @@ function plotContext(model: BuildingModel, s: number, withDimensions: boolean): 
   }
   items.push(shape(Role.SETBACK, model.setbackLine, true, { source: model.setbackSource, name: 'Setback line' }));
   return items;
+}
+
+/**
+ * The core, on a level it passes through.
+ *
+ * One helper for every sheet, because the core is the same footprint on all of
+ * them — that is what makes it a core. A sheet that drew its own would be a
+ * second placement of one thing, which is the defect `BuildingModel` exists to
+ * end.
+ *
+ * Empty for a level the core does not reach, and empty on a run stored before
+ * the engine sized one. Neither case draws a substitute.
+ */
+function coreItems(model: BuildingModel, levelId: string): ModelItem[] {
+  const core = model.core;
+  if (!core || !core.levelIds.includes(levelId)) return [];
+  const box = boxOf(core.outline);
+  const wide = box.maxX - box.minX >= box.maxY - box.minY;
+  return [
+    shape(Role.CORE, core.outline, true, { source: core.source, name: core.label }),
+    label(Role.CORE, centroidOf(core.outline), core.label, 1.8, wide ? 0 : 90, 'middle', core.source),
+  ];
 }
 
 function accessItems(model: BuildingModel, s: number): ModelItem[] {
@@ -369,6 +392,14 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     items.push(label(Role.BAY_NUMBER, tail, String(bay.number), 1.6, axis + 90));
   }
 
+  /*
+    THE CORE OVER THE BAYS, not under them. It passes through this level whatever
+    the layout put there, and a core drawn beneath the bays would read as a bay
+    that happens to sit on a shaft. Whether the layout accounted for it is the
+    reconciliation in the notes, not something the draw order may imply.
+  */
+  items.push(...coreItems(model, level.id));
+
   if (level.elevationMm === 0) items.push(...accessItems(model, s));
 
   const ramp = up ?? down;
@@ -383,6 +414,9 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     ...(parking.reserved
       ? [fact('Reserved, not laid out', parking.reserved.areaM2, `${parking.reserved.areaM2.value} SQ.M`)]
       : []),
+    ...(model.core && model.core.levelIds.includes(level.id)
+      ? [fact('Core', model.core.areaM2, `${model.core.areaM2.value} SQ.M`)]
+      : []),
   ];
   const legend: LegendEntry[] = [
     { role: Role.SLAB, provenanceClass: level.outlineSource.provenanceClass, label: 'Slab edge' },
@@ -391,6 +425,15 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     { role: Role.AISLE, label: 'Drive aisle' },
     ...(parking.rampStrip ? [{ role: Role.RAMP, label: 'Ramp - gradient NOT ASSESSED' }] : []),
     ...(parking.reserved ? [{ role: Role.RESERVED, label: 'Reserved: cores, plant, circulation' }] : []),
+    ...(model.core && model.core.levelIds.includes(level.id)
+      ? [
+          {
+            role: Role.CORE,
+            provenanceClass: model.core.source.provenanceClass,
+            label: 'Core - area only, no layout',
+          },
+        ]
+      : []),
   ];
   const title = `Parking level ${level.id}`;
   return {
@@ -405,7 +448,9 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     items,
     paperItems: paperFurniture({ title, number, scale: s, meta, facts, legend, north: true }),
     facts,
-    notes: model.notModelled.slice(0, 2),
+    // The core's reconciliation against the deduction belongs on the sheet the
+    // deduction was taken on, where a reader can see both numbers at once.
+    notes: [...(model.core ? model.core.reconciliation.slice(1) : []), ...model.notModelled.slice(0, 2)],
   };
 }
 
@@ -427,8 +472,21 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
     items.push(shape(Role.CONTEXT, podium.outline, true, { source: podium.outlineSource, name: 'Podium roof, below' }));
   }
   items.push(shape(Role.SLAB, first.outline, true, { source: first.outlineSource, name: 'Typical floor plate' }));
+  items.push(...coreItems(model, first.id));
+  /*
+    THE CORE IS NOW MODELLED AND THIS LABEL SAID IT WAS NOT. It sat in the middle
+    of the plate, which is exactly where the core now sits, so leaving it would
+    have printed "CORES NOT MODELLED" across the core. What is still true — units
+    and façades — is still said, and it is moved off the centre.
+  */
   items.push(
-    label(Role.ANNOTATION, centroidOf(first.outline), 'UNITS, CORES AND FACADES NOT MODELLED', 2, 0),
+    label(
+      Role.ANNOTATION,
+      { x: centroidOf(first.outline).x, y: asMm(boxOf(first.outline).minY) },
+      'UNITS AND FACADES NOT MODELLED',
+      2,
+      0,
+    ),
   );
 
   const last = typical[typical.length - 1]!;
@@ -436,9 +494,24 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
   const facts: StripFact[] = [
     { label: 'Levels', value: range },
     fact('First typical floor level', first.elevationM, `${signedLevel(first.elevationM.value)} M`),
+    ...(model.core
+      ? [
+          fact('Core', model.core.areaM2, `${model.core.areaM2.value} SQ.M`),
+          fact('Core, share of plate', model.core.plateShare, `${model.core.plateShare.value}`),
+        ]
+      : []),
   ];
   const legend: LegendEntry[] = [
     { role: Role.SLAB, provenanceClass: first.outlineSource.provenanceClass, label: 'Typical floor plate' },
+    ...(model.core
+      ? [
+          {
+            role: Role.CORE,
+            provenanceClass: model.core.source.provenanceClass,
+            label: 'Core - area only, no layout',
+          },
+        ]
+      : []),
     ...(podium ? [{ role: Role.CONTEXT, label: 'Podium roof, below' }] : []),
     { role: Role.SETBACK, provenanceClass: model.setbackSource.provenanceClass, label: 'Setback line' },
   ];
@@ -455,8 +528,12 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
     paperItems: paperFurniture({ title: 'Typical floor', number: 'A-201', scale: s, meta, facts, legend, north: true }),
     facts,
     notes: [
-      ...model.placements.filter((p) => p.subject === 'tower').map((p) => p.statement),
-      ...model.notModelled.filter((n) => /Cores|Façades/.test(n)),
+      ...model.placements
+        .filter((p) => p.subject === 'tower' || p.subject === 'core')
+        .map((p) => p.statement),
+      // The saleable reconciliation, on the sheet the saleable area is of.
+      ...(model.core ? model.core.reconciliation.slice(0, 1) : []),
+      ...model.notModelled.filter((n) => /core|Façades/i.test(n)),
     ],
   };
 }

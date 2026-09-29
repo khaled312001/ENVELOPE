@@ -34,6 +34,7 @@ import {
   LevelUse,
   type ModelAisle,
   type ModelBay,
+  type ModelCore,
   type ModelLevel,
   type ModelPoint,
   type ModelRamp,
@@ -56,6 +57,7 @@ import {
   subtractSpans,
 } from '@envelope/geometry';
 
+import { CORE_NOT_MODELLED, type CoreResult } from './core.js';
 import type { EnvelopeSolution } from './envelope.js';
 import type { LevelPlan, WorldRect } from './level-plan.js';
 import type { MassingResult } from './massing.js';
@@ -86,6 +88,16 @@ export interface BuildingModelInput {
   readonly schedule?: LevelSchedule;
   /** Whose schedule it is. Required with `schedule`, unused without it. */
   readonly actor?: { readonly id: string; readonly name: string };
+  /**
+   * The core, sized and placed by `solveCore`, with what it reconciles against.
+   *
+   * Optional only so that a caller building a model by hand in a test need not
+   * mint one. Every run has a core: stated or assumed, never absent.
+   */
+  readonly core?: {
+    readonly result: CoreResult;
+    readonly reconciliation: readonly string[];
+  };
 }
 
 const source = (t: Traced<unknown>): ElementSource => ({
@@ -118,9 +130,16 @@ const NOT_MODELLED: readonly string[] = [
   'Columns. With a structural grid the layout charges Table B.11\'s 300 mm clearance ' +
     'per bay, but it places no column, and drawing one would be drawing structure ' +
     'nobody checked against the bays.',
-  'Cores, stairs and lifts as rooms. The run declares how much of each parking level ' +
-    'they take — drawn as the reserved zone — not where each one goes; on the tower ' +
-    'floors their position is not determined at all.',
+  /*
+    THIS USED TO SAY THE CORE WAS NOT MODELLED AT ALL. It is now sized, placed
+    and drawn on every level — see `core.ts` — so what survives here is the part
+    that is still true: the outline is the plate scaled to an area, and nothing
+    is laid out inside it. `CORE_NOT_MODELLED` carries that sentence, and it is
+    pushed only when the model actually has a core, so a run without one still
+    says the larger thing.
+  */
+  'Stairs and lifts as rooms, and plant. The run declares how much of each parking ' +
+    'level they take — drawn as the reserved zone — not where each one goes.',
   'Slab thickness. Levels are planes at their floor level. The engine computes no ' +
     'slab depth, and a drawn thickness would be an invented one.',
   'Façades, windows, balconies and units. The engine computes none of them.',
@@ -403,6 +422,39 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
         unit: 'bays',
       });
 
+  // --- the core, through every level it passes -----------------------------------------
+  /*
+    ONE FOOTPRINT FOR THE WHOLE STACK, which is what makes it a core rather than
+    a room that moves. It passes through every PLACED level: a level the answer
+    does not reach is drawn as a permitted outline and nothing stands on it, so
+    drawing a core through it would be drawing a shaft in a building that is not
+    there.
+  */
+  const core: ModelCore | null = input.core
+    ? {
+        outline: input.core.result.ring.map(pt),
+        areaM2: toWire(input.core.result.areaM2),
+        plateShare: toWire(input.core.result.plateShare),
+        source: source(input.core.result.areaM2),
+        label: `CORE - ${input.core.result.areaM2.value.toFixed(0)} SQ.M`,
+        levelIds: levels.filter((l) => l.placed).map((l) => l.id),
+        reconciliation: input.core.reconciliation,
+      }
+    : null;
+  if (core) {
+    notModelled.push(CORE_NOT_MODELLED);
+    placements.push({
+      subject: 'core',
+      source: source(input.core!.result.placement),
+      statement: input.core!.result.placement.value,
+    });
+  } else {
+    notModelled.push(
+      'The core. This run was computed before the engine sized one, and a core ' +
+        'inferred now from its stored numbers would be a core nobody entered.',
+    );
+  }
+
   // --- sections -----------------------------------------------------------------------
   const sections = sectionsOf(input.plot, envelope.setbackRing, envelope.podiumRing, levels, ramps, strip);
   if (sections.length === 0) {
@@ -443,6 +495,7 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       : null,
     drawnBays: toWire(drawnBays),
     placements,
+    core,
     sections,
     notModelled,
   };

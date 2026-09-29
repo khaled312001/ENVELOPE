@@ -64,6 +64,13 @@ function useVerbatim(): (value: ReactNode) => ReactNode {
 const PARKING_IN_FAR_SWING = '15–35%';
 const PHASE = '0';
 const PODIUM_EXAMPLE_DIGIT = '2';
+/*
+  The core figures named once, because no digit lives in a dictionary.
+  The share is the engine's own `ASSUMED_PLATE_SHARE` written for a reader;
+  the example is an ordinary residential core, not this plot's.
+*/
+const CORE_ASSUMED_SHARE = '18%';
+const CORE_AREA_EXAMPLE = '180';
 const PODIUM_EXAMPLE_CODE = 'G+2P+8';
 const EFFICIENCY_ONCE_ASSUMED = '1.00';
 const EFFICIENCY_EXAMPLE = '0.93';
@@ -211,6 +218,15 @@ export function RulesStep({
    * Selecting a developer standard fills it from a cited target.
    */
   const [efficiency, setEfficiency] = useState(demo?.saleableEfficiency ?? '');
+  /*
+    THE CORE — Eng. Mohamed, 2026-09-28, the one thing he called الاهم.
+
+    Empty is a real state and the right default: the engine assumes 18% of the
+    tower plate and says so in amber, and a pre-filled figure here would be the
+    hidden default the whole product refuses. This is the one field on the
+    screen whose being blank is an answer.
+  */
+  const [coreArea, setCoreArea] = useState('');
   /**
    * Which of the two the reader is typing.
    *
@@ -346,6 +362,12 @@ export function RulesStep({
       (schedule.groundIsParking ? 1 : 0) +
       schedule.podiumParkingLevels,
     levels: schedule,
+    /*
+      Sent only when it was typed. An empty box is not zero and it is not a
+      default: it is the reader saying nothing, and the engine's answer to that
+      is an assumption with a basis rather than a number nobody chose.
+    */
+    ...(coreArea.trim() === '' ? {} : { coreAreaM2: coreArea.trim() }),
     parkingUsableFraction: {
       value: '0.85',
       source: 'ASSUMED',
@@ -390,6 +412,16 @@ export function RulesStep({
     Number.isFinite(efficiencyNumber) &&
     efficiencyNumber > 0 &&
     (saleableUnit === 'AREA' || efficiencyNumber <= 1);
+
+  /*
+    EMPTY IS VALID — it means "I have not said", which the engine answers with
+    a declared assumption. What is refused is a figure that is not a positive
+    number. Whether it FITS the plate the engine decides, because only the
+    engine knows the plate, and it refuses in a sentence naming both areas.
+  */
+  const coreNumber = Number(coreArea);
+  const coreValid =
+    coreArea.trim() === '' || (Number.isFinite(coreNumber) && coreNumber > 0);
 
   return (
     <>
@@ -569,11 +601,14 @@ export function RulesStep({
         }}
       />
 
+      {/* --- The core, which has no default and does not subtract ------- */}
+      <CoreArea area={coreArea} valid={coreValid} onChange={setCoreArea} />
+
       <div className="actions">
         <button
           type="button"
           className="button button--primary"
-          disabled={!parkingInFar || !efficiencyValid || !scheduleOk || busy}
+          disabled={!parkingInFar || !efficiencyValid || !coreValid || !scheduleOk || busy}
           onClick={() =>
             parkingInFar && efficiencyValid && scheduleOk && onRun(body(parkingInFar))
           }
@@ -1320,6 +1355,71 @@ export function SaleableEfficiency({
           </p>
         ) : null}
       </div>
+    </section>
+  );
+}
+
+/**
+ * The core's area — Eng. Mohamed, 2026-09-28, the one thing he called الاهم.
+ *
+ * **The empty box is the answer "I have not said", and the engine answers it
+ * with a declared assumption.** That is why nothing is pre-filled here: a figure
+ * in the box on arrival is a hidden default, and this product refuses those
+ * everywhere else. The panel says what the engine will assume, and what entering
+ * a number changes, so a reader who leaves it blank does so knowing.
+ *
+ * And it says, before anything else, what the core does NOT do. The obvious
+ * reading of "the core is in the calculation" is that the floor area is reduced
+ * for it. It is not: a core is inside GFA and outside saleable area, so the
+ * saleable figure above already carries it. Leaving that unsaid would leave a
+ * reader thinking the capacity figure is 18% too high.
+ */
+export function CoreArea({
+  area,
+  valid,
+  onChange,
+}: {
+  readonly area: string;
+  readonly valid: boolean;
+  readonly onChange: (value: string) => void;
+}): JSX.Element {
+  const t = useDict(EN, AR).core;
+  const ltr = useVerbatim();
+  return (
+    <section className="panel" aria-labelledby="core-heading">
+      <header className="panel__header">
+        <div>
+          <h2 id="core-heading" className="panel__title">
+            {t.title}
+          </h2>
+          <p className="panel__subtitle">{t.subtitle}</p>
+        </div>
+      </header>
+
+      <div className="field">
+        <label htmlFor="core-area">{t.label}</label>
+        <input
+          id="core-area"
+          className="input input--num"
+          inputMode="decimal"
+          value={area}
+          placeholder={t.placeholder(CORE_AREA_EXAMPLE)}
+          onChange={(e) => onChange(e.target.value)}
+          aria-describedby="core-area-help"
+        />
+        <p id="core-area-help" className="field__help">
+          {t.help.before}
+          {ltr(CORE_ASSUMED_SHARE)}
+          {t.help.after}
+        </p>
+        {area.trim() !== '' && !valid ? (
+          <p className="field__help" data-state="blocked" role="alert">
+            {t.invalid}
+          </p>
+        ) : null}
+      </div>
+
+      <p className="fine-print">{t.notSubtracted}</p>
     </section>
   );
 }

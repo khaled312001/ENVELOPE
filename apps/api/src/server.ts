@@ -1563,6 +1563,11 @@ function runInputFrom(
       ...(body.unitMix.basis !== undefined ? { basis: body.unitMix.basis } : {}),
     },
     parkingLevelsAvailable: body.parkingLevelsAvailable,
+    /*
+      The core. Absent is a real state — the engine assumes 18% of the tower
+      plate and declares it — so this is spread rather than defaulted here.
+    */
+    ...(body.coreAreaM2 === undefined ? {} : { coreAreaM2: new Decimal(body.coreAreaM2) }),
     parkingUsableFraction: {
       value: new Decimal(body.parkingUsableFraction.value),
       source: body.parkingUsableFraction.source,

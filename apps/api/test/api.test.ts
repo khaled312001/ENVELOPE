@@ -582,6 +582,84 @@ describe('runs', () => {
     expect(res.json().message).toMatch(/no parking at all/);
   });
 
+  /*
+    THE CORE — Eng. Mohamed, 2026-09-28, the one thing he called الاهم.
+
+    The contract's job here is to carry a quantity that changes no other
+    quantity. A core is inside GFA and inside the saleable efficiency, so the
+    only wrong thing the API could do is let it look subtracted.
+  */
+  it('assumes a core when none is sent, and says so in amber', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: plot.plotId },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.core.areaM2.provenanceClass).toBe('ASSUMED');
+    expect(Number(body.core.plateShare.value)).toBeCloseTo(0.18, 4);
+    // In the register, with a measured sensitivity rather than an unmeasured one.
+    const entry = (body.assumptions as { parameterId: string; sensitivity: unknown }[]).find(
+      (a) => a.parameterId === 'building.core_area_m2',
+    );
+    expect(entry).toBeDefined();
+    expect(entry!.sensitivity).not.toBeNull();
+  });
+
+  it('records a stated core under the runner name, and draws it on every placed level', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: plot.plotId, coreAreaM2: '150' },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.core.areaM2.value).toBe('150');
+    expect(body.core.areaM2.provenanceClass).toBe('USER_SET');
+    const placed = (body.building.levels as { id: string; placed: boolean }[])
+      .filter((l) => l.placed)
+      .map((l) => l.id);
+    expect(body.building.core.levelIds).toEqual(placed);
+  });
+
+  it('changes no capacity figure, however large the core is', async () => {
+    const plot = await createPlot();
+    const run = async (extra: Record<string, unknown>) =>
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/api/runs',
+          headers: ACTOR,
+          payload: { ...RUN_BODY, plotId: plot.plotId, ...extra },
+        })
+      ).json();
+    const base = await run({});
+    const big = await run({ coreAreaM2: '400' });
+    expect(big.capacity.governingGfa.value).toBe(base.capacity.governingGfa.value);
+    expect(big.parking.totalBays.value).toBe(base.parking.totalBays.value);
+    // And it says so: the reconciliation is two comparisons, never a deduction.
+    expect(big.core.reconciliation).toHaveLength(2);
+    expect(big.core.reconciliation[0]).toContain('of the tower plate');
+  });
+
+  it('refuses a core that cannot be a core of this plate, naming both areas', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: plot.plotId, coreAreaM2: '99999' },
+    });
+    expect(res.statusCode).toBeGreaterThanOrEqual(400);
+    expect(res.json().message).toMatch(/cannot be the whole floor/);
+    expect(res.json().message).toMatch(/square feet/);
+  });
+
   it('serves the derivation of any single value — §20.2 click-through', async () => {
     const plot = await createPlot();
     const run = (

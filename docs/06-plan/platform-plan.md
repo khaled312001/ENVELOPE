@@ -605,10 +605,54 @@ The three-layer structure (§2.2) applied to all ten steps, plus the assumptions
 plus a worked-example link per step. Held to `docs/05-design/arabic-glossary.md` in Arabic and
 run through the `ux-writing` ten-item pre-ship checklist in both languages.
 
-### 4.7 The core
+### 4.7 The core — **done, 29 Sep 2026**
 
-Placed in the engine, deterministic, traced, amber when assumed, drawn everywhere the model is
-drawn, never positioned by a yield search (§2.10b).
+Sized in the engine (`packages/capacity/src/core.ts`), placed by a rule, drawn on every level it
+passes through — on each parking sheet, on the typical floor, as a shaft in the 3D view, as
+3DFACE walls on `ENV-<LEVEL>-CORE` in the DXF, and in the `.glb`.
+
+**The obvious reading of "the core must be in the calculation" is wrong, and taking it would
+have made the answer worse.** Subtracting the core from the floor area is wrong twice over. A
+core is **inside GFA** — the annex says so under `CORE_AREA`, and `TOWER_PLATE` lists "Core"
+among its inclusions — so deducting it would report a GFA the plot does not have. And it is
+**outside saleable area**, which is exactly what the saleable efficiency already carries: 0.93
+means seven per cent of the gross does not sell, and the core is most of that seven per cent.
+The same holds one floor down, where the parking usable fraction's own words are "cores, plant,
+the ramp landing and circulation that is not drive aisle".
+
+So the core does not subtract. It does three things instead, and each is something the product
+could not do before:
+
+1. **It is drawn**, in the ink of the value that sized it. A tower plate with nothing in it
+   reads as a plate with nothing in it, and the typical-floor sheet used to print "UNITS, CORES
+   AND FACADES NOT MODELLED" across the middle of the plate — which is now where the core is.
+2. **It reconciles.** `reconcileCore` compares the core's share of the plate against what the
+   saleable efficiency leaves for everything that does not sell, and the core's area against
+   what the usable fraction deducts on a parking level. When the core alone exceeds either, the
+   input cannot hold — and the engine says so and **changes neither figure**. That arithmetic is
+   on the results screen and in the sheets' notes, and nothing else in the system performed it.
+3. **It is a declared quantity rather than an absence.** Unstated it is `ASSUMED` at 18% of the
+   tower plate — the middle of the 15–22% a residential core takes — amber everywhere, with a
+   basis and a **measured** sensitivity of zero in the register. Measured, not `null`: "we moved
+   it 10% and the answer did not change" is an answer, and it required `Perturbable.apply` to
+   take the run's output, because an assumed value is by definition not in the input.
+
+**Its position is a rule, not a search.** The core is the tower plate ring scaled about its
+centre to the core's area — the same deterministic placement the plate itself is drawn by,
+stated in the same words. A core positioned by searching for maximum unit yield is the optimiser
+at 34:37, it is a `TRADEOFF` value, and `PHASE_0_CLASSES` refuses to emit one by construction.
+The consequence is said wherever the core is drawn: **only its area is a quantity.** No lift,
+stair, riser or core wall is placed, and `notModelled` carries that sentence.
+
+**Refused, not clamped.** A core of zero or a core at least as large as the plate throws
+`RunBlockedError` at `G2:core`, in a sentence naming both areas and the usual cause — a figure
+in square feet read as square metres.
+
+**The third source in this plan's own sketch does not exist, and the branch was not written.**
+It asked for an area "derived from a developer standard where one is attached". No standard on
+file states a core area or a core ratio. A branch that reads a figure no document holds is a
+branch that would one day read the wrong one, so there are two sources — `USER_SET` and
+`ASSUMED` — and `CoreInput` says why in its own docblock.
 
 ### 4.8 Parking circulation
 
@@ -1087,6 +1131,16 @@ The gate that should have caught that held the same wrong number. Two values —
 the podium count and where the parking sits — stopped being assumptions, because
 a schedule is a person answering a question two integers could not put. The full
 argument is in §4.4.
+
+**L — §4.7 the core, done, and the obvious implementation of it was wrong.**
+Eng. Mohamed called the core *"الاهم"*, and the reading that suggests itself —
+subtract it from the floor area — is wrong twice: a core is inside GFA, and it
+is inside the saleable efficiency the run was already given. So it is sized,
+placed by a rule, drawn on every level in every output, and **reconciled**
+against the two inputs that already carry it, rather than deducted. Unstated it
+is `ASSUMED` at 18% of the plate with a *measured* sensitivity of zero. The third
+source this plan asked for — a developer standard — states no core figure
+anywhere on file, so that branch was not written. The full argument is in §4.7.
 
 **Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The

@@ -171,6 +171,18 @@ export const runRequest = z.object({
       podiumParkingLevels: z.number().int().min(0).max(20),
     })
     .optional(),
+  /**
+   * The core's plan area on a typical level, m² — Eng. Mohamed's *"الاهم"*.
+   *
+   * Optional, and absence is not a default: unsent, the engine assumes 18% of
+   * the tower plate, amber, with a basis and a measured sensitivity. Sent, it is
+   * USER_SET by the actor.
+   *
+   * A decimal string, like every other quantity on this boundary: `Decimal` is
+   * the engine's number type and a JSON float would round before the engine ever
+   * saw it.
+   */
+  coreAreaM2: decimalString.optional(),
   parkingUsableFraction: z.object({
     value: decimalString,
     source: z.enum(['DERIVED', 'ASSUMED']),

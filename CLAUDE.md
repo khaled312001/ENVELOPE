@@ -51,7 +51,7 @@ packages/
   rules/       typed rule records · 12 evaluators · bitemporal store · resolution ·
                developer standards and project briefs (a *separate* type, see below)
   capacity/    envelope · setback↔floor fixpoint · parking · layout · access ·
-               level plan · massing · bands A/B/C
+               level plan · massing · core · bands A/B/C
   invariants/  18 checks. Depends on `core` ONLY. ✗ never capacity, geometry, rules
   validation/  independent validation + five-way claim statement. ✗ never capacity/geometry
   sheets/      the drawing set, composed from the engine's BuildingModel: site plan, one
@@ -243,6 +243,21 @@ is a defect even when it makes something easier.
   `levels` is optional and additive: a stored run keeps its integers and reports
   `levels: null`, because re-reading an old answer under a new model changes a number
   somebody has already been shown.
+- **The core is drawn and reconciled, never subtracted.** Eng. Mohamed called it
+  *"الاهم"*, and the reading that suggests itself is wrong twice: a core is **inside
+  GFA** (`TOWER_PLATE` lists "Core" among its inclusions) so deducting it reports a
+  GFA the plot does not have, and it is **outside saleable area**, which is precisely
+  what `saleable_efficiency` already carries. On a parking level it is inside what the
+  usable fraction deducts. So `core.ts` sizes it, places it by a rule, draws it on
+  every level in every output, and `reconcileCore` **compares** it against both inputs
+  — saying so when the core alone exceeds what one of them leaves, and changing
+  neither. Unstated it is `ASSUMED` at 18% of the tower plate with a *measured*
+  sensitivity of zero, because "we moved it 10% and the answer did not change" is an
+  answer and `null` is not. Its position is the plate scaled about its centre — the
+  same rule the plate itself is drawn by — never a search for maximum yield, which is
+  the `TRADEOFF` optimiser `PHASE_0_CLASSES` refuses by construction. Only its area is
+  a quantity: no lift, stair, riser or core wall is placed, and `notModelled` says so
+  under every drawing.
 - **A developer standard is not a rule, and the type system says so.** `DeveloperStandard`
   and `ProjectBrief` live in `packages/rules/src/standards/` and are deliberately *not*
   `RuleRecord`s: a `RuleRecord` is resolvable by `resolveParameter` and can bind the

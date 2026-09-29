@@ -955,8 +955,23 @@ export function Landing({
       {/* ================================================================
           02 — HOW THE PARKING NUMBER IS MADE
           ============================================================= */}
+      {/*
+        THE PAGE ALTERNATES GROUND FROM HERE DOWN.
+
+        Five sections wearing one shell is five sections a reader cannot tell
+        apart while scrolling, and the fix this chassis already owns is
+        `.section--zoned` — a change of ground, used alongside the datum rule
+        rather than instead of it. Sections 02 and 04 take it, so the page reads
+        as light / zoned / light / zoned / light and every heading arrives on a
+        ground the one above it did not have.
+
+        NOT `.section--contrast`. The inverted band is the loud break and this
+        page cannot spend it: §13.1 keeps every state ink off it, and each of
+        these five sections carries state ink by construction — 02 and 04 draw
+        accent, 03 renders the provenance key itself and 05's figure is amber.
+      */}
       <section
-        className="shell section railed lp-section"
+        className="shell section section--zoned railed lp-section"
         id="parking-number"
         aria-labelledby="lp-parking"
       >
@@ -1137,7 +1152,7 @@ export function Landing({
           04 — THE FIVE-WAY CLAIM STATEMENT
           ============================================================= */}
       <section
-        className="shell section section--major railed lp-section"
+        className="shell section section--major section--zoned railed lp-section"
         id="claims"
         aria-labelledby="lp-claims"
       >

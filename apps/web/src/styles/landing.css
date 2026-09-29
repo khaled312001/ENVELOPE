@@ -77,8 +77,23 @@
     The figure spans both rows, which is what it did implicitly as one of two
     children and now does by name.
   */
+  /*
+    THE HEAD RUNS THE FOLD; THE ARGUMENT AND THE ARTEFACT SIT UNDER IT.
+
+    It used to sit in the 0.85fr column beside the figure, and at 1440 that is a
+    370px measure for a 61px headline — six lines, about 380px of the first
+    screen, and the consequence was that the GOVERNING FIGURE and the amber
+    assumption under it both fell below the fold. On a page whose entire argument
+    is the answer and the assumption together, the first screen held the claim and
+    neither of the two things that back it.
+
+    Spanning both columns costs the artefact nothing — it keeps its full height in
+    the row below — and buys back roughly 180px, which is the answer card. It is
+    also what 61px Light is FOR: a banner line reads as a statement at a banner
+    width and as a column of shouted fragments at a column width.
+  */
   grid-template-areas:
-    'head figure'
+    'head head'
     'copy figure';
   gap: clamp(var(--space-5), 4vw, var(--space-8));
   /*
@@ -175,7 +190,7 @@
    them is the same one, set here because they are now siblings rather than
    parent and child. */
 .lp-hero__head + .lp-hero__copy {
-  margin-block-start: var(--space-5);
+  margin-block-start: 0;
 }
 /*
   And a tighter block rhythm than a body section, for the reason the `align-items`
@@ -204,7 +219,15 @@
      advance is 0.6em, so 15ch at the H1's 36px floor computes to 324px against a
      288px column and the cap is inactive below a viewport of about 356px. What holds
      the line there is the grid track plus `min-inline-size: 0`, and normal wrapping. */
-  max-inline-size: var(--measure-banner);
+  /*
+    28ch, not `--measure-banner`'s 15. That token caps an H1 standing in a column;
+    this one spans the fold, and 15ch across a 1150px head would set three words a
+    line down the left edge with two thirds of the band empty. 28ch is about 34
+    characters of Plex at this size — three lines for the page's own sentence, and
+    still short of the 45–75 a paragraph wants, because a headline is read in one
+    movement rather than scanned.
+  */
+  max-inline-size: 28ch;
   text-wrap: balance;
   overflow-wrap: break-word;
 }
@@ -1881,4 +1904,29 @@
   font-size: var(--text-base);
   max-inline-size: var(--measure-prose);
   line-height: var(--leading-relaxed);
+}
+
+/* ==========================================================================
+ * THE ZONED SECTIONS BLEED
+ * ======================================================================= */
+
+/*
+ * `.section--zoned` sets a ground; `.shell` caps the element at the page width.
+ * Together they paint a grey rectangle with white margins either side, which
+ * reads as an oversized card rather than as a change of chapter — the ground
+ * has to reach the edge of the window to say "a different part of the argument
+ * starts here".
+ *
+ * The padding is `.section--opening`'s own expression, and it is a computation
+ * rather than a wrapper element: `50% - page-max/2 + gutter` is the inset that
+ * leaves the content exactly where the shell had it, and `max(...)` holds the
+ * plain gutter once the window is narrower than the page. No extra div, and the
+ * railed grid inside is untouched.
+ */
+.lp-section.section--zoned {
+  max-inline-size: none;
+  padding-inline: max(
+    var(--page-gutter),
+    calc(50% - var(--page-max) / 2 + var(--page-gutter))
+  );
 }

@@ -1,0 +1,268 @@
+/*
+ * THE FIGURES DRAWN IN CODE — `src/drawn.tsx`.
+ *
+ * One stylesheet for all of them, because they are one drawing set and not
+ * fourteen illustrations: a bay is the same bay in the parking figure and the
+ * parking step, a citation node is the same node under a figure and under an
+ * evidence tree. A reader who learns the language once has learned all of it.
+ *
+ * SEMANTIC TOKENS ONLY, as everywhere else — `pnpm contrast` fails a primitive
+ * read outside the theme blocks, and these are read in both themes because an
+ * SVG in the document inherits the page's own variables rather than carrying a
+ * palette of its own. That is the whole reason they are drawn here instead of
+ * being fourteen .svg files: a file would have to hardcode a hex, and the same
+ * hex is wrong in the other theme.
+ *
+ * AMBER APPEARS TWICE AND NOWHERE ELSE. §13.1 reserves it for uncertainty, so
+ * `--uncertain` reaches only `.drawn__assumed*` and `.drawn__unassessed`, whose
+ * subjects are an assumed value and the edge of what the engine will say.
+ */
+
+/*
+ * THE DRAWING IS MOUNTED, NOT PRINTED ON THE PAGE.
+ *
+ * A schematic laid straight on `--surface-base` is drawn in the same near-white
+ * the prose beside it is set on, and reads as a watermark. The ground goes here,
+ * on the SLOT, rather than on `.figured__figure` in the chassis, because that
+ * class is also worn by delivered photographs — each of which carries its own
+ * ground, and a second one behind it is a second sheet of paper.
+ *
+ * The panel is sunken and the sheet inside it is raised, which is the same
+ * figure/ground the drawings already use internally, applied one level out: on a
+ * base section the drawing reads as a plate laid on the page, and on a zoned one
+ * as a plate inset into it. Both are legible because the sheet keeps its own
+ * hairline either way.
+ */
+.drawn-slot {
+  display: block;
+  inline-size: 100%;
+  background: var(--surface-sunken);
+  padding: var(--space-4);
+}
+
+.drawn {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  /* The box is the slot's; the drawing letterboxes inside it rather than
+     stretching, because a stretched schematic reads as a mistake. */
+  aspect-ratio: 3 / 2;
+  overflow: visible;
+}
+
+/* The sheet the schematic is drawn on. */
+.drawn__sheet {
+  fill: var(--surface-raised);
+  stroke: var(--border-subtle);
+  stroke-width: 1;
+}
+
+/* ---- Bars, bands and rules ------------------------------------------- */
+.drawn__bar {
+  fill: var(--surface-inset);
+  stroke: var(--border-default);
+  stroke-width: 1;
+}
+.drawn__bar--binds {
+  fill: var(--accent-subtle);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.drawn__rule {
+  fill: var(--surface-inset);
+}
+
+/* ---- Nodes, wires and citations --------------------------------------- */
+.drawn__node {
+  fill: var(--surface-sunken);
+  stroke: var(--border-default);
+  stroke-width: 1;
+}
+.drawn__node--head {
+  fill: var(--accent-subtle);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.drawn__node--cite {
+  fill: var(--surface-raised);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+/* A check with no data is DORMANT, never a pass — drawn open, not ticked. */
+.drawn__node--dormant {
+  fill: none;
+  stroke: var(--border-default);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.drawn__wire {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.drawn__hair {
+  stroke: var(--border-default);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* ---- Marks ------------------------------------------------------------ */
+.drawn__chip {
+  fill: var(--surface-raised);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.drawn__chip--cite {
+  fill: var(--accent-subtle);
+  stroke: none;
+}
+.drawn__tick {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* The one claim this product refuses. Ink, not a colour of its own: a red cross
+   would make the refusal look like a failure, and it is a design decision. */
+.drawn__cross {
+  fill: none;
+  stroke: var(--text-primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.drawn__datum {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+/* ---- Type inside a drawing -------------------------------------------- */
+.drawn__tag,
+.drawn__note,
+.drawn__figure {
+  font-family: var(--font-mono);
+  fill: var(--text-secondary);
+}
+.drawn__tag {
+  font-size: 13px;
+  letter-spacing: var(--tracking-label);
+}
+.drawn__note {
+  font-size: 11px;
+}
+.drawn__figure {
+  font-size: 15px;
+  fill: var(--text-primary);
+  text-anchor: middle;
+}
+
+/* ---- The plot, and the parking level ---------------------------------- */
+.drawn__plot {
+  fill: var(--surface-sunken);
+  stroke: var(--text-primary);
+  stroke-width: 1.5;
+}
+.drawn__frontage {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.drawn__station {
+  fill: var(--surface-raised);
+  stroke: var(--text-primary);
+  stroke-width: 1.5;
+}
+.drawn__bay {
+  fill: var(--surface-raised);
+  stroke: var(--border-default);
+  stroke-width: 1;
+}
+.drawn__car {
+  fill: var(--surface-inset);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.drawn__aisle {
+  fill: var(--surface-sunken);
+  stroke: var(--border-subtle);
+  stroke-width: 1;
+}
+.drawn__ramp {
+  fill: var(--accent-subtle);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+.drawn__arrow {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---- The envelope ------------------------------------------------------ */
+.drawn__glass {
+  fill: var(--accent-subtle);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+.drawn__floor {
+  stroke: var(--border-default);
+  stroke-width: 1;
+}
+.drawn__ground {
+  fill: none;
+  stroke: var(--text-primary);
+  stroke-width: 2;
+}
+
+/* ---- Files ------------------------------------------------------------- */
+.drawn__file {
+  fill: var(--surface-raised);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.drawn__fold {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+/* ---- The two amber cases, and they are the only two -------------------- */
+.drawn__assumed {
+  fill: var(--uncertain-surface);
+  stroke: var(--uncertain-border);
+  stroke-width: 1;
+}
+.drawn__assumed-rail {
+  fill: var(--uncertain);
+}
+/* `evenodd`: the outer path is the plot and the inner one the part that is
+   assessed, so the fill lands in the band between them — which is exactly what
+   "not assessed" is. */
+.drawn__assessed {
+  fill: var(--surface-raised);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+.drawn__unassessed {
+  fill: var(--uncertain-surface);
+  fill-rule: evenodd;
+  stroke: var(--uncertain);
+  stroke-width: 1;
+}
+
+/* A drawing carries no motion of its own; it is a diagram, not an animation. */
+@media print {
+  .drawn__sheet {
+    fill: none;
+  }
+  /* The mount is a screen affordance. On paper the sheet IS the paper, and a
+     grey panel behind it is a page of toner spent on a distinction the sheet's
+     own hairline already makes. */
+  .drawn-slot {
+    background: none;
+    padding: 0;
+  }
+}

@@ -318,7 +318,15 @@
 .figured {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  /*
+    CENTRE, NOT FLEX-START. A section head is often a heading and nothing else —
+    two lines against a drawing three hundred pixels tall — and aligned to the
+    top that leaves a quarter of a screen of empty page under the heading with
+    the drawing beside it. Centred, the two read as one block. When the text is
+    the taller of the two, which is every step primer, the drawing centres
+    against the prose instead and the row is unchanged in height either way.
+  */
+  align-items: center;
   gap: var(--rhythm-block);
   container-type: inline-size;
 }
@@ -332,13 +340,29 @@
    drawing was made at when the column is narrower than it. */
 .figured__figure {
   inline-size: 100%;
-  max-inline-size: 20rem;
+  /*
+    28rem, not 20. At 20 the figure was narrower than the paragraph beside it and
+    read as a thumbnail of a drawing rather than as the drawing — which on a page
+    whose argument is "the artefact is real" is the wrong way round. The container
+    query moves with it: 58rem of container less a 28rem figure and the block gap
+    leaves the prose under 27rem, so the two sit side by side from 64rem instead,
+    and stack above it.
+  */
+  max-inline-size: 28rem;
   block-size: auto;
   border: var(--border-width) solid var(--border-subtle);
 }
-@container (min-width: 58rem) {
-  .figured__text { flex: 1 1 var(--measure-prose); }
-  .figured__figure { flex: none; inline-size: 20rem; }
+@container (min-width: 64rem) {
+  /*
+    `flex: 1 1 0`, not a `--measure-prose` BASIS. A 62ch basis plus a 28rem
+    figure plus the block gap is wider than the railed body at 1440, so the row
+    wrapped and the figure dropped under a heading with 700px of empty page
+    beside it — the basis decides wrapping, and the container query cannot see
+    that it did. Zero basis makes the text take what the figure leaves, which is
+    about 55ch here and still inside the measure the basis was protecting.
+  */
+  .figured__text { flex: 1 1 0; }
+  .figured__figure { flex: none; inline-size: 28rem; }
 }
 .section__body > * + * { margin-block-start: var(--space-5); }
 /* A plate or a refusal is a break in the argument and gets a block interval. */

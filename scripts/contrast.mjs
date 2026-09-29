@@ -706,6 +706,25 @@ const AMBER_OK = [
   //  else: AssumptionRegister renders the bar only
   //  inside `entry.sensitivity`, i.e. only inside
   //  an assumption row.
+  /\.drawn__assumed/, //                the assumptions FIGURE, drawn in code
+  //  (`src/drawn.tsx`). Its subject is an ASSUMED
+  //  entry — amber rail, basis, sensitivity — so
+  //  it is the canonical case and not an
+  //  exception to it. A schematic of an
+  //  assumption drawn in a neutral ink would be
+  //  teaching the reader the opposite of §13.1 on
+  //  the page that explains §13.1. The rail
+  //  modifier is covered by the same pattern.
+  /\.drawn__unassessed/, //             the band between the plot and the part of it
+  //  this engine will speak for, in the limits
+  //  figure. It is the edge of the answer, which
+  //  is the second thing amber means here and is
+  //  already why REGULATORY VALIDITY prints on an
+  //  amber ground. Nothing else in these drawings
+  //  is permitted amber: `pnpm contrast` fails
+  //  every other `.drawn__*` that reaches for it,
+  //  which is how the two above were caught the
+  //  first time they were written.
   /\.statement__verbatim/, //           a practitioner's quoted words inside the
   //  amber statement banner, and the rail is the
   //  banner's own border colour rather than a

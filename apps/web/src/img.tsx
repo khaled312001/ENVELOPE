@@ -52,6 +52,7 @@
 import { useDict } from './i18n/locale.js';
 import { AR as IMAGERY_AR } from './i18n/imagery.ar.js';
 import { EN as IMAGERY_EN } from './i18n/imagery.en.js';
+import { Drawn, hasDrawing } from './drawn.js';
 import { usePageTheme } from './page-theme.js';
 
 /*
@@ -241,6 +242,24 @@ export function Figure({
 }): JSX.Element | null {
   const alt = useDict(IMAGERY_EN, IMAGERY_AR);
   const [width, height] = IMAGE_SIZE[name];
+  /*
+    A SUPPLIED FILE WINS; A DRAWING STANDS IN UNTIL ONE ARRIVES.
+
+    Silence was the right default while the slots were being wired and the wrong
+    one to ship: nineteen of them rendered nothing, so every page that was meant
+    to carry a picture carried a column of prose instead. `drawn.tsx` answers the
+    ones a schematic can honestly answer — of the thing the section is about, in
+    the product's own drafting language — and the two full-bleed backdrops stay
+    silent, because a diagram stretched behind a fold is decoration.
+
+    Dropping the real file into `assets/img/` replaces the drawing with no other
+    edit, which is the same rule the glob already establishes.
+  */
+  if (!hasImage(name)) {
+    return alt[name] === '' || !hasDrawing(name) ? null : (
+      <Drawn name={name} title={alt[name]} {...(className === undefined ? {} : { className })} />
+    );
+  }
   return (
     <Illustration
       name={name}

@@ -35,6 +35,7 @@ import './styles/app.css';
    order — the one rule that could have, the legend swatch, wins on specificity
    instead — but the reading order should match the layering. */
 import './styles/drawing.css';
+import './styles/drawn.css';
 import './styles/provenance.css';
 import './styles/landing.css';
 import './styles/parking-page.css';

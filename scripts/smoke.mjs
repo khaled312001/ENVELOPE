@@ -728,6 +728,17 @@ await step('the parking question has no pre-selected answer', async () => {
   difference between this and the hidden default the requirement forbids.
 */
 await step('the answer on file is offered with its source, and taking it is one click', async () => {
+  /*
+    WAIT FOR IT, because the panel arrives from `/api/statements` in an effect.
+
+    Reading the body straight away passed on localhost every time and failed
+    against the deployed site: over HTTPS the fetch had not come back yet, so
+    the assertion said the statement was not marked as something other than a
+    regulation when what had actually happened is that it was not there yet. The
+    developer-standard step beside this one already carries the same wait, and
+    for the same reason.
+  */
+  await page.getByRole('button', { name: /use this answer/i }).waitFor({ timeout: wait(8000) });
   const t = await page.textContent('body');
   if (!/This is not a regulation/.test(t)) {
     throw new Error('the statement is not marked as something other than a regulation');

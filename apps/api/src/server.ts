@@ -1479,12 +1479,25 @@ function runInputFrom(
         ? { basis: body.parkingUsableFraction.basis }
         : {}),
     },
-    saleableEfficiency: {
-      value: new Decimal(body.saleableEfficiency.value),
-      source: body.saleableEfficiency.source,
-      ...(body.saleableEfficiency.basis ? { basis: body.saleableEfficiency.basis } : {}),
-      actor,
-    },
+    /*
+      EXACTLY ONE ARM, and the schema has already refused a body carrying both or
+      neither. The ternary is on the AREA rather than on the ratio because an
+      absent ratio is the newer case and reads more clearly as the exception.
+    */
+    saleableEfficiency:
+      body.saleableEfficiency.saleableAreaM2 !== undefined
+        ? {
+            saleableAreaM2: new Decimal(body.saleableEfficiency.saleableAreaM2),
+            source: body.saleableEfficiency.source,
+            ...(body.saleableEfficiency.basis ? { basis: body.saleableEfficiency.basis } : {}),
+            actor,
+          }
+        : {
+            value: new Decimal(body.saleableEfficiency.value!),
+            source: body.saleableEfficiency.source,
+            ...(body.saleableEfficiency.basis ? { basis: body.saleableEfficiency.basis } : {}),
+            actor,
+          },
     realismDiscount: new Decimal(body.realismDiscount),
     ...(body.podiumLevels !== undefined ? { podiumLevels: body.podiumLevels } : {}),
   };

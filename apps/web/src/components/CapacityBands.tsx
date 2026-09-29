@@ -30,6 +30,14 @@ export interface CapacityView {
   readonly integerGranularityLossM2: string;
   readonly userRealismDiscount: TracedWire;
   readonly levels: TracedWire;
+  /**
+   * Saleable area, both ways round — the share and the square metres.
+   *
+   * Both are always present, whichever one the run was asked for. The figure a
+   * reader did not type is the one that tells them the other is wrong.
+   */
+  readonly saleableEfficiency: TracedWire;
+  readonly saleableAreaM2: TracedWire;
   readonly explanation: string;
 }
 
@@ -129,6 +137,29 @@ export function CapacityBands({
               <dd>
                 <span className="value">{capacity.integerGranularityLossM2}</span>
                 <span className="value__unit">m²</span>
+              </dd>
+            </div>
+            {/*
+              BOTH SALEABLE FIGURES, AND THE ONE THE READER DID NOT TYPE IS THE
+              USEFUL ONE.
+
+              The rules step takes either a share of GFA or an area in square
+              metres. Whichever was entered, the engine computes the other and
+              publishes both — so somebody who typed 6,000 m² and is shown a 34%
+              share can see at once that one of the two came from a different
+              plot. Holding the conversion inside the engine and never showing it
+              would make that mistake invisible until a pro forma was built on it.
+            */}
+            <div>
+              <dt>{t.saleableArea}</dt>
+              <dd>
+                <TracedValue traced={capacity.saleableAreaM2} onInspect={onInspect} />
+              </dd>
+            </div>
+            <div>
+              <dt>{t.saleableShare}</dt>
+              <dd>
+                <TracedValue traced={capacity.saleableEfficiency} onInspect={onInspect} />
               </dd>
             </div>
           </dl>

@@ -62,6 +62,48 @@ export interface Actor {
  * `RunInput`s are equal, the two runs are identical, which is what makes
  * §13.4 reproducibility checkable rather than aspirational.
  */
+/**
+ * SALEABLE AREA, STATED AS A RATIO **OR** AS AN AREA — exactly one of the two.
+ *
+ * Eng. Mohamed, 2026: the number he works with is an area — two thousand square
+ * metres or more — and the field asked for a factor between 0 and 1. Both readings
+ * are legitimate and neither is a conversion the reader should be doing in their
+ * head:
+ *
+ *   * a RATIO is what a brief states as a market expectation — the project briefs
+ *     on file say 93%-97% of GFA — and is the right input when the GFA is not yet
+ *     known, which is most of the time;
+ *   * an AREA is what a developer's own brief states when it states one, and
+ *     asking somebody to divide it by a GFA the engine has not shown them yet is
+ *     asking them to guess the denominator.
+ *
+ * EXACTLY ONE, ENFORCED BY THE TYPE. The two arms each forbid the other's field,
+ * so an input carrying both does not compile and neither does one carrying
+ * neither. A runtime check would be a second place for the rule to live, and the
+ * copy that is not run is the copy that drifts.
+ *
+ * WHAT AN AREA IS DIVIDED BY, and it is worth naming because getting it wrong is
+ * invisible. The divisor is the envelope's OWN GFA — plate x levels, the building
+ * this run produced — never FAR x plot area. The permitted GFA is larger than the
+ * scheme wherever the envelope binds below FAR, and a share taken against a GFA
+ * the scheme never reaches reports an efficiency the scheme does not have.
+ *
+ * The share is what carries through to the unit count, in both directions: units
+ * are the governing GFA over (nsa over ratio). So an area entered here is the
+ * saleable area of the FULL envelope, and if a band below geometry governs, the
+ * saleable area falls with it. That is the intended reading, and it is why both
+ * figures are published as traced values either way — a reader always sees the
+ * one they did not type and can check it against the one they did.
+ */
+export type SaleableEfficiencyInput = {
+  readonly source: 'USER_SET' | 'DERIVED';
+  readonly basis?: string;
+  readonly actor?: { readonly id: string; readonly name: string };
+} & (
+  | { readonly value: Decimal; readonly saleableAreaM2?: undefined }
+  | { readonly saleableAreaM2: Decimal; readonly value?: undefined }
+);
+
 export interface RunInput {
   readonly plot: Plot;
   readonly rules: readonly RuleRecord[];
@@ -100,12 +142,7 @@ export interface RunInput {
    * regulation, so it arrives here as `USER_SET` when a person selects the
    * standard — never as an engine estimate.
    */
-  readonly saleableEfficiency: {
-    readonly value: Decimal;
-    readonly source: 'USER_SET' | 'DERIVED';
-    readonly basis?: string;
-    readonly actor?: { readonly id: string; readonly name: string };
-  };
+  readonly saleableEfficiency: SaleableEfficiencyInput;
   /**
    * How the parking level is laid out and where the cars get in.
    *
@@ -160,6 +197,17 @@ export interface RunOutput {
    */
   readonly governingUnitCount: Traced<number>;
   readonly demandAtGoverningBays: Traced<number>;
+  /**
+   * Saleable area, both ways round — the ratio and the square metres.
+   *
+   * BOTH ARE ALWAYS EMITTED, whichever one was entered. A reader who typed a
+   * ratio needs to see the area it comes to on this envelope to know it is the
+   * building they meant; a reader who typed an area needs to see the ratio to
+   * know they have not entered a figure from a different plot. A conversion done
+   * silently is a conversion nobody checks, and this one moves the unit count.
+   */
+  readonly saleableEfficiency: Traced<Decimal>;
+  readonly saleableAreaM2: Traced<Decimal>;
   /**
    * The parking level, drawn.
    *
@@ -257,27 +305,123 @@ export function runPipeline(input: RunInput): RunOutput {
   );
 
   const efficiency = input.saleableEfficiency;
-  if (efficiency.value.lte(0) || efficiency.value.gt(1)) {
+
+  /*
+    THE DIVISOR IS THE ENVELOPE'S OWN GFA, AND IT IS NAMED HERE RATHER THAN
+    LEFT TO BE INFERRED.
+
+    Not FAR x plot area. That is the PERMITTED GFA, and on every plot where the
+    envelope binds below FAR — a setback-governed plate, a height ceiling — it is
+    larger than the building this run actually produced. A ratio computed against
+    a GFA the scheme does not reach reports an efficiency the scheme does not have.
+
+    `plateM2 x levels` is the same quantity the unit count divides two statements
+    below, which is what makes the two figures consistent rather than merely
+    plausible.
+  */
+  const envelopeGfa = plateM2.times(levels);
+
+  const statedArea = efficiency.saleableAreaM2;
+  if (statedArea !== undefined && statedArea.lte(0)) {
     throw new RunBlockedError(
-      `saleable efficiency must sit in (0, 1]; got ${efficiency.value.toString()}. ` +
-        'Above 1 would mean a building sells more area than it has.',
+      `saleable area must be above zero; got ${statedArea.toString()} m².`,
+      'saleable_efficiency',
+    );
+  }
+  if (statedArea !== undefined && envelopeGfa.lte(0)) {
+    throw new RunBlockedError(
+      'a saleable area cannot be turned into a ratio against an envelope with no ' +
+        'GFA. This plot produced no floor area at all — that is what to fix first.',
       'saleable_efficiency',
     );
   }
 
+  const ratio =
+    statedArea !== undefined ? statedArea.div(envelopeGfa).toDecimalPlaces(6) : efficiency.value;
+
+  if (ratio.lte(0) || ratio.gt(1)) {
+    /*
+      THE MESSAGE NAMES BOTH NUMBERS WHEN THE AREA WAS THE INPUT.
+
+      "saleable efficiency must sit in (0, 1]; got 1.23" is true and useless to
+      somebody who never typed 1.23. They typed an area, and what they need to
+      know is that it is larger than the GFA this envelope yields — which is
+      usually a brief written for a bigger plot, or a figure in square feet.
+    */
+    throw new RunBlockedError(
+      statedArea !== undefined
+        ? `the saleable area entered (${statedArea.toFixed(2)} m²) is larger than the ` +
+          `GFA this envelope yields (${envelopeGfa.toFixed(2)} m²), which would mean ` +
+          'the building sells more area than it has. Check the figure — a brief ' +
+          'written for a different plot, or square feet read as square metres, are ' +
+          'the two ways this happens.'
+        : `saleable efficiency must sit in (0, 1]; got ${ratio.toString()}. ` +
+          'Above 1 would mean a building sells more area than it has.',
+      'saleable_efficiency',
+    );
+  }
+
+  /*
+    THE FIGURE THE READER DID NOT TYPE IS PUBLISHED TOO.
+
+    Whichever way round it was entered, both the ratio and the area are traced
+    nodes: a person who typed 2,000 m2 sees the implied 0.93 and can tell at a
+    glance that it is not 0.63, and a person who typed 0.93 sees the square metres
+    it comes to on this envelope. A conversion done silently is a conversion
+    nobody checks.
+  */
+  const areaTraced =
+    statedArea === undefined
+      ? null
+      : efficiency.source === 'USER_SET'
+        ? tracer.userSet('capacity.saleable_area_m2', statedArea, {
+            actor: efficiency.actor ?? input.actor,
+            label: 'saleable area',
+            unit: 'm²',
+          })
+        : tracer.computed('capacity.saleable_area_m2', statedArea, {
+            formula: 'saleable area, from a cited instrument',
+            uses: {},
+            unit: 'm²',
+            provenanceClass: 'DERIVED',
+          });
+
   const efficiencyTraced =
-    efficiency.source === 'USER_SET'
-      ? tracer.userSet('capacity.saleable_efficiency', efficiency.value, {
-          actor: efficiency.actor ?? input.actor,
-          label: 'saleable area ÷ GFA',
+    areaTraced !== null
+      ? tracer.computed('capacity.saleable_efficiency', ratio, {
+          formula: `${statedArea!.toFixed(2)} m² saleable ÷ ${envelopeGfa.toFixed(2)} m² GFA`,
+          uses: {
+            saleableArea: areaTraced,
+            plate: envelope.towerPlateCap,
+            levels: envelope.maxLevelsByHeight,
+          },
           unit: 'ratio',
         })
-      : tracer.computed('capacity.saleable_efficiency', efficiency.value, {
-          formula: 'saleable area over GFA, from a cited instrument',
-          uses: {},
-          unit: 'ratio',
-          provenanceClass: 'DERIVED',
-        });
+      : efficiency.source === 'USER_SET'
+        ? tracer.userSet('capacity.saleable_efficiency', ratio, {
+            actor: efficiency.actor ?? input.actor,
+            label: 'saleable area ÷ GFA',
+            unit: 'ratio',
+          })
+        : tracer.computed('capacity.saleable_efficiency', ratio, {
+            formula: 'saleable area over GFA, from a cited instrument',
+            uses: {},
+            unit: 'ratio',
+            provenanceClass: 'DERIVED',
+          });
+
+  /* The other direction: entered as a ratio, published as the area it implies. */
+  const saleableAreaTraced =
+    areaTraced ??
+    tracer.computed('capacity.saleable_area_m2', ratio.times(envelopeGfa).toDecimalPlaces(2), {
+      formula: `${ratio.toString()} × ${envelopeGfa.toFixed(2)} m² GFA`,
+      uses: {
+        efficiency: efficiencyTraced,
+        plate: envelope.towerPlateCap,
+        levels: envelope.maxLevelsByHeight,
+      },
+      unit: 'm²',
+    });
 
   const nsaTraced = tracer.computed('capacity.weighted_nsa_m2', weightedNsa, {
     formula: input.unitMix.entries
@@ -290,11 +434,11 @@ export function runPipeline(input: RunInput): RunOutput {
 
   const gfaPerUnit = weightedNsa.isZero()
     ? new Decimal(0)
-    : weightedNsa.div(efficiency.value).toDecimalPlaces(4);
+    : weightedNsa.div(ratio).toDecimalPlaces(4);
   const gfaPerUnitTraced = tracer.computed('capacity.gfa_per_unit_m2', gfaPerUnit, {
     formula:
       `${weightedNsa.toFixed(2)} m² saleable per unit ÷ ` +
-      `${efficiency.value.toString()} saleable per m² of GFA`,
+      `${ratio.toString()} saleable per m² of GFA`,
     uses: { nsa: nsaTraced, efficiency: efficiencyTraced },
     unit: 'm²',
     detail: {
@@ -507,6 +651,8 @@ export function runPipeline(input: RunInput): RunOutput {
     context: envelope.finalContext,
     governingUnitCount,
     demandAtGoverningBays,
+    saleableEfficiency: efficiencyTraced,
+    saleableAreaM2: saleableAreaTraced,
     levelPlan,
     levelPlanRefusal,
     massing,

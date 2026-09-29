@@ -289,6 +289,27 @@ describe('CapacityBands', () => {
     expect(out).not.toMatch(/\bexpected capacity\b/i);
     expect(out).not.toMatch(/\blikely\b/i);
   });
+
+  /*
+    ENG. MOHAMED'S POINT 7, KEPT ON THE RESULTS SCREEN.
+
+    The rules step takes the saleable figure as a share of GFA or as an area in
+    square metres, and its help text promises the share "beside the answer".
+    That promise is kept here or not at all: a conversion the engine performs
+    and never shows is a conversion nobody checks, and it moves the unit count.
+  */
+  it('shows the saleable figure both ways, so the one not typed can be checked', () => {
+    const out = html(<CapacityBands capacity={run.capacity} onInspect={() => {}} />);
+    expect(out).toContain('Saleable area');
+    expect(out).toContain('Saleable share of GFA');
+    /*
+      Both carry the engine's own unrounded string on the element, which is what
+      makes them checkable at all — a rounded figure and its rounded partner can
+      look consistent while neither is what the engine computed.
+    */
+    expect(out).toContain(`data-full="${run.capacity.saleableAreaM2.value}"`);
+    expect(out).toContain(`data-full="${run.capacity.saleableEfficiency.value}"`);
+  });
 });
 
 describe('AssumptionRegister', () => {

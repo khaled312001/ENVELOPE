@@ -150,11 +150,36 @@ export const runRequest = z.object({
    * overstated the unit count on every run. Azizi's own brief states 93%-97%;
    * pick one and it is recorded as yours.
    */
-  saleableEfficiency: z.object({
-    value: decimalString,
-    source: z.enum(['USER_SET', 'DERIVED']),
-    basis: z.string().min(20).optional(),
-  }),
+  /*
+    TWO WAYS TO SAY IT, AND THE SCHEMA TAKES EITHER — see `SaleableEfficiencyInput`
+    for the argument. A client sends `value` (a ratio) or `saleableAreaM2` (square
+    metres), never both and never neither; `superRefine` says which, in a sentence
+    rather than as a union error naming two branches.
+  */
+  saleableEfficiency: z
+    .object({
+      value: decimalString.optional(),
+      saleableAreaM2: decimalString.optional(),
+      source: z.enum(['USER_SET', 'DERIVED']),
+      basis: z.string().min(20).optional(),
+    })
+    .superRefine((v, ctx) => {
+      const ratio = v.value !== undefined;
+      const area = v.saleableAreaM2 !== undefined;
+      if (ratio === area) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: ratio
+            ? 'send the saleable figure once: either `value`, a ratio of GFA, or ' +
+              '`saleableAreaM2`, an area in square metres. Both were sent, and they ' +
+              'can disagree.'
+            : 'the saleable figure has no default. Send `value`, a ratio of GFA, or ' +
+              '`saleableAreaM2`, an area in square metres. The value this used to ' +
+              'take implicitly was 1.00 — every square metre of GFA saleable — and ' +
+              'it overstated the unit count on every run.',
+        });
+      }
+    }),
   /** §15.3 — defaults to 1.00 and is always `USER_SET`. Never estimated. */
   realismDiscount: decimalString.default('1.00'),
   /** Set only in development, and only against DRAFT rules. */

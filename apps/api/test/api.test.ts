@@ -305,6 +305,64 @@ describe('runs', () => {
     expect(res.statusCode).toBeGreaterThanOrEqual(400);
   });
 
+  /*
+    THE SALEABLE FIGURE IS ASKED ONCE AND ANSWERED ONCE.
+
+    Eng. Mohamed's point: the number a brief states is an AREA, so the schema
+    takes either form. What it must not take is both — two figures that can
+    disagree, with the server silently picking one — or neither, which is how
+    the implicit 1.00 got in the first time.
+  */
+  it('refuses a saleable figure sent both ways at once', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: {
+        ...RUN_BODY,
+        plotId: plot.plotId,
+        saleableEfficiency: { ...RUN_BODY.saleableEfficiency, saleableAreaM2: '6000' },
+      },
+    });
+    expect(res.statusCode).toBeGreaterThanOrEqual(400);
+    expect(res.json().message).toMatch(/they can disagree/);
+  });
+
+  it('refuses a run with no saleable figure at all, naming the default it used to take', async () => {
+    const plot = await createPlot();
+    const { value: _dropped, ...withoutRatio } = RUN_BODY.saleableEfficiency;
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: plot.plotId, saleableEfficiency: withoutRatio },
+    });
+    expect(res.statusCode).toBeGreaterThanOrEqual(400);
+    expect(res.json().message).toMatch(/1\.00/);
+  });
+
+  it('computes from a saleable area, and publishes the share it comes to', async () => {
+    const plot = await createPlot();
+    const { value: _dropped, ...rest } = RUN_BODY.saleableEfficiency;
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: {
+        ...RUN_BODY,
+        plotId: plot.plotId,
+        saleableEfficiency: { ...rest, saleableAreaM2: '3000' },
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    // Both figures reach the client, whichever one was sent.
+    expect(body.capacity.saleableAreaM2.value).toBe('3000');
+    expect(Number(body.capacity.saleableEfficiency.value)).toBeGreaterThan(0);
+    expect(Number(body.capacity.saleableEfficiency.value)).toBeLessThanOrEqual(1);
+  });
+
   it('serves the derivation of any single value — §20.2 click-through', async () => {
     const plot = await createPlot();
     const run = (

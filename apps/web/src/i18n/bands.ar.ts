@@ -45,6 +45,8 @@ export const AR: BandsDictionary = {
   beforeBinds: (band: string): string => ` قبل أن تصبح ${band} هي المُلزِمة`,
   levels: 'الطوابق',
   lostToFloors: 'المفقود بحساب الطوابق كاملةً',
+  saleableArea: 'المساحة القابلة للبيع',
+  saleableShare: 'حصّة القابل للبيع من إجمالي المساحة الطابقية',
 
   assumed: 'مُفترَض',
   perturbedBefore: (perturbation: string): string =>

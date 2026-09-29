@@ -630,16 +630,24 @@ export interface RunRequestBody {
     readonly basis?: string;
   };
   /**
-   * Saleable area over GFA. Required, with no default.
+   * Saleable area, as a share of GFA **or** as an area. Required, with no default.
    *
    * The engine used to take 1.00 implicitly here, which treated every square
    * metre of GFA as saleable and overstated the unit count on every run.
+   *
+   * EXACTLY ONE OF THE TWO, and the type says so rather than the server saying
+   * so afterwards. A reader whose figure is an area — which is the figure a
+   * developer's brief actually states — should not have to divide it by a GFA
+   * the engine has not computed yet; the engine does that division and publishes
+   * both numbers, so whichever one was not typed can still be checked.
    */
   readonly saleableEfficiency: {
-    readonly value: string;
     readonly source: 'USER_SET' | 'DERIVED';
     readonly basis?: string;
-  };
+  } & (
+    | { readonly value: string; readonly saleableAreaM2?: undefined }
+    | { readonly saleableAreaM2: string; readonly value?: undefined }
+  );
   readonly realismDiscount: string;
   readonly useDraftRules: boolean;
 }

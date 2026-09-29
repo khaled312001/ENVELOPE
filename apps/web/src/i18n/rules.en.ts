@@ -179,6 +179,34 @@ export const EN = {
     /** The validation message: what is wrong, and why the bound is where it is. */
     invalid: (above: string, atMost: string): string =>
       `It has to sit above ${above} and at most ${atMost}. Above ${atMost} would mean the building sells more area than it has.`,
+
+    /*
+      TWO WAYS TO SAY THE SAME THING, because a reader works in one of them and
+      converting in their head is where the mistake goes in. Eng. Mohamed on this
+      field: the number he has is an area — two thousand square metres or more —
+      and this asked him for a factor between 0 and 1.
+    */
+    unit: {
+      legend: 'Enter it as',
+      /* Each option carries the one thing that distinguishes it, in the same
+         shape the parking question uses — a label and a consequence. The
+         consequence here is which of the two the engine treats as exact. */
+      ratio: {
+        label: 'A share of the GFA',
+        detail: 'Use this when what you have is a target — a brief stating 93% to 97% of GFA.',
+      },
+      area: {
+        label: 'An area, in square metres',
+        detail:
+          'Use this when what you have is square metres. The engine divides it by the GFA this envelope yields and shows you the share.',
+      },
+    },
+    /* The unit goes in the label, as it does on the plot form's own area field. */
+    areaLabel: 'Saleable area (m²)',
+    areaPlaceholder: (example: string): string => `e.g. ${example}`,
+    areaHelp:
+      'The engine divides this by the GFA this envelope yields and shows you the share it comes to, beside the answer. If that share is not what you expected, one of the two figures is wrong.',
+    areaInvalid: 'An area above zero, in square metres.',
   },
 
   run: {
@@ -187,6 +215,11 @@ export const EN = {
     needsParking: 'Answer the parking question above to continue.',
     needsEfficiency:
       'Enter the saleable share of GFA to continue. It is not a formality — it moves the unit count by the whole of whatever it is not.',
+    /* The same refusal, naming the field the reader is actually looking at.
+       Telling somebody who chose square metres to "enter the share" sends them
+       hunting for a control that is not on the screen. */
+    needsSaleableArea:
+      'Enter the saleable area to continue. It is not a formality — it moves the unit count by the whole of whatever is not saleable.',
   },
 };
 

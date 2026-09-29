@@ -171,7 +171,7 @@
     "levelPlan": {
       "bayCount": {
         "value": "46",
-        "node": "n135",
+        "node": "n137",
         "parameterId": "parking.laid_out_bays",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -179,7 +179,7 @@
       },
       "areaPerBayM2": {
         "value": "41.68",
-        "node": "n137",
+        "node": "n139",
         "parameterId": "parking.area_per_bay_m2",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -187,7 +187,7 @@
       },
       "deductionsM2": {
         "value": "287.62",
-        "node": "n117",
+        "node": "n119",
         "parameterId": "parking.layout_deductions_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -195,7 +195,7 @@
       },
       "moduleDepthM": {
         "value": "17",
-        "node": "n121",
+        "node": "n123",
         "parameterId": "parking.module_depth_m",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -203,7 +203,7 @@
       },
       "usableAreaM2": {
         "value": "1629.88",
-        "node": "n123",
+        "node": "n125",
         "parameterId": "parking.layout_usable_area_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -1431,7 +1431,7 @@
           },
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-          "node": "n141",
+          "node": "n143",
           "provenanceClass": "DERIVED"
         },
         "candidates": [
@@ -1514,7 +1514,7 @@
         },
         "rank": 1,
         "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-        "node": "n141",
+        "node": "n143",
         "provenanceClass": "DERIVED"
       },
       "candidates": [

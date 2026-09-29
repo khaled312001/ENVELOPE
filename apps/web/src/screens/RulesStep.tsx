@@ -64,6 +64,10 @@ const PODIUM_EXAMPLE_DIGIT = '2';
 const PODIUM_EXAMPLE_CODE = 'G+2P+8';
 const EFFICIENCY_ONCE_ASSUMED = '1.00';
 const EFFICIENCY_EXAMPLE = '0.93';
+/* The same question asked in square metres. A figure of the order a Dubai
+   residential plot actually produces, so the placeholder cannot be mistaken
+   for a number in the other unit. */
+const SALEABLE_AREA_EXAMPLE = '6000';
 const EFFICIENCY_ABOVE = '0';
 const EFFICIENCY_AT_MOST = '1';
 
@@ -165,6 +169,20 @@ export function RulesStep({
    * Selecting a developer standard fills it from a cited target.
    */
   const [efficiency, setEfficiency] = useState(demo?.saleableEfficiency ?? '');
+  /**
+   * Which of the two the reader is typing.
+   *
+   * Eng. Mohamed on this field: the number he works with is an AREA — two
+   * thousand square metres and up — and the field asked him for a factor between
+   * 0 and 1. Both readings are legitimate, and the conversion is the engine's to
+   * do against the GFA it computed. A reader dividing in their head is a reader
+   * dividing by a GFA nobody has shown them yet.
+   *
+   * The ratio stays first and pre-selected. It is the form a developer standard
+   * states, and it is what the standard picker above fills in; changing the
+   * default would change what an already-entered number means.
+   */
+  const [saleableUnit, setSaleableUnit] = useState<'RATIO' | 'AREA'>('RATIO');
 
   useEffect(() => {
     void api
@@ -249,21 +267,42 @@ export function RulesStep({
         'plant are taken out. No cited rule fixes it.',
     },
     saleableEfficiency: {
-      value: efficiency,
+      /*
+        ONE FIELD, TWO KEYS. The API refuses a body carrying both or neither, so
+        exactly one is sent and the engine knows which question was answered
+        without a second flag to keep in step with it.
+      */
+      ...(saleableUnit === 'AREA' ? { saleableAreaM2: efficiency } : { value: efficiency }),
       source: 'USER_SET',
       basis: scenario
         ? `${standard!.developer} states ${standard!.targets.saleableEfficiencyMin.value}` +
           `-${standard!.targets.saleableEfficiencyMax.value} saleable to GFA: ` +
           `"${standard!.targets.saleableEfficiencyMin.citation.sourceTextVerbatim}". ` +
           'Selected by the person running this study.'
-        : 'entered by the person running this study; no developer standard was selected',
+        : saleableUnit === 'AREA'
+          ? 'a saleable area in square metres, entered by the person running this study; ' +
+            'the share of GFA is computed from it, and no developer standard was selected'
+          : 'entered by the person running this study; no developer standard was selected',
     },
     realismDiscount: '1.00',
     useDraftRules: true,
   });
 
+  /*
+    THE BOUND DEPENDS ON THE UNIT, and getting that wrong is how a screen refuses
+    a correct answer. A share sits in (0, 1]; an area is any positive number —
+    6,000 m² is an ordinary saleable area and fails the share test every time.
+
+    The upper bound on an area is checked by the ENGINE, not here, because only
+    the engine knows the GFA this envelope yields. It refuses in a sentence
+    naming both figures rather than reporting a ratio the reader never typed.
+  */
+  const efficiencyNumber = Number(efficiency);
   const efficiencyValid =
-    efficiency.trim() !== '' && Number(efficiency) > 0 && Number(efficiency) <= 1;
+    efficiency.trim() !== '' &&
+    Number.isFinite(efficiencyNumber) &&
+    efficiencyNumber > 0 &&
+    (saleableUnit === 'AREA' || efficiencyNumber <= 1);
 
   return (
     <>
@@ -430,8 +469,22 @@ export function RulesStep({
       <SaleableEfficiency
         standard={standard}
         efficiency={efficiency}
+        unit={saleableUnit}
         valid={efficiencyValid}
         onChange={setEfficiency}
+        onUnitChange={(next) => {
+          /*
+            THE BOX IS CLEARED WHEN THE UNIT CHANGES, deliberately.
+
+            0.93 read as 0.93 m² is a building that sells one square metre, and
+            6000 read as a share fails validation and looks like a broken field.
+            Converting it silently would be worse than either: it would put a
+            figure in the box that the reader did not type, on the one screen
+            whose whole proposition is that nothing is quietly substituted.
+          */
+          setSaleableUnit(next);
+          setEfficiency('');
+        }}
       />
 
       <div className="actions">
@@ -445,7 +498,10 @@ export function RulesStep({
         </button>
         {!parkingInFar ? <p className="fine-print">{t.run.needsParking}</p> : null}
         {parkingInFar && !efficiencyValid ? (
-          <p className="fine-print">{t.run.needsEfficiency}</p>
+          <p className="fine-print">
+            {/* Name the field the reader is looking at, not the other one. */}
+            {saleableUnit === 'AREA' ? t.run.needsSaleableArea : t.run.needsEfficiency}
+          </p>
         ) : null}
       </div>
     </>
@@ -797,16 +853,21 @@ export function ComparisonResult({
 export function SaleableEfficiency({
   standard,
   efficiency,
+  unit,
   valid,
   onChange,
+  onUnitChange,
 }: {
   readonly standard: DeveloperStandardView | undefined;
   readonly efficiency: string;
+  readonly unit: 'RATIO' | 'AREA';
   readonly valid: boolean;
   readonly onChange: (value: string) => void;
+  readonly onUnitChange: (unit: 'RATIO' | 'AREA') => void;
 }): JSX.Element {
   const t = useDict(EN, AR).efficiency;
   const ltr = useVerbatim();
+  const area = unit === 'AREA';
   return (
     <section className="panel panel--emphasis" aria-labelledby="efficiency-heading">
       <header className="panel__header">
@@ -818,19 +879,62 @@ export function SaleableEfficiency({
         </div>
       </header>
 
+      {/*
+        TWO RADIOS IN THE HOUSE CHOICE-SET, not a select and not a segmented
+        button. They are two mutually exclusive answers to one question, both
+        visible with what each one costs; a select hides the option the reader
+        is looking for behind a click, and a pair of styled buttons would have
+        to re-implement the arrow-key behaviour a radio group gets for nothing.
+      */}
+      <fieldset className="choice-set">
+        <legend className="field-group__legend">{t.unit.legend}</legend>
+
+        <label className={`choice ${area ? '' : 'is-selected'}`}>
+          <input
+            type="radio"
+            name="saleable-unit"
+            value="RATIO"
+            checked={!area}
+            onChange={() => onUnitChange('RATIO')}
+          />
+          <span>
+            <strong>{t.unit.ratio.label}</strong>
+            <span className="choice__detail">{t.unit.ratio.detail}</span>
+          </span>
+        </label>
+
+        <label className={`choice ${area ? 'is-selected' : ''}`}>
+          <input
+            type="radio"
+            name="saleable-unit"
+            value="AREA"
+            checked={area}
+            onChange={() => onUnitChange('AREA')}
+          />
+          <span>
+            <strong>{t.unit.area.label}</strong>
+            <span className="choice__detail">{t.unit.area.detail}</span>
+          </span>
+        </label>
+      </fieldset>
+
       <div className="field">
-        <label htmlFor="saleable-efficiency">{t.label}</label>
+        <label htmlFor="saleable-efficiency">{area ? t.areaLabel : t.label}</label>
         <input
           id="saleable-efficiency"
           className="input input--num"
           inputMode="decimal"
           value={efficiency}
-          placeholder={t.placeholder(EFFICIENCY_EXAMPLE)}
+          placeholder={
+            area ? t.areaPlaceholder(SALEABLE_AREA_EXAMPLE) : t.placeholder(EFFICIENCY_EXAMPLE)
+          }
           onChange={(e) => onChange(e.target.value)}
           aria-describedby="saleable-efficiency-help"
         />
         <p id="saleable-efficiency-help" className="field__help">
-          {standard ? (
+          {area ? (
+            t.areaHelp
+          ) : standard ? (
             <>
               {t.fromStandard.before}
               {ltr(standard.developer)}
@@ -848,7 +952,7 @@ export function SaleableEfficiency({
         </p>
         {efficiency.trim() !== '' && !valid ? (
           <p className="field__help" role="alert">
-            {t.invalid(EFFICIENCY_ABOVE, EFFICIENCY_AT_MOST)}
+            {area ? t.areaInvalid : t.invalid(EFFICIENCY_ABOVE, EFFICIENCY_AT_MOST)}
           </p>
         ) : null}
       </div>

@@ -478,4 +478,117 @@ describe('saleable efficiency', () => {
       );
     expect(node?.provenanceClass).toBe('USER_SET');
   });
+
+  /**
+   * THE SAME QUESTION, ASKED IN SQUARE METRES.
+   *
+   * Eng. Mohamed's point, 2026: the figure a developer's brief states is an
+   * AREA, and the engine only accepted a factor between 0 and 1. Dividing it by
+   * hand means dividing by a GFA the engine has not computed yet, so the
+   * division belongs here — and both figures are published either way, because
+   * a conversion done silently is a conversion nobody checks.
+   */
+  describe('stated as an area instead of a share', () => {
+    const ratioRun = (value: string) =>
+      runPipeline(
+        baseInput({
+          parkingLevelsAvailable: 12,
+          saleableEfficiency: {
+            value: new Decimal(value),
+            source: 'USER_SET',
+            basis: 'test — the saleable share of GFA, stated as a share',
+          },
+        }),
+      );
+
+    const areaRun = (m2: string) =>
+      runPipeline(
+        baseInput({
+          parkingLevelsAvailable: 12,
+          saleableEfficiency: {
+            saleableAreaM2: new Decimal(m2),
+            source: 'USER_SET',
+            basis: 'test — a saleable area in square metres, the way a brief states it',
+          },
+        }),
+      );
+
+    it('publishes both figures whichever one was entered', () => {
+      const fromRatio = ratioRun('0.93');
+      expect(fromRatio.saleableEfficiency.value.toString()).toBe('0.93');
+      expect(fromRatio.saleableAreaM2.value.gt(0)).toBe(true);
+
+      const fromArea = areaRun(fromRatio.saleableAreaM2.value.toString());
+      expect(fromArea.saleableAreaM2.value.toString()).toBe(
+        fromRatio.saleableAreaM2.value.toString(),
+      );
+      expect(fromArea.saleableEfficiency.value.gt(0)).toBe(true);
+    });
+
+    it('divides by the envelope’s own GFA, never by the permitted GFA', () => {
+      /*
+        The divisor is `plate × levels` — what this scheme actually builds — not
+        FAR × plot area. On a plot where the envelope binds below FAR the two
+        differ, and a share taken against a GFA the scheme never reaches reports
+        an efficiency the scheme does not have. Asserted by multiplication so no
+        rounding of the share can hide the wrong divisor.
+      */
+      const out = ratioRun('0.93');
+      const envelopeGfa = out.envelope.towerPlateCap.value.times(
+        out.envelope.maxLevelsByHeight.value,
+      );
+      expect(out.saleableAreaM2.value.toString()).toBe(
+        envelopeGfa.times('0.93').toDecimalPlaces(2).toString(),
+      );
+    });
+
+    it('round-trips: the area it published comes back as the share that produced it', () => {
+      const fromRatio = ratioRun('0.93');
+      const back = areaRun(fromRatio.saleableAreaM2.value.toString());
+      expect(back.saleableEfficiency.value.toFixed(4)).toBe('0.9300');
+      expect(back.governingUnitCount.value).toBe(fromRatio.governingUnitCount.value);
+    });
+
+    it('moves the unit count, which is the whole reason the field exists', () => {
+      const generous = ratioRun('0.97');
+      const half = areaRun(generous.saleableAreaM2.value.div(2).toDecimalPlaces(2).toString());
+      expect(half.governingUnitCount.value).toBeLessThan(generous.governingUnitCount.value);
+    });
+
+    it('reaches a graph node for the area, with the division written out', () => {
+      const nodes = areaRun('6000').graph.toJSON().nodes;
+      expect(nodes.some((n) => n.parameterId === 'capacity.saleable_area_m2')).toBe(true);
+      /*
+        The formula lives on the COMPUTATION node, which carries no parameterId —
+        the VALUE node beside it carries the figure and the class. Found the same
+        way the unit-count test above finds its own division.
+      */
+      const division = nodes.find((n) => (n.formula ?? '').includes('m² saleable ÷'));
+      // Both operands are named, so a reader can redo the division by hand.
+      expect(division?.formula).toMatch(/m² saleable ÷ .* m² GFA/);
+    });
+
+    it('refuses an area larger than the GFA, naming both figures', () => {
+      /*
+        "saleable efficiency must sit in (0, 1]; got 1.23" is true and useless to
+        somebody who never typed 1.23. What they need to know is that the area
+        they entered is bigger than the GFA this envelope yields — a brief
+        written for a larger plot, or square feet read as square metres.
+      */
+      let message = '';
+      try {
+        areaRun('900000');
+      } catch (e) {
+        message = e instanceof Error ? e.message : String(e);
+      }
+      expect(message).toMatch(/larger than the/);
+      expect(message).toContain('900000.00 m²');
+      expect(message).toMatch(/GFA this envelope yields/);
+      expect(message).not.toMatch(/must sit in/);
+    });
+
+    it('refuses an area of zero rather than reporting a building that sells nothing', () => {
+      expect(() => areaRun('0')).toThrow(/above zero/);
+    });
+  });
 });

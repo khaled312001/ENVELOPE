@@ -271,6 +271,17 @@ export function presentRun(
       integerGranularityLossM2: capacity.integerGranularityLossM2.toFixed(2),
       userRealismDiscount: toWire(capacity.userRealismDiscount),
       levels: toWire(capacity.levels),
+      /**
+       * Saleable area, both ways round — the share and the square metres.
+       *
+       * BOTH TRAVEL, whichever one was entered. A reader who typed a share sees
+       * the square metres it comes to on this envelope; a reader who typed an
+       * area sees the share. A conversion done silently is a conversion nobody
+       * checks, and this one moves the unit count by the whole of whatever is
+       * not saleable.
+       */
+      saleableEfficiency: toWire(output.saleableEfficiency),
+      saleableAreaM2: toWire(output.saleableAreaM2),
       explanation: explainGoverningBand(capacity),
     },
 

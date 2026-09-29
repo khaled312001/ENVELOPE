@@ -43,6 +43,17 @@ export const EN = {
   beforeBinds: (band: string): string => ` before ${band} binds`,
   levels: 'Levels',
   lostToFloors: 'Lost to whole floors',
+  /*
+    BOTH SALEABLE FIGURES, BECAUSE ONLY ONE OF THEM WAS TYPED.
+
+    The rules step asks for a share of GFA or an area in square metres, and the
+    engine publishes whichever one it computed beside the one it was given. A
+    reader who entered 6,000 m² and sees a 34% share knows immediately that one
+    of the two numbers is from a different plot — which is the whole point of
+    showing it rather than storing it.
+  */
+  saleableArea: 'Saleable area',
+  saleableShare: 'Saleable share of GFA',
 
   assumed: 'Assumed',
   /** Around the two governing figures the perturbation moved it between. */

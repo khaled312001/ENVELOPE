@@ -111,6 +111,22 @@ async function createPlot(plotNumber: string, withSheet: boolean) {
 }
 
 describe('the sheet travels with the plot', () => {
+  /*
+    THE ONE TEST IN THE SUITE THAT NEEDS LONGER THAN THE DEFAULT, AND WHY.
+
+    `vitest.config.ts` deliberately leaves per-test timeouts at 5 s and raises
+    only `hookTimeout`, because a suite that gives every test a minute stops
+    reporting the hang it was meant to catch. This test is the exception: it is
+    the first in the process to post a real affection plan, so it pays for
+    loading pdfjs and parsing the PDF inside the test body rather than in a
+    `beforeAll`. Alone that is ~2 s; with 55 files collecting in parallel on a
+    loaded machine it has been measured at 17 s.
+
+    Raising it here rather than globally keeps the failure specific: if this ever
+    exceeds 30 s, something about reading a sheet has genuinely changed.
+  */
+  const READS_A_REAL_PDF = 30_000;
+
   it('is read by the server and reported at upload', async () => {
     const { app, res } = await createPlot(PARCEL, true);
     try {
@@ -129,7 +145,7 @@ describe('the sheet travels with the plot', () => {
     } finally {
       await app.close();
     }
-  });
+  }, READS_A_REAL_PDF);
 
   it('names every limit it will not bind, with the reason', async () => {
     const { app, res } = await createPlot(PARCEL, true);

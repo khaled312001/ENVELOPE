@@ -427,13 +427,53 @@ const CASES: readonly Case[] = [
   {
     label: 'the saleable-efficiency question, unanswered',
     node: () => (
-      <SaleableEfficiency standard={undefined} efficiency="" valid={false} onChange={noop} />
+      <SaleableEfficiency
+        standard={undefined}
+        efficiency=""
+        unit="RATIO"
+        valid={false}
+        onChange={noop}
+        onUnitChange={noop}
+      />
+    ),
+  },
+  {
+    label: 'the saleable figure asked in square metres',
+    node: () => (
+      <SaleableEfficiency
+        standard={undefined}
+        efficiency="6000"
+        unit="AREA"
+        valid={true}
+        onChange={noop}
+        onUnitChange={noop}
+      />
+    ),
+  },
+  {
+    label: 'the saleable area, refused for being zero or below',
+    node: () => (
+      <SaleableEfficiency
+        standard={undefined}
+        efficiency="-1"
+        unit="AREA"
+        valid={false}
+        onChange={noop}
+        onUnitChange={noop}
+      />
     ),
   },
   {
     label: 'the saleable-efficiency question, out of range',
     node: () => (
-      <SaleableEfficiency standard={undefined} efficiency="1.4" valid={false} onChange={noop} />
+      <SaleableEfficiency
+        standard={undefined}
+        efficiency="1.4"
+        unit="RATIO"
+        valid={false}
+        onChange={noop}
+        onUnitChange={noop}
+      />
     ),
   },
   {
@@ -442,8 +482,10 @@ const CASES: readonly Case[] = [
       <SaleableEfficiency
         standard={standards['the general standard']!.standards[0]}
         efficiency="0.93"
+        unit="RATIO"
         valid={true}
         onChange={noop}
+        onUnitChange={noop}
       />
     ),
   },
@@ -688,7 +730,14 @@ describe('the English copy, as it was written inline', () => {
 
   it('says what is wrong with an out-of-range efficiency, and why', () => {
     const text = en(
-      <SaleableEfficiency standard={undefined} efficiency="1.4" valid={false} onChange={noop} />,
+      <SaleableEfficiency
+        standard={undefined}
+        efficiency="1.4"
+        unit="RATIO"
+        valid={false}
+        onChange={noop}
+        onUnitChange={noop}
+      />,
     );
     expect(text).toContain(
       'A number above 0 and at most 1. Whatever you enter is recorded as yours.',
@@ -698,10 +747,77 @@ describe('the English copy, as it was written inline', () => {
     );
   });
 
+  /*
+    ENG. MOHAMED'S POINT 7. The figure a developer's brief states is an AREA, and
+    this field only took a factor between 0 and 1. Both forms are offered, and
+    the screen says which is which rather than leaving a reader to work out that
+    "0.93" and "6000" are answers to the same question.
+  */
+  it('offers the saleable figure in either unit, and says what each is for', () => {
+    const text = en(
+      <SaleableEfficiency
+        standard={undefined}
+        efficiency=""
+        unit="RATIO"
+        valid={false}
+        onChange={noop}
+        onUnitChange={noop}
+      />,
+    );
+    expect(text).toContain('Enter it as');
+    expect(text).toContain('A share of the GFA');
+    expect(text).toContain('An area, in square metres');
+    expect(text).toContain('a brief stating 93% to 97% of GFA');
+  });
+
+  it('asks for square metres, and says what it will divide them by', () => {
+    const text = en(
+      <SaleableEfficiency
+        standard={undefined}
+        efficiency="6000"
+        unit="AREA"
+        valid={true}
+        onChange={noop}
+        onUnitChange={noop}
+      />,
+    );
+    // The unit is in the label, as it is on the plot form's own area field.
+    expect(text).toContain('Saleable area (m²)');
+    expect(text).toContain('divides this by the GFA this envelope yields');
+    /*
+      The share's bound must NOT be shown while an area is being typed. "A number
+      above 0 and at most 1" over a box holding 6000 reads as a broken field.
+    */
+    expect(text).not.toContain('A number above 0 and at most 1');
+  });
+
+  it('refuses a non-positive area in the unit the reader is actually using', () => {
+    const text = en(
+      <SaleableEfficiency
+        standard={undefined}
+        efficiency="-1"
+        unit="AREA"
+        valid={false}
+        onChange={noop}
+        onUnitChange={noop}
+      />,
+    );
+    expect(text).toContain('An area above zero, in square metres.');
+    // Never the share's sentence, which names a bound the reader is not under.
+    expect(text).not.toContain('Above 1 would mean the building sells more area');
+  });
+
   it('quotes the developer’s own range when a standard fills the efficiency', () => {
     const standard = standards['the general standard']!.standards[0]!;
     const text = en(
-      <SaleableEfficiency standard={standard} efficiency="0.93" valid={true} onChange={noop} />,
+      <SaleableEfficiency
+        standard={standard}
+        efficiency="0.93"
+        unit="RATIO"
+        valid={true}
+        onChange={noop}
+        onUnitChange={noop}
+      />,
     );
     expect(text).toContain(
       `${standard.developer} states ${standard.targets.saleableEfficiencyMin.value} to ` +

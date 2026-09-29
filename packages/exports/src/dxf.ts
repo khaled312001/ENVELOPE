@@ -33,7 +33,9 @@
 import type { BuildingModel, Mm, ModelPoint, ProvenanceClass } from '@envelope/core';
 import {
   inkClass,
+  issueDate,
   type ModelItem,
+  NOT_CHECKED,
   type Role,
   type Sheet,
   SheetKind,
@@ -446,10 +448,20 @@ function itemsToEntities(
   return out;
 }
 
-/** What every drawing says about itself, above the geometry. */
+/**
+ * What every drawing says about itself, above the geometry.
+ *
+ * The same facts the A3 title strip prints, because the DXF is the copy most
+ * likely to be x-reffed into somebody else's sheet and read by a person who
+ * never saw the strip. The issue date is the run's, never the export's — see
+ * `SheetMeta.issuedAt`.
+ */
 function titleLines(sheetTitle: string, meta: DxfMeta): string[] {
   return [
     `${sheetTitle} - plot ${meta.plotNumber}, ${meta.community} - run ${meta.runId}`,
+    `Issued ${issueDate(meta.issuedAt)}. Drawn by the TOP.ai engine. ` +
+      `Checked by: ${meta.checkedBy ?? NOT_CHECKED}.`,
+    'Revision 0 - first issue. No revision history is kept: a recomputation is a new run.',
     'NOT FOR CONSTRUCTION. REGULATORY VALIDITY: NOT ASSESSED.',
     'Generated capacity study, not a submission drawing. Layers: ENV-<level>-<element>.',
   ];
@@ -459,7 +471,27 @@ export interface DxfMeta {
   readonly plotNumber: string;
   readonly community: string;
   readonly runId: string;
+  /** When the figures were computed, ISO 8601. Never when the file was written. */
+  readonly issuedAt: string;
+  /** Who signed G4, when somebody has. Absent is printed NOT CHECKED, in words. */
+  readonly checkedBy?: string;
 }
+
+/**
+ * R12 is not Unicode.
+ *
+ * `$DWGCODEPAGE` names a single-byte page, so a community or a reviewer whose
+ * name carries an Arabic or an accented letter lands in a file that renders as
+ * mojibake — and `scripts/verify-dxf.mjs` fails a drawing whose text leaves
+ * printable ASCII, which is the right answer and would fail the download rather
+ * than the test. Diacritics fold; anything else becomes a visible '?' rather
+ * than being dropped, because a name silently shortened still reads as a name.
+ */
+const ascii = (s: string): string =>
+  s
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\u0020-\u007e]/g, '?');
 
 function titleBlock(lines: readonly string[], anchor: ModelPoint, scale: number, layers: Map<string, Aci>): DxfEntity[] {
   const layer = layerName('ANNOTATION', 'TEXT');
@@ -473,7 +505,7 @@ function titleBlock(lines: readonly string[], anchor: ModelPoint, scale: number,
     heightM: h,
     rotationDeg: 0,
     align: 'start' as const,
-    value,
+    value: ascii(value),
   }));
 }
 

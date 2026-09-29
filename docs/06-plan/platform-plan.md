@@ -813,10 +813,49 @@ version of the module chain duly measured a module with no bays on either side:
 every aisle is the same width and runs at one of two right angles, so a renderer
 guessing which one is the connector guesses.
 
-**Still to do from the list below:** addressable title-block fields with sheet
-*n* of *m*, date, revision and drawn/checked (items 1 and 12), grid bubbles and
-level datums (7), the symbol key in the legend (8), PDF, and IFC4. Note that the
-code carries a **recorded refusal** on the last of these — see the comment at
+**Items 1 and 12, the title block — done, 29 Sep 2026.** Every value in the
+strip is now a **named field** (`TitleField`), not a run of text a consumer has
+to recognise, and the sheet count is what proves the convention earns its keep:
+only the SET knows how many sheets it holds, so a strip is laid out with the
+field empty and `composeSheets` fills it afterwards **by key**. Look for it by
+matching text instead and the first thing found is the field's own LABEL, which
+also reads SHEET. The key travels into the markup as `data-field`, so a script,
+a test or a person with dev tools asks for the date by name.
+
+**The date is the run's, and never the export's.** A title block's date is read
+as the date of the information on it; `new Date()` at export time would re-date
+a six-month-old drawing on every download, with figures that had not moved. So
+`SheetMeta.issuedAt` has no default — the composition root supplies it from the
+stored row, and the POST that creates a run stamps ONE timestamp for both the
+row and the response, because two calls a millisecond apart straddle midnight
+once a day. The two title blocks a reader can compare, the screen's and the
+PDF's, are drawn from that single field. The test composes a sheet dated 2019
+and requires today's date to be nowhere on it.
+
+**Drawn, checked, and a revision table with one row.** DRAWN says `TOP.ai
+ENGINE`, because no person drew it. CHECKED prints the G4 signatory when there
+is one and `NOT CHECKED` in words when there is not — a blank box reads as an
+oversight, and this is a fact. The revision table states the one revision there
+is and says, on the sheet, that no history is kept: `StoredRun.parentRunId` is
+in the schema and is null on every run ever written, because editing an
+assumption computes a NEW run with a new number. Printing REV A / REV B rows out
+of a history nobody keeps would be the same defect as a level schedule
+synthesised to make INV-01 pass.
+
+Two things the work turned up. The DXF carried none of this, so it now repeats
+the issue date, the checked-by and the revision in the file most likely to be
+x-reffed into somebody else's sheet — and that exposed a latent defect: **R12 is
+not Unicode**, so a reviewer named in Arabic (the likely case on this product,
+not the exotic one) would have written a text entity outside printable ASCII and
+`pnpm dxf` would have failed the download. Names now fold, visibly, to `?`. And
+the strip **refuses** rather than overprinting: where the legend would reach the
+issue block it throws, naming both positions in millimetres, because a title
+block struck through by a legend is a sheet whose date nobody can read and it
+would surface in front of a client rather than in a test.
+
+**Still to do from the list below:** grid bubbles and level datums (7), the
+symbol key in the legend (8), PDF, and IFC4. Note that the code carries a
+**recorded refusal** on the last of these — see the comment at
 `/api/runs/:runId/export`: IFC round-tripping was not quoted in this phase and the
 client disclaimed knowledge of the format in the meeting, so shipping a
 badly-shaped IFC would be worse than shipping none. That refusal is to be settled
@@ -1329,6 +1368,20 @@ figure measuring the edge it crossed; and the cross aisle sorts first on a
 level, so the module chain measured an aisle with no bays on either side. The
 rest of §4.9 — the title block's addressable fields, the revision table, grid
 bubbles, PDF and IFC — is listed there with what is left.
+
+**P — §4.9 items 1 and 12, the title block, done.** Every value in the
+strip is a named field rather than a run of text, and the sheet count is what
+pays for it: only the set knows how many sheets it has, so `composeSheets`
+fills `SHEET n OF m` afterwards by key — matching text instead finds the
+field's own label, which also reads SHEET. The date is the RUN's, never the
+export's, from one timestamp the creating POST stamps for both the stored row
+and its response; a sheet composed with a 2019 date must not carry today's
+anywhere, and the test says so. CHECKED prints the G4 signatory or `NOT
+CHECKED` in words, because a blank box reads as an oversight. The revision
+table has one row and says on the sheet that no history is kept —
+`parentRunId` is null on every run ever written. Carrying the same facts into
+the DXF exposed a latent defect: R12 is not Unicode, so a reviewer named in
+Arabic would have written a file `pnpm dxf` fails; names now fold visibly.
 
 **Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The

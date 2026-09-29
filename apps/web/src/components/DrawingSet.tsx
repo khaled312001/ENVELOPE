@@ -66,6 +66,10 @@ export interface DrawableRun {
   readonly runId: string;
   readonly plot: { readonly plotNumber: string; readonly community: string };
   readonly building?: BuildingModel;
+  /** When the figures were computed. The title block's date, on screen as on paper. */
+  readonly issuedAt: string;
+  /** The gate record, for the one field of it a title block prints: who signed G4. */
+  readonly gates?: Record<string, { readonly actorName: string; readonly at: string }>;
 }
 
 /**
@@ -75,11 +79,24 @@ export interface DrawableRun {
  * the same run always composes the same set, byte for byte.
  */
 export function useSheets(run: DrawableRun): readonly Sheet[] {
-  const { runId, building } = run;
+  const { runId, building, issuedAt } = run;
   const { plotNumber, community } = run.plot;
+  // The title block's CHECKED field. The screen reads the G4 signatory out of
+  // the same record the export does, so the two title blocks cannot disagree
+  // about whether anybody has reviewed the run.
+  const checkedBy = run.gates?.['G4_REVIEWER_NAMED']?.actorName;
   return useMemo(
-    () => (building ? composeSheets(building, { plotNumber, community, runId }) : []),
-    [building, plotNumber, community, runId],
+    () =>
+      building
+        ? composeSheets(building, {
+            plotNumber,
+            community,
+            runId,
+            issuedAt,
+            ...(checkedBy ? { checkedBy } : {}),
+          })
+        : [],
+    [building, plotNumber, community, runId, issuedAt, checkedBy],
   );
 }
 
@@ -384,6 +401,7 @@ function PaperElement({ item, hatchId }: { readonly item: PaperItem; readonly ha
       fontSize={item.sizeMm}
       textAnchor={item.anchor}
       fontWeight={item.bold ? 700 : undefined}
+      data-field={item.field}
     >
       {item.value}
     </text>

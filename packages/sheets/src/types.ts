@@ -167,26 +167,60 @@ export type PaperRole =
   | 'north'
   | 'swatch';
 
-export type PaperItem =
-  | {
-      readonly kind: 'poly';
-      readonly role: PaperRole;
-      readonly points: readonly PaperPoint[];
-      readonly closed: boolean;
-      /** For a legend swatch: the model role whose ink it shows, and in which class. */
-      readonly swatch?: { readonly role: Role; readonly provenanceClass?: ProvenanceClass };
-    }
-  | {
-      readonly kind: 'text';
-      readonly role: PaperRole;
-      readonly at: PaperPoint;
-      readonly value: string;
-      readonly sizeMm: number;
-      readonly anchor: 'start' | 'middle' | 'end';
-      readonly bold: boolean;
-      /** A traced figure's class: its ink, and — for ASSUMED — its word. */
-      readonly provenanceClass?: ProvenanceClass;
-    };
+/**
+ * A title-block field, addressed by KEY rather than by matching its text.
+ *
+ * FreeCAD TechDraw's `freecad:editable` convention, and it is not ceremony: the
+ * sheet count needs it on the first day. A strip is laid out one sheet at a
+ * time and only the SET knows how many sheets it has, so `composeSheets` fills
+ * `SHEET_OF` afterwards. Filling it by key is a line; filling it by looking for
+ * the word "SHEET" also finds the title of every parking sheet.
+ */
+export const TitleField = {
+  PROJECT: 'project',
+  PLOT: 'plot',
+  COMMUNITY: 'community',
+  RUN: 'run',
+  TITLE: 'title',
+  NUMBER: 'number',
+  SHEET_OF: 'sheet-of',
+  SCALE: 'scale',
+  DATE: 'date',
+  REVISION: 'revision',
+  DRAWN: 'drawn',
+  CHECKED: 'checked',
+} as const;
+export type TitleField = (typeof TitleField)[keyof typeof TitleField];
+
+export interface PaperPoly {
+  readonly kind: 'poly';
+  readonly role: PaperRole;
+  readonly points: readonly PaperPoint[];
+  readonly closed: boolean;
+  /** For a legend swatch: the model role whose ink it shows, and in which class. */
+  readonly swatch?: { readonly role: Role; readonly provenanceClass?: ProvenanceClass };
+}
+
+export interface PaperText {
+  readonly kind: 'text';
+  readonly role: PaperRole;
+  readonly at: PaperPoint;
+  readonly value: string;
+  readonly sizeMm: number;
+  readonly anchor: 'start' | 'middle' | 'end';
+  readonly bold: boolean;
+  /** A traced figure's class: its ink, and — for ASSUMED — its word. */
+  readonly provenanceClass?: ProvenanceClass;
+  /**
+   * Which title-block field this text IS — set on the value, never on its label.
+   *
+   * Only the first line of a wrapped value carries it: a field is one value, so
+   * a consumer that replaces it replaces that line.
+   */
+  readonly field?: TitleField;
+}
+
+export type PaperItem = PaperPoly | PaperText;
 
 /**
  * How model millimetres land on paper.
@@ -259,4 +293,23 @@ export interface SheetMeta {
   readonly plotNumber: string;
   readonly community: string;
   readonly runId: string;
+  /**
+   * When the FIGURES were computed, ISO 8601 — never when the sheet was drawn.
+   *
+   * A title block's date is read as the date of the information on it. Stamping
+   * `new Date()` at export time would re-date a six-month-old run every time
+   * somebody downloaded it, on a sheet whose figures had not moved since. So it
+   * is supplied by whoever holds the run's record, and there is no default: a
+   * date this package invented would be a number the engine did not produce.
+   */
+  readonly issuedAt: string;
+  /**
+   * Who signed G4, when somebody has. Absent prints NOT CHECKED, in words.
+   *
+   * A blank "checked by" box reads as an oversight; this one is a fact, and the
+   * difference matters on the sheet somebody x-refs. Note what the name means
+   * even when it is there — G4 records a NAMED REVIEWER, not a compliance
+   * check, and REGULATORY VALIDITY: NOT ASSESSED is on the same strip.
+   */
+  readonly checkedBy?: string;
 }

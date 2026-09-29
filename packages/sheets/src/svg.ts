@@ -320,9 +320,13 @@ function paperItemSvg(item: PaperItem, hatchId: string): string {
       `${fill ? ` fill="${fill}"` : ''}${dash ? ` stroke-dasharray="${dash}"` : ''}/>`
     );
   }
+  // `data-field` carries the title-block key into the markup, so a reader — a
+  // test, a script, a person with dev tools — finds the date by asking for the
+  // date rather than by matching text that is also a sheet title.
   return (
     `<text class="${cls}" x="${n2(item.at.x)}" y="${n2(item.at.y)}" font-size="${item.sizeMm}"` +
-    ` text-anchor="${item.anchor}"${item.bold ? ' font-weight="700"' : ''}>${esc(item.value)}</text>`
+    ` text-anchor="${item.anchor}"${item.bold ? ' font-weight="700"' : ''}` +
+    `${item.field ? ` data-field="${item.field}"` : ''}>${esc(item.value)}</text>`
   );
 }
 

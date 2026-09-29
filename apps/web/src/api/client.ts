@@ -160,6 +160,14 @@ export interface PlotView {
 
 export interface RunView {
   readonly runId: string;
+  /**
+   * When the run was computed, ISO 8601.
+   *
+   * Put on by the API from the stored row, not by the engine, which does not
+   * know when its output was written. The title block on screen prints it and
+   * so does the one on paper — from this one field, so they cannot drift.
+   */
+  readonly issuedAt: string;
   readonly engineVersion: string;
   readonly annexVersion: string;
   readonly elapsedMs: number;

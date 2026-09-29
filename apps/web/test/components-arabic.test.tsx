@@ -36,6 +36,9 @@ import type { Plot } from '@envelope/core';
 import { initGeometry } from '@envelope/geometry';
 import { composeSheets } from '@envelope/sheets';
 
+/** A fixed issue date: a title block's date is the RUN's, never the test run's. */
+const ISSUED = '2026-09-29T08:00:00.000Z';
+
 import { runChecks } from '../../api/src/checks.js';
 import { ENGINE_VERSION, presentRun } from '../../api/src/present.js';
 import { plotOf, RECT_80x40, runInput, SKEWED } from '../../../test-support/pipeline.js';
@@ -171,7 +174,7 @@ function variants(): Record<string, JSX.Element> {
         <BuildingViewer model={run.building} variant="figure" focusLevelId={run.building.levels[0]!.id} />
       );
       out[`model-figure/${name}`] = <ModelFigure model={run.building} />;
-      const sheets = composeSheets(run.building, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId });
+      const sheets = composeSheets(run.building, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId, issuedAt: ISSUED });
       for (const s of sheets) out[`sheet-${s.id}/${name}`] = <SheetView sheet={s} idPrefix="t" onInspect={noop} />;
       for (const kind of ['PARKING', 'SITE', 'TYPICAL', 'SECTION'] as const) {
         out[`drawing-set-${kind}/${name}`] = <DrawingSet run={run} onInspect={noop} initialKind={kind} />;
@@ -410,7 +413,7 @@ describe('the drawings', () => {
 
   it('carry, in Arabic, exactly the bays the engine placed, car for car', () => {
     for (const run of [rect, skewed, podium]) {
-      const sheets = composeSheets(run.building!, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId });
+      const sheets = composeSheets(run.building!, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId, issuedAt: ISSUED });
       for (const sheet of sheets.filter((s) => s.kind === 'PARKING')) {
         const bays = Number(run.building!.levels.find((l) => l.id === sheet.levelId)!.parking!.bayCount.value);
         const markup = inArabic(<SheetView sheet={sheet} idPrefix="t" onInspect={noop} />);
@@ -426,7 +429,7 @@ describe('the drawings', () => {
   it('name themselves in Arabic, because a name is copy and the drawing is not', () => {
     const plan = inArabic(<ParkingPlan levelPlan={rect.levelPlan!} onInspect={noop} />);
     expect(plan).toMatch(/aria-label="المواقف الموزّعة: \d+،/);
-    const sheet = composeSheets(rect.building!, { plotNumber: rect.plot.plotNumber, community: rect.plot.community, runId: rect.runId })[0]!;
+    const sheet = composeSheets(rect.building!, { plotNumber: rect.plot.plotNumber, community: rect.plot.community, runId: rect.runId, issuedAt: ISSUED })[0]!;
     const view = inArabic(<SheetView sheet={sheet} idPrefix="t" onInspect={noop} />);
     expect(view).toContain(`${sheet.number} ${escaped(sheet.title)}، مرسومة بمقياس 1:${sheet.view.scale}.`);
   });
@@ -505,7 +508,7 @@ describe("the engine's own words", () => {
 
   it('the drawing set: each sheet’s facts and notes as the sheet states them', () => {
     for (const run of [rect, skewed, podium]) {
-      const sheets = composeSheets(run.building!, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId });
+      const sheets = composeSheets(run.building!, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId, issuedAt: ISSUED });
       const first = sheets.find((s) => s.kind === 'PARKING')!;
       const markup = inArabic(<DrawingSet run={run} onInspect={noop} />);
       for (const f of first.facts) expect(markup).toContain(`<dt><span dir="ltr" lang="en" class="verbatim">${escaped(f.label)}</span></dt>`);

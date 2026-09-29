@@ -34,7 +34,12 @@ export const RECT_120x80: Ring = [pt(0, 0), pt(120, 0), pt(120, 80), pt(0, 80)];
 /** Rotated, so nothing downstream can quietly assume the plot is axis-aligned. */
 export const SKEWED: Ring = [pt(10, 0), pt(80, 20), pt(70, 60), pt(0, 40)];
 
-export const META = { plotNumber: '345-1234', community: 'TEST COMMUNITY', runId: 'run-test' } as const;
+export const META = {
+  plotNumber: '345-1234',
+  community: 'TEST COMMUNITY',
+  runId: 'run-test',
+  issuedAt: '2026-06-11T08:00:00.000Z',
+} as const;
 
 export function plotOf(ring: Ring): Plot {
   const g = analysePlot(ring);

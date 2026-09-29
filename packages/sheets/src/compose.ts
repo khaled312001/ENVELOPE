@@ -56,6 +56,7 @@ import {
   type StripFact,
   SymbolName,
   type TextItem,
+  TitleField,
 } from './types.js';
 
 /** Paper millimetres of margin kept round the geometry for the labels outside it. */
@@ -130,7 +131,24 @@ export function composeSheets(model: BuildingModel, meta: SheetMeta): Sheet[] {
   const typical = typicalSheet(model, meta);
   if (typical) sheets.push(typical);
   model.sections.forEach((section, i) => sheets.push(sectionSheet(model, section, meta, `A-30${i + 1}`)));
-  return sheets;
+
+  /*
+    SHEET n OF m, FILLED BY KEY.
+
+    A strip is laid out one sheet at a time and only the set knows its size, so
+    the field is emitted as a placeholder and addressed here. This is what
+    §4.9's addressable fields buy on their first day: the alternative is a
+    renderer looking for the word "SHEET", which also matches the title of every
+    parking sheet in the set.
+  */
+  return sheets.map((sheet, i) => ({
+    ...sheet,
+    paperItems: sheet.paperItems.map((item) =>
+      item.kind === 'text' && item.field === TitleField.SHEET_OF
+        ? { ...item, value: `${i + 1} OF ${sheets.length}` }
+        : item,
+    ),
+  }));
 }
 
 // ---------------------------------------------------------------------------

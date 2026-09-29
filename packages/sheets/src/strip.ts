@@ -6,11 +6,27 @@
  * two sentences every sheet carries whatever it draws — NOT FOR CONSTRUCTION, and
  * REGULATORY VALIDITY: NOT ASSESSED — at the bottom, above the sheet number, where
  * a reader looking for the number cannot miss them.
+ *
+ * Every value in the strip is a NAMED FIELD (`TitleField`), not a run of text a
+ * consumer has to recognise. That is FreeCAD TechDraw's `freecad:editable`
+ * convention and §4.9's first item, and it pays for itself immediately: the
+ * sheet count is filled in by key after the strip is laid out, because only the
+ * set knows how many sheets are in it.
  */
 
 import type { ProvenanceClass } from '@envelope/core';
 
-import type { PaperItem, PaperPoint, PaperRole, Role, SheetMeta, StripFact } from './types.js';
+import {
+  type PaperItem,
+  type PaperPoint,
+  type PaperPoly,
+  type PaperRole,
+  type PaperText,
+  type Role,
+  type SheetMeta,
+  type StripFact,
+  TitleField,
+} from './types.js';
 
 export const PAPER = { widthMm: 420, heightMm: 297 } as const;
 
@@ -66,7 +82,7 @@ const text = (
   bold = false,
   anchor: 'start' | 'middle' | 'end' = 'start',
   provenanceClass?: ProvenanceClass,
-): PaperItem => ({
+): PaperText => ({
   kind: 'text',
   role,
   at,
@@ -77,7 +93,10 @@ const text = (
   ...(provenanceClass ? { provenanceClass } : {}),
 });
 
-const rule = (y: number): PaperItem => ({
+/** The same text, carrying the name of the field it is. */
+const keyed = (t: PaperText, field: TitleField): PaperText => ({ ...t, field });
+
+const rule = (y: number): PaperPoly => ({
   kind: 'poly',
   role: 'rule',
   points: [
@@ -87,7 +106,7 @@ const rule = (y: number): PaperItem => ({
   closed: false,
 });
 
-const box = (role: PaperRole, x: number, y: number, w: number, h: number): PaperItem => ({
+const box = (role: PaperRole, x: number, y: number, w: number, h: number): PaperPoly => ({
   kind: 'poly',
   role,
   points: [
@@ -98,6 +117,62 @@ const box = (role: PaperRole, x: number, y: number, w: number, h: number): Paper
   ],
   closed: true,
 });
+
+/** A label-over-value row of the issue block, in paper millimetres. */
+const FIELD_ROW = 8.2;
+
+/** What CHECKED says when nobody has signed G4. It is a fact, not a blank box. */
+export const NOT_CHECKED = 'NOT CHECKED';
+
+/** What SHEET holds until `composeSheets`, which alone knows the set size, fills it. */
+export const UNFILLED = '-';
+
+/**
+ * The issue date, as a title block prints it.
+ *
+ * ISO order on purpose. The set is read in English and in Arabic, and 09/10/2026
+ * is two different days depending on who is holding the page.
+ */
+export function issueDate(iso: string): string {
+  return /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(0, 10) : 'NOT RECORDED';
+}
+
+/**
+ * The revision table has one row, and this is why.
+ *
+ * A revision amends an issued drawing. Nothing in this product amends one:
+ * `StoredRun.parentRunId` is in the schema and is null on every run ever
+ * written, because editing an assumption computes a NEW run with a new number.
+ * So the table states the one revision there is and names what identifies an
+ * issue. Printing REV A / REV B rows out of a history nobody keeps would be the
+ * same defect as a level schedule synthesised to make INV-01 pass.
+ */
+export const REVISION_NOTE =
+  'No revision history is kept. A recomputation is a new run with a new run number, and ' +
+  'the run number above is what identifies this issue.';
+
+/**
+ * A label over its value, the value KEYED — §4.9 item 1.
+ *
+ * The key is on the value and not on the label because the value is the part
+ * anything downstream reads or replaces. A wrapped value keys its first line
+ * only: a field is one value, not a paragraph.
+ */
+function fieldRows(
+  field: TitleField,
+  label: string,
+  value: string,
+  x: number,
+  y: number,
+  widthMm: number,
+): PaperItem[] {
+  const out: PaperItem[] = [text('label', { x, y }, label, 2)];
+  wrap(value, 2.6, widthMm).forEach((line, i) => {
+    const t = text('value', { x, y: y + 4.2 + i * 3.6 }, line, 2.6, true);
+    out.push(i === 0 ? keyed(t, field) : t);
+  });
+  return out;
+}
 
 /** How an assumed figure is said in words as well as in amber — §13.1, twice. */
 const CLASS_WORD: Partial<Record<ProvenanceClass, string>> = {
@@ -123,7 +198,7 @@ export function paperFurniture(input: StripInput): PaperItem[] {
 
   // --- top: what this is and which run ---------------------------------------------
   let y = FRAME.y0 + 8;
-  items.push(text('heading', { x: left, y }, 'TOP.ai', 4, true));
+  items.push(keyed(text('heading', { x: left, y }, 'TOP.ai', 4, true), TitleField.PROJECT));
   y += 5;
   items.push(text('label', { x: left, y }, 'DEVELOPMENT CAPACITY STUDY', 2.2));
   y += 4;
@@ -131,16 +206,17 @@ export function paperFurniture(input: StripInput): PaperItem[] {
   y += 6;
   items.push(text('label', { x: left, y }, 'PLOT', 2));
   y += 5;
-  items.push(text('value', { x: left, y }, input.meta.plotNumber, 3.6, true));
+  items.push(keyed(text('value', { x: left, y }, input.meta.plotNumber, 3.6, true), TitleField.PLOT));
   y += 4.6;
-  for (const line of wrap(input.meta.community, 2.4, width)) {
-    items.push(text('value', { x: left, y }, line, 2.4));
+  wrap(input.meta.community, 2.4, width).forEach((line, i) => {
+    const t = text('value', { x: left, y }, line, 2.4);
+    items.push(i === 0 ? keyed(t, TitleField.COMMUNITY) : t);
     y += 3.4;
-  }
+  });
   y += 1.4;
   items.push(text('label', { x: left, y }, 'RUN', 2));
   y += 3.6;
-  items.push(text('value', { x: left, y }, input.meta.runId, 2.2));
+  items.push(keyed(text('value', { x: left, y }, input.meta.runId, 2.2), TitleField.RUN));
   y += 3;
   items.push(rule(y));
   y += 6;
@@ -167,7 +243,7 @@ export function paperFurniture(input: StripInput): PaperItem[] {
     items.push({
       ...box('swatch', left, y, 9, 4),
       swatch: { role: entry.role, ...(entry.provenanceClass ? { provenanceClass: entry.provenanceClass } : {}) },
-    } as PaperItem);
+    });
     const lines = wrap(entry.label, 2.2, width - 12);
     lines.forEach((line, i) => items.push(text('note', { x: left + 12, y: y + 3 + i * 3 }, line, 2.2)));
     y += Math.max(6, lines.length * 3 + 2.5);
@@ -175,12 +251,18 @@ export function paperFurniture(input: StripInput): PaperItem[] {
 
   // --- bottom: the two sentences, the title, the number ------------------------------------
   let b = FRAME.y1 - 5;
-  items.push(text('value', { x: STRIP.x1 - STRIP.pad, y: b }, `1:${input.scale} @ A3`, 3, false, 'end'));
-  items.push(text('title', { x: left, y: b }, input.number, 6, true));
+  items.push(
+    keyed(
+      text('value', { x: STRIP.x1 - STRIP.pad, y: b }, `1:${input.scale} @ A3`, 3, false, 'end'),
+      TitleField.SCALE,
+    ),
+  );
+  items.push(keyed(text('title', { x: left, y: b }, input.number, 6, true), TitleField.NUMBER));
   b -= 10;
   const titleLines = wrap(input.title.toUpperCase(), 4, width);
   for (let i = titleLines.length - 1; i >= 0; i -= 1) {
-    items.push(text('title', { x: left, y: b }, titleLines[i]!, 4, true));
+    const line = text('title', { x: left, y: b }, titleLines[i]!, 4, true);
+    items.push(i === 0 ? keyed(line, TitleField.TITLE) : line);
     b -= 5.4;
   }
   items.push(rule(b));
@@ -190,6 +272,47 @@ export function paperFurniture(input: StripInput): PaperItem[] {
   items.push(text('warning', { x: left, y: b }, 'NOT FOR CONSTRUCTION', 2.6, true));
   b -= 4;
   items.push(rule(b));
+
+  /*
+    THE ISSUE BLOCK — §4.9 items 1 and 12. When the figures were computed, which
+    sheet of how many, drawn by what, checked by whom, at which revision.
+
+    It is laid out DOWNWARD from a top worked out by height, because everything
+    below it is anchored to the bottom edge of the strip and everything above it
+    grows down from the top. Where the two would meet the strip REFUSES rather
+    than overprinting: a title block with the legend struck through it is a sheet
+    nobody can read, and it would surface on a plot with an unusual number of
+    legend rows — which is to say in front of a client rather than in a test.
+  */
+  const checked = input.meta.checkedBy ?? NOT_CHECKED;
+  const checkedLines = wrap(checked, 2.6, width);
+  const noteLines = wrap(REVISION_NOTE, 2, width);
+  const height = 2 * FIELD_ROW + 4.2 + checkedLines.length * 3.6 + 2 + noteLines.length * 3;
+  const top = b - height - 3;
+  if (y > top - 4) {
+    throw new Error(
+      `the title strip has no room for its issue block: the legend ends at ${y.toFixed(1)} mm of ` +
+        `paper and the block would begin at ${top.toFixed(1)} mm`,
+    );
+  }
+  items.push(rule(top - 4));
+  const col = left + 44;
+  const colWidth = width - 44;
+  let f = top;
+  items.push(...fieldRows(TitleField.DATE, 'DATE ISSUED', issueDate(input.meta.issuedAt), left, f, 42));
+  // SHEET is a PLACEHOLDER here. A strip is laid out one sheet at a time and only
+  // the set knows how big it is, so `composeSheets` fills this field by its key.
+  items.push(...fieldRows(TitleField.SHEET_OF, 'SHEET', UNFILLED, col, f, colWidth));
+  f += FIELD_ROW;
+  items.push(...fieldRows(TitleField.DRAWN, 'DRAWN', 'TOP.ai ENGINE', left, f, 42));
+  items.push(...fieldRows(TitleField.REVISION, 'REVISION', '0 - FIRST ISSUE', col, f, colWidth));
+  f += FIELD_ROW;
+  items.push(...fieldRows(TitleField.CHECKED, 'CHECKED', checked, left, f, width));
+  f += 4.2 + checkedLines.length * 3.6 + 2;
+  for (const line of noteLines) {
+    items.push(text('note', { x: left, y: f }, line, 2));
+    f += 3;
+  }
 
   items.push(...scaleBar(input.scale));
   if (input.north) items.push(...northArrow());

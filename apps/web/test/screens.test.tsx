@@ -420,10 +420,11 @@ describe('ParkingPlan', () => {
  * keyboard cannot reach.
  */
 describe('DrawingSet', () => {
-  const meta = (): { plotNumber: string; community: string; runId: string } => ({
+  const meta = (): { plotNumber: string; community: string; runId: string; issuedAt: string } => ({
     plotNumber: run.plot.plotNumber,
     community: run.plot.community,
     runId: run.runId,
+    issuedAt: '2026-09-29T08:00:00.000Z',
   });
   /** Every `d` attribute, in document order. The geometry, and nothing else. */
   const paths = (markup: string): string[] => [...markup.matchAll(/\sd="([^"]*)"/g)].map((m) => m[1]!);

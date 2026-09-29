@@ -153,3 +153,48 @@ describe('the building, in three dimensions', () => {
     expect(Math.max(...zs) - Math.min(...zs)).toBeCloseTo(out.envelope.floorToFloorM.value.toNumber(), 4);
   });
 });
+
+describe('the title block, in the file an architect x-refs', () => {
+  const sheetOf = (meta: Parameters<typeof sheetDxf>[1]): string => {
+    const out = runPipeline(runInput(RECT_80x40, {}));
+    const sheet = composeSheets(out.building, META).find((s) => s.kind === 'SITE')!;
+    return sheetDxf(sheet, meta);
+  };
+
+  it('dates the drawing by the run and never by the export', () => {
+    /*
+      The two agree on the day a run is exported, which is why a drift here would
+      never be noticed: it surfaces months later, on a download of a drawing
+      nobody has changed, in the file most likely to be x-reffed into a
+      submission set by somebody who never saw the run.
+    */
+    const dxf = sheetOf({ ...META, issuedAt: '2019-03-04T09:12:00.000Z' });
+    expect(dxf).toContain('Issued 2019-03-04');
+    expect(dxf).not.toContain(new Date().toISOString().slice(0, 10));
+  });
+
+  it('says NOT CHECKED in words, and names the reviewer once there is one', () => {
+    expect(sheetOf(META)).toContain('Checked by: NOT CHECKED');
+    expect(sheetOf({ ...META, checkedBy: 'R. HABIB' })).toContain('Checked by: R. HABIB');
+  });
+
+  it('states the one revision there is, and that no history is kept', () => {
+    expect(sheetOf(META)).toContain('Revision 0 - first issue');
+    expect(sheetOf(META)).toContain('a recomputation is a new run');
+  });
+
+  it('folds a name R12 cannot hold, visibly, rather than writing a file that will not open', () => {
+    /*
+      R12 is not Unicode: `$DWGCODEPAGE` names a single-byte page. A reviewer
+      whose name is written in Arabic \u2014 which on this product is the likely
+      case, not the exotic one \u2014 would otherwise put a text entity outside
+      printable ASCII into the file, and `scripts/verify-dxf.mjs` would fail it.
+      That is the right verdict on the file and the wrong place to learn it: the
+      gate runs over our fixtures and the name arrives from a customer.
+    */
+    const dxf = sheetOf({ ...META, checkedBy: '\u0645\u062d\u0645\u062f \u0633\u0627\u0644\u0645' });
+    expect(dxf).toMatch(/Checked by: \?+ \?+\./);
+    // Line endings are ASCII too, so the whole file may be held to it.
+    expect(/^[\u0000-\u007f]*$/.test(dxf), 'the whole file stays printable ASCII').toBe(true);
+  });
+});

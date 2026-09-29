@@ -829,12 +829,20 @@ export async function build(
     });
     const reportJson = toJsonString(report);
 
+    /*
+      ONE timestamp, stored and returned.
+      The title block prints the date the run was computed, and the screen draws
+      the same title block the PDF prints. Two `new Date()` calls a millisecond
+      apart would put two dates on one run, and the day they straddled midnight
+      the screen and the paper would disagree about which day the figures are.
+    */
+    const createdAt = new Date().toISOString();
     await repo.insert({
       runId,
       tenantId: actor.id,
       plotId: plot.plotId,
       parentRunId: null,
-      createdAt: new Date().toISOString(),
+      createdAt,
       createdByActorId: actor.id,
       createdByActorName: actor.name,
       engineVersion: ENGINE_VERSION,
@@ -863,7 +871,7 @@ export async function build(
     });
 
     reply.header('X-Run-Id', runId).status(201);
-    return { ...payload, sheet: sheetReport(bound) };
+    return { ...payload, sheet: sheetReport(bound), issuedAt: createdAt };
   });
 
   /**
@@ -1115,7 +1123,17 @@ export async function build(
     const { run, role } = await requireRunFor(repo, accounts, runId, await who(request), ANY_ROLE);
     // `access` tells the screen which actions to offer. The server enforces them
     // regardless; this only stops it offering a button that would answer 403.
-    return { ...JSON.parse(run.output), gates: JSON.parse(run.gates), access: role };
+    /*
+      `issuedAt` is added here rather than inside `presentRun`: the engine does
+      not know when its output was stored, and a title block's date is a fact
+      about the record, not a figure out of the computation.
+    */
+    return {
+      ...JSON.parse(run.output),
+      gates: JSON.parse(run.gates),
+      access: role,
+      issuedAt: run.createdAt,
+    };
   });
 
   /**
@@ -1248,6 +1266,22 @@ export async function build(
 
     const g4 = gates[Gate.G4_REVIEWER_NAMED]!;
 
+    /*
+      THE RUN, AS SOMETHING DRAWABLE.
+
+      A title block's issue date and its checked-by are facts ABOUT the run, not
+      figures out of it, so they are put on here at the composition root — the
+      date off the stored row and the name off the gate record. Never off the
+      clock: a sheet downloaded six months after its run must still say when the
+      figures were produced, and re-dating an unchanged drawing on every download
+      is the one thing a dated title block is relied on not to do.
+    */
+    const drawable = {
+      ...payload,
+      issuedAt: run.createdAt,
+      checkedBy: g4.actorName,
+    } as unknown as DrawableRun;
+
     /**
      * The stored report, re-imported and stamped with the reviewer.
      *
@@ -1277,14 +1311,14 @@ export async function build(
     const format = (request.query as { format?: string }).format ?? 'json';
     if (format === 'html') {
       reply.header('content-type', 'text/html; charset=utf-8');
-      return toHtml(reviewed, { sheets: runSheets(payload as unknown as DrawableRun) });
+      return toHtml(reviewed, { sheets: runSheets(drawable) });
     }
 
     // The drawing set: every sheet, A3, one to a page. Its own document rather
     // than pages inside the A4 report — see `drawingsSection` in the report.
     if (format === 'sheets') {
       reply.header('content-type', 'text/html; charset=utf-8');
-      return runDrawingSet(payload as unknown as DrawableRun);
+      return runDrawingSet(drawable);
     }
 
     /**
@@ -1307,7 +1341,7 @@ export async function build(
       // With one: that sheet alone, flat, at true size — the file an architect
       // x-refs into his own drawing.
       const sheet = (request.query as { sheet?: string }).sheet;
-      const drawing = runDrawing(payload as unknown as DrawableRun, sheet);
+      const drawing = runDrawing(drawable, sheet);
       reply.header('content-type', 'application/dxf');
       reply.header('content-disposition', `attachment; filename="${drawing.name}.dxf"`);
       return drawing.dxf;
@@ -1316,7 +1350,7 @@ export async function build(
     // The massing as glTF binary, for any 3D viewer. Same gates, same model, and the
     // two sentences travel in the file's own metadata (`extras`).
     if (format === 'glb') {
-      const glb = await runGlb(payload as unknown as DrawableRun);
+      const glb = await runGlb(drawable);
       reply.header('content-type', 'model/gltf-binary');
       reply.header('content-disposition', `attachment; filename="${glb.name}.glb"`);
       return reply.send(glb.bytes);

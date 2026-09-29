@@ -19,13 +19,40 @@ import type { BuildingModel } from '@envelope/core';
 import { buildingDxf, sheetDxf } from '@envelope/exports';
 import { buildingGlb } from '@envelope/massing';
 import { drawingSetHtml } from '@envelope/report';
-import { composeSheets, type Sheet } from '@envelope/sheets';
+import { composeSheets, type Sheet, type SheetMeta } from '@envelope/sheets';
 
 /** The slice of a presented run this drawing reads. Deliberately narrow. */
 export interface DrawableRun {
   readonly runId: string;
   readonly plot: { readonly plotNumber: string; readonly community: string };
   readonly building?: BuildingModel;
+  /**
+   * When the run was computed, ISO 8601 — the date the title block prints.
+   *
+   * It comes off the stored row, not off the clock. A sheet exported six months
+   * after its run must still say when the figures were produced; `new Date()`
+   * here would re-date every download of an unchanged drawing, which is the one
+   * thing a dated title block is relied on not to do.
+   */
+  readonly issuedAt: string;
+  /** The G4 reviewer's name, once somebody has signed. Absent prints NOT CHECKED. */
+  readonly checkedBy?: string;
+}
+
+/**
+ * What the title strip is told, in one place.
+ *
+ * Four exports used to build this literal four times, which is four chances for
+ * the PDF and the DXF to disagree about which run they are drawing.
+ */
+function metaOf(run: DrawableRun): SheetMeta {
+  return {
+    plotNumber: run.plot.plotNumber,
+    community: run.plot.community,
+    runId: run.runId,
+    issuedAt: run.issuedAt,
+    ...(run.checkedBy ? { checkedBy: run.checkedBy } : {}),
+  };
 }
 
 export class DrawingUnavailableError extends Error {
@@ -45,7 +72,7 @@ export class UnknownSheetError extends Error {
 export function runSheets(run: DrawableRun): readonly Sheet[] {
   const model = run.building;
   if (!model) return [];
-  return composeSheets(model, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId });
+  return composeSheets(model, metaOf(run));
 }
 
 /** The run's drawing set as one printable A3 document, or a 409 saying why there is none. */
@@ -57,7 +84,7 @@ export function runDrawingSet(run: DrawableRun): string {
         'drawing set. Compute the run again and export the new one.',
     );
   }
-  return drawingSetHtml(sheets, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId });
+  return drawingSetHtml(sheets, metaOf(run));
 }
 
 /**
@@ -75,7 +102,7 @@ export function runDrawing(run: DrawableRun, sheetId?: string): { readonly dxf: 
         'drawing to export. Compute the run again and export the new one.',
     );
   }
-  const meta = { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId };
+  const meta = metaOf(run);
   const sheets = composeSheets(model, meta);
   if (!sheetId) return { dxf: buildingDxf(model, sheets, meta), name: `envelope-${run.runId}` };
 
@@ -104,6 +131,6 @@ export async function runGlb(run: DrawableRun): Promise<{ readonly bytes: Buffer
         '3D model to export. Compute the run again and export the new one.',
     );
   }
-  const bytes = await buildingGlb(model, { plotNumber: run.plot.plotNumber, community: run.plot.community, runId: run.runId });
+  const bytes = await buildingGlb(model, metaOf(run));
   return { bytes: Buffer.from(bytes), name: `envelope-${run.runId}` };
 }

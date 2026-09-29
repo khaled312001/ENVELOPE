@@ -339,6 +339,20 @@ is a defect even when it makes something easier.
   And a chain is **one code path** for the overall and the intermediate measures: a
   drawing whose overall and intermediate dimensions disagree is the defect dimension
   strings exist to prevent.
+- **A title block's date is the run's, and a field is a key.** `SheetMeta.issuedAt`
+  has no default and is supplied by the composition root from the stored row, never
+  by `new Date()`: the two agree on the day a run is exported, which is exactly why
+  a drift would never be found — it surfaces months later, on a download of a
+  drawing nobody changed. The POST that creates a run stamps one timestamp for both
+  the row and the response, because two calls a millisecond apart straddle midnight
+  once a day, and the screen's title block and the PDF's are drawn from that one
+  field. Every value in the strip is a named `TitleField` rather than a run of text;
+  `composeSheets` fills `SHEET n OF m` **by key**, since only the set knows its own
+  size and a renderer matching the word "SHEET" finds the field's own label first.
+  CHECKED prints `NOT CHECKED` in words rather than leaving a blank box, and the
+  revision table has one row because `StoredRun.parentRunId` is null on every run
+  ever written — REV A / REV B rows out of a history nobody keeps would be the
+  same defect as a level schedule synthesised to make INV-01 pass.
 - **Degenerate geometry raises.** Slivers, self-intersections and near-tangent offsets throw
   rather than return a plausible wrong answer (PRD §14.3).
 - **Invariant failure blocks emission.** Never a warning, never a configurable severity.

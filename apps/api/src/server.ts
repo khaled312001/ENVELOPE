@@ -98,6 +98,12 @@ import { runWorkbookSpec, type ExportableRun } from './workbook.js';
 import { SqliteAccountRepository, type AccountRepository } from './account-store.js';
 import { normaliseEmail } from './accounts.js';
 import { registerAuthRoutes, resolveActor, sessionFrom, type GuestPolicy } from './auth-routes.js';
+import {
+  activeOrgFor,
+  auditInOrg,
+  registerOrgRoutes,
+  scopeToOrg,
+} from './org-routes.js';
 import { ANY_ROLE, requirePlotFor, requireRunFor, visibleRuns } from './access.js';
 import { createThrottle } from './throttle.js';
 import { SqliteRunRepository, type RunRepository, type StoredRun } from './store.js';
@@ -317,6 +323,7 @@ export async function build(
 
   registerIntakeRoutes(app, costly);
   if (accounts) registerAuthRoutes(app, accounts);
+  if (accounts) registerOrgRoutes(app, accounts);
 
   /**
    * The metric definitions annex — `FR-DEF-001 AC4`: every report cites the
@@ -562,6 +569,14 @@ export async function build(
       shapeClass: plot.shapeClass,
       plot: serialisePlot(plot, sheet),
     });
+    /*
+      WHICH WORKSPACE THIS PLOT BELONGS TO, recorded beside the plot rather than
+      on it. `StoredScope` argues the table; what matters here is that the record
+      is written at creation and never inferred afterwards — a plot whose
+      organisation is worked out later from who happens to be a member now is a
+      plot whose access changes when a membership does.
+    */
+    await scopeToOrg(accounts, await activeOrgFor(accounts, request, actor), 'plot', plot.plotId);
     reply.status(201);
     return {
       plotId: plot.plotId,
@@ -786,6 +801,20 @@ export async function build(
       fingerprint: subjectHash({ body, engine: ENGINE_VERSION, annex: ANNEX_VERSION }),
       draftRules: body.useDraftRules,
       gates: JSON.stringify({}),
+    });
+
+    const workspace = await activeOrgFor(accounts, request, actor);
+    await scopeToOrg(accounts, workspace, 'run', runId);
+    /*
+      §24.4 asks for an audit trail of who did what. A run computed inside a
+      workspace is the first entry in it — and the plot number is recorded, not
+      re-read later, because a log that resolves its own subjects at read time
+      shows what is true now rather than what happened.
+    */
+    await auditInOrg(accounts, workspace, actor, 'run.created', runId, {
+      plotId: plot.plotId,
+      plotNumber: plot.plotNumber,
+      draftRules: body.useDraftRules,
     });
 
     reply.header('X-Run-Id', runId).status(201);
@@ -1134,6 +1163,21 @@ export async function build(
       subjectHash: body.subjectHash,
     };
     await repo.recordGate(run.runId, JSON.stringify(gates));
+    /*
+      A GATE IS THE ONE THING §24.4 NAMES OUTRIGHT — "who approved what". The
+      licence is recorded here as it is everywhere else: as an assertion, with
+      `licenceAsserted` rather than `licenceVerified`, because nothing in this
+      product verifies one and a log that implied otherwise would be the lie the
+      whole claim statement exists to refuse.
+    */
+    await auditInOrg(
+      accounts,
+      await activeOrgFor(accounts, request, actor),
+      actor,
+      'gate.signed',
+      run.runId,
+      { gate: body.gate, licenceAsserted: actor.licence ?? null },
+    );
     return { gates };
   });
 

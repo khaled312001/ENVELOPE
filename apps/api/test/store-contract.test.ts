@@ -78,6 +78,11 @@ const IMPLEMENTATIONS: readonly (readonly [string, () => Promise<Stores>])[] = [
                   ['run_shares', 'run_id'],
                   ['drafts', 'account_id'],
                   ['sessions', 'token_hash'],
+                  ['org_scope', 'scope_id'],
+                  ['org_invites', 'invite_id'],
+                  ['org_members', 'org_id'],
+                  ['organisations', 'org_id'],
+                  ['audit_events', 'event_id'],
                   ['accounts', 'account_id'],
                 ] as const) {
                   await pool.execute(`DELETE FROM ${table} WHERE ${column} LIKE ?`, [`${P}%`]);
@@ -239,6 +244,103 @@ for (const [name, open] of IMPLEMENTATIONS) {
       expect(await s.accounts.listDrafts(`${P}acc1`)).toHaveLength(1);
       await s.accounts.deleteDraft(`${P}acc1`, 'plot');
       expect(await s.accounts.getDraft(`${P}acc1`, 'plot')).toBeUndefined();
+    });
+
+    /* ---------------------------------------------------------------------
+       TENANCY. The same contract, and for the same reason: `account-store.ts`
+       claims the tenancy statements are in the subset both dialects share, and
+       only running both can check that claim. Production runs MySQL.
+       --------------------------------------------------------------------- */
+
+    it('creates an organisation and its first owner together', async () => {
+      const orgId = `${P}org1`;
+      await s.accounts.createOrganisation(
+        { orgId, name: 'Dubai Design Partners', createdAt: '2026-09-01T00:00:00.000Z', createdByAccountId: `${P}acc1` },
+        { orgId, accountId: `${P}acc1`, role: 'owner', addedByAccountId: `${P}acc1`, addedAt: '2026-09-01T00:00:00.000Z' },
+      );
+      expect((await s.accounts.getOrganisation(orgId))?.name).toBe('Dubai Design Partners');
+      // Neither half without the other — that is the whole argument for one method.
+      expect((await s.accounts.getMembership(orgId, `${P}acc1`))?.role).toBe('owner');
+      expect(await s.accounts.countMembersWithRole(orgId, 'owner')).toBe(1);
+
+      await s.accounts.renameOrganisation(orgId, 'Al Barsha Architects');
+      expect((await s.accounts.getOrganisation(orgId))?.name).toBe('Al Barsha Architects');
+    });
+
+    it('replaces a membership rather than duplicating it, and removes it', async () => {
+      const orgId = `${P}org1`;
+      const m = { orgId, accountId: `${P}acc2`, role: 'member' as const, addedByAccountId: `${P}acc1`, addedAt: '2026-09-02T00:00:00.000Z' };
+      await s.accounts.putMembership(m);
+      await s.accounts.putMembership({ ...m, role: 'admin' });
+      expect(await s.accounts.listMembers(orgId)).toHaveLength(2);
+      expect((await s.accounts.getMembership(orgId, `${P}acc2`))?.role).toBe('admin');
+      expect((await s.accounts.listMembershipsFor(`${P}acc2`)).map((x) => x.orgId)).toEqual([orgId]);
+      await s.accounts.removeMembership(orgId, `${P}acc2`);
+      expect(await s.accounts.getMembership(orgId, `${P}acc2`)).toBeUndefined();
+    });
+
+    it('finds an invitation by its token hash and records its outcome', async () => {
+      const invite = {
+        inviteId: `${P}inv1`,
+        orgId: `${P}org1`,
+        email: 'invited@example.com',
+        role: 'viewer' as const,
+        tokenHash: `${P}hash`,
+        invitedByAccountId: `${P}acc1`,
+        createdAt: '2026-09-02T00:00:00.000Z',
+        expiresAt: '2026-09-09T00:00:00.000Z',
+        acceptedAt: null,
+        acceptedByAccountId: null,
+        revokedAt: null,
+      };
+      await s.accounts.createInvite(invite);
+      expect((await s.accounts.getInviteByTokenHash(`${P}hash`))?.inviteId).toBe(`${P}inv1`);
+      // NULL must come back as null and not as the empty string — `inviteState`
+      // reads these three as the difference between open, used and withdrawn.
+      expect(await s.accounts.getInvite(`${P}inv1`)).toMatchObject({ acceptedAt: null, revokedAt: null });
+      await s.accounts.markInviteAccepted(`${P}inv1`, '2026-09-03T00:00:00.000Z', `${P}acc2`);
+      expect((await s.accounts.getInvite(`${P}inv1`))?.acceptedByAccountId).toBe(`${P}acc2`);
+      await s.accounts.markInviteRevoked(`${P}inv1`, '2026-09-04T00:00:00.000Z');
+      expect((await s.accounts.getInvite(`${P}inv1`))?.revokedAt).toBe('2026-09-04T00:00:00.000Z');
+      expect((await s.accounts.listInvites(`${P}org1`)).map((x) => x.inviteId)).toContain(`${P}inv1`);
+    });
+
+    it('scopes a run to exactly one organisation', async () => {
+      await s.accounts.putScope({ orgId: `${P}org1`, scopeKind: 'run', scopeId: `${P}r1`, createdAt: '2026-09-02T00:00:00.000Z' });
+      await s.accounts.putScope({ orgId: `${P}org2`, scopeKind: 'run', scopeId: `${P}r1`, createdAt: '2026-09-03T00:00:00.000Z' });
+      // The second claim replaces the first; it does not sit beside it.
+      expect((await s.accounts.getScope('run', `${P}r1`))?.orgId).toBe(`${P}org2`);
+      expect(await s.accounts.listScopeIds(`${P}org1`, 'run', 10)).toEqual([]);
+      expect(await s.accounts.listScopeIds(`${P}org2`, 'run', 10)).toEqual([`${P}r1`]);
+      // A plot with the same id is a different row — the key is (kind, id).
+      await s.accounts.putScope({ orgId: `${P}org1`, scopeKind: 'plot', scopeId: `${P}r1`, createdAt: '2026-09-02T00:00:00.000Z' });
+      expect((await s.accounts.getScope('plot', `${P}r1`))?.orgId).toBe(`${P}org1`);
+    });
+
+    it('appends audit rows newest first and keeps the label as written', async () => {
+      for (const [i, action] of ['org.created', 'invite.created', 'member.role_changed'].entries()) {
+        await s.accounts.appendAudit({
+          eventId: `${P}ev${i}`,
+          at: `2026-09-0${i + 1}T00:00:00.000Z`,
+          orgId: `${P}org1`,
+          actorAccountId: `${P}acc1`,
+          actorLabel: 'Somebody',
+          action,
+          subject: `${P}acc2`,
+          detail: '{"from":"member","to":"admin"}',
+        });
+      }
+      const rows = await s.accounts.listAudit(`${P}org1`, 10);
+      expect(rows.map((r) => r.action)).toEqual(['member.role_changed', 'invite.created', 'org.created']);
+      expect(rows[0]?.actorLabel).toBe('Somebody');
+      expect(await s.accounts.listAudit(`${P}org1`, 2)).toHaveLength(2);
+    });
+
+    it('resolves many accounts in one statement, and none for none', async () => {
+      // The empty case is the one that matters: `IN ()` is a syntax error in both.
+      expect(await s.accounts.getAccountsByIds([])).toEqual([]);
+      const found = await s.accounts.getAccountsByIds([`${P}acc1`, `${P}nobody`]);
+      expect(found.map((a) => a.accountId)).toEqual([`${P}acc1`]);
     });
 
     it.runIf(name === 'mysql')('refuses a value too long for its column instead of cutting it', async () => {

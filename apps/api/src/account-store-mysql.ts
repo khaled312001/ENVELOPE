@@ -16,12 +16,19 @@
  * - A draft payload is `LONGTEXT`. The route caps it at 256 KB; `TEXT` stops at 64.
  */
 
-import type {
-  AccountRepository,
-  StoredAccount,
-  StoredDraft,
-  StoredSession,
-  StoredShare,
+import {
+  toWorkspaceRole,
+  type AccountRepository,
+  type StoredAccount,
+  type StoredAuditEvent,
+  type StoredDraft,
+  type StoredInvite,
+  type StoredMembership,
+  type StoredOrganisation,
+  type StoredScope,
+  type StoredSession,
+  type StoredShare,
+  type WorkspaceRole,
 } from './account-store.js';
 import type { MysqlPool } from './store-mysql.js';
 
@@ -66,6 +73,69 @@ export const MYSQL_ACCOUNT_SCHEMA: readonly string[] = [
      PRIMARY KEY (account_id, draft_key),
      KEY drafts_by_account (account_id, updated_at DESC)
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  /* TENANCY. See `account-store.ts` for what an organisation is and is not. */
+  `CREATE TABLE IF NOT EXISTS organisations (
+     org_id                VARCHAR(64)  NOT NULL,
+     name                  VARCHAR(160) NOT NULL,
+     created_at            VARCHAR(32)  NOT NULL,
+     created_by_account_id VARCHAR(64)  NOT NULL,
+     PRIMARY KEY (org_id)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS org_members (
+     org_id              VARCHAR(64) NOT NULL,
+     account_id          VARCHAR(64) NOT NULL,
+     role                VARCHAR(16) NOT NULL,
+     added_by_account_id VARCHAR(64) NOT NULL,
+     added_at            VARCHAR(32) NOT NULL,
+     PRIMARY KEY (org_id, account_id),
+     KEY members_by_account (account_id, added_at DESC)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS org_invites (
+     invite_id              VARCHAR(64)  NOT NULL,
+     org_id                 VARCHAR(64)  NOT NULL,
+     email                  VARCHAR(254) NOT NULL,
+     role                   VARCHAR(16)  NOT NULL,
+     token_hash             VARCHAR(128) NOT NULL,
+     invited_by_account_id  VARCHAR(64)  NOT NULL,
+     created_at             VARCHAR(32)  NOT NULL,
+     expires_at             VARCHAR(32)  NOT NULL,
+     accepted_at            VARCHAR(32)  NULL,
+     accepted_by_account_id VARCHAR(64)  NULL,
+     revoked_at             VARCHAR(32)  NULL,
+     PRIMARY KEY (invite_id),
+     UNIQUE KEY invites_by_token (token_hash),
+     KEY invites_by_org (org_id, created_at DESC)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS org_scope (
+     org_id     VARCHAR(64) NOT NULL,
+     scope_kind VARCHAR(16) NOT NULL,
+     scope_id   VARCHAR(64) NOT NULL,
+     created_at VARCHAR(32) NOT NULL,
+     PRIMARY KEY (scope_kind, scope_id),
+     KEY scope_by_org (org_id, scope_kind, created_at DESC)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  /*
+    `detail` is LONGTEXT for the reason `store-mysql.ts` gives for the payloads: a
+    TEXT column truncates at 64 KB under a non-strict SQL mode, silently, and an
+    audit row that was silently shortened is worse than no audit row at all.
+  */
+  `CREATE TABLE IF NOT EXISTS audit_events (
+     event_id         VARCHAR(64)  NOT NULL,
+     at               VARCHAR(32)  NOT NULL,
+     org_id           VARCHAR(64)  NULL,
+     actor_account_id VARCHAR(64)  NULL,
+     actor_label      VARCHAR(160) NOT NULL,
+     action           VARCHAR(64)  NOT NULL,
+     subject          VARCHAR(160) NULL,
+     detail           LONGTEXT     NOT NULL,
+     PRIMARY KEY (event_id),
+     KEY audit_by_org (org_id, at DESC)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
 ];
 
 type Row = { readonly [column: string]: unknown };
@@ -103,6 +173,58 @@ const toDraft = (r: Row): StoredDraft => ({
   payload: str(r['payload']),
   updatedAt: str(r['updated_at']),
 });
+
+/** MySQL hands back `null` for a NULL column; every other layer wants `string | null`. */
+const orNull = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
+
+const toOrg = (r: Row): StoredOrganisation => ({
+  orgId: str(r['org_id']),
+  name: str(r['name']),
+  createdAt: str(r['created_at']),
+  createdByAccountId: str(r['created_by_account_id']),
+});
+
+const toMember = (r: Row): StoredMembership => ({
+  orgId: str(r['org_id']),
+  accountId: str(r['account_id']),
+  role: toWorkspaceRole(str(r['role'])),
+  addedByAccountId: str(r['added_by_account_id']),
+  addedAt: str(r['added_at']),
+});
+
+const toInvite = (r: Row): StoredInvite => ({
+  inviteId: str(r['invite_id']),
+  orgId: str(r['org_id']),
+  email: str(r['email']),
+  role: toWorkspaceRole(str(r['role'])),
+  tokenHash: str(r['token_hash']),
+  invitedByAccountId: str(r['invited_by_account_id']),
+  createdAt: str(r['created_at']),
+  expiresAt: str(r['expires_at']),
+  acceptedAt: orNull(r['accepted_at']),
+  acceptedByAccountId: orNull(r['accepted_by_account_id']),
+  revokedAt: orNull(r['revoked_at']),
+});
+
+const toScope = (r: Row): StoredScope => ({
+  orgId: str(r['org_id']),
+  scopeKind: str(r['scope_kind']) === 'run' ? 'run' : 'plot',
+  scopeId: str(r['scope_id']),
+  createdAt: str(r['created_at']),
+});
+
+const toAudit = (r: Row): StoredAuditEvent => ({
+  eventId: str(r['event_id']),
+  at: str(r['at']),
+  orgId: orNull(r['org_id']),
+  actorAccountId: orNull(r['actor_account_id']),
+  actorLabel: str(r['actor_label']),
+  action: str(r['action']),
+  subject: orNull(r['subject']),
+  detail: str(r['detail']),
+});
+
+const placeholders = (n: number): string => new Array(n).fill('?').join(', ');
 
 export class MysqlAccountRepository implements AccountRepository {
   readonly #pool: MysqlPool;
@@ -145,6 +267,15 @@ export class MysqlAccountRepository implements AccountRepository {
   async getAccountById(accountId: string): Promise<StoredAccount | undefined> {
     const [row] = await this.#rows('SELECT * FROM accounts WHERE account_id = ?', [accountId]);
     return row ? toAccount(row) : undefined;
+  }
+
+  async getAccountsByIds(accountIds: readonly string[]): Promise<readonly StoredAccount[]> {
+    if (accountIds.length === 0) return [];
+    const rows = await this.#rows(
+      `SELECT * FROM accounts WHERE account_id IN (${placeholders(accountIds.length)})`,
+      accountIds,
+    );
+    return rows.map(toAccount);
   }
 
   async updatePasswordHash(accountId: string, passwordHash: string): Promise<void> {
@@ -273,6 +404,215 @@ export class MysqlAccountRepository implements AccountRepository {
       accountId,
       draftKey,
     ]);
+  }
+
+  async createOrganisation(org: StoredOrganisation, owner: StoredMembership): Promise<void> {
+    const ORG = `INSERT INTO organisations (org_id, name, created_at, created_by_account_id)
+                 VALUES (?, ?, ?, ?)`;
+    const MEMBER = `INSERT INTO org_members (org_id, account_id, role, added_by_account_id, added_at)
+                    VALUES (?, ?, ?, ?, ?)`;
+    const orgValues = [org.orgId, org.name, org.createdAt, org.createdByAccountId];
+    const memberValues = [
+      owner.orgId,
+      owner.accountId,
+      owner.role,
+      owner.addedByAccountId,
+      owner.addedAt,
+    ];
+
+    const take = this.#pool.getConnection;
+    if (take) {
+      const conn = await take.call(this.#pool);
+      try {
+        await conn.beginTransaction();
+        await conn.execute(ORG, orgValues);
+        await conn.execute(MEMBER, memberValues);
+        await conn.commit();
+      } catch (error) {
+        await conn.rollback();
+        throw error;
+      } finally {
+        conn.release();
+      }
+      return;
+    }
+
+    /*
+      NO TRANSACTION AVAILABLE — the membership goes in FIRST, deliberately.
+
+      A pool without `getConnection` cannot give these two statements one session,
+      so one of the two orders has to be chosen for what it leaves behind when the
+      second write never happens. A membership row pointing at no organisation is
+      invisible: `listMembershipsFor` resolves each row through `getOrganisation`
+      and drops the ones that resolve to nothing. An organisation row with no
+      members is the opposite — it exists, it is administered by nobody, and there
+      is no role anywhere that can delete it. The recoverable half-state is the
+      one that gets written first.
+    */
+    await this.#pool.execute(MEMBER, memberValues);
+    await this.#pool.execute(ORG, orgValues);
+  }
+
+  async getOrganisation(orgId: string): Promise<StoredOrganisation | undefined> {
+    const [row] = await this.#rows('SELECT * FROM organisations WHERE org_id = ?', [orgId]);
+    return row ? toOrg(row) : undefined;
+  }
+
+  async renameOrganisation(orgId: string, name: string): Promise<void> {
+    await this.#pool.execute('UPDATE organisations SET name = ? WHERE org_id = ?', [name, orgId]);
+  }
+
+  async putMembership(m: StoredMembership): Promise<void> {
+    await this.#pool.execute('DELETE FROM org_members WHERE org_id = ? AND account_id = ?', [
+      m.orgId,
+      m.accountId,
+    ]);
+    await this.#pool.execute(
+      `INSERT INTO org_members (org_id, account_id, role, added_by_account_id, added_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [m.orgId, m.accountId, m.role, m.addedByAccountId, m.addedAt],
+    );
+  }
+
+  async getMembership(orgId: string, accountId: string): Promise<StoredMembership | undefined> {
+    const [row] = await this.#rows(
+      'SELECT * FROM org_members WHERE org_id = ? AND account_id = ?',
+      [orgId, accountId],
+    );
+    return row ? toMember(row) : undefined;
+  }
+
+  async removeMembership(orgId: string, accountId: string): Promise<void> {
+    await this.#pool.execute('DELETE FROM org_members WHERE org_id = ? AND account_id = ?', [
+      orgId,
+      accountId,
+    ]);
+  }
+
+  async listMembers(orgId: string): Promise<readonly StoredMembership[]> {
+    const rows = await this.#rows('SELECT * FROM org_members WHERE org_id = ? ORDER BY added_at ASC', [
+      orgId,
+    ]);
+    return rows.map(toMember);
+  }
+
+  async listMembershipsFor(accountId: string): Promise<readonly StoredMembership[]> {
+    const rows = await this.#rows(
+      'SELECT * FROM org_members WHERE account_id = ? ORDER BY added_at ASC',
+      [accountId],
+    );
+    return rows.map(toMember);
+  }
+
+  async countMembersWithRole(orgId: string, role: WorkspaceRole): Promise<number> {
+    const [row] = await this.#rows(
+      'SELECT COUNT(*) AS n FROM org_members WHERE org_id = ? AND role = ?',
+      [orgId, role],
+    );
+    return Number(row?.['n'] ?? 0);
+  }
+
+  async createInvite(i: StoredInvite): Promise<void> {
+    await this.#pool.execute(
+      `INSERT INTO org_invites (
+         invite_id, org_id, email, role, token_hash, invited_by_account_id,
+         created_at, expires_at, accepted_at, accepted_by_account_id, revoked_at
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        i.inviteId,
+        i.orgId,
+        i.email,
+        i.role,
+        i.tokenHash,
+        i.invitedByAccountId,
+        i.createdAt,
+        i.expiresAt,
+        i.acceptedAt,
+        i.acceptedByAccountId,
+        i.revokedAt,
+      ],
+    );
+  }
+
+  async getInviteByTokenHash(tokenHash: string): Promise<StoredInvite | undefined> {
+    const [row] = await this.#rows('SELECT * FROM org_invites WHERE token_hash = ?', [tokenHash]);
+    return row ? toInvite(row) : undefined;
+  }
+
+  async getInvite(inviteId: string): Promise<StoredInvite | undefined> {
+    const [row] = await this.#rows('SELECT * FROM org_invites WHERE invite_id = ?', [inviteId]);
+    return row ? toInvite(row) : undefined;
+  }
+
+  async listInvites(orgId: string): Promise<readonly StoredInvite[]> {
+    const rows = await this.#rows(
+      'SELECT * FROM org_invites WHERE org_id = ? ORDER BY created_at DESC',
+      [orgId],
+    );
+    return rows.map(toInvite);
+  }
+
+  async markInviteAccepted(inviteId: string, at: string, accountId: string): Promise<void> {
+    await this.#pool.execute(
+      'UPDATE org_invites SET accepted_at = ?, accepted_by_account_id = ? WHERE invite_id = ?',
+      [at, accountId, inviteId],
+    );
+  }
+
+  async markInviteRevoked(inviteId: string, at: string): Promise<void> {
+    await this.#pool.execute('UPDATE org_invites SET revoked_at = ? WHERE invite_id = ?', [
+      at,
+      inviteId,
+    ]);
+  }
+
+  async putScope(s: StoredScope): Promise<void> {
+    await this.#pool.execute('DELETE FROM org_scope WHERE scope_kind = ? AND scope_id = ?', [
+      s.scopeKind,
+      s.scopeId,
+    ]);
+    await this.#pool.execute(
+      'INSERT INTO org_scope (org_id, scope_kind, scope_id, created_at) VALUES (?, ?, ?, ?)',
+      [s.orgId, s.scopeKind, s.scopeId, s.createdAt],
+    );
+  }
+
+  async getScope(scopeKind: 'run' | 'plot', scopeId: string): Promise<StoredScope | undefined> {
+    const [row] = await this.#rows(
+      'SELECT * FROM org_scope WHERE scope_kind = ? AND scope_id = ?',
+      [scopeKind, scopeId],
+    );
+    return row ? toScope(row) : undefined;
+  }
+
+  async listScopeIds(
+    orgId: string,
+    scopeKind: 'run' | 'plot',
+    limit: number,
+  ): Promise<readonly string[]> {
+    const rows = await this.#rows(
+      `SELECT scope_id FROM org_scope WHERE org_id = ? AND scope_kind = ?
+       ORDER BY created_at DESC LIMIT ?`,
+      [orgId, scopeKind, limit],
+    );
+    return rows.map((r) => str(r['scope_id']));
+  }
+
+  async appendAudit(e: StoredAuditEvent): Promise<void> {
+    await this.#pool.execute(
+      `INSERT INTO audit_events
+         (event_id, at, org_id, actor_account_id, actor_label, action, subject, detail)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [e.eventId, e.at, e.orgId, e.actorAccountId, e.actorLabel, e.action, e.subject, e.detail],
+    );
+  }
+
+  async listAudit(orgId: string, limit: number): Promise<readonly StoredAuditEvent[]> {
+    const rows = await this.#rows(
+      'SELECT * FROM audit_events WHERE org_id = ? ORDER BY at DESC, event_id DESC LIMIT ?',
+      [orgId, limit],
+    );
+    return rows.map(toAudit);
   }
 
   async close(): Promise<void> {

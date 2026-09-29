@@ -39,9 +39,34 @@ import type { RunRepository, StoredPlot, StoredRun } from './store.js';
 interface MysqlRow {
   readonly [column: string]: unknown;
 }
+/**
+ * One connection taken out of the pool, for the rare write that needs two
+ * statements to succeed or neither to.
+ *
+ * `START TRANSACTION` sent to a *pool* is not a transaction: the pool is free to
+ * hand the next statement to a different connection, and the two would then be in
+ * different sessions with the `BEGIN` stranded on the first. A transaction has to
+ * hold one connection, which is what this is for.
+ */
+export interface MysqlConnection {
+  execute(sql: string, values?: readonly unknown[]): Promise<[MysqlRow[], unknown]>;
+  beginTransaction(): Promise<void>;
+  commit(): Promise<void>;
+  rollback(): Promise<void>;
+  release(): void;
+}
+
 export interface MysqlPool {
   query(sql: string, values?: readonly unknown[]): Promise<[MysqlRow[], unknown]>;
   execute(sql: string, values?: readonly unknown[]): Promise<[MysqlRow[], unknown]>;
+  /**
+   * OPTIONAL, and the optionality is the point. `mysql2`'s pool has it; the
+   * hand-written doubles in `apps/api/test` do not, and requiring it would make
+   * every one of them implement transaction semantics they never exercise. A
+   * caller that needs a transaction checks for it and says in its own comment
+   * what it does when it is absent.
+   */
+  getConnection?(): Promise<MysqlConnection>;
   end(): Promise<void>;
 }
 

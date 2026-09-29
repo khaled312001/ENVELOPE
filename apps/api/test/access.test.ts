@@ -221,6 +221,8 @@ type Reach =
   | 'run-session'
   /** Names a plot, in its path or its body. A stranger gets 404. */
   | 'plot'
+  /** Names an organisation in its path. A non-member gets 404, for the same reason. */
+  | 'workspace'
   /** Answers about the caller. Must carry nobody else's run or plot. */
   | 'own'
   /** Carries no run and no plot, for anybody. */
@@ -260,6 +262,22 @@ const ROUTES: Readonly<Record<string, Reach>> = {
   'POST /api/runs/:runId/gates': 'run',
   'POST /api/runs/:runId/export': 'run',
   'POST /api/runs/:runId/share': 'run-session',
+  /* Tenancy. `GET`/`POST /api/orgs` answer about the caller's own memberships and
+     name nobody else's workspace; everything under `/api/orgs/:orgId` names one,
+     and is therefore attacked as a workspace below. The two invite routes carry a
+     TOKEN rather than an id — a bearer credential, checked against the signed-in
+     account's own email, so they answer about the caller. */
+  'GET /api/orgs': 'own',
+  'POST /api/orgs': 'own',
+  'POST /api/invites/preview': 'own',
+  'POST /api/invites/accept': 'own',
+  'GET /api/orgs/:orgId': 'workspace',
+  'PATCH /api/orgs/:orgId': 'workspace',
+  'GET /api/orgs/:orgId/audit': 'workspace',
+  'POST /api/orgs/:orgId/invites': 'workspace',
+  'DELETE /api/orgs/:orgId/invites/:inviteId': 'workspace',
+  'PATCH /api/orgs/:orgId/members/:accountId': 'workspace',
+  'DELETE /api/orgs/:orgId/members/:accountId': 'workspace',
 };
 
 /** "METHOD /path" for every route the server registered, from its own route tree. */
@@ -329,6 +347,59 @@ describe('"from any route" — the router’s list, not this file’s', () => {
       const res = await app.inject({ ...request(route), headers: { cookie: author.cookie } });
       expect({ route, notFound: res.statusCode === 404 }).toEqual({ route, notFound: false });
     }
+  });
+
+  it('answers a non-member 404 on every route that names somebody else’s workspace', async () => {
+    const owner = await signUp('owner@example.com');
+    const stranger = await signUp('stranger@example.com');
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/orgs',
+      headers: { cookie: owner.cookie },
+      payload: { name: 'Dubai Design Partners' },
+    });
+    expect(created.statusCode).toBe(201);
+    const orgId = created.json().orgId as string;
+
+    const request = (
+      route: string,
+    ): { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; url: string; payload?: object } => {
+      const [method, path] = route.split(' ') as ['GET' | 'POST' | 'PATCH' | 'DELETE', string];
+      const url = path
+        .replace(':orgId', orgId)
+        .replace(':inviteId', 'inv-does-not-matter')
+        .replace(':accountId', owner.accountId);
+      if (route.includes('/invites') && method === 'POST') {
+        return { method, url, payload: { email: 'stranger@example.com', role: 'owner' } };
+      }
+      if (method === 'PATCH' && route.includes('/members/')) return { method, url, payload: { role: 'owner' } };
+      if (method === 'PATCH') return { method, url, payload: { name: 'Taken Over' } };
+      return { method, url };
+    };
+
+    const attacked = Object.entries(ROUTES).filter(([, r]) => r === 'workspace');
+    expect(attacked.length).toBeGreaterThan(0);
+
+    for (const [route] of attacked) {
+      for (const headers of [MALLORY, { cookie: stranger.cookie }]) {
+        const res = await app.inject({ ...request(route), headers });
+        // A guest gets 401 (a workspace belongs to accounts); a signed-in
+        // non-member gets 404, which is the same answer an id that never
+        // existed gets. Neither is 200, and neither is 403 — a 403 would
+        // confirm the workspace is real.
+        const expected = 'cookie' in headers ? 404 : 401;
+        expect({ route, status: res.statusCode }).toEqual({ route, status: expected });
+      }
+    }
+
+    // The workspace is really there, so the 404s above are about who asked.
+    const own = await app.inject({
+      method: 'GET',
+      url: `/api/orgs/${orgId}`,
+      headers: { cookie: owner.cookie },
+    });
+    expect(own.statusCode).toBe(200);
   });
 
   it('carries nobody else’s run or plot in any answer a stranger can read', async () => {

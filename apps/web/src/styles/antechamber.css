@@ -386,3 +386,38 @@
   display: flex;
   align-items: center;
 }
+
+/*
+ * THE SURVEY STRIP BEHIND THE OPENING BAND — decoration, and out of flow.
+ *
+ * `image-prompts.md` #22 draws it at 1600 × 400: a grid with five parcels at
+ * hairline weight, nothing accented. It ships `alt=""` and `aria-hidden`, and it
+ * has not been delivered, so this selector matches nothing today — `img.tsx`
+ * renders no element for a name with no file, which is why the band needs no
+ * fallback and gets none.
+ *
+ * `--brand-wash` is a MEASURED GROUND: every ink in the language is checked over
+ * it in three themes by `pnpm contrast`, and that checker reads tokens and cannot
+ * see an image. So the opacity here is a ceiling chosen before the file exists,
+ * and the fold has to be looked at when the drawing lands.
+ */
+.ac > .section--opening {
+  position: relative;
+}
+.ac__backdrop {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+.ac > .section--opening > .ac-split {
+  position: relative;
+  z-index: 1;
+}
+@media print {
+  .ac__backdrop { display: none; }
+}

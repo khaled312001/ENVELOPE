@@ -1051,17 +1051,48 @@ it through `PageTheme` (`apps/web/src/page-theme.tsx`), which `Illustration`
 reads — a provider that holds no state, because three copies of the theme once
 desynchronised and this is not the file that gets to add a fourth.
 
-**Wired so far — the nine step figures (#9–#17).** `StepPrimer` names the file,
-the two primer dictionaries carry its alt text, and `primer.test.ts` holds the
-halves together: a step with a filename and no alt text fails, alt text in one
-language only fails, and a name `image-prompts.md` does not commission fails. The
-figure sits beside the prose on a wide panel and under it on a narrow one, chosen
-by a **container query** rather than a media query — the panel sits inside the
-workspace shell on `/app`, so its own width and the viewport's are different
-numbers, and a media query would put the drawing beside the prose at a viewport
-width where the rail has already taken the room. It is never hidden at a narrow
-width: an `alt`-carrying image behind `display: none` leaves the accessibility
-tree, so the reader who most needs the description is the one who would lose it.
+**The brief is the authority and the code is a copy of it.** `ImageName` is a
+closed union of the twenty-five names; `IMAGE_SIZE` gives each one the dimensions
+it is drawn at, so a box does not reflow when a file loads; and
+`i18n/imagery.en.ts` / `imagery.ar.ts` carry what a screen reader says instead of
+each picture, keyed by the same filename. All three are **transcriptions**, and
+`apps/web/test/imagery.test.ts` re-derives every one of them from
+`image-prompts.md` and compares — character for character, in both languages. A
+drawing that is re-briefed fails the test until its description follows it. An
+image described as something it no longer shows is worse than one with no
+description: the second is a gap a reader can tell is a gap.
+
+`Figure` is the call site for all of them, and it takes a name and nothing else.
+The alt text cannot be forgotten at a call site because there is nowhere to write
+it, and the three decorative images carry `''` — which the brief itself declares,
+and which the test holds to exactly those three.
+
+**One layout primitive, `.figured`.** The five landing section heads and the nine
+step primers use it. It puts the figure beside the prose on a wide panel and
+under it on a narrow one, chosen by a **container query** rather than a media
+query: a step primer sits inside the workspace rail on `/app`, so its own width
+and the viewport's are different numbers, and a media query would put the drawing
+beside the prose at a viewport width where the rail has already taken the room.
+It is never hidden at a narrow width — an `alt`-carrying image behind
+`display: none` leaves the accessibility tree, so the reader who most needs the
+description is the one who would lose it.
+
+**Wired: nineteen of the twenty-five.** The nine step figures (#9–#17), the five
+landing section heads (#3–#7), the hero backdrop (#8), the auth panel (#18), the
+dashboard band (#22), the 404's sheet index (#23) and `/refusals`' stopped
+pipeline (#24). The remaining six each have a **recorded reason** in
+`imagery.test.ts`, and the test fails a name that is neither rendered nor listed:
+`og-cover` waits on an `og:image` meta the page does not declare; `mark` waits on
+a decision about replacing the wordmark drawn in code; `empty-projects` and
+`empty-shared` wait on `/projects`; `empty-members` waits on `/settings/members`
+and on that screen having an "only the owner" state to hang it on; `guide-cover`
+belongs to the delivered guide rather than to the site.
+
+**Two backdrops are wired on a ceiling, not on a measurement.** #8 and #22 sit
+behind measured grounds, and `pnpm contrast` reads tokens — it cannot see an
+image. Their opacity was chosen before the files existed. When those two land the
+folds have to be looked at and `pnpm amber` re-run on `/`; the brief states the
+same constraint in its own words under #8.
 
 ---
 
@@ -1514,6 +1545,20 @@ which fails a step named without a description, described in one language only,
 or pointing at a drawing `image-prompts.md` does not commission. The theme
 reaches `Illustration` through a provider that publishes `Root`'s single
 `useTheme()` rather than holding one of its own.
+
+**T — nineteen of the twenty-five slots are wired, and the brief is the
+authority for all of them.** `ImageName`, the size table and the two alt-text
+dictionaries are transcriptions of `image-prompts.md`, and `imagery.test.ts`
+re-derives each from the document and compares character for character — a
+drawing that is re-briefed fails until its description follows it. `Figure` takes
+a name and nothing else, so alt text cannot be forgotten where an image is
+rendered. One layout primitive, `.figured`, serves the five landing heads and the
+nine step primers, with a container query rather than a media query because a
+primer's width and the viewport's differ by the width of the rail. The six
+unwired names each carry a reason the test holds them to, so the remaining work
+is a list that cannot quietly shrink by deletion. Nothing on screen moved: the
+files have not been delivered, and a name with no file renders no element and
+makes no request.
 
 **Still blocked on the client: the twenty-five image files.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The

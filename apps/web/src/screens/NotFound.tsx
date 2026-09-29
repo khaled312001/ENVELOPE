@@ -73,6 +73,7 @@ import { EN } from '../i18n/notFound.en.js';
   chrome dictionaries, which reach `content/shared.js`, `routes.json` and a
   TYPE-ONLY `router.js`. The cycle `page-meta.ts` exists to have broken stays broken.
 */
+import { Figure } from '../img.js';
 import { useDict, useT, Verbatim } from '../i18n/locale.js';
 import type { PageProps } from '../Root.js';
 /*
@@ -193,26 +194,33 @@ export default function NotFound({ navigate }: PageProps): JSX.Element {
 
   return (
     <div className="nf">
-      <section className="shell section section--opening">
-        <h1 className="nf__title">{t.hero.title}</h1>
-        <p className="nf__lede">{t.hero.lede}</p>
+      <section className="shell section section--opening figured">
+        <div className="figured__text">
+          <h1 className="nf__title">{t.hero.title}</h1>
+          <p className="nf__lede">{t.hero.lede}</p>
 
-        {echo ? (
-          /*
-            THE LABEL IS PART OF THE TREATMENT AND NOT A CAPTION. It denies the
-            address immediately before the address is shown, so the words on the chip
-            arrive already refused. It is also what keeps the hostile render inside
-            `prohibitions.ts`'s negation window — see the residue note at the top of
-            this file for the case where that is not enough.
-          */
-          <p className="nf__echo">
-            <span className="nf__echo-label">{t.hero.echoLabel}</span>
-            <code className="nf__path">{echo}</code>
-          </p>
-        ) : null}
+          {echo ? (
+            /*
+              THE LABEL IS PART OF THE TREATMENT AND NOT A CAPTION. It denies the
+              address immediately before the address is shown, so the words on the chip
+              arrive already refused. It is also what keeps the hostile render inside
+              `prohibitions.ts`'s negation window — see the residue note at the top of
+              this file for the case where that is not enough.
+            */
+            <p className="nf__echo">
+              <span className="nf__echo-label">{t.hero.echoLabel}</span>
+              <code className="nf__path">{echo}</code>
+            </p>
+          ) : null}
 
-        <p className="nf__note">{t.hero.note}</p>
-        {echo ? <p className="nf__note nf__note--fine">{t.hero.specimen}</p> : null}
+          <p className="nf__note">{t.hero.note}</p>
+          {echo ? <p className="nf__note nf__note--fine">{t.hero.specimen}</p> : null}
+        </div>
+        {/* The sheet index with one position empty — `image-prompts.md` #23.
+            It is described, not decorative: a 404 that says "not here" in words
+            and shows a gap in a grid is saying it twice, and the second way is
+            the one a reader who cannot read the page still gets. */}
+        <Figure name="state-not-here" className="figured__figure" />
       </section>
 
       <section className="shell section reveal">

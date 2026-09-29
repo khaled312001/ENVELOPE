@@ -48,7 +48,7 @@ import { AuthFailure } from '../api/auth.js';
 import { AR } from '../i18n/auth.ar.js';
 import { EN } from '../i18n/auth.en.js';
 import { useDict, useLocale } from '../i18n/locale.js';
-import { Illustration } from '../img.js';
+import { Figure } from '../img.js';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
 import { useSession } from '../session.js';
@@ -346,21 +346,14 @@ export function AuthScreen({ mode, page }: { readonly mode: Mode; readonly page:
         {/*
           THE ASIDE IS THE OFFER AND ITS LIMIT, and the image is behind it.
 
-          `Illustration` renders NOTHING while the file is absent — no element and
+          `Figure` renders NOTHING while the file is absent — no element and
           no request — so this column is the two paragraphs today and the two
           paragraphs over a drawing when #18 arrives. The layout does not change
           shape either way, which is why the panel is a background layer rather
           than a sibling column that would collapse.
         */}
         <aside className="auth__aside" aria-label={t.aside.what}>
-          <Illustration
-            name="auth-panel"
-            alt=""
-            theme={page.theme}
-            className="auth__panel-img"
-            width={960}
-            height={1200}
-          />
+          <Figure name="auth-panel" className="auth__panel-img" />
           <div className="auth__aside-body">
             <p>{t.aside.what}</p>
             <p className="auth__aside-not">{t.aside.not}</p>

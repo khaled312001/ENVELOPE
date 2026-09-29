@@ -58,6 +58,7 @@ import type { PageProps } from '../Root.js';
 import { AccountPanel } from '../components/AccountPanel.js';
 import { AR } from '../i18n/antechamber.ar.js';
 import { EN } from '../i18n/antechamber.en.js';
+import { Figure } from '../img.js';
 import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 import { Link } from '../router.js';
 
@@ -201,6 +202,14 @@ export default function Antechamber({ setActor, navigate, search }: PageProps): 
         who has met the title alone has been told nothing yet.
       */}
       <section className="shell section section--opening">
+        {/*
+          THE SURVEY STRIP BEHIND THE BAND — `image-prompts.md` #22, decorative,
+          `alt=""` and `aria-hidden`. Five parcels at hairline weight on a grid,
+          nothing accented and nothing singled out: a working surface, not a
+          picture of one plot. It has not been delivered, so nothing renders and
+          the band is exactly what it was.
+        */}
+        <Figure name="dashboard-backdrop" className="ac__backdrop" />
         <div className="ac-split">
           <h1 className="ac__title">{t.hero.title}</h1>
 

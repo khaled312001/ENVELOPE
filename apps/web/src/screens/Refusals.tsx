@@ -94,6 +94,7 @@ import {
 import { AR } from '../i18n/refusals.ar.js';
 import { EN, type RefusalsDictionary } from '../i18n/refusals.en.js';
 import { PageContents } from '../components/PageContents.js';
+import { Figure } from '../img.js';
 import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
@@ -322,10 +323,26 @@ export default function Refusals({ navigate }: PageProps): JSX.Element {
   return (
     <div className="rf">
       {/* ================= HERO ========================================= */}
-      <section className="shell section section--opening" aria-labelledby="rf-hero-h">
-        <h1 id="rf-hero-h">{t.hero.title}</h1>
-        <p className="rf__lede">{t.hero.lede}</p>
-        <p className="rf__hero-note">{t.hero.note}</p>
+      <section
+        className="shell section section--opening figured"
+        aria-labelledby="rf-hero-h"
+      >
+        <div className="figured__text">
+          <h1 id="rf-hero-h">{t.hero.title}</h1>
+          <p className="rf__lede">{t.hero.lede}</p>
+          <p className="rf__hero-note">{t.hero.note}</p>
+        </div>
+        {/*
+          THE PIPELINE THAT STOPS AT ITS THIRD STAGE — `image-prompts.md` #24, and
+          the one image the brief permits red.
+
+          It is described rather than decorative, and the description is the
+          careful part: "stopped", not "failed". A refusal in this product is a
+          computation that declined to answer, which is the whole subject of this
+          page; a picture that reads as an error would argue the opposite of every
+          sentence beside it.
+        */}
+        <Figure name="state-refused" className="figured__figure" />
       </section>
 
       {/* ================= 01 · THE REFUSAL CONTRACT ==================== */}

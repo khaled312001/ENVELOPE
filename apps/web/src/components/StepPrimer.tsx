@@ -50,17 +50,17 @@
 import { useDict } from '../i18n/locale.js';
 import { AR } from '../i18n/primer.ar.js';
 import { EN } from '../i18n/primer.en.js';
-import { Illustration, hasImage } from '../img.js';
+import { Figure, type ImageName } from '../img.js';
 
 export type PrimerStep = keyof typeof EN.steps;
 
 /**
- * THE FIGURE FOR EACH STEP, BY FILENAME, IN ONE PLACE AND NOT IN THE DICTIONARIES.
+ * WHICH OF THE COMMISSIONED IMAGES BELONGS TO WHICH STEP.
  *
- * A filename is not language. Its alt text is, and that lives in `primer.en.ts`
- * and `primer.ar.ts` beside the sentences it stands in for; the name lives here
- * once, so the Arabic file cannot be edited into pointing at a different drawing
- * from the English one.
+ * The name only. What a screen reader says instead of the picture is in
+ * `imagery.en.ts` and `imagery.ar.ts`, keyed by the same name and transcribed
+ * from the brief that commissioned the drawing — which is where the person
+ * who knows what the picture will show has already written it down.
  *
  * `parameters` is absent because `image-prompts.md` commissions no drawing for
  * it: it is the confirmation screen, its whole subject is the figures already on
@@ -72,7 +72,7 @@ export type PrimerStep = keyof typeof EN.steps;
  * panel renders exactly as it did before this was written: no element, no
  * request, no reserved gap.
  */
-export const STEP_IMAGE: Readonly<Partial<Record<PrimerStep, string>>> = {
+export const STEP_IMAGE: Readonly<Partial<Record<PrimerStep, ImageName>>> = {
   intake: 'step-0-sheet',
   plot: 'step-1-plot',
   rules: 'step-3-rules',
@@ -90,34 +90,21 @@ export function StepPrimer({ step }: { readonly step: PrimerStep }): JSX.Element
   const name = STEP_IMAGE[step];
 
   /*
-    THE FIGURE COMES AFTER THE PROSE IN THE DOM, and is put beside it by the
-    stylesheet on a wide panel and under it on a narrow one.
+    THE FIGURE COMES AFTER THE PROSE IN THE DOM, and `.figured` in the chassis
+    puts it beside the prose on a wide panel and under it on a narrow one. The
+    reading order is the argument, and it is made there.
 
-    Reading order is the reason, in both senses. A screen reader reaches the
-    sentence before the picture of the sentence, which is the right order for a
-    panel whose job is to say what the step is. And on a phone the reader gets
-    the fact first rather than a drawing occupying the whole first screen —
-    the same complaint that moved the landing page's 3D widget below its
-    headline.
-
-    It is not hidden on a narrow panel. An `alt`-carrying image behind
-    `display: none` is out of the accessibility tree entirely, so the reader who
-    most needs the description is the one who loses it.
+    NO CONDITIONAL CLASS, because `.figured` holding one child is a block.
+    `Figure` renders nothing while the file is absent — no element and no
+    request — so the unillustrated panel is the illustrated panel with the
+    figure missing, rather than a second layout that has to be kept in step
+    with the first.
   */
-  const figure =
-    name !== undefined && p.imageAlt !== undefined && hasImage(name) ? (
-      <Illustration
-        name={name}
-        alt={p.imageAlt}
-        className="primer__figure"
-        width={480}
-        height={320}
-      />
-    ) : null;
+  const figure = name === undefined ? null : <Figure name={name} className="figured__figure" />;
 
   return (
-    <div className={figure ? 'primer primer--illustrated' : 'primer'}>
-      <div className="primer__text">
+    <div className="primer figured">
+      <div className="primer__text figured__text">
         <p className="primer__fact">{p.fact}</p>
         <p className="primer__means">{p.means}</p>
         {/* The amber sentence carries the colour it names, so the claim and its

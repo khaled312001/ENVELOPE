@@ -45,8 +45,11 @@
  */
 
 /* The opening section carries no `.section__body`, so it sets its own interval
-   rather than borrowing the chassis rule that governs one. */
-.nf > .section--opening > * + * {
+   rather than borrowing the chassis rule that governs one. Its statement now sits
+   inside `.figured__text`, with the sheet-index drawing beside it — the interval
+   follows the prose rather than staying on the section, or the figure would
+   collect a margin on top of the row's own gap. */
+.nf > .section--opening > .figured__text > * + * {
   margin-block-start: var(--space-5);
 }
 

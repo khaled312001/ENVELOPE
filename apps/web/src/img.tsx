@@ -49,6 +49,9 @@
  * is the only place that knows the answer.
  */
 
+import { useDict } from './i18n/locale.js';
+import { AR as IMAGERY_AR } from './i18n/imagery.ar.js';
+import { EN as IMAGERY_EN } from './i18n/imagery.en.js';
 import { usePageTheme } from './page-theme.js';
 
 /*
@@ -139,6 +142,112 @@ export function Illustration({
       */
       loading="lazy"
       decoding="async"
+    />
+  );
+}
+
+/**
+ * THE TWENTY-FIVE, AS A CLOSED UNION.
+ *
+ * `docs/06-plan/image-prompts.md` is the commission: what will be drawn, at what
+ * size, and what a screen reader says instead. This union is that list, and
+ * `imagery.test.ts` holds it to the file - a name here that the brief does not
+ * commission is a slot no file ever lands in, and the page would go on rendering
+ * nothing with every gate green.
+ *
+ * It is closed on purpose. `Figure` takes an `ImageName`, so a call site cannot
+ * name an image nobody briefed and nobody described.
+ */
+export type ImageName =
+  | 'og-cover'
+  | 'mark'
+  | 'lp-capacities'
+  | 'lp-parking'
+  | 'lp-guarantees'
+  | 'lp-claims'
+  | 'lp-limits'
+  | 'lp-hero-backdrop'
+  | 'step-0-sheet'
+  | 'step-1-plot'
+  | 'step-3-rules'
+  | 'step-4-assumptions'
+  | 'step-5-capacity'
+  | 'step-6-parking'
+  | 'step-7-checks'
+  | 'step-8-evidence'
+  | 'step-9-export'
+  | 'auth-panel'
+  | 'empty-projects'
+  | 'empty-members'
+  | 'empty-shared'
+  | 'dashboard-backdrop'
+  | 'state-not-here'
+  | 'state-refused'
+  | 'guide-cover';
+
+/**
+ * The size each file is drawn at, so the box does not reflow when it loads.
+ *
+ * From the brief, and checked against it. These are the INTRINSIC dimensions,
+ * not a layout: the stylesheet decides how much room a figure gets, and these
+ * two numbers only tell the browser the ratio to hold while it waits.
+ */
+export const IMAGE_SIZE: Readonly<Record<ImageName, readonly [number, number]>> = {
+  'og-cover': [1200, 630],
+  'mark': [64, 64],
+  'lp-capacities': [640, 480],
+  'lp-parking': [640, 480],
+  'lp-guarantees': [640, 480],
+  'lp-claims': [640, 480],
+  'lp-limits': [640, 480],
+  'lp-hero-backdrop': [1920, 900],
+  'step-0-sheet': [480, 320],
+  'step-1-plot': [480, 320],
+  'step-3-rules': [480, 320],
+  'step-4-assumptions': [480, 320],
+  'step-5-capacity': [480, 320],
+  'step-6-parking': [480, 320],
+  'step-7-checks': [480, 320],
+  'step-8-evidence': [480, 320],
+  'step-9-export': [480, 320],
+  'auth-panel': [960, 1200],
+  'empty-projects': [400, 280],
+  'empty-members': [400, 280],
+  'empty-shared': [400, 280],
+  'dashboard-backdrop': [1600, 400],
+  'state-not-here': [480, 320],
+  'state-refused': [480, 320],
+  'guide-cover': [2480, 3508],
+};
+
+/**
+ * A commissioned image, with the description the brief wrote for it.
+ *
+ * This is the call site for every one of the twenty-five that a page renders.
+ * `Illustration` is the lower layer and still takes an explicit `alt`, for the
+ * two cases this cannot serve: an image outside the commission, and a test.
+ *
+ * Nothing here is conditional on the file existing, and nothing needs to be.
+ * `Illustration` returns `null` when it does not - no element, no request. Use
+ * `hasImage` beside this only where the LAYOUT changes shape, which is a
+ * different question from whether to render.
+ */
+export function Figure({
+  name,
+  className,
+}: {
+  readonly name: ImageName;
+  readonly className?: string | undefined;
+}): JSX.Element | null {
+  const alt = useDict(IMAGERY_EN, IMAGERY_AR);
+  const [width, height] = IMAGE_SIZE[name];
+  return (
+    <Illustration
+      name={name}
+      alt={alt[name]}
+      width={width}
+      height={height}
+      {...(className === undefined ? {} : { className })}
     />
   );
 }

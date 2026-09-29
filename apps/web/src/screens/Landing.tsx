@@ -107,6 +107,7 @@ import { LIMITS } from '../content/shared.js';
 import { AR } from '../i18n/landing.ar.js';
 import { EN } from '../i18n/landing.en.js';
 import { PageContents } from '../components/PageContents.js';
+import { Figure } from '../img.js';
 import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 // `Href`, not `Route`. Every CTA on this site carries a query — `/app?demo=…` — and a
 // `Route`-only signature rejects all of them.
@@ -698,6 +699,23 @@ export function Landing({
           owns the ground, `.lp-hero` owns only this section's geometry. */}
       <section className="shell section--opening lp-hero" aria-labelledby="lp-title">
         {/*
+          THE SURVEY GROUND, AND IT IS DECORATION IN THE STRICT SENSE.
+
+          `image-prompts.md` #8: a square grid with unrelated parcel outlines laid
+          over it at different scales, every stroke lighter than the wash it sits
+          on. It carries `alt=""` and `aria-hidden`, so nothing is announced and
+          nothing is lost by its absence — which is its state today, since the
+          file has not been delivered.
+
+          THE BRIEF'S OWN CONSTRAINT IS A MEASUREMENT, AND IT IS NOT MET BY THIS
+          MARKUP. `pnpm contrast` reads tokens and cannot see an image, so the
+          day this file lands the hero's inks have to be re-measured over it by
+          eye and `pnpm amber` re-run on `/` — the fold is counted there, and a
+          backdrop that lifts the ground anywhere near the headline is a
+          1.4.3 failure no stylesheet gate would report.
+        */}
+        <Figure name="lp-hero-backdrop" className="lp-hero__backdrop" />
+        {/*
           THE HEADLINE IS ITS OWN GRID AREA, AND THAT IS A MOBILE FIX.
 
           `.lp-hero__figure` used to take `order: -1` under 64rem, on the argument
@@ -890,9 +908,12 @@ export function Landing({
           {idx('capacities')}
         </p>
         <div className="railed__body">
-          <div className="section__head">
-            <h2 id="lp-capacities">{t.capacities.title}</h2>
-            <p className="lp-lede">{t.capacities.lede}</p>
+          <div className="section__head figured">
+            <div className="figured__text">
+              <h2 id="lp-capacities">{t.capacities.title}</h2>
+              <p className="lp-lede">{t.capacities.lede}</p>
+            </div>
+            <Figure name="lp-capacities" className="figured__figure" />
           </div>
 
           <ol className="lp-bands">
@@ -943,8 +964,11 @@ export function Landing({
           {idx('parking-number')}
         </p>
         <div className="railed__body">
-          <div className="section__head">
-            <h2 id="lp-parking">{t.parking.title}</h2>
+          <div className="section__head figured">
+            <div className="figured__text">
+              <h2 id="lp-parking">{t.parking.title}</h2>
+            </div>
+            <Figure name="lp-parking" className="figured__figure" />
           </div>
 
           <div className="lp-made">
@@ -1036,9 +1060,12 @@ export function Landing({
           {idx('guarantees')}
         </p>
         <div className="railed__body">
-          <div className="section__head">
-            <h2 id="lp-guarantees">{t.guarantees.title}</h2>
-            <p className="lp-lede">{t.guarantees.lede}</p>
+          <div className="section__head figured">
+            <div className="figured__text">
+              <h2 id="lp-guarantees">{t.guarantees.title}</h2>
+              <p className="lp-lede">{t.guarantees.lede}</p>
+            </div>
+            <Figure name="lp-guarantees" className="figured__figure" />
           </div>
 
           {/*
@@ -1118,9 +1145,12 @@ export function Landing({
           {idx('claims')}
         </p>
         <div className="railed__body">
-          <div className="section__head">
-            <h2 id="lp-claims">{t.claims.title}</h2>
-            <p className="lp-lede">{t.claims.lede}</p>
+          <div className="section__head figured">
+            <div className="figured__text">
+              <h2 id="lp-claims">{t.claims.title}</h2>
+              <p className="lp-lede">{t.claims.lede}</p>
+            </div>
+            <Figure name="lp-claims" className="figured__figure" />
           </div>
         </div>
 
@@ -1203,10 +1233,13 @@ export function Landing({
           {idx('limits')}
         </p>
         <div className="railed__body">
-          <div className="section__head">
-            <h2 id="lp-limits">{t.limits.title}</h2>
-            {/* The lede is honest about its own length; `landing.en.ts` says why. */}
-            <p className="lp-lede">{t.limits.lede}</p>
+          <div className="section__head figured">
+            <div className="figured__text">
+              <h2 id="lp-limits">{t.limits.title}</h2>
+              {/* The lede is honest about its own length; `landing.en.ts` says why. */}
+              <p className="lp-lede">{t.limits.lede}</p>
+            </div>
+            <Figure name="lp-limits" className="figured__figure" />
           </div>
         </div>
 

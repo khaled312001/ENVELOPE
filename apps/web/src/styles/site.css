@@ -285,6 +285,61 @@
 }
 
 .section__head { margin-block-end: var(--rhythm-block); }
+
+/*
+ * PROSE WITH A FIGURE BESIDE IT — one primitive, used by every explanatory image
+ * on this site.
+ *
+ * The five landing section heads wear it and so do the nine step primers, which
+ * is the whole reason it is here in the chassis rather than twice in two page
+ * stylesheets. The images are commissioned and none has been delivered; `img.tsx`
+ * makes that silent, and this block is written so that a panel with no figure in
+ * it lays out exactly as it did before there was one — a wrapping row holding a
+ * single item at `flex: 1 1 100%` is a block.
+ *
+ * A CONTAINER QUERY, NOT A MEDIA QUERY, and the difference is load-bearing. A
+ * step primer sits inside the workspace rail on `/app` and inside the page on the
+ * step routes, so its own width and the viewport's are different numbers; a media
+ * query would put the drawing beside the prose at a viewport width where the rail
+ * has already taken the room for it.
+ *
+ * THE FIGURE IS NEVER HIDDEN, at any width. `display: none` takes an element out
+ * of the accessibility tree along with the description it carries, so the reader
+ * who most needs the sentence standing in for the picture is the one who would
+ * lose it. It stacks under the prose instead — which is also the right order on
+ * a phone, and the same argument that moved the landing page's 3D artefact below
+ * its headline.
+ *
+ * No cap on the text. The prose measure belongs to the prose that wants one
+ * (`.primer__text` sets its own); a section heading is set with `text-wrap:
+ * balance` across the shell and capping it here would re-break every landing
+ * heading on a page that has no images in it yet.
+ */
+.figured {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--rhythm-block);
+  container-type: inline-size;
+}
+.figured__text {
+  flex: 1 1 100%;
+  min-inline-size: 0;
+}
+/* A hairline and nothing else. Each file carries its own ground — the brief
+   grounds the dark variants at the dark paper — so a background here would be a
+   second sheet of paper behind the first. `block-size: auto` holds the ratio the
+   drawing was made at when the column is narrower than it. */
+.figured__figure {
+  inline-size: 100%;
+  max-inline-size: 20rem;
+  block-size: auto;
+  border: var(--border-width) solid var(--border-subtle);
+}
+@container (min-width: 58rem) {
+  .figured__text { flex: 1 1 var(--measure-prose); }
+  .figured__figure { flex: none; inline-size: 20rem; }
+}
 .section__body > * + * { margin-block-start: var(--space-5); }
 /* A plate or a refusal is a break in the argument and gets a block interval. */
 .section__body > .plate + *,

@@ -122,6 +122,50 @@
 .lp-hero__copy,
 .lp-hero__figure {
   min-inline-size: 0;
+  /* Above the survey ground below. Only a stacking order — the backdrop is out
+     of flow, so nothing here moves whether it is there or not. */
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * THE SURVEY GROUND BEHIND THE FOLD — decoration, and the strict kind.
+ *
+ * `image-prompts.md` #8 draws it: a square grid with unrelated parcel outlines
+ * laid over it at several scales, every stroke lighter than the wash. It ships
+ * with `alt=""` and `aria-hidden`, and the file has not been delivered, so today
+ * this selector matches nothing at all — `img.tsx` renders no element for a name
+ * with no file.
+ *
+ * OUT OF FLOW, so the hero's three grid areas are unaffected by its presence or
+ * its absence. `object-fit: cover` rather than a repeat: it is one drawing at
+ * 1920 × 900 and tiling it would make a pattern out of a picture.
+ *
+ * NOT PRINTED. A decorative ground costs ink and carries nothing; the rule
+ * elsewhere in this repository is that decoration may not HIDE content, which is
+ * a different thing from decoration being dropped on paper.
+ *
+ * THE OPACITY IS A CEILING SET BEFORE THE FILE EXISTS, not a measurement. The
+ * brief's own critical constraint is that the backdrop must not lift the ground's
+ * luminance near the hero text; `pnpm contrast` reads tokens and cannot see an
+ * image, so when the drawing lands the fold has to be looked at and `pnpm amber`
+ * re-run on `/`.
+ */
+.lp-hero {
+  position: relative;
+}
+.lp-hero__backdrop {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 0;
+}
+@media print {
+  .lp-hero__backdrop { display: none; }
 }
 /* The eyebrow to its headline, at the same step the copy column uses between blocks. */
 .lp-hero__head > * + * {

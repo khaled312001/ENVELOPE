@@ -224,20 +224,19 @@ describe('the primer and the panels under it', () => {
 });
 
 /**
- * THE FIGURE, AND THE THREE WAYS ITS TWO HALVES CAN COME APART.
+ * THE FIGURE, AND THE TWO WAYS IT COMES APART.
  *
- * A step's drawing is named in `StepPrimer.tsx` and described in the two
- * dictionaries, because a filename is not language and a description is. That
- * split is right and it is also a seam: a step can gain a filename and no alt
- * text, gain alt text in English only, or be given a name `image-prompts.md`
- * does not commission. Each of those ships a picture nobody can read, or reads a
- * picture that will never arrive. All three are held here.
+ * A step's drawing is named here and described in `imagery.en.ts` /
+ * `imagery.ar.ts`, which `imagery.test.ts` holds to the brief that commissioned
+ * it. What is left for this file is the half that is the primer's own: that the
+ * right steps have a figure at all, that the names are ones the brief
+ * commissions, and that the panel does not change shape until a file exists.
  *
- * AND THE FOURTH FAILURE IS THE ONE WITH NO FILES IN IT. None of the twenty-five
+ * THE SECOND OF THOSE IS THE ONE WITH NO FILES IN IT. None of the twenty-five
  * images exists yet; `img.tsx` makes absence silent, and the assertion below is
- * written so that it holds BEFORE and AFTER they land — an `<img>` is present in
- * the markup exactly when the file is on disk, never on the strength of a name in
- * a table.
+ * written so that it holds BEFORE and AFTER they land - an `<img>` is present in
+ * the markup exactly when the file is on disk, never on the strength of a name
+ * in a table.
  */
 describe('the step figure', () => {
   const ILLUSTRATED = STEPS.filter((s) => STEP_IMAGE[s] !== undefined);
@@ -246,27 +245,19 @@ describe('the step figure', () => {
     expect(ILLUSTRATED).toEqual(STEPS.filter((s) => s !== 'parameters'));
   });
 
-  it('is named and described in the same steps, in both languages', () => {
-    for (const step of STEPS) {
-      const named = STEP_IMAGE[step] !== undefined;
-      expect(EN.steps[step]!.imageAlt !== undefined, `${step}: English alt text`).toBe(named);
-      expect(AR.steps[step]!.imageAlt !== undefined, `${step}: Arabic alt text`).toBe(named);
-    }
-  });
-
   /*
     THE NAMES ARE HELD TO THE BRIEF, not to themselves. `image-prompts.md` is what
     was commissioned and what will be delivered; a name invented here would be a
     slot no file ever lands in, and the panel would go on rendering nothing with
     every gate green.
   */
-  it('names the files image-prompts.md commissions', () => {
+  it('names the files image-prompts.md commissions for a step', () => {
     const brief = readFileSync(
       new URL('../../../docs/06-plan/image-prompts.md', import.meta.url),
       'utf8',
     );
     const commissioned = new Set(
-      [...brief.matchAll(/^### #\d+ — `(step-[a-z0-9-]+)\.[a-z]+`/gm)].map((m) => m[1]!),
+      [...brief.matchAll(/^### #\d+ \u2014 `(step-[a-z0-9-]+)\.[a-z]+`/gm)].map((m) => m[1]!),
     );
     expect(commissioned.size).toBe(ILLUSTRATED.length);
     for (const step of ILLUSTRATED) {
@@ -283,32 +274,10 @@ describe('the step figure', () => {
       );
       const name = STEP_IMAGE[step];
       const expected = name !== undefined && hasImage(name);
-      expect(/<img\b/.test(markup), `${step}: an image while the file is ${expected ? 'present' : 'absent'}`).toBe(
-        expected,
-      );
-      expect(/primer--illustrated/.test(markup), `${step}: the illustrated layout`).toBe(expected);
-    }
-  });
-
-  /*
-    The alt text stands in for the drawing, so it is prose and is held to the same
-    prohibitions as prose. It never reaches `stripTags`, which takes the attribute
-    away with the tag it sits in — so this is the only place it is read.
-  */
-  it('describes the drawing in prose that is allowed on this site', () => {
-    for (const step of ILLUSTRATED) {
-      for (const [label, alt] of [
-        [`${step} (en)`, EN.steps[step]!.imageAlt!],
-        [`${step} (ar)`, AR.steps[step]!.imageAlt!],
-      ] as const) {
-        expect(alt.length, `${label} is empty`).toBeGreaterThan(20);
-        expectNoBannedVocabulary(alt, label);
-        expectNoComplianceClaim(alt, label);
-      }
       expect(
-        EN.steps[step]!.imageAlt,
-        `${step}: the Arabic alt text is the English one`,
-      ).not.toBe(AR.steps[step]!.imageAlt);
+        /<img\b/.test(markup),
+        `${step}: an image while the file is ${expected ? 'present' : 'absent'}`,
+      ).toBe(expected);
     }
   });
 });

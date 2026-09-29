@@ -33,9 +33,11 @@
  * would get the light image, and the one place that is most visible is a
  * full-bleed decorative panel. Rendering both and hiding one in CSS fetches both.
  *
- * So the theme is a prop. `Root` already owns it and already passes it down
- * through `PageProps`, so this costs nothing and is exactly right: one request,
- * the correct file, no flash.
+ * So the theme is read in React. `Root` owns the only `useTheme()` there is and
+ * publishes it through `PageTheme`, which this component reads; one request, the
+ * correct file, no flash. The prop is kept and overrides the context, because two
+ * call sites need it: a component rendering a preview of the OTHER theme, and a
+ * test that renders one illustration with no provider around it.
  *
  * ---------------------------------------------------------------------------
  * ALT TEXT IS REQUIRED AND MAY BE EMPTY, which is not the same as optional.
@@ -46,6 +48,8 @@
  * and #22. Making the prop required forces the decision at the call site, which
  * is the only place that knows the answer.
  */
+
+import { usePageTheme } from './page-theme.js';
 
 /*
   EAGER, AND `?url` RATHER THAN AN IMPORT OF THE MODULE.
@@ -102,13 +106,15 @@ export function Illustration({
   readonly name: string;
   /** Required, and `''` for a decorative image. See the docblock. */
   readonly alt: string;
-  readonly theme: 'light' | 'dark';
+  /** Defaults to the page's theme. Pass one only to override it — see the docblock. */
+  readonly theme?: 'light' | 'dark' | undefined;
   readonly className?: string | undefined;
   /** The intrinsic size from `image-prompts.md`, so the box does not reflow on load. */
   readonly width?: number | undefined;
   readonly height?: number | undefined;
 }): JSX.Element | null {
-  const src = imageUrl(name, theme);
+  const page = usePageTheme();
+  const src = imageUrl(name, theme ?? page);
   if (!src) return null;
   return (
     <img

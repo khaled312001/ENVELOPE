@@ -48,6 +48,20 @@ export type PrimerStep =
   | 'export';
 
 export interface Primer {
+  /**
+   * THE ALT TEXT FOR THIS STEP'S FIGURE, and the figure's name is NOT here.
+   *
+   * `STEP_IMAGE` in `StepPrimer.tsx` holds the filename, because a filename is
+   * not language and a second copy of it in the Arabic file is a second thing
+   * that can drift. What IS language is the sentence a screen reader says
+   * instead of the picture, and that belongs beside the sentences around it.
+   *
+   * Optional because nine of the ten steps have a figure and `parameters` does
+   * not: it is a confirmation screen, and `image-prompts.md` commissions no
+   * drawing for it. `primer.test.ts` holds the two halves together — a step with
+   * a filename and no alt text, or alt text and no file, fails there.
+   */
+  readonly imageAlt?: string;
   /** Layer 1: what this screen is. One sentence, no caveat inside it. */
   readonly fact: string;
   /** Layer 2: what it costs the reader — what to do, or what is refused. */
@@ -72,6 +86,8 @@ export interface Primer {
 export const EN: { readonly steps: Readonly<Record<PrimerStep, Primer>> } = {
   steps: {
     intake: {
+      imageAlt:
+        'A sheet with some of its values traced out to a list, and two entries in the list left unconnected.',
       fact: 'This step reads an affection plan — the sheet the authority issues for a plot.',
       means:
         'You do not need it. Skip this and type the plot in by hand — the run is the same run. What the sheet buys you is that the figures came off a document instead of out of memory.',
@@ -80,6 +96,8 @@ export const EN: { readonly steps: Readonly<Record<PrimerStep, Primer>> } = {
     },
 
     plot: {
+      imageAlt:
+        'An irregular plot of eight edges, one of them curved, with roads on two sides and a neighbouring plot on a third.',
       fact: 'This is the plot’s shape, and what each of its edges faces.',
       means:
         'Every edge needs a classification, because the setback on an edge is chosen by what that edge faces and there is no default for it. The area your dimensions compute is then checked against the area the sheet prints, and a disagreement larger than the tolerance is reported rather than absorbed.',
@@ -96,6 +114,8 @@ export const EN: { readonly steps: Readonly<Record<PrimerStep, Primer>> } = {
     },
 
     rules: {
+      imageAlt:
+        'A measured band subdivided into parts, and a second band below it, detached and outside the measure.',
       fact: 'These are the rules that will be applied, and the two questions no rule answers.',
       means:
         'Whether parking counts toward the plot ratio, and how much of the floor area is saleable. Neither has a default anywhere in this product, both move the answer by more than the difference you are studying, and the run will not start until you have answered them.',
@@ -104,6 +124,8 @@ export const EN: { readonly steps: Readonly<Record<PrimerStep, Primer>> } = {
     },
 
     assumptions: {
+      imageAlt:
+        'A list of values in which two are marked as assumed, by colour and by a second non-colour cue.',
       fact: 'An assumption is a number no document stated and no rule supplied.',
       means:
         'The engine chose one so the run could finish, wrote down why, measured how far the answer moves if the choice is wrong, and put it in this list. Change any of them and the answer moves with it.',
@@ -114,6 +136,8 @@ export const EN: { readonly steps: Readonly<Record<PrimerStep, Primer>> } = {
     },
 
     capacity: {
+      imageAlt:
+        'A stack of floor plates with a podium below and a tower above, and a core running through every level.',
       fact: 'Three capacities are computed, and the smallest one is the answer.',
       means:
         'What the regulation permits, what the massing can hold, and what the parking can serve. The one that binds is the one that decides the scheme; the gap to the next one is your headroom, and knowing which band you are against tells you what there is any point changing.',
@@ -124,6 +148,8 @@ export const EN: { readonly steps: Readonly<Record<PrimerStep, Primer>> } = {
     },
 
     parking: {
+      imageAlt:
+        'A parking level: rows of bays, two aisles meeting in a T, a ramp entering from one edge, and cars standing in one row.',
       fact: 'The bays are placed as rectangles on a level, not divided out of an area.',
       means:
         'What you see is where each car stands and which way it faces: bays that were placed, not divided out. The drawings, the exported CAD file and the 3D view all render that one placement rather than each making its own, so a car in the model is a car on the sheet.',
@@ -134,6 +160,7 @@ export const EN: { readonly steps: Readonly<Record<PrimerStep, Primer>> } = {
     },
 
     checks: {
+      imageAlt: 'Eighteen checks; ten are solid and eight are dotted and empty.',
       fact: 'This is where the run is checked — by code that cannot see the engine that produced it.',
       means:
         'A check with no data to work on reports itself dormant rather than passing. Nothing on this screen is a compliance verdict: this product never claims regulatory validity, and a check that passed would not be one.',
@@ -142,6 +169,7 @@ export const EN: { readonly steps: Readonly<Record<PrimerStep, Primer>> } = {
     },
 
     evidence: {
+      imageAlt: 'One branch of a derivation, opened down to the clause it cites.',
       fact: 'Every number in this run, with the derivation behind it.',
       means:
         'Open any one of them and the derivation opens with it — a rule with a citation, a document, a person who entered it, or an assumption with its basis.',
@@ -150,6 +178,7 @@ export const EN: { readonly steps: Readonly<Record<PrimerStep, Primer>> } = {
     },
 
     export: {
+      imageAlt: 'Six files a finished run produces.',
       fact: 'What leaves this screen carries its own limits with it.',
       means:
         'The report, the drawing set, the CAD file, the 3D model and the workbook all carry the assumption register and the line saying regulatory validity was not assessed — every format, not the ones where it happens to be convenient.',

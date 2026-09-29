@@ -17,6 +17,7 @@ import type { Actor } from './api/client.js';
 import { AppSidebar } from './components/AppSidebar.js';
 import { SiteChrome, UntranslatedNotice } from './components/SiteChrome.js';
 import { NOT_FOUND_PAGE, PAGES } from './pages.js';
+import { PageTheme } from './page-theme.js';
 import { NOT_FOUND, useRouter, type Href } from './router.js';
 
 /**
@@ -274,7 +275,15 @@ export default function Root(): JSX.Element {
     `hidden` rather than a conditional render, so the run survives a route change. It
     is cheap: the engine holds one run and nothing in it polls.
   */
-  return (
+  /*
+    THE CHROME IS BUILT INTO A NAME AND THEN WRAPPED, rather than returned from
+    inside the provider, so that this file's JSX keeps the indentation its diffs
+    are read at. `PageTheme` publishes the theme `Root` already owns — it does
+    not hold one — to the components too deep to be handed it, which is every
+    call site of `Illustration`: a step primer, an empty state, the auth panel.
+    See `page-theme.tsx` for why a prop would not do.
+  */
+  const page = (
     <SiteChrome
       route={route}
       navigate={navigate}
@@ -328,4 +337,6 @@ export default function Root(): JSX.Element {
       {showEngine ? null : <spec.component {...pageProps} />}
     </SiteChrome>
   );
+
+  return <PageTheme value={theme}>{page}</PageTheme>;
 }

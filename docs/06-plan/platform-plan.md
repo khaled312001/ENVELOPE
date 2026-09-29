@@ -1035,6 +1035,34 @@ subject**, and **nothing that implies approval or compliance**. Three further as
 there as *draw in code, do not commission* — the road symbols, every drawing of an actual plot,
 and the avatars.
 
+**The slots are wired before the files arrive, and that is the point of how they
+are wired.** `apps/web/src/img.tsx` reads the set of images that exist from the
+filesystem with `import.meta.glob`, at build time. A name with no file emits no
+element and makes no request — no broken-image glyph, no console error for
+`pnpm smoke` to count, no reserved gap. When a file is dropped into
+`src/assets/img/` it appears; nothing else is edited, and there is no manifest
+that can disagree with the directory.
+
+The dark variant is chosen **in React**, not in CSS and not in `<picture>`: this
+site's theme is `data-theme` on `<html>`, so a media query would serve the light
+file to a reader who chose dark on a machine set to light, and rendering both and
+hiding one fetches both. `Root` owns the only `useTheme()` there is and publishes
+it through `PageTheme` (`apps/web/src/page-theme.tsx`), which `Illustration`
+reads — a provider that holds no state, because three copies of the theme once
+desynchronised and this is not the file that gets to add a fourth.
+
+**Wired so far — the nine step figures (#9–#17).** `StepPrimer` names the file,
+the two primer dictionaries carry its alt text, and `primer.test.ts` holds the
+halves together: a step with a filename and no alt text fails, alt text in one
+language only fails, and a name `image-prompts.md` does not commission fails. The
+figure sits beside the prose on a wide panel and under it on a narrow one, chosen
+by a **container query** rather than a media query — the panel sits inside the
+workspace shell on `/app`, so its own width and the viewport's are different
+numbers, and a media query would put the drawing beside the prose at a viewport
+width where the rail has already taken the room. It is never hidden at a narrow
+width: an `alt`-carrying image behind `display: none` leaves the accessibility
+tree, so the reader who most needs the description is the one who would lose it.
+
 ---
 
 ## 6 · The dashboard
@@ -1472,11 +1500,28 @@ opener and the dialog still opens, with the app in it instead of the report —
 so `pnpm smoke` reads the frame's document back, and the check was doctored to
 print `about:blank` and shown to fail before it was trusted.
 
-**Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
+**S — the nine step figures are wired, and no file has to exist for that to be
+true.** The client's loudest complaint about the design was *«باهت — بلا لون وبلا
+صور»*, and `Illustration` had zero call sites: the component that renders the
+twenty-five commissioned images was written and never called. It is called now on
+the nine step primers. Nothing renders yet and nothing changed on screen, which
+is the property that was built for — `img.tsx` reads the directory at build time,
+so a name with no file emits no element and makes no request, and the panel lays
+out exactly as it did before. What the slot being wired buys is that the client's
+files are a drag and a drop rather than a commit. The seam it opens — a filename
+here, its alt text in two dictionaries there — is closed by `primer.test.ts`,
+which fails a step named without a description, described in one language only,
+or pointing at a drawing `image-prompts.md` does not commission. The theme
+reaches `Illustration` through a provider that publishes `Root`'s single
+`useTheme()` rather than holding one of its own.
+
+**Still blocked on the client: the twenty-five image files.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The
 prompts in `image-prompts.md` were **rewritten on 29 Sep** for the new identity:
 the first version specified the austere flat-graphite house style he rejected.
-The five hard rules are unchanged and are not negotiable.
+The five hard rules are unchanged and are not negotiable. **The slots themselves
+are no longer blocked** — see entry S and §5.5: the nine step figures are wired,
+and dropping a file into that directory is the whole of what is left for them.
 
 ### What had landed, as of 28 Sep 2026
 

@@ -1112,14 +1112,60 @@ select.input { cursor: pointer; }
   to be the answer for all ten, so the block generalised and the class went with
   it. Nothing about the rules changed but their name.
 */
+/*
+  THE PANEL IS A ROW THAT WRAPS, and it holds one child when there is no figure.
+
+  `.primer__text` carries the column and the measure `.primer` used to carry, so
+  a primer with no illustration lays out exactly as it did before there was one:
+  a single flex item at the prose measure. Nothing about that case is conditional
+  on the figure existing, which is the whole of `img.tsx`'s argument — the files
+  are commissioned and none of them has landed.
+*/
 .primer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-5);
+  margin-block-end: var(--space-5);
+}
+.primer__text {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  flex: 1 1 100%;
   max-inline-size: var(--measure-prose);
-  margin-block-end: var(--space-5);
 }
 .primer p { margin: 0; }
+
+/*
+  A CONTAINER QUERY, NOT A MEDIA QUERY, and the difference is load-bearing here.
+
+  This panel sits inside the workspace shell on `/app` and inside the page on the
+  step routes, so its own width and the viewport's are different numbers. A media
+  query would put the figure beside the prose at a viewport width where the rail
+  has already taken the room for it, and the two would overlap on exactly the
+  screen the rail is for.
+
+  The containment is declared only on the illustrated panel, so an unillustrated
+  one is not made a containment context for nothing.
+*/
+.primer--illustrated { container-type: inline-size; }
+
+/* Hairline and nothing else. Each file carries its own ground — `image-prompts.md`
+   grounds the dark variants at the dark paper — so a background here would be a
+   second paper behind the first. `block-size: auto` keeps the ratio the file is
+   drawn at when the column is narrower than the drawing. */
+.primer__figure {
+  inline-size: 100%;
+  max-inline-size: 20rem;
+  block-size: auto;
+  border: var(--border-width) solid var(--border-subtle);
+}
+
+@container (min-width: 58rem) {
+  .primer__text { flex: 1 1 var(--measure-prose); }
+  .primer__figure { flex: none; inline-size: 20rem; }
+}
 
 /* The fact is the sentence the reader must not miss, so it is the one line here
    set in the body ink rather than the secondary; everything under it explains

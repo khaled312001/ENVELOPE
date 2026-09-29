@@ -50,32 +50,94 @@
 import { useDict } from '../i18n/locale.js';
 import { AR } from '../i18n/primer.ar.js';
 import { EN } from '../i18n/primer.en.js';
+import { Illustration, hasImage } from '../img.js';
 
 export type PrimerStep = keyof typeof EN.steps;
+
+/**
+ * THE FIGURE FOR EACH STEP, BY FILENAME, IN ONE PLACE AND NOT IN THE DICTIONARIES.
+ *
+ * A filename is not language. Its alt text is, and that lives in `primer.en.ts`
+ * and `primer.ar.ts` beside the sentences it stands in for; the name lives here
+ * once, so the Arabic file cannot be edited into pointing at a different drawing
+ * from the English one.
+ *
+ * `parameters` is absent because `image-prompts.md` commissions no drawing for
+ * it: it is the confirmation screen, its whole subject is the figures already on
+ * it, and a picture above them would be a second thing to look at on the one
+ * screen asking the reader to look at the first.
+ *
+ * NONE OF THESE FILES EXIST YET. They are commissioned, and `hasImage` is what
+ * makes that a non-event — `img.tsx` argues it at length. Until a file lands the
+ * panel renders exactly as it did before this was written: no element, no
+ * request, no reserved gap.
+ */
+export const STEP_IMAGE: Readonly<Partial<Record<PrimerStep, string>>> = {
+  intake: 'step-0-sheet',
+  plot: 'step-1-plot',
+  rules: 'step-3-rules',
+  assumptions: 'step-4-assumptions',
+  capacity: 'step-5-capacity',
+  parking: 'step-6-parking',
+  checks: 'step-7-checks',
+  evidence: 'step-8-evidence',
+  export: 'step-9-export',
+};
 
 export function StepPrimer({ step }: { readonly step: PrimerStep }): JSX.Element {
   const t = useDict(EN, AR);
   const p = t.steps[step];
+  const name = STEP_IMAGE[step];
+
+  /*
+    THE FIGURE COMES AFTER THE PROSE IN THE DOM, and is put beside it by the
+    stylesheet on a wide panel and under it on a narrow one.
+
+    Reading order is the reason, in both senses. A screen reader reaches the
+    sentence before the picture of the sentence, which is the right order for a
+    panel whose job is to say what the step is. And on a phone the reader gets
+    the fact first rather than a drawing occupying the whole first screen —
+    the same complaint that moved the landing page's 3D widget below its
+    headline.
+
+    It is not hidden on a narrow panel. An `alt`-carrying image behind
+    `display: none` is out of the accessibility tree entirely, so the reader who
+    most needs the description is the one who loses it.
+  */
+  const figure =
+    name !== undefined && p.imageAlt !== undefined && hasImage(name) ? (
+      <Illustration
+        name={name}
+        alt={p.imageAlt}
+        className="primer__figure"
+        width={480}
+        height={320}
+      />
+    ) : null;
+
   return (
-    <div className="primer">
-      <p className="primer__fact">{p.fact}</p>
-      <p className="primer__means">{p.means}</p>
-      {/* The amber sentence carries the colour it names, so the claim and its
-          referent are in the same eyeful rather than a paragraph apart. The marker
-          is `aria-hidden`: it is a swatch, and the sentence beside it is the whole
-          of what it would have to announce. */}
-      {p.amber === undefined ? null : (
-        <p className="primer__amber">
-          <span className="traced traced--assumed" aria-hidden="true">
-            <span className="traced__marker" />
-          </span>
-          {p.amber}
-        </p>
-      )}
-      <details className="disclosure">
-        <summary>{p.whySummary}</summary>
-        <p>{p.why}</p>
-      </details>
+    <div className={figure ? 'primer primer--illustrated' : 'primer'}>
+      <div className="primer__text">
+        <p className="primer__fact">{p.fact}</p>
+        <p className="primer__means">{p.means}</p>
+        {/* The amber sentence carries the colour it names, so the claim and its
+            referent are in the same eyeful rather than a paragraph apart. The marker
+            is `aria-hidden`: it is a swatch, and the sentence beside it is the whole
+            of what it would have to announce. */}
+        {p.amber === undefined ? null : (
+          <p className="primer__amber">
+            <span className="traced traced--assumed" aria-hidden="true">
+              <span className="traced__marker" />
+            </span>
+            {p.amber}
+          </p>
+        )}
+        <details className="disclosure">
+          <summary>{p.whySummary}</summary>
+          <p>{p.why}</p>
+        </details>
+      </div>
+      {figure}
     </div>
   );
 }

@@ -327,6 +327,18 @@ is a defect even when it makes something easier.
   model has none of them; `notModelled` says so under the
   picture. The podium/tower split is not derivable from a run — the affection plan states
   it — so an unentered podium level count is `ASSUMED`, amber, and said in words as well.
+- **A dimension prints the engine's figure; it never measures the drawing.** A
+  boundary's length is `ModelEdge.lengthMm` and a module's is Table B.11 as the engine
+  cited it — both carried on the model for exactly this reason. Measuring the drawn
+  geometry instead would agree on every correct model, which is why the disagreement
+  would never be found: the drawing would win, silently, in a file an architect x-refs
+  into a submission set. `packages/sheets/test/dimensions.test.ts` doctors a model — an
+  edge drawn 80 m and stated 61.50 m — and requires the sheet to print 61.50. Two
+  drafting rules travel with it. **Annotation is drawn last**, because a halo only masks
+  ink laid down before it and a section line through a figure is a figure nobody reads.
+  And a chain is **one code path** for the overall and the intermediate measures: a
+  drawing whose overall and intermediate dimensions disagree is the defect dimension
+  strings exist to prevent.
 - **Degenerate geometry raises.** Slivers, self-intersections and near-tangent offsets throw
   rather than return a plausible wrong answer (PRD §14.3).
 - **Invariant failure blocks emission.** Never a warning, never a configurable severity.

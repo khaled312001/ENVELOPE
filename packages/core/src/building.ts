@@ -80,6 +80,15 @@ export interface ModelAisle {
   readonly twoWay: boolean;
   /** Drawn along the aisle. Emitted from the standard that sized it. */
   readonly label: string;
+  /**
+   * The cross aisle, which joins the module aisles to the way onto the level.
+   *
+   * Said here rather than inferred from the drawing, because every aisle on a
+   * level is the same width and runs at one of two right angles: a renderer
+   * guessing which one is the connector would guess, and the first sheet that
+   * dimensioned a module across it measured a run of bays that does not exist.
+   */
+  readonly crossing: boolean;
 }
 
 /**
@@ -164,6 +173,19 @@ export interface ModelLevel {
     readonly reserved: ModelReservedZone | null;
     /** The ramp strip reserved on this level, whether or not a ramp uses it. */
     readonly rampStrip: ModelRing | null;
+    /**
+     * The module the level was laid out to, as Table B.11 states it.
+     *
+     * Three strings, so the sheet can dimension one module across — bay, aisle,
+     * bay — with the figures the engine cited rather than distances read off the
+     * rectangles it drew. Identical on every parking level, like the rest of
+     * this object.
+     */
+    readonly module: {
+      readonly bayWidthM: string;
+      readonly bayLengthM: string;
+      readonly aisleWidthM: string;
+    };
     readonly baysSource: ElementSource;
     /**
      * The engine's count for this level, traced. A sheet prints this, never the
@@ -226,6 +248,15 @@ export interface ModelEdge {
    */
   readonly classification: EdgeClassification;
   readonly roadHierarchy: RoadHierarchy | null;
+  /**
+   * The edge's own length, as the plot holds it.
+   *
+   * Carried so a dimension string prints the engine's figure rather than a
+   * distance the composer measured off its own drawing. The two agree on a
+   * correct model, which is exactly why the disagreement would never be noticed:
+   * the drawing would win, silently, in a file an architect x-refs.
+   */
+  readonly lengthMm: Mm;
 }
 
 export interface ModelAccess {

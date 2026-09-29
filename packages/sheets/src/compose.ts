@@ -29,6 +29,7 @@ import {
   type TracedWire,
 } from '@envelope/core';
 
+import { dimensionChain, DIM, metres } from './dimensions.js';
 import { BAND_NOTE, bandWidthM, edgeBand } from './edges.js';
 import {
   angleOf,
@@ -218,8 +219,30 @@ function plotContext(model: BuildingModel, s: number, withDimensions: boolean): 
     // Outside the boundary, one and a half text heights clear of it.
     items.push(label(Role.EDGE_LABEL, offsetPoint(mid, n, -2.6 * 2.4 * s), edge.label, 2.4, along));
 
-    if (withDimensions && edge.setbackM !== null) {
-      const depth = Number(edge.setbackM) * 1000;
+    if (withDimensions) {
+      /*
+        THE OVERALL CHAIN: every boundary measured, outside the plot and outside
+        its band, with the length the ENGINE holds rather than one the composer
+        measured off its own drawing. The two agree on a correct model, which is
+        precisely why a disagreement would go unseen — the drawing would win,
+        silently, in a file somebody x-refs into a submission set.
+      */
+      items.push(
+        ...dimensionChain([edge.start, edge.end], [metres(edge.lengthMm)], {
+          scale: s,
+          out: { x: -n.x, y: -n.y },
+          offsetMm: outwardDimensionMm(model, s),
+        }),
+      );
+
+      /*
+        THE INTERMEDIATE CHAIN: the setback, perpendicular to the same boundary
+        and inside the plot, so the two read together — how long the edge is and
+        how far the building stands off it. Drawn as a chain rather than as a bare
+        line and two ticks, because a witness line is what tells a reader WHICH
+        two points the figure spans.
+      */
+      const depth = edge.setbackM === null ? 0 : Number(edge.setbackM) * 1000;
       if (depth > 0) {
         // A quarter of the way along the edge, clear of the midpoint where the
         // driveway most often lands.
@@ -230,25 +253,62 @@ function plotContext(model: BuildingModel, s: number, withDimensions: boolean): 
         const head = offsetPoint(foot, n, depth);
         const len = lengthOf(edge.start, edge.end) || 1;
         const t = { x: (edge.end.x - edge.start.x) / len, y: (edge.end.y - edge.start.y) / len };
-        const tick = 1.2 * s;
-        items.push(shape(Role.DIMENSION, [foot, head], false));
-        for (const p of [foot, head]) {
-          items.push(shape(Role.DIMENSION, [offsetPoint(p, t, -tick), offsetPoint(p, t, tick)], false));
-        }
         items.push(
-          label(
-            Role.DIMENSION,
-            offsetPoint(midpointOf(foot, head), t, 2.2 * s),
-            `${edge.setbackM} M`,
-            2,
-            angleOf(foot, head),
-          ),
+          ...dimensionChain([foot, head], [`${edge.setbackM} M`], {
+            scale: s,
+            out: t,
+            offsetMm: 0,
+          }),
         );
       }
     }
   }
   items.push(shape(Role.SETBACK, model.setbackLine, true, { source: model.setbackSource, name: 'Setback line' }));
   return items;
+}
+
+
+/**
+ * How far outside the boundary a dimension chain sits, in paper millimetres.
+ *
+ * Past the widest band on the plot, because a figure printed on top of the road
+ * symbol is a figure nobody reads. The band is measured in metres and the clear
+ * gap in paper millimetres, so the scale has to come in — which is also why the
+ * site plan fits itself twice: see `sitePlan`.
+ */
+export function outwardDimensionMm(model: BuildingModel, s: number): number {
+  const box = boxOf(model.plot.outline);
+  const spanM = Math.max(box.maxX - box.minX, box.maxY - box.minY) / 1000;
+  let widestM = 0;
+  for (const edge of model.plot.edges) {
+    const w = bandWidthM(edge.classification, edge.roadHierarchy, spanM);
+    if (w > widestM) widestM = w;
+  }
+  return (widestM * 1000) / s + DIM_CLEAR_MM;
+}
+
+/** Paper millimetres of clear air between the widest band and the chain. */
+const DIM_CLEAR_MM = 7;
+
+/** The paper the chain and its figure take, beyond the boundary. */
+export const dimensionReachMm = (model: BuildingModel, s: number): number =>
+  outwardDimensionMm(model, s) + DIM.overMm + DIM.liftMm + DIM.textMm;
+
+
+/**
+ * Dimensions last, so they are drawn over everything they measure.
+ *
+ * Annotation belongs on top: a section line crossing a boundary is a drawing, a
+ * section line crossing the figure that measures it is a figure nobody can read.
+ * The text halo only masks ink laid down before it, so the order is the fix and a
+ * thicker halo is not. One list for every renderer, so the screen, the sheet and
+ * the DXF all take the same order — which is what `pnpm parity` compares.
+ */
+function annotationLast(items: readonly ModelItem[]): ModelItem[] {
+  const under: ModelItem[] = [];
+  const over: ModelItem[] = [];
+  for (const item of items) (item.role === Role.DIMENSION ? over : under).push(item);
+  return [...under, ...over];
 }
 
 /**
@@ -300,7 +360,15 @@ function accessItems(model: BuildingModel, s: number): ModelItem[] {
 
 function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
   const box = boxOf(model.plot.outline);
-  const f = frame(box);
+  /*
+    FITTED TWICE. The dimension chains sit outside the boundary, and the room they
+    need is part paper (the clear gap, the text) and part model (the band they
+    clear). So the sheet is fitted once to learn its scale, the reach is worked out
+    at that scale, and it is fitted again with room for it. `fitScale` chooses off
+    a ladder of standard scales, so the second pass either keeps the scale or steps
+    down one rung — it cannot oscillate, and 1:237 is not on the ladder to land on.
+  */
+  const f = frame(box, MARGIN + dimensionReachMm(model, frame(box).scale));
   const s = f.scale;
   const items: ModelItem[] = [...plotContext(model, s, true)];
 
@@ -318,9 +386,11 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
     const [a, b] = section.line;
     const len = lengthOf(a, b) || 1;
     const t = { x: (b.x - a.x) / len, y: (b.y - a.y) / len };
-    // Past the edge words (which sit 6.2 mm of paper outside the boundary), so a
-    // section letter never lands on ROAD SIDE or NEIGHBOUR.
-    const ends = [offsetPoint(a, t, -11 * s), offsetPoint(b, t, 11 * s)] as const;
+    // Past the edge words (which sit 6.2 mm of paper outside the boundary) AND
+    // past the dimension chains, so a section letter never lands on ROAD SIDE, on
+    // NEIGHBOUR, or on the figure measuring the edge it crosses.
+    const reach = Math.max(11, dimensionReachMm(model, s) + 3);
+    const ends = [offsetPoint(a, t, -reach * s), offsetPoint(b, t, reach * s)] as const;
     items.push(shape(Role.CUT_LINE, ends, false, { name: `Section ${section.id}-${section.id} cut line` }));
     items.push(label(Role.CUT_LINE, offsetPoint(ends[0], t, -2.4 * s), section.id, 3.4));
     items.push(label(Role.CUT_LINE, offsetPoint(ends[1], t, 2.4 * s), section.id, 3.4));
@@ -332,6 +402,7 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
   ];
   const legend: LegendEntry[] = [
     { role: Role.PLOT, label: 'Plot boundary' },
+    { role: Role.DIMENSION, label: 'Dimension, in metres, from the engine' },
     // Every boundary kind this plot actually has, ranked. A legend listing the
     // four road classes on a plot with one road is a key to a drawing nobody made.
     ...bandLegend(model),
@@ -351,7 +422,7 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
     paper: PAPER,
     view: f.view,
     viewport: f.viewport,
-    items,
+    items: annotationLast(items),
     paperItems: paperFurniture({ title: 'Site plan', number: 'A-001', scale: s, meta, facts, legend, north: true }),
     facts,
     notes: [
@@ -361,6 +432,77 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
       ...model.sections.map((x) => `Section ${x.id}-${x.id}: ${x.taken}`),
     ],
   };
+}
+
+
+/**
+ * A module dimensioned across one aisle: bay, aisle, bay.
+ *
+ * The figure an architect checks first, and the one the client's own drawings
+ * carry — "6.00M WIDE 2 WAY DRIVEWAY". All three come from Table B.11 as the
+ * engine cited them; none is a distance read back off a rectangle drawn above.
+ *
+ * It is placed **outside the slab edge**, clear of the level along the aisle's
+ * own direction. Set beside the aisle it would land on the cross aisle at one end
+ * or the ramp at the other, and a dimension printed over the thing it measures is
+ * a dimension nobody reads.
+ */
+function moduleChain(
+  parking: NonNullable<ModelLevel['parking']>,
+  outline: readonly ModelPoint[],
+  s: number,
+): ModelItem[] {
+  // A module aisle, never the cross aisle: the cross aisle has no bay run on
+  // either side, so a module measured across it is a module nobody laid out.
+  const ring = parking.aisles.find((a) => !a.crossing)?.outline;
+  const p0 = ring?.[0];
+  const p1 = ring?.[1];
+  const p2 = ring?.[2];
+  if (!ring || !p0 || !p1 || !p2) return [];
+
+  const e1 = { x: p1.x - p0.x, y: p1.y - p0.y };
+  const e2 = { x: p2.x - p1.x, y: p2.y - p1.y };
+  const l1 = Math.hypot(e1.x, e1.y) || 1;
+  const l2 = Math.hypot(e2.x, e2.y) || 1;
+  // The long edge runs along the aisle; the short one runs across it, which is
+  // the direction a module is measured in.
+  const longFirst = l1 >= l2;
+  const u = longFirst ? { x: e1.x / l1, y: e1.y / l1 } : { x: e2.x / l2, y: e2.y / l2 };
+  const w = longFirst ? { x: e2.x / l2, y: e2.y / l2 } : { x: e1.x / l1, y: e1.y / l1 };
+
+  // u and w are orthonormal, so the aisle's near corner is (min along u, min
+  // across w) put back together. Taken off the corner list it would be ambiguous:
+  // two corners share the minimum along u.
+  const dot = (p: ModelPoint, v: { x: number; y: number }): number => p.x * v.x + p.y * v.y;
+  let minU = Infinity;
+  let minW = Infinity;
+  for (const p of ring) {
+    minU = Math.min(minU, dot(p, u));
+    minW = Math.min(minW, dot(p, w));
+  }
+  let slabMinU = Infinity;
+  for (const p of outline) slabMinU = Math.min(slabMinU, dot(p, u));
+
+  const corner = mm(u.x * minU + w.x * minW, u.y * minU + w.y * minW);
+  const bayMm = Number(parking.module.bayLengthM) * 1000;
+  const aisleMm = Number(parking.module.aisleWidthM) * 1000;
+  const start = offsetPoint(corner, w, -bayMm);
+  const two = (value: string): string => `${Number(value).toFixed(2)} M`;
+  return dimensionChain(
+    [
+      start,
+      offsetPoint(start, w, bayMm),
+      offsetPoint(start, w, bayMm + aisleMm),
+      offsetPoint(start, w, bayMm + aisleMm * 1 + bayMm),
+    ],
+    [two(parking.module.bayLengthM), two(parking.module.aisleWidthM), two(parking.module.bayLengthM)],
+    {
+      scale: s,
+      out: { x: -u.x, y: -u.y },
+      // Past the slab edge, then six paper millimetres of clear air.
+      offsetMm: (minU - slabMinU) / s + 6,
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -513,6 +655,14 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
         ]
       : []),
   ];
+  /*
+    THE MODULE, DIMENSIONED ACROSS ONE AISLE: bay, aisle, bay. It is the figure
+    an architect checks first and the one the client's own drawings carry
+    ("6.00M WIDE 2 WAY DRIVEWAY"), and all three figures are Table B.11's as the
+    engine cited them — never distances read back off the rectangles drawn above.
+  */
+  items.push(...moduleChain(parking, level.outline, s));
+
   const title = `Parking level ${level.id}`;
   return {
     id: `level-${level.id}`,
@@ -523,7 +673,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     paper: PAPER,
     view: f.view,
     viewport: f.viewport,
-    items,
+    items: annotationLast(items),
     paperItems: paperFurniture({ title, number, scale: s, meta, facts, legend, north: true }),
     facts,
     // The core's reconciliation against the deduction belongs on the sheet the
@@ -602,7 +752,7 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
     paper: PAPER,
     view: f.view,
     viewport: f.viewport,
-    items,
+    items: annotationLast(items),
     paperItems: paperFurniture({ title: 'Typical floor', number: 'A-201', scale: s, meta, facts, legend, north: true }),
     facts,
     notes: [
@@ -761,7 +911,7 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
     paper: PAPER,
     view: f.view,
     viewport: f.viewport,
-    items,
+    items: annotationLast(items),
     paperItems: paperFurniture({ title, number, scale: s, meta, facts, legend, north: false }),
     facts,
     notes: [

@@ -58,6 +58,7 @@ import {
 } from '@envelope/geometry';
 
 import { CORE_NOT_MODELLED, type CoreResult } from './core.js';
+import { CROSS_AISLE_ROW } from './layout.js';
 import type { EnvelopeSolution } from './envelope.js';
 import type { LevelPlan, WorldRect } from './level-plan.js';
 import type { MassingResult } from './massing.js';
@@ -479,6 +480,7 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
         setbackM: setbackBySeq.get(e.seq)?.toFixed(2) ?? null,
         classification: e.classification,
         roadHierarchy: e.roadHierarchy ?? null,
+        lengthMm: e.lengthMm,
       })),
     },
     setbackLine: envelope.setbackRing.map(pt),
@@ -665,6 +667,7 @@ function parkingOf(plan: LevelPlan): NonNullable<ModelLevel['parking']> {
           : [midpoint(a, b), midpoint(d, c)]) as readonly [ModelPoint, ModelPoint],
         twoWay,
         label,
+        crossing: r.row === CROSS_AISLE_ROW,
       };
     });
 
@@ -679,6 +682,11 @@ function parkingOf(plan: LevelPlan): NonNullable<ModelLevel['parking']> {
         }
       : null,
     rampStrip: plan.rampStrip ? plan.rampStrip.world.map(pt) : null,
+    module: {
+      bayWidthM: standard.bayWidthM,
+      bayLengthM: standard.bayLengthM,
+      aisleWidthM: standard.drivewayWidthM,
+    },
     baysSource: source(plan.bayCount),
     bayCount: toWire(plan.bayCount),
   };

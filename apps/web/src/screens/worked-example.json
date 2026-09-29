@@ -1676,10 +1676,6 @@
             "assumedInk": false
           },
           {
-            "name": "ENV-SITE-DIMENSION",
-            "assumedInk": false
-          },
-          {
             "name": "ENV-SITE-SETBACK",
             "assumedInk": false
           },
@@ -1701,6 +1697,10 @@
           },
           {
             "name": "ENV-SITE-CUT-LINE",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-SITE-DIMENSION",
             "assumedInk": false
           },
           {

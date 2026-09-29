@@ -773,6 +773,55 @@ was a trade and not a wash by luck.
 
 ### 4.9 Drawings and exports
 
+**Item 6, dimension strings — done, 29 Sep 2026.** The rest of the list below still
+stands; this is the piece that decides whether the file opens as a drawing or as a
+picture of one, and it is the piece a reviewer looks at first.
+
+`packages/sheets/src/dimensions.ts` builds one chain: witness lines clear of the
+feature and running past the line, the architectural 45° slash rather than an
+arrowhead, one line from the first stop to the last, and one figure per segment.
+An *overall* chain is that call with two stops and an *intermediate* chain is the
+same call with the stops in between — one code path, because a drawing whose
+overall and intermediate dimensions disagree is the defect dimension strings exist
+to prevent. Everything is stated in paper millimetres and scaled at the door,
+which is item 9 in the list below.
+
+It reaches three drawings. The **site plan** measures every boundary, outside the
+plot and outside its band, and the setback applied to it perpendicular and inside;
+the sheet is fitted **twice**, because the room a chain needs is part paper and
+part metres. Every **parking level** carries one module dimensioned across — bay,
+aisle, bay — placed outside the slab edge, since beside the aisle it would land on
+the cross aisle at one end or the ramp at the other. The **DXF** needed no change
+at all: a dimension is a `Role.DIMENSION` item and the writer already gives every
+role its own layer, so `ENV-<level>-DIMENSION` appeared the day the items did, as
+geometry with the engine's own text — item 6's last clause, arrived at by not
+writing a second code path.
+
+**And a dimension prints the engine's figure; it never measures the drawing.** A
+boundary's length is `ModelEdge.lengthMm` and a module's is Table B.11 as the
+engine cited it, both newly carried on the model for exactly this. The two agree on
+a correct model, which is precisely why a disagreement would never surface — the
+drawing would win, silently, in a file somebody x-refs. So the test doctors the
+model: an edge drawn 80 m long and *stated* 61.50 m must print 61.50.
+
+Two things the work turned up. Annotation was being drawn **under** the geometry,
+so a section line ran through the figure measuring the edge it crossed and the
+text halo could not help — a halo only masks ink laid down before it. Dimensions
+are now last in the display list, for every renderer at once. And `ModelAisle`
+gained `crossing`, because the cross aisle sorts first on a level and the first
+version of the module chain duly measured a module with no bays on either side:
+every aisle is the same width and runs at one of two right angles, so a renderer
+guessing which one is the connector guesses.
+
+**Still to do from the list below:** addressable title-block fields with sheet
+*n* of *m*, date, revision and drawn/checked (items 1 and 12), grid bubbles and
+level datums (7), the symbol key in the legend (8), PDF, and IFC4. Note that the
+code carries a **recorded refusal** on the last of these — see the comment at
+`/api/runs/:runId/export`: IFC round-tripping was not quoted in this phase and the
+client disclaimed knowledge of the format in the meeting, so shipping a
+badly-shaped IFC would be worse than shipping none. That refusal is to be settled
+with him rather than overridden here.
+
 **Sheet furniture**, in `packages/sheets`, one display list, drawn by the screen, the A3 set, the
 PDF and the DXF:
 
@@ -1267,6 +1316,19 @@ separate losses instead of an efficiency percentage. Both orientations are
 packed and the better kept — an orientation, never a design. Proved by deleting
 the cross aisle and watching the level fall apart, in the engine and again in
 the drawn model. The full argument is in §4.8.
+
+**O — §4.9 item 6, dimension strings, done.** The drawings measured
+nothing. Every boundary is now dimensioned outside the plot with its setback
+perpendicular inside it, every parking level carries one module dimensioned
+across, and the DXF needed no change because a dimension is an item with a
+role and the writer already gives every role a layer. The figures are the
+engine's — a boundary's length and Table B.11's bay and aisle — never distances
+read back off the drawing, which a doctored model proves. Two defects fell out:
+annotation was drawn under the geometry, so a section line ran through the
+figure measuring the edge it crossed; and the cross aisle sorts first on a
+level, so the module chain measured an aisle with no bays on either side. The
+rest of §4.9 — the title block's addressable fields, the revision table, grid
+bubbles, PDF and IFC — is listed there with what is left.
 
 **Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The

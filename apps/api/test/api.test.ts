@@ -467,6 +467,121 @@ describe('runs', () => {
     );
   });
 
+  /*
+    THE LEVEL SCHEDULE — Eng. Mohamed, 2026-09-28.
+
+    Two integers reached the engine: how many parking levels, and how many
+    levels stand on the podium. Neither says what the building is, and the one
+    thing they could not say — which levels hold the parking — was declared as
+    an assumption for exactly as long as they were the only input.
+  */
+  it('takes a level schedule, and computes both old integers from it', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: {
+        ...RUN_BODY,
+        plotId: plot.plotId,
+        // Deliberately disagreeing with RUN_BODY's own integers: the schedule wins.
+        parkingLevelsAvailable: 0,
+        levels: {
+          basements: 2,
+          groundIsParking: true,
+          podiumAboveGround: 2,
+          podiumParkingLevels: 1,
+        },
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    // 2 basements + the ground floor + 1 podium level.
+    expect(body.parking.levelsAvailable.value).toBe('4');
+    // And the code, written the way the affection plan prints it.
+    expect(body.levels.code).toMatch(/^2B\+G\+2P\+\d+$/);
+  });
+
+  it('puts the parking where the schedule says, and stops calling it an assumption', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: {
+        ...RUN_BODY,
+        plotId: plot.plotId,
+        levels: {
+          basements: 1,
+          groundIsParking: true,
+          podiumAboveGround: 1,
+          podiumParkingLevels: 0,
+        },
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    const assumed = (body.assumptions as { parameterId: string }[]).map((a) => a.parameterId);
+    expect(assumed).not.toContain('building.parking_levels_placement');
+    expect(assumed).not.toContain('massing.podium_levels');
+  });
+
+  it('is null on a run given the integers, rather than inferred from them', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: plot.plotId },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().levels).toBeNull();
+  });
+
+  it('refuses a schedule that parks more podium levels than it has', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: {
+        ...RUN_BODY,
+        plotId: plot.plotId,
+        levels: {
+          basements: 0,
+          groundIsParking: true,
+          podiumAboveGround: 1,
+          podiumParkingLevels: 3,
+        },
+      },
+    });
+    // Refused, not clamped: rounding it down would answer a question about the
+    // building that whoever filled the form got wrong.
+    expect(res.statusCode).toBeGreaterThanOrEqual(400);
+    expect(res.json().message).toMatch(/3 podium level\(s\) of parking/);
+  });
+
+  it('refuses a schedule that provides no parking at all', async () => {
+    const plot = await createPlot();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: {
+        ...RUN_BODY,
+        plotId: plot.plotId,
+        levels: {
+          basements: 0,
+          groundIsParking: false,
+          podiumAboveGround: 2,
+          podiumParkingLevels: 0,
+        },
+      },
+    });
+    expect(res.statusCode).toBeGreaterThanOrEqual(400);
+    expect(res.json().message).toMatch(/no parking at all/);
+  });
+
   it('serves the derivation of any single value — §20.2 click-through', async () => {
     const plot = await createPlot();
     const run = (

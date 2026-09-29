@@ -140,15 +140,37 @@ export const runRequest = z.object({
     }),
   parkingLevelsAvailable: z.number().int().min(0).max(8),
   /**
-   * How many of the permitted levels are podium — the `2` in `G+2P+8`.
+   * Levels standing on the podium footprint, **the ground floor included**.
    *
    * Optional, and absence is not a default: the engine records an unentered count
    * as ASSUMED, amber, with its own basis string. Sent, it is USER_SET by the actor
    * who confirmed it, including when the screen pre-filled it from the affection
    * plan — the sheet was read by a parser and confirmed by a person, and the person
    * is the one whose name the value carries.
+   *
+   * THE GROUND FLOOR IS INSIDE THIS NUMBER. `G+2P+8` is three, not two — which is
+   * what `levels` below exists to stop anybody having to remember.
    */
   podiumLevels: z.number().int().min(0).max(20).optional(),
+  /**
+   * The level schedule, and the better way to say both of the numbers above.
+   *
+   * Eng. Mohamed, 2026-09-28: it should be the ground floor, how many basements,
+   * how many podium levels. Two integers cannot say any of that, and the three
+   * kinds of level do not behave alike.
+   *
+   * Sent, it supplies `parkingLevelsAvailable` and `podiumLevels` and the two
+   * fields above are ignored — stated beats derived. Absent, the run is computed
+   * the old way, which is how every run stored before this existed was computed.
+   */
+  levels: z
+    .object({
+      basements: z.number().int().min(0).max(8),
+      groundIsParking: z.boolean(),
+      podiumAboveGround: z.number().int().min(0).max(20),
+      podiumParkingLevels: z.number().int().min(0).max(20),
+    })
+    .optional(),
   parkingUsableFraction: z.object({
     value: decimalString,
     source: z.enum(['DERIVED', 'ASSUMED']),

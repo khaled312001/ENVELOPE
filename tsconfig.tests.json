@@ -32,10 +32,16 @@
     /*
       The workspace packages, mapped to their built types.
 
-      `apps/web` does not declare `@envelope/core` as a dependency — it has no
-      reason to, since the browser bundle never imports it — so pnpm never links
-      it there and bare resolution fails. Vitest finds it at the workspace root;
-      this makes the compiler agree, against the same `dist` the runtime loads.
+      A test may import any of them, and several do so from an app that has no
+      reason to declare the package itself. The mapping makes the compiler
+      resolve them the way Vitest's aliases already do, against the same `dist`
+      the runtime loads.
+
+      `@envelope/core` used to be the example here — declared by nothing,
+      because the browser bundle never imported it. It does now:
+      `LevelSchedulePanel` calls `levelCode` and `scheduleRefusal` so that the
+      height code on screen is the engine's own string rather than a second
+      rendering of it, and the package moved into `apps/web`'s dependencies.
     */
     "baseUrl": ".",
     "paths": {

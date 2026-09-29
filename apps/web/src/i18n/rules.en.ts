@@ -89,11 +89,27 @@ export const EN = {
     },
   },
 
+  /*
+    THE LEVEL SCHEDULE — Eng. Mohamed's point, 2026-09-28.
+
+    This panel was two number fields: "levels available" and "podium levels".
+    Neither says what the building is. A basement, the ground floor and a podium
+    level behave differently — a basement has no setback and costs ramp length,
+    the ground floor carries the vehicle entrance, a podium level is bound by the
+    podium setback — and one integer flattened all three.
+  */
   levels: {
-    title: 'Parking levels',
-    subtitle: 'How many levels of structured parking the scheme can provide.',
-    available: 'Levels available',
-    podium: 'Podium levels',
+    title: 'The levels',
+    subtitle:
+      'What the building is made of, from the bottom up. The tower is not entered here — it comes out of the run.',
+    basements: 'Basements',
+    basementsHelp: 'Below grade, all parking. Nothing else below grade is modelled.',
+    groundIsParking: 'The ground floor is parking',
+    groundHelp:
+      'It carries the vehicle entrance whatever is on it. Leave it clear for retail or a lobby.',
+    podiumAbove: 'Podium levels above the ground floor',
+    podiumParking: 'Of those, levels holding parking',
+    podiumParkingHelp: 'Counted from the ground up — a Dubai podium is filled from the bottom.',
     /** The height code as printed sits between these. */
     fromSheetBefore: 'Read from the affection plan as ',
     fromSheetAfter: '. Confirm or change it — the run records it under your name.',
@@ -101,8 +117,22 @@ export const EN = {
     example: {
       before: 'The number of podium levels in the height code, such as the ',
       between: ' in ',
-      after: '. Left empty, the massing shows one podium level and marks it as assumed.',
+      after: '. The ground floor is not one of them.',
     },
+    /** The live readout. The tower count is absent until the run produces one. */
+    codeLabel: 'This schedule reads',
+    codeNote:
+      'The way a height code is written on an affection plan. The tower count is added once the run produces one.',
+    /*
+      The lead-in on the refusal. The sentence after it is the ENGINE'S, in
+      English, in both languages — the same ruling as the error banner, which
+      prints the API's own words because the API is the only party that knows
+      why. What the banner does and this did not is say, in the reader's
+      language, what kind of thing is about to be said.
+    */
+    problemLead: 'This schedule does not describe a building.',
+    parkingLabel: 'Parking levels',
+    parkingNote: 'Basements, plus the ground floor if it is parking, plus the podium levels that hold it.',
   },
 
   rules: {

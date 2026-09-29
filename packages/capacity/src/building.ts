@@ -30,6 +30,7 @@ import {
   Decimal,
   EDGE_LABEL,
   type ElementSource,
+  type LevelSchedule,
   LevelUse,
   type ModelAisle,
   type ModelBay,
@@ -73,6 +74,18 @@ export interface BuildingModelInput {
    * ceiling; this says how much of it the answer places.
    */
   readonly answerLevels: Traced<number>;
+  /**
+   * The stated level schedule, when the run was given one.
+   *
+   * It changes one thing here and it is the important one: where the parking
+   * sits stops being an assumption. Two integers could never say whether four
+   * parking levels are two basements and two podium levels or the other way
+   * round, so this module placed them podium-first and declared that in amber.
+   * A schedule is a person answering the question.
+   */
+  readonly schedule?: LevelSchedule;
+  /** Whose schedule it is. Required with `schedule`, unused without it. */
+  readonly actor?: { readonly id: string; readonly name: string };
 }
 
 const source = (t: Traced<unknown>): ElementSource => ({
@@ -136,8 +149,19 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   const podiumLevels = podiumMass.levels;
   const totalAbove = envelope.maxLevelsByHeight.value;
   const parkingCount = Math.max(0, input.parkingLevels.value);
-  const parkingInPodium = Math.min(parkingCount, podiumLevels.value);
-  const parkingBelow = parkingCount - parkingInPodium;
+  /*
+    WHERE THE PARKING SITS: STATED, OR INFERRED AND SAID TO BE INFERRED.
+
+    With a schedule it is read straight off what the person entered — basements
+    below, then the ground floor if they gave it to parking, then podium levels
+    from the ground up. Without one, two integers are all there is, so the old
+    rule stands: fill the podium first, put the rest below grade, and declare it.
+  */
+  const stated = input.schedule;
+  const parkingInPodium = stated
+    ? (stated.groundIsParking ? 1 : 0) + stated.podiumParkingLevels
+    : Math.min(parkingCount, podiumLevels.value);
+  const parkingBelow = stated ? stated.basements : parkingCount - parkingInPodium;
   // The answer's levels stand on the parking. Where the podium parking and the
   // answer together need more levels than the ceiling permits, the shortfall is said
   // in words below rather than drawn above the ceiling.
@@ -149,15 +173,21 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   const notModelled: string[] = [...NOT_MODELLED];
 
   // --- where the parking goes ------------------------------------------------
+  const placementText =
+    `${parkingInPodium} in the podium from the ground up` +
+    (parkingBelow > 0 ? `, ${parkingBelow} below grade` : '');
   const parkingPlacement =
-    parkingCount > 0
-      ? tracer.assumed(
-          'building.parking_levels_placement',
-          `${parkingInPodium} in the podium from the ground up` +
-            (parkingBelow > 0 ? `, ${parkingBelow} below grade` : ''),
-          { basis: PARKING_PLACEMENT_BASIS, label: 'which levels hold the parking' },
-        )
-      : undefined;
+    parkingCount === 0
+      ? undefined
+      : stated && input.actor
+        ? tracer.userSet('building.parking_levels_placement', placementText, {
+            actor: input.actor,
+            label: 'which levels hold the parking',
+          })
+        : tracer.assumed('building.parking_levels_placement', placementText, {
+            basis: PARKING_PLACEMENT_BASIS,
+            label: 'which levels hold the parking',
+          });
   if (parkingPlacement) {
     placements.push({
       subject: 'parking levels',
@@ -238,15 +268,28 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       podium: podiumLevels,
       ...(isParking ? { placement: parkingPlacement! } : {}),
     });
-    const id = `L${String(i).padStart(2, '0')}`;
+    /*
+      LEVELS ARE NAMED FOR WHAT THEY ARE, not for their index.
+
+      `B2, B1, G, P1, P2, L03` is how a Dubai drawing is numbered and how the
+      client reads a height code; `L00, L01, L02` named three different kinds of
+      level alike, and a reader of the drawing set or the DXF could not tell the
+      ground floor from a podium level from a typical one.
+
+      Typical floors keep their ABSOLUTE index. Renumbering them from the top of
+      the podium would make `L01` mean a different storey on two plots with
+      different podiums — and the level ids are DXF layer names, which somebody
+      carries between drawings.
+    */
+    const id = i === 0 ? 'G' : inPodium ? `P${i}` : `L${String(i).padStart(2, '0')}`;
     levels.push({
       id,
       name:
-        `Level ${i}` +
+        (i === 0 ? 'Ground floor' : inPodium ? `Podium ${i}` : `Level ${i}`) +
         (use === LevelUse.PODIUM_PARKING
-          ? ' · podium parking'
+          ? ' · parking'
           : use === LevelUse.PODIUM
-            ? ' · podium'
+            ? ''
             : ' · typical floor'),
       use,
       elevationMm: (i * f2fMm) as Mm,

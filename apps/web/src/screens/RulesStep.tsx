@@ -22,6 +22,7 @@
  * translated.
  */
 
+import { levelCode, scheduleRefusal, type LevelSchedule } from '@envelope/core';
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
 
 import {
@@ -147,18 +148,47 @@ export function RulesStep({
   const [parkingInFar, setParkingInFar] = useState<RunRequestBody['parkingInFar'] | ''>(
     (demo?.parkingInFar as RunRequestBody['parkingInFar'] | undefined) ?? '',
   );
-  const [levels, setLevels] = useState(demo?.parkingLevelsAvailable ?? 2);
-  /*
-    EMPTY MEANS "NOT ENTERED", NOT ZERO AND NOT ONE.
-
-    Left empty, the request omits the field and the engine records the podium as
-    ASSUMED with its own basis — amber on the capacity step, listed in the report.
-    Pre-filled from the sheet, it is still a field the reader can see and change
-    before it goes anywhere, and what is sent is recorded under their name.
-  */
-  const [podium, setPodium] = useState<string>(
-    sheetPodiumLevels ? String(sheetPodiumLevels.value) : '',
+  /**
+   * THE LEVEL SCHEDULE, which replaced two integers that could not say what a
+   * building is made of.
+   *
+   * Eng. Mohamed, 2026-09-28: it should be the ground floor, how many basements,
+   * how many podium levels. Each behaves differently — a basement has no setback
+   * and costs ramp length, the ground floor carries the vehicle entrance, a
+   * podium level is bound by the podium setback — and "5 parking levels" said
+   * none of it.
+   *
+   * The default is the old default said out loud: two levels of parking, one
+   * below grade and the ground floor. It is on screen, it is editable, and what
+   * is sent is recorded under the name of whoever sent it — which is the same
+   * treatment every other pre-filled field on this step gets.
+   */
+  const [basements, setBasements] = useState('1');
+  const [groundIsParking, setGroundIsParking] = useState(true);
+  const [podiumAbove, setPodiumAbove] = useState<string>(
+    sheetPodiumLevels ? String(sheetPodiumLevels.value) : '1',
   );
+  const [podiumParking, setPodiumParking] = useState('0');
+  /**
+   * The schedule as a value, and what is wrong with it if anything.
+   *
+   * `scheduleRefusal` is the engine's own function, imported rather than
+   * re-implemented: a screen that decided for itself what a valid schedule is
+   * would drift from the engine that refuses one, and the reader would meet the
+   * disagreement as a run that failed after they had been told it was fine.
+   */
+  const schedule: LevelSchedule = {
+    basements: Number(basements),
+    groundIsParking,
+    podiumAboveGround: Number(podiumAbove),
+    podiumParkingLevels: Number(podiumParking),
+  };
+  const scheduleProblem = [basements, podiumAbove, podiumParking].some(
+    (v) => v.trim() === '' || !Number.isInteger(Number(v)),
+  )
+    ? ''
+    : (scheduleRefusal(schedule) ?? '');
+  const scheduleOk = scheduleProblem === '' && !Number.isNaN(schedule.basements);
   const [comparison, setComparison] = useState<ParkingComparison | null>(null);
   /**
    * The recorded statements, and which of them is still answering for the reader.
@@ -304,8 +334,18 @@ export function RulesStep({
       ? { parkingInFarStatementId: fromStatement }
       : {}),
     unitMix: mix,
-    parkingLevelsAvailable: levels,
-    ...(podium.trim() !== '' ? { podiumLevels: Number(podium) } : {}),
+    /*
+      BOTH FORMS TRAVEL, AND THE SCHEDULE WINS.
+
+      `parkingLevelsAvailable` is required by the contract and is what every
+      stored run holds, so it is still sent — derived from the schedule, not
+      typed twice. The server takes `levels` when it is there.
+    */
+    parkingLevelsAvailable:
+      schedule.basements +
+      (schedule.groundIsParking ? 1 : 0) +
+      schedule.podiumParkingLevels,
+    levels: schedule,
     parkingUsableFraction: {
       value: '0.85',
       source: 'ASSUMED',
@@ -473,57 +513,18 @@ export function RulesStep({
       </section>
 
       {/* --- Parking levels ------------------------------------------- */}
-      <section className="panel">
-        <header className="panel__header">
-          <div>
-            <h2 className="panel__title">{t.levels.title}</h2>
-            <p className="panel__subtitle">{t.levels.subtitle}</p>
-          </div>
-        </header>
-        <div className="field field--compact">
-          <label htmlFor="levels">{t.levels.available}</label>
-          <input
-            id="levels"
-            className="input input--num"
-            type="number"
-            min={0}
-            max={8}
-            value={levels}
-            onChange={(e) => setLevels(Number(e.target.value))}
-          />
-        </div>
-        <div className="field field--compact">
-          <label htmlFor="podium-levels">{t.levels.podium}</label>
-          <input
-            id="podium-levels"
-            className="input input--num"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={20}
-            value={podium}
-            onChange={(e) => setPodium(e.target.value)}
-            aria-describedby="podium-levels-hint"
-          />
-          <p id="podium-levels-hint" className="field__help">
-            {sheetPodiumLevels ? (
-              <>
-                {t.levels.fromSheetBefore}
-                <span className="value">{ltr(sheetPodiumLevels.raw)}</span>
-                {t.levels.fromSheetAfter}
-              </>
-            ) : (
-              <>
-                {t.levels.example.before}
-                {ltr(PODIUM_EXAMPLE_DIGIT)}
-                {t.levels.example.between}
-                {ltr(PODIUM_EXAMPLE_CODE)}
-                {t.levels.example.after}
-              </>
-            )}
-          </p>
-        </div>
-      </section>
+      <LevelSchedulePanel
+        basements={basements}
+        groundIsParking={groundIsParking}
+        podiumAbove={podiumAbove}
+        podiumParking={podiumParking}
+        sheetPodiumLevels={sheetPodiumLevels}
+        problem={scheduleProblem}
+        onBasements={setBasements}
+        onGroundIsParking={setGroundIsParking}
+        onPodiumAbove={setPodiumAbove}
+        onPodiumParking={setPodiumParking}
+      />
 
       {/* --- Disclosure ------------------------------------------------ */}
       <RuleDisclosure rules={rules} />
@@ -572,8 +573,10 @@ export function RulesStep({
         <button
           type="button"
           className="button button--primary"
-          disabled={!parkingInFar || !efficiencyValid || busy}
-          onClick={() => parkingInFar && efficiencyValid && onRun(body(parkingInFar))}
+          disabled={!parkingInFar || !efficiencyValid || !scheduleOk || busy}
+          onClick={() =>
+            parkingInFar && efficiencyValid && scheduleOk && onRun(body(parkingInFar))
+          }
         >
           {busy ? t.run.busy : t.run.idle}
         </button>
@@ -586,6 +589,193 @@ export function RulesStep({
         ) : null}
       </div>
     </>
+  );
+}
+
+/**
+ * The level schedule — what the building is made of, from the bottom up.
+ *
+ * Eng. Mohamed, 2026-09-28: *"هو المفروض تكون ground floor, Bassment كام دور,
+ * Podium كام دور"*. This panel was two number fields — "levels available" and
+ * "podium levels" — and neither could say any of that. A basement, the ground
+ * floor and a podium level are three different things:
+ *
+ * - a basement has no setback and no coverage limit, and costs ramp length;
+ * - the ground floor is bound by coverage and carries the vehicle entrance;
+ * - a podium level is bound by the podium setback.
+ *
+ * The readout is the point of the panel as much as the fields are. `levelCode`
+ * is the engine's own function, so what a reader sees here is the string the run
+ * will print and not a second rendering of it — and it is the form the affection
+ * plan itself prints, so the screen and the source document finally agree.
+ *
+ * Exported for the same reason the panels below it are: a static render runs no
+ * effects, and this one sits beside two panels that only appear after an API
+ * call, so a test that drove the whole step would not reach it in either language.
+ */
+export function LevelSchedulePanel({
+  basements,
+  groundIsParking,
+  podiumAbove,
+  podiumParking,
+  sheetPodiumLevels,
+  problem,
+  onBasements,
+  onGroundIsParking,
+  onPodiumAbove,
+  onPodiumParking,
+}: {
+  readonly basements: string;
+  readonly groundIsParking: boolean;
+  readonly podiumAbove: string;
+  readonly podiumParking: string;
+  readonly sheetPodiumLevels: { readonly value: number; readonly raw: string } | null;
+  /** The engine's own refusal sentence, or the empty string. */
+  readonly problem: string;
+  readonly onBasements: (v: string) => void;
+  readonly onGroundIsParking: (v: boolean) => void;
+  readonly onPodiumAbove: (v: string) => void;
+  readonly onPodiumParking: (v: string) => void;
+}): JSX.Element {
+  const t = useDict(EN, AR).levels;
+  const ltr = useVerbatim();
+  const n = (v: string): number => (Number.isInteger(Number(v)) ? Number(v) : 0);
+  const schedule: LevelSchedule = {
+    basements: n(basements),
+    groundIsParking,
+    podiumAboveGround: n(podiumAbove),
+    podiumParkingLevels: n(podiumParking),
+  };
+  /*
+    Zero as the tower count, which `levelCode` renders by leaving the tower off
+    entirely. The tower comes out of the setback-to-floor fixpoint and nobody has
+    run it yet — printing a guess beside three numbers a person just typed would
+    make the one figure they cannot check the most prominent thing on the panel.
+  */
+  const code = levelCode(schedule, 0);
+  const parking = schedule.basements + (groundIsParking ? 1 : 0) + schedule.podiumParkingLevels;
+  return (
+    <section className="panel" aria-labelledby="levels-heading">
+      <header className="panel__header">
+        <div>
+          <h2 id="levels-heading" className="panel__title">
+            {t.title}
+          </h2>
+          <p className="panel__subtitle">{t.subtitle}</p>
+        </div>
+      </header>
+
+      <div className="field field--compact">
+        <label htmlFor="basements">{t.basements}</label>
+        <input
+          id="basements"
+          className="input input--num"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={8}
+          value={basements}
+          onChange={(e) => onBasements(e.target.value)}
+          aria-describedby="basements-hint"
+        />
+        <p id="basements-hint" className="field__help">
+          {t.basementsHelp}
+        </p>
+      </div>
+
+      <div className="field field--compact">
+        <label className="choice">
+          <input
+            type="checkbox"
+            checked={groundIsParking}
+            onChange={(e) => onGroundIsParking(e.target.checked)}
+          />
+          <span>
+            <strong>{t.groundIsParking}</strong>
+            <span className="choice__detail">{t.groundHelp}</span>
+          </span>
+        </label>
+      </div>
+
+      <div className="field field--compact">
+        <label htmlFor="podium-levels">{t.podiumAbove}</label>
+        <input
+          id="podium-levels"
+          className="input input--num"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={20}
+          value={podiumAbove}
+          onChange={(e) => onPodiumAbove(e.target.value)}
+          aria-describedby="podium-levels-hint"
+        />
+        <p id="podium-levels-hint" className="field__help">
+          {sheetPodiumLevels ? (
+            <>
+              {t.fromSheetBefore}
+              <span className="value">{ltr(sheetPodiumLevels.raw)}</span>
+              {t.fromSheetAfter}
+            </>
+          ) : (
+            <>
+              {t.example.before}
+              {ltr(PODIUM_EXAMPLE_DIGIT)}
+              {t.example.between}
+              {ltr(PODIUM_EXAMPLE_CODE)}
+              {t.example.after}
+            </>
+          )}
+        </p>
+      </div>
+
+      <div className="field field--compact">
+        <label htmlFor="podium-parking">{t.podiumParking}</label>
+        <input
+          id="podium-parking"
+          className="input input--num"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={20}
+          value={podiumParking}
+          onChange={(e) => onPodiumParking(e.target.value)}
+          aria-describedby="podium-parking-hint"
+        />
+        <p id="podium-parking-hint" className="field__help">
+          {t.podiumParkingHelp}
+        </p>
+      </div>
+
+      {/*
+        WHAT THE SCHEDULE READS AS, live. The engine's own `levelCode`, so this
+        is the string the run will print rather than a second rendering of it.
+      */}
+      <div className="field field--readout">
+        <span className="field__readout-label">{t.codeLabel}</span>
+        <span className="field__readout-value">{ltr(code)}</span>
+        <p className="field__help">{t.codeNote}</p>
+      </div>
+
+      <div className="field field--readout">
+        <span className="field__readout-label">{t.parkingLabel}</span>
+        <span className="field__readout-value">{ltr(String(parking))}</span>
+        <p className="field__help">{t.parkingNote}</p>
+      </div>
+
+      {/*
+        The engine's sentence, not a second opinion about it — led by a line in
+        the reader's own language, because the sentence itself is English in
+        both. `ErrorBanner` has always done this for the API's refusals; this
+        panel printed the bare sentence, which left an Arabic reader looking at
+        an English paragraph with nothing saying what it was.
+      */}
+      {problem !== '' ? (
+        <p className="field__help" data-state="blocked" role="alert">
+          <strong>{t.problemLead}</strong> {ltr(problem)}
+        </p>
+      ) : null}
+    </section>
   );
 }
 

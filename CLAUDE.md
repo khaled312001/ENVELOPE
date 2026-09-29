@@ -210,6 +210,39 @@ is a defect even when it makes something easier.
   exact shape of failure "no hidden defaults" exists to catch. `capacity.gfa_per_unit_m2`
   and `capacity.weighted_nsa_m2` are now separate nodes: what a unit *costs* in GFA and
   what it *sells*. Azizi's own brief states the market number, 93–97%.
+- **The saleable figure is asked in whichever unit the reader holds, and the divisor
+  is the envelope's own GFA.** `SaleableEfficiencyInput` takes a ratio **or** an area,
+  exactly one, enforced by `exactOptionalPropertyTypes` rather than by a runtime check;
+  both are published. The divisor is `plate × levels`, never FAR × plot area:
+  `DJAZ1MED12RES011` prints no FAR at all, and a permitted GFA the scheme never reaches
+  reports an efficiency the scheme does not have. It is not circular — the envelope
+  solve never reads the efficiency. An area larger than the envelope's GFA is refused in
+  a sentence naming both figures, not reported as a ratio above 1 nobody typed.
+- **A practitioner's answer is a third instrument, and it is `USER_SET` by him.**
+  `PracticeStatement` (`packages/rules/src/statements/`) is weaker than a
+  `DeveloperStandard` and is not a `RuleRecord`. `DERIVED` in this system means the value
+  reached a cited regulatory instrument; dressing a named person's opinion as one is the
+  single most consequential piece of laundering available in this codebase. It is served
+  from `/api/statements`, quoted verbatim with the edge of the claim beside it, and
+  **offered with a button, never pre-selected** — `pnpm smoke` refuses a checked radio
+  beside an enabled Compute button, because that is the default `FR-DEF-002` forbids
+  whatever is written above it. A run that names a statement and sends a different answer
+  is refused at the boundary: it would put its own answer under somebody else's name.
+- **`G+2P+8` is three levels on the podium footprint, not two.** `LevelSchedule` in
+  `@envelope/core` states what a building is made of — basements, whether the ground
+  floor is parking, podium levels *above the ground floor*, and how many of those hold
+  parking — and `podiumFootprintLevels` / `parkingLevels` are the only two places that
+  arithmetic lives. The engine read the `2` and drew two for as long as two integers were
+  the whole model, and `pnpm smoke` asserted the wrong number with it. A schedule that
+  does not describe a building is **refused, not clamped**: rounding three podium parking
+  levels down into a one-level podium answers a question about the building that whoever
+  filled the form got wrong. A stated schedule makes the podium count and the parking
+  placement `USER_SET` rather than `ASSUMED` — where the parking sits was never derivable
+  from two integers. Levels are named for what they are (`B2, B1, G, P1, L03`), because
+  those ids are DXF layer names and `L00` named three different kinds of level alike.
+  `levels` is optional and additive: a stored run keeps its integers and reports
+  `levels: null`, because re-reading an old answer under a new model changes a number
+  somebody has already been shown.
 - **A developer standard is not a rule, and the type system says so.** `DeveloperStandard`
   and `ProjectBrief` live in `packages/rules/src/standards/` and are deliberately *not*
   `RuleRecord`s: a `RuleRecord` is resolvable by `resolveParameter` and can bind the

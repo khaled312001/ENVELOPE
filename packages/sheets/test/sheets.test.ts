@@ -38,7 +38,7 @@ describe('the set', () => {
     const sheets = composeSheets(out.building, META);
     write('80x40', sheets);
     expect(sheets.map((s) => s.number)).toEqual(['A-001', 'A-101', 'A-102', 'A-201', 'A-301', 'A-302']);
-    expect(sheets.filter((s) => s.kind === 'PARKING').map((s) => s.levelId)).toEqual(['L00', 'L01']);
+    expect(sheets.filter((s) => s.kind === 'PARKING').map((s) => s.levelId)).toEqual(['G', 'P1']);
   });
 
   it('carries the two sentences on every sheet', () => {
@@ -87,8 +87,8 @@ describe('a parking level sheet', () => {
   it('says which way the ramp goes from this level, and that its gradient is not assessed', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 2 }));
     const [low, high] = composeSheets(out.building, META).filter((s) => s.kind === 'PARKING');
-    expect(sheetSvg(low!)).toContain('UP TO L01');
-    expect(sheetSvg(high!)).toContain('DOWN TO L00');
+    expect(sheetSvg(low!)).toContain('UP TO P1');
+    expect(sheetSvg(high!)).toContain('DOWN TO G');
     expect(sheetSvg(low!)).toMatch(/GRADIENT NOT ASSESSED/);
   });
 

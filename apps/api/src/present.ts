@@ -294,6 +294,17 @@ export function presentRun(
       explanation: explainGoverningBand(capacity),
     },
 
+    /**
+     * The level schedule, and the height code it writes as — `2B+G+3P+35`.
+     *
+     * Null on a run computed from the two integers, which is every run stored
+     * before the schedule existed. A reader of one of those sees a note saying
+     * which model it was computed under; the engine never re-interprets it,
+     * because re-reading an old answer under a new model changes a number
+     * somebody has already been shown.
+     */
+    levels: output.levelSchedule,
+
     assumptions: register.map((a) => ({
       nodeId: a.nodeId,
       parameterId: a.parameterId,

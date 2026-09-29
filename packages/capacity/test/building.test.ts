@@ -22,7 +22,13 @@ import { analysePlot, area, initGeometry, type Ring } from '@envelope/geometry';
 import { asOfNow, loadSeedRulesForDevelopment, RuleStore } from '@envelope/rules';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { buildBuildingModel, runPipeline, type RunInput, type RunOutput } from '../src/index.js';
+import {
+  buildAssumptionRegister,
+  buildBuildingModel,
+  runPipeline,
+  type RunInput,
+  type RunOutput,
+} from '../src/index.js';
 
 const ACK = 'I understand these rules are not approved';
 const m = (v: number): Mm => asMm(Math.round(v * 1000));
@@ -175,7 +181,10 @@ describe('the stack', () => {
 
   it('puts the declared parking levels in the podium, from the ground up', () => {
     const parking = out.building.levels.filter((l) => l.parking);
-    expect(parking.map((l) => l.id)).toEqual(['L00', 'L01']);
+    // Named for what they are: the ground floor, then the first podium level.
+    expect(parking.map((l) => l.id)).toEqual(['G', 'P1']);
+    // A typical floor keeps its absolute index, so L02 means the same storey on
+    // every plot whatever its podium holds.
     expect(out.building.levels.find((l) => l.id === 'L02')!.use).toBe('TYPICAL');
     const placement = out.building.placements.find((p) => p.subject === 'parking levels');
     expect(placement?.source.provenanceClass).toBe('ASSUMED');
@@ -236,8 +245,88 @@ describe('the stack', () => {
   it('sends parking the podium cannot hold below grade', () => {
     const deep = runPipeline(input(RECT_80x40, { podiumLevels: 1, parkingLevelsAvailable: 3 }));
     const parking = deep.building.levels.filter((l) => l.parking);
-    expect(parking.map((l) => l.id)).toEqual(['B2', 'B1', 'L00']);
+    expect(parking.map((l) => l.id)).toEqual(['B2', 'B1', 'G']);
     expect(parking.map((l) => l.elevationMm < 0)).toEqual([true, true, false]);
+  });
+});
+
+/**
+ * Eng. Mohamed, 2026-09-28: it should be the ground floor, how many basements,
+ * how many podium levels. Two integers say none of that, and the thing they
+ * could not say — *which* levels hold the parking — was declared in amber for
+ * exactly as long as they were the only input.
+ */
+describe('the level schedule', () => {
+  const SCHEDULE = {
+    basements: 2,
+    groundIsParking: true,
+    podiumAboveGround: 2,
+    podiumParkingLevels: 1,
+  } as const;
+
+  let out: RunOutput;
+  beforeAll(() => {
+    out = runPipeline(input(RECT_80x40, { levelSchedule: SCHEDULE }));
+  });
+
+  it('supplies both integers the run used to be given separately', () => {
+    // 2 basements + the ground floor + 1 podium level = 4 levels of parking,
+    // on a podium footprint of 1 + 2 = three levels.
+    expect(out.parking.levelsAvailable.value).toBe(4);
+    expect(out.massing.masses[0]!.levels.value).toBe(3);
+  });
+
+  it('stops the parking placement being an assumption, and names whose schedule it is', () => {
+    const placement = out.building.placements.find((p) => p.subject === 'parking levels')!;
+    expect(placement.source.provenanceClass).toBe('USER_SET');
+    // The name is a USER node the value reaches, not a field on it — which is
+    // the whole point of asking the graph rather than the value.
+    const walk = (id: string, seen = new Set<string>()): string[] => {
+      if (seen.has(id)) return [];
+      seen.add(id);
+      const here = out.graph.nodes.find((n) => n.id === id);
+      return [
+        ...(here?.kind === 'USER' ? [here.label] : []),
+        ...out.graph.edges.filter((e) => e.from === id).flatMap((e) => walk(e.to, seen)),
+      ];
+    };
+    expect(walk(placement.source.node)).toContain('Test Architect');
+  });
+
+  it('puts the parking where the schedule says, not where the old rule guessed', () => {
+    const parking = out.building.levels.filter((l) => l.parking);
+    expect(parking.map((l) => l.id)).toEqual(['B2', 'B1', 'G', 'P1']);
+    // The second podium level was not given to parking, so it holds none.
+    expect(out.building.levels.find((l) => l.id === 'P2')!.parking).toBeNull();
+  });
+
+  it('stops the massing assuming a podium count', () => {
+    const assumed = buildAssumptionRegister(input(RECT_80x40, { levelSchedule: SCHEDULE }), out).map(
+      (a) => a.parameterId,
+    );
+    expect(assumed).not.toContain('massing.podium_levels');
+    expect(assumed).not.toContain('building.parking_levels_placement');
+  });
+
+  it('writes the height code the way the affection plan prints it', () => {
+    expect(out.levelSchedule).not.toBeNull();
+    expect(out.levelSchedule!.code).toBe(
+      `2B+G+2P+${String(out.massing.towerLevels.value)}`,
+    );
+  });
+
+  it('is null on a run given the two integers instead, rather than inferred from them', () => {
+    expect(runPipeline(input(RECT_80x40, { podiumLevels: 2 })).levelSchedule).toBeNull();
+  });
+
+  it('is refused, not clamped, when it parks more podium levels than it has', () => {
+    expect(() =>
+      runPipeline(
+        input(RECT_80x40, {
+          levelSchedule: { ...SCHEDULE, podiumAboveGround: 1, podiumParkingLevels: 3 },
+        }),
+      ),
+    ).toThrow(/3 podium level\(s\) of parking/);
   });
 });
 
@@ -277,7 +366,7 @@ describe('the ramp', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2 }));
     expect(out.building.ramps).toHaveLength(1);
     const ramp = out.building.ramps[0]!;
-    expect([ramp.fromLevelId, ramp.toLevelId]).toEqual(['L00', 'L01']);
+    expect([ramp.fromLevelId, ramp.toLevelId]).toEqual(['G', 'P1']);
     const rise = out.envelope.floorToFloorM.value;
     const run = out.levelPlan!.rampStrip!.runM.value;
     expect(ramp.gradientPct.value).toBe(rise.div(run).times(100).toDecimalPlaces(2).toString());
@@ -305,7 +394,7 @@ describe('the podium is the footprint the figure describes', () => {
     // than the cap allows.
     expect(out.envelope.setbackPermittedFootprint.value.lt(out.envelope.coverageCap.value)).toBe(true);
     expect(out.envelope.podiumPlacement).toBeUndefined();
-    expect(out.building.levels.find((l) => l.id === 'L00')!.outline).toEqual(out.building.setbackLine);
+    expect(out.building.levels.find((l) => l.id === 'G')!.outline).toEqual(out.building.setbackLine);
   });
 
   it('is cut to the coverage cap when the cap binds, and says where it stands', () => {
@@ -315,7 +404,7 @@ describe('the podium is the footprint the figure describes', () => {
     expect(capM2.lt(setbackM2)).toBe(true);
     // The drawing used to show the whole setback line here: 7,455 m² of slab next
     // to a 5,760 m² footprint figure.
-    expect(out.building.setbackLine).not.toEqual(out.building.levels.find((l) => l.id === 'L00')!.outline);
+    expect(out.building.setbackLine).not.toEqual(out.building.levels.find((l) => l.id === 'G')!.outline);
 
     const podiumM2 = new Decimal(area(out.envelope.podiumRing)).div(1_000_000);
     // The ring is the capped area to within the 1 mm grid's rounding.
@@ -347,14 +436,15 @@ describe('the sections', () => {
 
   it('opens the slab a ramp passes through, and only that slab', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 3, parkingLevelsAvailable: 2 }));
+    // Three podium levels, so the stack reads G, P1, P2: the ramp runs G → P1.
     const byId = new Map(out.building.sections[0]!.levels.map((l) => [l.levelId, l]));
-    expect(byId.get('L01')!.openings.length).toBeGreaterThan(0);
-    expect(byId.get('L02')!.openings).toEqual([]);
+    expect(byId.get('P1')!.openings.length).toBeGreaterThan(0);
+    expect(byId.get('P2')!.openings).toEqual([]);
     // Cut plus opening is the whole slab: nothing lost, nothing doubled.
     const total = (spans: readonly (readonly [number, number])[]): number =>
       spans.reduce((s, [a, b]) => s + (b - a), 0);
-    const l01 = byId.get('L01')!;
-    const l02 = byId.get('L02')!;
+    const l01 = byId.get('P1')!;
+    const l02 = byId.get('P2')!;
     expect(total(l01.cut) + total(l01.openings)).toBe(total(l02.cut));
   });
 

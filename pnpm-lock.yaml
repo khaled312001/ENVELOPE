@@ -95,6 +95,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@envelope/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@envelope/massing':
         specifier: workspace:*
         version: link:../../packages/massing
@@ -111,9 +114,6 @@ importers:
         specifier: ^0.185.1
         version: 0.185.1
     devDependencies:
-      '@envelope/core':
-        specifier: workspace:*
-        version: link:../../packages/core
       '@types/react':
         specifier: ^18.3.18
         version: 18.3.31

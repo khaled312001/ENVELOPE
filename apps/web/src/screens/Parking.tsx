@@ -82,11 +82,15 @@ import example from './worked-example.json' with { type: 'json' };
 
 const IN = example.input;
 /**
- * The worked example's parking level at grade, in the building model. Checked in
+ * The worked example's parking level at grade, in the building model.
+ *
+ * `G`, because levels are named for what they are rather than for their index —
+ * `B2, B1, G, P1, L03` is how a Dubai drawing is numbered, and `L00` named the
+ * ground floor, a podium level and a typical floor alike. Checked in
  * `parking-page.test.tsx` against the model file, so a change to how the engine
  * stacks the parking cannot leave this figure framing a level that is not there.
  */
-export const MODEL_LEVEL = 'L00';
+export const MODEL_LEVEL = 'G';
 const V = example.verified;
 
 /* -------------------------------------------------------------------------

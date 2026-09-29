@@ -659,8 +659,27 @@ export interface RunRequestBody {
     readonly basis?: string;
   };
   readonly parkingLevelsAvailable: number;
-  /** The `2` in `G+2P+8`. Omitted, the engine assumes one podium level, in amber. */
+  /**
+   * Levels standing on the podium footprint, **the ground floor included**.
+   *
+   * Omitted, the engine assumes one podium level, in amber. `G+2P+8` is three,
+   * not two — send `levels` and let the engine do that arithmetic in one place.
+   */
   readonly podiumLevels?: number;
+  /**
+   * The level schedule: basements, the ground floor, the podium.
+   *
+   * Sent, it supplies both `parkingLevelsAvailable` and `podiumLevels`, and the
+   * run stops calling the placement of the parking an assumption — two integers
+   * could never say whether four parking levels are two basements and two podium
+   * levels or the other way round.
+   */
+  readonly levels?: {
+    readonly basements: number;
+    readonly groundIsParking: boolean;
+    readonly podiumAboveGround: number;
+    readonly podiumParkingLevels: number;
+  };
   readonly parkingUsableFraction: {
     readonly value: string;
     readonly source: 'DERIVED' | 'ASSUMED';

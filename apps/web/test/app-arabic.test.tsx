@@ -43,7 +43,7 @@ import {
   runPipeline,
   type RunInput,
 } from '@envelope/capacity';
-import type { Plot } from '@envelope/core';
+import { scheduleRefusal, type Plot } from '@envelope/core';
 import { initGeometry } from '@envelope/geometry';
 
 import { runChecks } from '../../api/src/checks.js';
@@ -83,6 +83,7 @@ import { PlotForm } from '../src/screens/PlotForm.js';
 import {
   ComparisonResult,
   DeveloperStandardPanel,
+  LevelSchedulePanel,
   RuleDisclosure,
   RulesStep,
   SaleableEfficiency,
@@ -464,6 +465,64 @@ const CASES: readonly Case[] = [
   {
     label: 'the answer on file, offered',
     node: () => <StatementNote statement={STATEMENT} onUse={noop} />,
+  },
+  {
+    label: 'the level schedule',
+    node: () => (
+      <LevelSchedulePanel
+        basements="2"
+        groundIsParking={true}
+        podiumAbove="2"
+        podiumParking="1"
+        sheetPodiumLevels={null}
+        problem=""
+        onBasements={noop}
+        onGroundIsParking={noop}
+        onPodiumAbove={noop}
+        onPodiumParking={noop}
+      />
+    ),
+  },
+  {
+    label: 'the level schedule, read from the sheet',
+    node: () => (
+      <LevelSchedulePanel
+        basements="0"
+        groundIsParking={true}
+        podiumAbove="2"
+        podiumParking="2"
+        sheetPodiumLevels={{ value: 2, raw: 'G+2P+8' }}
+        problem=""
+        onBasements={noop}
+        onGroundIsParking={noop}
+        onPodiumAbove={noop}
+        onPodiumParking={noop}
+      />
+    ),
+  },
+  {
+    label: 'the level schedule, refused',
+    node: () => (
+      <LevelSchedulePanel
+        basements="0"
+        groundIsParking={false}
+        podiumAbove="1"
+        podiumParking="3"
+        sheetPodiumLevels={null}
+        problem={
+          scheduleRefusal({
+            basements: 0,
+            groundIsParking: false,
+            podiumAboveGround: 1,
+            podiumParkingLevels: 3,
+          }) ?? ''
+        }
+        onBasements={noop}
+        onGroundIsParking={noop}
+        onPodiumAbove={noop}
+        onPodiumParking={noop}
+      />
+    ),
   },
   {
     label: 'the answer on file, taken',
@@ -901,6 +960,131 @@ describe('the English copy, as it was written inline', () => {
     expect(render('en', <StatementNote statement={STATEMENT} used={true} onUse={noop} />)).not.toContain(
       'Use this answer',
     );
+  });
+
+  /*
+    THE LEVEL SCHEDULE — Eng. Mohamed, 2026-09-28.
+
+    The panel's whole job is to stop a person having to do the arithmetic the
+    engine got wrong: `G+2P+8` is three levels on the podium footprint and the
+    engine drew two. So the two derived figures are asserted here against what
+    the entered numbers mean, not against what the panel happens to print.
+  */
+  it('reads the schedule back as a height code, the way an affection plan prints one', () => {
+    const text = en(
+      <LevelSchedulePanel
+        basements="2"
+        groundIsParking={true}
+        podiumAbove="2"
+        podiumParking="1"
+        sheetPodiumLevels={null}
+        problem=""
+        onBasements={noop}
+        onGroundIsParking={noop}
+        onPodiumAbove={noop}
+        onPodiumParking={noop}
+      />,
+    );
+    expect(text).toContain('2B+G+2P');
+    // The tower is left off, because no run has produced one yet.
+    expect(text).not.toMatch(/2B\+G\+2P\+\d/);
+    expect(text).toContain('This schedule reads');
+  });
+
+  it('counts the parking levels the schedule provides, ground floor included', () => {
+    const text = en(
+      <LevelSchedulePanel
+        basements="2"
+        groundIsParking={true}
+        podiumAbove="2"
+        podiumParking="1"
+        sheetPodiumLevels={null}
+        problem=""
+        onBasements={noop}
+        onGroundIsParking={noop}
+        onPodiumAbove={noop}
+        onPodiumParking={noop}
+      />,
+    );
+    // 2 basements + the ground floor + 1 podium level.
+    expect(text).toMatch(/Parking levels\s*4/);
+  });
+
+  it('asks for the podium levels above the ground floor, and says the ground floor is not one', () => {
+    const text = en(
+      <LevelSchedulePanel
+        basements="0"
+        groundIsParking={true}
+        podiumAbove="1"
+        podiumParking="0"
+        sheetPodiumLevels={null}
+        problem=""
+        onBasements={noop}
+        onGroundIsParking={noop}
+        onPodiumAbove={noop}
+        onPodiumParking={noop}
+      />,
+    );
+    expect(text).toContain('Podium levels above the ground floor');
+    expect(text).toContain('The ground floor is not one of them.');
+  });
+
+  it('quotes the height code the sheet itself printed, where the plot came with one', () => {
+    const text = en(
+      <LevelSchedulePanel
+        basements="0"
+        groundIsParking={true}
+        podiumAbove="2"
+        podiumParking="2"
+        sheetPodiumLevels={{ value: 2, raw: 'G+2P+8' }}
+        problem=""
+        onBasements={noop}
+        onGroundIsParking={noop}
+        onPodiumAbove={noop}
+        onPodiumParking={noop}
+      />,
+    );
+    expect(text).toContain('Read from the affection plan as');
+    expect(text).toContain('G+2P+8');
+    // It is offered, never imposed: the run records it under the reader's name.
+    expect(text).toContain('Confirm or change it');
+  });
+
+  it('prints the refusal the engine wrote, led by a line saying what it is', () => {
+    const problem =
+      scheduleRefusal({
+        basements: 0,
+        groundIsParking: false,
+        podiumAboveGround: 1,
+        podiumParkingLevels: 3,
+      }) ?? '';
+    expect(problem).not.toBe('');
+    const markup = render(
+      'en',
+      <LevelSchedulePanel
+        basements="0"
+        groundIsParking={false}
+        podiumAbove="1"
+        podiumParking="3"
+        sheetPodiumLevels={null}
+        problem={problem}
+        onBasements={noop}
+        onGroundIsParking={noop}
+        onPodiumAbove={noop}
+        onPodiumParking={noop}
+      />,
+    );
+    expect(visibleText(markup)).toContain('This schedule does not describe a building.');
+    // The engine's sentence, word for word — not a second rendering of it.
+    expect(visibleText(markup)).toContain(problem);
+    expect(markup).toContain('role="alert"');
+    /*
+      BLOCKED, NOT ASSUMED. A refused schedule is not a value at all, and amber
+      means one specific thing. `pnpm contrast` polices who may paint it; this
+      says the refusal did not ask.
+    */
+    expect(markup).toContain('data-state="blocked"');
+    expect(markup).not.toMatch(/assumed/i);
   });
 
   it('quotes the developer’s own range when a standard fills the efficiency', () => {

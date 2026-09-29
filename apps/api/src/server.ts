@@ -1591,6 +1591,13 @@ function runInputFrom(
           },
     realismDiscount: new Decimal(body.realismDiscount),
     ...(body.podiumLevels !== undefined ? { podiumLevels: body.podiumLevels } : {}),
+    /*
+      STATED BEATS DERIVED. A schedule says the same two numbers with the rest of
+      the building attached, so the engine takes it and computes both from it —
+      and, because it now knows where the parking sits, stops calling the
+      placement an assumption.
+    */
+    ...(body.levels ? { levelSchedule: body.levels } : {}),
   };
 }
 

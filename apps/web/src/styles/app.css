@@ -716,6 +716,13 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .field--compact { gap: var(--space-hair); }
 .field label { font-size: var(--text-sm); font-weight: var(--weight-medium); }
 .field__help { font-size: var(--text-xs); color: var(--text-tertiary); max-width: 34ch; }
+/*
+  A refusal is not a hint, and tertiary ink is where hints live. It takes the
+  BLOCKED state — the state layer's own "we cannot answer this", which is
+  deliberately not amber: amber is an ASSUMED value and a refused schedule is
+  not a value at all.
+*/
+.field__help[data-state='blocked'] { color: var(--state-strong); max-width: 60ch; }
 
 /*
   A readout, not a panel.

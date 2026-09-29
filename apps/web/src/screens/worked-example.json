@@ -72,6 +72,12 @@
         ]
       },
       "parkingLevelsAvailable": 2,
+      "levels": {
+        "basements": 1,
+        "groundIsParking": true,
+        "podiumAboveGround": 1,
+        "podiumParkingLevels": 0
+      },
       "parkingUsableFraction": {
         "value": "0.85",
         "source": "ASSUMED",
@@ -1698,47 +1704,47 @@
             "assumedInk": false
           },
           {
-            "name": "ENV-L00-SLAB",
+            "name": "ENV-G-SLAB",
             "assumedInk": false
           },
           {
-            "name": "ENV-L00-RESERVED",
+            "name": "ENV-G-RESERVED",
             "assumedInk": true
           },
           {
-            "name": "ENV-L00-RAMP",
+            "name": "ENV-G-RAMP",
             "assumedInk": false
           },
           {
-            "name": "ENV-L00-RAMP-ARROW",
+            "name": "ENV-G-RAMP-ARROW",
             "assumedInk": false
           },
           {
-            "name": "ENV-L00-AISLE",
+            "name": "ENV-G-AISLE",
             "assumedInk": false
           },
           {
-            "name": "ENV-L00-AISLE-ARROW",
+            "name": "ENV-G-AISLE-ARROW",
             "assumedInk": false
           },
           {
-            "name": "ENV-L00-BAY",
+            "name": "ENV-G-BAY",
             "assumedInk": false
           },
           {
-            "name": "ENV-L00-CAR",
+            "name": "ENV-G-CAR",
             "assumedInk": false
           },
           {
-            "name": "ENV-L00-BAY-NUMBER",
+            "name": "ENV-G-BAY-NUMBER",
             "assumedInk": false
           },
           {
-            "name": "ENV-L00-ACCESS",
+            "name": "ENV-G-ACCESS",
             "assumedInk": false
           },
           {
-            "name": "ENV-L00-ACCESS-ARROW",
+            "name": "ENV-G-ACCESS-ARROW",
             "assumedInk": false
           },
           {
@@ -1746,16 +1752,16 @@
             "assumedInk": false
           },
           {
-            "name": "ENV-L00-MASS",
+            "name": "ENV-G-MASS",
             "assumedInk": false
           },
           {
-            "name": "ENV-L01-SLAB",
-            "assumedInk": true
+            "name": "ENV-P1-SLAB",
+            "assumedInk": false
           },
           {
-            "name": "ENV-L01-MASS",
-            "assumedInk": true
+            "name": "ENV-P1-MASS",
+            "assumedInk": false
           },
           {
             "name": "ENV-L02-SLAB",
@@ -1843,9 +1849,9 @@
           "title": "Parking level B1"
         },
         {
-          "id": "level-L00",
+          "id": "level-G",
           "number": "A-102",
-          "title": "Parking level L00"
+          "title": "Parking level G"
         },
         {
           "id": "typical",

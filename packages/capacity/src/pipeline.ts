@@ -28,6 +28,11 @@ import {
   type BuildingModel,
   type CapacityResult,
   Decimal,
+  levelCode,
+  type LevelSchedule,
+  parkingLevels,
+  podiumFootprintLevels,
+  scheduleRefusal,
   type ParkingInFar,
   type ParkingResult,
   type Plot,
@@ -147,6 +152,14 @@ export interface RunInput {
     readonly entries: readonly UnitTypeMix[];
     readonly basis?: string;
   };
+  /**
+   * Levels of parking, as one number.
+   *
+   * The whole level model, until `levelSchedule` below. Kept because it is what
+   * every stored run holds, and a stored run is never re-interpreted — see the
+   * note on `levelSchedule`. Where both are given the schedule wins, because it
+   * says the same thing with more of the building in it.
+   */
   readonly parkingLevelsAvailable: number;
   readonly parkingUsableFraction: {
     readonly value: Decimal;
@@ -188,14 +201,39 @@ export interface RunInput {
     readonly accessEdgeSeq?: number;
   };
   /**
-   * Podium levels, when a person has entered one.
+   * Levels standing on the podium footprint, **the ground floor included**.
    *
    * Absent is a real state and not a missing input: the affection plan states
    * the podium count and this engine does not derive it, so an absent one is
    * declared as an assumption in the massing rather than guessed. It moves the
    * picture; it moves no capacity figure.
+   *
+   * THE GROUND FLOOR IS INSIDE THIS NUMBER and was not documented as being so,
+   * which is how `G+2P+8` came to draw a two-level podium where the sheet says
+   * three. A caller with a height code should send `levelSchedule` and let
+   * `podiumFootprintLevels` do that arithmetic in one place.
    */
   readonly podiumLevels?: number;
+  /**
+   * The level schedule — what the building is made of, level by level.
+   *
+   * Eng. Mohamed, 2026-09-28: *"هو المفروض تكون ground floor, Bassment كام دور,
+   * Podium كام دور"*. The two integers above cannot say any of that, and the
+   * three kinds of level do not behave alike: a basement has no setback and
+   * costs ramp length, the ground floor carries the vehicle entrance, a podium
+   * level is bound by the podium setback.
+   *
+   * **Optional, and additive rather than a replacement.** Every run stored
+   * before this existed holds the integers and nothing else, and a stored run
+   * is never re-interpreted — re-reading an old answer under a new model would
+   * change a number somebody has already been shown. Where a schedule is given
+   * it supplies both integers, traced, with the arithmetic written out.
+   *
+   * **Q27 is not answered here.** Whether a podium parking level counts against
+   * the height allowance is open with the client, and this type states what the
+   * building is, not how the allowance treats it.
+   */
+  readonly levelSchedule?: LevelSchedule;
   readonly context?: EvalContext;
 }
 
@@ -245,6 +283,19 @@ export interface RunOutput {
    * on whose authority.
    */
   readonly parkingInFarTreatment: Traced<ParkingInFar>;
+  /**
+   * The schedule this run was computed on, when one was stated, and the height
+   * code it writes as — `2B+G+3P+35`.
+   *
+   * Null on a run that was given the integers instead, which is every run
+   * stored before the schedule existed. A reader of such a run sees a note
+   * saying which model it was computed under rather than a code inferred from
+   * numbers that cannot carry one.
+   */
+  readonly levelSchedule: {
+    readonly schedule: LevelSchedule;
+    readonly code: string;
+  } | null;
   /**
    * The parking level, drawn.
    *
@@ -299,6 +350,22 @@ export function runPipeline(input: RunInput): RunOutput {
       'G2:parking-in-FAR',
     );
   }
+
+  /*
+    THE SCHEDULE SUPPLIES THE TWO INTEGERS, and it is checked before anything is
+    computed rather than clamped.
+
+    A clamp would answer a question about the building that whoever filled the
+    form got wrong — four podium parking levels in a two-level podium is not a
+    number to round down, it is a schedule to fix.
+  */
+  const schedule = input.levelSchedule;
+  if (schedule) {
+    const refusal = scheduleRefusal(schedule);
+    if (refusal) throw new RunBlockedError(refusal, 'G2:level-schedule');
+  }
+  const parkingLevelsAvailable = schedule ? parkingLevels(schedule) : input.parkingLevelsAvailable;
+  const podiumFootprint = schedule ? podiumFootprintLevels(schedule) : input.podiumLevels;
 
   const graph = new ProvenanceGraph();
   const tracer = new Tracer(graph);
@@ -527,7 +594,7 @@ export function runPipeline(input: RunInput): RunOutput {
     },
     targetUnits,
     areaPerLevelM2: envelope.podiumFootprint.value,
-    levelsAvailable: input.parkingLevelsAvailable,
+    levelsAvailable: parkingLevelsAvailable,
     usableFraction: input.parkingUsableFraction,
   });
 
@@ -689,9 +756,9 @@ export function runPipeline(input: RunInput): RunOutput {
     plateRing: envelope.plateRing,
     floorToFloorM: envelope.floorToFloorM,
     maxLevelsByHeight: envelope.maxLevelsByHeight,
-    ...(input.podiumLevels === undefined
+    ...(podiumFootprint === undefined
       ? {}
-      : { podiumLevels: { value: input.podiumLevels, actor: input.actor } }),
+      : { podiumLevels: { value: podiumFootprint, actor: input.actor } }),
   });
 
   const building = buildBuildingModel({
@@ -703,6 +770,13 @@ export function runPipeline(input: RunInput): RunOutput {
     levelPlan,
     levelPlanRefusal,
     answerLevels: capacity.levels,
+    /*
+      The schedule, when there is one — and it stops the placement being an
+      assumption. Where the parking sits was never derivable from two integers,
+      so `building.ts` placed it podium-first and declared that in amber. A
+      stated schedule is the person saying where it goes.
+    */
+    ...(schedule ? { schedule, actor: input.actor } : {}),
   });
 
   return {
@@ -717,6 +791,9 @@ export function runPipeline(input: RunInput): RunOutput {
     saleableEfficiency: efficiencyTraced,
     saleableAreaM2: saleableAreaTraced,
     parkingInFarTreatment: treatmentTraced,
+    levelSchedule: schedule
+      ? { schedule, code: levelCode(schedule, massing.towerLevels.value) }
+      : null,
     levelPlan,
     levelPlanRefusal,
     massing,

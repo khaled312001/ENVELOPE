@@ -587,10 +587,44 @@ await step('the sheet\'s podium count waits on the rules step to be confirmed', 
   // The Warsan sheet prints G+2P+8. It used to be read at intake and dropped at
   // the composition root, so every massing showed one podium level in amber. It
   // now arrives here pre-filled — visible and editable before it goes anywhere.
+  //
+  // The field holds the SHEET'S DIGIT, 2: it asks for podium levels above the
+  // ground floor, which is the part of the code a reader can copy across without
+  // doing arithmetic. The massing draws 1 + 2. Both numbers are correct and they
+  // are different, which is the whole reason the schedule type exists.
   const value = await page.getByLabel('Podium levels').inputValue();
   if (value !== '2') throw new Error(`podium levels pre-filled as "${value}", not the sheet's 2`);
   const t = await page.textContent('body');
   if (!t.includes('G+2P+8')) throw new Error('the field does not say where its value came from');
+});
+
+/*
+  THE LEVEL SCHEDULE READS BACK AS A HEIGHT CODE — Eng. Mohamed, 2026-09-28.
+
+  Checked in a browser because the panel is the only place the three numbers a
+  person types and the code they add up to sit side by side. The engine's own
+  `levelCode` writes the string, so this asserts the screen ran it rather than
+  that somebody typed the same format twice.
+*/
+await step('the level schedule reads back the way an affection plan prints one', async () => {
+  const panel = page.locator('section[aria-labelledby="levels-heading"]');
+  await panel.waitFor({ timeout: wait(8000) });
+  const t = (await panel.textContent()).replace(/\s+/g, ' ');
+  // One basement, the ground floor given to parking, and the sheet's two podium
+  // levels: G with a basement in front of it, and the tower left off because no
+  // run has produced one.
+  if (!t.includes('1B+G+2P')) throw new Error(`the schedule does not read back as a code: ${t}`);
+  if (/1B\+G\+2P\+\d/.test(t)) throw new Error('a tower count was printed before a run produced one');
+  // The derived parking count, which is the figure the parking solver takes.
+  // The label and the figure are adjacent elements, so the text runs together:
+  // "Parking levels2Basements, plus…". No word boundary falls after the 2.
+  if (!/Parking levels\s*2(?!\d)/.test(t)) {
+    throw new Error('the parking level count the schedule provides is not shown');
+  }
+  // Amber means ASSUMED. Three numbers a person just typed are not assumed.
+  if (await panel.locator('.traced--assumed').count()) {
+    throw new Error('the level schedule painted amber');
+  }
 });
 
 await step('the parking question has no pre-selected answer', async () => {
@@ -737,15 +771,27 @@ await step('the massing view stands the building up, and says what it assumed', 
   // unentered case — ASSUMED, amber, with a basis — is asserted in
   // `apps/api/test/api.test.ts`, where both halves sit side by side.
   // Read from the row itself. Falling back to the body text would pass on any
-  // "2" anywhere on the page, which is a check that cannot fail.
+  // "3" anywhere on the page, which is a check that cannot fail.
   const podium = page.locator('section[aria-labelledby="massing-heading"] tbody tr', {
     has: page.locator('th', { hasText: /^\s*Podium/ }),
   });
   if ((await podium.count()) === 0) throw new Error('no podium row in the massing table');
   const levels = await podium.first().locator('td').first().textContent();
-  // The cell reads "2levels (You set this)", so a word boundary never falls after the 2.
-  if (!/^\s*2(?!\d)/.test(levels ?? '')) {
-    throw new Error(`the podium shows "${levels}" levels, not the sheet's 2`);
+  /*
+    THREE, NOT THE SHEET'S 2 — and this assertion held the defect.
+
+    `G+2P+8` is ground plus two podium levels: THREE levels standing on the
+    podium footprint. The rules step asks for the digit (`2`, "podium levels
+    above the ground floor") because that is what the sheet prints; the massing
+    draws `1 + 2`. This step read the digit off the sheet and demanded the
+    massing show it, so the podium was drawn one level short on every plot whose
+    sheet stated one, and the gate that should have caught it agreed with it.
+
+    The cell reads "3levels (You set this)", so a word boundary never falls
+    after the 3.
+  */
+  if (!/^\s*3(?!\d)/.test(levels ?? '')) {
+    throw new Error(`the podium shows "${levels}", not the 1 + 2 the sheet's G+2P+8 means`);
   }
   if (/rests on an assumption/i.test(t)) {
     throw new Error('a podium count the reader confirmed is still described as assumed');

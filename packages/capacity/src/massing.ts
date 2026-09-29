@@ -14,10 +14,16 @@
  *
  * **The podium height is the honest problem.** The engine derives the total
  * level count from the height ceiling and the floor-to-floor, and it derives
- * both footprints. It does not derive how many of those levels are podium: the
- * affection plan states that (`G+2P+8` is two), and a run that was not given one
- * does not know it. So an ungiven podium count is `ASSUMED` with a basis and the
- * podium draws amber — which is exactly what it is.
+ * both footprints. It does not derive how many of those levels stand on the
+ * podium footprint: the affection plan states that, and a run that was not
+ * given one does not know it. So an ungiven podium count is `ASSUMED` with a
+ * basis and the podium draws amber — which is exactly what it is.
+ *
+ * And the count is the **footprint** count, the ground floor included: `G+2P+8`
+ * is three here, not two. Writing "the 2 in G+2P+8" in this file's own comments
+ * is how the massing came to draw a two-level podium on a sheet saying three.
+ * `podiumFootprintLevels` in `@envelope/core` does that arithmetic once so no
+ * caller has to remember which of the two numbers a signature means.
  */
 
 import {
@@ -48,10 +54,13 @@ export interface MassingInput {
   readonly floorToFloorM: TracedDecimal;
   readonly maxLevelsByHeight: Traced<number>;
   /**
-   * Podium levels, when the run was told.
+   * Levels standing on the podium footprint, **the ground floor included**.
    *
    * `USER_SET` when a person entered it; absent means nobody has, and the
    * massing says so rather than picking a number that looks right.
+   *
+   * `G+2P+8` is `3`. Callers holding a height code should pass
+   * `podiumFootprintLevels(schedule)` rather than the podium digit.
    */
   readonly podiumLevels?: {
     readonly value: number;
@@ -63,13 +72,22 @@ export interface MassingResult {
   readonly masses: readonly Mass[];
   /** Total built height, so a caption can state it without re-adding the parts. */
   readonly totalHeightM: TracedDecimal;
+  /**
+   * Levels the height ceiling permits above the podium.
+   *
+   * Surfaced rather than left inside, because the height code a reader sees —
+   * `2B+G+3P+35` — ends in this number, and re-deriving it at the point of
+   * display would be the second place the same subtraction lives.
+   */
+  readonly towerLevels: Traced<number>;
 }
 
 const PODIUM_BASIS =
-  'How many of the permitted levels are podium is stated on the affection plan — ' +
-  '"G+2P+8" is two — and this run was not given one, so the massing shows a ' +
-  'single podium level. It changes the picture and the podium roof level; it ' +
-  'changes no capacity figure in this run. Enter the podium count to replace it.';
+  'How many levels stand on the podium footprint is stated on the affection plan — ' +
+  '"G+2P+8" is three, the ground floor included — and this run was not given a ' +
+  'level schedule, so the massing shows a single podium level. It changes the ' +
+  'picture and the podium roof level; it changes no capacity figure in this run. ' +
+  'Enter the level schedule to replace it.';
 
 /**
  * Build the massing.
@@ -165,7 +183,7 @@ export function buildMassing(input: MassingInput): MassingResult {
     },
   );
 
-  return { masses, totalHeightM: totalHeight };
+  return { masses, totalHeightM: totalHeight, towerLevels };
 }
 
 /** Metres, for a consumer that draws rather than computes. */

@@ -517,12 +517,58 @@ Each area lists the change, the files, and how it is verified. Nothing here ship
 - A `plot-limits` panel: every limit, its source (sheet / brief / regulation / you), and its
   value, in one table.
 
-### 4.4 The level schedule
+### 4.4 The level schedule — **done, 29 Sep 2026**
 
-The structured schedule in §2.7, threaded through `pipeline.ts`, `massing.ts`, `building.ts`,
-`level-plan.ts`, `parking.ts` and the API schema. A migration for stored runs: an old run keeps
-its integer and renders with a note saying which schedule it was computed under — never
-re-interpreted, because that would change a stored answer.
+`LevelSchedule` in `@envelope/core` — basements, whether the ground floor is parking, podium
+levels above the ground floor, and how many of those hold parking — threaded through
+`pipeline.ts`, `massing.ts` and `building.ts`, and accepted by the API as `levels`. A run given
+one no longer needs `parkingLevelsAvailable` or `podiumLevels`: both are derived from it, by
+`parkingLevels()` and `podiumFootprintLevels()`, which are the only two places that arithmetic
+now lives.
+
+**It found an off-by-one that had shipped.** `G+2P+8` is ground plus two podium levels:
+**three** levels standing on the podium footprint. The massing read the `2` and drew two, on
+every plot whose sheet states a podium. It moved the picture and the podium roof level and no
+capacity figure, which is why it survived — and `scripts/smoke.mjs` held the wrong number too,
+asserting the massing show the sheet's digit. The screen still asks for the digit, because that
+is what a reader copies off the sheet; `podiumFootprintLevels` does the `1 +` once.
+
+**Two values stopped being assumptions.** Where the parking sits was never derivable from two
+integers, so `building.ts` filled the podium from the ground up and declared that in amber. A
+stated schedule is a person answering the question, so the placement is `USER_SET` under their
+name and `massing.podium_levels` is too. The readiness snapshot's assumption exposure lost both
+rows, which `pnpm example` caught and refused to accept without being told to.
+
+**A schedule that does not describe a building is refused, not clamped.** Three podium parking
+levels in a one-level podium, or a schedule providing no parking at all, throws
+`RunBlockedError` at `G2:level-schedule` before anything is computed. Clamping would answer a
+question about the building that whoever filled the form got wrong. The panel prints the
+engine's own sentence, led by a line in the reader's language saying what kind of thing it is —
+the same treatment `ErrorBanner` gives the API's refusals, and for the same reason.
+
+**Levels are named for what they are.** `B2, B1, G, P1, L03` rather than `L00, L01, L02`, which
+named the ground floor, a podium level and a typical floor alike and reached the DXF as layer
+names. Typical floors keep their absolute index, so `L03` means the same storey on two plots
+with different podiums. The schedule reads back on screen as `1B+G+2P`, written by the engine's
+own `levelCode` — the tower left off until a run has produced one, because printing a guess
+beside three numbers a person just typed would make the one figure they cannot check the most
+prominent thing on the panel.
+
+**Stored runs are not re-interpreted.** `levels` is optional and additive; a run computed from
+the two integers reports `levels: null` rather than a code inferred from numbers that cannot
+carry one. Re-reading an old answer under a new model would change a number somebody has
+already been shown.
+
+**What §2.7 sketched and this deliberately does not carry: a floor-to-floor per band.** The
+sketch gave each of basements, ground, podium and tower its own. The engine has one
+`floorToFloorM`, and it is the divisor in the height fixpoint — four of them make the fixpoint
+solve over four unknowns, and the rule the fixpoint implements does not distinguish them. It is
+a real modelling gap (a 4.5 m ground floor under 3.2 m typicals is an ordinary Dubai scheme and
+this engine cannot say so) and it is a separate piece of work, not a field to add quietly to a
+schedule. The tower is likewise absent from the type on purpose: it comes out of the
+setback↔floor fixpoint, and a stated tower count would be an input competing with a computed
+answer. **Q27 is still open** and this type does not answer it — it states what the building is,
+not how the height allowance treats it.
 
 ### 4.5 Saleable GFA — ratio or area — **done, 29 Sep 2026**
 
@@ -1033,6 +1079,14 @@ claim beside it, and taken with one button rather than pre-selected. `pnpm smoke
 failed the pre-selection this plan asked for, correctly: a checked radio beside
 an enabled Compute button is the default `FR-DEF-002` forbids, whatever is
 written above it. The full argument is in §2.6.
+
+**K — §4.4 the level schedule, done, and it found a shipped off-by-one.** The
+structured schedule replaced two integers, and the first thing it exposed was
+that `G+2P+8` is three levels on the podium footprint where the engine drew two.
+The gate that should have caught that held the same wrong number. Two values —
+the podium count and where the parking sits — stopped being assumptions, because
+a schedule is a person answering a question two integers could not put. The full
+argument is in §4.4.
 
 **Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The

@@ -16,7 +16,9 @@
 
 import type { ProvenanceClass } from '@envelope/core';
 
+import { SYMBOLS } from './symbols.js';
 import {
+  type LegendEntry,
   type PaperItem,
   type PaperPoint,
   type PaperPoly,
@@ -25,6 +27,7 @@ import {
   type Role,
   type SheetMeta,
   type StripFact,
+  type SymbolName,
   TitleField,
 } from './types.js';
 
@@ -36,12 +39,6 @@ const STRIP = { x0: 322, x1: 410, pad: 4 } as const;
 /** Where the model is drawn. Labels may sit in its margin; nothing is clipped. */
 export const VIEWPORT = { x: 16, y: 16, width: 300, height: 265 } as const;
 
-export interface LegendEntry {
-  readonly role: Role;
-  readonly provenanceClass?: ProvenanceClass;
-  readonly label: string;
-}
-
 export interface StripInput {
   readonly title: string;
   readonly number: string;
@@ -49,6 +46,12 @@ export interface StripInput {
   readonly meta: SheetMeta;
   readonly facts: readonly StripFact[];
   readonly legend: readonly LegendEntry[];
+  /**
+   * Sentences printed under the legend: how the bays are numbered, what is NOT
+   * drawn, where the CAD layers come from. A key that names the inks and leaves
+   * the scheme unsaid has answered the easy half of §4.9 item 8.
+   */
+  readonly legendNotes?: readonly string[];
   readonly north: boolean;
 }
 
@@ -117,6 +120,48 @@ const box = (role: PaperRole, x: number, y: number, w: number, h: number): Paper
   ],
   closed: true,
 });
+
+
+/**
+ * A legend row that shows a symbol rather than a colour.
+ *
+ * Fitted into the swatch box from the symbol's own extent, so a car and an
+ * arrow — one drawn in millimetres, the other in units of length — both land
+ * the same size on paper without either being retyped here. The y axis flips:
+ * a symbol is defined in model space, where y is north, and paper's y is down.
+ */
+function symbolSwatch(
+  symbol: SymbolName,
+  role: Role,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): PaperPoly[] {
+  const lines = SYMBOLS[symbol].polylines;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const line of lines) {
+    for (const [px, py] of line.points) {
+      minX = Math.min(minX, px);
+      maxX = Math.max(maxX, px);
+      minY = Math.min(minY, py);
+      maxY = Math.max(maxY, py);
+    }
+  }
+  const k = Math.min(w / (maxX - minX || 1), h / (maxY - minY || 1));
+  const cx = x + w / 2 - ((minX + maxX) / 2) * k;
+  const cy = y + h / 2 + ((minY + maxY) / 2) * k;
+  return lines.map((line) => ({
+    kind: 'poly' as const,
+    role: 'swatch' as const,
+    points: line.points.map(([px, py]) => ({ x: cx + px * k, y: cy - py * k })),
+    closed: line.closed,
+    swatch: { role },
+  }));
+}
 
 /** A label-over-value row of the issue block, in paper millimetres. */
 const FIELD_ROW = 8.2;
@@ -240,13 +285,27 @@ export function paperFurniture(input: StripInput): PaperItem[] {
   items.push(text('label', { x: left, y }, 'LEGEND', 2));
   y += 3;
   for (const entry of input.legend) {
-    items.push({
-      ...box('swatch', left, y, 9, 4),
-      swatch: { role: entry.role, ...(entry.provenanceClass ? { provenanceClass: entry.provenanceClass } : {}) },
-    });
+    if (entry.symbol) {
+      items.push(...symbolSwatch(entry.symbol, entry.role, left, y, 9, 4));
+    } else {
+      items.push({
+        ...box('swatch', left, y, 9, 4),
+        swatch: { role: entry.role, ...(entry.provenanceClass ? { provenanceClass: entry.provenanceClass } : {}) },
+      });
+    }
     const lines = wrap(entry.label, 2.2, width - 12);
     lines.forEach((line, i) => items.push(text('note', { x: left + 12, y: y + 3 + i * 3 }, line, 2.2)));
-    y += Math.max(6, lines.length * 3 + 2.5);
+    y += Math.max(5.4, lines.length * 3 + 2.4);
+  }
+
+  // The scheme, under the key: how a bay number is arrived at, what is not
+  // drawn at all, and where the DXF's layer names come from.
+  for (const note of input.legendNotes ?? []) {
+    y += 1.2;
+    for (const line of wrap(note, 2, width)) {
+      items.push(text('note', { x: left, y }, line, 2));
+      y += 2.8;
+    }
   }
 
   // --- bottom: the two sentences, the title, the number ------------------------------------

@@ -128,9 +128,10 @@ const TOWER_PLACEMENT_BASIS =
 
 /** Always true of this model, whatever the run. Said with every drawing of it. */
 const NOT_MODELLED: readonly string[] = [
-  'Columns. With a structural grid the layout charges Table B.11\'s 300 mm clearance ' +
-    'per bay, but it places no column, and drawing one would be drawing structure ' +
-    'nobody checked against the bays.',
+  'Columns, and therefore no grid bubbles. The layout charges Table B.11\'s 300 mm ' +
+    'clearance per bay but places no column, so drawing one would be drawing structure ' +
+    'nobody checked against the bays - and a grid bubble is read as a column line. ' +
+    'Position on a parking sheet is given by bay number and by the dimensioned module.',
   /*
     THIS USED TO SAY THE CORE WAS NOT MODELLED AT ALL. It is now sized, placed
     and drawn on every level — see `core.ts` — so what survives here is the part

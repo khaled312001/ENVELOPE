@@ -853,8 +853,45 @@ issue block it throws, naming both positions in millimetres, because a title
 block struck through by a legend is a sheet whose date nobody can read and it
 would surface in front of a client rather than in a test.
 
-**Still to do from the list below:** grid bubbles and level datums (7), the
-symbol key in the legend (8), PDF, and IFC4. Note that the code carries a
+**Items 7 and 8, the key and the datum — done, 29 Sep 2026, one of them half
+refused.** The legend named its inks and stopped there. It now carries a
+**symbol key**, drawn from the same `SYMBOLS` geometry the sheet inserts and the
+DXF blocks, so the car in the key is the car in the bay — fitted from the
+symbol's own extent, which means redrawing the car moves the key with it. And
+under the key, the **scheme**: how a bay number is arrived at and what it is not
+("a position on this sheet and nothing else: not a title, not an allocation"),
+and where the DXF's layer names come from.
+
+The test is not that the legend has rows. It is that **the key covers the
+drawing** — every symbol a sheet draws must be keyed — and it failed the first
+time it ran: the site plan had been drawing a two-headed arrow at the vehicle
+entry since access was built, and keying nothing. That is the whole value of
+holding a legend to the drawing rather than to a list somebody maintains.
+
+**Level datums** (item 7) were a bare tick and a figure; they are now the
+drafting symbol, a triangle pointing at the slab whose floor level the figure
+states, one per level on every section. On a PLAN the floor level is already a
+title-strip fact with its provenance and its amber, so a spot level would have
+added a symbol and no information while shrinking the drawing to make room for
+it — it was tried and dropped.
+
+**Grid bubbles are refused, and the sheet says so.** A bubble means a structural
+gridline to everyone who opens a drawing. The layout charges Table B.11's
+clearance per bay and places no column, so bubbling the drive aisles would put a
+grid nobody computed on the sheet an architect is most likely to trace over.
+Every parking sheet therefore prints "No structural grid is drawn: the engine
+places no column, and a bubble reads as a column line. Position is given by bay
+number and by the dimensioned module", and `notModelled` carries the same
+sentence into the report and the .glb.
+
+Two things fell out. `Sheet` now carries its `legend` as data, not only as ink
+— which is what lets the coverage test exist, and what a screen-reader legend
+will read when it is built. And the strip's refusal earned its keep on the first
+sheet it saw: three new legend rows and three notes overran a parking strip by
+2.3 mm, and it said so in millimetres instead of printing the title block
+through the key.
+
+**Still to do from the list below:** PDF and IFC4. Note that the code carries a
 **recorded refusal** on the last of these — see the comment at
 `/api/runs/:runId/export`: IFC round-tripping was not quoted in this phase and the
 client disclaimed knowledge of the format in the meeting, so shipping a
@@ -1382,6 +1419,20 @@ table has one row and says on the sheet that no history is kept —
 `parentRunId` is null on every run ever written. Carrying the same facts into
 the DXF exposed a latent defect: R12 is not Unicode, so a reviewer named in
 Arabic would have written a file `pnpm dxf` fails; names now fold visibly.
+
+**Q — §4.9 items 7 and 8, the key and the datum, done; grid bubbles
+refused.** The legend named its inks and nothing else. It now carries a symbol
+key drawn from the same geometry the sheet inserts and the DXF blocks, and
+under it the scheme: how a bay number is arrived at, what it is not, and where
+the CAD layer names come from. The test holds the key to the DRAWING — every
+symbol drawn must be keyed — and failed on its first run: the site plan had
+been drawing a two-headed arrow at the vehicle entry and keying nothing. Level
+datums are now the drafting triangle rather than a bare tick, on every section
+level; on a plan the floor level is already a strip fact, so a spot level was
+tried and dropped as a symbol with no information. Grid bubbles are refused in
+words on every parking sheet, because a bubble reads as a column line and the
+engine places no column. `Sheet` now carries its legend as data, which is what
+lets the coverage test exist.
 
 **Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The

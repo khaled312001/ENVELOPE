@@ -46,8 +46,9 @@ import {
   type Box,
 } from './plane.js';
 import { placeCars } from './cars.js';
-import { type LegendEntry, PAPER, paperFurniture, VIEWPORT } from './strip.js';
+import { PAPER, paperFurniture, VIEWPORT } from './strip.js';
 import {
+  type LegendEntry,
   type ModelItem,
   Role,
   type Sheet,
@@ -58,6 +59,34 @@ import {
   type TextItem,
   TitleField,
 } from './types.js';
+
+
+/**
+ * The scheme behind the bay numbers — §4.9 item 8 asks for it, not just the key.
+ *
+ * A number on a drawing is read as a reference to something. These refer to
+ * nothing outside this sheet, and a reader who assumed otherwise would be
+ * quoting a bay number into a lease.
+ */
+const BAY_NUMBERING =
+  'Bays are numbered from 1 on each level, row by row in the order it was laid out. A number ' +
+  'is a position on this sheet and nothing else: not a title, not an allocation.';
+
+/**
+ * Why there are no grid bubbles — §4.9 item 7, half of it refused.
+ *
+ * A bubble means a structural gridline to everyone who reads a drawing. The
+ * layout charges Table B.11's clearance per bay but places no column, so
+ * bubbling the drive aisles would put a grid nobody computed on the sheet an
+ * architect is most likely to trace over. What the sheet gives instead is
+ * derivable and stated: a bay number, and the module dimensioned across.
+ */
+const NO_GRID =
+  'No structural grid is drawn: the engine places no column, and a bubble reads as a column ' +
+  'line. Position is given by bay number and by the dimensioned module.';
+
+/** For the reader who opens the same sheet in CAD and looks for the layer table. */
+const CAD_LAYERS = 'In the DXF of this sheet, layers are named ENV-<level>-<element>.';
 
 /** Paper millimetres of margin kept round the geometry for the labels outside it. */
 const MARGIN = 14;
@@ -427,7 +456,16 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
     { role: Role.SETBACK, provenanceClass: model.setbackSource.provenanceClass, label: 'Setback line, from each cited setback' },
     ...(ground ? [{ role: Role.PODIUM, provenanceClass: ground.outlineSource.provenanceClass, label: 'Podium footprint' }] : []),
     ...(tower ? [{ role: Role.TOWER, provenanceClass: tower.outlineSource.provenanceClass, label: 'Tower plate' }] : []),
-    ...(model.access ? [{ role: Role.ACCESS, label: 'Vehicle entry / exit' }] : []),
+    ...(model.access
+      ? [
+          { role: Role.ACCESS, label: 'Vehicle entry / exit' },
+          {
+            role: Role.ACCESS_ARROW,
+            symbol: SymbolName.ARROW_2WAY,
+            label: 'Direction of travel, in and out',
+          },
+        ]
+      : []),
     ...(model.sections.length > 0 ? [{ role: Role.CUT_LINE, label: 'Section cut line' }] : []),
   ];
 
@@ -441,8 +479,18 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
     view: f.view,
     viewport: f.viewport,
     items: annotationLast(items),
-    paperItems: paperFurniture({ title: 'Site plan', number: 'A-001', scale: s, meta, facts, legend, north: true }),
+    paperItems: paperFurniture({
+      title: 'Site plan',
+      number: 'A-001',
+      scale: s,
+      meta,
+      facts,
+      legend,
+      legendNotes: [CAD_LAYERS],
+      north: true,
+    }),
     facts,
+    legend,
     notes: [
       // Said wherever a band is drawn: the band ranks, it does not measure.
       ...(bandLegend(model).length > 0 ? [BAND_NOTE] : []),
@@ -672,6 +720,26 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
           },
         ]
       : []),
+    /*
+      THE SYMBOL KEY — §4.9 item 8. Drawn from the same `SYMBOLS` geometry the
+      sheet inserts and the DXF blocks, so the car in the key is the car in the
+      bay. The car's caption is the one that matters: 4.6 x 1.8 m is a drafting
+      convention and nothing on this sheet was computed from it.
+    */
+    {
+      role: Role.CAR,
+      symbol: SymbolName.CAR,
+      label: 'Car - a 4.6 x 1.8 m drafting symbol, not a vehicle the engine sized',
+    },
+    ...(parking.aisles.some((a) => a.twoWay)
+      ? [{ role: Role.AISLE_ARROW, symbol: SymbolName.ARROW_2WAY, label: 'Drive aisle, two-way' }]
+      : []),
+    ...(parking.aisles.some((a) => !a.twoWay)
+      ? [{ role: Role.AISLE_ARROW, symbol: SymbolName.ARROW, label: 'Drive aisle, one-way' }]
+      : []),
+    ...(parking.rampStrip
+      ? [{ role: Role.RAMP_ARROW, symbol: SymbolName.ARROW, label: 'Ramp, direction of travel' }]
+      : []),
   ];
   /*
     THE MODULE, DIMENSIONED ACROSS ONE AISLE: bay, aisle, bay. It is the figure
@@ -692,8 +760,18 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     view: f.view,
     viewport: f.viewport,
     items: annotationLast(items),
-    paperItems: paperFurniture({ title, number, scale: s, meta, facts, legend, north: true }),
+    paperItems: paperFurniture({
+      title,
+      number,
+      scale: s,
+      meta,
+      facts,
+      legend,
+      legendNotes: [BAY_NUMBERING, NO_GRID, CAD_LAYERS],
+      north: true,
+    }),
     facts,
+    legend,
     // The core's reconciliation against the deduction belongs on the sheet the
     // deduction was taken on, where a reader can see both numbers at once.
     notes: [...(model.core ? model.core.reconciliation.slice(1) : []), ...model.notModelled.slice(0, 2)],
@@ -771,8 +849,18 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
     view: f.view,
     viewport: f.viewport,
     items: annotationLast(items),
-    paperItems: paperFurniture({ title: 'Typical floor', number: 'A-201', scale: s, meta, facts, legend, north: true }),
+    paperItems: paperFurniture({
+      title: 'Typical floor',
+      number: 'A-201',
+      scale: s,
+      meta,
+      facts,
+      legend,
+      legendNotes: [CAD_LAYERS],
+      north: true,
+    }),
     facts,
+    legend,
     notes: [
       ...model.placements
         .filter((p) => p.subject === 'tower' || p.subject === 'core')
@@ -859,7 +947,19 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
         sourceOf(level.elevationM),
       ),
     );
+    /*
+      THE LEVEL DATUM — §4.9 item 7. The line was already here; the triangle is
+      what makes it a datum rather than a stray tick, and it points AT the slab
+      whose floor level the figure beside it states.
+    */
+    const tri = 2 * s;
     items.push(shape(Role.LEVEL_MARK, [P(-1200, e0), P(0, e0)], false));
+    items.push(
+      shape(Role.LEVEL_MARK, [P(-700, e0), P(-700 - tri / 2, e0 - tri), P(-700 + tri / 2, e0 - tri)], true, {
+        source: sourceOf(level.elevationM),
+        name: `${level.id} level datum`,
+      }),
+    );
   }
 
   for (const ramp of section.ramps) {
@@ -918,6 +1018,7 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
     { role: Role.SETBACK, provenanceClass: model.setbackSource.provenanceClass, label: 'Setback line' },
     { role: Role.CEILING, provenanceClass: model.heightCeilingM.provenanceClass, label: 'Height ceiling' },
     ...(section.ramps.length > 0 ? [{ role: Role.RAMP, label: 'Ramp - gradient NOT ASSESSED' }] : []),
+    { role: Role.LEVEL_MARK, label: 'Level datum - floor level from the ground datum' },
   ];
   const title = `Section ${section.id}-${section.id}`;
   return {
@@ -930,8 +1031,18 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
     view: f.view,
     viewport: f.viewport,
     items: annotationLast(items),
-    paperItems: paperFurniture({ title, number, scale: s, meta, facts, legend, north: false }),
+    paperItems: paperFurniture({
+      title,
+      number,
+      scale: s,
+      meta,
+      facts,
+      legend,
+      legendNotes: [CAD_LAYERS],
+      north: false,
+    }),
     facts,
+    legend,
     notes: [
       `${title}: ${section.taken}`,
       ...model.placements.filter((p) => p.subject === 'answer').map((p) => p.statement),

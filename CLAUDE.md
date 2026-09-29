@@ -353,6 +353,16 @@ is a defect even when it makes something easier.
   revision table has one row because `StoredRun.parentRunId` is null on every run
   ever written — REV A / REV B rows out of a history nobody keeps would be the
   same defect as a level schedule synthesised to make INV-01 pass.
+- **A legend is held to the drawing, not to a list.** Every symbol a sheet draws
+  must appear in its key, and `packages/sheets/test/legend.test.ts` walks the sheet's
+  own items to check it — which caught the site plan drawing a two-headed arrow at
+  the vehicle entry and keying nothing, on the first run. The key is built from
+  `SYMBOLS`, the geometry the sheet inserts and the DXF blocks, so the car in the key
+  is the car in the bay; a second outline drawn by hand would be a key to a drawing
+  nobody made. **And there are no grid bubbles.** A bubble means a structural
+  gridline to everyone who opens a drawing, the layout places no column, so every
+  parking sheet says in words that there is no grid and gives the bay number and the
+  dimensioned module instead.
 - **Degenerate geometry raises.** Slivers, self-intersections and near-tangent offsets throw
   rather than return a plausible wrong answer (PRD §14.3).
 - **Invariant failure blocks emission.** Never a warning, never a configurable severity.

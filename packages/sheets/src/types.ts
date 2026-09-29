@@ -256,6 +256,21 @@ export interface StripFact {
   readonly node?: string;
 }
 
+/** One row of the key: what an ink or a symbol on this sheet means. */
+export interface LegendEntry {
+  readonly role: Role;
+  readonly provenanceClass?: ProvenanceClass;
+  readonly label: string;
+  /**
+   * Show the SYMBOL instead of a colour swatch — §4.9 item 8's symbol key.
+   *
+   * It is drawn from `SYMBOLS`, the same geometry the sheet inserts and the DXF
+   * blocks. Redrawing a little car here would give the legend a symbol the
+   * drawing does not use, which is the one thing a key must never do.
+   */
+  readonly symbol?: SymbolName;
+}
+
 export interface Sheet {
   /** Stable, for a URL or a tab: `site`, `level-B1`, `typical`, `section-a`. */
   readonly id: string;
@@ -286,6 +301,14 @@ export interface Sheet {
    * inside a drawing is a pointer-only way to a derivation.
    */
   readonly facts: readonly StripFact[];
+  /**
+   * The key, as data — every ink and every symbol this sheet actually draws.
+   *
+   * On paper it is ink; here it is a list, which is what lets a test hold the
+   * sheet to the property that matters: a symbol drawn and not keyed is a symbol
+   * a reader has to guess at.
+   */
+  readonly legend: readonly LegendEntry[];
 }
 
 /** Who and what the set is for — printed in every title strip. */

@@ -1973,7 +1973,7 @@
         ],
         "units": "metres, Y up",
         "notModelled": [
-          "Columns. With a structural grid the layout charges Table B.11's 300 mm clearance per bay, but it places no column, and drawing one would be drawing structure nobody checked against the bays.",
+          "Columns, and therefore no grid bubbles. The layout charges Table B.11's 300 mm clearance per bay but places no column, so drawing one would be drawing structure nobody checked against the bays - and a grid bubble is read as a column line. Position on a parking sheet is given by bay number and by the dimensioned module.",
           "Stairs and lifts as rooms, and plant. The run declares how much of each parking level they take — drawn as the reserved zone — not where each one goes.",
           "Slab thickness. Levels are planes at their floor level. The engine computes no slab depth, and a drawn thickness would be an invented one.",
           "Façades, windows, balconies and units. The engine computes none of them.",

@@ -275,9 +275,19 @@ describe('the workspace shell', () => {
 
   it('draws its own glyphs rather than borrowing an icon set', () => {
     const markup = railed('/app', 'Khaled');
-    // Three marks, one per item, each hidden from the accessibility tree because
-    // the label beside it is the name.
-    expect((markup.match(/sidebar__glyph/g) ?? []).length).toBe(3);
+    /*
+      ONE MARK PER ITEM, COUNTED FROM THE ROUTE RECORD.
+
+      This said `toBe(3)` and broke the day a fourth workspace route landed — which
+      is the assertion working, and also the assertion being written the way this
+      codebase refuses everywhere else. The rail is built from `shell === 'workspace'`
+      precisely so nobody has to remember it; the test now reads the same source, so
+      a fifth route is covered without an edit and a route rendered with NO glyph
+      still fails.
+    */
+    const rail = ROUTES.filter((r) => PAGE_META[r].shell === 'workspace');
+    expect(rail.length).toBeGreaterThan(2);
+    expect((markup.match(/sidebar__glyph/g) ?? []).length).toBe(rail.length);
     expect(markup).toMatch(/<svg[^>]*class="sidebar__glyph"[^>]*aria-hidden="true"/);
   });
 

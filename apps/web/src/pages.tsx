@@ -40,6 +40,8 @@ import Refusals from './screens/Refusals.js';
 import { SignIn, SignUp } from './screens/Auth.js';
 import Settings from './screens/Settings.js';
 import Work from './screens/Work.js';
+import Workspace from './screens/Workspace.js';
+import AcceptInvite from './screens/AcceptInvite.js';
 
 export interface PageSpec extends PageMeta {
   readonly component: (p: PageProps) => JSX.Element;
@@ -55,6 +57,8 @@ const COMPONENTS: Readonly<Record<Route, (p: PageProps) => JSX.Element>> = {
   '/sign-in': SignIn,
   '/sign-up': SignUp,
   '/settings': Settings,
+  '/workspace': Workspace,
+  '/accept-invite': AcceptInvite,
   /* `/readiness` DISPATCHES ABOVE THE ACTOR CHECK — see `ReadinessRoute` below,
      which is a named component rather than an inline arrow because it reads the
      page heading out of the locale and an inline arrow cannot hold a hook. */

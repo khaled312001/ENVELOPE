@@ -108,6 +108,30 @@
     "shell": "workspace"
   },
   {
+    "path": "/workspace",
+    "title": "Workspace — TOP.ai",
+    "description": "A firm, the people in it and what each of them may do. Nothing here is verified by anybody: the name is a label its members chose, and a licence on a review is recorded and never checked.",
+    "navLabel": null,
+    "footerLabel": "Workspace",
+    "nav": "footer-only",
+    "group": "product",
+    "needsActor": false,
+    "arabic": "translated",
+    "shell": "workspace"
+  },
+  {
+    "path": "/accept-invite",
+    "title": "An invitation — TOP.ai",
+    "description": "The other end of a workspace invitation. The link works for one account and says nothing about why it was refused.",
+    "navLabel": null,
+    "footerLabel": "An invitation",
+    "nav": "unlisted",
+    "group": "product",
+    "needsActor": false,
+    "arabic": "translated",
+    "shell": "site"
+  },
+  {
     "path": "/readiness",
     "title": "Deployment readiness — TOP.ai",
     "description": "What is not ready in this deployment, and the human action that would change each figure. Readiness, not uptime — nothing here monitors availability.",

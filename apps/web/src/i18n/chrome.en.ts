@@ -94,6 +94,11 @@ export const EN = {
     label: 'Your workspace',
     heading: 'Workspace',
     signedInAs: 'Signed in as',
+    /* Where new plots and runs are being filed. A run keeps the workspace it was
+       computed in, so this is consequential on every step and the rail says it on
+       every page rather than only on the page that changes it. */
+    filingUnder: 'Filing work under',
+    personal: 'On my own',
     /* The accessible name of the collapse control, which CHANGES with the state:
        a name that stayed the same would leave a screen-reader user to infer the
        direction from `aria-expanded` alone. */

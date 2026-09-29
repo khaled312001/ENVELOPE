@@ -341,7 +341,9 @@ function Colophon({
       <div className="shell">
         <div className="colophon__map">
           {GROUP_ORDER.map((group) => {
-            const members = ROUTES.filter((r) => PAGE_META[r].group === group);
+            const members = ROUTES.filter(
+              (r) => PAGE_META[r].group === group && PAGE_META[r].nav !== 'unlisted',
+            );
             const isReference = group === 'reference';
             // AN EMPTY COLUMN IS OMITTED, never rendered as a heading over nothing.
             // `method` has no members until the pages in it are built, and a greyed

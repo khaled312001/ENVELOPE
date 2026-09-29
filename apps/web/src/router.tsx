@@ -50,6 +50,8 @@ export const ROUTES = [
   '/sign-in',
   '/sign-up',
   '/settings',
+  '/workspace',
+  '/accept-invite',
   '/readiness',
 ] as const;
 export type Route = (typeof ROUTES)[number];

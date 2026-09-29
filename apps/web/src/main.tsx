@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import Root from './Root.js';
 import { LocaleProvider } from './i18n/locale.js';
 import { SessionProvider } from './session.js';
+import { WorkspaceProvider } from './workspace.js';
 
 /*
  * STYLESHEET ORDER IS LOAD-BEARING, AND NO PAGE AGENT EVER EDITS THIS FILE TO GET
@@ -43,6 +44,7 @@ import './styles/readiness.css';
 import './styles/not-found.css';
 import './styles/work.css';
 import './styles/antechamber.css';
+import './styles/workspace.css';
 /* Last, and it is the only sheet whose position matters: it turns 235 logical
    properties into a right-to-left layout and overrides the Latin font stack for
    Arabic, so anything it touches has to already be defined. */
@@ -55,7 +57,11 @@ createRoot(root).render(
   <StrictMode>
     <LocaleProvider>
       <SessionProvider>
-        <Root />
+        {/* Inside the session: a workspace belongs to an account, and this asks
+            the server for the account's memberships as soon as there is one. */}
+        <WorkspaceProvider>
+          <Root />
+        </WorkspaceProvider>
       </SessionProvider>
     </LocaleProvider>
   </StrictMode>,

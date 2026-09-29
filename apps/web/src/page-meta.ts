@@ -51,7 +51,23 @@ export interface PageMeta {
    */
   readonly navLabel: string | null;
   readonly footerLabel: string;
-  readonly nav: 'primary' | 'footer-only';
+  /**
+   * WHERE THE CHROME NAMES THIS ROUTE.
+   *
+   *   primary      in the masthead nav and in the footer sitemap
+   *   footer-only  in the footer sitemap
+   *   unlisted     in neither, and that is a THIRD case rather than a variant of
+   *                the second. `/accept-invite` is reached by a link somebody was
+   *                handed and says "this address has no invitation in it" when it
+   *                is opened without one. A footer entry leading to that sentence
+   *                is a sitemap row for a page nobody can use from the sitemap —
+   *                the same defect as a greyed link to a page that does not exist,
+   *                which `site-map.md` already refuses.
+   *
+   * It stays in `ROUTES`, so it is typed, dispatched, smoke-walked and covered by
+   * its own prohibitions test. Unlisted is about the chrome, not about existence.
+   */
+  readonly nav: 'primary' | 'footer-only' | 'unlisted';
   readonly group: 'claim' | 'product' | 'method' | 'reference';
   /** Only `/app`. Everything else is readable without a name. */
   readonly needsActor: boolean;

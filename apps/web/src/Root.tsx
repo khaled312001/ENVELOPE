@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { EngineApp, Header, useDensity, useSidebar, useTheme, type Density } from './App.js';
 import { LanguageToggle, useLocale, useT } from './i18n/locale.js';
 import { useSession } from './session.js';
+import { useWorkspace } from './workspace.js';
 import type { Actor } from './api/client.js';
 import { AppSidebar } from './components/AppSidebar.js';
 import { SiteChrome, UntranslatedNotice } from './components/SiteChrome.js';
@@ -67,6 +68,7 @@ export default function Root(): JSX.Element {
   const [density, setDensity] = useDensity();
   const [railCollapsed, setRailCollapsed] = useSidebar();
   const { state: sessionState, account: session } = useSession();
+  const { active: activeWorkspace } = useWorkspace();
 
   const [actor, setActorState] = useState<Actor | null>(() => {
     try {
@@ -91,8 +93,20 @@ export default function Root(): JSX.Element {
    */
   const setActor = useCallback((next: Actor | null) => {
     try {
-      if (next) localStorage.setItem('envelope.actor', JSON.stringify(next));
-      else localStorage.removeItem('envelope.actor');
+      /*
+        THE WORKSPACE IS STRIPPED BEFORE THE IDENTITY IS REMEMBERED.
+
+        `workspaceId` rides on `Actor` so that every engine call carries it without
+        a second parameter (see the field's own note in `api/client.ts`), but it is
+        not part of who somebody is. Written to storage it would outlive membership:
+        a reader removed from a firm on Monday would still be sending its id on
+        Tuesday, and `workspace.tsx`'s careful "remembered, then checked against the
+        list" would be bypassed by a copy in another key.
+      */
+      if (next) {
+        const { workspaceId: _workspace, ...identity } = next;
+        localStorage.setItem('envelope.actor', JSON.stringify(identity));
+      } else localStorage.removeItem('envelope.actor');
     } catch {
       /* the session still works, it just will not be remembered */
     }
@@ -173,9 +187,20 @@ export default function Root(): JSX.Element {
     document.title = title;
   }, [title]);
 
+  /*
+    THE ACTOR AS THE PAGES SEE IT: the identity, plus where the work is being filed.
+
+    Merged here rather than stored, so there is one owner of the workspace
+    (`workspace.tsx`) and one owner of the identity, and neither can drift into the
+    other. `null` workspace means personal, which is a real answer — see that file
+    for why nothing falls back to "the first one".
+  */
+  const actorInWorkspace: Actor | null =
+    actor && activeWorkspace ? { ...actor, workspaceId: activeWorkspace.orgId } : actor;
+
   const pageProps: PageProps = {
     navigate,
-    actor,
+    actor: actorInWorkspace,
     setActor,
     search,
     theme,
@@ -207,6 +232,7 @@ export default function Root(): JSX.Element {
         collapsed={railCollapsed}
         setCollapsed={setRailCollapsed}
         {...(sessionState === 'signed-in' && session ? { accountName: session.name } : {})}
+        {...(activeWorkspace ? { workspaceName: activeWorkspace.name } : {})}
       />
     ) : null;
 

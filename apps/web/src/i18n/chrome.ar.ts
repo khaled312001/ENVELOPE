@@ -48,6 +48,8 @@ export const AR: ChromeDictionary = {
     label: 'مساحة عملك',
     heading: 'مساحة العمل',
     signedInAs: 'داخل باسم',
+    filingUnder: 'تُحفَظ الأعمال تحت',
+    personal: 'وحدي',
     /* «اطوِ» و«افرد» — فعلان صريحان. The name changes with the state for the
        reason the English carries. */
     collapse: 'اطوِ شريط مساحة العمل',
@@ -207,6 +209,20 @@ export const AR: ChromeDictionary = {
         'اسمك ورقم رخصتك وكلمة المرور — وما يفعله كلٌّ منها بتشغيلة توقّعها. الرخصة تُسجَّل ولا يُتحقَّق منها؛ وهذه الصفحة تقول ذلك عند الحقل الذي يُكتب فيه الرقم.',
       navLabel: null,
       footerLabel: 'الإعدادات',
+    },
+    '/workspace': {
+      title: 'مساحة العمل — TOP.ai',
+      description:
+        'مكتبٌ ومَن فيه وما يحقّ لكلٍّ منهم. لا يتحقّق أحد من شيء هنا: الاسم لافتةٌ اختارها أعضاؤه، ورقم الرخصة على المراجعة يُسجَّل ولا يُتحقَّق منه.',
+      navLabel: null,
+      footerLabel: 'مساحة العمل',
+    },
+    '/accept-invite': {
+      title: 'دعوة — TOP.ai',
+      description:
+        'الطرف الآخر من دعوة مساحة عمل. الرابط يعمل لحسابٍ واحد، ولا يقول شيئًا عن سبب رفضه.',
+      navLabel: null,
+      footerLabel: 'دعوة',
     },
     '/readiness': {
       title: 'جاهزية النشر — TOP.ai',

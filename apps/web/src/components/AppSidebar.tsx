@@ -23,11 +23,20 @@
  * its reason, because a silently dropped requirement is indistinguishable from a
  * forgotten one.
  *
- * 1. **No workspace switcher.** It switches between organisations, and there are
- *    none — `CLAUDE.md` states that plainly and §6.4 of the plan makes it a rule:
- *    no screen ships before the server enforces what it displays. A switcher over
- *    one implicit workspace is a control that claims tenancy this deployment does
- *    not have, on the element a reader would trust most.
+ * 1. **No workspace switcher — RESOLVED, and the resolution is recorded rather
+ *    than the refusal deleted.** This said: "It switches between organisations, and
+ *    there are none… a switcher over one implicit workspace is a control that
+ *    claims tenancy this deployment does not have, on the element a reader would
+ *    trust most." That was true until `apps/api/src/org-routes.ts` and the
+ *    membership axis in `access.ts` were built and attacked in
+ *    `apps/api/test/tenancy.test.ts`. The switcher itself lives on `/workspace`,
+ *    beside the sentence about what it changes; the rail carries the ANSWER —
+ *    which workspace new work is being filed under — because that is consequential
+ *    on every step of the engine and a reader should not have to leave the page
+ *    they are computing on to find it out.
+ *
+ *    It reads "On my own" rather than going blank when there is no workspace. A
+ *    rail that showed nothing would make personal work look like a missing value.
  *
  * 2. **The theme toggle stays in the top bar.** §5.2 puts it in the sidebar footer
  *    "and not also in the top bar", which follows from that plan's two separate
@@ -113,6 +122,7 @@ const GLYPH: Readonly<Record<Route, JSX.Element | null>> = {
   '/readiness': null,
   '/sign-in': null,
   '/sign-up': null,
+  '/accept-invite': null,
   '/app': (
     <>
       <path d="M2.5 4.5 L5.5 2.5 L13.5 2.5 L13.5 13.5 L2.5 13.5 Z" />
@@ -123,6 +133,19 @@ const GLYPH: Readonly<Record<Route, JSX.Element | null>> = {
     <>
       <path d="M2.5 5.5 L9.5 5.5 L9.5 13.5 L2.5 13.5 Z" />
       <path d="M5.5 5.5 L5.5 2.5 L12.5 2.5 L12.5 10.5 L9.5 10.5" />
+    </>
+  ),
+  /*
+    workspace  three figures on one baseline — people, not a building. The rail's
+               other two marks are drawings of the subject matter; this one is
+               drawn in the same hand rather than borrowed from an icon set, for
+               the reason the record above gives.
+  */
+  '/workspace': (
+    <>
+      <path d="M8 3.5 a1.6 1.6 0 1 1 0 3.2 a1.6 1.6 0 1 1 0 -3.2" />
+      <path d="M3.5 12.5 v-1 a2 2 0 0 1 2 -2 h5 a2 2 0 0 1 2 2 v1" />
+      <path d="M2.5 7.5 h1.5 M12 7.5 h1.5" />
     </>
   ),
   '/settings': (
@@ -186,12 +209,21 @@ export function AppSidebar({
    * that hid which of the two you are.
    */
   accountName,
+  /**
+   * The workspace new plots and runs are being filed under, when there is one.
+   *
+   * Passed in rather than read from the context here, for the reason `Root` gives
+   * for the theme: one owner, and the value travels. It is also what lets a test
+   * render this rail in both states without a provider.
+   */
+  workspaceName,
   collapsed,
   setCollapsed,
 }: {
   readonly route: Location;
   readonly navigate: (to: Href) => void;
   readonly accountName?: string | undefined;
+  readonly workspaceName?: string | undefined;
   readonly collapsed: boolean;
   readonly setCollapsed: (v: boolean) => void;
 }): JSX.Element {
@@ -276,6 +308,16 @@ export function AppSidebar({
             <>
               <span className="sidebar__who-label">{t.rail.signedInAs}</span>
               <span className="sidebar__who-name">{accountName}</span>
+              {/*
+                WHERE THE WORK IS GOING, under who is doing it.
+
+                Only for an account: a guest has no workspace, and a line saying
+                "On my own" under "You are a guest" would be two ways of saying one
+                thing. Rendered for an account in BOTH states, because "on my own"
+                is a real answer and an absent line would read as a missing value.
+              */}
+              <span className="sidebar__who-label">{t.rail.filingUnder}</span>
+              <span className="sidebar__who-name">{workspaceName ?? t.rail.personal}</span>
             </>
           ) : (
             <p className="sidebar__guest">{t.rail.guest}</p>

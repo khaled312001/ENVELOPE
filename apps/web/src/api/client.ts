@@ -24,6 +24,21 @@ export interface Actor {
   readonly id: string;
   readonly name: string;
   readonly licence?: string;
+  /**
+   * WHICH WORKSPACE THIS REQUEST IS BEING MADE INSIDE — not part of the identity.
+   *
+   * It sits on `Actor` because every call in this module already takes one, and a
+   * second parameter threaded through forty signatures would be forgotten on the
+   * one call that files a run. It is NOT who the reader is: `workspace.tsx` owns
+   * it, `Root` merges it in at the point of use, and it is stripped before the
+   * actor is written to storage, because an identity remembered with a workspace
+   * inside it would survive being removed from that workspace.
+   *
+   * The server checks membership on every request and treats a workspace the
+   * actor does not belong to as absent, so this can only ever narrow where work
+   * is filed — it cannot reach somebody else's.
+   */
+  readonly workspaceId?: string;
 }
 
 export class ApiError extends Error {
@@ -57,6 +72,7 @@ function headers(actor: Actor, hasBody: boolean): Record<string, string> {
     'x-actor-id': actor.id,
     'x-actor-name': actor.name,
     ...(actor.licence ? { 'x-actor-licence': actor.licence } : {}),
+    ...(actor.workspaceId ? { 'x-workspace-id': actor.workspaceId } : {}),
   };
 }
 

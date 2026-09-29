@@ -1,0 +1,445 @@
+/*
+ * `/workspace` and `/accept-invite`.
+ *
+ * The screen is five panels, two schedules and a log, and it borrows almost
+ * everything: `.plate`, `.schedule`, `.field`, `.button` and `.section--opening`
+ * are the chassis's. What is here is what a list of PEOPLE needs that a list of
+ * runs does not — a person cell carrying three facts, an inline confirmation
+ * inside a row, and a log whose entries are a time, a sentence and a detail.
+ *
+ * ---------------------------------------------------------------------------
+ * NOTHING IN THIS FILE PAINTS `--uncertain`, AND THE TEMPTATION IS REAL.
+ *
+ * Four things on this page are exactly what a designer reaches for amber to mark:
+ * a workspace nobody verified, a licence nobody checked, an invitation about to
+ * expire, and a role in the middle of being changed. §13.1 reserves amber for one
+ * meaning — a value the engine ASSUMED — and spending it on "attention" here would
+ * teach every reader of this page to read the engine's amber as "be careful"
+ * rather than "you may edit this". The page uses weight, rule and position.
+ *
+ * ---------------------------------------------------------------------------
+ * SEMANTIC TOKENS ONLY. `pnpm contrast`'s assertion (9) fails a stylesheet that
+ * reads a primitive, and no pair below is new: text-secondary and text-tertiary on
+ * --surface-raised are the plate's own pairs, already measured in both themes.
+ */
+
+.ws__lede {
+  max-inline-size: var(--measure-prose);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+.ws__prose {
+  max-inline-size: var(--measure-prose);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+/*
+ * A disclosure, and it is styled to be READ rather than to be dismissed.
+ *
+ * Four of the sentences on this page are the reason it can be shipped at all —
+ * the name is unverified, members read each other's work, a licence is recorded
+ * and never checked, nothing stops an author signing their own review. A muted
+ * note in small grey type is how a disclosure gets skipped, so these sit at the
+ * body size on the prose measure with a rule at the inline start, which is the
+ * same treatment the site gives a quoted refusal.
+ */
+.ws__note {
+  max-inline-size: var(--measure-prose);
+  margin-block-start: var(--space-4);
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--rail-w) solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+/* The two that qualify a signature get the darker rule and the body size. */
+.ws__note--strong {
+  border-inline-start-color: var(--border-strong);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+}
+
+.ws__panel + .ws__panel {
+  margin-block-start: var(--rhythm-block);
+}
+
+.ws__panel-heading {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+  margin: 0;
+}
+
+.ws__panel-lede {
+  max-inline-size: var(--measure-prose);
+  margin-block-start: var(--space-2);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+.ws__sub {
+  margin-block-start: var(--rhythm-block);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+
+.ws__empty {
+  padding-block: var(--space-5);
+  color: var(--text-secondary);
+}
+
+.ws__error {
+  margin-block-start: var(--space-4);
+  max-inline-size: var(--measure-prose);
+  color: var(--variance);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.ws__ok {
+  margin-inline-start: var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.ws__busy {
+  margin-inline-start: var(--space-2);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+/* ------------------------------------------------------------------- picker */
+
+/*
+ * The switcher sits ABOVE the panels and outside the plate.
+ *
+ * It changes what every panel below is about, so it is not one of them. Inside a
+ * plate it would read as a setting of the first panel — which is the members
+ * table, and "which workspace am I looking at" is not a property of a table.
+ */
+.ws__picker {
+  display: grid;
+  gap: var(--space-2);
+  margin-block-end: var(--rhythm-block);
+  padding-block-end: var(--rhythm-block);
+  border-block-end: var(--border-width) solid var(--border-subtle);
+}
+
+.ws__picker-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+}
+
+.ws__picker-effect {
+  max-inline-size: var(--measure-prose);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------ controls */
+
+/*
+ * A native select, sized to the tap minimum.
+ *
+ * Not restyled into something that no longer looks like a control: the one screen
+ * where a mis-click changes somebody's access is the wrong place for a listbox
+ * that has to re-implement keyboard behaviour. The border and the type are the
+ * chassis's; the rest is the platform's.
+ */
+.ws__select {
+  min-block-size: var(--tap-min);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.ws__select:focus-visible {
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.ws__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-4);
+  margin-block-start: var(--space-5);
+}
+
+.ws__form > .field {
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+}
+
+.ws__form input,
+.ws__form select {
+  min-block-size: var(--tap-min);
+}
+
+.ws__form .button {
+  min-block-size: var(--tap-min);
+}
+
+/* -------------------------------------------------------------------- table */
+
+.ws__table {
+  inline-size: 100%;
+}
+
+/* Three facts in one cell, stacked, because they are not a row of equals: who
+   this is, how to reach them, and what they have asserted about a licence. */
+.ws__person {
+  display: block;
+  font-weight: var(--weight-normal);
+}
+
+.ws__person-name {
+  display: block;
+  font-weight: var(--weight-medium);
+}
+
+.ws__person-email {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The licence line, and it is `--text-xs` on `--text-tertiary` DELIBERATELY.
+ *
+ * It is the quietest thing in the cell because it is an assertion nobody checked,
+ * and the sentence that says so is in the roles panel at body size. Making the
+ * number prominent would give a recorded string the weight of a credential.
+ */
+.ws__person-licence {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.ws__you {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-normal);
+}
+
+.ws__missing {
+  color: var(--text-tertiary);
+  font-style: normal;
+}
+
+.ws__role-fixed {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.ws__role-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.ws__row-actions {
+  inline-size: 1%;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ confirm */
+
+/*
+ * The confirmation opens INSIDE the row rather than over the page.
+ *
+ * No modal, so there is no focus trap to get wrong, no backdrop, and nothing
+ * painted over the table the reader is checking the name against. It is wide,
+ * because the sentence it carries — what the person loses, and what survives — is
+ * the reason it exists.
+ */
+.ws__confirm {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 18rem;
+  max-inline-size: var(--measure-prose);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  white-space: normal;
+}
+
+.ws__confirm-question {
+  font-weight: var(--weight-medium);
+}
+
+.ws__confirm-body {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.ws__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.ws__confirm-actions .button {
+  min-block-size: var(--tap-min);
+}
+
+/* -------------------------------------------------------------------- roles */
+
+.ws__roles {
+  display: grid;
+  gap: var(--space-4);
+  margin-block-start: var(--space-5);
+}
+
+.ws__role {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  align-items: baseline;
+}
+
+@media (max-width: 40rem) {
+  .ws__role {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ws__role-name {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+}
+
+.ws__role-can {
+  margin: 0;
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------ invites */
+
+.ws__minted {
+  margin-block-start: var(--space-5);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.ws__minted-heading {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+
+.ws__minted-lede {
+  margin-block-start: var(--space-2);
+  max-inline-size: var(--measure-prose);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+/*
+ * The link is a read-only input at full width, in mono.
+ *
+ * A `<p>` would be selectable and would also be one long unbreakable string that
+ * widens the page on a phone — the class of defect `pnpm smoke` was written to
+ * catch. An input scrolls inside its own box instead.
+ */
+.ws__link {
+  inline-size: 100%;
+  margin-block-start: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.ws__minted-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block-start: var(--space-3);
+}
+
+/* --------------------------------------------------------------------- log */
+
+.ws__log {
+  margin-block-start: var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.ws__event {
+  padding-block: var(--space-3);
+  border-block-start: var(--border-width) solid var(--border-subtle);
+}
+
+.ws__event-at {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.ws__event-line {
+  margin-block-start: var(--space-1);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+.ws__event-actor {
+  font-weight: var(--weight-medium);
+}
+
+.ws__event-subject {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.ws__event-detail,
+.ws__event-rename {
+  margin-block-start: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* ------------------------------------------------------------ accept-invite */
+
+/*
+ * The invitation page is a single plate on the prose measure.
+ *
+ * It asks one question and carries one disclosure, and a wide page for one
+ * question reads as a form somebody forgot to finish.
+ */
+.ws--invite .ws__panel {
+  max-inline-size: var(--measure-prose);
+}

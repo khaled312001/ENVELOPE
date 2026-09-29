@@ -41,6 +41,12 @@ const SLUGS: Readonly<Record<string, string>> = {
   '/sign-in': 'auth-pages',
   '/sign-up': 'auth-pages',
   '/settings': 'settings',
+  '/workspace': 'workspace',
+  /* Its own file and not a section of `workspace.test.tsx`: this page's whole
+     property is what it does NOT say about a refused invitation, and coverage
+     supplied by another route's filename is the invisible gap this map exists
+     to close. */
+  '/accept-invite': 'accept-invite',
   '/readiness': 'readiness',
 };
 

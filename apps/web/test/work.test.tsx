@@ -544,8 +544,14 @@ describe('the review panel', () => {
     const both = panel(subject({ gates: SIGNED, access: 'reader' }), null);
     expect(stripTags(both)).not.toContain(RUN_EN.files.locked);
     // A run with no model has nothing to draw, so it is not offered the drawn files —
-    // the server would answer 409 for them.
-    expect(buttons(both)).toEqual([RUN_EN.files.html, RUN_EN.files.json, RUN_EN.files.xlsx]);
+    // the server would answer 409 for them. The report is offered twice: to read,
+    // and to print, which is how this product writes a PDF.
+    expect(buttons(both)).toEqual([
+      RUN_EN.files.html,
+      RUN_EN.files.print,
+      RUN_EN.files.json,
+      RUN_EN.files.xlsx,
+    ]);
   });
 
   it('names who signed and when, as the run recorded it', () => {

@@ -251,6 +251,20 @@ export const EN = {
 
     openReport: 'Open the report',
     openDrawingSet: (paper: string): string => `Open the drawing set (${paper})`,
+    printReport: 'Save the report as PDF',
+    printDrawingSet: (paper: string): string => `Save the drawing set as PDF (${paper})`,
+    /*
+      THE PDF, EXPLAINED WHERE IT IS OFFERED. A button that opens a print dialog
+      when the reader expected a file reads as a broken feature, so the page says
+      what it is doing and why. The reason is the same one the sheets are built
+      on: one layout, several renderers.
+    */
+    pdfNote:
+      'The PDF is written by your browser from the document the server produced \u2014 choose ' +
+      '\u201cSave as PDF\u201d in the print dialog. The paper size, the margins and the page ' +
+      'breaks are already in the document. It is laid out once, not twice: a second writer ' +
+      'on the server would set the same report in a different engine, and the day the two ' +
+      'disagreed the copy you filed would be the one nobody had read.',
     openJson: 'Open the JSON export',
     downloadDxf: 'Download the CAD drawing (DXF)',
     downloadModel: (threeD: string): string => `Download the ${threeD} model (glTF)`,

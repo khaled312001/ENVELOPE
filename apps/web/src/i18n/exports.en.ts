@@ -81,6 +81,11 @@ export const EN = {
       'your own. A section comes only as a sheet; drawn into the model, it would stand in ' +
       'the car park. The same sheets also come as one document to print, ',
     bodyAfterSize: ', one sheet to a page.',
+    pdf:
+      'That document is the PDF. It is print-first HTML — the paper size, the margins and ' +
+      'the page breaks are in the file — and the browser saves it. Writing a second one on ' +
+      'the server would set the same report in a different engine, and two layouts of one ' +
+      'report drift the way two drawings of one building do.',
 
     sheets: {
       region: 'The sheets of the drawing set',

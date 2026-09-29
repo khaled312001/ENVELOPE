@@ -1250,7 +1250,7 @@ describe('the English copy, as it was written inline', () => {
       ' — the inputs, versions and rule set',
       `Report fingerprint${EXPORTED.reportFingerprint.digest.slice(0, 16)}… — SHA-256 over the content`,
       'The metric definitions annex is not signed.',
-      'Open the reportOpen the drawing set (A3)Open the JSON exportDownload the CAD drawing (DXF)Download the 3D model (glTF)Download the workbook (XLSX)',
+      'Open the reportSave the report as PDFOpen the drawing set (A3)Save the drawing set as PDF (A3)Open the JSON exportDownload the CAD drawing (DXF)Download the 3D model (glTF)Download the workbook (XLSX)',
       'The CAD drawing is the whole building: every parking level at its own height with a car in every bay, the ramps as slopes between levels, and the massing stood up as 3D faces. Each level has its own layers — ENV-B1-BAY, ENV-B1-CAR — so a reviewer can switch off one level, or one kind of thing on it. Revit and IFC are not included: round-tripping IFC is a body of work this phase has not quoted, and a badly-shaped one would be worse than none.',
       'The 3D model is the capacity step’s 3D view as a .glb file: binary glTF 2.0, with no extension a reader is required to support. It is in metres, measured from the middle of the plot, with a node for each level and its cars. It carries the same two sentences in its metadata, because a 3D file has no title block to print them in.',
       'One sheet at a time',

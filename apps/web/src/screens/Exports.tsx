@@ -211,6 +211,7 @@ export default function Exports({ navigate }: PageProps): JSX.Element {
           {SHEET_SIZE}
           {t.drawing.bodyAfterSize}
         </p>
+        <p>{t.drawing.pdf}</p>
 
         <div className="schedule" role="region" aria-label={t.drawing.sheets.region} tabIndex={0}>
           <table>

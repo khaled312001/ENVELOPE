@@ -891,8 +891,33 @@ sheet it saw: three new legend rows and three notes overran a parking strip by
 2.3 mm, and it said so in millimetres instead of printing the title block
 through the key.
 
-**Still to do from the list below:** PDF and IFC4. Note that the code carries a
-**recorded refusal** on the last of these — see the comment at
+**PDF — done, 29 Sep 2026, and the browser writes it.** The report has been
+print-first HTML since it was built: `@page` A4 for the report and A3 for the
+drawing set, with the margins, the page breaks and the running footer in the
+document. What was missing was not a writer — it was **saying so and offering
+it**. A reader who is told a product exports PDF, finds no PDF button, and is
+never told the report prints, concludes it does not.
+
+So both documents now carry a **Save as PDF** action, on the export step and on
+a saved run's page, and a sentence beside them says what is happening and why.
+The why is the rule the sheets are built on. A server-side writer would lay the
+same report out a SECOND time, from the same data, in a different engine; the
+two would agree the day it was written and drift afterwards, and the copy
+somebody filed would be the one nobody had read. One layout, several renderers.
+(It is also the only thing that can run on the deployment: Passenger on shared
+hosting has no headless browser, and a PDF library would be that second engine.)
+
+A hidden frame rather than a popup: a blocked popup is a button that does
+nothing, and printing a frame raises the dialog on the FRAME's document, so its
+`@page` rules decide the paper. **The failure that matters here is silent** —
+print the opener by mistake and the dialog still opens, the button still looks
+right, and what comes out is a screenshot of the app with the report nowhere in
+it. `pnpm smoke` therefore reads the frame's own document back and holds it to
+the sentence every report carries; the check was doctored to print `about:blank`
+and it failed, before it was trusted.
+
+**Still to do from the list below:** IFC4. The code carries a
+**recorded refusal** on it — see the comment at
 `/api/runs/:runId/export`: IFC round-tripping was not quoted in this phase and the
 client disclaimed knowledge of the format in the meeting, so shipping a
 badly-shaped IFC would be worse than shipping none. That refusal is to be settled
@@ -1433,6 +1458,19 @@ tried and dropped as a symbol with no information. Grid bubbles are refused in
 words on every parking sheet, because a bubble reads as a column line and the
 engine places no column. `Sheet` now carries its legend as data, which is what
 lets the coverage test exist.
+
+**R — §4.9's PDF, done; the browser writes it.** The report was already
+print-first HTML — A4 for the report, A3 for the drawing set, margins and page
+breaks in the document. What was missing was the offer and the sentence: a
+reader told a product exports PDF who finds no PDF button concludes it does
+not. Both documents now have a Save as PDF action and a note saying the
+browser writes it, because a second writer on the server would set the same
+report in a different engine and the copy somebody filed would be the one
+nobody had read. A hidden frame rather than a popup, since printing a frame
+raises the dialog on the FRAME's document. The failure is silent — print the
+opener and the dialog still opens, with the app in it instead of the report —
+so `pnpm smoke` reads the frame's document back, and the check was doctored to
+print `about:blank` and shown to fail before it was trusted.
 
 **Still blocked on the client: the twenty-five images.** `apps/web/src/assets/img/`
 holds only its README, so every slot renders nothing — by design, silently. The

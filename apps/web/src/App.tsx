@@ -45,6 +45,7 @@ import { ProvenanceTree, type ProvTree } from './components/ProvenanceTree.js';
 import { ProvenanceLegend, TracedValue } from './components/TracedValue.js';
 import { MassingPanel } from './components/MassingPanel.js';
 import { DrawingSet, useSheets } from './components/DrawingSet.js';
+import { downloadObject, openDocument, printDocument } from './documents.js';
 import { ParkingPlan, VehicleAccessPanel } from './components/ParkingPlan.js';
 import { AffectionPlanIntake, type Prefill } from './screens/AffectionPlanIntake.js';
 import { ChecksStep } from './screens/ChecksStep.js';
@@ -1482,6 +1483,12 @@ export function ExportDone({
         </div>
       ) : null}
 
+      {/*
+        THE PDF. The report is print-first HTML, so the browser is this
+        product's PDF writer — `documents.ts` argues why that is a decision and
+        not a shortfall. The note under the buttons says so on the page, because
+        a reader who expects a file and gets a dialog concludes it is broken.
+      */}
       <div className="actions actions--row">
         <button
           type="button"
@@ -1490,6 +1497,13 @@ export function ExportDone({
         >
           {t.openReport}
         </button>
+        <button
+          type="button"
+          className="button"
+          onClick={() => printDocument(done.html, 'text/html')}
+        >
+          {t.printReport}
+        </button>
         {done.sheets ? (
           <button
             type="button"
@@ -1497,6 +1511,15 @@ export function ExportDone({
             onClick={() => openDocument(done.sheets!, 'text/html')}
           >
             {t.openDrawingSet(DRAWING_SET_PAPER)}
+          </button>
+        ) : null}
+        {done.sheets ? (
+          <button
+            type="button"
+            className="button"
+            onClick={() => printDocument(done.sheets!, 'text/html')}
+          >
+            {t.printDrawingSet(DRAWING_SET_PAPER)}
           </button>
         ) : null}
         <button
@@ -1545,6 +1568,8 @@ export function ExportDone({
           {t.downloadXlsx}
         </button>
       </div>
+
+      <p className="fine-print">{t.pdfNote}</p>
 
       <p className="fine-print">
         {t.cad.lead(THREE_D)}
@@ -1613,31 +1638,13 @@ async function download(
 ): Promise<void> {
   try {
     const blob = await api.exportRunFile(actor, runId, format, sheet?.id);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `envelope-${runId.slice(0, 8)}${sheet ? `-${sheet.number}` : ''}.${format}`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    downloadObject(
+      URL.createObjectURL(blob),
+      `envelope-${runId.slice(0, 8)}${sheet ? `-${sheet.number}` : ''}.${format}`,
+    );
   } catch (e) {
     if (e instanceof ApiError) onError(e);
   }
-}
-
-/**
- * Hand the browser a document the server produced.
- *
- * A new tab rather than a download, because the report is meant to be *read*
- * before it is filed — and a file that lands in Downloads unopened is how a
- * claim statement goes unread. The object URL is revoked after a minute; the
- * tab keeps its own copy.
- */
-function openDocument(text: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type }));
-  window.open(url, '_blank', 'noopener');
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 // ---------------------------------------------------------------------------

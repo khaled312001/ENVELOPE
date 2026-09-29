@@ -363,6 +363,17 @@ is a defect even when it makes something easier.
   gridline to everyone who opens a drawing, the layout places no column, so every
   parking sheet says in words that there is no grid and gives the bay number and the
   dimensioned module instead.
+- **The browser writes the PDF, and the page says so.** The report is print-first
+  HTML — `@page` A4 for the report and A3 for the drawing set, margins, page breaks
+  and running footer in the document — so a server-side PDF writer would lay the
+  same report out a SECOND time in a different engine. The two would agree the day
+  it shipped and drift afterwards, and the copy somebody filed would be the one
+  nobody had read: the defect `pnpm parity` exists to catch between the screen, the
+  paper and the DXF. `apps/web/src/documents.ts` prints a hidden FRAME, never the
+  opener, so the document's own `@page` decides the paper — and that failure is
+  silent, since printing the opener still opens a dialog and still looks right. The
+  smoke gate reads the frame's document back and holds it to the report's own
+  sentence.
 - **Degenerate geometry raises.** Slivers, self-intersections and near-tangent offsets throw
   rather than return a plausible wrong answer (PRD §14.3).
 - **Invariant failure blocks emission.** Never a warning, never a configurable severity.

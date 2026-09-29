@@ -997,6 +997,34 @@ await step('the report opens, and it carries the claim statement', async () => {
   await report.close();
 });
 
+await step('save as PDF hands the browser the report, not this page', async () => {
+  /*
+    THE PDF, WHICH ONLY A BROWSER CAN SHOW IS WORKING.
+
+    The report is print-first HTML and the browser is this product's PDF writer
+    (`apps/web/src/documents.ts`). The failure that matters is silent: print the
+    OPENER instead of the document and the dialog still opens, the button still
+    looks right, and what comes out is a screenshot of the app with the report
+    nowhere in it. So the frame's own document is read back here and held to the
+    sentence every report carries.
+
+    `print()` itself is a no-op in headless Chromium, which is why the click is
+    safe to make in a gate at all.
+  */
+  await page.getByRole('button', { name: /save the report as pdf/i }).click();
+  const frame = page.frameLocator('iframe[aria-hidden="true"]');
+  const text = await frame.locator('body').textContent({ timeout: wait(20000) });
+  for (const phrase of ['REGULATORY VALIDITY', 'NOT ASSESSED']) {
+    if (!text.toUpperCase().includes(phrase)) {
+      throw new Error(`the printed document is missing: ${phrase}`);
+    }
+  }
+  // The page itself is not what would have been printed.
+  if (/Save the report as PDF/i.test(text)) {
+    throw new Error('the print frame holds this page, not the report');
+  }
+});
+
 await step('the readiness page leads with what is not ready', async () => {
   // Reached through the shared nav, which every route now carries — the engine's
   // own two-item route bar is gone, and with it the "Status" label. The name

@@ -38,6 +38,7 @@ import type { RunView } from '../api/client.js';
 import { ModelFigure } from '../components/ModelFigure.js';
 import { hashOf } from '../gateHash.js';
 import { AR } from '../i18n/runPage.ar.js';
+import { downloadObject, openObject, printObject } from '../documents.js';
 import { EN } from '../i18n/runPage.en.js';
 import { useDict } from '../i18n/locale.js';
 import { Link, type Href } from '../router.js';
@@ -296,7 +297,18 @@ export function RunPage({
  */
 type SignRefusal = { readonly kind: 'session' } | { readonly kind: 'server'; readonly sentence: string };
 
-/** The run's files, in the order a reader wants them: what to read, then what to open elsewhere. */
+/** What the browser is asked to do with a file: read it, print it, or save it. */
+type Delivery = 'open' | 'print' | 'download';
+
+
+/**
+ * The run's files, in the order a reader wants them: what to read, then what to
+ * open elsewhere.
+ *
+ * `opens` means the browser can render it, which is the same property that makes
+ * it printable — the two documents that open in a tab are the two that are
+ * print-first HTML, and the PDF is the browser's own save of them.
+ */
 const FILES: readonly { readonly format: RunFileFormat; readonly opens: boolean; readonly drawn: boolean }[] = [
   { format: 'html', opens: true, drawn: false },
   { format: 'sheets', opens: true, drawn: true },
@@ -353,7 +365,9 @@ export function ReviewPanel({
   const ready = Boolean(assumptions && review);
   const [signing, setSigning] = useState(false);
   const [refusal, setRefusal] = useState<SignRefusal | null>(null);
-  const [fetching, setFetching] = useState<RunFileFormat | null>(null);
+  // Keyed by format AND delivery: two buttons on one row, and only the one that
+  // was pressed should read “Preparing…”.
+  const [fetching, setFetching] = useState<string | null>(null);
   const [fileRefusal, setFileRefusal] = useState<string | null>(null);
 
   const sign = (): void => {
@@ -369,26 +383,16 @@ export function ReviewPanel({
       .finally(() => setSigning(false));
   };
 
-  const fetchFile = (format: RunFileFormat, opens: boolean): void => {
-    setFetching(format);
+  const fetchFile = (format: RunFileFormat, how: Delivery): void => {
+    setFetching(`${format}:${how}`);
     setFileRefusal(null);
     accountRuns
       .file(run.runId, format)
       .then((blob) => {
         const url = URL.createObjectURL(blob);
-        if (opens) {
-          // Read before it is filed: a report that lands in Downloads unopened is how
-          // a claim statement goes unread. The engine's export step does the same.
-          window.open(url, '_blank', 'noopener');
-        } else {
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `envelope-${run.runId.slice(0, 8)}.${EXTENSION[format]}`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-        }
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        if (how === 'print') printObject(url);
+        else if (how === 'open') openObject(url);
+        else downloadObject(url, `envelope-${run.runId.slice(0, 8)}.${EXTENSION[format]}`);
       })
       .catch((e: unknown) => setFileRefusal(e instanceof Error ? e.message : String(e)))
       .finally(() => setFetching(null));
@@ -491,16 +495,30 @@ export function ReviewPanel({
                   <button
                     type="button"
                     className={format === 'html' ? 'button button--primary' : 'button'}
-                    onClick={() => fetchFile(format, opens)}
+                    onClick={() => fetchFile(format, opens ? 'open' : 'download')}
                     disabled={fetching !== null}
-                    aria-busy={fetching === format}
+                    aria-busy={fetching === `${format}:${opens ? 'open' : 'download'}`}
                   >
-                    {fetching === format ? t.files.preparing : t.files[format]}
+                    {fetching === `${format}:${opens ? 'open' : 'download'}`
+                      ? t.files.preparing
+                      : t.files[format]}
                   </button>
+                  {opens ? (
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={() => fetchFile(format, 'print')}
+                      disabled={fetching !== null}
+                      aria-busy={fetching === `${format}:print`}
+                    >
+                      {fetching === `${format}:print` ? t.files.preparing : t.files.print}
+                    </button>
+                  ) : null}
                   {opens ? <span className="rn__file-note">{t.files.newTab}</span> : null}
                 </li>
               ))}
             </ul>
+            <p className="rn__file-note">{t.files.pdfNote}</p>
             {fileRefusal ? (
               <p className="ac__error" role="alert">
                 {t.files.refusedBefore}

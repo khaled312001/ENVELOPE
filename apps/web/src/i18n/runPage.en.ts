@@ -143,6 +143,10 @@ export const EN = {
     html: 'Open the report',
     sheets: 'Open the drawing set',
     newTab: 'Opens in a new tab.',
+    print: 'Save as PDF',
+    pdfNote:
+      'The report and the drawing set are print-first documents: the PDF is your ' +
+      'browser\u2019s own save of them, at the paper size already in the document.',
     json: 'Download the report data (JSON)',
     dxf: 'Download the building for CAD (DXF)',
     glb: 'Download the 3D model (glTF)',

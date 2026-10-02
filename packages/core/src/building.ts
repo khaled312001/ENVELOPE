@@ -175,6 +175,14 @@ export interface ModelCore {
   readonly roomsSource?: ElementSource;
   /** Why nothing is drawn inside the core, when nothing is. */
   readonly roomsNote?: string;
+  /**
+   * What of the core passes through a parking level: the box its stairs, lifts
+   * and lift lobby fill. The parking layout places no bay inside it, and the
+   * parking sheets and the 3D view draw it there instead of the whole core.
+   * Absent where no indicative layout fits — the whole core is then the
+   * obstruction — and on a run stored before the shaft existed.
+   */
+  readonly shaft?: { readonly outline: ModelRing; readonly areaM2: TracedWire; readonly label: string };
 }
 
 export interface ModelLevel {

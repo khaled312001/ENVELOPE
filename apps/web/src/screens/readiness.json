@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-02T17:09:29.515Z",
+  "generatedAt": "2026-10-02T17:51:18.793Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
@@ -44,18 +44,6 @@
       "basis": "no cited rule fixes the gross area consumed per bay. 32 m²/bay is the mid-point of the 28–35 m²/bay range typical of a structured basement, and it is ranked in the assumption register because the parking band moves roughly in proportion to it."
     },
     {
-      "parameterId": "parking.ramp_width_m",
-      "runs": 1,
-      "maxRelativeEffect": "0",
-      "basis": "A 6 m strip: the two-way driveway width of Table B.11, so two cars pass on the ramp as they do in the aisle. B.7.2.2 sets its own ramp widths and they are not encoded here, so this width is not checked against them."
-    },
-    {
-      "parameterId": "parking.ramp_run_m",
-      "runs": 1,
-      "maxRelativeEffect": "0",
-      "basis": "A 30 m run reserved for the ramp in plan, or the whole packable depth when that is shorter. It sets the gradient the ramp needs to climb one level, which is reported but not assessed: B.7.2.2 is not encoded. A longer run costs bays; a shorter one steepens the ramp."
-    },
-    {
       "parameterId": "building.core_placement",
       "runs": 1,
       "maxRelativeEffect": "0",
@@ -66,6 +54,18 @@
       "runs": 1,
       "maxRelativeEffect": "0",
       "basis": "An indicative core for a residential tower, drawn so a reader can see where the lifts and stairs stand: two stairs of 5.6 × 2.8 m (two flights of about 1.2 m and a landing at each end), lift shafts of 2.4 × 2.4 m for a 13-person car, and a lift lobby 2.4 m deep across their front. No clause of the Dubai Building Code on file is applied and no developer standard gives a core layout, so this is an assumption. Egress capacity, travel distance, lift traffic and fire-fighting provisions are NOT ASSESSED: the stairs drawn are not an egress design."
+    },
+    {
+      "parameterId": "parking.ramp_width_m",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "A 6 m strip: the two-way driveway width of Table B.11, so two cars pass on the ramp as they do in the aisle. B.7.2.2 sets its own ramp widths and they are not encoded here, so this width is not checked against them."
+    },
+    {
+      "parameterId": "parking.ramp_run_m",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "A 30 m run reserved for the ramp in plan, or the whole packable depth when that is shorter. It sets the gradient the ramp needs to climb one level, which is reported but not assessed: B.7.2.2 is not encoded. A longer run costs bays; a shorter one steepens the ramp."
     },
     {
       "parameterId": "building.tower_placement",

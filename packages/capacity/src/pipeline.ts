@@ -203,6 +203,20 @@ export interface RunInput {
     readonly structuralGridM?: Decimal;
     /** The affection plan's stated access side, when the sheet names one. */
     readonly accessEdgeSeq?: number;
+    /**
+     * Lay the parking out around the core's shafts — stairs, lifts and the lift
+     * lobby — rather than drawing them over bays that stay in the count.
+     *
+     * OFF UNTIL WHERE THE CORE STANDS IS DECIDED. With the core centred on the
+     * plate, a level deep enough for only one module has its one aisle cut by the
+     * shafts and loses most of its bays: on a 50.85 × 26.85 m plot, 11 bays
+     * become 4. The client's own drawing of that plot stands the core beside the
+     * aisle, not in the middle of it — a placement decision this engine does not
+     * make (the core position search is the TRADEOFF optimiser Phase 0 refuses).
+     * On deeper levels it costs only the bays the shafts truly cover: 192 to 185
+     * on a 120 × 80 m plot. Tested on, shipped off, and said so.
+     */
+    readonly avoidCore?: boolean;
   };
   /**
    * Levels standing on the podium footprint, **the ground floor included**.
@@ -760,6 +774,50 @@ export function runPipeline(input: RunInput): RunOutput {
     envelope.finalContext,
   );
 
+  /*
+    THE CORE — sized here and drawn everywhere, never subtracted.
+
+    It is solved before the parking level is laid out, because the core is a
+    shaft through every parking level and the layout places no bay inside it,
+    and before the model because every level draws it. A stated area that
+    cannot be a core of this plate is refused in the caller's own words rather
+    than clamped.
+  */
+  let core: CoreResult;
+  try {
+    core = solveCore({
+      tracer,
+      plateRing: envelope.plateRing,
+      plateAreaM2: envelope.towerPlateCap,
+      ...(input.coreAreaM2 === undefined
+        ? {}
+        : { stated: { areaM2: input.coreAreaM2, actor: input.actor } }),
+    });
+  } catch (error) {
+    if (error instanceof CoreRefusedError) throw new RunBlockedError(error.message, 'G2:core');
+    throw error;
+  }
+  /*
+    THE CORE'S INDICATIVE LAYOUT, AND THE SHAFT IT GIVES THE CAR PARK.
+
+    Laid out here, once, because the parking level needs it: what passes
+    through a parking level is the stairs, the lifts and the lift lobby, not
+    the whole residential core. Where no layout fits, the whole core is the
+    obstruction — the safe side.
+  */
+  const coreLayout = layoutCore({ tracer, ring: core.ring });
+  const parkingObstruction =
+    coreLayout.kind === 'LAID_OUT'
+      ? { ring: coreLayout.shaft.outline, areaM2: coreLayout.shaft.areaM2 }
+      : { ring: core.ring, areaM2: core.areaM2 };
+  const coreReconciliation = reconcileCore({
+    plateShare: core.plateShare.value,
+    coreAreaM2: core.areaM2.value,
+    saleableEfficiency: efficiencyTraced.value,
+    parkingUsableFraction: parking.usableFraction.value,
+    parkingLevelAreaM2: envelope.podiumFootprint.value,
+  });
+
   // --- The level, laid out -------------------------------------------------
   //
   // Last, because it consumes the envelope's ring and the parking solver's
@@ -777,6 +835,7 @@ export function runPipeline(input: RunInput): RunOutput {
       podiumRing: envelope.podiumRing,
       usableFraction: parking.usableFraction,
       includeRamp: input.levelPlan?.includeRamp ?? true,
+      ...(input.levelPlan?.avoidCore ? { core: parkingObstruction } : {}),
       ...(input.levelPlan?.structuralGridM === undefined
         ? {}
         : { structuralGridM: input.levelPlan.structuralGridM }),
@@ -799,36 +858,6 @@ export function runPipeline(input: RunInput): RunOutput {
       : { podiumLevels: { value: podiumFootprint, actor: input.actor } }),
   });
 
-  /*
-    THE CORE — sized here and drawn everywhere, never subtracted.
-
-    It is solved after the massing because it needs the plate the massing stands
-    on, and before the model because every level draws it. A stated area that
-    cannot be a core of this plate is refused in the caller's own words rather
-    than clamped.
-  */
-  let core: CoreResult;
-  try {
-    core = solveCore({
-      tracer,
-      plateRing: envelope.plateRing,
-      plateAreaM2: envelope.towerPlateCap,
-      ...(input.coreAreaM2 === undefined
-        ? {}
-        : { stated: { areaM2: input.coreAreaM2, actor: input.actor } }),
-    });
-  } catch (error) {
-    if (error instanceof CoreRefusedError) throw new RunBlockedError(error.message, 'G2:core');
-    throw error;
-  }
-  const coreReconciliation = reconcileCore({
-    plateShare: core.plateShare.value,
-    coreAreaM2: core.areaM2.value,
-    saleableEfficiency: efficiencyTraced.value,
-    parkingUsableFraction: parking.usableFraction.value,
-    parkingLevelAreaM2: envelope.podiumFootprint.value,
-  });
-
   const building = buildBuildingModel({
     tracer,
     plot: input.plot,
@@ -837,7 +866,8 @@ export function runPipeline(input: RunInput): RunOutput {
     core: {
       result: core,
       reconciliation: coreReconciliation,
-      layout: layoutCore({ tracer, ring: core.ring }),
+      layout: coreLayout,
+      shaftOnParking: input.levelPlan?.avoidCore === true,
     },
     parkingLevels: parking.levelsAvailable,
     levelPlan,

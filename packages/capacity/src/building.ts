@@ -102,6 +102,12 @@ export interface BuildingModelInput {
     readonly reconciliation: readonly string[];
     /** The indicative layout inside it, or why there is none. */
     readonly layout?: CoreLayout;
+    /**
+     * Whether the parking was laid out around the shafts — and so whether the
+     * parking levels draw the shafts rather than the whole core. Drawing the
+     * smaller box over bays the layout still counted would hide the conflict.
+     */
+    readonly shaftOnParking?: boolean;
   };
 }
 
@@ -450,6 +456,15 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
               rooms: input.core.layout.rooms.map((r) => ({ kind: r.kind, outline: r.outline })),
               roomsSource: source(input.core.layout.program),
             }
+          : {}),
+        ...(input.core.layout?.kind === 'LAID_OUT' && input.core.shaftOnParking
+          ? {
+              shaft: {
+                outline: input.core.layout.shaft.outline.map(pt),
+                areaM2: toWire(input.core.layout.shaft.areaM2),
+                label: `CORE SHAFTS - ${input.core.layout.shaft.areaM2.value.toFixed(0)} SQ.M`,
+              },
+            }
           : input.core.layout?.kind === 'NOT_LAID_OUT'
             ? { rooms: [], roomsNote: input.core.layout.reason }
             : {}),
@@ -733,8 +748,11 @@ function parkingOf(plan: LevelPlan): NonNullable<ModelLevel['parking']> {
     reserved: plan.reservedZone
       ? {
           outline: plan.reservedZone.map(pt),
-          areaM2: toWire(plan.deductionsM2),
-          label: `CORES, PLANT & CIRCULATION - ${plan.deductionsM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`,
+          areaM2: toWire(plan.reservedAreaM2),
+          label:
+            plan.reservedAreaM2 === plan.deductionsM2
+              ? `CORES, PLANT & CIRCULATION - ${plan.deductionsM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`
+              : `PLANT & CIRCULATION - ${plan.reservedAreaM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`,
         }
       : null,
     rampStrip: plan.rampStrip ? plan.rampStrip.world.map(pt) : null,

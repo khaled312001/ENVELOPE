@@ -30,7 +30,7 @@
  * recover the room's own axes without a second field.
  */
 
-import { asMm, type Tracer, type Traced } from '@envelope/core';
+import { asMm, Decimal, type Tracer, type Traced, type TracedDecimal } from '@envelope/core';
 
 /** Plot-space millimetres, as the core ring is held. */
 interface Pt {
@@ -60,7 +60,17 @@ export interface CoreRoom {
 }
 
 export type CoreLayout =
-  | { readonly kind: 'LAID_OUT'; readonly rooms: readonly CoreRoom[]; readonly program: Traced<string> }
+  | {
+      readonly kind: 'LAID_OUT';
+      readonly rooms: readonly CoreRoom[];
+      readonly program: Traced<string>;
+      /**
+       * The box the stairs, lifts and lobby fill — what passes through a parking
+       * level. The rest of the core is the residential floors' (corridors, the
+       * floor lobby) and has no business on a car park.
+       */
+      readonly shaft: { readonly outline: CoreRoom['outline']; readonly areaM2: TracedDecimal };
+    }
   | { readonly kind: 'NOT_LAID_OUT'; readonly reason: string };
 
 export const CORE_LAYOUT_BASIS =
@@ -136,15 +146,29 @@ export function layoutCore(input: { readonly tracer: Tracer; readonly ring: read
     outline: [at(a0, b0), at(a0 + da, b0), at(a0 + da, b0 + db), at(a0, b0 + db)],
   });
 
+  // Centred both ways: the shafts stand in the middle of the core, which is
+  // where the core itself stands on the plate.
   const row = 2 * STAIR_ALONG_MM + lifts * LIFT_MM;
   const start = (frame.lengthMm - row) / 2;
-  const rooms: CoreRoom[] = [rect(CoreRoomKind.STAIR, start, 0, STAIR_ALONG_MM, STAIR_ACROSS_MM)];
+  const b0 = (frame.depthMm - needDepth) / 2;
+  const rooms: CoreRoom[] = [rect(CoreRoomKind.STAIR, start, b0, STAIR_ALONG_MM, STAIR_ACROSS_MM)];
   for (let i = 0; i < lifts; i++) {
-    rooms.push(rect(CoreRoomKind.LIFT, start + STAIR_ALONG_MM + i * LIFT_MM, 0, LIFT_MM, LIFT_MM));
+    rooms.push(rect(CoreRoomKind.LIFT, start + STAIR_ALONG_MM + i * LIFT_MM, b0, LIFT_MM, LIFT_MM));
   }
   rooms.push(
-    rect(CoreRoomKind.STAIR, start + STAIR_ALONG_MM + lifts * LIFT_MM, 0, STAIR_ALONG_MM, STAIR_ACROSS_MM),
-    rect(CoreRoomKind.LOBBY, start, STAIR_ACROSS_MM, row, LOBBY_DEPTH_MM),
+    rect(CoreRoomKind.STAIR, start + STAIR_ALONG_MM + lifts * LIFT_MM, b0, STAIR_ALONG_MM, STAIR_ACROSS_MM),
+    rect(CoreRoomKind.LOBBY, start, b0 + STAIR_ACROSS_MM, row, LOBBY_DEPTH_MM),
   );
-  return { kind: 'LAID_OUT', rooms, program };
+  const shaftArea = new Decimal(row).times(needDepth).div(1_000_000);
+  const shaft = {
+    outline: rect(CoreRoomKind.LOBBY, start, b0, row, needDepth).outline,
+    areaM2: input.tracer.computed('building.core_shaft_area_m2', shaftArea, {
+      formula:
+        `${(row / 1000).toFixed(1)} m of stairs and lifts × ${(needDepth / 1000).toFixed(1)} m ` +
+        'with the lift lobby — what of the core passes through a parking level',
+      uses: { program },
+      unit: 'm²',
+    }),
+  };
+  return { kind: 'LAID_OUT', rooms, program, shaft };
 }

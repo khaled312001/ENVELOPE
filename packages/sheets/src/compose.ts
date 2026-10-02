@@ -374,6 +374,8 @@ function annotationLast(items: readonly ModelItem[]): ModelItem[] {
 function coreItems(model: BuildingModel, levelId: string, s: number): ModelItem[] {
   const core = model.core;
   if (!core || !core.levelIds.includes(levelId)) return [];
+  const onParking = model.levels.some((l) => l.id === levelId && l.parking);
+  if (onParking && core.shaft) return shaftItems(core, core.shaft, s);
   const box = boxOf(core.outline);
   const wide = box.maxX - box.minX >= box.maxY - box.minY;
   const rooms = core.rooms ?? [];
@@ -395,6 +397,32 @@ function coreItems(model: BuildingModel, levelId: string, s: number): ModelItem[
       label(Role.CORE_ROOM, mm(below.x, below.y), CORE_CAVEAT, 1.2, wide ? 0 : 90, 'middle', core.roomsSource),
     );
   }
+  return items;
+}
+
+/**
+ * The core on a parking level: its shafts — stairs, lifts and the lift lobby —
+ * and not the whole residential core, whose corridors and floor lobby are not on
+ * a car park. The parking layout placed no bay inside this box. The box is full
+ * of rooms, so its label and the caveat go just outside it, on the lobby side.
+ */
+function shaftItems(
+  core: NonNullable<BuildingModel['core']>,
+  shaft: NonNullable<NonNullable<BuildingModel['core']>['shaft']>,
+  s: number,
+): ModelItem[] {
+  const source = sourceOf(shaft.areaM2);
+  const [o, a, far, back] = shaft.outline as [ModelPoint, ModelPoint, ModelPoint, ModelPoint];
+  const across = lengthOf(o, back);
+  const v = across === 0 ? { x: 0, y: 1 } : { x: (back.x - o.x) / across, y: (back.y - o.y) / across };
+  const farMid = midpointOf(far, back);
+  const along = angleOf(o, a);
+  const items: ModelItem[] = [shape(Role.CORE, shaft.outline, true, { source, name: shaft.label })];
+  for (const room of core.rooms ?? []) items.push(...coreRoomItems(room, core.roomsSource));
+  items.push(
+    label(Role.CORE, mm(farMid.x + v.x * 2.6 * s, farMid.y + v.y * 2.6 * s), shaft.label, 1.6, along, 'middle', source),
+    label(Role.CORE_ROOM, mm(farMid.x + v.x * 4.6 * s, farMid.y + v.y * 4.6 * s), CORE_CAVEAT, 1.2, along, 'middle', core.roomsSource),
+  );
   return items;
 }
 
@@ -760,7 +788,18 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     const len = lengthOf(a, b);
     const along = angleOf(a, b);
     const arrow = Math.round(Math.min(5000, len / 5));
-    for (const at of [0.2, 0.8]) {
+    /*
+      THE ARROWS CLEAR THE LABEL. At a fifth of the way in from each end they
+      sat on the words of an aisle the core had cut short. Where they would, they
+      move to the ends; where even that is too tight they are left out — the
+      label already says which way the aisle runs. The label's length is
+      estimated from its characters at the 2 mm text height.
+    */
+    const labelHalf = (aisle.label.length * 2 * 0.62 * s) / 2;
+    const clear = (at: number): boolean => Math.abs(0.5 - at) * len - arrow / 2 > labelHalf + 500;
+    const ends = (arrow / 2 + 500) / len;
+    const spots = clear(0.2) ? [0.2, 0.8] : clear(ends) ? [ends, 1 - ends] : [];
+    for (const at of spots) {
       items.push({
         kind: 'symbol',
         role: Role.AISLE_ARROW,
@@ -809,7 +848,11 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       ? [fact('Reserved, not laid out', parking.reserved.areaM2, `${parking.reserved.areaM2.value} SQ.M`)]
       : []),
     ...(model.core && model.core.levelIds.includes(level.id)
-      ? [fact('Core', model.core.areaM2, `${model.core.areaM2.value} SQ.M`)]
+      ? [
+          model.core.shaft
+            ? fact('Core shafts', model.core.shaft.areaM2, `${model.core.shaft.areaM2.value} SQ.M`)
+            : fact('Core', model.core.areaM2, `${model.core.areaM2.value} SQ.M`),
+        ]
       : []),
   ];
   const legend: LegendEntry[] = [
@@ -833,8 +876,12 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       ? [
           {
             role: Role.CORE,
-            provenanceClass: model.core.source.provenanceClass,
-            label: model.core.rooms?.length ? 'Core; stairs + lifts assumed' : 'Core - area only, no layout',
+            provenanceClass: (model.core.shaft ? model.core.shaft.areaM2 : model.core.areaM2).provenanceClass,
+            label: model.core.shaft
+              ? 'Core shafts; stairs + lifts assumed'
+              : model.core.rooms?.length
+                ? 'Core; stairs + lifts assumed'
+                : 'Core - area only, no layout',
           },
         ]
       : []),

@@ -1951,6 +1951,10 @@
           "note": "Demand at the probe target. Compare against the \"Parking level\" sheet: a level that packs fewer bays than this sheet requires is a real and reportable state, not an error in either number."
         },
         {
+          "name": "GFA calculation",
+          "note": "Allowed is FAR × plot area, before the parking-in-FAR treatment. Proposed is whole floors of the tower plate, plus parking only where it counts toward FAR. There is no commercial row: this engine places no commercial area."
+        },
+        {
           "name": "Parking level",
           "note": "Bays placed as rectangles to Dubai Building Code Table B.11, not an area divided by a factor. A bay count that cannot be laid out is not a bay count."
         },

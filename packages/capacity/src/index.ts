@@ -9,4 +9,5 @@ export * from './massing.js';
 export * from './building.js';
 export * from './core.js';
 export * from './bands.js';
+export * from './gfa-statement.js';
 export * from './pipeline.js';

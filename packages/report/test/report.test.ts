@@ -874,6 +874,61 @@ describe('HTML report', () => {
   });
 });
 
+describe('the GFA calculation', () => {
+  /*
+    The area table a submission drawing carries. A run stored before it existed
+    has none and must render none; a run that has one prints every figure as the
+    engine stated it, the square feet included.
+  */
+  const withStatement = (): RunReport => {
+    const run = makeRun();
+    const plate = wire('envelope.tower_plate_cap', '1060.00', ProvenanceClass.DERIVED, 'm²');
+    return {
+      ...run,
+      capacity: {
+        ...run.capacity,
+        gfaStatement: {
+          plotArea: { m2: d('3200.00'), ft2: d('34444.51') },
+          allowed: wire('gfa_statement.allowed_gfa_m2', '16000.00', ProvenanceClass.DERIVED, 'm²'),
+          allowedFt2: d('172222.56'),
+          rows: [
+            {
+              kind: 'RESIDENTIAL',
+              levelIds: ['L01', 'L15'],
+              count: 15,
+              perLevel: plate,
+              perLevelFt2: d('11409.75'),
+              area: wire('gfa_statement.residential_gfa_m2', '15900.00', ProvenanceClass.DERIVED, 'm²'),
+              areaFt2: d('171146.18'),
+            },
+          ],
+          proposed: wire('gfa_statement.proposed_gfa_m2', '15900.00', ProvenanceClass.DERIVED, 'm²'),
+          proposedFt2: d('171146.18'),
+          remaining: wire('gfa_statement.remaining_gfa_m2', '100.00', ProvenanceClass.DERIVED, 'm²'),
+          remainingFt2: d('1076.39'),
+          partFloorNotPlaced: { m2: d('0.00'), ft2: d('0.00') },
+        },
+      },
+    };
+  };
+
+  it('is absent from a run stored before the statement existed', () => {
+    expect(toHtml(makeRun())).not.toContain('<h3>GFA calculation</h3>');
+  });
+
+  it('states allowed, proposed and the floors, in square metres and square feet', () => {
+    const html = toHtml(withStatement());
+    expect(html).toContain('<h3>GFA calculation</h3>');
+    expect(html).toContain('Gross floor area allowed');
+    expect(html).toContain('Total gross floor area proposed');
+    expect(html).toContain('1 · Residential floors');
+    expect(html).toContain('L01 to L15');
+    expect(html).toContain('× 15');
+    expect(html).toContain('171,146.18');
+    expect(html).toContain('There is no commercial table');
+  });
+});
+
 describe('the drawing set', () => {
   beforeAll(async () => {
     await initGeometry();

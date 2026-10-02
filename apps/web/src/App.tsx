@@ -39,6 +39,7 @@ import {
 } from './api/client.js';
 import { AssumptionRegister } from './components/AssumptionRegister.js';
 import { CapacityBands } from './components/CapacityBands.js';
+import { GfaStatement } from './components/GfaStatement.js';
 import { PlotCanvas } from './components/PlotCanvas.js';
 import { PlotLimits } from './components/PlotLimits.js';
 import { ProvenanceTree, type ProvTree } from './components/ProvenanceTree.js';
@@ -620,6 +621,9 @@ export function EngineApp({
                       : undefined
                   }
                 />
+                {run.gfaStatement ? (
+                  <GfaStatement statement={run.gfaStatement} onInspect={inspect} />
+                ) : null}
                 {plot ? (
                   <MassingPanel run={run} onInspect={inspect} />
                 ) : null}

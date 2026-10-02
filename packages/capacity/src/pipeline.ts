@@ -53,6 +53,7 @@ import {
 
 import { computeBands, type BandSource } from './bands.js';
 import { buildBuildingModel } from './building.js';
+import { buildGfaStatement, type GfaStatement } from './gfa-statement.js';
 import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './core.js';
 import { solveEnvelope, type EnvelopeSolution } from './envelope.js';
 import { planParkingLevel, type LevelPlan } from './level-plan.js';
@@ -350,6 +351,12 @@ export interface RunOutput {
    * view, the DXF — reads this and nothing else, so they cannot disagree.
    */
   readonly building: BuildingModel;
+  /**
+   * The area table a submission drawing carries — allowed, proposed, and the
+   * floors that make up the proposal. Every figure in it is one this run already
+   * produced; see `gfa-statement.ts`.
+   */
+  readonly gfaStatement: GfaStatement;
 }
 
 export class RunBlockedError extends Error {
@@ -840,6 +847,24 @@ export function runPipeline(input: RunInput): RunOutput {
     ...(schedule ? { schedule, actor: input.actor } : {}),
   });
 
+  const isParking = (use: string): boolean =>
+    use === 'BASEMENT_PARKING' || use === 'PODIUM_PARKING';
+  const gfaStatement = buildGfaStatement({
+    tracer,
+    farMax: farMaxOf(envelope),
+    plotAreaM2: plotAreaOf(input.plot),
+    farRule: bandSource('far.max'),
+    towerPlate: envelope.towerPlateCap,
+    levels: capacity.levels,
+    residentialLevelIds: building.levels
+      .filter((l) => l.placed && !isParking(l.use))
+      .map((l) => l.id),
+    parkingInFar: input.parkingInFar,
+    parkingArea: parking.requiredAreaM2,
+    parkingLevelIds: building.levels.filter((l) => isParking(l.use)).map((l) => l.id),
+    governingGfa: capacity.governingGfa,
+  });
+
   return {
     envelope,
     parking,
@@ -865,6 +890,7 @@ export function runPipeline(input: RunInput): RunOutput {
     levelPlanRefusal,
     massing,
     building,
+    gfaStatement,
   };
 }
 

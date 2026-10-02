@@ -22,6 +22,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { parseDxf } from '../../../test-support/dxf.js';
 import { subjectHash } from '../src/gates.js';
 import { build } from '../src/server.js';
+import { runWorkbookSpec, type ExportableRun } from '../src/workbook.js';
 import { SqliteRunRepository } from '../src/store.js';
 
 const ACTOR = { 'x-actor-id': 'u1', 'x-actor-name': 'Test Architect' };
@@ -267,6 +268,24 @@ describe('XLSX export', () => {
     // sheet is always first and always carries the refusal.
     const text = bytes.toString('latin1');
     expect(text).toContain('xl/workbook.xml');
+  });
+
+  it('carries the GFA calculation as its own sheet, every row traced', async () => {
+    const view = (
+      await app.inject({ method: 'GET', url: `/api/runs/${run.runId}`, headers: REVIEWER })
+    ).json() as { gfaStatement?: unknown };
+    expect(view.gfaStatement).toBeDefined();
+    const spec = runWorkbookSpec(view as unknown as ExportableRun, '2026-10-02T00:00:00.000Z');
+    const sheet = spec.sheets.find((s) => s.name === 'GFA calculation');
+    expect(sheet).toBeDefined();
+    expect(sheet!.rows.map((r) => r.label)).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Gross floor area allowed \(m²\) — [\d.]+ ft²$/),
+        expect.stringMatching(/^Total gross floor area proposed \(m²\) — [\d.]+ ft²$/),
+        expect.stringMatching(/^1\. Residential floors — × \d+ \(m²\)/),
+      ]),
+    );
+    for (const row of sheet!.rows) expect(row.source).toBeTruthy();
   });
 });
 

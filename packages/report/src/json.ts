@@ -364,6 +364,39 @@ export interface CapacitySection {
   /** §15.3 — default 1.00, `USER_SET`, never a system estimate. */
   readonly userRealismDiscount: TracedWire;
   readonly levels: TracedWire;
+  /**
+   * The area table a submission drawing carries — allowed, proposed, and the
+   * floors that make it up, in m² and ft². Optional: a run stored before the
+   * statement existed has none, and one rebuilt from its numbers would be a
+   * table nobody's engine produced.
+   */
+  readonly gfaStatement?: GfaStatementSection;
+}
+
+/** An area as the engine stated it in both units. */
+export interface StatedArea {
+  readonly m2: DecimalString;
+  readonly ft2: DecimalString;
+}
+
+export interface GfaStatementSection {
+  readonly plotArea: StatedArea;
+  readonly allowed: TracedWire;
+  readonly allowedFt2: DecimalString;
+  readonly rows: readonly {
+    readonly kind: 'RESIDENTIAL' | 'PARKING';
+    readonly levelIds: readonly string[];
+    readonly count: number;
+    readonly perLevel: TracedWire | null;
+    readonly perLevelFt2: DecimalString | null;
+    readonly area: TracedWire;
+    readonly areaFt2: DecimalString;
+  }[];
+  readonly proposed: TracedWire;
+  readonly proposedFt2: DecimalString;
+  readonly remaining: TracedWire;
+  readonly remainingFt2: DecimalString;
+  readonly partFloorNotPlaced: StatedArea;
 }
 
 // ---------------------------------------------------------------------------

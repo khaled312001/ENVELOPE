@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-29T03:04:55.970Z",
+  "generatedAt": "2026-10-02T17:01:13.756Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
@@ -60,6 +60,12 @@
       "runs": 1,
       "maxRelativeEffect": "0",
       "basis": "The core area fixes how much plate the core takes, not where on the plate it stands. It is drawn as the tower plate outline scaled about its centre to the core area — the same placement the plate itself is drawn by, which keeps its proportions and an equal margin on every side. Where the core actually sits, and how the lifts and stairs sit inside it, are design decisions this engine does not make. Searching for the position that yields the most units is the optimiser this phase refuses by construction."
+    },
+    {
+      "parameterId": "building.core_layout",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "An indicative core for a residential tower, drawn so a reader can see where the lifts and stairs stand: two stairs of 5.6 × 2.8 m (two flights of about 1.2 m and a landing at each end), lift shafts of 2.4 × 2.4 m for a 13-person car, and a lift lobby 2.4 m deep across their front. No clause of the Dubai Building Code on file is applied and no developer standard gives a core layout, so this is an assumption. Egress capacity, travel distance, lift traffic and fire-fighting provisions are NOT ASSESSED: the stairs drawn are not an egress design."
     },
     {
       "parameterId": "building.tower_placement",

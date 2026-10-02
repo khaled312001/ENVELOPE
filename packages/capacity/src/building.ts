@@ -58,6 +58,7 @@ import {
 } from '@envelope/geometry';
 
 import { CORE_NOT_MODELLED, type CoreResult } from './core.js';
+import type { CoreLayout } from './core-layout.js';
 import { CROSS_AISLE_ROW } from './layout.js';
 import type { EnvelopeSolution } from './envelope.js';
 import type { LevelPlan, WorldRect } from './level-plan.js';
@@ -98,6 +99,8 @@ export interface BuildingModelInput {
   readonly core?: {
     readonly result: CoreResult;
     readonly reconciliation: readonly string[];
+    /** The indicative layout inside it, or why there is none. */
+    readonly layout?: CoreLayout;
   };
 }
 
@@ -441,6 +444,14 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
         label: `CORE - ${input.core.result.areaM2.value.toFixed(0)} SQ.M`,
         levelIds: levels.filter((l) => l.placed).map((l) => l.id),
         reconciliation: input.core.reconciliation,
+        ...(input.core.layout?.kind === 'LAID_OUT'
+          ? {
+              rooms: input.core.layout.rooms.map((r) => ({ kind: r.kind, outline: r.outline })),
+              roomsSource: source(input.core.layout.program),
+            }
+          : input.core.layout?.kind === 'NOT_LAID_OUT'
+            ? { rooms: [], roomsNote: input.core.layout.reason }
+            : {}),
       }
     : null;
   if (core) {

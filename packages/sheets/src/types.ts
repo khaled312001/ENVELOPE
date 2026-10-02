@@ -72,6 +72,16 @@ export const Role = {
    * out the plant room too.
    */
   CORE: 'core',
+  /**
+   * The indicative layout inside the core — stairs, lifts, the lift lobby.
+   *
+   * Its own role because it is a different claim from the core: the core's
+   * AREA is computed, the rooms inside it are an assumed program, and a reader
+   * must be able to switch them off in CAD and see the area alone. Outlines and
+   * labels carry the program's class; treads and the lift cross do not, so one
+   * assumption is not painted amber forty times over.
+   */
+  CORE_ROOM: 'core-room',
   ACCESS: 'access',
   ACCESS_ARROW: 'access-arrow',
   CUT_LINE: 'cut-line',

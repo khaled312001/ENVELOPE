@@ -118,6 +118,13 @@ export interface ModelReservedZone {
  * and says nothing about where it stands. No lift, stair, riser or core wall is
  * placed inside it, and `notModelled` says so under every drawing.
  */
+/** A room of the indicative core layout. See `core-layout.ts` in `@envelope/capacity`. */
+export interface ModelCoreRoom {
+  readonly kind: 'STAIR' | 'LIFT' | 'LOBBY';
+  /** [origin, +along, +along+across, +across] — so a sheet recovers the room's axes. */
+  readonly outline: ModelRing;
+}
+
 export interface ModelCore {
   readonly outline: ModelRing;
   readonly areaM2: TracedWire;
@@ -136,6 +143,17 @@ export interface ModelCore {
    * it is compared, and these are those comparisons in words. Neither blocks.
    */
   readonly reconciliation: readonly string[];
+  /**
+   * Stairs, lifts and the lift lobby, as an indicative layout — ASSUMED, drawn in
+   * the assumed ink, and never an egress design. Empty when the core is not a
+   * rectangle or too small for the program, and `roomsNote` then says why.
+   * Absent on a run stored before the layout existed.
+   */
+  readonly rooms?: readonly ModelCoreRoom[];
+  /** The assumed program the rooms are drawn from: their ink and click target. */
+  readonly roomsSource?: ElementSource;
+  /** Why nothing is drawn inside the core, when nothing is. */
+  readonly roomsNote?: string;
 }
 
 export interface ModelLevel {

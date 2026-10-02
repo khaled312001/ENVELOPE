@@ -54,6 +54,7 @@ import {
 import { computeBands, type BandSource } from './bands.js';
 import { buildBuildingModel } from './building.js';
 import { buildGfaStatement, type GfaStatement } from './gfa-statement.js';
+import { layoutCore } from './core-layout.js';
 import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './core.js';
 import { solveEnvelope, type EnvelopeSolution } from './envelope.js';
 import { planParkingLevel, type LevelPlan } from './level-plan.js';
@@ -833,7 +834,11 @@ export function runPipeline(input: RunInput): RunOutput {
     plot: input.plot,
     envelope,
     massing,
-    core: { result: core, reconciliation: coreReconciliation },
+    core: {
+      result: core,
+      reconciliation: coreReconciliation,
+      layout: layoutCore({ tracer, ring: core.ring }),
+    },
     parkingLevels: parking.levelsAvailable,
     levelPlan,
     levelPlanRefusal,

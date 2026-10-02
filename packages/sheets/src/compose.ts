@@ -23,6 +23,7 @@ import {
   type ElementSource,
   type ModelEdge,
   type ModelLevel,
+  type ModelCoreRoom,
   type ModelPoint,
   type ModelRing,
   type ModelSection,
@@ -369,15 +370,101 @@ function annotationLast(items: readonly ModelItem[]): ModelItem[] {
  * Empty for a level the core does not reach, and empty on a run stored before
  * the engine sized one. Neither case draws a substitute.
  */
-function coreItems(model: BuildingModel, levelId: string): ModelItem[] {
+function coreItems(model: BuildingModel, levelId: string, s: number): ModelItem[] {
   const core = model.core;
   if (!core || !core.levelIds.includes(levelId)) return [];
   const box = boxOf(core.outline);
   const wide = box.maxX - box.minX >= box.maxY - box.minY;
-  return [
+  const rooms = core.rooms ?? [];
+  const lobby = rooms.find((r) => r.kind === 'LOBBY');
+  const at = coreLabelAt(core.outline, lobby);
+  const items: ModelItem[] = [
     shape(Role.CORE, core.outline, true, { source: core.source, name: core.label }),
-    label(Role.CORE, centroidOf(core.outline), core.label, 1.8, wide ? 0 : 90, 'middle', core.source),
+    label(Role.CORE, at, core.label, 1.8, wide ? 0 : 90, 'middle', core.source),
   ];
+  if (rooms.length > 0) {
+    for (const room of rooms) items.push(...coreRoomItems(room, core.roomsSource));
+    /*
+      THE CAVEAT ON THE DRAWING, under the core's own label, in the program's
+      ink. A stair drawn without it reads as an egress design; a sentence in the
+      title strip is a sentence a reader of a cropped plan never sees.
+    */
+    const below = wide ? { x: at.x, y: at.y - 3 * s } : { x: at.x + 3 * s, y: at.y };
+    items.push(
+      label(Role.CORE_ROOM, mm(below.x, below.y), CORE_CAVEAT, 1.2, wide ? 0 : 90, 'middle', core.roomsSource),
+    );
+  }
+  return items;
+}
+
+/**
+ * Where the core's own label goes: its centre, or — when the rooms fill the
+ * centre — the middle of the strip beyond the lift lobby, if there is room to
+ * read it there. A label on top of "LIFT LOBBY" is two labels nobody can read.
+ */
+function coreLabelAt(outline: readonly ModelPoint[], lobby: ModelCoreRoom | undefined): ModelPoint {
+  const centre = centroidOf(outline);
+  if (!lobby) return centre;
+  const [o, , far, back] = lobby.outline as [ModelPoint, ModelPoint, ModelPoint, ModelPoint];
+  const across = lengthOf(o, back);
+  if (across === 0) return centre;
+  const v = { x: (back.x - o.x) / across, y: (back.y - o.y) / across };
+  const farMid = midpointOf(far, back);
+  const beyond = Math.max(...outline.map((p) => (p.x - farMid.x) * v.x + (p.y - farMid.y) * v.y));
+  return beyond >= 1500 ? mm(farMid.x + (v.x * beyond) / 2, farMid.y + (v.y * beyond) / 2) : centre;
+}
+
+/** Under the core label wherever an indicative layout is drawn. */
+const CORE_CAVEAT = 'INDICATIVE LAYOUT - EGRESS NOT ASSESSED';
+
+const ROOM_LABEL: Readonly<Record<ModelCoreRoom['kind'], string>> = {
+  STAIR: 'STAIR',
+  LIFT: 'LIFT',
+  LOBBY: 'LIFT LOBBY',
+};
+
+/** Tread spacing on a drawn stair: a going of 280 mm, the drafting convention. */
+const TREAD_MM = 280;
+/** The landing kept clear of treads at each end of a stair. */
+const LANDING_MM = 1200;
+
+/**
+ * One room of the indicative core layout. The outline and label carry the
+ * program's class — assumed, so amber — and the drafting inside it does not: a
+ * stair's treads and a lift's cross are symbols of what the room is, not more
+ * claims to paint.
+ */
+function coreRoomItems(room: ModelCoreRoom, source: ElementSource | undefined): ModelItem[] {
+  const [o, a, , b] = room.outline as [ModelPoint, ModelPoint, ModelPoint, ModelPoint];
+  const along = lengthOf(o, a);
+  const across = lengthOf(o, b);
+  if (along === 0 || across === 0) return [];
+  const u = { x: (a.x - o.x) / along, y: (a.y - o.y) / along };
+  const v = { x: (b.x - o.x) / across, y: (b.y - o.y) / across };
+  const at = (s: number, t: number): ModelPoint =>
+    mm(o.x + s * u.x + t * v.x, o.y + s * u.y + t * v.y);
+  const items: ModelItem[] = [
+    shape(Role.CORE_ROOM, room.outline, true, {
+      ...(source ? { source } : {}),
+      name: `${ROOM_LABEL[room.kind]} - indicative`,
+    }),
+  ];
+  if (room.kind === 'STAIR' && along > 2 * LANDING_MM) {
+    // The wall between the two flights, then the treads across both.
+    items.push(shape(Role.CORE_ROOM, [at(LANDING_MM, across / 2), at(along - LANDING_MM, across / 2)], false));
+    for (let s = LANDING_MM; s <= along - LANDING_MM + 1; s += TREAD_MM) {
+      items.push(shape(Role.CORE_ROOM, [at(s, 0), at(s, across)], false));
+    }
+  }
+  if (room.kind === 'LIFT') {
+    items.push(shape(Role.CORE_ROOM, [at(0, 0), at(along, across)], false));
+    items.push(shape(Role.CORE_ROOM, [at(along, 0), at(0, across)], false));
+  }
+  // A stair's label sits on its landing, clear of the treads, read along the landing.
+  const labelAt = room.kind === 'STAIR' ? at(LANDING_MM / 2, across / 2) : centroidOf(room.outline);
+  const rotation = room.kind === 'STAIR' ? angleOf(o, b) : angleOf(o, a);
+  items.push(label(Role.CORE_ROOM, labelAt, ROOM_LABEL[room.kind], 1.2, rotation, 'middle', source));
+  return items;
 }
 
 function accessItems(model: BuildingModel, s: number): ModelItem[] {
@@ -684,7 +771,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     that happens to sit on a shaft. Whether the layout accounted for it is the
     reconciliation in the notes, not something the draw order may imply.
   */
-  items.push(...coreItems(model, level.id));
+  items.push(...coreItems(model, level.id, s));
 
   if (level.elevationMm === 0) items.push(...accessItems(model, s));
 
@@ -716,7 +803,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
           {
             role: Role.CORE,
             provenanceClass: model.core.source.provenanceClass,
-            label: 'Core - area only, no layout',
+            label: model.core.rooms?.length ? 'Core; stairs + lifts assumed' : 'Core - area only, no layout',
           },
         ]
       : []),
@@ -796,7 +883,7 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
     items.push(shape(Role.CONTEXT, podium.outline, true, { source: podium.outlineSource, name: 'Podium roof, below' }));
   }
   items.push(shape(Role.SLAB, first.outline, true, { source: first.outlineSource, name: 'Typical floor plate' }));
-  items.push(...coreItems(model, first.id));
+  items.push(...coreItems(model, first.id, s));
   /*
     THE CORE IS NOW MODELLED AND THIS LABEL SAID IT WAS NOT. It sat in the middle
     of the plate, which is exactly where the core now sits, so leaving it would
@@ -832,7 +919,7 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
           {
             role: Role.CORE,
             provenanceClass: model.core.source.provenanceClass,
-            label: 'Core - area only, no layout',
+            label: model.core.rooms?.length ? 'Core; stairs + lifts assumed' : 'Core - area only, no layout',
           },
         ]
       : []),

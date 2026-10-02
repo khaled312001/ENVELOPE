@@ -67,6 +67,7 @@ export const ROLE_STYLE: Readonly<Record<Role, RoleStyle>> = {
   // A solid, heavy outline: the core is a cut element on every plan it appears
   // on, and the four-pen hierarchy puts a cut wall at the slab's weight.
   core: { strokeMm: 0.5, fill: 'tint' },
+  'core-room': { strokeMm: 0.25, fill: 'none' },
   access: { strokeMm: 1, fill: 'none' },
   'access-arrow': { strokeMm: 0.35, fill: 'none' },
   'cut-line': { strokeMm: 0.35, dash: '6 1.5 1 1.5', fill: 'none' },
@@ -97,6 +98,7 @@ const CLASS_INKED: ReadonlySet<Role> = new Set<Role>([
   'ceiling',
   'reserved',
   'core',
+  'core-room',
   'level-mark',
   'context',
 ]);
@@ -189,6 +191,7 @@ const INK: Readonly<Partial<Record<Role, { stroke: string; fill?: string }>>> = 
   'ramp-arrow': { stroke: 'var(--deferred, #656971)' },
   reserved: { stroke: 'var(--text-tertiary, #656571)' },
   core: { stroke: 'var(--text-primary, #14161c)', fill: 'var(--surface-sunken, #eef1f8)' },
+  'core-room': { stroke: 'var(--text-secondary, #55555f)' },
   access: { stroke: 'var(--text-primary, #14161c)' },
   'access-arrow': { stroke: 'var(--text-secondary, #55555f)' },
   'cut-line': { stroke: 'var(--accent, #2b5cd9)' },
@@ -210,6 +213,7 @@ const TEXT_INK: Readonly<Partial<Record<Role, string>>> = {
   'cut-line': 'var(--accent, #2b5cd9)',
   reserved: 'var(--text-secondary, #55555f)',
   core: 'var(--text-secondary, #55555f)',
+  'core-room': 'var(--text-secondary, #55555f)',
 };
 
 const MONO = 'var(--font-mono, "IBM Plex Mono", ui-monospace, monospace)';

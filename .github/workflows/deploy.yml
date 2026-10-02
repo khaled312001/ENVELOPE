@@ -125,17 +125,35 @@ jobs:
           echo "live:     $live"
           [ "$live" = "$expected" ] || { echo "::error::the host holds a different release"; exit 1; }
 
+          # What a URL answers: status, type, and the start of the body — enough to
+          # tell a JSON health reply from a CDN's browser check or the site's shell.
+          # Public-facing responses only; no server log is printed (the repo is public).
+          probe() {
+            local code
+            code="$(curl -sS -o /tmp/probe -w '%{http_code} %{content_type}' --max-time 20 "$1" 2>/tmp/probe.err || true)"
+            echo "$code | $(head -c 160 /tmp/probe | tr '\n\r' '  ') $(cat /tmp/probe.err 2>/dev/null)"
+          }
+
           # The engine restarts on the first request after activation; give it time.
-          for i in $(seq 1 36); do
-            health="$(curl -fsS --max-time 20 "${SITE}api/health" || true)"
-            if echo "$health" | grep -q '"status":"ok"'; then echo "engine: $health"; break; fi
+          # Asked from here and from the host itself: a CDN that challenges a
+          # datacenter address answers this runner differently from the server.
+          ok=""
+          for i in $(seq 1 24); do
+            here="$(probe "${SITE}api/health")"
+            if grep -q '"status":"ok"' /tmp/probe; then ok="runner"; break; fi
+            there="$(remote "curl -sS -m 20 '${SITE}api/health' 2>&1 | head -c 300" || true)"
+            if echo "$there" | grep -q '"status":"ok"'; then ok="host"; break; fi
             sleep 5
           done
-          echo "$health" | grep -q '"status":"ok"' || { echo "::error::${SITE}api/health did not answer ok"; exit 1; }
+          echo "health from this runner: $here"
+          echo "health from the host:    ${there:-(not asked)}"
+          [ -n "$ok" ] || { echo "::error::${SITE}api/health did not answer ok, from here or from the host"; exit 1; }
+          [ "$ok" = "runner" ] || echo "::warning::the engine answers on the host but not to this runner — a CDN check on datacenter addresses, most likely; the browser walk below may meet it too"
 
           bundle="$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' out/deploy/web/index.html | head -1)"
-          curl -fsS --max-time 30 "$SITE" | grep -q "$bundle" \
-            || { echo "::error::$SITE does not serve $bundle"; exit 1; }
+          page="$(remote "curl -sS -m 30 '${SITE}'" || true)"
+          echo "$page" | grep -q "$bundle" \
+            || { echo "::error::$SITE does not serve $bundle — it answered: $(echo "$page" | head -c 200 | tr '\n' ' ')"; exit 1; }
           echo "the page serves $bundle"
 
       - name: Put the previous release back

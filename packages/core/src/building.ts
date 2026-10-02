@@ -105,6 +105,33 @@ export interface ModelReservedZone {
   readonly label: string;
 }
 
+/** A room of the indicative ground-floor program. See `ground-program.ts` in `@envelope/capacity`. */
+export interface ModelGroundRoom {
+  readonly name: string;
+  /** [origin, +along, +along+across, +across] — so a sheet recovers the room's axes. */
+  readonly outline: ModelRing;
+}
+
+/**
+ * The entrance and plant rooms drawn in the ground floor's reserved strip — an
+ * assumed program, never a services design. Only on the parking level at grade.
+ */
+export interface ModelGroundRooms {
+  readonly levelId: string;
+  readonly rooms: readonly ModelGroundRoom[];
+  /** The assumed program: the rooms' ink and click target. */
+  readonly source: ElementSource;
+  /** Rooms of the program the strip had no length left for. */
+  readonly notPlaced: readonly string[];
+}
+
+/** A room of the indicative core layout. See `core-layout.ts` in `@envelope/capacity`. */
+export interface ModelCoreRoom {
+  readonly kind: 'STAIR' | 'LIFT' | 'LOBBY';
+  /** [origin, +along, +along+across, +across] — so a sheet recovers the room's axes. */
+  readonly outline: ModelRing;
+}
+
 /**
  * The vertical core, as the engine sized and placed it.
  *
@@ -115,16 +142,10 @@ export interface ModelReservedZone {
  *
  * **Only the area is a quantity.** The outline is the tower plate scaled about
  * its centre to that area, because the area fixes how much plate the core takes
- * and says nothing about where it stands. No lift, stair, riser or core wall is
- * placed inside it, and `notModelled` says so under every drawing.
+ * and says nothing about where it stands. The stairs, lifts and lobby inside it
+ * (`rooms`) are an indicative layout, assumed, and never an egress design; no
+ * riser or core wall is placed, and `notModelled` says so under every drawing.
  */
-/** A room of the indicative core layout. See `core-layout.ts` in `@envelope/capacity`. */
-export interface ModelCoreRoom {
-  readonly kind: 'STAIR' | 'LIFT' | 'LOBBY';
-  /** [origin, +along, +along+across, +across] — so a sheet recovers the room's axes. */
-  readonly outline: ModelRing;
-}
-
 export interface ModelCore {
   readonly outline: ModelRing;
   readonly areaM2: TracedWire;
@@ -367,6 +388,12 @@ export interface BuildingModel {
    * a run sees a note rather than a core inferred from its numbers.
    */
   readonly core: ModelCore | null;
+  /**
+   * The indicative ground-floor rooms, when the level at grade is a parking level
+   * with a reserved strip deep enough to hold them. Absent otherwise, and on a run
+   * stored before the program existed.
+   */
+  readonly groundRooms?: ModelGroundRooms;
   /** Empty only when no line through the scheme crosses the plot — said in `notModelled`. */
   readonly sections: readonly ModelSection[];
   /** What this model does not contain, and why. Shown with every drawing of it. */

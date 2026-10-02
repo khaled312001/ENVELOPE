@@ -1756,6 +1756,10 @@
             "assumedInk": true
           },
           {
+            "name": "ENV-G-GROUND-ROOM",
+            "assumedInk": true
+          },
+          {
             "name": "ENV-G-RAMP",
             "assumedInk": false
           },
@@ -1992,7 +1996,8 @@
           "Neighbouring buildings and the road. The run knows which edges of the plot face a road and which face a neighbour — the site plan writes that on the boundary — but not what stands beyond them, so neither is drawn.",
           "Pedestrian entrance, refuse room and escape distances — NOT ASSESSED until their rules are encoded.",
           "Ramp transitions, headroom and the approach from the street — NOT ASSESSED (DBC B.7.2.2). Only the gradient over the reserved run is computed.",
-          "The core, as a design. Its outline is the tower plate scaled to the core area, and only that area is a computed quantity. The stairs, lifts and lobby drawn inside it are an indicative layout, assumed: egress, lift traffic and fire-fighting are NOT ASSESSED, and no riser or core wall is placed."
+          "The core, as a design. Its outline is the tower plate scaled to the core area, and only that area is a computed quantity. The stairs, lifts and lobby drawn inside it are an indicative layout, assumed: egress, lift traffic and fire-fighting are NOT ASSESSED, and no riser or core wall is placed.",
+          "The ground floor, as a services design. The entrance and plant rooms in its reserved strip are an indicative program, assumed: no room is sized, ventilated or access-checked against a DEWA, Civil Defence or municipality requirement."
         ]
       },
       "jsonFields": [

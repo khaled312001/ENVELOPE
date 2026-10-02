@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-02T17:01:13.756Z",
+  "generatedAt": "2026-10-02T17:09:29.515Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
@@ -72,6 +72,12 @@
       "runs": 1,
       "maxRelativeEffect": "0",
       "basis": "The tower plate cap fixes the plate's area, not where it stands on the podium roof. It is drawn as the podium outline scaled about its centre to the capped area. Where the tower actually sits is a design decision this engine does not make, and the massing has always said so."
+    },
+    {
+      "parameterId": "building.ground_floor_program",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "An indicative ground floor for a residential tower, drawn in the strip the parking layout reserves for plant and circulation: an entrance lobby 6 m wide, a substation 9 m, LV and generator rooms and a pump room 5 m each, a water tank 6 m, a garbage room 4 m, and TEL and MM rooms 2.5 m, each the depth of the strip up to 7 m, along its outer side. These are typical widths, not figures from a DEWA, Civil Defence or municipality requirement on file, so the program is an assumption; no room is sized, ventilated or access-checked."
     }
   ],
   "deferred": [

@@ -80,7 +80,7 @@ const unit = (a: Pt): Pt => ({ x: a.x / len(a), y: a.y / len(a) });
  * The core's rectangle as an origin and two unit axes, the first along its longer
  * side. Null when the ring is not a rectangle to within a millimetre a metre.
  */
-function frameOf(ring: readonly Pt[]):
+export function frameOf(ring: readonly Pt[]):
   | { origin: Pt; along: Pt; across: Pt; lengthMm: number; depthMm: number }
   | null {
   if (ring.length !== 4) return null;

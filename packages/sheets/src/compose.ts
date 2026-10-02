@@ -24,6 +24,7 @@ import {
   type ModelEdge,
   type ModelLevel,
   type ModelCoreRoom,
+  type ModelGroundRoom,
   type ModelPoint,
   type ModelRing,
   type ModelSection,
@@ -414,6 +415,19 @@ function coreLabelAt(outline: readonly ModelPoint[], lobby: ModelCoreRoom | unde
   return beyond >= 1500 ? mm(farMid.x + (v.x * beyond) / 2, farMid.y + (v.y * beyond) / 2) : centre;
 }
 
+/**
+ * One room of the indicative ground-floor program: its outline and its name, in
+ * the program's ink, the name read along the room's longer side.
+ */
+function groundRoomItems(room: ModelGroundRoom, source: ElementSource): ModelItem[] {
+  const [o, a, , b] = room.outline as [ModelPoint, ModelPoint, ModelPoint, ModelPoint];
+  const rotation = lengthOf(o, a) >= lengthOf(o, b) ? angleOf(o, a) : angleOf(o, b);
+  return [
+    shape(Role.GROUND_ROOM, room.outline, true, { source, name: `${room.name} - indicative` }),
+    label(Role.GROUND_ROOM, centroidOf(room.outline), room.name, 1.2, rotation, 'middle', source),
+  ];
+}
+
 /** Under the core label wherever an indicative layout is drawn. */
 const CORE_CAVEAT = 'INDICATIVE LAYOUT - EGRESS NOT ASSESSED';
 
@@ -675,12 +689,19 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
 
   items.push(shape(Role.SLAB, level.outline, true, { source: level.outlineSource, name: `${level.id} slab edge` }));
 
+  const groundRooms = model.groundRooms?.levelId === level.id ? model.groundRooms : undefined;
   if (parking.reserved) {
     const r = parking.reserved;
     items.push(shape(Role.RESERVED, r.outline, true, { source: sourceOf(r.areaM2), name: r.label }));
     const rb = boxOf(r.outline);
     const wide = rb.maxX - rb.minX >= rb.maxY - rb.minY;
-    items.push(label(Role.RESERVED, centroidOf(r.outline), r.label, 1.8, wide ? 0 : 90, 'middle', sourceOf(r.areaM2)));
+    // On the ground floor the rooms carry the labels; the strip's own would sit across them.
+    if (!groundRooms) {
+      items.push(label(Role.RESERVED, centroidOf(r.outline), r.label, 1.8, wide ? 0 : 90, 'middle', sourceOf(r.areaM2)));
+    }
+  }
+  if (groundRooms) {
+    for (const room of groundRooms.rooms) items.push(...groundRoomItems(room, groundRooms.source));
   }
 
   // --- the ramp, and which way it goes from here -------------------------------------
@@ -797,7 +818,17 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     ...(parking.bays.some((b) => b.accessible) ? [{ role: Role.BAY_ACCESSIBLE, label: 'Accessible bay' }] : []),
     { role: Role.AISLE, label: 'Drive aisle' },
     ...(parking.rampStrip ? [{ role: Role.RAMP, label: 'Ramp - gradient NOT ASSESSED' }] : []),
-    ...(parking.reserved ? [{ role: Role.RESERVED, label: 'Reserved: cores, plant, circulation' }] : []),
+    ...(parking.reserved
+      ? [
+          {
+            role: Role.RESERVED,
+            label:
+              model.groundRooms?.levelId === level.id
+                ? 'Reserved; entrance + plant assumed'
+                : 'Reserved: cores, plant, circulation',
+          },
+        ]
+      : []),
     ...(model.core && model.core.levelIds.includes(level.id)
       ? [
           {

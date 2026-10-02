@@ -59,6 +59,7 @@ import {
 
 import { CORE_NOT_MODELLED, type CoreResult } from './core.js';
 import type { CoreLayout } from './core-layout.js';
+import { layoutGroundProgram } from './ground-program.js';
 import { CROSS_AISLE_ROW } from './layout.js';
 import type { EnvelopeSolution } from './envelope.js';
 import type { LevelPlan, WorldRect } from './level-plan.js';
@@ -468,6 +469,48 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     );
   }
 
+  // --- the ground floor's rooms, in its reserved strip ----------------------------------
+  /*
+    ONLY AT GRADE, and only in the strip the layout already reserved. The strip's
+    area is the layout's figure and stays it; this says what such a strip is
+    commonly made of, as one assumption, and names whatever did not fit.
+  */
+  const ground = levels.find((l) => l.parking && l.elevationMm === 0);
+  const zone = levelPlan?.reservedZone;
+  let groundRooms: BuildingModel['groundRooms'];
+  if (ground && zone) {
+    const program = layoutGroundProgram({
+      tracer,
+      zone,
+      ...(core
+        ? {
+            towards: {
+              x: core.outline.reduce((t, p) => t + p.x, 0) / core.outline.length,
+              y: core.outline.reduce((t, p) => t + p.y, 0) / core.outline.length,
+            },
+          }
+        : {}),
+    });
+    if (program.kind === 'LAID_OUT') {
+      groundRooms = {
+        levelId: ground.id,
+        rooms: program.rooms.map((r) => ({ name: r.name, outline: r.outline })),
+        source: source(program.program),
+        notPlaced: program.notPlaced,
+      };
+      notModelled.push(
+        'The ground floor, as a services design. The entrance and plant rooms in its ' +
+          'reserved strip are an indicative program, assumed: no room is sized, ventilated ' +
+          'or access-checked against a DEWA, Civil Defence or municipality requirement.' +
+          (program.notPlaced.length
+            ? ` The strip had no length left for: ${program.notPlaced.join(', ').toLowerCase()}.`
+            : ''),
+      );
+    } else {
+      notModelled.push(`The ground floor's rooms. ${program.reason}`);
+    }
+  }
+
   // --- sections -----------------------------------------------------------------------
   const sections = sectionsOf(input.plot, envelope.setbackRing, envelope.podiumRing, levels, ramps, strip);
   if (sections.length === 0) {
@@ -512,6 +555,7 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     drawnBays: toWire(drawnBays),
     placements,
     core,
+    ...(groundRooms ? { groundRooms } : {}),
     sections,
     notModelled,
   };

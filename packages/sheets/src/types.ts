@@ -82,6 +82,13 @@ export const Role = {
    * assumption is not painted amber forty times over.
    */
   CORE_ROOM: 'core-room',
+  /**
+   * The entrance and plant rooms of the indicative ground-floor program, drawn
+   * in the reserved strip at grade. Its own role for the same reason as the core
+   * rooms: the strip's area is the layout's figure, the rooms are an assumption,
+   * and CAD must be able to show one without the other.
+   */
+  GROUND_ROOM: 'ground-room',
   ACCESS: 'access',
   ACCESS_ARROW: 'access-arrow',
   CUT_LINE: 'cut-line',

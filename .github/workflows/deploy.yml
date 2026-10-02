@@ -57,9 +57,13 @@ jobs:
       - name: The password is there
         env:
           SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          # For the names in the message below, and only the names: jq prints the
+          # keys, the values stay in this step's environment, masked by the runner.
+          VISIBLE_SECRETS: ${{ toJSON(secrets) }}
         run: |
           if [ -z "$SSHPASS" ]; then
-            echo "::error::Add the repository secret HOSTINGER_SSH_PASSWORD (Settings → Secrets and variables → Actions), then re-run this job."
+            echo "::error::This workflow cannot see a secret named HOSTINGER_SSH_PASSWORD. It must be a Repository secret under Settings → Secrets and variables → Actions → Secrets (not Variables, not Codespaces or Dependabot, not inside an Environment)."
+            echo "Secrets this workflow can see, by name: $(jq -r 'keys | join(", ")' <<<"$VISIBLE_SECRETS")"
             exit 1
           fi
 

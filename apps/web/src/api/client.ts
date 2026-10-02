@@ -91,7 +91,14 @@ async function call<T>(
       // The server's messages are written to be read by a person — they name the
       // rule, the gate or the missing declaration. Passing them through beats
       // any generic string this layer could substitute.
-      String(body['message'] ?? `Request failed with ${res.status}`),
+      // Some routes put the sentence in `detail` instead — the intake's "not a
+      // PDF" and "could not be read" among them — and the reader was shown
+      // "Request failed with 422" with the reason one field away.
+      String(
+        body['message'] ??
+          (typeof body['detail'] === 'string' ? body['detail'] : undefined) ??
+          `Request failed with ${res.status}`,
+      ),
       body['detail'],
       body['gate'] as string | undefined,
     );

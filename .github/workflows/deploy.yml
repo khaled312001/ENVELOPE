@@ -14,7 +14,8 @@
 #   - a push whose head commit message contains [deploy], to the branches below;
 #   - by hand, from the Actions tab (once this file is on the default branch).
 #
-# One secret: HOSTINGER_SSH_PASSWORD (Settings → Secrets and variables → Actions).
+# One secret: HOSTINGER_SSH_PASSWORD, or HOSTINGER_SSH_PASS, under Settings →
+# Secrets and variables → Actions → Repository secrets.
 # Nothing else here is a credential: the host, port and account name are already
 # in `scripts/deploy/build.mjs` and in the site's DNS.
 
@@ -56,13 +57,13 @@ jobs:
 
       - name: The password is there
         env:
-          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
           # For the names in the message below, and only the names: jq prints the
           # keys, the values stay in this step's environment, masked by the runner.
           VISIBLE_SECRETS: ${{ toJSON(secrets) }}
         run: |
           if [ -z "$SSHPASS" ]; then
-            echo "::error::This workflow cannot see a secret named HOSTINGER_SSH_PASSWORD. It must be a Repository secret under Settings → Secrets and variables → Actions → Secrets (not Variables, not Codespaces or Dependabot, not inside an Environment)."
+            echo "::error::This workflow cannot see a secret named HOSTINGER_SSH_PASSWORD or HOSTINGER_SSH_PASS. It must be a Repository secret under Settings → Secrets and variables → Actions → Secrets (not Variables, not Codespaces or Dependabot, not inside an Environment)."
             echo "Secrets this workflow can see, by name: $(jq -r 'keys | join(", ")' <<<"$VISIBLE_SECRETS")"
             exit 1
           fi
@@ -84,7 +85,7 @@ jobs:
       - name: What is live now
         id: live
         env:
-          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
         run: |
           remote() { sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; }
           echo "live before this deploy: $(remote "cat ~/$APP_DIR/release.txt 2>/dev/null || echo 'no release.txt'")"
@@ -107,7 +108,7 @@ jobs:
       - name: Upload and activate
         id: activate
         env:
-          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
         run: |
           remote() { sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; }
           remote 'mkdir -p ~/tob-deploy'
@@ -119,7 +120,7 @@ jobs:
       - name: The live site is this release
         id: verify
         env:
-          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
         run: |
           remote() { sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; }
           expected="$(cat out/deploy/app/release.txt)"
@@ -144,7 +145,7 @@ jobs:
       - name: Put the previous release back
         if: failure() && steps.activate.outcome == 'success'
         env:
-          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
         run: |
           sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_HOST" \
             'cd ~/tob-deploy && sh activate.sh rollback'

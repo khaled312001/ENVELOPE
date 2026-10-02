@@ -807,6 +807,33 @@ await step('the efficiency has no default and blocks the run until answered', as
   await page.getByLabel(/Saleable area/i).fill('0.93');
 });
 
+/*
+  THE DEFECT THAT LOCKED THE FLOW ON THE LIVE SITE. ٠٫٩٣ typed on an Arabic
+  keyboard, and 93% typed the way the screen itself writes the range, were both
+  refused with "it has to sit above 0 and at most 1"; Compute stayed disabled and
+  every step after it read "Complete the earlier steps first". A right answer
+  written the way a reader writes it must count, and the screen must say what the
+  engine will receive.
+*/
+await step('a share typed in Arabic digits or as a percentage counts, and says how it was read', async () => {
+  const field = page.getByLabel(/Saleable area/i);
+  const blocked = /Enter the saleable share of GFA to continue/;
+  for (const typed of ['٠٫٩٣', '93%']) {
+    await field.fill(typed);
+    const t = await page.textContent('body');
+    if (blocked.test(t)) throw new Error(`${typed} was refused as an unanswered share`);
+    if (!/The engine reads this as\s*0\.93/.test(t)) {
+      throw new Error(`${typed} was accepted without saying the engine reads it as 0.93`);
+    }
+  }
+  await field.fill('93');
+  const t = await page.textContent('body');
+  if (!/looks like a percentage/.test(t)) {
+    throw new Error('a bare 93 was not told it looks like a percentage');
+  }
+  await field.fill('0.93');
+});
+
 await step('the comparison shows what each answer is worth', async () => {
   await page.getByRole('button', { name: /what each answer is worth/i }).click();
   await page.locator('.comparison__verdict').waitFor({ timeout: wait(8000) });

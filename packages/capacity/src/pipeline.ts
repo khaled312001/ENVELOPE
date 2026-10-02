@@ -760,50 +760,12 @@ export function runPipeline(input: RunInput): RunOutput {
     envelope.finalContext,
   );
 
-  // --- The level, laid out -------------------------------------------------
-  //
-  // Last, because it consumes the envelope's ring and the parking solver's
-  // usable fraction, and because a failure here must not cost the run. A plot
-  // too narrow to hold a single bay run is a finding about the plot; reporting
-  // "no layout, and here is why" is the answer, and throwing would replace a
-  // finding with an outage.
-  let levelPlan: LevelPlan | undefined;
-  let levelPlanRefusal: string | undefined;
-  try {
-    levelPlan = planParkingLevel({
-      tracer,
-      plot: input.plot,
-      edges: input.plot.edges,
-      podiumRing: envelope.podiumRing,
-      usableFraction: parking.usableFraction,
-      includeRamp: input.levelPlan?.includeRamp ?? true,
-      ...(input.levelPlan?.structuralGridM === undefined
-        ? {}
-        : { structuralGridM: input.levelPlan.structuralGridM }),
-      ...(input.levelPlan?.accessEdgeSeq === undefined
-        ? {}
-        : { affectionPlanAccessEdgeSeq: input.levelPlan.accessEdgeSeq }),
-    });
-  } catch (error) {
-    levelPlanRefusal = error instanceof Error ? error.message : String(error);
-  }
-
-  const massing = buildMassing({
-    tracer,
-    podiumRing: envelope.podiumRing,
-    plateRing: envelope.plateRing,
-    floorToFloorM: envelope.floorToFloorM,
-    maxLevelsByHeight: envelope.maxLevelsByHeight,
-    ...(podiumFootprint === undefined
-      ? {}
-      : { podiumLevels: { value: podiumFootprint, actor: input.actor } }),
-  });
-
   /*
     THE CORE — sized here and drawn everywhere, never subtracted.
 
-    It is solved after the massing because it needs the plate the massing stands
-    on, and before the model because every level draws it. A stated area that
+    It is solved before the parking level is laid out, because the core is a
+    shaft through every parking level and the layout places no bay inside it,
+    and before the model because every level draws it. A stated area that
     cannot be a core of this plate is refused in the caller's own words rather
     than clamped.
   */
@@ -827,6 +789,46 @@ export function runPipeline(input: RunInput): RunOutput {
     saleableEfficiency: efficiencyTraced.value,
     parkingUsableFraction: parking.usableFraction.value,
     parkingLevelAreaM2: envelope.podiumFootprint.value,
+  });
+
+  // --- The level, laid out -------------------------------------------------
+  //
+  // Last, because it consumes the envelope's ring and the parking solver's
+  // usable fraction, and because a failure here must not cost the run. A plot
+  // too narrow to hold a single bay run is a finding about the plot; reporting
+  // "no layout, and here is why" is the answer, and throwing would replace a
+  // finding with an outage.
+  let levelPlan: LevelPlan | undefined;
+  let levelPlanRefusal: string | undefined;
+  try {
+    levelPlan = planParkingLevel({
+      tracer,
+      plot: input.plot,
+      edges: input.plot.edges,
+      podiumRing: envelope.podiumRing,
+      usableFraction: parking.usableFraction,
+      includeRamp: input.levelPlan?.includeRamp ?? true,
+      core: { ring: core.ring, areaM2: core.areaM2 },
+      ...(input.levelPlan?.structuralGridM === undefined
+        ? {}
+        : { structuralGridM: input.levelPlan.structuralGridM }),
+      ...(input.levelPlan?.accessEdgeSeq === undefined
+        ? {}
+        : { affectionPlanAccessEdgeSeq: input.levelPlan.accessEdgeSeq }),
+    });
+  } catch (error) {
+    levelPlanRefusal = error instanceof Error ? error.message : String(error);
+  }
+
+  const massing = buildMassing({
+    tracer,
+    podiumRing: envelope.podiumRing,
+    plateRing: envelope.plateRing,
+    floorToFloorM: envelope.floorToFloorM,
+    maxLevelsByHeight: envelope.maxLevelsByHeight,
+    ...(podiumFootprint === undefined
+      ? {}
+      : { podiumLevels: { value: podiumFootprint, actor: input.actor } }),
   });
 
   const building = buildBuildingModel({

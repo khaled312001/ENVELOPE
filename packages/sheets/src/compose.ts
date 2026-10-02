@@ -760,7 +760,18 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     const len = lengthOf(a, b);
     const along = angleOf(a, b);
     const arrow = Math.round(Math.min(5000, len / 5));
-    for (const at of [0.2, 0.8]) {
+    /*
+      THE ARROWS CLEAR THE LABEL. At a fifth of the way in from each end they
+      sat on the words of an aisle the core had cut short. Where they would, they
+      move to the ends; where even that is too tight they are left out — the
+      label already says which way the aisle runs. The label's length is
+      estimated from its characters at the 2 mm text height.
+    */
+    const labelHalf = (aisle.label.length * 2 * 0.62 * s) / 2;
+    const clear = (at: number): boolean => Math.abs(0.5 - at) * len - arrow / 2 > labelHalf + 500;
+    const ends = (arrow / 2 + 500) / len;
+    const spots = clear(0.2) ? [0.2, 0.8] : clear(ends) ? [ends, 1 - ends] : [];
+    for (const at of spots) {
       items.push({
         kind: 'symbol',
         role: Role.AISLE_ARROW,

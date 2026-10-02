@@ -733,11 +733,8 @@ function parkingOf(plan: LevelPlan): NonNullable<ModelLevel['parking']> {
     reserved: plan.reservedZone
       ? {
           outline: plan.reservedZone.map(pt),
-          areaM2: toWire(plan.reservedAreaM2),
-          label:
-            plan.reservedAreaM2 === plan.deductionsM2
-              ? `CORES, PLANT & CIRCULATION - ${plan.deductionsM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`
-              : `PLANT & CIRCULATION - ${plan.reservedAreaM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`,
+          areaM2: toWire(plan.deductionsM2),
+          label: `CORES, PLANT & CIRCULATION - ${plan.deductionsM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`,
         }
       : null,
     rampStrip: plan.rampStrip ? plan.rampStrip.world.map(pt) : null,

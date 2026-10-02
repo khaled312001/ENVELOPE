@@ -76,62 +76,10 @@ describe('the core subtracts from nothing', () => {
     expect(big.capacity.levels.value).toBe(base.capacity.levels.value);
   });
 
-});
-
-/*
-  WHERE IT DOES SUBTRACT: FROM THE PARKING LEVEL IT STANDS ON.
-
-  The core subtracts from no capacity figure, but it is a shaft through every
-  parking level, and a bay inside it is not a bay. It used to be drawn over bays
-  that stayed in the count — the deduction reserved a strip at the far edge "for
-  cores", and the core itself stood at the centre. Now the layout places no bay
-  where the core stands and cuts any aisle across it; its area comes off the
-  strip instead, so it is not deducted twice.
-*/
-describe('the core on the parking level', () => {
-  const overlaps = (
-    a: readonly { x: number; y: number }[],
-    b: readonly { x: number; y: number }[],
-  ): boolean => {
-    const box = (r: readonly { x: number; y: number }[]) => ({
-      x0: Math.min(...r.map((p) => p.x)),
-      x1: Math.max(...r.map((p) => p.x)),
-      y0: Math.min(...r.map((p) => p.y)),
-      y1: Math.max(...r.map((p) => p.y)),
-    });
-    const p = box(a);
-    const q = box(b);
-    // A millimetre of tolerance: the two are rounded to the grid separately.
-    return p.x0 < q.x1 - 1 && q.x0 < p.x1 - 1 && p.y0 < q.y1 - 1 && q.y0 < p.y1 - 1;
-  };
-
-  it('has no bay inside it', () => {
-    const out = runPipeline(input());
-    const core = out.building.core!.outline;
-    const bays = out.levelPlan!.rects.filter((r) => r.kind === 'BAY' || r.kind === 'ACCESSIBLE_BAY');
-    expect(bays.length).toBeGreaterThan(0);
-    for (const bay of bays) expect(overlaps(bay.world, core)).toBe(false);
-  });
-
-  it('says how many bays it took, and takes its area off the reserved strip', () => {
-    const out = runPipeline(input());
-    expect(out.levelPlan!.layout.baysUnderCore).toBeGreaterThan(0);
-    expect(
-      out.levelPlan!.reservedAreaM2.value.eq(
-        Decimal.max(0, out.levelPlan!.deductionsM2.value.minus(out.core.areaM2.value)),
-      ),
-    ).toBe(true);
-  });
-
-  it('keeps every bay out of a core of any size', () => {
+  it('moves no bay the layout placed', () => {
     const base = runPipeline(input());
-    for (const share of ['0.1', '0.25', '0.4']) {
-      const out = runPipeline(input({ coreAreaM2: base.envelope.towerPlateCap.value.times(share) }));
-      const core = out.building.core!.outline;
-      for (const r of out.levelPlan!.rects) {
-        if (r.kind === 'BAY' || r.kind === 'ACCESSIBLE_BAY') expect(overlaps(r.world, core)).toBe(false);
-      }
-    }
+    const big = runPipeline(input({ coreAreaM2: base.envelope.towerPlateCap.value.times('0.4') }));
+    expect(big.levelPlan!.bayCount.value).toBe(base.levelPlan!.bayCount.value);
   });
 });
 

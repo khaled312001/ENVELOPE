@@ -123,11 +123,6 @@ export interface LevelPlan {
   /** What was taken off the level before packing, and where the number came from. */
   readonly deductionsM2: TracedDecimal;
   /**
-   * The reserved strip's own area: the deduction less the core, which now stands
-   * where it is drawn. Equal to `deductionsM2` when no core was given.
-   */
-  readonly reservedAreaM2: TracedDecimal;
-  /**
    * Everything this plan does not establish, in one list.
    *
    * The layout's notes, the access placement's `notAssessed`, and — when the
@@ -169,26 +164,6 @@ export interface LevelPlanInput {
   readonly structuralGridM?: Decimal;
   /** Passed through to `placeVehicleAccess` — the sheet's stated access side. */
   readonly affectionPlanAccessEdgeSeq?: number;
-  /**
-   * The core's footprint in plot coordinates, and its area. It is a shaft through
-   * every parking level: the layout places no bay inside it and cuts any aisle
-   * across it. See `ParkingLayoutInput.core`.
-   */
-  readonly core?: { readonly ring: Ring; readonly areaM2: TracedDecimal };
-}
-
-/**
- * A plot point in the packing rectangle's own frame, millimetres — the inverse of
- * `fromLocal`.
- */
-function toLocal(rect: InscribedRect, p: Pt): { readonly x: number; readonly y: number } {
-  const theta = (rect.angleDeg.toNumber() * Math.PI) / 180;
-  const dx = p.x - rect.originMm.x;
-  const dy = p.y - rect.originMm.y;
-  return {
-    x: dx * Math.cos(theta) + dy * Math.sin(theta),
-    y: -dx * Math.sin(theta) + dy * Math.cos(theta),
-  };
 }
 
 const mmToM = (v: Mm | number): Decimal => new Decimal(v).div(1000);
@@ -230,33 +205,11 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     },
   );
 
-  /*
-    The core in the packing frame, as the box that holds it there. On a plot whose
-    core is turned against the packing rectangle the box is larger than the core,
-    which is the safe side: a bay beside the core is lost, never one inside it.
-  */
-  const coreRect = input.core
-    ? (() => {
-        const local = input.core.ring.map((p) => toLocal(rect, p));
-        const xs = local.map((p) => p.x / 1000);
-        const ys = local.map((p) => p.y / 1000);
-        const x0 = new Decimal(Math.min(...xs)).toDecimalPlaces(3);
-        const y0 = new Decimal(Math.min(...ys)).toDecimalPlaces(3);
-        return {
-          x: x0,
-          y: y0,
-          width: new Decimal(Math.max(...xs)).toDecimalPlaces(3).minus(x0),
-          height: new Decimal(Math.max(...ys)).toDecimalPlaces(3).minus(y0),
-        };
-      })()
-    : undefined;
-
   const layout = layoutParkingLevel({
     tracer: input.tracer,
     footprint: { widthM, depthM },
     deductionsTraced,
     includeRamp: input.includeRamp,
-    ...(input.core && coreRect ? { core: { rect: coreRect, areaM2: input.core.areaM2 } } : {}),
     ...(input.angle === undefined ? {} : { angle: input.angle }),
     ...(input.structuralGridM === undefined ? {} : { structuralGridM: input.structuralGridM }),
   });
@@ -383,7 +336,6 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
       },
     },
     deductionsM2: deductionsTraced,
-    reservedAreaM2: layout.reservedAreaM2,
     notAssessed,
   };
 }

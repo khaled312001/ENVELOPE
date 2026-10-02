@@ -124,9 +124,7 @@ export function pointAlong(a: Pt, b: Pt, distanceMm: number): Pt {
     throw new DegenerateGeometryError('a section line needs two distinct points', { a, b });
   }
   const k = new Decimal(distanceMm).div(length);
-  // `+ 0` turns a rounded −0 into 0: JSON writes both as 0, so a −0 left here
-  // makes a model that does not survive its own round trip.
-  const round = (v: Decimal): number => v.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber() + 0;
+  const round = (v: Decimal): number => v.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber();
   return {
     x: round(k.times(dx).plus(a.x)) as Pt['x'],
     y: round(k.times(dy).plus(a.y)) as Pt['y'],

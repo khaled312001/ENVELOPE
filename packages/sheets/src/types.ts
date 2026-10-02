@@ -72,6 +72,23 @@ export const Role = {
    * out the plant room too.
    */
   CORE: 'core',
+  /**
+   * The indicative layout inside the core — stairs, lifts, the lift lobby.
+   *
+   * Its own role because it is a different claim from the core: the core's
+   * AREA is computed, the rooms inside it are an assumed program, and a reader
+   * must be able to switch them off in CAD and see the area alone. Outlines and
+   * labels carry the program's class; treads and the lift cross do not, so one
+   * assumption is not painted amber forty times over.
+   */
+  CORE_ROOM: 'core-room',
+  /**
+   * The entrance and plant rooms of the indicative ground-floor program, drawn
+   * in the reserved strip at grade. Its own role for the same reason as the core
+   * rooms: the strip's area is the layout's figure, the rooms are an assumption,
+   * and CAD must be able to show one without the other.
+   */
+  GROUND_ROOM: 'ground-room',
   ACCESS: 'access',
   ACCESS_ARROW: 'access-arrow',
   CUT_LINE: 'cut-line',

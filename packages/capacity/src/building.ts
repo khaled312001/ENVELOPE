@@ -58,6 +58,8 @@ import {
 } from '@envelope/geometry';
 
 import { CORE_NOT_MODELLED, type CoreResult } from './core.js';
+import type { CoreLayout } from './core-layout.js';
+import { layoutGroundProgram } from './ground-program.js';
 import { CROSS_AISLE_ROW } from './layout.js';
 import type { EnvelopeSolution } from './envelope.js';
 import type { LevelPlan, WorldRect } from './level-plan.js';
@@ -98,6 +100,14 @@ export interface BuildingModelInput {
   readonly core?: {
     readonly result: CoreResult;
     readonly reconciliation: readonly string[];
+    /** The indicative layout inside it, or why there is none. */
+    readonly layout?: CoreLayout;
+    /**
+     * Whether the parking was laid out around the shafts — and so whether the
+     * parking levels draw the shafts rather than the whole core. Drawing the
+     * smaller box over bays the layout still counted would hide the conflict.
+     */
+    readonly shaftOnParking?: boolean;
   };
 }
 
@@ -441,6 +451,23 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
         label: `CORE - ${input.core.result.areaM2.value.toFixed(0)} SQ.M`,
         levelIds: levels.filter((l) => l.placed).map((l) => l.id),
         reconciliation: input.core.reconciliation,
+        ...(input.core.layout?.kind === 'LAID_OUT'
+          ? {
+              rooms: input.core.layout.rooms.map((r) => ({ kind: r.kind, outline: r.outline })),
+              roomsSource: source(input.core.layout.program),
+            }
+          : {}),
+        ...(input.core.layout?.kind === 'LAID_OUT' && input.core.shaftOnParking
+          ? {
+              shaft: {
+                outline: input.core.layout.shaft.outline.map(pt),
+                areaM2: toWire(input.core.layout.shaft.areaM2),
+                label: `CORE SHAFTS - ${input.core.layout.shaft.areaM2.value.toFixed(0)} SQ.M`,
+              },
+            }
+          : input.core.layout?.kind === 'NOT_LAID_OUT'
+            ? { rooms: [], roomsNote: input.core.layout.reason }
+            : {}),
       }
     : null;
   if (core) {
@@ -455,6 +482,48 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       'The core. This run was computed before the engine sized one, and a core ' +
         'inferred now from its stored numbers would be a core nobody entered.',
     );
+  }
+
+  // --- the ground floor's rooms, in its reserved strip ----------------------------------
+  /*
+    ONLY AT GRADE, and only in the strip the layout already reserved. The strip's
+    area is the layout's figure and stays it; this says what such a strip is
+    commonly made of, as one assumption, and names whatever did not fit.
+  */
+  const ground = levels.find((l) => l.parking && l.elevationMm === 0);
+  const zone = levelPlan?.reservedZone;
+  let groundRooms: BuildingModel['groundRooms'];
+  if (ground && zone) {
+    const program = layoutGroundProgram({
+      tracer,
+      zone,
+      ...(core
+        ? {
+            towards: {
+              x: core.outline.reduce((t, p) => t + p.x, 0) / core.outline.length,
+              y: core.outline.reduce((t, p) => t + p.y, 0) / core.outline.length,
+            },
+          }
+        : {}),
+    });
+    if (program.kind === 'LAID_OUT') {
+      groundRooms = {
+        levelId: ground.id,
+        rooms: program.rooms.map((r) => ({ name: r.name, outline: r.outline })),
+        source: source(program.program),
+        notPlaced: program.notPlaced,
+      };
+      notModelled.push(
+        'The ground floor, as a services design. The entrance and plant rooms in its ' +
+          'reserved strip are an indicative program, assumed: no room is sized, ventilated ' +
+          'or access-checked against a DEWA, Civil Defence or municipality requirement.' +
+          (program.notPlaced.length
+            ? ` The strip had no length left for: ${program.notPlaced.join(', ').toLowerCase()}.`
+            : ''),
+      );
+    } else {
+      notModelled.push(`The ground floor's rooms. ${program.reason}`);
+    }
   }
 
   // --- sections -----------------------------------------------------------------------
@@ -501,6 +570,7 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     drawnBays: toWire(drawnBays),
     placements,
     core,
+    ...(groundRooms ? { groundRooms } : {}),
     sections,
     notModelled,
   };
@@ -678,8 +748,11 @@ function parkingOf(plan: LevelPlan): NonNullable<ModelLevel['parking']> {
     reserved: plan.reservedZone
       ? {
           outline: plan.reservedZone.map(pt),
-          areaM2: toWire(plan.deductionsM2),
-          label: `CORES, PLANT & CIRCULATION - ${plan.deductionsM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`,
+          areaM2: toWire(plan.reservedAreaM2),
+          label:
+            plan.reservedAreaM2 === plan.deductionsM2
+              ? `CORES, PLANT & CIRCULATION - ${plan.deductionsM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`
+              : `PLANT & CIRCULATION - ${plan.reservedAreaM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`,
         }
       : null,
     rampStrip: plan.rampStrip ? plan.rampStrip.world.map(pt) : null,

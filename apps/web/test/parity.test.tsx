@@ -373,12 +373,14 @@ describe('the cross aisle, removed', () => {
       expect(nodes.length, `${level.id} stacks one module, so nothing is joined`).toBeGreaterThan(
         1,
       );
-      // The cross aisle is the one that meets the most other aisles.
-      const meets = nodes.map(
-        (n, i) => nodes.filter((m, j) => j !== i && contactMm(n, m) >= AISLE_MM).length,
-      );
-      const without = nodes.filter((_, i) => i !== meets.indexOf(Math.max(...meets)));
-      expect(components(without, AISLE_MM), `${level.id} without its cross aisle`).toBe(
+      /*
+        Every cross aisle goes — there are two where a core cuts the module aisles
+        and a second one reaches the bays beyond the cut. Taking only one would
+        leave the other joining everything, and prove nothing.
+      */
+      expect(level.parking.aisles.some((a) => a.crossing), `${level.id} has no cross aisle`).toBe(true);
+      const without = level.parking.aisles.filter((a) => !a.crossing).map((a) => a.outline);
+      expect(components(without, AISLE_MM), `${level.id} without its cross aisles`).toBe(
         without.length,
       );
       doctored += 1;

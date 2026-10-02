@@ -39,8 +39,54 @@ export interface ExportableRun {
   readonly parking: Record<string, unknown>;
   readonly capacity: Record<string, unknown>;
   readonly levelPlan: Record<string, unknown> | null;
+  /** As `present.ts` sends it. Absent on a run stored before the statement existed. */
+  readonly gfaStatement?: GfaStatementRows;
   readonly assumptions: readonly Assumption[];
   readonly provenance?: Provenance;
+}
+
+interface StatedTracedArea {
+  readonly traced: TracedWire;
+  readonly ft2: string;
+}
+
+interface GfaStatementRows {
+  readonly allowed: StatedTracedArea;
+  readonly rows: readonly {
+    readonly kind: 'RESIDENTIAL' | 'PARKING';
+    readonly count: number;
+    readonly perLevel: StatedTracedArea | null;
+    readonly area: StatedTracedArea;
+  }[];
+  readonly proposed: StatedTracedArea;
+  readonly remaining: StatedTracedArea;
+}
+
+const GFA_ROW_LABEL = {
+  RESIDENTIAL: 'Residential floors',
+  PARKING: 'Parking, counted toward FAR',
+} as const;
+
+/**
+ * The GFA calculation as rows: allowed, each floor group, proposed, what is left.
+ * The square feet ride in the label because a row's value column is the traced
+ * square metres, and both figures are the engine's.
+ */
+function gfaRows(s: GfaStatementRows, index: GraphIndex): readonly ValueRow[] {
+  const row = (label: string, a: StatedTracedArea): ValueRow => ({
+    label: `${label} (m²) — ${a.ft2} ft²`,
+    traced: a.traced,
+    source: sourceText(a.traced, index),
+  });
+  const out: ValueRow[] = [row('Gross floor area allowed', s.allowed)];
+  s.rows.forEach((r, i) => {
+    const name = `${i + 1}. ${GFA_ROW_LABEL[r.kind]}`;
+    if (r.perLevel) out.push(row(`${name} — one level`, r.perLevel));
+    out.push(row(r.perLevel ? `${name} — × ${r.count}` : name, r.area));
+  });
+  out.push(row('Total gross floor area proposed', s.proposed));
+  out.push(row('Left within the allowance', s.remaining));
+  return out;
 }
 
 const isTraced = (v: unknown): v is TracedWire =>
@@ -205,6 +251,17 @@ export function runWorkbookSpec(run: ExportableRun, generatedAt: string): Workbo
       rows: rows(run.parking, PARKING_LABELS, index),
     },
   ];
+
+  if (run.gfaStatement) {
+    sheets.push({
+      name: 'GFA calculation',
+      note:
+        'Allowed is FAR × plot area, before the parking-in-FAR treatment. Proposed is ' +
+        'whole floors of the tower plate, plus parking only where it counts toward FAR. ' +
+        'There is no commercial row: this engine places no commercial area.',
+      rows: gfaRows(run.gfaStatement, index),
+    });
+  }
 
   if (run.levelPlan) {
     sheets.push({

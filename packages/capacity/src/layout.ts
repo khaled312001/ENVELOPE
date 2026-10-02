@@ -235,6 +235,19 @@ export interface ParkingLayoutInput {
   readonly deductionsTraced?: TracedDecimal;
   /** Include a ramp in this level's layout. A basement below grade needs one. */
   readonly includeRamp?: boolean;
+  /**
+   * The core, where it stands on this level, in the footprint's local metres —
+   * x along the width, y along the depth.
+   *
+   * IT USED TO BE DRAWN OVER BAYS THAT WERE COUNTED. The deduction reserved a
+   * strip at the far edge "for cores and plant", the core was placed at the
+   * centre of the tower, and every bay under it stayed in the count. Now a bay
+   * it covers is not placed, an aisle it crosses is cut where it stands, and a
+   * bay that cut leaves without a way in is dropped by the circulation check like
+   * any other. Its area comes off the reserved strip, which would otherwise
+   * deduct the core a second time.
+   */
+  readonly core?: { readonly rect: Rect; readonly areaM2: TracedDecimal };
 }
 
 export interface ParkingLayoutResult {
@@ -269,6 +282,13 @@ export interface ParkingLayoutResult {
    * drawing, not where anyone put them.
    */
   readonly reserved: Rect | undefined;
+  /**
+   * The area of that strip, traced: the deduction, less the core when the core
+   * stands where it is drawn. The deduction itself when no core was given.
+   */
+  readonly reservedAreaM2: TracedDecimal;
+  /** Bays the core covers, which were not placed. Zero when no core was given. */
+  readonly baysUnderCore: number;
   /** Rows that came out partial, and why. Reported, not hidden. */
   readonly notes: readonly string[];
 }
@@ -308,6 +328,27 @@ interface PackOptions {
   readonly moduleDepth: Decimal;
   readonly effectiveBayWidth: Decimal;
   readonly includeRamp: boolean;
+  /** Where the core stands, in this packing's own frame. */
+  readonly obstructions: readonly Rect[];
+  /**
+   * A second cross aisle at the far end of the runs. Tried only where a core
+   * stands on the level: the core cuts module aisles, and the bays beyond the cut
+   * are stranded unless another cross aisle reaches them from the other side.
+   */
+  readonly farCrossAisle: boolean;
+  /**
+   * The cross aisle beside the ramp, which every packing has unless a core is
+   * standing across it — then the far one alone, reached through the module
+   * aisles the ramp meets, is tried too.
+   */
+  readonly nearCrossAisle: boolean;
+  /**
+   * Where the first module starts, metres along the depth. Zero but where a core
+   * stands on the level: then the module grid is slid against the core, so that
+   * it stands in a run of bays rather than across an aisle that every bay beyond
+   * it needs. The strip before the first module is left unpacked, and said so.
+   */
+  readonly offsetM: Decimal;
 }
 
 interface Packing {
@@ -318,6 +359,7 @@ interface Packing {
   readonly crossAisleAreaM2: Decimal;
   readonly baysLostToCrossAisle: number;
   readonly strandedBays: number;
+  readonly baysUnderCore: number;
   readonly notes: readonly string[];
   /** Why nothing could be packed this way round. Returned, not thrown: the other
    *  orientation may still work, and a throw would hide that. */
@@ -335,16 +377,53 @@ function refused(reason: string): Packing {
     crossAisleAreaM2: ZERO,
     baysLostToCrossAisle: 0,
     strandedBays: 0,
+    baysUnderCore: 0,
     notes: [],
     refusal: reason,
   };
 }
 
 /** Pack one rectangle, one way round. Returns a refusal rather than throwing. */
+/** Positive-area overlap: two rectangles that only touch do not collide. */
+const collides = (a: Rect, b: Rect): boolean =>
+  a.x.lt(b.x.plus(b.width)) &&
+  b.x.lt(a.x.plus(a.width)) &&
+  a.y.lt(b.y.plus(b.height)) &&
+  b.y.lt(a.y.plus(a.height));
+
+/**
+ * What is left of a drivable strip once the core stands across it: the pieces
+ * either side, along the strip's long axis, each the strip's full width. A strip
+ * the core cuts into only partly is cut all the same — a lane narrower than the
+ * aisle is not a way through, and the circulation check would say so anyway.
+ */
+function piecesOutside(r: PlacedRect, blocks: readonly Rect[]): PlacedRect[] {
+  const alongX = r.width.gte(r.height);
+  const start = alongX ? r.x : r.y;
+  const end = alongX ? r.x.plus(r.width) : r.y.plus(r.height);
+  const cuts = blocks
+    .map((b) => (alongX ? [b.x, b.x.plus(b.width)] : [b.y, b.y.plus(b.height)]) as [Decimal, Decimal])
+    .sort((p, q) => p[0].comparedTo(q[0]));
+  const pieces: PlacedRect[] = [];
+  let at = start;
+  for (const [c0, c1] of cuts) {
+    if (c0.gt(at)) pieces.push(piece(r, alongX, at, Decimal.min(c0, end)));
+    at = Decimal.max(at, c1);
+  }
+  if (end.gt(at)) pieces.push(piece(r, alongX, at, end));
+  return pieces;
+}
+
+function piece(r: PlacedRect, alongX: boolean, from: Decimal, to: Decimal): PlacedRect {
+  return alongX
+    ? { ...r, x: from, width: to.minus(from) }
+    : { ...r, y: from, height: to.minus(from) };
+}
+
 function packLevel(o: PackOptions): Packing {
   const notes: string[] = [];
-  const rects: PlacedRect[] = [];
-  const availableDepth0 = o.grossDepthM.minus(o.deductedDepthM);
+  let rects: PlacedRect[] = [];
+  const availableDepth0 = o.grossDepthM.minus(o.deductedDepthM).minus(o.offsetM);
   if (availableDepth0.lte(0)) {
     return refused(
       `the ${o.deductedDepthM.toFixed(2)} m strip taken for cores and plant leaves no ` +
@@ -401,9 +480,10 @@ function packLevel(o: PackOptions): Packing {
   // one aisle and the next. One cross aisle down the side joins them all to the
   // ramp, or to the slab edge where the driveway lands. With a single run there
   // is nothing to join, so none is reserved and none is charged.
-  const crossAisleWidth = aisleCount >= 2 ? o.aisleWidth : ZERO;
+  const crossAisleWidth = aisleCount >= 2 && o.nearCrossAisle ? o.aisleWidth : ZERO;
+  const farAisleWidth = o.farCrossAisle && aisleCount >= 2 ? o.aisleWidth : ZERO;
   const runX = rampX.plus(crossAisleWidth);
-  const packWidth = o.widthM.minus(runX);
+  const packWidth = o.widthM.minus(runX).minus(farAisleWidth);
   if (packWidth.lte(0)) {
     return refused(
       `a ${o.widthM.toFixed(2)} m width holds the ramp strip and the cross aisle and ` +
@@ -426,7 +506,16 @@ function packLevel(o: PackOptions): Packing {
 
   // --- pack double-loaded modules ----------------------------------------
   let availableDepth = availableDepth0;
-  let cursorY = ZERO;
+  let cursorY = o.offsetM;
+  if (o.offsetM.gt(0)) {
+    notes.push(
+      `The modules start ${o.offsetM.toString()} m in from the edge, so the core stands in ` +
+        'a run of bays rather than across a drive aisle that the bays beyond it need. ' +
+        'That strip is left unpacked. Where the core stranded bays, every start from 0 m ' +
+        'to one module depth in 1 m steps was packed, with the cross aisle at either end ' +
+        'or both, and the start that reaches the most bays was kept.',
+    );
+  }
   let row = 0;
   const bayRun = (y: Decimal, r: number): void => {
     for (let i = 0; i < baysPerRun; i += 1) {
@@ -496,12 +585,53 @@ function packLevel(o: PackOptions): Packing {
       height: cursorY,
     });
     crossAisleAreaM2 = crossAisleWidth.times(cursorY);
+    if (farAisleWidth.gt(0)) {
+      rects.push({
+        kind: RectKind.AISLE,
+        row: CROSS_AISLE_ROW,
+        x: runX.plus(packWidth),
+        y: ZERO,
+        width: farAisleWidth,
+        height: cursorY,
+      });
+      crossAisleAreaM2 = crossAisleAreaM2.plus(farAisleWidth.times(cursorY));
+      notes.push(
+        `A second ${farAisleWidth.toString()} m cross aisle runs down the far side. The core ` +
+          'cuts the module aisles it stands across, and without this one every bay beyond ' +
+          'the cut has no way in; it costs another bay run of width and reaches more bays ' +
+          'than it costs. Both arrangements were packed.',
+      );
+    }
     notes.push(
       `A ${crossAisleWidth.toString()} m cross aisle runs the packed depth down one side. ` +
         `Without it the ${aisleCount} module aisles do not touch one another and every bay ` +
         'past the first module is unreachable; with it, they cost one bay run of width. ' +
         'The cost is in the losses, not absorbed into an efficiency figure.',
     );
+  }
+
+  // --- the core, where it stands ------------------------------------------
+  let baysUnderCore = 0;
+  if (o.obstructions.length > 0) {
+    const cut: PlacedRect[] = [];
+    for (const r of rects) {
+      const hits = o.obstructions.filter((b) => collides(r, b));
+      if (hits.length === 0) {
+        cut.push(r);
+      } else if (r.kind === RectKind.BAY || r.kind === RectKind.ACCESSIBLE_BAY) {
+        baysUnderCore += 1;
+      } else {
+        cut.push(...piecesOutside(r, hits));
+      }
+    }
+    rects = cut;
+    if (baysUnderCore > 0) {
+      notes.push(
+        `${baysUnderCore} bay(s) would stand where the core does and are not placed; any ` +
+          'aisle the core crosses is cut there. The core is a shaft through every parking ' +
+          'level, and a bay inside it is not a bay.',
+      );
+    }
   }
 
   // --- does a car reach every bay? ----------------------------------------
@@ -526,10 +656,19 @@ function packLevel(o: PackOptions): Packing {
     minOpeningM: o.aisleWidth,
   });
 
+  /*
+    AN AISLE NO CAR CAN REACH IS NOT AN AISLE. Only the core cuts one off — a
+    piece of module aisle beyond it with no cross aisle at its end — and drawing
+    it would put a driveway on the plan that leads nowhere. Dropped, like the
+    bays along it.
+  */
+  const reachableRect = new Set(drivableIdx.filter((_, n) => reachable.has(n)));
   const kept: PlacedRect[] = [];
   let bayCount = 0;
   let strandedBays = 0;
-  for (const r of rects) {
+  for (let i = 0; i < rects.length; i += 1) {
+    const r = rects[i]!;
+    if (r.kind === RectKind.AISLE && !reachableRect.has(i)) continue;
     if (r.kind !== RectKind.BAY && r.kind !== RectKind.ACCESSIBLE_BAY) {
       kept.push(r);
       continue;
@@ -572,6 +711,7 @@ function packLevel(o: PackOptions): Packing {
     crossAisleAreaM2,
     baysLostToCrossAisle: (baysPerRunUnconnected - baysPerRun) * runCount,
     strandedBays,
+    baysUnderCore,
     notes,
     refusal: undefined,
   };
@@ -699,6 +839,31 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
   // rectangle. Taking it off as an abstract area would leave rows placed where
   // the core is, which is exactly the drawing nobody can build. Each orientation
   // takes it off its own depth, so the same area comes off either way.
+  /*
+    THE CORE STANDS WHERE IT IS DRAWN, so the strip no longer deducts it. The
+    strip is what is left of the deduction — plant, the ramp landing, circulation
+    — and the core is taken where it actually is. A core larger than the whole
+    deduction leaves no strip, and says so.
+  */
+  const coreAreaM2 = input.core ? input.core.areaM2.value : ZERO;
+  const stripM2 = Decimal.max(ZERO, deductedM2.minus(coreAreaM2));
+  const reservedAreaM2 = input.core
+    ? tracer.computed('parking.reserved_strip_m2', qArea(stripM2), {
+        formula:
+          `max(0, ${deductedM2.toString()} m² deducted − ${coreAreaM2.toFixed(2)} m² core, ` +
+          'which stands where it is drawn)',
+        uses: { deductions: deductionTraced, core: input.core.areaM2 },
+        unit: 'm²',
+      })
+    : deductionTraced;
+  if (input.core && coreAreaM2.gt(deductedM2)) {
+    notes.push(
+      `The core (${coreAreaM2.toFixed(2)} m²) is larger than the whole deduction for cores, ` +
+        `plant and circulation (${deductedM2.toString()} m²), so no strip is reserved: the ` +
+        'usable fraction is more generous than this core allows.',
+    );
+  }
+
   const common = {
     bayWidth,
     bayLength,
@@ -707,18 +872,63 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     effectiveBayWidth,
     includeRamp: input.includeRamp ?? false,
   };
-  const alongWidth = packLevel({
+  /*
+    WITH A CORE ON THE LEVEL, TWO ARRANGEMENTS EACH WAY ROUND: one cross aisle,
+    or one at each end. The better is kept, as the orientation is. Without a core
+    nothing is cut and the second cross aisle only costs width, so it is not
+    tried — a run with no core packs exactly as it always did.
+  */
+  const best = (a: Packing, b: Packing): Packing => (b.bayCount > a.bayCount ? b : a);
+  const packBoth = (
+    opts: Omit<PackOptions, 'farCrossAisle' | 'nearCrossAisle' | 'offsetM'>,
+  ): Packing => {
+    const one = packLevel({ ...opts, nearCrossAisle: true, farCrossAisle: false, offsetM: ZERO });
+    if (opts.obstructions.length === 0) return one;
+    /*
+      A FIXED SWEEP, NOT A DESIGN SEARCH. The core does not move — where it stands
+      is the run's assumption or the user's statement. What is tried is where the
+      module grid starts against it (every 1 m across one module depth, and only
+      where the core strands bays at the start) and which
+      end the cross aisle runs down (by the ramp, the far end, or both — the core
+      can stand across the one by the ramp). The candidates are the same every
+      time and the most bays wins, ties going to the earlier, so the answer is
+      reproducible.
+    */
+    const arrangements = [
+      [true, false],
+      [true, true],
+      [false, true],
+    ] as const;
+    let kept = one;
+    for (const [near, far] of arrangements.slice(1)) {
+      kept = best(kept, packLevel({ ...opts, nearCrossAisle: near, farCrossAisle: far, offsetM: ZERO }));
+    }
+    // The grid is slid only when the core still strands bays where it starts:
+    // it is the expensive half of the sweep, and it has nothing to win otherwise.
+    if (kept.strandedBays === 0) return kept;
+    const step = new Decimal(1);
+    for (let offset = step; offset.lt(opts.moduleDepth); offset = offset.plus(step)) {
+      for (const [near, far] of arrangements) {
+        kept = best(kept, packLevel({ ...opts, nearCrossAisle: near, farCrossAisle: far, offsetM: offset }));
+      }
+    }
+    return kept;
+  };
+  const alongWidth = packBoth({
     ...common,
     widthM: footprint.widthM,
     grossDepthM: footprint.depthM,
-    deductedDepthM: deductedM2.div(footprint.widthM),
+    deductedDepthM: stripM2.div(footprint.widthM),
+    obstructions: input.core ? [input.core.rect] : [],
   });
   const alongDepth = transpose(
-    packLevel({
+    packBoth({
       ...common,
       widthM: footprint.depthM,
       grossDepthM: footprint.widthM,
-      deductedDepthM: deductedM2.div(footprint.depthM),
+      deductedDepthM: stripM2.div(footprint.depthM),
+      // This pass is packed in the reflected frame and reflected back after.
+      obstructions: input.core ? [flip(input.core.rect)] : [],
     }),
   );
 
@@ -777,9 +987,14 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
   };
   if (losses.reserved.bays > 0) {
     notes.push(
-      `The ${deductedM2.toFixed(0)} m² reserved for cores, plant and the ramp landing ` +
+      `The ${deductedM2.toFixed(0)} m² deducted for cores, plant and the ramp landing ` +
         `costs about ${losses.reserved.bays} bays at ${marginalAreaPerBay.toFixed(2)} m² ` +
-        'each — the area one more bay takes inside a module, not the gross area per bay.',
+        'each — the area one more bay takes inside a module, not the gross area per bay.' +
+        (input.core
+          ? ` Of it, ${coreAreaM2.toFixed(0)} m² is the core, standing where it is drawn ` +
+            `(${packing.baysUnderCore} bay(s) were not placed there), and ` +
+            `${stripM2.toFixed(0)} m² is the strip reserved at the edge.`
+          : ''),
     );
   }
   if (losses.circulation.bays > 0) {
@@ -860,6 +1075,8 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     rects: packing.rects,
     ramp,
     reserved: packing.reserved,
+    reservedAreaM2,
+    baysUnderCore: packing.baysUnderCore,
     bayCount: bayCountTraced,
     areaPerBayM2: areaPerBay,
     moduleDepthM: moduleDepth,

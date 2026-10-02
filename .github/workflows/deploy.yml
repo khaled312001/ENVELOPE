@@ -1,0 +1,186 @@
+# Build a release, put it live on the Hostinger account, and check it there.
+#
+# The release is built here, never on the host — `scripts/deploy/build.mjs` says
+# why — and made live by the same `scripts/deploy/activate.sh` a person would run.
+# Then the live site is checked: the engine answers, the release on the host is
+# this one, the page served loads this bundle, and the nine-step flow is walked in
+# a real browser against the real site (`scripts/smoke.mjs`).
+#
+# If the engine does not come back, the previous release is put back at once. A
+# browser walk that fails leaves the release up and the run red: the walk reports
+# what a reader would meet, and a rollback over a finding is a decision for a person.
+#
+# Runs on:
+#   - a push whose head commit message contains [deploy], to the branches below;
+#   - by hand, from the Actions tab (once this file is on the default branch).
+#
+# One secret: HOSTINGER_SSH_PASSWORD, or HOSTINGER_SSH_PASS, under Settings →
+# Secrets and variables → Actions → Repository secrets.
+# Nothing else here is a credential: the host, port and account name are already
+# in `scripts/deploy/build.mjs` and in the site's DNS.
+
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches: [plan/phase-0-stabilise, khaled/affectionate-franklin-y9tgh2]
+  workflow_dispatch:
+    inputs:
+      smoke:
+        description: Walk the flow in a browser against the live site afterwards
+        type: boolean
+        default: true
+
+# One deploy at a time, and never one cancelled half-way through activation.
+concurrency:
+  group: deploy-live
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SSH_HOST: 82.198.227.216
+  SSH_PORT: '65002'
+  SSH_USER: u405809647
+  APP_DIR: domains/khaledahmed.net/tob-app
+  WEB_DIR: domains/khaledahmed.net/public_html/tob
+  SITE: https://top.khaledahmed.net/
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[deploy]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The password is there
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
+        run: |
+          if [ -z "$SSHPASS" ]; then
+            echo "::error::Add the password as a Repository secret named HOSTINGER_SSH_PASSWORD or HOSTINGER_SSH_PASS (Settings → Secrets and variables → Actions → Secrets — not Variables, not an Environment), then re-run this job."
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: SSH client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: What is live now
+        id: live
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
+        run: |
+          remote() { sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; }
+          echo "live before this deploy: $(remote "cat ~/$APP_DIR/release.txt 2>/dev/null || echo 'no release.txt'")"
+          # Build the release the way the live one was built: with HTTPS forced if,
+          # and only if, the site's rules already force it.
+          if remote "grep -q 'RewriteCond %{HTTPS} !=on' ~/$WEB_DIR/.htaccess"; then
+            echo "https=--https" >> "$GITHUB_OUTPUT"
+            echo "the live site forces HTTPS; the release will too"
+          else
+            echo "https=" >> "$GITHUB_OUTPUT"
+            echo "the live site does not force HTTPS; neither will the release"
+          fi
+
+      - name: Typecheck and boundaries
+        run: pnpm typecheck && pnpm boundaries
+
+      - name: Build the release
+        run: node scripts/deploy/build.mjs ${{ steps.live.outputs.https }}
+
+      - name: Upload and activate
+        id: activate
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
+        run: |
+          remote() { sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; }
+          remote 'mkdir -p ~/tob-deploy'
+          sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=accept-new \
+            out/deploy/app.tar.gz out/deploy/web.tar.gz scripts/deploy/activate.sh \
+            "$SSH_USER@$SSH_HOST:tob-deploy/"
+          remote 'cd ~/tob-deploy && sh activate.sh'
+
+      - name: The live site is this release
+        id: verify
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
+        run: |
+          remote() { sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; }
+          expected="$(cat out/deploy/app/release.txt)"
+          live="$(remote "cat ~/$APP_DIR/release.txt")"
+          echo "expected: $expected"
+          echo "live:     $live"
+          [ "$live" = "$expected" ] || { echo "::error::the host holds a different release"; exit 1; }
+
+          # What a URL answers: status, type, and the start of the body — enough to
+          # tell a JSON health reply from a CDN's browser check or the site's shell.
+          # Public-facing responses only; no server log is printed (the repo is public).
+          probe() {
+            local code
+            code="$(curl -sSL -o /tmp/probe -w '%{http_code} %{content_type} %{url_effective}' --max-time 20 "$1" 2>/tmp/probe.err || true)"
+            echo "$code | $(head -c 160 /tmp/probe | tr '\n\r' '  ') $(cat /tmp/probe.err 2>/dev/null)"
+          }
+
+          # The address the site actually answers at. The domain is behind
+          # Cloudflare and may redirect (a 301 to another host name); every check
+          # below, and the browser walk after it, follows it to where it lands.
+          landed="$(curl -sSL -o /dev/null -w '%{url_effective}' --max-time 30 "$SITE" || true)"
+          live_site="$(echo "${landed:-$SITE}" | sed -E 's#^(https?://[^/]+).*#\1/#')"
+          echo "$SITE lands at $live_site"
+          echo "LIVE_SITE=$live_site" >> "$GITHUB_ENV"
+
+          # The engine restarts on the first request after activation; give it time.
+          # Asked from here and from the host itself: a CDN that challenges a
+          # datacenter address answers this runner differently from the server.
+          # The host folder is public_html/tob, so tob.khaledahmed.net is the
+          # subdomain it serves; asked too, in case the address above lands
+          # somewhere else.
+          ok=""
+          for i in $(seq 1 24); do
+            for base in "$live_site" "https://tob.khaledahmed.net/"; do
+              here="$(probe "${base}api/health")"
+              if grep -q '"status":"ok"' /tmp/probe; then ok="runner"; live_site="$base"; break 2; fi
+              there="$(remote "curl -sSL -m 20 '${base}api/health' 2>&1 | head -c 300" || true)"
+              if echo "$there" | grep -q '"status":"ok"'; then ok="host"; live_site="$base"; break 2; fi
+            done
+            sleep 5
+          done
+          echo "LIVE_SITE=$live_site" >> "$GITHUB_ENV"
+          echo "the engine answers at ${live_site}api/health (asked from: ${ok:-nowhere})"
+          echo "health from this runner: $here"
+          echo "health from the host:    ${there:-(not asked)}"
+          [ -n "$ok" ] || { echo "::error::${live_site}api/health did not answer ok, from here or from the host"; exit 1; }
+          [ "$ok" = "runner" ] || echo "::warning::the engine answers on the host but not to this runner — a CDN check on datacenter addresses, most likely; the browser walk below may meet it too"
+
+          bundle="$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' out/deploy/web/index.html | head -1)"
+          page="$(remote "curl -sSL -m 30 '${live_site}'" || true)"
+          echo "$page" | grep -q "$bundle" \
+            || { echo "::error::$live_site does not serve $bundle — it answered: $(echo "$page" | head -c 200 | tr '\n' ' ')"; exit 1; }
+          echo "the page serves $bundle"
+
+      - name: Put the previous release back
+        if: failure() && steps.activate.outcome == 'success'
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
+        run: |
+          sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_HOST" \
+            'cd ~/tob-deploy && sh activate.sh rollback'
+
+      - name: Walk the flow on the live site
+        if: github.event_name != 'workflow_dispatch' || inputs.smoke
+        env:
+          SMOKE_URL: ${{ env.LIVE_SITE || env.SITE }}
+        run: node scripts/smoke.mjs

@@ -8,5 +8,8 @@ export * from './level-plan.js';
 export * from './massing.js';
 export * from './building.js';
 export * from './core.js';
+export * from './core-layout.js';
+export * from './ground-program.js';
 export * from './bands.js';
+export * from './gfa-statement.js';
 export * from './pipeline.js';

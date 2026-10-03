@@ -28,6 +28,7 @@ import {
   type BuildingModel,
   type CapacityResult,
   Decimal,
+  EDGE_LABEL,
   levelCode,
   type LevelSchedule,
   parkingLevels,
@@ -207,14 +208,15 @@ export interface RunInput {
      * Lay the parking out around the core's shafts — stairs, lifts and the lift
      * lobby — rather than drawing them over bays that stay in the count.
      *
-     * OFF UNTIL WHERE THE CORE STANDS IS DECIDED. With the core centred on the
-     * plate, a level deep enough for only one module has its one aisle cut by the
-     * shafts and loses most of its bays: on a 50.85 × 26.85 m plot, 11 bays
-     * become 4. The client's own drawing of that plot stands the core beside the
-     * aisle, not in the middle of it — a placement decision this engine does not
-     * make (the core position search is the TRADEOFF optimiser Phase 0 refuses).
-     * On deeper levels it costs only the bays the shafts truly cover: 192 to 185
-     * on a 120 × 80 m plot. Tested on, shipped off, and said so.
+     * ON UNLESS SWITCHED OFF. A bay inside a lift shaft is not a bay, and the
+     * sheets used to draw the shafts over bays that were counted, numbered and
+     * exported. What it costs depends on where the core stands: on deep levels
+     * only the bays the shafts truly cover (192 to 185 on a 120 × 80 m plot); on a
+     * level deep enough for one module, a centred core stands across the only
+     * aisle and strands the bays beyond it, and the run says so and points at
+     * `corePosition`. The engine does not move the core to win them back — that
+     * search is the TRADEOFF optimiser Phase 0 refuses. `false` is for a test
+     * that needs the old packing; nothing in the product sends it.
      */
     readonly avoidCore?: boolean;
   };
@@ -266,6 +268,15 @@ export interface RunInput {
    * argument in full is at the top of `core.ts`.
    */
   readonly coreAreaM2?: Decimal;
+  /**
+   * Where the core stands: set against the plot boundary with this `seq`.
+   *
+   * Absent, the core is centred on the plate, ASSUMED. Present, it is `USER_SET`
+   * by `actor` — the core slides from the centre towards that boundary until it
+   * meets the tower plate's edge. A stated position is the only way the core
+   * moves; the engine never searches for one (see `solveCore`).
+   */
+  readonly corePosition?: { readonly edgeSeq: number };
   readonly context?: EvalContext;
 }
 
@@ -783,6 +794,29 @@ export function runPipeline(input: RunInput): RunOutput {
     cannot be a core of this plate is refused in the caller's own words rather
     than clamped.
   */
+  /*
+    A stated position names a boundary of THIS plot. One that does not exist is
+    refused in a sentence rather than ignored: ignoring it would draw a centred
+    core under a person's name.
+  */
+  const positionSeq = input.corePosition?.edgeSeq;
+  const positionEdge =
+    positionSeq === undefined ? undefined : input.plot.edges.find((e) => e.seq === positionSeq);
+  if (positionSeq !== undefined && !positionEdge) {
+    throw new RunBlockedError(
+      `the core was placed against boundary ${positionSeq + 1}, and this plot has ` +
+        `${input.plot.edges.length} boundaries. Choose one of them, or leave the core centred.`,
+      'G2:core',
+    );
+  }
+  const corePositionEdge = positionEdge
+    ? {
+        seq: positionEdge.seq,
+        label: EDGE_LABEL[positionEdge.classification],
+        start: positionEdge.start,
+        end: positionEdge.end,
+      }
+    : undefined;
   let core: CoreResult;
   try {
     core = solveCore({
@@ -792,6 +826,7 @@ export function runPipeline(input: RunInput): RunOutput {
       ...(input.coreAreaM2 === undefined
         ? {}
         : { stated: { areaM2: input.coreAreaM2, actor: input.actor } }),
+      ...(corePositionEdge ? { position: { edge: corePositionEdge, actor: input.actor } } : {}),
     });
   } catch (error) {
     if (error instanceof CoreRefusedError) throw new RunBlockedError(error.message, 'G2:core');
@@ -827,6 +862,7 @@ export function runPipeline(input: RunInput): RunOutput {
   // finding with an outage.
   let levelPlan: LevelPlan | undefined;
   let levelPlanRefusal: string | undefined;
+  const avoidCore = input.levelPlan?.avoidCore ?? true;
   try {
     levelPlan = planParkingLevel({
       tracer,
@@ -835,7 +871,7 @@ export function runPipeline(input: RunInput): RunOutput {
       podiumRing: envelope.podiumRing,
       usableFraction: parking.usableFraction,
       includeRamp: input.levelPlan?.includeRamp ?? true,
-      ...(input.levelPlan?.avoidCore ? { core: parkingObstruction } : {}),
+      ...(avoidCore ? { core: parkingObstruction } : {}),
       ...(input.levelPlan?.structuralGridM === undefined
         ? {}
         : { structuralGridM: input.levelPlan.structuralGridM }),
@@ -867,7 +903,7 @@ export function runPipeline(input: RunInput): RunOutput {
       result: core,
       reconciliation: coreReconciliation,
       layout: coreLayout,
-      shaftOnParking: input.levelPlan?.avoidCore === true,
+      shaftOnParking: avoidCore,
     },
     parkingLevels: parking.levelsAvailable,
     levelPlan,

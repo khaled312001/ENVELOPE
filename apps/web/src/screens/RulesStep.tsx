@@ -228,6 +228,8 @@ export function RulesStep({
     screen whose being blank is an answer.
   */
   const [coreArea, setCoreArea] = useState('');
+  /** The boundary the core is set against, as its `seq`; '' is centred, assumed. */
+  const [corePosition, setCorePosition] = useState('');
   /**
    * Which of the two the reader is typing.
    *
@@ -369,6 +371,7 @@ export function RulesStep({
       is an assumption with a basis rather than a number nobody chose.
     */
     ...(coreArea.trim() === '' ? {} : { coreAreaM2: coreRead?.value ?? coreArea.trim() }),
+    ...(corePosition === '' ? {} : { corePosition: { edgeSeq: Number(corePosition) } }),
     parkingUsableFraction: {
       value: '0.85',
       source: 'ASSUMED',
@@ -637,6 +640,9 @@ export function RulesStep({
         valid={coreValid}
         {...(coreValid && coreRead?.rewritten ? { reading: coreRead.value } : {})}
         onChange={setCoreArea}
+        edges={plot.edges}
+        position={corePosition}
+        onPosition={setCorePosition}
       />
 
       <div className="actions">
@@ -1446,12 +1452,20 @@ export function CoreArea({
   valid,
   reading,
   onChange,
+  edges,
+  position,
+  onPosition,
 }: {
   readonly area: string;
   readonly valid: boolean;
   /** The figure the run will post, when it is not the characters typed. */
   readonly reading?: string;
   readonly onChange: (value: string) => void;
+  /** The plot's boundaries, to set the core against one of them. */
+  readonly edges: PlotView['edges'];
+  /** The chosen boundary's `seq` as a string, or '' for centred. */
+  readonly position: string;
+  readonly onPosition: (value: string) => void;
 }): JSX.Element {
   const t = useDict(EN, AR).core;
   const ltr = useVerbatim();
@@ -1494,6 +1508,37 @@ export function CoreArea({
             {t.invalid}
           </p>
         ) : null}
+      </div>
+
+      {/*
+        WHERE THE CORE STANDS. Centred is the engine's assumption and is said to be
+        one in the option itself, so the default reads as a choice nobody made
+        rather than as a fact. A boundary is the reader's statement, recorded under
+        their name; nothing here moves the core to park more cars.
+      */}
+      <div className="field">
+        <label htmlFor="core-position">{t.position.label}</label>
+        <select
+          id="core-position"
+          className="input"
+          value={position}
+          onChange={(e) => onPosition(e.target.value)}
+          aria-describedby="core-position-help"
+        >
+          <option value="">{t.position.centred}</option>
+          {edges.map((edge) => (
+            <option key={edge.seq} value={String(edge.seq)}>
+              {t.position.against(
+                edge.seq + 1,
+                t.position.kinds[edge.classification] ?? edge.classification,
+                edge.lengthM,
+              )}
+            </option>
+          ))}
+        </select>
+        <p id="core-position-help" className="field__help">
+          {t.position.help}
+        </p>
       </div>
 
       <p className="fine-print">{t.notSubtracted}</p>

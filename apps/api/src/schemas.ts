@@ -230,6 +230,15 @@ export const runRequest = z.object({
    * saw it.
    */
   coreAreaM2: decimalString.optional(),
+  /**
+   * Where the core stands: against the plot boundary with this `seq`.
+   *
+   * Optional, and absence is the engine's assumption, not a default chosen here:
+   * unsent, the core is centred on the plate and marked ASSUMED. Sent, it is
+   * USER_SET by the actor. A `seq` the plot does not have is refused by the
+   * engine in a sentence naming how many boundaries there are.
+   */
+  corePosition: z.object({ edgeSeq: z.number().int().min(0).max(999) }).strict().optional(),
   parkingUsableFraction: z.object({
     value: decimalString,
     source: z.enum(['DERIVED', 'ASSUMED']),

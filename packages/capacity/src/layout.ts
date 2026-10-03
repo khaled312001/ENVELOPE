@@ -314,6 +314,20 @@ const RAMP_RUN_BASIS =
   'reported but not assessed: B.7.2.2 is not encoded. A longer run costs bays; a ' +
   'shorter one steepens the ramp.';
 
+/**
+ * Said wherever the core cost bays beyond the ones it covers.
+ *
+ * The cut is real — a car does not drive through a lift shaft — and so is the
+ * reason: where the core stands is an input. The sentence names the input and
+ * says the engine will not move the core itself, because moving it to park more
+ * cars is the search Phase 0 refuses.
+ */
+export const CORE_STRANDS =
+  'The core stands across a drive aisle here, and the bays beyond it have no way in. ' +
+  'Where the core stands decides this: set it against a boundary on the Rules step ' +
+  'and the level is laid out around it there. The engine does not move the core to ' +
+  'park more cars.';
+
 // ---------------------------------------------------------------------------
 // The packer
 // ---------------------------------------------------------------------------
@@ -684,13 +698,15 @@ function packLevel(o: PackOptions): Packing {
     notes.push(
       `${strandedBays} bay(s) were placed and then dropped: no aisle a car can reach ` +
         'runs past their open end. They are not counted and not drawn. A bay that ' +
-        'cannot be reached is not a bay, however neatly it fits.',
+        'cannot be reached is not a bay, however neatly it fits.' +
+        (o.obstructions.length > 0 ? ` ${CORE_STRANDS}` : ''),
     );
   }
   if (bayCount === 0) {
     return refused(
       `${rects.filter((r) => r.kind === RectKind.BAY).length} bay(s) were placed and none ` +
-        'of them can be reached from the way onto the level',
+        'of them can be reached from the way onto the level' +
+        (o.obstructions.length > 0 && baysUnderCore + strandedBays > 0 ? ` (${CORE_STRANDS})` : ''),
     );
   }
 

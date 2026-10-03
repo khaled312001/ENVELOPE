@@ -744,6 +744,12 @@ export interface RunRequestBody {
    * reconciles it against both, and never charges for it twice.
    */
   readonly coreAreaM2?: string;
+  /**
+   * Where the core stands: against the plot boundary with this `seq`. Omitted,
+   * the engine centres it on the plate and marks that as assumed. Sent, it is
+   * `USER_SET` by the actor — the only way the core moves.
+   */
+  readonly corePosition?: { readonly edgeSeq: number };
   readonly parkingUsableFraction: {
     readonly value: string;
     readonly source: 'DERIVED' | 'ASSUMED';

@@ -137,6 +137,25 @@ export const EN = {
       'area, so the saleable figure you gave already accounts for it, and on a parking ' +
       'level it is inside what the usable fraction deducts. The engine draws the core and ' +
       'compares it against both, on the results screen.',
+    position: {
+      label: 'Where the core stands',
+      centred: 'Centred on the tower plate (assumed)',
+      /** "Against boundary 2 · road · 40.00 m". */
+      against: (n: number, kind: string, lengthM: string): string =>
+        `Against boundary ${n} · ${kind} · ${lengthM} m`,
+      kinds: {
+        ROAD: 'road',
+        ADJACENT_PLOT: 'neighbouring plot',
+        OPEN_SPACE: 'open space',
+        OTHER: 'other',
+      } as Readonly<Record<string, string>>,
+      help:
+        'This decides where the drive aisles on the parking levels can run, because the ' +
+        'lifts and stairs pass through them and no bay or aisle is drawn there. Centred, ' +
+        'on a narrow plot they stand across the only aisle and the bays beyond them have ' +
+        'no way in. Choose a boundary and the core slides towards it, the same size, until ' +
+        'it meets the edge of the tower plate. The engine never moves it to fit more cars.',
+    },
   },
 
   levels: {

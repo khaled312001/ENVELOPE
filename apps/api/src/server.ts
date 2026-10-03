@@ -1738,6 +1738,7 @@ function runInputFrom(
       plate and declares it — so this is spread rather than defaulted here.
     */
     ...(body.coreAreaM2 === undefined ? {} : { coreAreaM2: new Decimal(body.coreAreaM2) }),
+    ...(body.corePosition === undefined ? {} : { corePosition: { edgeSeq: body.corePosition.edgeSeq } }),
     parkingUsableFraction: {
       value: new Decimal(body.parkingUsableFraction.value),
       source: body.parkingUsableFraction.source,

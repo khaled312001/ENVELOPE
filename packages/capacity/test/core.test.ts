@@ -18,8 +18,8 @@ import { area, containsPoint, initGeometry } from '@envelope/geometry';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { reconcileCore } from '../src/core.js';
-import { buildAssumptionRegister, runPipeline, RunBlockedError, type RunInput } from '../src/index.js';
-import { RECT_80x40, runInput } from '../../../test-support/pipeline.js';
+import { buildAssumptionRegister, CORE_STRANDS, runPipeline, RunBlockedError, type RunInput } from '../src/index.js';
+import { pt, RECT_80x40, runInput } from '../../../test-support/pipeline.js';
 
 const input = (overrides: Partial<RunInput> = {}): RunInput => runInput(RECT_80x40, overrides);
 
@@ -89,10 +89,13 @@ describe('the core subtracts from nothing', () => {
   strip instead, so it is not deducted twice.
 */
 describe('the core on the parking level', () => {
-  it('is drawn over the parking as before unless the run asks for the shafts to be avoided', () => {
-    const out = runPipeline(input());
-    expect(out.building.core!.shaft).toBeUndefined();
-    expect(out.levelPlan!.layout.baysUnderCore).toBe(0);
+  it('is avoided by default, and only a run that switches it off packs over the shafts', () => {
+    const avoided = runPipeline(input());
+    expect(avoided.building.core!.shaft).toBeDefined();
+    expect(avoided.levelPlan!.layout.baysUnderCore).toBeGreaterThan(0);
+    const old = runPipeline(input({ levelPlan: { avoidCore: false } }));
+    expect(old.building.core!.shaft).toBeUndefined();
+    expect(old.levelPlan!.layout.baysUnderCore).toBe(0);
   });
 
   const overlaps = (
@@ -112,7 +115,7 @@ describe('the core on the parking level', () => {
   };
 
   it('has no bay inside the shafts it carries through the car park', () => {
-    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
+    const out = runPipeline(input());
     const core = out.building.core!.shaft!.outline;
     const bays = out.levelPlan!.rects.filter((r) => r.kind === 'BAY' || r.kind === 'ACCESSIBLE_BAY');
     expect(bays.length).toBeGreaterThan(0);
@@ -120,7 +123,7 @@ describe('the core on the parking level', () => {
   });
 
   it('says how many bays the shafts took, and takes their area off the reserved strip', () => {
-    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
+    const out = runPipeline(input());
     const shaft = out.building.core!.shaft!;
     expect(out.levelPlan!.layout.baysUnderCore).toBeGreaterThan(0);
     expect(
@@ -131,16 +134,16 @@ describe('the core on the parking level', () => {
   });
 
   it('carries only the shafts through the car park, not the whole residential core', () => {
-    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
+    const out = runPipeline(input());
     const shaft = out.building.core!.shaft!;
     expect(Number(shaft.areaM2.value)).toBeLessThan(out.core.areaM2.value.toNumber());
   });
 
   it('keeps every bay out of the shafts of a core of any size', () => {
-    const base = runPipeline(input({ levelPlan: { avoidCore: true } }));
+    const base = runPipeline(input());
     for (const share of ['0.1', '0.25', '0.4']) {
       const out = runPipeline(
-        input({ levelPlan: { avoidCore: true }, coreAreaM2: base.envelope.towerPlateCap.value.times(share) }),
+        input({ coreAreaM2: base.envelope.towerPlateCap.value.times(share) }),
       );
       const core = (out.building.core!.shaft ?? out.building.core!).outline;
       for (const r of out.levelPlan!.rects) {
@@ -167,14 +170,14 @@ describe('where the core stands', () => {
   });
 
   it('is a placement and not a design, and the graph says which', () => {
-    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
+    const out = runPipeline(input());
     expect(out.core.placement.provenanceClass).toBe('ASSUMED');
     const node = out.graph.nodes.find((n) => n.id === out.core.placement.node)!;
     expect(node.parameterId).toBe('building.core_placement');
   });
 
   it('passes through every placed level and no permitted one', () => {
-    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
+    const out = runPipeline(input());
     const core = out.building!.core!;
     const placed = out.building!.levels.filter((l) => l.placed).map((l) => l.id);
     expect(core.levelIds).toEqual(placed);
@@ -185,15 +188,76 @@ describe('where the core stands', () => {
   });
 });
 
+/*
+  WHERE THE CORE STANDS, STATED. Centred is the assumption; a boundary is a
+  person's statement, and the only way the core moves. What is at risk: a core
+  that slides out of the plate, changes size on the way, moves without a name on
+  it — or moves at all when nobody asked.
+*/
+describe('a core set against a boundary', () => {
+  const NARROW = [pt(0, 0), pt(60, 0), pt(60, 30), pt(0, 30)];
+  const box = (ring: readonly { x: number; y: number }[]) => ({
+    x0: Math.min(...ring.map((p) => p.x)),
+    x1: Math.max(...ring.map((p) => p.x)),
+    y0: Math.min(...ring.map((p) => p.y)),
+    y1: Math.max(...ring.map((p) => p.y)),
+  });
+
+  it('slides to the plate edge facing that boundary, the same size, and is the person’s', () => {
+    const centred = runPipeline(input());
+    const placed = runPipeline(input({ corePosition: { edgeSeq: 0 } }));
+    const ring = placed.building.core!.outline;
+    for (const p of ring) {
+      expect(containsPoint(placed.envelope.plateRing, { x: p.x as Mm, y: p.y as Mm })).toBe(true);
+    }
+    const a = (r: readonly { x: number; y: number }[]) =>
+      area(r.map((p) => ({ x: p.x as Mm, y: p.y as Mm })));
+    expect(Math.abs(a(ring) - a(centred.building.core!.outline))).toBeLessThan(10_000);
+    // Edge 0 runs along y = 0: the core meets the plate's own lowest line.
+    const plate = box(placed.envelope.plateRing);
+    expect(Math.abs(box(ring).y0 - plate.y0)).toBeLessThanOrEqual(2);
+    expect(box(ring).x0).toBe(box(centred.building.core!.outline).x0);
+    expect(placed.core.placement.provenanceClass).toBe('USER_SET');
+    expect(placed.core.placement.value).toContain('against boundary 1');
+  });
+
+  it('does not move when no boundary is named', () => {
+    const a = runPipeline(input());
+    const b = runPipeline(input());
+    expect(a.building.core!.outline).toEqual(b.building.core!.outline);
+    expect(a.core.placement.provenanceClass).toBe('ASSUMED');
+  });
+
+  it('is refused against a boundary the plot does not have, in a sentence', () => {
+    expect(() => runPipeline(input({ corePosition: { edgeSeq: 9 } }))).toThrow(RunBlockedError);
+    expect(() => runPipeline(input({ corePosition: { edgeSeq: 9 } }))).toThrow(/this plot has 4 boundaries/);
+  });
+
+  /*
+    THE NARROW PLOT, which is why the input exists. Centred, the shafts stand
+    across the level's main aisle and the bays beyond them have no way in — and
+    the run says so and names the input. Against a long side, the level keeps
+    nearly every bay the old packing drew, with none of them inside a shaft.
+  */
+  it('wins back the bays a centred core strands on a narrow plot, and the centred run says why', () => {
+    const centred = runPipeline(runInput(NARROW));
+    const placed = runPipeline(runInput(NARROW, { corePosition: { edgeSeq: 0 } }));
+    expect(centred.levelPlan!.losses.circulation.strandedBays).toBeGreaterThan(0);
+    expect(centred.levelPlan!.notAssessed.join(' ')).toContain(CORE_STRANDS);
+    expect(placed.levelPlan!.bayCount.value).toBeGreaterThan(centred.levelPlan!.bayCount.value * 2);
+    expect(placed.levelPlan!.losses.circulation.strandedBays).toBe(0);
+  });
+});
+
 describe('a core this plate cannot hold', () => {
   it('is refused, not shrunk, when it is the whole floor', () => {
-    const plate = runPipeline(input({ levelPlan: { avoidCore: true } })).envelope.towerPlateCap.value;
+    const plate = runPipeline(input()).envelope.towerPlateCap.value;
     expect(() => runPipeline(input({ coreAreaM2: plate }))).toThrow(RunBlockedError);
     expect(() => runPipeline(input({ coreAreaM2: plate }))).toThrow(/cannot be the whole floor/);
   });
 
   it('names the usual cause, because square feet read as square metres is how it happens', () => {
-    const plate = runPipeline(input({ levelPlan: { avoidCore: true } })).envelope.towerPlateCap.value;
+    const plate = runPipeline(input()).envelope.towerPlateCap.value;
     try {
       runPipeline(input({ coreAreaM2: plate.times(2) }));
       throw new Error('expected a refusal');
@@ -252,7 +316,7 @@ describe('the reconciliation', () => {
   });
 
   it('reaches the model, so a drawing carries it', () => {
-    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
+    const out = runPipeline(input());
     expect(out.building!.core!.reconciliation).toEqual(out.core.reconciliation);
     expect(out.core.reconciliation).toHaveLength(2);
   });

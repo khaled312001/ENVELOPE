@@ -225,6 +225,15 @@ beforeAll(async () => {
  * ---------------------------------------------------------------------- */
 
 const noop = (): void => {};
+/** The core-position props: a two-boundary plot, centred. */
+const CORE_POSITION = {
+  edges: [
+    { seq: 0, classification: 'ROAD', roadHierarchy: 'LOCAL', lengthM: '80.00' },
+    { seq: 1, classification: 'ADJACENT_PLOT', roadHierarchy: null, lengthM: '40.00' },
+  ],
+  position: '',
+  onPosition: noop,
+} as const;
 const ACTOR = { id: 'a', name: 'A Person' };
 const LICENSED = { id: 'b', name: 'B Person', licence: 'L-1' };
 
@@ -469,15 +478,15 @@ const CASES: readonly Case[] = [
   },
   {
     label: 'the core, unanswered',
-    node: () => <CoreArea area="" valid={true} onChange={noop} />,
+    node: () => <CoreArea area="" valid={true} onChange={noop} {...CORE_POSITION} />,
   },
   {
     label: 'the core, stated',
-    node: () => <CoreArea area="180" valid={true} onChange={noop} />,
+    node: () => <CoreArea area="180" valid={true} onChange={noop} {...CORE_POSITION} />,
   },
   {
     label: 'the core, refused for being zero or below',
-    node: () => <CoreArea area="-1" valid={false} onChange={noop} />,
+    node: () => <CoreArea area="-1" valid={false} onChange={noop} {...CORE_POSITION} />,
   },
   {
     label: 'the level schedule',
@@ -1124,7 +1133,7 @@ describe('the English copy, as it was written inline', () => {
     capacity figure as wrong by the size of the core.
   */
   it('says the core subtracts from nothing, which is the part a reader gets wrong', () => {
-    const text = en(<CoreArea area="" valid={true} onChange={noop} />);
+    const text = en(<CoreArea area="" valid={true} onChange={noop} {...CORE_POSITION} />);
     expect(text).toContain('Nothing above is reduced for the core.');
     expect(text).toContain('inside GFA and outside saleable area');
     // And where the comparison does happen, so the sentence is not a dead end.
@@ -1132,7 +1141,7 @@ describe('the English copy, as it was written inline', () => {
   });
 
   it('arrives empty, and says what the engine will assume if it stays that way', () => {
-    const markup = render('en', <CoreArea area="" valid={true} onChange={noop} />);
+    const markup = render('en', <CoreArea area="" valid={true} onChange={noop} {...CORE_POSITION} />);
     // FR-DEF-002's discipline, applied to a field it does not name: a figure in
     // the box on arrival is a default nobody chose.
     expect(markup).toMatch(/id="core-area"[^>]*value=""/);
@@ -1143,15 +1152,34 @@ describe('the English copy, as it was written inline', () => {
   });
 
   it('refuses a core area that is not a positive number, in words and in state', () => {
-    const markup = render('en', <CoreArea area="-1" valid={false} onChange={noop} />);
+    const markup = render('en', <CoreArea area="-1" valid={false} onChange={noop} {...CORE_POSITION} />);
     expect(visibleText(markup)).toContain('A core area is a number greater than zero.');
     expect(markup).toContain('role="alert"');
     // BLOCKED, not ASSUMED: a refused figure is not a value at all.
     expect(markup).toContain('data-state="blocked"');
   });
 
+  /*
+    WHERE THE CORE STANDS. Centred is the engine's assumption, so the option that
+    says so is the one selected on arrival and it says "assumed" in its own words;
+    every boundary of the plot is offered, none is pre-selected, and the help says
+    the engine never moves the core to fit more cars.
+  */
+  it('offers every boundary for the core, arrives centred, and calls centred an assumption', () => {
+    const markup = render('en', <CoreArea area="" valid={true} onChange={noop} {...CORE_POSITION} />);
+    expect(markup).toMatch(/<select[^>]*id="core-position"/);
+    expect(markup).toMatch(/<option value="" selected="">Centred on the tower plate \(assumed\)<\/option>/);
+    expect(markup).toContain('Against boundary 1 · road · 80.00 m');
+    expect(markup).toContain('Against boundary 2 · neighbouring plot · 40.00 m');
+    expect(markup).not.toMatch(/<option value="\d+" selected/);
+    expect(visibleText(markup)).toContain('The engine never moves it to fit more cars.');
+    const ar = visibleText(render('ar', <CoreArea area="" valid={true} onChange={noop} {...CORE_POSITION} />));
+    expect(ar).toContain('في منتصف مسطح البرج (مفترض)');
+    expect(ar).toContain('ملاصقة للحد 1 · طريق · 80.00 م');
+  });
+
   it('says nothing about a refusal while the box is empty', () => {
-    expect(render('en', <CoreArea area="" valid={true} onChange={noop} />)).not.toContain(
+    expect(render('en', <CoreArea area="" valid={true} onChange={noop} {...CORE_POSITION} />)).not.toContain(
       'role="alert"',
     );
   });

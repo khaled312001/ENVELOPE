@@ -182,13 +182,13 @@ describe('the fields, rendered alone', () => {
   });
 
   it('prints the core area as read', () => {
-    const markup = render(<CoreArea area="١٨٠" valid={true} reading="180" onChange={noop} />);
+    const markup = render(<CoreArea area="١٨٠" valid={true} reading="180" onChange={noop} edges={[]} position="" onPosition={noop} />);
     expect(markup).toContain('The engine reads this as ');
     expect(markup).toContain('180');
   });
 
   it('says nothing about a reading when none was supplied', () => {
-    const markup = render(<CoreArea area="180" valid={true} onChange={noop} />);
+    const markup = render(<CoreArea area="180" valid={true} onChange={noop} edges={[]} position="" onPosition={noop} />);
     expect(markup).not.toContain('The engine reads this as');
   });
 });

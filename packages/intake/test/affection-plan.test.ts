@@ -25,8 +25,10 @@ import {
   parseAffectionPlan,
   parseHeight,
   parseSetbackFace,
+  readFacts,
   type AffectionPlanFacts,
 } from '../src/index.js';
+import type { PdfPageText } from '../src/pdf-text.js';
 
 /**
  * Long enough for three real PDFs on a loaded machine.
@@ -84,6 +86,13 @@ describe('parseSetbackFace', () => {
     expect(face.rear?.kind).toBe('FIXED');
   });
 
+  it('does not read "setback" as the rear face', () => {
+    const face = parseSetbackFace('Side setback 0m, Front setback 6m');
+    expect(face.side?.kind).toBe('FIXED');
+    expect(face.front?.kind).toBe('FIXED');
+    expect(face.rear).toBeUndefined();
+  });
+
   it('keeps a wall-type-dependent setback conditional instead of picking one', () => {
     const face = parseSetbackFace(
       '0m to street front, Side and rear setback is 0m to solid wall and 4.0m to window wall.',
@@ -92,6 +101,45 @@ describe('parseSetbackFace', () => {
     if (face.side?.kind === 'CONDITIONAL') {
       expect(face.side.options.map((o) => o.metres.toString())).toEqual(['0', '4']);
     }
+  });
+});
+
+/*
+  A SHEET NOBODY HAS ON FILE, built line by line. Each line is one text item, a
+  row apart, so these run in a fresh checkout — the real sheets are kept out of
+  git — and each pins a defect a differently-worded plan tripped.
+*/
+function sheet(...lines: string[]): PdfPageText {
+  return {
+    page: 1,
+    width: 1190,
+    height: 842,
+    items: lines.map((text, i) => ({
+      text,
+      page: 1,
+      bbox: [100, 800 - i * 20, 100 + text.length * 6, 810 - i * 20] as const,
+    })),
+  };
+}
+const readSheet = (page: PdfPageText): AffectionPlanFacts =>
+  readFacts(page, { documentUri: 'other-project.pdf', tracer: new Tracer(new ProvenanceGraph()) });
+
+describe('a sheet worded differently from the samples', () => {
+  it('does not refuse the whole file over a comma in a label', () => {
+    // "Plot Area, Sq.M" used to match the number pattern on its comma, and
+    // Decimal('') threw: a 422 for a sheet whose area was printed below it.
+    const facts = readSheet(sheet('Plot Area, Sq.M', '1,365.23 SQ. M.'));
+    expect(facts.totalAreaSqm?.value.toString()).toBe('1365.23');
+  });
+
+  it('reads a decimal comma as a decimal point, not as thousands', () => {
+    const facts = readSheet(sheet('Total Area', '1365,23 SQ. M.'));
+    expect(facts.totalAreaSqm?.value.toString()).toBe('1365.23');
+  });
+
+  it('still reads a comma grouping thousands as thousands', () => {
+    const facts = readSheet(sheet('Total Area', '12,365 SQ. M.'));
+    expect(facts.totalAreaSqm?.value.toString()).toBe('12365');
   });
 });
 

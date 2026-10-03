@@ -76,10 +76,77 @@ describe('the core subtracts from nothing', () => {
     expect(big.capacity.levels.value).toBe(base.capacity.levels.value);
   });
 
-  it('moves no bay the layout placed', () => {
-    const base = runPipeline(input());
-    const big = runPipeline(input({ coreAreaM2: base.envelope.towerPlateCap.value.times('0.4') }));
-    expect(big.levelPlan!.bayCount.value).toBe(base.levelPlan!.bayCount.value);
+});
+
+/*
+  WHERE IT DOES SUBTRACT: FROM THE PARKING LEVEL IT STANDS ON.
+
+  The core subtracts from no capacity figure, but it is a shaft through every
+  parking level, and a bay inside it is not a bay. It used to be drawn over bays
+  that stayed in the count — the deduction reserved a strip at the far edge "for
+  cores", and the core itself stood at the centre. Now the layout places no bay
+  where the core stands and cuts any aisle across it; its area comes off the
+  strip instead, so it is not deducted twice.
+*/
+describe('the core on the parking level', () => {
+  it('is drawn over the parking as before unless the run asks for the shafts to be avoided', () => {
+    const out = runPipeline(input());
+    expect(out.building.core!.shaft).toBeUndefined();
+    expect(out.levelPlan!.layout.baysUnderCore).toBe(0);
+  });
+
+  const overlaps = (
+    a: readonly { x: number; y: number }[],
+    b: readonly { x: number; y: number }[],
+  ): boolean => {
+    const box = (r: readonly { x: number; y: number }[]) => ({
+      x0: Math.min(...r.map((p) => p.x)),
+      x1: Math.max(...r.map((p) => p.x)),
+      y0: Math.min(...r.map((p) => p.y)),
+      y1: Math.max(...r.map((p) => p.y)),
+    });
+    const p = box(a);
+    const q = box(b);
+    // A millimetre of tolerance: the two are rounded to the grid separately.
+    return p.x0 < q.x1 - 1 && q.x0 < p.x1 - 1 && p.y0 < q.y1 - 1 && q.y0 < p.y1 - 1;
+  };
+
+  it('has no bay inside the shafts it carries through the car park', () => {
+    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
+    const core = out.building.core!.shaft!.outline;
+    const bays = out.levelPlan!.rects.filter((r) => r.kind === 'BAY' || r.kind === 'ACCESSIBLE_BAY');
+    expect(bays.length).toBeGreaterThan(0);
+    for (const bay of bays) expect(overlaps(bay.world, core)).toBe(false);
+  });
+
+  it('says how many bays the shafts took, and takes their area off the reserved strip', () => {
+    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
+    const shaft = out.building.core!.shaft!;
+    expect(out.levelPlan!.layout.baysUnderCore).toBeGreaterThan(0);
+    expect(
+      out.levelPlan!.reservedAreaM2.value.eq(
+        Decimal.max(0, out.levelPlan!.deductionsM2.value.minus(shaft.areaM2.value)),
+      ),
+    ).toBe(true);
+  });
+
+  it('carries only the shafts through the car park, not the whole residential core', () => {
+    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
+    const shaft = out.building.core!.shaft!;
+    expect(Number(shaft.areaM2.value)).toBeLessThan(out.core.areaM2.value.toNumber());
+  });
+
+  it('keeps every bay out of the shafts of a core of any size', () => {
+    const base = runPipeline(input({ levelPlan: { avoidCore: true } }));
+    for (const share of ['0.1', '0.25', '0.4']) {
+      const out = runPipeline(
+        input({ levelPlan: { avoidCore: true }, coreAreaM2: base.envelope.towerPlateCap.value.times(share) }),
+      );
+      const core = (out.building.core!.shaft ?? out.building.core!).outline;
+      for (const r of out.levelPlan!.rects) {
+        if (r.kind === 'BAY' || r.kind === 'ACCESSIBLE_BAY') expect(overlaps(r.world, core)).toBe(false);
+      }
+    }
   });
 });
 
@@ -100,14 +167,14 @@ describe('where the core stands', () => {
   });
 
   it('is a placement and not a design, and the graph says which', () => {
-    const out = runPipeline(input());
+    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
     expect(out.core.placement.provenanceClass).toBe('ASSUMED');
     const node = out.graph.nodes.find((n) => n.id === out.core.placement.node)!;
     expect(node.parameterId).toBe('building.core_placement');
   });
 
   it('passes through every placed level and no permitted one', () => {
-    const out = runPipeline(input());
+    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
     const core = out.building!.core!;
     const placed = out.building!.levels.filter((l) => l.placed).map((l) => l.id);
     expect(core.levelIds).toEqual(placed);
@@ -120,13 +187,13 @@ describe('where the core stands', () => {
 
 describe('a core this plate cannot hold', () => {
   it('is refused, not shrunk, when it is the whole floor', () => {
-    const plate = runPipeline(input()).envelope.towerPlateCap.value;
+    const plate = runPipeline(input({ levelPlan: { avoidCore: true } })).envelope.towerPlateCap.value;
     expect(() => runPipeline(input({ coreAreaM2: plate }))).toThrow(RunBlockedError);
     expect(() => runPipeline(input({ coreAreaM2: plate }))).toThrow(/cannot be the whole floor/);
   });
 
   it('names the usual cause, because square feet read as square metres is how it happens', () => {
-    const plate = runPipeline(input()).envelope.towerPlateCap.value;
+    const plate = runPipeline(input({ levelPlan: { avoidCore: true } })).envelope.towerPlateCap.value;
     try {
       runPipeline(input({ coreAreaM2: plate.times(2) }));
       throw new Error('expected a refusal');
@@ -185,7 +252,7 @@ describe('the reconciliation', () => {
   });
 
   it('reaches the model, so a drawing carries it', () => {
-    const out = runPipeline(input());
+    const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
     expect(out.building!.core!.reconciliation).toEqual(out.core.reconciliation);
     expect(out.core.reconciliation).toHaveLength(2);
   });

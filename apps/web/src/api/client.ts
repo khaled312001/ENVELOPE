@@ -91,7 +91,14 @@ async function call<T>(
       // The server's messages are written to be read by a person — they name the
       // rule, the gate or the missing declaration. Passing them through beats
       // any generic string this layer could substitute.
-      String(body['message'] ?? `Request failed with ${res.status}`),
+      // Some routes put the sentence in `detail` instead — the intake's "not a
+      // PDF" and "could not be read" among them — and the reader was shown
+      // "Request failed with 422" with the reason one field away.
+      String(
+        body['message'] ??
+          (typeof body['detail'] === 'string' ? body['detail'] : undefined) ??
+          `Request failed with ${res.status}`,
+      ),
       body['detail'],
       body['gate'] as string | undefined,
     );
@@ -260,6 +267,12 @@ export interface RunView {
     readonly placement: TracedWire;
     readonly reconciliation: readonly string[];
   };
+  /**
+   * The area table a submission drawing carries. Absent on a run stored before
+   * the statement existed; such a run shows no table rather than one rebuilt
+   * from its numbers.
+   */
+  readonly gfaStatement?: GfaStatementView;
   readonly assumptions: readonly AssumptionEntry[];
   readonly checks: ChecksView;
   readonly gates?: Record<string, { readonly actorName: string; readonly at: string }>;
@@ -1005,4 +1018,30 @@ export interface ExportResult {
   readonly draftRules: boolean;
   readonly warning?: string;
   readonly document: unknown;
+}
+
+/** Square metres and the exact square feet beside them. */
+export interface AreaPair {
+  readonly m2: string;
+  readonly ft2: string;
+}
+
+/** An area the engine traced, with its square feet. */
+export interface TracedArea extends AreaPair {
+  readonly traced: TracedWire;
+}
+
+export interface GfaStatementView {
+  readonly plotArea: AreaPair;
+  readonly allowed: TracedArea;
+  readonly rows: readonly {
+    readonly kind: 'RESIDENTIAL' | 'PARKING';
+    readonly levelIds: readonly string[];
+    readonly count: number;
+    readonly perLevel: TracedArea | null;
+    readonly area: TracedArea;
+  }[];
+  readonly proposed: TracedArea;
+  readonly remaining: TracedArea;
+  readonly partFloorNotPlaced: AreaPair;
 }

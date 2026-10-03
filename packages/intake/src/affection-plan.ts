@@ -122,9 +122,22 @@ export interface AffectionPlanFacts {
 // Extraction
 // ---------------------------------------------------------------------------
 
-const NUM = String.raw`[\d,]+(?:\.\d+)?`;
+/*
+  A NUMBER STARTS WITH A DIGIT. This was `[\d,]+`, which a lone comma satisfies:
+  a sheet labelled "Plot Area, Sq.M" matched the area pattern on the comma, and
+  `new Decimal('')` threw — the whole upload refused with "[DecimalError] Invalid
+  argument" over a label, on a sheet whose figures were all printed.
+*/
+const NUM = String.raw`\d[\d,]*(?:\.\d+)?`;
 
+/*
+  A COMMA WITH ONE OR TWO DIGITS AFTER IT IS A DECIMAL POINT. It cannot be a
+  thousands separator, and stripping it read "1365,23 SQ. M." as 136,523 m² — a
+  plot a hundred times its size, which every number downstream would have trusted.
+  Every other comma groups thousands, as before.
+*/
 function toDecimal(raw: string): Decimal {
+  if (/^\d+,\d{1,2}$/.test(raw)) return new Decimal(raw.replace(',', '.'));
   return new Decimal(raw.replace(/,/g, ''));
 }
 
@@ -220,7 +233,9 @@ export function parseSetbackFace(line: string): SetbackFace {
     if (!value) continue;
     if (/front|street/i.test(c)) face.front = value;
     if (/side/i.test(c)) face.side = value;
-    if (/rear|back/i.test(c)) face.rear = value;
+    // Whole words: "setback" ends in "back", and "Side setback 0m" used to set
+    // the rear face too — a value for a face the sheet never named.
+    if (/\brear\b|\bback\b/i.test(c)) face.rear = value;
     // "6m to adjacent plot" names every face that is not the street: a plot
     // boundary is a side or a rear, and the sheet does not distinguish them.
     if (/adjacent\s+plot/i.test(c)) {

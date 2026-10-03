@@ -38,6 +38,9 @@ import { runChecks } from '../../api/src/checks.js';
 import { ENGINE_VERSION, presentRun } from '../../api/src/present.js';
 import type { AffectionPlanRead, PlotView, RunView } from '../src/api/client.js';
 import { CapacityBands } from '../src/components/CapacityBands.js';
+import { GfaStatement } from '../src/components/GfaStatement.js';
+import { StaticLocale } from '../src/i18n/locale.js';
+import { expectNoEnglishProse, expectSitewideProhibitions } from './prohibitions.js';
 import { DrawingSet, SheetView } from '../src/components/DrawingSet.js';
 import { AssumptionRegister } from '../src/components/AssumptionRegister.js';
 import { formatTraced } from '../src/components/TracedValue.js';
@@ -309,6 +312,50 @@ describe('CapacityBands', () => {
     */
     expect(out).toContain(`data-full="${run.capacity.saleableAreaM2.value}"`);
     expect(out).toContain(`data-full="${run.capacity.saleableEfficiency.value}"`);
+  });
+});
+
+/*
+  THE AREA TABLE A SUBMISSION DRAWING CARRIES, from a real run. It must print the
+  engine's figures and nothing else: the residential row's total is the engine's
+  product, the proposed total is the engine's sum, and nothing on it is a figure
+  this component multiplied.
+*/
+describe('GfaStatement', () => {
+  it('states allowed, proposed and the floors that make it up, as the engine computed them', () => {
+    const statement = run.gfaStatement!;
+    expect(statement).toBeDefined();
+    const out = html(<GfaStatement statement={statement} onInspect={() => {}} />);
+    expect(out).toContain('GFA calculation');
+    expect(out).toContain('Plot area');
+    expect(out).toContain('Gross floor area allowed');
+    expect(out).toContain('Total gross floor area proposed');
+    expect(out).toContain('Residential floors');
+    // Every traced area carries the engine's own unrounded figure on the element.
+    for (const traced of [statement.allowed, statement.proposed, statement.rows[0]!.area]) {
+      expect(out).toContain(`data-full="${traced.traced.value}"`);
+    }
+    // Square feet beside every area, as the drawings carry them.
+    expect(out).toContain(statement.proposed.ft2);
+    expect(out).toContain(`× ${statement.rows[0]!.count}`);
+    expectSitewideProhibitions(out, 'GfaStatement');
+  });
+
+  it('prints no parking row on a run where parking is excluded from FAR', () => {
+    const out = html(<GfaStatement statement={run.gfaStatement!} onInspect={() => {}} />);
+    expect(run.capacity.parkingInFarTreatment.value).toBe('EXCLUDED_FROM_FAR');
+    expect(out).not.toContain('counted toward FAR');
+  });
+
+  it('reads in Arabic, with the figures and level ids left as the engine wrote them', () => {
+    const out = renderToStaticMarkup(
+      <StaticLocale locale="ar">
+        <GfaStatement statement={run.gfaStatement!} onInspect={() => {}} />
+      </StaticLocale>,
+    );
+    expect(out).toContain('حساب إجمالي المساحة الطابقية');
+    expect(out).toContain(run.gfaStatement!.proposed.ft2);
+    expectNoEnglishProse(out, 'GfaStatement (ar)');
   });
 });
 

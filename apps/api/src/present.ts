@@ -23,6 +23,7 @@ import {
 import {
   type buildAssumptionRegister,
   explainGoverningBand,
+  type GfaStatement,
   type runPipeline,
 } from '@envelope/capacity';
 import { SEED_RULES_WARNING } from '@envelope/rules';
@@ -344,6 +345,13 @@ export function presentRun(
      */
     levels: output.levelSchedule,
 
+    /**
+     * The GFA statement — allowed, proposed, and the floors that make it up, in
+     * square metres and square feet, laid out the way a submission drawing's
+     * area table is. Every figure is the engine's, the square feet included.
+     */
+    gfaStatement: presentGfaStatement(output.gfaStatement),
+
     assumptions: register.map((a) => ({
       nodeId: a.nodeId,
       parameterId: a.parameterId,
@@ -368,3 +376,38 @@ export function presentRun(
   };
 }
 
+
+/** Square metres and the engine's square feet beside them, both to two places. */
+function areaPair(m2: Decimal, ft2: Decimal): { readonly m2: string; readonly ft2: string } {
+  return { m2: m2.toFixed(2), ft2: ft2.toFixed(2) };
+}
+
+function presentGfaStatement(statement: GfaStatement) {
+  const { ft2 } = statement;
+  return {
+    plotArea: areaPair(statement.plotAreaM2, ft2.plotArea),
+    allowed: {
+      traced: toWire(statement.allowedGfaM2),
+      ...areaPair(statement.allowedGfaM2.value, ft2.allowed),
+    },
+    rows: statement.rows.map((r) => ({
+      kind: r.kind,
+      levelIds: r.levelIds,
+      count: r.count,
+      perLevel:
+        r.perLevelM2 && r.perLevelFt2
+          ? { traced: toWire(r.perLevelM2), ...areaPair(r.perLevelM2.value, r.perLevelFt2) }
+          : null,
+      area: { traced: toWire(r.areaM2), ...areaPair(r.areaM2.value, r.areaFt2) },
+    })),
+    proposed: {
+      traced: toWire(statement.proposedGfaM2),
+      ...areaPair(statement.proposedGfaM2.value, ft2.proposed),
+    },
+    remaining: {
+      traced: toWire(statement.remainingGfaM2),
+      ...areaPair(statement.remainingGfaM2.value, ft2.remaining),
+    },
+    partFloorNotPlaced: areaPair(statement.partFloorNotPlacedM2, ft2.partFloorNotPlaced),
+  };
+}

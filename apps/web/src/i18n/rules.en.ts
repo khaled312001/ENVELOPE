@@ -130,6 +130,8 @@ export const EN = {
         'names both areas.',
     },
     invalid: 'A core area is a number greater than zero.',
+    /** The figure the run will post sits between these, when it is not what was typed. */
+    readAs: { before: 'The engine reads this as ', after: '.' },
     notSubtracted:
       'Nothing above is reduced for the core. A core is inside GFA and outside saleable ' +
       'area, so the saleable figure you gave already accounts for it, and on a parking ' +
@@ -278,6 +280,19 @@ export const EN = {
     /** The validation message: what is wrong, and why the bound is where it is. */
     invalid: (above: string, atMost: string): string =>
       `It has to sit above ${above} and at most ${atMost}. Above ${atMost} would mean the building sells more area than it has.`,
+    /** The figure the run will post sits between these, when it is not what was typed. */
+    readAs: { before: 'The engine reads this as ', after: '.' },
+    /**
+     * A share typed as a percentage without its sign. The two ways of writing it
+     * sit after `before` and `or`. It is refused, not divided: without the sign
+     * nothing says it is a percentage.
+     */
+    percentHint: {
+      before: (atMost: string): string =>
+        `Above ${atMost}, so this looks like a percentage. Enter `,
+      or: ', or ',
+      after: '.',
+    },
 
     /*
       TWO WAYS TO SAY THE SAME THING, because a reader works in one of them and
@@ -319,6 +334,8 @@ export const EN = {
        hunting for a control that is not on the screen. */
     needsSaleableArea:
       'Enter the saleable area to continue. It is not a formality — it moves the unit count by the whole of whatever is not saleable.',
+    needsCore: 'Correct the core area above, or leave it empty, to continue.',
+    needsLevels: 'Correct the levels above to continue.',
   },
 };
 

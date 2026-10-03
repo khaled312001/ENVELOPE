@@ -22,7 +22,7 @@
  * translated.
  */
 
-import { levelCode, scheduleRefusal, type LevelSchedule } from '@envelope/core';
+import { Decimal, levelCode, scheduleRefusal, type LevelSchedule } from '@envelope/core';
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
 
 import {
@@ -38,6 +38,7 @@ import {
   type StandardsView,
   type StatementsView,
 } from '../api/client.js';
+import { readDecimal } from '../decimalInput.js';
 import { AR } from '../i18n/rules.ar.js';
 import { EN } from '../i18n/rules.en.js';
 import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
@@ -367,7 +368,7 @@ export function RulesStep({
       default: it is the reader saying nothing, and the engine's answer to that
       is an assumption with a basis rather than a number nobody chose.
     */
-    ...(coreArea.trim() === '' ? {} : { coreAreaM2: coreArea.trim() }),
+    ...(coreArea.trim() === '' ? {} : { coreAreaM2: coreRead?.value ?? coreArea.trim() }),
     parkingUsableFraction: {
       value: '0.85',
       source: 'ASSUMED',
@@ -381,7 +382,9 @@ export function RulesStep({
         exactly one is sent and the engine knows which question was answered
         without a second flag to keep in step with it.
       */
-      ...(saleableUnit === 'AREA' ? { saleableAreaM2: efficiency } : { value: efficiency }),
+      ...(saleableUnit === 'AREA'
+        ? { saleableAreaM2: efficiencyRead?.value ?? efficiency }
+        : { value: efficiencyRead?.value ?? efficiency }),
       source: 'USER_SET',
       basis: scenario
         ? `${standard!.developer} states ${standard!.targets.saleableEfficiencyMin.value}` +
@@ -406,12 +409,36 @@ export function RulesStep({
     the engine knows the GFA this envelope yields. It refuses in a sentence
     naming both figures rather than reporting a ratio the reader never typed.
   */
-  const efficiencyNumber = Number(efficiency);
+  /*
+    READ, NOT `Number()`. `Number('٠٫٩٣')`, `Number('93%')` and `Number('6,000')`
+    are all NaN, and each of them is a right answer typed the way a reader types
+    it. The reading is in `decimalInput.ts`; whatever it rewrote is printed beside
+    the field, and the run posts the figure printed.
+  */
+  const efficiencyRead = readDecimal(efficiency, { percent: saleableUnit === 'RATIO' });
+  const efficiencyNumber = efficiencyRead ? Number(efficiencyRead.value) : Number.NaN;
   const efficiencyValid =
-    efficiency.trim() !== '' &&
+    efficiencyRead !== null &&
     Number.isFinite(efficiencyNumber) &&
     efficiencyNumber > 0 &&
     (saleableUnit === 'AREA' || efficiencyNumber <= 1);
+  /*
+    93 TYPED AS A SHARE IS REFUSED, AND SAYS WHAT IT PROBABLY MEANT. It is not
+    divided by a hundred here: without a percent sign nothing says it is one, and
+    a figure the reader did not type would go to the engine. The sentence names
+    both ways of writing it, and the reader picks.
+  */
+  const percentHint =
+    saleableUnit === 'RATIO' &&
+    efficiencyRead !== null &&
+    !efficiencyRead.percent &&
+    efficiencyNumber > 1 &&
+    efficiencyNumber <= 100
+      ? {
+          share: new Decimal(efficiencyRead.value).div(100).toFixed(),
+          percent: `${efficiencyRead.value}%`,
+        }
+      : undefined;
 
   /*
     EMPTY IS VALID — it means "I have not said", which the engine answers with
@@ -419,7 +446,8 @@ export function RulesStep({
     number. Whether it FITS the plate the engine decides, because only the
     engine knows the plate, and it refuses in a sentence naming both areas.
   */
-  const coreNumber = Number(coreArea);
+  const coreRead = readDecimal(coreArea);
+  const coreNumber = coreRead ? Number(coreRead.value) : Number.NaN;
   const coreValid =
     coreArea.trim() === '' || (Number.isFinite(coreNumber) && coreNumber > 0);
 
@@ -585,6 +613,8 @@ export function RulesStep({
         efficiency={efficiency}
         unit={saleableUnit}
         valid={efficiencyValid}
+        {...(efficiencyValid && efficiencyRead?.rewritten ? { reading: efficiencyRead.value } : {})}
+        {...(percentHint ? { percentHint } : {})}
         onChange={setEfficiency}
         onUnitChange={(next) => {
           /*
@@ -602,7 +632,12 @@ export function RulesStep({
       />
 
       {/* --- The core, which has no default and does not subtract ------- */}
-      <CoreArea area={coreArea} valid={coreValid} onChange={setCoreArea} />
+      <CoreArea
+        area={coreArea}
+        valid={coreValid}
+        {...(coreValid && coreRead?.rewritten ? { reading: coreRead.value } : {})}
+        onChange={setCoreArea}
+      />
 
       <div className="actions">
         <button
@@ -622,6 +657,13 @@ export function RulesStep({
             {saleableUnit === 'AREA' ? t.run.needsSaleableArea : t.run.needsEfficiency}
           </p>
         ) : null}
+        {/*
+          EVERY REASON THE BUTTON IS DISABLED IS NAMED BESIDE IT. A refused core
+          area or level schedule used to disable Compute with nothing here at all,
+          and the only sentence saying why was a panel the reader had scrolled past.
+        */}
+        {!coreValid ? <p className="fine-print">{t.run.needsCore}</p> : null}
+        {!scheduleOk ? <p className="fine-print">{t.run.needsLevels}</p> : null}
       </div>
     </>
   );
@@ -1254,6 +1296,8 @@ export function SaleableEfficiency({
   efficiency,
   unit,
   valid,
+  reading,
+  percentHint,
   onChange,
   onUnitChange,
 }: {
@@ -1261,6 +1305,10 @@ export function SaleableEfficiency({
   readonly efficiency: string;
   readonly unit: 'RATIO' | 'AREA';
   readonly valid: boolean;
+  /** The figure the run will post, when it is not the characters typed. */
+  readonly reading?: string;
+  /** A share typed as a percentage without the sign: the two ways to write it. */
+  readonly percentHint?: { readonly share: string; readonly percent: string };
   readonly onChange: (value: string) => void;
   readonly onUnitChange: (unit: 'RATIO' | 'AREA') => void;
 }): JSX.Element {
@@ -1349,9 +1397,28 @@ export function SaleableEfficiency({
             t.bounds(EFFICIENCY_ABOVE, EFFICIENCY_AT_MOST)
           )}
         </p>
+        {valid && reading !== undefined ? (
+          <p className="field__help" aria-live="polite">
+            {t.readAs.before}
+            <span className="value">{ltr(reading)}</span>
+            {t.readAs.after}
+          </p>
+        ) : null}
         {efficiency.trim() !== '' && !valid ? (
           <p className="field__help" role="alert">
-            {area ? t.areaInvalid : t.invalid(EFFICIENCY_ABOVE, EFFICIENCY_AT_MOST)}
+            {percentHint ? (
+              <>
+                {t.percentHint.before(EFFICIENCY_AT_MOST)}
+                <span className="value">{ltr(percentHint.share)}</span>
+                {t.percentHint.or}
+                <span className="value">{ltr(percentHint.percent)}</span>
+                {t.percentHint.after}
+              </>
+            ) : area ? (
+              t.areaInvalid
+            ) : (
+              t.invalid(EFFICIENCY_ABOVE, EFFICIENCY_AT_MOST)
+            )}
           </p>
         ) : null}
       </div>
@@ -1377,10 +1444,13 @@ export function SaleableEfficiency({
 export function CoreArea({
   area,
   valid,
+  reading,
   onChange,
 }: {
   readonly area: string;
   readonly valid: boolean;
+  /** The figure the run will post, when it is not the characters typed. */
+  readonly reading?: string;
   readonly onChange: (value: string) => void;
 }): JSX.Element {
   const t = useDict(EN, AR).core;
@@ -1412,6 +1482,13 @@ export function CoreArea({
           {ltr(CORE_ASSUMED_SHARE)}
           {t.help.after}
         </p>
+        {valid && reading !== undefined ? (
+          <p className="field__help" aria-live="polite">
+            {t.readAs.before}
+            <span className="value">{ltr(reading)}</span>
+            {t.readAs.after}
+          </p>
+        ) : null}
         {area.trim() !== '' && !valid ? (
           <p className="field__help" data-state="blocked" role="alert">
             {t.invalid}

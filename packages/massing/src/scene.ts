@@ -306,8 +306,14 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
     */
     if (model.core && model.core.levelIds.includes(level.id)) {
       const core = model.core;
-      const coreColour = colourOf(core.source.provenanceClass, palette);
-      const shaft = new THREE.Mesh(track(walls(core.outline, at, 0, storeyM)), surface(coreColour, 0.3, false));
+      // On a parking level, what passes through is the shafts, not the whole core.
+      const onParking = level.parking !== null && core.shaft !== undefined;
+      const outline = onParking ? core.shaft!.outline : core.outline;
+      const coreColour = colourOf(
+        onParking ? core.shaft!.areaM2.provenanceClass : core.source.provenanceClass,
+        palette,
+      );
+      const shaft = new THREE.Mesh(track(walls(outline, at, 0, storeyM)), surface(coreColour, 0.3, false));
       shaft.name = `${level.id} core`;
       pickable(shaft, { node: core.areaM2.node, rank: 4, name: core.label });
       group.add(shaft);

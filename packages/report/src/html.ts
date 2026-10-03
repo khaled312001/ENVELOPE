@@ -951,6 +951,7 @@ function capacitySection(run: RunReport, indexes: Indexes): string {
       ['User realism discount', value(run.capacity.userRealismDiscount, indexes)],
     ]) +
     `</dl>` +
+    gfaStatementBlock(run, indexes) +
     `<p class="note"><strong>Headroom</strong> is reported because it is what tells a developer ` +
     `where to push (§15.2). <strong>Integer granularity loss</strong> is the permitted area that ` +
     `no integer number of floors can consume; §15.4 requires it to be reported rather than ` +
@@ -963,6 +964,54 @@ function capacitySection(run: RunReport, indexes: Indexes): string {
     `product could do, because it is the number a customer would act on and the one they cannot ` +
     `check.</p>` +
     `</section>`
+  );
+}
+
+/**
+ * The GFA calculation, laid out as a submission drawing lays it out: plot area,
+ * allowed, proposed, then the floors with the area of one level and the count,
+ * in m² and ft². Absent on a run stored before the statement existed.
+ */
+function gfaStatementBlock(run: RunReport, indexes: Indexes): string {
+  const s = run.capacity.gfaStatement;
+  if (!s) return '';
+  const label = (kind: 'RESIDENTIAL' | 'PARKING'): string =>
+    kind === 'RESIDENTIAL' ? 'Residential floors' : 'Parking, counted toward FAR';
+  const rows = s.rows.map((r, i) => {
+    const ids = r.levelIds.length
+      ? ` <span class="note">${esc(
+          r.levelIds.length === 1 ? r.levelIds[0]! : `${r.levelIds[0]!} to ${r.levelIds[r.levelIds.length - 1]!}`,
+        )}</span>`
+      : '';
+    return [
+      `${i + 1} · ${esc(label(r.kind))}${ids}`,
+      r.perLevel ? `${value(r.perLevel, indexes)} × ${r.count}` : '—',
+      value(r.area, indexes),
+      plain(r.areaFt2, 'ft²'),
+    ];
+  });
+  rows.push(['Total', '', value(s.proposed, indexes), plain(s.proposedFt2, 'ft²')]);
+  return (
+    `<h3>GFA calculation</h3>` +
+    `<dl>` +
+    definitionRows([
+      ['Plot area', `${plain(s.plotArea.m2, 'm²')} · ${plain(s.plotArea.ft2, 'ft²')}`],
+      ['Gross floor area allowed', `${value(s.allowed, indexes)} · ${plain(s.allowedFt2, 'ft²')}`],
+      [
+        'Total gross floor area proposed',
+        `${value(s.proposed, indexes)} · ${plain(s.proposedFt2, 'ft²')}`,
+      ],
+      ['Left within the allowance', `${value(s.remaining, indexes)} · ${plain(s.remainingFt2, 'ft²')}`],
+    ]) +
+    `</dl>` +
+    table('Gross floor area proposed, floor by floor', ['Description', 'Area per level', 'Area', 'Area (ft²)'], rows) +
+    `<p class="note">Allowed is FAR × plot area, before the parking-in-FAR treatment. Proposed is ` +
+    `whole floors of the tower plate` +
+    (Number(s.partFloorNotPlaced.m2) > 0
+      ? `; the ${plain(s.partFloorNotPlaced.m2, 'm²')} the governing capacity holds above the ` +
+        `last whole floor is not placed and not counted`
+      : '') +
+    `. There is no commercial table: this engine places no commercial area.</p>`
   );
 }
 

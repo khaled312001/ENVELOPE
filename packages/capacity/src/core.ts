@@ -107,9 +107,10 @@ const PLACEMENT_BASIS =
 
 /** Said wherever the core is drawn. It is a footprint, not a laid-out core. */
 export const CORE_NOT_MODELLED =
-  'The core, as a layout. Its outline is the tower plate scaled to the core ' +
-  'area, and only that area is a computed quantity: no lift, stair, riser or ' +
-  'core wall is placed, and the engine does not claim a core layout.';
+  'The core, as a design. Its outline is the tower plate scaled to the core ' +
+  'area, and only that area is a computed quantity. The stairs, lifts and lobby ' +
+  'drawn inside it are an indicative layout, assumed: egress, lift traffic and ' +
+  'fire-fighting are NOT ASSESSED, and no riser or core wall is placed.';
 
 export interface CoreInput {
   readonly tracer: Tracer;

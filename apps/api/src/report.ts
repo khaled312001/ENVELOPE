@@ -573,6 +573,7 @@ export function buildRunReport(args: BuildReportInput): RunReport {
       ),
       userRealismDiscount: wire(capacity.userRealismDiscount),
       levels: wire(capacity.levels),
+      gfaStatement: gfaStatementSection(output.gfaStatement),
     },
 
     parking: {
@@ -643,4 +644,37 @@ function reasonFor(
     default:
       return 'Not applied.';
   }
+}
+
+/**
+ * The GFA statement, carried as the engine stated it. Formats; computes nothing —
+ * the square feet are the engine's own figures, not a conversion done here.
+ */
+function gfaStatementSection(statement: RunOutput['gfaStatement']) {
+  const ft = (v: Decimal, at: string) => dec(v.toFixed(2), `$.capacity.gfaStatement.${at}`);
+  return {
+    plotArea: {
+      m2: ft(statement.plotAreaM2, 'plotArea.m2'),
+      ft2: ft(statement.ft2.plotArea, 'plotArea.ft2'),
+    },
+    allowed: wire(statement.allowedGfaM2),
+    allowedFt2: ft(statement.ft2.allowed, 'allowedFt2'),
+    rows: statement.rows.map((r, i) => ({
+      kind: r.kind,
+      levelIds: r.levelIds,
+      count: r.count,
+      perLevel: r.perLevelM2 ? wire(r.perLevelM2) : null,
+      perLevelFt2: r.perLevelFt2 ? ft(r.perLevelFt2, `rows[${i}].perLevelFt2`) : null,
+      area: wire(r.areaM2),
+      areaFt2: ft(r.areaFt2, `rows[${i}].areaFt2`),
+    })),
+    proposed: wire(statement.proposedGfaM2),
+    proposedFt2: ft(statement.ft2.proposed, 'proposedFt2'),
+    remaining: wire(statement.remainingGfaM2),
+    remainingFt2: ft(statement.ft2.remaining, 'remainingFt2'),
+    partFloorNotPlaced: {
+      m2: ft(statement.partFloorNotPlacedM2, 'partFloorNotPlaced.m2'),
+      ft2: ft(statement.ft2.partFloorNotPlaced, 'partFloorNotPlaced.ft2'),
+    },
+  };
 }

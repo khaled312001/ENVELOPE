@@ -83,16 +83,27 @@ jobs:
         env:
           SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
         run: |
-          remote() { sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; }
+          # SSH, retried when the CONNECTION fails (exit 255) and never when the command
+          # does: a host that drops one connection mid-deploy is not a failed release.
+          remote() { local a rc; for a in 1 2 3 4; do if sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; then return 0; else rc=$?; fi; if [ "$rc" -ne 255 ]; then return "$rc"; fi; echo "ssh could not connect (attempt $a); retrying" >&2; sleep $((a * 10)); done; return 255; }
           echo "live before this deploy: $(remote "cat ~/$APP_DIR/release.txt 2>/dev/null || echo 'no release.txt'")"
           # Build the release the way the live one was built: with HTTPS forced if,
-          # and only if, the site's rules already force it.
-          if remote "grep -q 'RewriteCond %{HTTPS} !=on' ~/$WEB_DIR/.htaccess"; then
+          # and only if, the site's rules already force it. grep says 0 (found) or
+          # 1 (not found); anything else is the host not answering, and reading
+          # THAT as "not forced" once built a release that would have dropped HTTPS.
+          set +e
+          remote "grep -q 'RewriteCond %{HTTPS} !=on' ~/$WEB_DIR/.htaccess"
+          rc=$?
+          set -e
+          if [ $rc -eq 0 ]; then
             echo "https=--https" >> "$GITHUB_OUTPUT"
             echo "the live site forces HTTPS; the release will too"
-          else
+          elif [ $rc -eq 1 ]; then
             echo "https=" >> "$GITHUB_OUTPUT"
             echo "the live site does not force HTTPS; neither will the release"
+          else
+            echo "::error::could not read the live site's rules over SSH (exit $rc); not building a release that might drop HTTPS"
+            exit 1
           fi
 
       - name: Typecheck and boundaries
@@ -106,11 +117,17 @@ jobs:
         env:
           SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
         run: |
-          remote() { sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; }
+          # SSH, retried when the CONNECTION fails (exit 255) and never when the command
+          # does: a host that drops one connection mid-deploy is not a failed release.
+          remote() { local a rc; for a in 1 2 3 4; do if sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; then return 0; else rc=$?; fi; if [ "$rc" -ne 255 ]; then return "$rc"; fi; echo "ssh could not connect (attempt $a); retrying" >&2; sleep $((a * 10)); done; return 255; }
           remote 'mkdir -p ~/tob-deploy'
-          sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=accept-new \
-            out/deploy/app.tar.gz out/deploy/web.tar.gz scripts/deploy/activate.sh \
-            "$SSH_USER@$SSH_HOST:tob-deploy/"
+          for a in 1 2 3 4; do
+            sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
+              out/deploy/app.tar.gz out/deploy/web.tar.gz scripts/deploy/activate.sh \
+              "$SSH_USER@$SSH_HOST:tob-deploy/" && break
+            [ $a -eq 4 ] && { echo "::error::the upload did not reach the host after four attempts"; exit 1; }
+            echo "upload failed (attempt $a); retrying"; sleep $((a * 10))
+          done
           remote 'cd ~/tob-deploy && sh activate.sh'
 
       - name: The live site is this release
@@ -118,7 +135,9 @@ jobs:
         env:
           SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD || secrets.HOSTINGER_SSH_PASS }}
         run: |
-          remote() { sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; }
+          # SSH, retried when the CONNECTION fails (exit 255) and never when the command
+          # does: a host that drops one connection mid-deploy is not a failed release.
+          remote() { local a rc; for a in 1 2 3 4; do if sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$SSH_USER@$SSH_HOST" "$@"; then return 0; else rc=$?; fi; if [ "$rc" -ne 255 ]; then return "$rc"; fi; echo "ssh could not connect (attempt $a); retrying" >&2; sleep $((a * 10)); done; return 255; }
           expected="$(cat out/deploy/app/release.txt)"
           live="$(remote "cat ~/$APP_DIR/release.txt")"
           echo "expected: $expected"

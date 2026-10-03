@@ -272,6 +272,48 @@ describe.each(CASES)('$name', ({ ring, podiumLevels }) => {
     scene.dispose();
   });
 
+  /*
+    THE SLAB IS OPEN OVER THE RAMP, as the section draws it. The ground floor was
+    filled solid over the ramp from the basement, which hid the one assumed shape
+    on the level under a slab that is not there. Measured on the mesh: its
+    triangles cover the slab less the ramp, and none of them lies on the ramp.
+  */
+  it('leaves each slab open where a ramp passes through it, and nowhere else', () => {
+    const model = out().building;
+    const scene = buildBuildingScene(model, PALETTE);
+    const ringArea = (r: readonly { x: number; y: number }[]): number =>
+      Math.abs(r.reduce((a, p, i) => { const q = r[(i + 1) % r.length]!; return a + p.x * q.y - q.x * p.y; }, 0)) / 2;
+    for (const { level, group } of scene.levels) {
+      if (level.placed === false) continue;
+      const slab = group.getObjectByName(`${level.id} slab`) as Mesh | undefined;
+      expect(slab, level.id).toBeDefined();
+      const pos = slab!.geometry.getAttribute('position');
+      let area = 0;
+      const centroids: { x: number; y: number }[] = [];
+      for (let i = 0; i < pos.count; i += 3) {
+        const [ax, ay, bx, by, cx, cy] = [pos.getX(i), pos.getY(i), pos.getX(i + 1), pos.getY(i + 1), pos.getX(i + 2), pos.getY(i + 2)];
+        area += Math.abs((bx - ax) * (cy - ay) - (cx - ax) * (by - ay)) / 2;
+        centroids.push({ x: (ax + bx + cx) / 3, y: (ay + by + cy) / 3 });
+      }
+      const ramps = model.ramps.filter((r) => r.fromLevelId === level.id || r.toLevelId === level.id);
+      // Scene units are metres; the model is millimetres.
+      const expected = (ringArea(level.outline) - ramps.reduce((a, r) => a + ringArea(r.outline), 0)) / 1e6;
+      expect(area, level.id).toBeCloseTo(expected, 0);
+      for (const r of ramps) {
+        const xs = r.outline.map((p) => (p.x - scene.originMm.x) / 1000);
+        const ys = r.outline.map((p) => (p.y - scene.originMm.y) / 1000);
+        const inside = centroids.filter(
+          (c) => c.x > Math.min(...xs) + 0.01 && c.x < Math.max(...xs) - 0.01 && c.y > Math.min(...ys) + 0.01 && c.y < Math.max(...ys) - 0.01,
+        );
+        if (Math.abs(r.outline[0]!.x - r.outline[1]!.x) < 1 || Math.abs(r.outline[0]!.y - r.outline[1]!.y) < 1) {
+          // An axis-aligned ramp: its box is the ramp, and no slab triangle sits in it.
+          expect(inside, `${level.id} slab over ramp ${r.id}`).toEqual([]);
+        }
+      }
+    }
+    scene.dispose();
+  });
+
   it('writes the same cars into the .glb, as plain meshes with no extension a reader must support', async () => {
     const model = out().building;
     const glb = await buildingGlb(model, META);

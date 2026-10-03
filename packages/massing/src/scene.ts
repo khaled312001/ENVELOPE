@@ -276,7 +276,16 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
     }
 
     const slabColour = colourOf(level.outlineSource.provenanceClass, palette);
-    const slab = new THREE.Mesh(track(fill([level.outline], at, 0).geometry), surface(slabColour, 0.28, false));
+    /*
+      THE SLAB IS OPEN WHERE A RAMP PASSES THROUGH IT, as the section draws it.
+      Filled solid, the ground floor lay over the ramp from the basement: the
+      section showed the opening and the 3D view hid the ramp under a slab that
+      is not there.
+    */
+    const openings = model.ramps
+      .filter((r) => r.fromLevelId === level.id || r.toLevelId === level.id)
+      .map((r) => r.outline);
+    const slab = new THREE.Mesh(track(fill([level.outline], at, 0, openings).geometry), surface(slabColour, 0.28, false));
     slab.name = `${level.id} slab`;
     pickable(slab, { node: level.outlineSource.node, rank: 6, name: `${level.id} slab` });
     group.add(slab);
@@ -574,15 +583,24 @@ function centreOf(ring: ModelRing, at: At): THREE.Vector2 {
 }
 
 /** Flat fills for several rings, triangulated, remembering which ring each triangle came from. */
-function fill(rings: readonly ModelRing[], at: At, z: number): { geometry: THREE.BufferGeometry; triangleRing: number[] } {
+function fill(
+  rings: readonly ModelRing[],
+  at: At,
+  z: number,
+  /** Openings cut from every ring — the slab where a ramp passes through it. */
+  holes: readonly ModelRing[] = [],
+): { geometry: THREE.BufferGeometry; triangleRing: number[] } {
   const positions: number[] = [];
   const triangleRing: number[] = [];
+  const holeContours = holes.map((h) => h.map(at)).filter((h) => h.length >= 3);
   rings.forEach((ring, r) => {
     const contour = ring.map(at);
     if (contour.length < 3) return;
-    for (const triangle of THREE.ShapeUtils.triangulateShape(contour, [])) {
+    // The triangles index the outline and its holes as one list, in that order.
+    const vertices = [...contour, ...holeContours.flat()];
+    for (const triangle of THREE.ShapeUtils.triangulateShape(contour, holeContours)) {
       for (const n of triangle) {
-        const p = contour[n]!;
+        const p = vertices[n]!;
         positions.push(p.x, p.y, z);
       }
       triangleRing.push(r);

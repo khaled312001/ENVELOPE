@@ -839,6 +839,23 @@ await step('the comparison shows what each answer is worth', async () => {
   await page.locator('.comparison__verdict').waitFor({ timeout: wait(8000) });
 });
 
+/*
+  WHERE THE CORE STANDS. This walk's plot is 50.85 × 26.85 m: one parking module
+  deep, so a centred core stands its lifts and stairs across the only aisle and the
+  bays beyond them have no way in. The place for the core is the person's to state —
+  the engine refuses to search for it — so the walk checks it arrives centred and
+  called an assumption, that every boundary is offered, and then states one.
+*/
+await step('the core arrives centred and assumed, and can be set against any boundary', async () => {
+  const select = page.locator('#core-position');
+  if ((await select.inputValue()) !== '') throw new Error('the core arrived set against a boundary nobody chose');
+  const centred = (await select.locator('option[value=""]').textContent()) ?? '';
+  if (!/assumed/i.test(centred)) throw new Error(`the centred core is not called an assumption: "${centred}"`);
+  const boundaries = (await select.locator('option').count()) - 1;
+  if (boundaries !== 4) throw new Error(`the core can be set against ${boundaries} boundaries; the plot has 4`);
+  await select.selectOption('3');
+});
+
 await step('computing the capacity lands on the assumption register first', async () => {
   await page.getByRole('radio', { name: /no, it is excluded/i }).check();
   await page.getByRole('button', { name: /compute capacity/i }).click();

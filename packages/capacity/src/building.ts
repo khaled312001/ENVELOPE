@@ -38,7 +38,9 @@ import {
   type ModelLevel,
   type ModelPoint,
   type ModelRamp,
+  type ModelRampFlight,
   type ModelSection,
+  RampForm,
   type ModelSpan,
   type Mm,
   type Plot,
@@ -109,6 +111,12 @@ export interface BuildingModelInput {
      */
     readonly shaftOnParking?: boolean;
   };
+  /**
+   * How cars climb between the parking levels: stated by a person, or the
+   * straight strip assumed. The gradient names it, so a reader who opens the
+   * figure finds whose decision the form of the ramp was.
+   */
+  readonly rampForm?: Traced<string>;
 }
 
 const source = (t: Traced<unknown>): ElementSource => ({
@@ -257,8 +265,50 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     });
   }
 
+  // --- the ramp: its form and gradient, before the levels -----------------------
+  //
+  // Computed here because a loop's aisles carry it: on a loop there is no ramp
+  // strip, the aisles ARE the ramp, and their labels say how steep.
+  const strip = levelPlan?.rampStrip;
+  const form = levelPlan?.rampForm ?? RampForm.STRAIGHT;
+  const travel = levelPlan?.rampTravelM;
+  const flights = levelPlan?.rampFlights ?? [];
+  const hasRamp = form === RampForm.LOOP ? levelPlan?.rampLoop !== undefined : strip !== undefined;
+  let gradient: TracedDecimal | undefined;
+  if (hasRamp && travel && parkingCount >= 2) {
+    const FORMULA: Record<RampForm, string> = {
+      STRAIGHT: `${f2f.value.toString()} m rise ÷ ${travel.value.toString()} m run × 100`,
+      U_TURN:
+        `${f2f.value.toString()} m rise ÷ ${travel.value.toString()} m of slope (both legs ` +
+        'of the U-turn; the landing is level) × 100',
+      LOOP:
+        `${f2f.value.toString()} m rise ÷ ${travel.value.toString()} m of slope (the loop's ` +
+        'two sloped sides; the far cross aisle is a level landing) × 100',
+    };
+    gradient = tracer.computed(
+      'building.ramp_gradient_pct',
+      f2f.value.div(travel.value).times(100).toDecimalPlaces(2),
+      {
+        formula: FORMULA[form],
+        uses: {
+          rise: f2f,
+          run: travel,
+          ...(input.rampForm ? { form: input.rampForm } : {}),
+        },
+        unit: '%',
+        detail: {
+          note:
+            'The gradient a ramp of this form needs to climb one level. ' +
+            'Whether it is permitted is NOT ASSESSED — DBC B.7.2.2 is not encoded.',
+        },
+      },
+    );
+  }
+
   // --- the parking content, identical on every parking level -------------------
-  const parkingContent: ModelLevel['parking'] = levelPlan ? parkingOf(levelPlan) : null;
+  const parkingContent: ModelLevel['parking'] = levelPlan
+    ? parkingOf(levelPlan, form === RampForm.LOOP && gradient ? gradient : undefined)
+    : null;
   if (parkingCount > 0 && !levelPlan) {
     notModelled.push(
       `Parking bays. The level could not be laid out: ${input.levelPlanRefusal ?? 'no reason was recorded'}`,
@@ -363,25 +413,39 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   // --- ramps between consecutive parking levels ------------------------------------
   const parkingStack = levels.filter((l) => l.parking !== null);
   const ramps: ModelRamp[] = [];
-  const strip = levelPlan?.rampStrip;
-  if (strip && parkingStack.length >= 2) {
-    const gradient = tracer.computed(
-      'building.ramp_gradient_pct',
-      f2f.value.div(strip.runM.value).times(100).toDecimalPlaces(2),
-      {
-        formula:
-          `${f2f.value.toString()} m rise ÷ ${strip.runM.value.toString()} m run × 100`,
-        uses: { rise: f2f, run: strip.runM },
-        unit: '%',
-        detail: {
-          note:
-            'The gradient a ramp in the reserved strip needs to climb one level. ' +
-            'Whether it is permitted is NOT ASSESSED — DBC B.7.2.2 is not encoded.',
-        },
-      },
-    );
+  if (hasRamp && gradient && parkingStack.length >= 2) {
+    const NAME: Record<RampForm, string> = {
+      STRAIGHT: 'SLOPED RAMP',
+      U_TURN: 'U-TURN RAMP',
+      LOOP: 'SLOPED LOOP',
+    };
     const label =
-      `SLOPED RAMP ${gradient.value.toFixed(2)}% - GRADIENT NOT ASSESSED (DBC B.7.2.2)`;
+      `${NAME[form]} ${gradient.value.toFixed(2)}% - GRADIENT NOT ASSESSED (DBC B.7.2.2)`;
+    const modelFlights: ModelRampFlight[] = flights.map((f) => ({
+      outline: f.world.map(pt),
+      foot: [pt(f.foot[0]), pt(f.foot[1])],
+      head: [pt(f.head[0]), pt(f.head[1])],
+      footRise: f.footRise,
+      headRise: f.headRise,
+    }));
+    // By height, not by order: the piece that leaves this level and the piece that
+    // reaches the next. A loop lists its landing after its aisles.
+    const first = flights.reduce<(typeof flights)[number] | undefined>(
+      (a, f) => (a === undefined || f.footRise < a.footRise ? f : a),
+      undefined,
+    );
+    const last = flights.reduce<(typeof flights)[number] | undefined>(
+      (a, f) => (a === undefined || f.headRise > a.headRise ? f : a),
+      undefined,
+    );
+    /*
+      The ramp's own foot and head: where a car leaves this level and where it
+      arrives on the next. For a U-turn both are at the strip's open end; for a
+      loop, the start of its first sloped aisle and the end of its last.
+    */
+    const foot = form === RampForm.STRAIGHT || !first ? strip!.foot : first.foot;
+    const head = form === RampForm.STRAIGHT || !last ? strip!.head : last.head;
+    const outline = form === RampForm.LOOP ? levelPlan!.rampLoop!.outline : strip!.world;
     for (let i = 0; i + 1 < parkingStack.length; i += 1) {
       const low = parkingStack[i]!;
       const high = parkingStack[i + 1]!;
@@ -389,23 +453,35 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
         id: `R${i + 1}`,
         fromLevelId: low.id,
         toLevelId: high.id,
-        outline: strip.world.map(pt),
-        foot: [pt(strip.foot[0]), pt(strip.foot[1])],
-        head: [pt(strip.head[0]), pt(strip.head[1])],
+        outline: outline.map(pt),
+        foot: [pt(foot[0]), pt(foot[1])],
+        head: [pt(head[0]), pt(head[1])],
         fromElevationMm: low.elevationMm,
         toElevationMm: high.elevationMm,
         gradientPct: toWire(gradient),
         label,
+        ...(form === RampForm.STRAIGHT ? {} : { form, flights: modelFlights }),
+        ...(form === RampForm.LOOP && levelPlan?.rampLoop ? { path: levelPlan.rampLoop.path.map(pt) } : {}),
       });
     }
     notModelled.push(
       'Ramp transitions, headroom and the approach from the street — NOT ASSESSED ' +
         '(DBC B.7.2.2). Only the gradient over the reserved run is computed.',
     );
-  } else if (strip && parkingStack.length === 1) {
+    if (form === RampForm.LOOP) {
+      notModelled.push(
+        'The slope of the bays along a sloped loop. The loop climbs on its aisles, and ' +
+          'the bays beside them climb with it; the plans and the 3D view draw every bay ' +
+          'at its level\'s floor, and the sections draw each level flat.',
+      );
+    }
+  } else if (hasRamp && parkingStack.length === 1) {
     notModelled.push(
-      'A ramp. The strip is reserved on the one parking level, but there is no second ' +
-        'parking level for a ramp to reach, so no gradient is computed.',
+      form === RampForm.LOOP
+        ? 'A sloped loop. The aisles are laid out as a loop on the one parking level, ' +
+            'but there is no second parking level for it to climb to, so no gradient is computed.'
+        : 'A ramp. The strip is reserved on the one parking level, but there is no second ' +
+            'parking level for a ramp to reach, so no gradient is computed.',
     );
   }
   if (parkingBelow > 0 && parkingInPodium === 0) {
@@ -622,11 +698,17 @@ function sectionsOf(
     'the longest side of the plot.';
 
   const context = { plot, setbackRing, levels, ramps, strip };
+  // A U-turn is cut along its first leg: through the middle of the strip the
+  // line would run down the wall between the legs and cut neither.
+  const leg = ramps[0]?.form === RampForm.U_TURN ? ramps[0].flights?.[0] : undefined;
   const sections: (ModelSection | null)[] =
     strip && ramps.length > 0
       ? [
-          cut('A', midpoint(strip.foot[0], strip.foot[1]) as Pt, midpoint(strip.head[0], strip.head[1]) as Pt,
-            'Along the ramp, up its run, through the middle of the ramp strip.', true, context),
+          leg
+            ? cut('A', midpoint(leg.foot[0], leg.foot[1]) as Pt, midpoint(leg.head[0], leg.head[1]) as Pt,
+                'Along the ramp, up its first leg, to the landing where it turns.', true, context)
+            : cut('A', midpoint(strip.foot[0], strip.foot[1]) as Pt, midpoint(strip.head[0], strip.head[1]) as Pt,
+                'Along the ramp, up its run, through the middle of the ramp strip.', true, context),
           cut('B', centre, along, longTaken, false, context),
         ]
       : [cut('A', centre, along, longTaken, false, context)];
@@ -683,24 +765,37 @@ function cut(
     }),
     // A ramp is drawn as a slope only on the section that runs along it; any other
     // cut crosses it, and shows it as the opening it leaves in the slab.
+    /*
+      A ramp in pieces is drawn piece by piece, and only the pieces the line runs
+      through: a U-turn's first leg and its landing, not the second leg beside them.
+    */
     ramps: alongRamp
-      ? ramps.map((r) => ({
-          rampId: r.id,
-          foot: {
-            alongMm: (distanceAlong(midpoint(r.foot[0], r.foot[1]) as Pt, a, b) - origin) as Mm,
-            elevationMm: r.fromElevationMm,
-          },
-          head: {
-            alongMm: (distanceAlong(midpoint(r.head[0], r.head[1]) as Pt, a, b) - origin) as Mm,
-            elevationMm: r.toElevationMm,
-          },
-        }))
+      ? ramps.flatMap((r) => {
+          const at = (p: readonly [ModelPoint, ModelPoint]): Mm =>
+            (distanceAlong(midpoint(p[0] as Pt, p[1] as Pt) as Pt, a, b) - origin) as Mm;
+          const height = (rise: number): Mm =>
+            Math.round(r.fromElevationMm + rise * (r.toElevationMm - r.fromElevationMm)) as Mm;
+          if (!r.flights) {
+            return [{
+              rampId: r.id,
+              foot: { alongMm: at(r.foot), elevationMm: r.fromElevationMm },
+              head: { alongMm: at(r.head), elevationMm: r.toElevationMm },
+            }];
+          }
+          return r.flights
+            .filter((f) => lineSpans(f.outline as readonly Pt[], a, b).length > 0)
+            .map((f) => ({
+              rampId: r.id,
+              foot: { alongMm: at(f.foot), elevationMm: height(f.footRise) },
+              head: { alongMm: at(f.head), elevationMm: height(f.headRise) },
+            }));
+        })
       : [],
   };
 }
 
 /** One parking level's content, from the level plan. Numbered as a reader scans. */
-function parkingOf(plan: LevelPlan): NonNullable<ModelLevel['parking']> {
+function parkingOf(plan: LevelPlan, loopGradient?: TracedDecimal): NonNullable<ModelLevel['parking']> {
   const byScan = (a: WorldRect, b: WorldRect): number =>
     a.yM.comparedTo(b.yM) || a.xM.comparedTo(b.xM);
 
@@ -731,13 +826,27 @@ function parkingOf(plan: LevelPlan): NonNullable<ModelLevel['parking']> {
         through the parked cars instead of down the driveway.
       */
       const alongX = r.widthM.gte(r.heightM);
+      /*
+        ON A LOOP THE AISLES ARE THE RAMP, so their labels say so: a sloped aisle
+        carries the loop's gradient and that it is not assessed, the far cross
+        aisle that it is the level landing. The words are the engine's, like the
+        width before them.
+      */
+      const flight = loopGradient
+        ? plan.rampFlights.find((f) => f.world.every((p, i) => p.x === r.world[i]!.x && p.y === r.world[i]!.y))
+        : undefined;
+      const words = !flight
+        ? label
+        : flight.footRise === flight.headRise
+          ? `${label} - LEVEL LANDING`
+          : `${label} - SLOPED ${loopGradient!.value.toFixed(2)}%, NOT ASSESSED`;
       return {
         outline: r.world.map(pt),
         centreLine: (alongX
           ? [midpoint(a, d), midpoint(b, c)]
           : [midpoint(a, b), midpoint(d, c)]) as readonly [ModelPoint, ModelPoint],
         twoWay,
-        label,
+        label: words,
         crossing: r.row === CROSS_AISLE_ROW,
       };
     });

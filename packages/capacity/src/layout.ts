@@ -52,6 +52,7 @@
 import {
   Decimal,
   qArea,
+  RampForm,
   type Citation,
   type Traced,
   type TracedDecimal,
@@ -236,6 +237,13 @@ export interface ParkingLayoutInput {
   /** Include a ramp in this level's layout. A basement below grade needs one. */
   readonly includeRamp?: boolean;
   /**
+   * How the ramp climbs, when there is one: a straight strip (the default), a
+   * U-turn strip twice as wide and half as long, or no strip at all — a loop of
+   * aisles round the island that climbs as it goes. Stated by a person or
+   * assumed by the caller; this module never chooses it.
+   */
+  readonly rampForm?: RampForm;
+  /**
    * The core, where it stands on this level, in the footprint's local metres —
    * x along the width, y along the depth.
    *
@@ -275,6 +283,26 @@ export interface ParkingLayoutResult {
    * open to ask why 30. They are assumptions and are now declared as such.
    */
   readonly ramp: { readonly widthM: TracedDecimal; readonly runM: TracedDecimal } | undefined;
+  /** How the ramp climbs. `STRAIGHT` when the caller did not say. */
+  readonly rampForm: RampForm;
+  /**
+   * The pieces of a ramp that is not one sloped plane, in this result's local
+   * metres: a U-turn's two legs and landing, a loop's sloped aisles and landing.
+   * Empty for a straight strip, and where no ramp was asked for.
+   */
+  readonly flights: readonly RampFlight[];
+  /**
+   * How far a car drives, in plan, to climb one storey: the strip's run, both
+   * legs of a U-turn, or the two sloped sides of a loop. The gradient is the
+   * storey height over this. Undefined where no ramp was asked for.
+   */
+  readonly travelM: TracedDecimal | undefined;
+  /**
+   * A loop's centre line, as the rectangle whose corners it rounds — the near
+   * and far cross aisles' centre lines, the first and last module aisles'. Local
+   * metres. Undefined unless the ramp is a loop.
+   */
+  readonly loopCentre: Rect | undefined;
   /**
    * The strip the deduction was taken from, in the same local metres as `rects`:
    * the full width, at the far end of the depth. Undefined when nothing was
@@ -314,6 +342,57 @@ const RAMP_RUN_BASIS =
   'reported but not assessed: B.7.2.2 is not encoded. A longer run costs bays; a ' +
   'shorter one steepens the ramp.';
 
+/**
+ * Said wherever the core cost bays beyond the ones it covers.
+ *
+ * The cut is real — a car does not drive through a lift shaft — and so is the
+ * reason: where the core stands is an input. The sentence names the input and
+ * says the engine will not move the core itself, because moving it to park more
+ * cars is the search Phase 0 refuses.
+ */
+export const CORE_STRANDS =
+  'The core stands across a drive aisle here, and the bays beyond it have no way in. ' +
+  'Where the core stands decides this: set it against a boundary on the Rules step ' +
+  'and the level is laid out around it there. The engine does not move the core to ' +
+  'park more cars.';
+
+/**
+ * The U-turn: two legs of the straight ramp's width side by side, a wall between
+ * them, and a level landing where they turn. Each leg climbs half a storey, so a
+ * car drives both legs — the same 30 m of slope as the straight strip — in a strip
+ * 21 m long instead of 30.
+ */
+const U_TURN_WALL_M = '0.3';
+const U_TURN_LANDING_M = '6';
+const U_TURN_WIDTH_M = '12.3';
+const U_TURN_RUN_M = '21';
+
+const U_TURN_WIDTH_BASIS =
+  'Two legs of 6 m side by side — the two-way driveway width of Table B.11, so two ' +
+  'cars pass on each leg as they do in the aisle — with a 0.3 m wall between them: ' +
+  '12.3 m. B.7.2.2 sets its own ramp widths and they are not encoded here, so this ' +
+  'width is not checked against them.';
+const U_TURN_RUN_BASIS =
+  'Legs of 15 m and a level landing 6 m deep where they turn: 21 m in plan, or the ' +
+  'whole packable depth when that is shorter. A car drives both legs to climb one ' +
+  'storey — 30 m of slope, as on the straight ramp. The turning radius on the ' +
+  'landing, transitions and headroom are NOT ASSESSED: B.7.2.2 is not encoded.';
+
+/**
+ * A piece of a ramp that is not one sloped plane, in the packing's local metres.
+ *
+ * `axis` is the direction it climbs along, and `footAtMin` says which end of that
+ * axis is its foot. `footRise` and `headRise` are the share of the storey reached
+ * at each end — 0 at this level, 1 at the next — and equal on a landing.
+ */
+export interface RampFlight {
+  readonly rect: Rect;
+  readonly axis: 'x' | 'y';
+  readonly footAtMin: boolean;
+  readonly footRise: number;
+  readonly headRise: number;
+}
+
 // ---------------------------------------------------------------------------
 // The packer
 // ---------------------------------------------------------------------------
@@ -328,6 +407,7 @@ interface PackOptions {
   readonly moduleDepth: Decimal;
   readonly effectiveBayWidth: Decimal;
   readonly includeRamp: boolean;
+  readonly rampForm: RampForm;
   /** Where the core stands, in this packing's own frame. */
   readonly obstructions: readonly Rect[];
   /**
@@ -356,6 +436,11 @@ interface Packing {
   readonly bayCount: number;
   readonly reserved: Rect | undefined;
   readonly ramp: { readonly widthM: Decimal; readonly runM: Decimal } | undefined;
+  readonly flights: readonly RampFlight[];
+  /** Plan distance driven to climb one storey. Zero where there is no ramp. */
+  readonly travelM: Decimal;
+  /** A loop's centre line, as the rectangle its corners round off. */
+  readonly loopCentre: Rect | undefined;
   readonly crossAisleAreaM2: Decimal;
   readonly baysLostToCrossAisle: number;
   readonly strandedBays: number;
@@ -374,6 +459,9 @@ function refused(reason: string): Packing {
     bayCount: 0,
     reserved: undefined,
     ramp: undefined,
+    flights: [],
+    travelM: ZERO,
+    loopCentre: undefined,
     crossAisleAreaM2: ZERO,
     baysLostToCrossAisle: 0,
     strandedBays: 0,
@@ -438,9 +526,14 @@ function packLevel(o: PackOptions): Packing {
   // ramp parked across eight cars, and a bay count eight too high.
   let rampX = ZERO;
   let ramp: Packing['ramp'];
-  if (o.includeRamp) {
-    const rampWidth = Decimal.min(new Decimal(RAMP_WIDTH_M), o.widthM);
-    const rampRun = Decimal.min(new Decimal(RAMP_RUN_M), availableDepth0);
+  let flights: RampFlight[] = [];
+  let travelM = ZERO;
+  let loopCentre: Rect | undefined;
+  const loop = o.includeRamp && o.rampForm === RampForm.LOOP;
+  if (o.includeRamp && !loop) {
+    const uTurn = o.rampForm === RampForm.U_TURN;
+    const rampWidth = Decimal.min(new Decimal(uTurn ? U_TURN_WIDTH_M : RAMP_WIDTH_M), o.widthM);
+    const rampRun = Decimal.min(new Decimal(uTurn ? U_TURN_RUN_M : RAMP_RUN_M), availableDepth0);
     rampX = rampWidth;
     ramp = { widthM: rampWidth, runM: rampRun };
     rects.push({
@@ -451,12 +544,41 @@ function packLevel(o: PackOptions): Packing {
       width: rampWidth,
       height: rampRun,
     });
-    notes.push(
-      `A ${rampWidth.toString()} m × ${rampRun.toFixed(2)} m ramp strip is reserved down one ` +
-        'edge, and the bay runs are packed into the remaining width. Gradient, ' +
-        'transitions and headroom under B.7.2.2 are NOT ASSESSED — only the plan ' +
-        'area is reserved.',
-    );
+    if (uTurn) {
+      /*
+        LEG, LANDING, LEG. The first leg leaves this level beside the slab edge and
+        climbs half a storey to the landing; the second comes back down the strip
+        beside it, climbing the other half to the next level, and lands next to
+        the cross aisle. The landing is a third of the run at most, so a short
+        strip keeps legs to climb on.
+      */
+      const wall = new Decimal(U_TURN_WALL_M);
+      const leg = rampWidth.minus(wall).div(2);
+      const landing = Decimal.min(new Decimal(U_TURN_LANDING_M), rampRun.div(3));
+      const legRun = rampRun.minus(landing);
+      flights = [
+        { rect: { x: ZERO, y: ZERO, width: leg, height: legRun }, axis: 'y', footAtMin: true, footRise: 0, headRise: 0.5 },
+        { rect: { x: ZERO, y: legRun, width: rampWidth, height: landing }, axis: 'y', footAtMin: true, footRise: 0.5, headRise: 0.5 },
+        { rect: { x: leg.plus(wall), y: ZERO, width: leg, height: legRun }, axis: 'y', footAtMin: false, footRise: 0.5, headRise: 1 },
+      ];
+      travelM = legRun.times(2);
+      notes.push(
+        `A ${rampWidth.toString()} m × ${rampRun.toFixed(2)} m U-turn ramp is reserved down one ` +
+          `edge: two ${leg.toFixed(2)} m legs of ${legRun.toFixed(2)} m with a ` +
+          `${wall.toString()} m wall between them, and a ${landing.toFixed(2)} m landing where ` +
+          'they turn. Each leg climbs half a storey. Gradient, the turning radius on the ' +
+          'landing, transitions and headroom under B.7.2.2 are NOT ASSESSED — only the ' +
+          'plan area is reserved.',
+      );
+    } else {
+      travelM = rampRun;
+      notes.push(
+        `A ${rampWidth.toString()} m × ${rampRun.toFixed(2)} m ramp strip is reserved down one ` +
+          'edge, and the bay runs are packed into the remaining width. Gradient, ' +
+          'transitions and headroom under B.7.2.2 are NOT ASSESSED — only the plan ' +
+          'area is reserved.',
+      );
+    }
   }
 
   // --- how many aisles will there be? ------------------------------------
@@ -472,6 +594,13 @@ function packLevel(o: PackOptions): Packing {
       `${availableDepth0.toFixed(2)} m of packable depth holds neither a ` +
         `${o.moduleDepth.toFixed(2)} m double-loaded module nor a ` +
         `${singleLoadedDepth.toFixed(2)} m single-loaded run`,
+    );
+  }
+  if (loop && aisleCount < 2) {
+    return refused(
+      `a sloped loop needs two drive aisles joined at both ends, and ` +
+        `${availableDepth0.toFixed(2)} m of packable depth holds one. A straight or ` +
+        'U-turn ramp does not need the second aisle',
     );
   }
 
@@ -517,6 +646,9 @@ function packLevel(o: PackOptions): Packing {
     );
   }
   let row = 0;
+  // Where the first and last module aisles start: a loop turns on their centre lines.
+  let firstAisleY: Decimal | undefined;
+  let lastAisleY = ZERO;
   const bayRun = (y: Decimal, r: number): void => {
     for (let i = 0; i < baysPerRun; i += 1) {
       rects.push({
@@ -531,6 +663,8 @@ function packLevel(o: PackOptions): Packing {
   };
   while (availableDepth.gte(o.moduleDepth)) {
     bayRun(cursorY, row);
+    firstAisleY ??= cursorY.plus(o.bayLength);
+    lastAisleY = cursorY.plus(o.bayLength);
     rects.push({
       kind: RectKind.AISLE,
       row,
@@ -549,6 +683,8 @@ function packLevel(o: PackOptions): Packing {
   let runCount = moduleCount * 2;
   if (availableDepth.gte(singleLoadedDepth)) {
     bayRun(cursorY, row);
+    firstAisleY ??= cursorY.plus(o.bayLength);
+    lastAisleY = cursorY.plus(o.bayLength);
     rects.push({
       kind: RectKind.AISLE,
       row,
@@ -684,13 +820,58 @@ function packLevel(o: PackOptions): Packing {
     notes.push(
       `${strandedBays} bay(s) were placed and then dropped: no aisle a car can reach ` +
         'runs past their open end. They are not counted and not drawn. A bay that ' +
-        'cannot be reached is not a bay, however neatly it fits.',
+        'cannot be reached is not a bay, however neatly it fits.' +
+        (o.obstructions.length > 0 ? ` ${CORE_STRANDS}` : ''),
     );
   }
+  /*
+    THE LOOP CLIMBS ON ITS AISLES. Every module aisle but the last climbs from the
+    cross aisle by the way in (this level) to the far one, half a storey up; the
+    far cross aisle is the landing; the last aisle climbs the second half back to
+    the near end, where the next level begins. A piece the core cut short climbs
+    the share of the slope it covers, so the loop's height is continuous round it.
+  */
+  if (loop) {
+    const near = runX;
+    const span = packWidth;
+    const share = (x: Decimal): number => x.minus(near).div(span).toNumber();
+    const drives = rects.filter((r, i) => r.kind === RectKind.AISLE && reachableRect.has(i));
+    const lastRow = Math.max(...drives.filter((r) => r.row >= 0).map((r) => r.row));
+    for (const r of drives) {
+      if (r.row >= 0) {
+        const t0 = share(r.x);
+        const t1 = share(r.x.plus(r.width));
+        flights.push(
+          r.row < lastRow
+            ? { rect: r, axis: 'x', footAtMin: true, footRise: t0 / 2, headRise: t1 / 2 }
+            : { rect: r, axis: 'x', footAtMin: false, footRise: 0.5 + (1 - t1) / 2, headRise: 0.5 + (1 - t0) / 2 },
+        );
+      } else if (r.x.gte(runX.plus(packWidth))) {
+        flights.push({ rect: r, axis: 'y', footAtMin: true, footRise: 0.5, headRise: 0.5 });
+      }
+    }
+    travelM = span.times(2);
+    const half = o.aisleWidth.div(2);
+    loopCentre = {
+      x: rampX.plus(half),
+      y: (firstAisleY ?? ZERO).plus(half),
+      width: runX.plus(packWidth).plus(half).minus(rampX.plus(half)),
+      height: lastAisleY.minus(firstAisleY ?? ZERO),
+    };
+    notes.push(
+      `The drive aisles run as one loop round the island, and the loop is the ramp: ` +
+        `the aisles on one side climb half a storey over ${span.toFixed(2)} m to the far ` +
+        'cross aisle, which is a level landing, and the last aisle climbs the other half ' +
+        'back. No ramp strip is reserved. The bays along the sloped aisles slope with ' +
+        'them; their gradient, the transitions and headroom under B.7.2.2 are NOT ASSESSED.',
+    );
+  }
+
   if (bayCount === 0) {
     return refused(
       `${rects.filter((r) => r.kind === RectKind.BAY).length} bay(s) were placed and none ` +
-        'of them can be reached from the way onto the level',
+        'of them can be reached from the way onto the level' +
+        (o.obstructions.length > 0 && baysUnderCore + strandedBays > 0 ? ` (${CORE_STRANDS})` : ''),
     );
   }
 
@@ -708,6 +889,9 @@ function packLevel(o: PackOptions): Packing {
     bayCount,
     reserved,
     ramp,
+    flights,
+    travelM,
+    loopCentre,
     crossAisleAreaM2,
     baysLostToCrossAisle: (baysPerRunUnconnected - baysPerRun) * runCount,
     strandedBays,
@@ -732,6 +916,8 @@ function transpose(p: Packing): Packing {
     ...p,
     rects: p.rects.map((r) => ({ kind: r.kind, row: r.row, ...flip(r) })),
     reserved: p.reserved ? flip(p.reserved) : undefined,
+    flights: p.flights.map((f) => ({ ...f, rect: flip(f.rect), axis: f.axis === 'x' ? 'y' : 'x' })),
+    loopCentre: p.loopCentre ? flip(p.loopCentre) : undefined,
   };
 }
 
@@ -871,7 +1057,9 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     moduleDepth: moduleDepthValue,
     effectiveBayWidth,
     includeRamp: input.includeRamp ?? false,
+    rampForm: input.rampForm ?? RampForm.STRAIGHT,
   };
+  const loop = (input.includeRamp ?? false) && input.rampForm === RampForm.LOOP;
   /*
     WITH A CORE ON THE LEVEL, TWO ARRANGEMENTS EACH WAY ROUND: one cross aisle,
     or one at each end. The better is kept, as the orientation is. Without a core
@@ -882,6 +1070,18 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
   const packBoth = (
     opts: Omit<PackOptions, 'farCrossAisle' | 'nearCrossAisle' | 'offsetM'>,
   ): Packing => {
+    /*
+      A LOOP IS BOTH CROSS AISLES, ALWAYS: they are the two ends it turns at. It
+      is not one of the arrangements below and is not compared with them.
+    */
+    if (loop) {
+      let kept = packLevel({ ...opts, nearCrossAisle: true, farCrossAisle: true, offsetM: ZERO });
+      if (opts.obstructions.length === 0 || kept.strandedBays === 0) return kept;
+      for (let offset = new Decimal(1); offset.lt(opts.moduleDepth); offset = offset.plus(1)) {
+        kept = best(kept, packLevel({ ...opts, nearCrossAisle: true, farCrossAisle: true, offsetM: offset }));
+      }
+      return kept;
+    }
     const one = packLevel({ ...opts, nearCrossAisle: true, farCrossAisle: false, offsetM: ZERO });
     if (opts.obstructions.length === 0) return one;
     /*
@@ -1039,15 +1239,20 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     },
   });
 
+  const rampForm = input.rampForm ?? RampForm.STRAIGHT;
+  const uTurn = rampForm === RampForm.U_TURN;
+  const WIDTH_M = uTurn ? U_TURN_WIDTH_M : RAMP_WIDTH_M;
+  const RUN_M = uTurn ? U_TURN_RUN_M : RAMP_RUN_M;
   let ramp: ParkingLayoutResult['ramp'];
+  let travelM: TracedDecimal | undefined;
   if (packing.ramp) {
-    const widthAssumed = tracer.assumed('parking.ramp_width_m', new Decimal(RAMP_WIDTH_M), {
-      basis: RAMP_WIDTH_BASIS,
+    const widthAssumed = tracer.assumed('parking.ramp_width_m', new Decimal(WIDTH_M), {
+      basis: uTurn ? U_TURN_WIDTH_BASIS : RAMP_WIDTH_BASIS,
       label: 'ramp width',
       unit: 'm',
     });
-    const runAssumed = tracer.assumed('parking.ramp_run_m', new Decimal(RAMP_RUN_M), {
-      basis: RAMP_RUN_BASIS,
+    const runAssumed = tracer.assumed('parking.ramp_run_m', new Decimal(RUN_M), {
+      basis: uTurn ? U_TURN_RUN_BASIS : RAMP_RUN_BASIS,
       label: 'ramp run',
       unit: 'm',
     });
@@ -1057,23 +1262,44 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
       widthM: drawnWidth.eq(widthAssumed.value)
         ? widthAssumed
         : tracer.computed('parking.ramp_width_drawn_m', drawnWidth, {
-            formula: `min(${RAMP_WIDTH_M} m ramp width, ${footprint.widthM.toFixed(2)} m level width)`,
+            formula: `min(${WIDTH_M} m ramp width, ${footprint.widthM.toFixed(2)} m level width)`,
             uses: { width: widthAssumed },
             unit: 'm',
           }),
       runM: drawnRun.eq(runAssumed.value)
         ? runAssumed
         : tracer.computed('parking.ramp_run_drawn_m', drawnRun, {
-            formula: `min(${RAMP_RUN_M} m ramp run, ${drawnRun.toFixed(2)} m packable depth)`,
+            formula: `min(${RUN_M} m ramp run, ${drawnRun.toFixed(2)} m packable depth)`,
             uses: { run: runAssumed, usable: usableArea },
             unit: 'm',
           }),
     };
+    travelM = uTurn
+      ? tracer.computed('parking.ramp_travel_m', packing.travelM, {
+          formula:
+            `2 legs × ${packing.travelM.div(2).toFixed(2)} m (the ${ramp.runM.value.toFixed(2)} m ` +
+            'strip less the landing where they turn)',
+          uses: { run: ramp.runM },
+          unit: 'm',
+        })
+      : ramp.runM;
+  } else if (packing.travelM.gt(0)) {
+    travelM = tracer.computed('parking.ramp_travel_m', packing.travelM, {
+      formula:
+        `2 sloped sides of the loop × ${packing.travelM.div(2).toFixed(2)} m, the length of ` +
+        'a module aisle between the two cross aisles',
+      uses: { usable: usableArea, moduleDepth },
+      unit: 'm',
+    });
   }
 
   return {
     rects: packing.rects,
     ramp,
+    rampForm,
+    flights: packing.flights,
+    travelM,
+    loopCentre: packing.loopCentre,
     reserved: packing.reserved,
     reservedAreaM2,
     baysUnderCore: packing.baysUnderCore,

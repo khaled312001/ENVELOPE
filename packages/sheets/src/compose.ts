@@ -26,6 +26,7 @@ import {
   type ModelCoreRoom,
   type ModelGroundRoom,
   type ModelPoint,
+  type ModelRamp,
   type ModelRing,
   type ModelSection,
   type TracedWire,
@@ -701,6 +702,117 @@ function moduleChain(
 }
 
 // ---------------------------------------------------------------------------
+// Ramp forms
+// ---------------------------------------------------------------------------
+
+/**
+ * Half a circle from `a` to `b`, bulging towards `towards` — the turn on a U-turn
+ * ramp's landing, from the centre line of one leg to the other's. A drafting
+ * convention for the direction of travel: the landing's own outline is the
+ * engine's, and this curve measures nothing.
+ */
+function halfCircle(a: ModelPoint, b: ModelPoint, towards: { x: number; y: number }): ModelPoint[] {
+  const c = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  const r = Math.hypot(b.x - a.x, b.y - a.y) / 2;
+  if (r === 0) return [a, b];
+  const u = { x: (a.x - c.x) / r, y: (a.y - c.y) / r };
+  const n = Math.hypot(towards.x, towards.y) || 1;
+  const p = { x: towards.x / n, y: towards.y / n };
+  const points: ModelPoint[] = [];
+  for (let i = 0; i <= 16; i += 1) {
+    const t = (i / 16) * Math.PI;
+    points.push(mm(c.x + r * (Math.cos(t) * u.x + Math.sin(t) * p.x), c.y + r * (Math.cos(t) * u.y + Math.sin(t) * p.y)));
+  }
+  return points;
+}
+
+/**
+ * A U-TURN RAMP on a parking plan: the strip in the gradient's ink, its two legs,
+ * the turn across the landing, and on each leg the way it goes from this level —
+ * up the first leg to the level above, down the second to the level below.
+ */
+function uTurnItems(
+  strip: ModelRing,
+  ramp: ModelRamp,
+  up: ModelRamp | undefined,
+  down: ModelRamp | undefined,
+  s: number,
+): ModelItem[] {
+  const [legA, , legB] = ramp.flights as readonly [NonNullable<ModelRamp['flights']>[number], unknown, NonNullable<ModelRamp['flights']>[number]];
+  const items: ModelItem[] = [
+    shape(Role.RAMP, strip, true, { source: sourceOf(ramp.gradientPct), name: ramp.label }),
+    shape(Role.RAMP, legA.outline, true, { name: 'U-turn ramp, first leg' }),
+    shape(Role.RAMP, legB.outline, true, { name: 'U-turn ramp, second leg' }),
+  ];
+  const aFoot = midpointOf(legA.foot[0], legA.foot[1]);
+  const aHead = midpointOf(legA.head[0], legA.head[1]);
+  const bFoot = midpointOf(legB.foot[0], legB.foot[1]);
+  const bHead = midpointOf(legB.head[0], legB.head[1]);
+  items.push(
+    shape(Role.RAMP, halfCircle(aHead, bFoot, { x: aHead.x - aFoot.x, y: aHead.y - aFoot.y }), false, {
+      name: 'U-turn ramp, the turn on the landing',
+    }),
+  );
+  /*
+    One leg, one way. The first leg leaves this level for the one above; the
+    second is the ramp from the level below arriving here, so from this level it
+    goes DOWN. Both arrows point away from the open end, into the ramp.
+  */
+  const leg = (from: ModelPoint, to: ModelPoint, words: string, gradient: boolean): void => {
+    const c = midpointOf(from, to);
+    const along = angleOf(from, to);
+    const run = lengthOf(from, to);
+    items.push({
+      kind: 'symbol',
+      role: Role.RAMP_ARROW,
+      symbol: SymbolName.ARROW,
+      at: c,
+      rotationDeg: round2(along),
+      scale: Math.round(run * 0.5),
+    });
+    const across = { x: -Math.sin((along * Math.PI) / 180), y: Math.cos((along * Math.PI) / 180) };
+    const head = 0.09 * Math.round(run * 0.5);
+    items.push(label(Role.RAMP, offsetPoint(c, across, Math.max(2.2 * s, head + 1.6 * s)), words, 2, along));
+    if (gradient) {
+      items.push(
+        label(Role.RAMP, offsetPoint(c, across, -Math.max(2.6 * s, head + 1.5 * s)), ramp.label, 1.8, along, 'middle', sourceOf(ramp.gradientPct)),
+      );
+    }
+  };
+  if (up) leg(aFoot, aHead, `UP TO ${up.toLevelId}`, true);
+  if (down) leg(bHead, bFoot, `DOWN TO ${down.fromLevelId}`, !up);
+  return items;
+}
+
+/**
+ * A SLOPED LOOP on a parking plan: the loop's centre line, as the engine emitted
+ * it, in the gradient's ink, with an arrow at each turn pointing the way it
+ * climbs. The aisles it runs along carry the slope in their own labels.
+ */
+function loopItems(ramp: ModelRamp): ModelItem[] {
+  const path = ramp.path!;
+  const items: ModelItem[] = [shape(Role.RAMP, path, true, { source: sourceOf(ramp.gradientPct), name: ramp.label })];
+  // The path is four quarter-turns of seven points each, in the direction of the
+  // climb; the middle point of each turn takes the arrow.
+  const turns = Math.floor(path.length / 7);
+  const length = Math.min(3000, lengthOf(path[0]!, path[Math.floor(path.length / 2)]!) / 8);
+  for (let k = 0; k < turns; k += 1) {
+    const i = k * 7 + 3;
+    const before = path[i - 1]!;
+    const after = path[i + 1]!;
+    items.push({
+      kind: 'symbol',
+      role: Role.RAMP_ARROW,
+      symbol: SymbolName.ARROW,
+      at: path[i]!,
+      rotationDeg: round2(angleOf(before, after)),
+      scale: Math.round(length),
+    });
+  }
+  return items;
+}
+
+// ---------------------------------------------------------------------------
 // A-1xx Parking levels
 // ---------------------------------------------------------------------------
 
@@ -735,7 +847,12 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
   // --- the ramp, and which way it goes from here -------------------------------------
   const up = model.ramps.find((r) => r.fromLevelId === level.id);
   const down = model.ramps.find((r) => r.toLevelId === level.id);
-  if (parking.rampStrip) {
+  const climb = up ?? down;
+  const uTurn = climb?.form === 'U_TURN' && climb.flights?.length === 3 ? climb : undefined;
+  const loop = climb?.form === 'LOOP' && climb.path && climb.path.length > 2 ? climb : undefined;
+  if (parking.rampStrip && uTurn) {
+    items.push(...uTurnItems(parking.rampStrip, uTurn, up, down, s));
+  } else if (parking.rampStrip && !loop) {
     const ramp = up ?? down;
     items.push(
       shape(Role.RAMP, parking.rampStrip, true, {
@@ -811,6 +928,8 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     }
     items.push(label(Role.AISLE, midpointOf(a, b), aisle.label, 2, along));
   }
+  // A loop runs ON the aisles, so it is drawn over their fill, not under it.
+  if (loop) items.push(...loopItems(loop));
 
   // --- bays: outline, car, number -----------------------------------------------------------
   for (const { bay, at: c, rotationDeg: axis, tail } of placeCars(parking)) {
@@ -860,7 +979,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     { role: Role.BAY, label: 'Parking bay, Table B.11' },
     ...(parking.bays.some((b) => b.accessible) ? [{ role: Role.BAY_ACCESSIBLE, label: 'Accessible bay' }] : []),
     { role: Role.AISLE, label: 'Drive aisle' },
-    ...(parking.rampStrip ? [{ role: Role.RAMP, label: 'Ramp - gradient NOT ASSESSED' }] : []),
+    ...(parking.rampStrip || loop ? [{ role: Role.RAMP, label: 'Ramp - gradient NOT ASSESSED' }] : []),
     ...(parking.reserved
       ? [
           {
@@ -902,7 +1021,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     ...(parking.aisles.some((a) => !a.twoWay)
       ? [{ role: Role.AISLE_ARROW, symbol: SymbolName.ARROW, label: 'Drive aisle, one-way' }]
       : []),
-    ...(parking.rampStrip
+    ...(parking.rampStrip || loop
       ? [{ role: Role.RAMP_ARROW, symbol: SymbolName.ARROW, label: 'Ramp, direction of travel' }]
       : []),
   ];

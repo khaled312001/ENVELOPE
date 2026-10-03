@@ -176,16 +176,16 @@
     },
     "levelPlan": {
       "bayCount": {
-        "value": "46",
-        "node": "n149",
+        "value": "39",
+        "node": "n154",
         "parameterId": "parking.laid_out_bays",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
         "unit": "bays"
       },
       "areaPerBayM2": {
-        "value": "41.68",
-        "node": "n151",
+        "value": "49.17",
+        "node": "n156",
         "parameterId": "parking.area_per_bay_m2",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -193,7 +193,7 @@
       },
       "deductionsM2": {
         "value": "287.62",
-        "node": "n135",
+        "node": "n138",
         "parameterId": "parking.layout_deductions_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -201,7 +201,7 @@
       },
       "moduleDepthM": {
         "value": "17",
-        "node": "n139",
+        "node": "n142",
         "parameterId": "parking.module_depth_m",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -209,7 +209,7 @@
       },
       "usableAreaM2": {
         "value": "1629.88",
-        "node": "n141",
+        "node": "n144",
         "parameterId": "parking.layout_usable_area_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -217,7 +217,7 @@
       },
       "orientation": {
         "value": "modules along the width",
-        "node": "n145",
+        "node": "n150",
         "parameterId": "parking.module_orientation",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION"
@@ -291,7 +291,7 @@
           "kind": "RAMP",
           "row": -1,
           "widthM": "6.000",
-          "heightM": "25.075",
+          "heightM": "26.355",
           "outline": [
             {
               "x": "72.500",
@@ -303,11 +303,11 @@
             },
             {
               "x": "66.500",
-              "y": "8.925"
+              "y": "7.645"
             },
             {
               "x": "72.500",
-              "y": "8.925"
+              "y": "7.645"
             }
           ]
         },
@@ -1062,174 +1062,6 @@
           "heightM": "5.500",
           "outline": [
             {
-              "x": "49.000",
-              "y": "22.500"
-            },
-            {
-              "x": "46.500",
-              "y": "22.500"
-            },
-            {
-              "x": "46.500",
-              "y": "17.000"
-            },
-            {
-              "x": "49.000",
-              "y": "17.000"
-            }
-          ]
-        },
-        {
-          "kind": "BAY",
-          "row": 0,
-          "widthM": "2.500",
-          "heightM": "5.500",
-          "outline": [
-            {
-              "x": "46.500",
-              "y": "22.500"
-            },
-            {
-              "x": "44.000",
-              "y": "22.500"
-            },
-            {
-              "x": "44.000",
-              "y": "17.000"
-            },
-            {
-              "x": "46.500",
-              "y": "17.000"
-            }
-          ]
-        },
-        {
-          "kind": "BAY",
-          "row": 0,
-          "widthM": "2.500",
-          "heightM": "5.500",
-          "outline": [
-            {
-              "x": "44.000",
-              "y": "22.500"
-            },
-            {
-              "x": "41.500",
-              "y": "22.500"
-            },
-            {
-              "x": "41.500",
-              "y": "17.000"
-            },
-            {
-              "x": "44.000",
-              "y": "17.000"
-            }
-          ]
-        },
-        {
-          "kind": "BAY",
-          "row": 0,
-          "widthM": "2.500",
-          "heightM": "5.500",
-          "outline": [
-            {
-              "x": "41.500",
-              "y": "22.500"
-            },
-            {
-              "x": "39.000",
-              "y": "22.500"
-            },
-            {
-              "x": "39.000",
-              "y": "17.000"
-            },
-            {
-              "x": "41.500",
-              "y": "17.000"
-            }
-          ]
-        },
-        {
-          "kind": "BAY",
-          "row": 0,
-          "widthM": "2.500",
-          "heightM": "5.500",
-          "outline": [
-            {
-              "x": "39.000",
-              "y": "22.500"
-            },
-            {
-              "x": "36.500",
-              "y": "22.500"
-            },
-            {
-              "x": "36.500",
-              "y": "17.000"
-            },
-            {
-              "x": "39.000",
-              "y": "17.000"
-            }
-          ]
-        },
-        {
-          "kind": "BAY",
-          "row": 0,
-          "widthM": "2.500",
-          "heightM": "5.500",
-          "outline": [
-            {
-              "x": "36.500",
-              "y": "22.500"
-            },
-            {
-              "x": "34.000",
-              "y": "22.500"
-            },
-            {
-              "x": "34.000",
-              "y": "17.000"
-            },
-            {
-              "x": "36.500",
-              "y": "17.000"
-            }
-          ]
-        },
-        {
-          "kind": "BAY",
-          "row": 0,
-          "widthM": "2.500",
-          "heightM": "5.500",
-          "outline": [
-            {
-              "x": "34.000",
-              "y": "22.500"
-            },
-            {
-              "x": "31.500",
-              "y": "22.500"
-            },
-            {
-              "x": "31.500",
-              "y": "17.000"
-            },
-            {
-              "x": "34.000",
-              "y": "17.000"
-            }
-          ]
-        },
-        {
-          "kind": "BAY",
-          "row": 0,
-          "widthM": "2.500",
-          "heightM": "5.500",
-          "outline": [
-            {
               "x": "31.500",
               "y": "22.500"
             },
@@ -1459,7 +1291,7 @@
           },
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-          "node": "n163",
+          "node": "n168",
           "provenanceClass": "DERIVED"
         },
         "candidates": [
@@ -1516,10 +1348,11 @@
         ]
       },
       "notAssessed": [
-        "A 6 m × 25.08 m ramp strip is reserved down one edge, and the bay runs are packed into the remaining width. Gradient, transitions and headroom under B.7.2.2 are NOT ASSESSED — only the plan area is reserved.",
-        "8.08 m of depth is left unused — too shallow for a bay (5.5 m) plus its aisle (6 m). It is reported rather than quietly filled.",
-        "The runs are laid modules along the width: 46 bays against 42 the other way round, in the same rectangle. Both were packed.",
-        "The 288 m² deducted for cores, plant and the ramp landing costs about 13 bays at 21.25 m² each — the area one more bay takes inside a module, not the gross area per bay.",
+        "A 6 m × 26.36 m ramp strip is reserved down one edge, and the bay runs are packed into the remaining width. Gradient, transitions and headroom under B.7.2.2 are NOT ASSESSED — only the plan area is reserved.",
+        "9.36 m of depth is left unused — too shallow for a bay (5.5 m) plus its aisle (6 m). It is reported rather than quietly filled.",
+        "7 bay(s) would stand where the core does and are not placed; any aisle the core crosses is cut there. The core is a shaft through every parking level, and a bay inside it is not a bay.",
+        "The runs are laid modules along the width: 39 bays against 28 the other way round, in the same rectangle. Both were packed.",
+        "The 288 m² deducted for cores, plant and the ramp landing costs about 13 bays at 21.25 m² each — the area one more bay takes inside a module, not the gross area per bay. Of it, 83 m² is the core, standing where it is drawn (7 bay(s) were not placed there), and 204 m² is the strip reserved at the edge.",
         "Whether a T junction sits opposite the chosen opening (B.7.2.1: \"Vehicle access shall not be located opposite a T junction\"). That needs the surrounding road network, which no affection plan carries.",
         "RTA approval. B.7.2.1 defers the location to RTA requirements and the Dubai access management manual; nothing here substitutes for that.",
         "Whether a traffic impact study is required for this development."
@@ -1544,7 +1377,7 @@
         },
         "rank": 1,
         "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-        "node": "n163",
+        "node": "n168",
         "provenanceClass": "DERIVED"
       },
       "candidates": [
@@ -1639,10 +1472,10 @@
         }
       ],
       "cars": {
-        "engine": 92,
-        "drawingSet": 92,
-        "dxf": 92,
-        "modelFile": 92
+        "engine": 78,
+        "drawingSet": 78,
+        "dxf": 78,
+        "modelFile": 78
       },
       "stampedIn": [
         "json",

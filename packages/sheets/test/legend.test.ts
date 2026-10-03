@@ -34,16 +34,24 @@ beforeAll(async () => {
   await initGeometry();
 });
 
-const sheets = (ring: typeof RECT_80x40) =>
-  composeSheets(runPipeline(runInput(ring, {})).building, META);
+const sheets = (ring: typeof RECT_80x40, rampForm?: 'U_TURN' | 'LOOP') =>
+  composeSheets(
+    runPipeline(runInput(ring, rampForm ? { levelPlan: { rampForm } } : {})).building,
+    META,
+  );
 
 const strip = (items: readonly { kind: string }[]): PaperText[] =>
   items.filter((i): i is PaperText => i.kind === 'text');
 
 describe('the symbol key', () => {
-  it('keys every symbol the sheet actually draws', () => {
-    for (const ring of [RECT_80x40, RECT_120x80]) {
-      for (const sheet of sheets(ring)) {
+  it('keys every symbol the sheet actually draws, whatever form the ramp takes', () => {
+    for (const set of [
+      sheets(RECT_80x40),
+      sheets(RECT_120x80),
+      sheets(RECT_80x40, 'U_TURN'),
+      sheets(RECT_120x80, 'LOOP'),
+    ]) {
+      for (const sheet of set) {
         const drawn = new Set(
           sheet.items.filter((i): i is SymbolItem => i.kind === 'symbol').map((i) => i.symbol),
         );
@@ -87,6 +95,44 @@ describe('the symbol key', () => {
     const cy = car.map(([, y]) => y);
     const own = (Math.max(...cx) - Math.min(...cx)) / (Math.max(...cy) - Math.min(...cy));
     expect(aspect).toBeCloseTo(own, 3);
+  });
+});
+
+/*
+  THE RAMP FORMS ON PAPER. A U-turn shows its two legs, the turn across its
+  landing and which way each leg goes from the level; a loop shows its path in
+  the gradient's ink with an arrow at every turn. Both are keyed, and neither is
+  drawn on a run that did not state it.
+*/
+describe('a ramp that is not a straight strip', () => {
+  const ramps = (set: ReturnType<typeof sheets>) =>
+    set.find((s) => s.kind === 'PARKING')!.items.filter((i) => 'role' in i && (i.role === Role.RAMP || i.role === Role.RAMP_ARROW));
+
+  it('draws a U-turn as two legs, a turn, and the way each leg goes', () => {
+    const items = ramps(sheets(RECT_80x40, 'U_TURN'));
+    const names = items.map((i) => (i.kind === 'shape' ? i.name : undefined)).filter(Boolean);
+    expect(names).toContain('U-turn ramp, first leg');
+    expect(names).toContain('U-turn ramp, second leg');
+    expect(names).toContain('U-turn ramp, the turn on the landing');
+    const words = items.filter((i) => i.kind === 'text').map((i) => (i.kind === 'text' ? i.value : ''));
+    expect(words.some((w) => /^UP TO /.test(w))).toBe(true);
+    expect(words.some((w) => /^U-TURN RAMP .*GRADIENT NOT ASSESSED/.test(w))).toBe(true);
+  });
+
+  it('draws a loop as its path with an arrow at each of its four turns, and keys both', () => {
+    const parking = sheets(RECT_120x80, 'LOOP').find((s) => s.kind === 'PARKING')!;
+    const path = parking.items.filter((i) => i.kind === 'shape' && i.role === Role.RAMP);
+    expect(path).toHaveLength(1);
+    expect(path[0]!.kind === 'shape' && path[0]!.closed).toBe(true);
+    const arrows = parking.items.filter((i) => i.kind === 'symbol' && i.role === Role.RAMP_ARROW);
+    expect(arrows).toHaveLength(4);
+    expect(parking.legend.some((e) => e.role === Role.RAMP)).toBe(true);
+    expect(parking.legend.some((e) => e.role === Role.RAMP_ARROW)).toBe(true);
+  });
+
+  it('draws neither on a run that stated no form', () => {
+    const items = ramps(sheets(RECT_80x40));
+    expect(items.some((i) => i.kind === 'shape' && /U-turn/.test(i.name ?? ''))).toBe(false);
   });
 });
 

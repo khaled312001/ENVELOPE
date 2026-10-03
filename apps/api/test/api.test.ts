@@ -660,6 +660,31 @@ describe('runs', () => {
     expect(res.json().message).toMatch(/square feet/);
   });
 
+  it('sets the core against a stated boundary under the runner name, and refuses one the plot lacks', async () => {
+    const plot = await createPlot();
+    const post = (extra: Record<string, unknown>) =>
+      app.inject({ method: 'POST', url: '/api/runs', headers: ACTOR, payload: { ...RUN_BODY, plotId: plot.plotId, ...extra } });
+    const placed = await post({ corePosition: { edgeSeq: 0 } });
+    expect(placed.statusCode).toBe(201);
+    expect(placed.json().core.placement.provenanceClass).toBe('USER_SET');
+    const missing = await post({ corePosition: { edgeSeq: 9 } });
+    expect(missing.statusCode).toBeGreaterThanOrEqual(400);
+    expect(missing.json().message).toMatch(/this plot has 4 boundaries/);
+  });
+
+  it('lays out a stated ramp form, and refuses one it does not know at the boundary', async () => {
+    const plot = await createPlot();
+    const post = (extra: Record<string, unknown>) =>
+      app.inject({ method: 'POST', url: '/api/runs', headers: ACTOR, payload: { ...RUN_BODY, plotId: plot.plotId, ...extra } });
+    const uTurn = await post({ rampForm: 'U_TURN' });
+    expect(uTurn.statusCode).toBe(201);
+    const ramp = uTurn.json().building.ramps[0];
+    expect(ramp.form).toBe('U_TURN');
+    expect(ramp.flights).toHaveLength(3);
+    expect(ramp.label).toMatch(/^U-TURN RAMP .*GRADIENT NOT ASSESSED/);
+    expect((await post({ rampForm: 'SPIRAL' })).statusCode).toBe(400);
+  });
+
   it('serves the derivation of any single value — §20.2 click-through', async () => {
     const plot = await createPlot();
     const run = (

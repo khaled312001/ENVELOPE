@@ -255,9 +255,19 @@ is a defect even when it makes something easier.
   sensitivity of zero, because "we moved it 10% and the answer did not change" is an
   answer and `null` is not. Its position is the plate scaled about its centre — the
   same rule the plate itself is drawn by — never a search for maximum yield, which is
-  the `TRADEOFF` optimiser `PHASE_0_CLASSES` refuses by construction. Only its area is
-  a quantity: no lift, stair, riser or core wall is placed, and `notModelled` says so
+  the `TRADEOFF` optimiser `PHASE_0_CLASSES` refuses by construction. A person may set
+  it against a boundary instead (`corePosition`, `USER_SET`): it slides from the
+  centre, unchanged, until it meets the plate's edge. That is the *only* way it moves.
+  Only its area is a quantity: the stairs, lifts and lobby drawn inside it are an
+  indicative layout, `ASSUMED`, never an egress design, and `notModelled` says so
   under every drawing.
+- **No bay stands inside the core's shafts.** On a parking level the stairs, lifts and
+  lift lobby pass through, so the layout places no bay there and cuts any aisle they
+  cross. It costs the bays the shafts cover on a deep level (192 → 185 on 120 × 80 m);
+  on a level one module deep a centred core stands across the only aisle and strands
+  the bays beyond it, and the run says so in `CORE_STRANDS` and names `corePosition`.
+  It does **not** move the core to win them back. The 3D slab is open where a ramp
+  passes, as the section always drew it.
 - **A boundary symbol ranks; it does not measure.** Eng. Mohamed asked for a symbol for
   the road and its type — the field that drives the vehicle-access recommendation under
   B.7.2.1 and had no visual presence at all — and the honest version of it is narrow: an
@@ -318,6 +328,16 @@ is a defect even when it makes something easier.
   both reported, reproducible — an *orientation*. Searching where the ramp or the core
   goes is the optimiser of 34:37, a `TRADEOFF` value, and `PHASE_0_CLASSES` refuses to
   emit one by construction. Do not let the first grow into the second.
+- **The ramp's form is stated or assumed, never chosen for the bays.** `rampForm` is a
+  straight strip (assumed when nobody says, and declared as `parking.ramp_form`), a
+  U-turn — two 6 m legs, a 0.3 m wall and a level landing, each leg half a storey —
+  or a sloped loop: no strip, both cross aisles always, the aisles on one side
+  climbing half a storey to the far cross aisle as a level landing and the last aisle
+  climbing the other half back. The gradient is the storey over the distance a car
+  actually drives (the run, both legs, the loop's two sloped sides) and is NOT
+  ASSESSED. A loop needs two aisles and is refused in a sentence on a level with one.
+  The loop's path is emitted by the engine, runs the way it climbs, and is drawn a
+  quarter-aisle inside the centre lines because on them it struck out the labels.
 - **The massing is built in the engine, not the renderer.** A 3D view is the most persuasive
   surface in the product; a massing assembled by a viewer would be a building nobody
   computed, drawn convincingly. `@envelope/massing` takes a `BuildingModel` and nothing

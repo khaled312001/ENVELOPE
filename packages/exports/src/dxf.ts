@@ -675,18 +675,29 @@ export function buildingDxf(model: BuildingModel, sheets: readonly Sheet[], meta
   for (const ramp of model.ramps) {
     const layer = layerName(ramp.id, 'ramp');
     layers.set(layer, Aci.GREY);
-    const [f0, f1] = ramp.foot;
-    const [h0, h1] = ramp.head;
-    entities.push({
-      kind: '3dface',
-      layer,
-      corners: [
-        { x: f0.x, y: f0.y, z: ramp.fromElevationMm },
-        { x: f1.x, y: f1.y, z: ramp.fromElevationMm },
-        { x: h1.x, y: h1.y, z: ramp.toElevationMm },
-        { x: h0.x, y: h0.y, z: ramp.toElevationMm },
-      ],
-    });
+    // A ramp in pieces is one face a piece, each at the share of the rise the
+    // engine gave it: a U-turn's legs and landing, a loop's sloped aisles.
+    const pieces = ramp.flights ?? [{ foot: ramp.foot, head: ramp.head, footRise: 0, headRise: 1 }];
+    const rise = ramp.toElevationMm - ramp.fromElevationMm;
+    for (const piece of pieces) {
+      const [f0, f1] = piece.foot;
+      const [h0, h1] = piece.head;
+      const zf = Math.round(ramp.fromElevationMm + piece.footRise * rise);
+      const zh = Math.round(ramp.fromElevationMm + piece.headRise * rise);
+      // Untwisted whichever way round the head edge was written, as on screen.
+      const d = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);
+      const [g0, g1] = d(f0, h0) + d(f1, h1) > d(f0, h1) + d(f1, h0) ? [h1, h0] : [h0, h1];
+      entities.push({
+        kind: '3dface',
+        layer,
+        corners: [
+          { x: f0.x, y: f0.y, z: zf },
+          { x: f1.x, y: f1.y, z: zf },
+          { x: g1.x, y: g1.y, z: zh },
+          { x: g0.x, y: g0.y, z: zh },
+        ],
+      });
+    }
   }
 
   const scale = site?.view.scale ?? 500;

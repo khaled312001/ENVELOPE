@@ -243,6 +243,42 @@ export interface ModelLevel {
 }
 
 /**
+ * How cars climb from one parking level to the next — a design choice, stated by a
+ * person or assumed, never chosen by the engine to fit more cars.
+ *
+ * - `STRAIGHT`: one sloped strip, foot to head, beside the cross aisle.
+ * - `U_TURN`: two legs side by side and a level landing at the far end, each leg
+ *   climbing half the storey; the form on the client's ground-floor drawings.
+ * - `LOOP`: no ramp strip at all. The drive aisles run as one loop round the
+ *   island of bays the core stands in, and the loop is the ramp: the aisles on
+ *   one side climb half a storey to a level landing at the far end, those on the
+ *   other climb the second half back — the sloped podium on the client's drawings.
+ */
+export const RampForm = {
+  STRAIGHT: 'STRAIGHT',
+  U_TURN: 'U_TURN',
+  LOOP: 'LOOP',
+} as const;
+export type RampForm = (typeof RampForm)[keyof typeof RampForm];
+
+/**
+ * One piece of a ramp that is not a single sloped plane: a leg, a landing, a
+ * sloped aisle of a loop.
+ *
+ * `footRise` and `headRise` are the share of the ramp's whole rise at each end —
+ * 0 at the lower level, 1 at the upper — so a landing has the same value at both.
+ * They place the piece in height; the gradient a reader sees is the ramp's own
+ * traced figure, never derived from these.
+ */
+export interface ModelRampFlight {
+  readonly outline: ModelRing;
+  readonly foot: readonly [ModelPoint, ModelPoint];
+  readonly head: readonly [ModelPoint, ModelPoint];
+  readonly footRise: number;
+  readonly headRise: number;
+}
+
+/**
  * A ramp between two parking levels.
  *
  * A sloped plane from `foot` (on the lower level) to `head` (on the upper), so
@@ -264,6 +300,20 @@ export interface ModelRamp {
   readonly toElevationMm: Mm;
   readonly gradientPct: TracedWire;
   readonly label: string;
+  /** How it climbs. Absent on a run stored before the forms existed: a straight strip. */
+  readonly form?: RampForm;
+  /**
+   * Its pieces, when it is not one sloped plane from `foot` to `head` — the legs
+   * and landing of a U-turn, the sloped aisles and landing of a loop. Every
+   * renderer that stands a ramp up in height draws these instead of the plane.
+   */
+  readonly flights?: readonly ModelRampFlight[];
+  /**
+   * A loop's centre line, closed, its corners rounded to the turn a car makes:
+   * the drafting path a plan draws for the direction of travel. Emitted by the
+   * engine so no renderer decides where the loop runs. Loops only.
+   */
+  readonly path?: readonly ModelPoint[];
 }
 
 /** The words the client writes along his own boundaries, keyed by classification. */

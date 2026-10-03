@@ -85,6 +85,8 @@ function present(facts: AffectionPlanFacts): unknown {
     issueDate: fieldOf(facts.issueDate),
     drawingRef: fieldOf(facts.drawingRef),
     parkingDeferredTo: fieldOf(facts.parkingDeferredTo),
+    parkingRule: fieldOf(facts.parkingRule),
+    coordinates: traced(facts.coordinates),
 
     totalAreaSqm: fieldOf(facts.totalAreaSqm),
     far: fieldOf(facts.far),

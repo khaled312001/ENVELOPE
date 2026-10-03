@@ -242,6 +242,15 @@ function Field({
   );
 }
 
+/** "25% of the height, 3–7.5 m" — a setback that moves with the height the run finds. */
+function shareOfHeight(
+  v: Extract<SetbackValueView, { kind: 'HEIGHT_SHARE' }>,
+  t: typeof EN,
+): string {
+  const pct = (Number(v.share) * 100).toFixed(0);
+  return t.heightShare(pct, v.minMetres ?? null, v.maxMetres ?? null);
+}
+
 /** The three faces of one mass, or a plain statement that a face is unstated. */
 function Faces({ face }: { readonly face: SetbackFaceView }): JSX.Element {
   const t = useDict(EN, AR);
@@ -262,6 +271,8 @@ function Faces({ face }: { readonly face: SetbackFaceView }): JSX.Element {
           {t.faces[name]}{' '}
           {v!.kind === 'FIXED' ? (
             <strong>{v!.metres} m</strong>
+          ) : v!.kind === 'HEIGHT_SHARE' ? (
+            <strong>{shareOfHeight(v!, t)}</strong>
           ) : (
             <>
               <span className="chip chip--warn">{t.needsDecision}</span>{' '}
@@ -281,6 +292,14 @@ function Faces({ face }: { readonly face: SetbackFaceView }): JSX.Element {
       ))}
     </>
   );
+}
+
+/** One cell of a DDA side table. */
+function SideValue({ v }: { readonly v: SetbackValueView }): JSX.Element {
+  const t = useDict(EN, AR);
+  if (v.kind === 'FIXED') return <strong>{v.metres} m</strong>;
+  if (v.kind === 'HEIGHT_SHARE') return <strong>{shareOfHeight(v, t)}</strong>;
+  return <strong>{v.options.map((o) => `${o.metres} m ${o.condition}`).join(t.or)}</strong>;
 }
 
 /**
@@ -374,6 +393,17 @@ export function Reading({
               <strong>{t.setbacks.tower}</strong> — <Faces face={f.setbacks.value.tower} />
             </li>
           </ul>
+          {f.setbacks.value.bySide && f.setbacks.value.bySide.length > 0 ? (
+            <ul className="reason-list">
+              {f.setbacks.value.bySide.map((row) => (
+                <li key={row.side}>
+                  <strong>{t.setbacks.side(row.side)}</strong> — {t.setbacks.tower}{' '}
+                  {row.building ? <SideValue v={row.building} /> : 'N/A'} · {t.setbacks.podium}{' '}
+                  {row.podium ? <SideValue v={row.podium} /> : 'N/A'}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <p className="fine-print">
             {t.setbacks.asPrintedBefore}
             {ltr(f.setbacks.value.raw)}

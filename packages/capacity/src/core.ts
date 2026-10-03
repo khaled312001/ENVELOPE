@@ -56,6 +56,7 @@
  */
 
 import {
+  asMm,
   Decimal,
   metric,
   qArea,
@@ -64,7 +65,7 @@ import {
   type TracedDecimal,
   type Tracer,
 } from '@envelope/core';
-import { scaleToArea, type Ring } from '@envelope/geometry';
+import { area, intersect, ringContainsRing, scaleToArea, type Pt, type Ring } from '@envelope/geometry';
 
 /**
  * A core the run cannot draw, with the sentence a person needs.
@@ -133,6 +134,27 @@ export interface CoreInput {
     readonly areaM2: Decimal;
     readonly actor: { readonly id: string; readonly name: string };
   };
+  /**
+   * Where the core stands, stated: set against one boundary of the plot.
+   *
+   * Absent, the core is centred on the plate — an assumption, and on a narrow
+   * plot an expensive one: centred, its shafts stand across the only drive aisle
+   * of the parking level, and every bay beyond them has no way in. Where the core
+   * goes is a design decision, so this engine does not move it; a person who
+   * states a boundary does, and the core is slid towards that boundary, unchanged
+   * in size and shape, until it meets the edge of the tower plate. One stated
+   * input, one deterministic answer — never a search for the position that parks
+   * the most cars, which is the optimiser this phase refuses.
+   */
+  readonly position?: {
+    readonly edge: {
+      readonly seq: number;
+      readonly label: string;
+      readonly start: Pt;
+      readonly end: Pt;
+    };
+    readonly actor: { readonly id: string; readonly name: string };
+  };
 }
 
 export interface CoreResult {
@@ -188,10 +210,11 @@ export function solveCore(input: CoreInput): CoreResult {
     );
   }
 
-  const ring = scaleToArea(
+  const centred = scaleToArea(
     input.plateRing,
     coreArea.times(1_000_000).toDecimalPlaces(0).toNumber(),
   );
+  const ring = input.position ? slideTowards(centred, input.plateRing, input.position.edge) : centred;
 
   const plateShare = tracer.computed('building.core_plate_share', qRatio(coreArea.div(plate)), {
     formula: `${coreArea.toFixed(2)} m² core ÷ ${plate.toFixed(2)} m² tower plate`,
@@ -199,13 +222,70 @@ export function solveCore(input: CoreInput): CoreResult {
     unit: 'ratio',
   });
 
-  const placement = tracer.assumed(
-    'building.core_placement',
-    "centred on the tower plate, in the plate's own proportions",
-    { basis: PLACEMENT_BASIS, label: 'where the core stands' },
-  );
+  const placement = input.position
+    ? tracer.userSet(
+        'building.core_placement',
+        `against boundary ${input.position.edge.seq + 1} (${input.position.edge.label}), ` +
+          "in the plate's own proportions, slid from the centre until it meets the plate edge",
+        { actor: input.position.actor, label: 'where the core stands' },
+      )
+    : tracer.assumed(
+        'building.core_placement',
+        "centred on the tower plate, in the plate's own proportions",
+        { basis: PLACEMENT_BASIS, label: 'where the core stands' },
+      );
 
   return { areaM2: areaTraced, plateShare, ring, placement };
+}
+
+/**
+ * The centred core, slid towards a boundary until it meets the tower plate's edge.
+ *
+ * The direction is the boundary's outward normal — square to the edge the person
+ * named, not towards its midpoint, so a core set against a long side stays
+ * opposite the same stretch of it. The distance is the largest whole millimetre
+ * at which the core is still wholly inside the plate, found by bisection: the
+ * plate is convex or rectilinear at Phase 0, so inside-ness only changes once
+ * along the slide. The core's size and shape never change, and the result is
+ * checked by area as well as by its corners.
+ */
+function slideTowards(
+  core: Ring,
+  plate: Ring,
+  edge: { readonly start: Pt; readonly end: Pt },
+): Ring {
+  const ex = edge.end.x - edge.start.x;
+  const ey = edge.end.y - edge.start.y;
+  const length = Math.hypot(ex, ey);
+  if (length === 0) return core;
+  let nx = -ey / length;
+  let ny = ex / length;
+  const cx = core.reduce((sum, p) => sum + p.x, 0) / core.length;
+  const cy = core.reduce((sum, p) => sum + p.y, 0) / core.length;
+  const mx = (edge.start.x + edge.end.x) / 2;
+  const my = (edge.start.y + edge.end.y) / 2;
+  if (nx * (mx - cx) + ny * (my - cy) < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  const moved = (t: number): Ring =>
+    core.map((p) => ({ x: asMm(Math.round(p.x + nx * t)), y: asMm(Math.round(p.y + ny * t)) }));
+  const coreArea = Number(area(core));
+  const fits = (t: number): boolean => {
+    const r = moved(t);
+    if (!ringContainsRing(plate, r)) return false;
+    const inside = intersect(plate, r).reduce((sum, piece) => sum + Number(area(piece)), 0);
+    return Math.abs(inside - coreArea) <= 1_000;
+  };
+  let lo = 0;
+  let hi = Math.ceil(Math.abs(nx * (mx - cx) + ny * (my - cy)));
+  if (fits(hi)) return moved(hi);
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (fits(mid)) lo = mid;
+    else hi = mid;
+  }
+  return moved(lo);
 }
 
 /**

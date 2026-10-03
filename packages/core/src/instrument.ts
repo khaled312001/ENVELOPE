@@ -60,6 +60,20 @@ export type SetbackValue =
   | {
       readonly kind: 'CONDITIONAL';
       readonly options: readonly { readonly condition: string; readonly metres: Decimal }[];
+    }
+  /**
+   * A share of the building's height, held between a floor and a ceiling — "QUARTER
+   * OF THE HEIGHT FROM NEIGHBORING PLOTS … MAXIMUM 7.5M AND A MINIMUM OF 3M", as the
+   * Dubai Development Authority and Dubai Municipality both print it. Not a number:
+   * the height is what the run solves for, so the distance is too.
+   */
+  | {
+      readonly kind: 'HEIGHT_SHARE';
+      readonly share: Decimal;
+      readonly minMetres?: Decimal;
+      readonly maxMetres?: Decimal;
+      /** What it is measured from, in the sheet's own terms. */
+      readonly from: string;
     };
 
 export interface SetbackFace {
@@ -75,6 +89,20 @@ export interface SetbackSchedule {
   readonly raw: string;
   /** True when any face came back `CONDITIONAL` and needs a user decision. */
   readonly requiresDecision: boolean;
+  /**
+   * The setbacks as a Dubai Development Authority sheet states them: per numbered
+   * side, for the building and for the podium. The faces above are filled from
+   * these only where every side agrees — the sheet's sides are its own numbering,
+   * and which of them faces the road is the drawing's to show, not this list's.
+   */
+  readonly bySide?: readonly {
+    readonly side: string;
+    readonly building?: SetbackValue;
+    readonly podium?: SetbackValue;
+    /** The cell printed N/A. */
+    readonly buildingNotApplicable?: boolean;
+    readonly podiumNotApplicable?: boolean;
+  }[];
 }
 
 export interface CoverageSchedule {

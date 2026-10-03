@@ -137,6 +137,44 @@ export const EN = {
       'area, so the saleable figure you gave already accounts for it, and on a parking ' +
       'level it is inside what the usable fraction deducts. The engine draws the core and ' +
       'compares it against both, on the results screen.',
+    position: {
+      label: 'Where the core stands',
+      centred: 'Centred on the tower plate (assumed)',
+      /** "Against boundary 2 · road · 40.00 m". */
+      against: (n: number, kind: string, lengthM: string): string =>
+        `Against boundary ${n} · ${kind} · ${lengthM} m`,
+      kinds: {
+        ROAD: 'road',
+        ADJACENT_PLOT: 'neighbouring plot',
+        OPEN_SPACE: 'open space',
+        OTHER: 'other',
+      } as Readonly<Record<string, string>>,
+      help:
+        'This decides where the drive aisles on the parking levels can run, because the ' +
+        'lifts and stairs pass through them and no bay or aisle is drawn there. Centred, ' +
+        'on a narrow plot they stand across the only aisle and the bays beyond them have ' +
+        'no way in. Choose a boundary and the core slides towards it, the same size, until ' +
+        'it meets the edge of the tower plate. The engine never moves it to fit more cars.',
+    },
+  },
+
+  ramp: {
+    title: 'How cars climb between parking levels',
+    subtitle:
+      'The form of the ramp. It decides how much of each parking level the ramp takes, ' +
+      'and so how many bays are left.',
+    label: 'Ramp form',
+    assumed: 'A straight ramp strip (assumed — nobody has said)',
+    options: {
+      STRAIGHT: 'A straight ramp strip',
+      U_TURN: 'A U-turn ramp: two legs and a landing',
+      LOOP: 'A sloped loop round the core island, with no ramp strip',
+    } as Readonly<Record<string, string>>,
+    help:
+      'A straight strip is 6 m wide and up to 30 m long. A U-turn takes a strip twice as ' +
+      'wide and two-thirds as long. A sloped loop takes no strip: the aisles round the ' +
+      'island climb, and it needs at least two of them. Each gives a gradient, computed and ' +
+      'NOT ASSESSED against DBC B.7.2.2. The engine never chooses one to fit more cars.',
   },
 
   levels: {
@@ -328,12 +366,16 @@ export const EN = {
     idle: 'Compute capacity',
     needsParking: 'Answer the parking question above to continue.',
     needsEfficiency:
-      'Enter the saleable share of GFA to continue. It is not a formality — it moves the unit count by the whole of whatever it is not.',
+      'Enter the saleable share of GFA to continue — 0.93 or 93%, for example. It is not a formality: it moves the unit count by the whole of whatever it is not.',
     /* The same refusal, naming the field the reader is actually looking at.
        Telling somebody who chose square metres to "enter the share" sends them
        hunting for a control that is not on the screen. */
     needsSaleableArea:
       'Enter the saleable area to continue. It is not a formality — it moves the unit count by the whole of whatever is not saleable.',
+    goToParking: 'Go to the parking question',
+    goToSaleable: 'Go to the saleable figure',
+    /** The share the reader's own percentage comes to sits between these. */
+    useShare: { before: 'Use ', after: ' (your figure as a share)' },
     needsCore: 'Correct the core area above, or leave it empty, to continue.',
     needsLevels: 'Correct the levels above to continue.',
   },

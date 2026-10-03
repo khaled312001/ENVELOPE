@@ -74,6 +74,15 @@ export const AR: IntakeDictionary = {
   faceSeparator: '، ',
   needsDecision: 'يحتاج إلى قرار',
   or: ' أو ',
+  heightShare: (pct: string, min: string | null, max: string | null): string =>
+    `${pct}% من ارتفاع المبنى` +
+    (min !== null && max !== null
+      ? `، من ${min} إلى ${max} م`
+      : min !== null
+        ? `، ولا يقل عن ${min} م`
+        : max !== null
+          ? `، ولا يزيد على ${max} م`
+          : ''),
 
   height: {
     label: 'الارتفاع:',
@@ -90,6 +99,7 @@ export const AR: IntakeDictionary = {
     title: 'الارتدادات كما وردت مطبوعة',
     podium: 'الدور الأرضي والبوديوم',
     tower: 'البرج',
+    side: (n: string): string => `الضلع ${n}`,
     asPrintedBefore: 'كما ورد مطبوعا: «',
     asPrintedAfter: '»',
     decision: {

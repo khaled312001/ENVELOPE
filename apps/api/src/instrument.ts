@@ -277,6 +277,7 @@ export interface StoredSheetWire {
       tower: SetbackFaceWire;
       raw: string;
       requiresDecision: boolean;
+      bySide?: readonly SideWire[];
     };
     readonly citation: Citation;
   };
@@ -288,7 +289,71 @@ type SetbackValueWire =
   | {
       readonly kind: 'CONDITIONAL';
       readonly options: readonly { readonly condition: string; readonly metres: string }[];
+    }
+  | {
+      readonly kind: 'HEIGHT_SHARE';
+      readonly share: string;
+      readonly minMetres?: string;
+      readonly maxMetres?: string;
+      readonly from: string;
     };
+
+interface SideWire {
+  readonly side: string;
+  readonly building?: SetbackValueWire;
+  readonly podium?: SetbackValueWire;
+  readonly buildingNotApplicable?: boolean;
+  readonly podiumNotApplicable?: boolean;
+}
+
+/** One setback value to its stored form and back. Every kind, or the sheet loses one. */
+const valueOut = (v: SetbackValue): SetbackValueWire =>
+  v.kind === 'FIXED'
+    ? { kind: 'FIXED', metres: v.metres.toString() }
+    : v.kind === 'CONDITIONAL'
+      ? {
+          kind: 'CONDITIONAL',
+          options: v.options.map((o) => ({ condition: o.condition, metres: o.metres.toString() })),
+        }
+      : {
+          kind: 'HEIGHT_SHARE',
+          share: v.share.toString(),
+          ...(v.minMetres ? { minMetres: v.minMetres.toString() } : {}),
+          ...(v.maxMetres ? { maxMetres: v.maxMetres.toString() } : {}),
+          from: v.from,
+        };
+
+const valueIn = (v: SetbackValueWire): SetbackValue =>
+  v.kind === 'FIXED'
+    ? { kind: 'FIXED', metres: new Decimal(v.metres) }
+    : v.kind === 'CONDITIONAL'
+      ? {
+          kind: 'CONDITIONAL',
+          options: v.options.map((o) => ({ condition: o.condition, metres: new Decimal(o.metres) })),
+        }
+      : {
+          kind: 'HEIGHT_SHARE',
+          share: new Decimal(v.share),
+          ...(v.minMetres ? { minMetres: new Decimal(v.minMetres) } : {}),
+          ...(v.maxMetres ? { maxMetres: new Decimal(v.maxMetres) } : {}),
+          from: v.from,
+        };
+
+type Side = NonNullable<SetbackSchedule['bySide']>[number];
+const sideOut = (s: Side): SideWire => ({
+  side: s.side,
+  ...(s.building ? { building: valueOut(s.building) } : {}),
+  ...(s.podium ? { podium: valueOut(s.podium) } : {}),
+  ...(s.buildingNotApplicable ? { buildingNotApplicable: true } : {}),
+  ...(s.podiumNotApplicable ? { podiumNotApplicable: true } : {}),
+});
+const sideIn = (s: SideWire): Side => ({
+  side: s.side,
+  ...(s.building ? { building: valueIn(s.building) } : {}),
+  ...(s.podium ? { podium: valueIn(s.podium) } : {}),
+  ...(s.buildingNotApplicable ? { buildingNotApplicable: true } : {}),
+  ...(s.podiumNotApplicable ? { podiumNotApplicable: true } : {}),
+});
 
 interface SetbackFaceWire {
   readonly front?: SetbackValueWire;
@@ -302,14 +367,7 @@ const faceOut = (f: {
   rear?: SetbackValue;
 }): SetbackFaceWire => {
   const one = (v: SetbackValue | undefined): SetbackValueWire | undefined =>
-    v === undefined
-      ? undefined
-      : v.kind === 'FIXED'
-        ? { kind: 'FIXED', metres: v.metres.toString() }
-        : {
-            kind: 'CONDITIONAL',
-            options: v.options.map((o) => ({ condition: o.condition, metres: o.metres.toString() })),
-          };
+    v === undefined ? undefined : valueOut(v);
   const front = one(f.front);
   const side = one(f.side);
   const rear = one(f.rear);
@@ -318,17 +376,7 @@ const faceOut = (f: {
 
 const faceIn = (f: SetbackFaceWire): { front?: SetbackValue; side?: SetbackValue; rear?: SetbackValue } => {
   const one = (v: SetbackValueWire | undefined): SetbackValue | undefined =>
-    v === undefined
-      ? undefined
-      : v.kind === 'FIXED'
-        ? { kind: 'FIXED', metres: new Decimal(v.metres) }
-        : {
-            kind: 'CONDITIONAL',
-            options: v.options.map((o) => ({
-              condition: o.condition,
-              metres: new Decimal(o.metres),
-            })),
-          };
+    v === undefined ? undefined : valueIn(v);
   const front = one(f.front);
   const side = one(f.side);
   const rear = one(f.rear);
@@ -363,6 +411,7 @@ export function serialiseSheet(sheet: StoredSheet): StoredSheetWire {
               tower: faceOut(l.setbacks.value.tower),
               raw: l.setbacks.value.raw,
               requiresDecision: l.setbacks.value.requiresDecision,
+              ...(l.setbacks.value.bySide ? { bySide: l.setbacks.value.bySide.map(sideOut) } : {}),
             },
             citation: l.setbacks.citation,
           },
@@ -396,6 +445,7 @@ export function deserialiseSheet(w: StoredSheetWire): StoredSheet {
               tower: faceIn(w.setbacks.value.tower),
               raw: w.setbacks.value.raw,
               requiresDecision: w.setbacks.value.requiresDecision,
+              ...(w.setbacks.value.bySide ? { bySide: w.setbacks.value.bySide.map(sideIn) } : {}),
             },
             citation: w.setbacks.citation,
           },

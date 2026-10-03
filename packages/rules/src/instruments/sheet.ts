@@ -371,6 +371,42 @@ export function rulesFromInstrument(
       which would then fall through to `byPartialOrder` and pick the larger as
       "most restrictive", silently applying the rear setback to the side.
     */
+    /*
+      A SETBACK STATED AS A SHARE OF THE HEIGHT, OR PER NUMBERED SIDE, IS NOT BOUND
+      YET, AND SAYS SO. "A quarter of the height, at least 3 m and at most 7.5 m"
+      depends on the height the run is solving for, and "side 1: 5 m, sides 2–4:
+      7 m" depends on which side faces the road. Both are listed here so the general
+      rules that apply instead are visible beside what the sheet says.
+    */
+    for (const [name, v] of [
+      ['setbacks.podium.side', podium.side],
+      ['setbacks.podium.rear', podium.rear],
+    ] as const) {
+      if (v && v.kind === 'HEIGHT_SHARE') {
+        notBound.push({
+          field: name,
+          stated:
+            `${v.share.times(100).toString()}% of the building height from ${v.from}` +
+            (v.minMetres ? `, at least ${v.minMetres.toString()} m` : '') +
+            (v.maxMetres ? `, at most ${v.maxMetres.toString()} m` : ''),
+          reason:
+            'A setback stated as a share of the height depends on the height this run solves ' +
+            'for. It is not bound in this release; the general setback rules apply and the ' +
+            'sheet’s rule is shown so the two can be compared.',
+        });
+      }
+    }
+    if (limits.setbacks.value.bySide && !podium.side && !podium.front) {
+      notBound.push({
+        field: 'setbacks.by_side',
+        stated: raw,
+        reason:
+          'The sheet states a setback per numbered side. Which side faces the road is shown on ' +
+          'its drawing, not in the table, so no side is bound by guessing; the general setback ' +
+          'rules apply.',
+      });
+    }
+
     const side = podium.side;
     const rear = podium.rear;
     if (isFixed(side) && isFixed(rear) && !side.metres.eq(rear.metres)) {

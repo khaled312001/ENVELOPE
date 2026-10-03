@@ -47,13 +47,32 @@ import {
   type Tracer,
 } from '@envelope/core';
 import {
+  arabicFar,
+  ddaLandUse,
+  ddaParking,
+  heightShareSetback,
+  lineMatching,
+  municipalityLandUse,
+  parseArabicHeight,
+  readCoordinates,
+  readingOrder,
+  readSideTable,
+  arabic,
+  valueBelow,
+  type SheetCoordinates,
+  type SideCell,
+} from './layouts.js';
+import {
   locate,
   pageLines,
   pageText,
   readPdfText,
   valueLeftOf,
   type PdfPageText,
+  type TextItem,
 } from './pdf-text.js';
+
+export type { SheetCoordinates } from './layouts.js';
 
 // ---------------------------------------------------------------------------
 // Shapes
@@ -116,6 +135,19 @@ export interface AffectionPlanFacts {
   readonly crossChecks: readonly CrossCheck[];
   /** Whether the sheet defers parking to another instrument. */
   readonly parkingDeferredTo?: Traced<string>;
+  /**
+   * The parking requirement the sheet states itself — the DDA's "PARKING: ONE BAY
+   * FOR EACH UNIT …", the Municipality's Parking row. Quoted, not bound: the engine
+   * holds parking ratios per unit type, and these are per unit size and per area of
+   * use, which no rule here converts.
+   */
+  readonly parkingRule?: Traced<string>;
+  /**
+   * The plot's corners as the sheet's coordinate table states them — DDA sheets
+   * print one, in DLTM. The shape a plot form can be filled from, rather than a
+   * rectangle somebody typed.
+   */
+  readonly coordinates?: Traced<SheetCoordinates>;
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +311,61 @@ function parseCoverage(text: string): CoverageSchedule | undefined {
   };
 }
 
+/**
+ * A DDA setback table as a schedule.
+ *
+ * Every side is kept, in `bySide`. The faces — front, side, rear — are filled only
+ * where every side agrees: the sheet numbers its sides on its own drawing, and
+ * which of them faces the road is the drawing's to show. A table of 5 m on side 1
+ * and 7 m on sides 2 to 4 binds no face here rather than one chosen by guessing
+ * which side is the street. "SEE NOTES" takes the note's rule; a share of the
+ * height measured "from neighbouring plots" fills the side and rear faces and
+ * leaves the road face to the general rules, because the note does not name it.
+ */
+function sideSchedule(
+  rows: readonly { readonly side: string; readonly building: SideCell; readonly podium: SideCell }[],
+  note: { readonly value: SetbackValue; readonly verbatim: string } | undefined,
+): SetbackSchedule {
+  const valueOf = (c: SideCell): SetbackValue | undefined =>
+    c.kind === 'METRES' ? { kind: 'FIXED', metres: c.metres } : c.kind === 'SEE_NOTES' ? note?.value : undefined;
+  const bySide = rows.map((r) => {
+    const building = valueOf(r.building);
+    const podium = valueOf(r.podium);
+    return {
+      side: r.side,
+      ...(building ? { building } : {}),
+      ...(podium ? { podium } : {}),
+      ...(r.building.kind === 'NOT_APPLICABLE' ? { buildingNotApplicable: true } : {}),
+      ...(r.podium.kind === 'NOT_APPLICABLE' ? { podiumNotApplicable: true } : {}),
+    };
+  });
+  const faceOf = (values: readonly (SetbackValue | undefined)[]): SetbackFace => {
+    const first = values[0];
+    if (!first || values.some((v) => !sameValue(v, first))) return {};
+    return first.kind === 'HEIGHT_SHARE' ? { side: first, rear: first } : { front: first, side: first, rear: first };
+  };
+  const cell = (c: SideCell): string =>
+    c.kind === 'METRES' ? `${c.metres.toString()} m` : c.kind === 'SEE_NOTES' ? 'see notes' : c.kind === 'NOT_APPLICABLE' ? 'N/A' : 'blank';
+  const table = rows.map((r) => `SIDE ${r.side}: building ${cell(r.building)}, podium ${cell(r.podium)}`).join('; ');
+  const usesNote = rows.some((r) => r.building.kind === 'SEE_NOTES' || r.podium.kind === 'SEE_NOTES');
+  return {
+    podium: faceOf(bySide.map((r) => r.podium)),
+    tower: faceOf(bySide.map((r) => r.building)),
+    raw: usesNote && note ? `${table} | ${note.verbatim}` : table,
+    requiresDecision: false,
+    bySide,
+  };
+}
+
+function sameValue(a: SetbackValue | undefined, b: SetbackValue): boolean {
+  if (!a || a.kind !== b.kind) return false;
+  if (a.kind === 'FIXED' && b.kind === 'FIXED') return a.metres.eq(b.metres);
+  if (a.kind === 'HEIGHT_SHARE' && b.kind === 'HEIGHT_SHARE') {
+    return a.share.eq(b.share) && String(a.minMetres) === String(b.minMetres) && String(a.maxMetres) === String(b.maxMetres);
+  }
+  return false;
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -315,8 +402,18 @@ export function readFacts(
   const missing: MissingField[] = [];
   const crossChecks: CrossCheck[] = [];
 
+  /*
+    THE ISSUE DATE: beside its label where the sheet labels it (the DDA prints
+    "ISSUE DATE 18/11/2025 02:27:59 PM"), otherwise the first date written with
+    dashes (Trakhees) or slashes. Two numbers and a slash are not a date — the
+    Municipality sheet cites "22/2001", a decree.
+  */
   const issueDate =
-    /(\d{1,2}-\d{1,2}-\d{4})/.exec(text)?.[1] ?? 'UNDATED';
+    /ISSUE\s+DATE\s*:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{4})/i.exec(text)?.[1] ??
+    /(\d{1,2}-\d{1,2}-\d{4})/.exec(text)?.[1] ??
+    /(?<![\d/])(\d{1,2}\/\d{1,2}\/\d{4})(?![\d/])/.exec(text)?.[1] ??
+    'UNDATED';
+  const lines = pageLines(page);
 
   /** Emit a `DERIVED` value citing the box it was read from. */
   const fromSheet = <T>(
@@ -338,6 +435,24 @@ export function readFacts(
     });
   };
 
+  /** A `DERIVED` value citing a box found by position rather than by its text. */
+  const fromItem = <T>(field: string, value: T, item: TextItem, verbatim: string, unit?: string): Traced<T> =>
+    tracer.derived(`affection_plan.${field}`, value, {
+      rule: {
+        ruleId: `AFFECTION_PLAN.${field}`,
+        citation: { ...cite(documentUri, issueDate, field, item), sourceTextVerbatim: verbatim },
+      },
+      formula: `read from affection plan field "${field}"`,
+      ...(unit !== undefined ? { unit } : {}),
+      detail: { verbatim },
+    });
+
+  /** The line a pattern matched on, quoted in reading order when it is Arabic. */
+  const quoted = (pattern: RegExp): { item: TextItem; verbatim: string } | undefined => {
+    const line = lineMatching(lines, pattern);
+    return line ? { item: line, verbatim: readingOrder(page, line) } : undefined;
+  };
+
   const absent = (field: string, label: string, consequence: string): undefined => {
     missing.push({ field, label, consequence });
     return undefined;
@@ -349,13 +464,28 @@ export function readFacts(
   // sheet hits "GFA=4778.31 Sq. m" first — which silently reports the permitted
   // floor area as the plot area, an error that then propagates into every
   // downstream number while looking entirely plausible.
-  const areaLine = pageLines(page)
+  /*
+    A LABELLED AREA FIRST: "PLOT AREA 1,040.04 M² (11,194.93 FT²)". Then the first
+    line carrying a figure in square metres — but never one about GFA or parking.
+    On a DDA sheet that scan used to stop at the parking note, "ONE BAY FOR EACH
+    UNIT LESS THAN OR EQUAL TO 150 SQ.M GFA", and report a 1,040 m² plot as 150.
+  */
+  const labelledArea = new RegExp(
+    String.raw`\b(?:PLOT|TOTAL|LAND)\s+AREA\b[^\d\n]{0,12}(${NUM})\s*(?:M\s*2|M²|SQ\.?\s*M\.?|M\b)`,
+    'i',
+  ).exec(text);
+  const areaLine = lines
     .map((l) => l.text)
-    .find((l) => /GFA\s*=/i.test(l) === false && new RegExp(String.raw`${NUM}\s*SQ\.?\s*M\.?`, 'i').test(l));
+    .find(
+      (l) =>
+        !/GFA|PARKING|\bBAYS?\b/i.test(l) &&
+        new RegExp(String.raw`${NUM}\s*SQ\.?\s*M\.?`, 'i').test(l),
+    );
   const areaMatch =
-    areaLine === undefined
+    labelledArea ??
+    (areaLine === undefined
       ? null
-      : new RegExp(String.raw`(${NUM})\s*SQ\.?\s*M\.?`, 'i').exec(areaLine);
+      : new RegExp(String.raw`(${NUM})\s*SQ\.?\s*M\.?`, 'i').exec(areaLine));
   const totalAreaSqm =
     areaMatch?.[1] !== undefined
       ? fromSheet('total_area_sqm', qArea(toDecimal(areaMatch[1])), areaMatch[0], 'm²')
@@ -370,57 +500,123 @@ export function readFacts(
     'i',
   ).exec(text);
 
+  // "MAX. GFA 2,288.08 M² (24,628.69 FT²)" — the DDA's own row.
+  const maxGfa = new RegExp(
+    String.raw`\bMAX(?:IMUM)?\.?\s*GFA\b[^\d\n]{0,12}(${NUM})\s*(?:M\s*2|M²|SQ\.?\s*M\.?|M\b)`,
+    'i',
+  ).exec(text);
+  const gfaRead = gfaFar?.[1] !== undefined ? gfaFar : maxGfa;
   const gfaSqm =
-    gfaFar?.[1] !== undefined
-      ? fromSheet('gfa_permitted_sqm', qArea(toDecimal(gfaFar[1])), gfaFar[0], 'm²')
+    gfaRead?.[1] !== undefined
+      ? fromSheet('gfa_permitted_sqm', qArea(toDecimal(gfaRead[1])), gfaRead[0], 'm²')
       : absent(
           'gfa_permitted_sqm',
           'GFA',
-          'Permitted GFA is not printed on this sheet. It must be obtained from the DCR or set by a named user; it must not be inferred from a neighbouring plot.',
+          'No permitted GFA was found on this sheet. It must be obtained from the DCR or set by a named user; it must not be inferred from a neighbouring plot.',
         );
 
+  // «وبنسبة طابقية = 5.0» — the Municipality writes its FAR in Arabic.
+  const farArabic = gfaFar?.[2] === undefined ? arabicFar(text) : undefined;
+  const farArabicLine = farArabic
+    ? quoted(new RegExp(String.raw`${NUM}\s*=\s*${arabic('طابقية')}|${arabic('طابقية')}\s*=\s*${NUM}`))
+    : undefined;
+  /*
+    A SHEET THAT STATES ITS DENSITY AS A GFA AND PRINTS NO FAR. The DDA prints
+    "MAX. GFA" and no FAR at all; the engine bounds an envelope by FAR, and a GFA
+    binds nothing (`packages/rules/src/instruments/sheet.ts`). So the FAR is the
+    sheet's two printed figures divided — MAX. GFA over PLOT AREA, both read off
+    this sheet and both cited — which is the same limit in the unit the engine
+    holds, not a figure from anywhere else. It multiplies back to the printed GFA,
+    so no cross-check is run on it: that would only be checking the division.
+  */
+  const farComputed =
+    gfaFar?.[2] === undefined && !farArabic && gfaSqm && totalAreaSqm && !totalAreaSqm.value.isZero()
+      ? tracer.computed('affection_plan.far', qRatio(gfaSqm.value.div(totalAreaSqm.value)), {
+          formula:
+            `MAX. GFA ${gfaSqm.value.toString()} m² ÷ plot area ${totalAreaSqm.value.toString()} m² — ` +
+            'the sheet states its density as a GFA and prints no FAR',
+          uses: { gfa: gfaSqm, area: totalAreaSqm },
+          unit: 'ratio',
+        })
+      : undefined;
   const far =
     gfaFar?.[2] !== undefined
       ? // 'ratio', the unit the engine gives every FAR. Emitted with none, the screen
         // formatted it as a count and printed the sheet's 3.5 as "4".
         fromSheet('far', qRatio(toDecimal(gfaFar[2])), gfaFar[0], 'ratio')
-      : absent(
-          'far',
-          'FAR',
-          'Floor area ratio is not printed on this sheet. Required before any capacity figure may be produced.',
-        );
+      : farArabic && farArabicLine
+        ? fromItem('far', qRatio(toDecimal(farArabic.value)), farArabicLine.item, farArabicLine.verbatim, 'ratio')
+        : (farComputed ??
+          absent(
+            'far',
+            'FAR',
+            'No floor area ratio, and no GFA to derive one from, was found on this sheet. Required before any capacity figure may be produced.',
+          ));
 
   // --- height -------------------------------------------------------------
   const heightRaw = /\bG\s*\+\s*\d+(?:\s*P\s*\+\s*\d+)?\b/i.exec(text)?.[0];
   const parsedHeight = heightRaw === undefined ? undefined : parseHeight(heightRaw);
+  // «أرضي + أول لقاعدة البرج + (16) طابق» — the Municipality's height, in words.
+  const arabicHeightLine =
+    parsedHeight === undefined ? lines.find((l) => parseArabicHeight(l.text) !== undefined) : undefined;
+  const arabicHeight = arabicHeightLine ? parseArabicHeight(arabicHeightLine.text) : undefined;
   const height =
     parsedHeight !== undefined && heightRaw !== undefined
       ? fromSheet('height_allowance', parsedHeight, heightRaw)
-      : absent(
-          'height_allowance',
-          'Height',
-          'Permitted storey count is not printed; the envelope has no vertical bound.',
-        );
+      : arabicHeight && arabicHeightLine
+        ? fromItem('height_allowance', arabicHeight, arabicHeightLine, readingOrder(page, arabicHeightLine))
+        : absent(
+            'height_allowance',
+            'Height',
+            'No permitted storey count was found on this sheet; the envelope has no vertical bound.',
+          );
 
   // --- setbacks and coverage ---------------------------------------------
   const parsedSetbacks = parseSetbacks(text);
+  const sideTable = parsedSetbacks === undefined ? readSideTable(page) : undefined;
+  const shareNote = parsedSetbacks === undefined ? heightShareSetback(text) : undefined;
+  const ddaSchedule = sideTable ? sideSchedule(sideTable.rows, shareNote) : undefined;
+  const shareLine =
+    !sideTable && shareNote
+      ? quoted(new RegExp(String.raw`${arabic('أقصى')}|QUARTER\s+OF\s+THE|THIRD\s+OF\s+THE|HALF\s+OF\s+THE`, 'i'))
+      : undefined;
   const setbacks =
     parsedSetbacks !== undefined
       ? fromSheet('setbacks', parsedSetbacks, parsedSetbacks.raw.split(' | ')[0] ?? '')
-      : absent(
-          'setbacks',
-          'Setback',
-          'No setback schedule on the sheet. Trakhees regulations and the master developer DCR govern instead and must be supplied.',
-        );
+      : ddaSchedule && sideTable
+        ? fromItem('setbacks', ddaSchedule, sideTable.anchor, ddaSchedule.raw)
+        : shareNote && shareLine
+          ? fromItem(
+              'setbacks',
+              {
+                // One statement for the whole building, from its neighbours: the
+                // podium and the tower above it alike. The road is not named.
+                podium: { side: shareNote.value, rear: shareNote.value },
+                tower: { side: shareNote.value, rear: shareNote.value },
+                raw: shareLine.verbatim,
+                requiresDecision: false,
+              } satisfies SetbackSchedule,
+              shareLine.item,
+              shareLine.verbatim,
+            )
+          : absent(
+              'setbacks',
+              'Setback',
+              'No setback schedule was found on this sheet. The authority’s regulations and the master developer’s DCR govern instead and must be supplied.',
+            );
 
   const parsedCoverage = parseCoverage(text);
+  // "MAX. COVERAGE N/A" is a statement, and a different one from silence.
+  const coverageNotApplicable = /\bMAX(?:IMUM)?\.?\s*COVERAGE\s*:?\s*N\s*\/\s*A\b/i.test(text);
   const coverage =
     parsedCoverage !== undefined
       ? fromSheet('plot_coverage', parsedCoverage, parsedCoverage.raw.split(' | ')[0] ?? '')
       : absent(
           'plot_coverage',
           'Plot Coverage',
-          'No coverage cap on the sheet; the footprint has no horizontal bound from this instrument.',
+          coverageNotApplicable
+            ? 'The sheet prints coverage as N/A: this instrument sets no coverage cap, so the footprint is bounded by the setbacks alone.'
+            : 'No coverage cap was found on this sheet; the footprint has no horizontal bound from this instrument.',
         );
 
   // --- label/value fields -------------------------------------------------
@@ -446,21 +642,67 @@ export function readFacts(
   const landUseRaw = /Mixed Use \([^)]*\)|(?:^|\n)(Residential|Commercial|Industrial)(?:\n|$)/i.exec(
     text,
   )?.[0];
+  const ddaUse = landUseRaw === undefined ? ddaLandUse(page) : undefined;
+  const dmUse = landUseRaw === undefined && !ddaUse ? municipalityLandUse(text) : undefined;
+  const dmUseLine = dmUse ? lineMatching(lines, new RegExp(arabic(dmUse.verbatim.includes('سكني') ? 'سكني' : 'تجاري'))) : undefined;
   const landUse =
     landUseRaw !== undefined
       ? fromSheet('land_use', landUseRaw.trim(), landUseRaw.trim())
-      : absent('land_use', 'Usage', 'Land use selects the applicable rule set; none can be chosen.');
+      : ddaUse
+        ? fromItem('land_use', ddaUse.value, ddaUse.anchor, ddaUse.value)
+        : dmUse && dmUseLine
+          ? fromItem('land_use', dmUse.value, dmUseLine, readingOrder(page, dmUseLine))
+          : absent('land_use', 'Usage', 'Land use selects the applicable rule set; none can be chosen.');
 
   const parkingNote = /\(Refer to [^)]*\)/i.exec(text)?.[0];
   const parkingDeferredTo =
     parkingNote === undefined ? undefined : fromSheet('parking_authority', parkingNote, parkingNote);
-  if (parkingDeferredTo === undefined) {
+  /*
+    A SHEET THAT STATES ITS OWN PARKING. The DDA's general note and the
+    Municipality's Parking row both give the requirement on the sheet itself — the
+    instrument B.7.2.6.1 gives precedence over Table B.13 — so "the sheet does not
+    say which instrument governs parking" would be false of them. Quoted, in
+    reading order; not bound.
+  */
+  const ddaPark = parkingDeferredTo === undefined ? ddaParking(page) : undefined;
+  const dmParkLine =
+    parkingDeferredTo === undefined && !ddaPark
+      ? lines
+          .filter((l) => new RegExp(arabic('موقف')).test(l.text.normalize('NFKC')))
+          .sort((a, b) => b.bbox[1] - a.bbox[1])
+      : [];
+  const parkingRule = ddaPark
+    ? fromItem('parking_rule', ddaPark.value, ddaPark.anchor, ddaPark.value)
+    : dmParkLine.length > 0
+      ? (() => {
+          const said = dmParkLine.map((l) => readingOrder(page, l)).join(' ');
+          return fromItem('parking_rule', said, dmParkLine[0]!, said);
+        })()
+      : undefined;
+  if (parkingDeferredTo === undefined && parkingRule === undefined) {
     missing.push({
       field: 'parking_authority',
       label: 'Parking',
       consequence:
         'The sheet does not say which instrument governs parking. Dubai Building Code B.7.2.6.1 gives precedence to the affection plan or DCR over Table B.13, so the governing instrument must be established before a bay count is produced.',
     });
+  }
+
+  /*
+    A SHEET WITH A FAR AND NO GFA is not missing anything the engine needs: GFA is
+    FAR × plot area, which the engine computes. The gap is still listed — the sheet
+    does not print it — but its consequence says what actually happens.
+  */
+  if (far && !gfaSqm) {
+    const k = missing.findIndex((m) => m.field === 'gfa_permitted_sqm');
+    if (k >= 0) {
+      missing[k] = {
+        field: 'gfa_permitted_sqm',
+        label: 'GFA',
+        consequence:
+          'The sheet prints a FAR and no GFA. The engine computes the GFA from the FAR and the plot area; nothing is blocked.',
+      };
+    }
   }
 
   // --- cross-checks -------------------------------------------------------
@@ -492,13 +734,35 @@ export function readFacts(
   if (coverage) facts.coverage = coverage;
   if (landUse) facts.landUse = landUse;
   if (parkingDeferredTo) facts.parkingDeferredTo = parkingDeferredTo;
+  if (parkingRule) facts.parkingRule = parkingRule;
 
-  const parcelId = labelled('parcel_id', 'Parcel ID');
+  /*
+    LABELS BESIDE THEIR VALUES ON TRAKHEES AND MUNICIPALITY SHEETS, ABOVE THEM ON
+    A DDA's right-hand panel — "COMMUNITY" in one band, "SAIH SHUAIB 1" in the band
+    below — and the DDA's plot number in its own row on the left.
+  */
+  const below = (field: string, label: RegExp): Traced<string> | undefined => {
+    const item = valueBelow(page, label);
+    if (!item) return undefined;
+    const value = item.text.replace(/\s+/g, ' ').trim();
+    return value === '' ? undefined : fromItem(field, value, item, value);
+  };
+  const plotNumberRow = /\bPLOT\s+NUMBER\s*:?\s*(\d{5,})/i.exec(text);
+  const parcelId =
+    labelled('parcel_id', 'Parcel ID') ??
+    (plotNumberRow?.[1] !== undefined ? fromSheet('parcel_id', plotNumberRow[1], plotNumberRow[0]) : undefined);
   if (parcelId) facts.parcelId = parcelId;
-  const community = labelled('community', 'Community');
+  const community = labelled('community', 'Community') ?? below('community', /^!?\s*COMMUNITY$/i);
   if (community) facts.community = community;
-  const developer = labelled('developer', 'Developer');
+  const developer = labelled('developer', 'Developer') ?? below('developer', /^MASTER\s+DEVELOPER$/i);
   if (developer) facts.developer = developer;
+  const coordinates = readCoordinates(page);
+  if (coordinates) {
+    const said = coordinates.value.points
+      .map((p) => `${p.id}: ${p.east.toString()} E, ${p.north.toString()} N`)
+      .join('; ');
+    facts.coordinates = fromItem('plot_coordinates', coordinates.value, coordinates.anchor, `${coordinates.value.system} — ${said}`);
+  }
   const drgRef = /Drg\.\s*Ref\.?\s*:\s*(\S+)/i.exec(text)?.[1];
   const drawingRef = drgRef === undefined ? undefined : fromSheet('drawing_ref', drgRef, drgRef);
   if (drawingRef) facts.drawingRef = drawingRef;
@@ -510,9 +774,17 @@ export function readFacts(
   return facts;
 }
 
-/** Everything the caller must resolve before the engine may run. */
+/**
+ * Everything the caller must resolve before the engine may run.
+ *
+ * The engine bounds an envelope by FAR, so a sheet that prints a FAR and no GFA is
+ * not blocked by the GFA — the Municipality's sheets print «نسبة طابقية» and no
+ * GFA at all, and the engine derives one from the other. A sheet with neither is
+ * blocked by both, as `DJAZ1MED12RES011` is.
+ */
 export function blockingGaps(facts: AffectionPlanFacts): readonly MissingField[] {
-  const blocking = new Set(['total_area_sqm', 'far', 'gfa_permitted_sqm', 'height_allowance']);
+  const blocking = new Set(['total_area_sqm', 'far', 'height_allowance']);
+  if (facts.far === undefined) blocking.add('gfa_permitted_sqm');
   return facts.missing.filter((m) => blocking.has(m.field));
 }
 

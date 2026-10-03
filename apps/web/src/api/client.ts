@@ -393,6 +393,14 @@ export type SetbackValueView =
   | {
       readonly kind: 'CONDITIONAL';
       readonly options: readonly { readonly condition: string; readonly metres: string }[];
+    }
+  /** "A quarter of the height from neighbouring plots, 3 m to 7.5 m" — DDA and Municipality sheets. */
+  | {
+      readonly kind: 'HEIGHT_SHARE';
+      readonly share: string;
+      readonly minMetres?: string;
+      readonly maxMetres?: string;
+      readonly from: string;
     };
 
 export interface SetbackFaceView {
@@ -465,6 +473,12 @@ export interface AffectionPlanRead {
         readonly raw: string;
         /** True when a face came back conditional and a person must choose. */
         readonly requiresDecision: boolean;
+        /** A DDA sheet's setbacks per numbered side, as its table prints them. */
+        readonly bySide?: readonly {
+          readonly side: string;
+          readonly building?: SetbackValueView;
+          readonly podium?: SetbackValueView;
+        }[];
       };
       readonly provenanceClass: string;
     } | null;

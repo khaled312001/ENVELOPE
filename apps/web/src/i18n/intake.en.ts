@@ -70,6 +70,16 @@ export const EN = {
   needsDecision: 'needs a decision',
   /** Between the options of a conditional setback. */
   or: ' or ',
+  /** A setback that is a share of the building's height, held between two distances. */
+  heightShare: (pct: string, min: string | null, max: string | null): string =>
+    `${pct}% of the building height` +
+    (min !== null && max !== null
+      ? `, ${min}–${max} m`
+      : min !== null
+        ? `, at least ${min} m`
+        : max !== null
+          ? `, at most ${max} m`
+          : ''),
 
   height: {
     label: 'Height:',
@@ -90,6 +100,7 @@ export const EN = {
     title: 'Setbacks, as printed',
     podium: 'Ground floor and podium',
     tower: 'Tower',
+    side: (n: string): string => `Side ${n}`,
     asPrintedBefore: 'As printed: “',
     asPrintedAfter: '”',
     decision: {

@@ -230,6 +230,8 @@ export function RulesStep({
   const [coreArea, setCoreArea] = useState('');
   /** The boundary the core is set against, as its `seq`; '' is centred, assumed. */
   const [corePosition, setCorePosition] = useState('');
+  /** How cars climb between parking levels; '' is the straight strip, assumed. */
+  const [rampForm, setRampForm] = useState('');
   /**
    * Which of the two the reader is typing.
    *
@@ -372,6 +374,7 @@ export function RulesStep({
     */
     ...(coreArea.trim() === '' ? {} : { coreAreaM2: coreRead?.value ?? coreArea.trim() }),
     ...(corePosition === '' ? {} : { corePosition: { edgeSeq: Number(corePosition) } }),
+    ...(rampForm === '' ? {} : { rampForm: rampForm as NonNullable<RunRequestBody['rampForm']> }),
     parkingUsableFraction: {
       value: '0.85',
       source: 'ASSUMED',
@@ -418,6 +421,13 @@ export function RulesStep({
     it. The reading is in `decimalInput.ts`; whatever it rewrote is printed beside
     the field, and the run posts the figure printed.
   */
+  /** Bring a field into view and give it the keyboard — or a heading, its section. */
+  const goTo = (id: string): void => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center' });
+    if (el instanceof HTMLInputElement) el.focus();
+  };
   const efficiencyRead = readDecimal(efficiency, { percent: saleableUnit === 'RATIO' });
   const efficiencyNumber = efficiencyRead ? Number(efficiencyRead.value) : Number.NaN;
   const efficiencyValid =
@@ -589,6 +599,8 @@ export function RulesStep({
         onPodiumParking={setPodiumParking}
       />
 
+      <RampFormPanel form={rampForm} onForm={setRampForm} />
+
       {/* --- Disclosure ------------------------------------------------ */}
       <RuleDisclosure rules={rules} />
 
@@ -656,12 +668,39 @@ export function RulesStep({
         >
           {busy ? t.run.busy : t.run.idle}
         </button>
-        {!parkingInFar ? <p className="fine-print">{t.run.needsParking}</p> : null}
-        {parkingInFar && !efficiencyValid ? (
-          <p className="fine-print">
+        {/*
+          A DISABLED BUTTON NEEDS A WAY TO WHAT DISABLES IT. Reported from the live
+          site twice: a reader at Compute capacity, with the reason printed under it,
+          and the field it names a long scroll above — so the reader stopped. Each
+          reason now carries a button that takes them there; and a share typed as a
+          bare percentage gets the one-click fix the field above already describes,
+          which puts the figure in the box where the reader sees it before it is sent.
+        */}
+        {!parkingInFar ? (
+          <div className="fine-print">
+            <p>{t.run.needsParking}</p>
+            <button type="button" className="button" onClick={() => goTo('parking-far-heading')}>
+              {t.run.goToParking}
+            </button>
+          </div>
+        ) : null}
+        {!efficiencyValid ? (
+          <div className="fine-print">
             {/* Name the field the reader is looking at, not the other one. */}
-            {saleableUnit === 'AREA' ? t.run.needsSaleableArea : t.run.needsEfficiency}
-          </p>
+            <p>{saleableUnit === 'AREA' ? t.run.needsSaleableArea : t.run.needsEfficiency}</p>
+            {percentHint ? (
+              <button type="button" className="button" onClick={() => setEfficiency(percentHint.share)}>
+                {t.run.useShare.before}
+                <span className="value" dir="ltr">
+                  {percentHint.share}
+                </span>
+                {t.run.useShare.after}
+              </button>
+            ) : null}{' '}
+            <button type="button" className="button" onClick={() => goTo('saleable-efficiency')}>
+              {t.run.goToSaleable}
+            </button>
+          </div>
         ) : null}
         {/*
           EVERY REASON THE BUTTON IS DISABLED IS NAMED BESIDE IT. A refused core
@@ -1542,6 +1581,57 @@ export function CoreArea({
       </div>
 
       <p className="fine-print">{t.notSubtracted}</p>
+    </section>
+  );
+}
+
+/**
+ * HOW CARS CLIMB BETWEEN PARKING LEVELS — the form of the ramp.
+ *
+ * Empty is the engine's assumption, the straight strip, and the option says so
+ * in its own words: a pre-selected form here would be a design decision nobody
+ * made, and every form moves the bay count. A choice is the reader's, recorded
+ * under their name.
+ */
+export function RampFormPanel({
+  form,
+  onForm,
+}: {
+  /** '' for the assumed straight strip, or a stated form. */
+  readonly form: string;
+  readonly onForm: (value: string) => void;
+}): JSX.Element {
+  const t = useDict(EN, AR).ramp;
+  return (
+    <section className="panel" aria-labelledby="ramp-heading">
+      <header className="panel__header">
+        <div>
+          <h2 id="ramp-heading" className="panel__title">
+            {t.title}
+          </h2>
+          <p className="panel__subtitle">{t.subtitle}</p>
+        </div>
+      </header>
+      <div className="field">
+        <label htmlFor="ramp-form">{t.label}</label>
+        <select
+          id="ramp-form"
+          className="input"
+          value={form}
+          onChange={(e) => onForm(e.target.value)}
+          aria-describedby="ramp-form-help"
+        >
+          <option value="">{t.assumed}</option>
+          {(['STRAIGHT', 'U_TURN', 'LOOP'] as const).map((f) => (
+            <option key={f} value={f}>
+              {t.options[f]}
+            </option>
+          ))}
+        </select>
+        <p id="ramp-form-help" className="field__help">
+          {t.help}
+        </p>
+      </div>
     </section>
   );
 }

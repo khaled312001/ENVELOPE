@@ -282,8 +282,9 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
       section showed the opening and the 3D view hid the ramp under a slab that
       is not there.
     */
+    // A loop has no opening: it climbs on the level's own aisles, drawn above them.
     const openings = model.ramps
-      .filter((r) => r.fromLevelId === level.id || r.toLevelId === level.id)
+      .filter((r) => r.form !== 'LOOP' && (r.fromLevelId === level.id || r.toLevelId === level.id))
       .map((r) => r.outline);
     const slab = new THREE.Mesh(track(fill([level.outline], at, 0, openings).geometry), surface(slabColour, 0.28, false));
     slab.name = `${level.id} slab`;
@@ -421,14 +422,14 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
   }
 
   // --- ramps: a sloped plane between the two levels it joins -------------------------------
-  const rampMeshes: { ramp: BuildingModel['ramps'][number]; mesh: THREE.Mesh; edges: THREE.LineLoop }[] = [];
+  const rampMeshes: { ramp: BuildingModel['ramps'][number]; mesh: THREE.Mesh; edges: THREE.LineSegments }[] = [];
   for (const ramp of model.ramps) {
     const colour = colourOf(ramp.gradientPct.provenanceClass, palette);
     const geometry = track(new THREE.BufferGeometry());
     const mesh = new THREE.Mesh(geometry, surface(colour, 0.6, false));
     mesh.name = `ramp ${ramp.id}`;
     pickable(mesh, { node: ramp.gradientPct.node, rank: 2, name: ramp.label });
-    const edges = new THREE.LineLoop(track(new THREE.BufferGeometry()), ink(colour));
+    const edges = new THREE.LineSegments(track(new THREE.BufferGeometry()), ink(colour));
     edges.name = `ramp ${ramp.id} edge`;
     root.add(mesh, edges);
     rampMeshes.push({ ramp, mesh, edges });
@@ -447,23 +448,34 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
     for (const { ramp, mesh, edges } of rampMeshes) {
       const z0 = levelZ.get(ramp.fromLevelId) ?? ramp.fromElevationMm / 1000;
       const z1 = levelZ.get(ramp.toLevelId) ?? ramp.toElevationMm / 1000;
-      const [f0, f1] = ramp.foot.map(at) as [THREE.Vector2, THREE.Vector2];
-      let [h0, h1] = ramp.head.map(at) as [THREE.Vector2, THREE.Vector2];
-      // Keep the quad untwisted whichever way round the head edge was written.
-      if (f0.distanceTo(h0) + f1.distanceTo(h1) > f0.distanceTo(h1) + f1.distanceTo(h0)) [h0, h1] = [h1, h0];
-      const v = [
-        [f0.x, f0.y, z0],
-        [f1.x, f1.y, z0],
-        [h1.x, h1.y, z1],
-        [h0.x, h0.y, z1],
-      ] as const;
-      mesh.geometry.setAttribute(
-        'position',
-        new THREE.Float32BufferAttribute([...v[0], ...v[1], ...v[2], ...v[0], ...v[2], ...v[3]], 3),
-      );
+      /*
+        One sloped quad per piece: the whole strip for a straight ramp, or each
+        leg, landing and sloped aisle at the share of the rise the engine gave it.
+        The heights are the engine's; nothing here decides how a ramp climbs.
+      */
+      const pieces = ramp.flights ?? [{ foot: ramp.foot, head: ramp.head, footRise: 0, headRise: 1 }];
+      const faces: number[] = [];
+      const lines: number[] = [];
+      for (const piece of pieces) {
+        const zf = z0 + piece.footRise * (z1 - z0);
+        const zh = z0 + piece.headRise * (z1 - z0);
+        const [f0, f1] = piece.foot.map(at) as [THREE.Vector2, THREE.Vector2];
+        let [h0, h1] = piece.head.map(at) as [THREE.Vector2, THREE.Vector2];
+        // Keep the quad untwisted whichever way round the head edge was written.
+        if (f0.distanceTo(h0) + f1.distanceTo(h1) > f0.distanceTo(h1) + f1.distanceTo(h0)) [h0, h1] = [h1, h0];
+        const v = [
+          [f0.x, f0.y, zf],
+          [f1.x, f1.y, zf],
+          [h1.x, h1.y, zh],
+          [h0.x, h0.y, zh],
+        ] as const;
+        faces.push(...v[0], ...v[1], ...v[2], ...v[0], ...v[2], ...v[3]);
+        lines.push(...v[0], ...v[1], ...v[1], ...v[2], ...v[2], ...v[3], ...v[3], ...v[0]);
+      }
+      mesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(faces, 3));
       mesh.geometry.computeVertexNormals();
       mesh.geometry.computeBoundingSphere();
-      edges.geometry.setAttribute('position', new THREE.Float32BufferAttribute(v.flat(), 3));
+      edges.geometry.setAttribute('position', new THREE.Float32BufferAttribute(lines, 3));
       edges.geometry.computeBoundingSphere();
     }
   }

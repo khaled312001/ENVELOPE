@@ -750,6 +750,11 @@ export interface RunRequestBody {
    * `USER_SET` by the actor — the only way the core moves.
    */
   readonly corePosition?: { readonly edgeSeq: number };
+  /**
+   * How cars climb between parking levels. Omitted, the engine assumes a straight
+   * strip and says so; sent, it is `USER_SET` by the actor.
+   */
+  readonly rampForm?: 'STRAIGHT' | 'U_TURN' | 'LOOP';
   readonly parkingUsableFraction: {
     readonly value: string;
     readonly source: 'DERIVED' | 'ASSUMED';

@@ -43,6 +43,13 @@ describe('readDecimal', () => {
     expect(readDecimal('٠٫٩٣')?.rewritten).toBe(true);
   });
 
+  it('reads the comma an Arabic keyboard types exactly as a comma', () => {
+    expect(readDecimal('0،93')?.value).toBe('0.93');
+    expect(readDecimal('٠،٩٣')?.value).toBe('0.93');
+    expect(readDecimal('6،000')?.value).toBe('6000');
+    expect(readDecimal('0،93')?.rewritten).toBe(true);
+  });
+
   it('drops commas that group thousands, and reads a lone comma as the decimal point', () => {
     expect(readDecimal('6,000')?.value).toBe('6000');
     expect(readDecimal('12,500.5')?.value).toBe('12500.5');
@@ -161,6 +168,24 @@ describe('Compute capacity, with the share typed the way a reader types it', () 
     expect(markup).toContain('looks like a percentage');
     expect(markup).toContain('0.93');
     expect(markup).toContain('93%');
+  });
+
+  /*
+    A DISABLED BUTTON NEEDS A WAY TO WHAT DISABLES IT — reported from the live site.
+    Beside Compute: the reason, a button to the field, and for a bare percentage the
+    one-click fix that puts the reader's own figure in the box as a share.
+  */
+  it('offers, beside a disabled Compute, a way to the field and the fix for a bare 93', () => {
+    const markup = rulesStep('93');
+    expect(markup).toMatch(/<button[^>]*>Use <span[^>]*>0\.93<\/span> \(your figure as a share\)<\/button>/);
+    expect(markup).toMatch(/<button[^>]*>Go to the saleable figure<\/button>/);
+  });
+
+  it('offers the way to the field when the share is empty, and no fix it would have to invent', () => {
+    const markup = rulesStep('');
+    expect(computeButton(markup)).toContain('disabled');
+    expect(markup).toMatch(/<button[^>]*>Go to the saleable figure<\/button>/);
+    expect(markup).not.toContain('your figure as a share');
   });
 });
 

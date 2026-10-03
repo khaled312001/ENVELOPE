@@ -83,6 +83,7 @@ import { PlotForm } from '../src/screens/PlotForm.js';
 import {
   ComparisonResult,
   CoreArea,
+  RampFormPanel,
   DeveloperStandardPanel,
   LevelSchedulePanel,
   RuleDisclosure,
@@ -483,6 +484,10 @@ const CASES: readonly Case[] = [
   {
     label: 'the core, stated',
     node: () => <CoreArea area="180" valid={true} onChange={noop} {...CORE_POSITION} />,
+  },
+  {
+    label: 'how cars climb between parking levels',
+    node: () => <RampFormPanel form="" onForm={noop} />,
   },
   {
     label: 'the core, refused for being zero or below',
@@ -1176,6 +1181,25 @@ describe('the English copy, as it was written inline', () => {
     const ar = visibleText(render('ar', <CoreArea area="" valid={true} onChange={noop} {...CORE_POSITION} />));
     expect(ar).toContain('في منتصف مسطح البرج (مفترض)');
     expect(ar).toContain('ملاصقة للحد 1 · طريق · 80.00 م');
+  });
+
+  /*
+    HOW CARS CLIMB. The straight strip is the engine's assumption and the option
+    that holds it says so; no form is pre-selected, every stated form is offered,
+    and the help says the engine never picks one for the bays it would win.
+  */
+  it('offers the ramp forms, arrives on the assumed straight strip, and says so in both languages', () => {
+    const markup = render('en', <RampFormPanel form="" onForm={noop} />);
+    expect(markup).toMatch(/<select[^>]*id="ramp-form"/);
+    expect(markup).toMatch(/<option value="" selected="">A straight ramp strip \(assumed — nobody has said\)<\/option>/);
+    for (const v of ['STRAIGHT', 'U_TURN', 'LOOP']) expect(markup).toContain(`<option value="${v}">`);
+    expect(markup).not.toMatch(/<option value="[A-Z_]+" selected/);
+    const text = visibleText(markup);
+    expect(text).toContain('NOT ASSESSED against DBC B.7.2.2');
+    expect(text).toContain('The engine never chooses one to fit more cars.');
+    const ar = visibleText(render('ar', <RampFormPanel form="" onForm={noop} />));
+    expect(ar).toContain('شريط منحدر مستقيم (مفترض — لم يحدده أحد)');
+    expect(ar).toContain('لم يخضع للتقييم');
   });
 
   it('says nothing about a refusal while the box is empty', () => {

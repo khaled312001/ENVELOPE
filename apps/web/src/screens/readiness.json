@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-02T17:51:18.793Z",
+  "generatedAt": "2026-10-03T12:38:25.050Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
@@ -54,6 +54,12 @@
       "runs": 1,
       "maxRelativeEffect": "0",
       "basis": "An indicative core for a residential tower, drawn so a reader can see where the lifts and stairs stand: two stairs of 5.6 × 2.8 m (two flights of about 1.2 m and a landing at each end), lift shafts of 2.4 × 2.4 m for a 13-person car, and a lift lobby 2.4 m deep across their front. No clause of the Dubai Building Code on file is applied and no developer standard gives a core layout, so this is an assumption. Egress capacity, travel distance, lift traffic and fire-fighting provisions are NOT ASSESSED: the stairs drawn are not an egress design."
+    },
+    {
+      "parameterId": "parking.ramp_form",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "A straight ramp strip down one edge of each parking level: the simplest form, and the one this engine laid out before the form could be stated. A U-turn ramp takes a strip twice as wide and two-thirds as long; a sloped loop takes no strip and climbs on the aisles round the island. Which one the building uses is a design decision — state it on the Rules step to replace this."
     },
     {
       "parameterId": "parking.ramp_width_m",

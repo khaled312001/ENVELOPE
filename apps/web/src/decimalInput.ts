@@ -25,7 +25,8 @@
  *
  *   - Arabic-Indic (٠–٩) and extended Arabic-Indic (۰–۹) digits are digits;
  *   - ٫ is the Arabic decimal separator, ٬ the Arabic thousands separator, ٪ a
- *     percent sign and − a minus sign;
+ *     percent sign and − a minus sign; ، (the Arabic comma, which is what the
+ *     comma key types on an Arabic keyboard) is read exactly as a comma is;
  *   - commas grouping thousands — `6,000`, `12,500.5` — are dropped, and a comma
  *     is read as the decimal point only where it cannot be a grouping (`0,93`);
  *   - a trailing or leading `%` divides by a hundred, and only where the caller
@@ -72,6 +73,9 @@ export function readDecimal(
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
     .replace(/٫/g, '.')
     .replace(/٬/g, ',')
+    // The comma an Arabic keyboard types, read exactly as "," is: a decimal comma
+    // in 0،93, a grouping in 6،000, and refused where it could be either.
+    .replace(/،/g, ',')
     .replace(/٪/g, '%')
     .replace(/−/g, '-');
 

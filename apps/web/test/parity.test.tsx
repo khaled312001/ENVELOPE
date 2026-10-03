@@ -143,15 +143,24 @@ function served(bay: readonly XY[], nodes: readonly (readonly XY[])[]): boolean 
 const AISLE_MM = 6000 - 10;
 
 const CASES = [
-  { name: '80 x 40', ring: RECT_80x40, podiumLevels: undefined },
-  { name: '80 x 40, two podium levels', ring: RECT_80x40, podiumLevels: 2 },
-  { name: '120 x 80', ring: RECT_120x80, podiumLevels: undefined },
-  { name: 'skewed', ring: SKEWED, podiumLevels: undefined },
+  { name: '80 x 40', ring: RECT_80x40, podiumLevels: undefined, rampForm: undefined },
+  { name: '80 x 40, two podium levels', ring: RECT_80x40, podiumLevels: 2, rampForm: undefined },
+  { name: '120 x 80', ring: RECT_120x80, podiumLevels: undefined, rampForm: undefined },
+  { name: 'skewed', ring: SKEWED, podiumLevels: undefined, rampForm: undefined },
+  // The two stated ramp forms: every renderer must still draw the engine's bays.
+  { name: '80 x 40, U-turn ramp', ring: RECT_80x40, podiumLevels: undefined, rampForm: 'U_TURN' },
+  { name: '120 x 80, sloped loop', ring: RECT_120x80, podiumLevels: undefined, rampForm: 'LOOP' },
+  { name: 'skewed, sloped loop', ring: SKEWED, podiumLevels: undefined, rampForm: 'LOOP' },
 ] as const;
 
-describe.each(CASES)('$name', ({ ring, podiumLevels }) => {
+describe.each(CASES)('$name', ({ ring, podiumLevels, rampForm }) => {
   const out = (): ReturnType<typeof runPipeline> =>
-    runPipeline(runInput(ring, podiumLevels === undefined ? {} : { podiumLevels }));
+    runPipeline(
+      runInput(ring, {
+        ...(podiumLevels === undefined ? {} : { podiumLevels }),
+        ...(rampForm === undefined ? {} : { levelPlan: { rampForm } }),
+      }),
+    );
 
   it('draws, on every parking level, in every renderer, exactly the bays the engine placed', () => {
     const model = out().building;
@@ -295,7 +304,10 @@ describe.each(CASES)('$name', ({ ring, podiumLevels }) => {
         area += Math.abs((bx - ax) * (cy - ay) - (cx - ax) * (by - ay)) / 2;
         centroids.push({ x: (ax + bx + cx) / 3, y: (ay + by + cy) / 3 });
       }
-      const ramps = model.ramps.filter((r) => r.fromLevelId === level.id || r.toLevelId === level.id);
+      // A loop climbs on the level's own aisles and leaves no opening.
+      const ramps = model.ramps.filter(
+        (r) => r.form !== 'LOOP' && (r.fromLevelId === level.id || r.toLevelId === level.id),
+      );
       // Scene units are metres; the model is millimetres.
       const expected = (ringArea(level.outline) - ramps.reduce((a, r) => a + ringArea(r.outline), 0)) / 1e6;
       expect(area, level.id).toBeCloseTo(expected, 0);

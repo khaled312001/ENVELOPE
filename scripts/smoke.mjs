@@ -831,6 +831,18 @@ await step('a share typed in Arabic digits or as a percentage counts, and says h
   if (!/looks like a percentage/.test(t)) {
     throw new Error('a bare 93 was not told it looks like a percentage');
   }
+  /*
+    AND THE READER CAN ACT ON IT FROM THE BUTTON. Reported from the live site: a
+    reader at a disabled Compute, the reason printed under it, the field a long
+    scroll above. The fix is offered there, and it puts 0.93 in the box — where the
+    reader sees it — rather than sending a figure nobody typed.
+  */
+  await page.getByRole('button', { name: /^Use 0\.93/ }).click();
+  if ((await field.inputValue()) !== '0.93') throw new Error('"Use 0.93" did not put 0.93 in the field');
+  await field.fill('');
+  await page.getByRole('button', { name: /go to the saleable figure/i }).click();
+  const focused = await page.evaluate(() => document.activeElement?.id);
+  if (focused !== 'saleable-efficiency') throw new Error(`"Go to the saleable figure" left the focus on ${focused}`);
   await field.fill('0.93');
 });
 
@@ -854,6 +866,21 @@ await step('the core arrives centred and assumed, and can be set against any bou
   const boundaries = (await select.locator('option').count()) - 1;
   if (boundaries !== 4) throw new Error(`the core can be set against ${boundaries} boundaries; the plot has 4`);
   await select.selectOption('3');
+});
+
+/*
+  HOW CARS CLIMB. The client draws a U-turn at grade and a sloped loop on the podium;
+  the engine draws a straight strip unless somebody says otherwise. The choice is
+  offered, and nothing is pre-selected but the assumption, which says it is one.
+*/
+await step('the ramp form arrives as the assumed straight strip, and offers the client’s forms', async () => {
+  const select = page.locator('#ramp-form');
+  if ((await select.inputValue()) !== '') throw new Error('a ramp form arrived chosen that nobody chose');
+  const assumed = (await select.locator('option[value=""]').textContent()) ?? '';
+  if (!/assumed/i.test(assumed)) throw new Error(`the straight strip is not called an assumption: "${assumed}"`);
+  for (const form of ['U_TURN', 'LOOP']) {
+    if ((await select.locator(`option[value="${form}"]`).count()) !== 1) throw new Error(`the ${form} form is not offered`);
+  }
 });
 
 await step('computing the capacity lands on the assumption register first', async () => {

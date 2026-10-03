@@ -54,11 +54,13 @@ const edge = (seq, classification, roadHierarchy) => ({
 });
 
 /**
- * Three plots, chosen to break different things: the recorded worked example,
+ * Five runs, chosen to break different things: the recorded worked example,
  * because it is the one a reader of the landing page will download; a plain
  * rectangle with two roads, because the access placement has a choice to make;
- * and a skewed quadrilateral, because a writer that assumed axis-aligned
- * geometry would pass the other two.
+ * the same rectangle with a U-turn ramp and with a sloped loop, because a ramp in
+ * pieces is written as several faces at their own heights; and a skewed
+ * quadrilateral, because a writer that assumed axis-aligned geometry would pass
+ * the others.
  */
 const PLOTS = [
   { name: 'worked example', plot: published.input.plot },
@@ -82,6 +84,32 @@ const PLOTS = [
       ],
     },
   },
+  /*
+    The two stated ramp forms, on the same plot: a U-turn's legs and landing and
+    a loop's sloped aisles are written as faces at their own heights, and the
+    cars must still be the engine's bays.
+  */
+  ...['U_TURN', 'LOOP'].map((rampForm) => ({
+    name: `80 x 40, ${rampForm === 'LOOP' ? 'sloped loop' : 'U-turn ramp'}`,
+    run: { rampForm },
+    plot: {
+      plotNumber: `DXF-${rampForm}`,
+      community: 'CHECK',
+      landUse: 'RESIDENTIAL_MULTI',
+      vertices: [
+        { x: '0', y: '0' },
+        { x: '80', y: '0' },
+        { x: '80', y: '40' },
+        { x: '0', y: '40' },
+      ],
+      edges: [
+        edge(0, 'ROAD', 'LOCAL'),
+        edge(1, 'ADJACENT_PLOT'),
+        edge(2, 'ROAD', 'ARTERIAL'),
+        edge(3, 'ADJACENT_PLOT'),
+      ],
+    },
+  })),
   {
     name: 'skewed',
     plot: {
@@ -116,7 +144,7 @@ const parse = (text) => new DxfParser().parseSync(text);
 
 const rows = [];
 
-for (const { name, plot: plotBody } of PLOTS) {
+for (const { name, plot: plotBody, run: runExtra } of PLOTS) {
   const plot = (await app.inject({ method: 'POST', url: '/api/plots', headers: ACTOR, payload: plotBody })).json();
   if (!plot.plotId) {
     fail(name, `the plot was rejected: ${JSON.stringify(plot).slice(0, 300)}`);
@@ -126,7 +154,7 @@ for (const { name, plot: plotBody } of PLOTS) {
     method: 'POST',
     url: '/api/runs',
     headers: ACTOR,
-    payload: { ...published.input.run, plotId: plot.plotId },
+    payload: { ...published.input.run, ...(runExtra ?? {}), plotId: plot.plotId },
   });
   const run = res.json();
   if (res.statusCode >= 300) {

@@ -24,6 +24,7 @@
 
 import {
   Decimal,
+  type RampForm,
   type Mm,
   type Plot,
   type PlotEdge,
@@ -45,8 +46,19 @@ import {
   type ParkingAngle,
   type ParkingLayoutResult,
   type PlacedRect,
+  type RampFlight,
+  type Rect,
   type RectKind,
 } from './layout.js';
+
+/** A ramp flight in plot coordinates: a leg, a landing, a sloped aisle of a loop. */
+export interface WorldFlight {
+  readonly world: readonly Pt[];
+  readonly foot: readonly [Pt, Pt];
+  readonly head: readonly [Pt, Pt];
+  readonly footRise: number;
+  readonly headRise: number;
+}
 
 /** A rectangle from the packer, carried with the world polygon that draws it. */
 export interface WorldRect {
@@ -101,6 +113,21 @@ export interface LevelPlan {
     readonly widthM: TracedDecimal;
     readonly runM: TracedDecimal;
   } | undefined;
+  /** How the ramp climbs — as stated, or the straight strip when nobody said. */
+  readonly rampForm: RampForm;
+  /**
+   * A U-turn's legs and landing, or a loop's sloped aisles and landing, in plot
+   * coordinates. Empty for a straight strip.
+   */
+  readonly rampFlights: readonly WorldFlight[];
+  /** The plan distance a car drives to climb one storey; the gradient's divisor. */
+  readonly rampTravelM: TracedDecimal | undefined;
+  /**
+   * A loop's centre line, closed, its corners rounded to the turn a car makes —
+   * a drafting path for the direction of travel, in plot coordinates — and the
+   * drive's outer edge round it. Undefined unless the ramp is a loop.
+   */
+  readonly rampLoop: { readonly path: readonly Pt[]; readonly outline: readonly Pt[] } | undefined;
   readonly bayCount: Traced<number>;
   readonly areaPerBayM2: TracedDecimal;
   /**
@@ -165,6 +192,8 @@ export interface LevelPlanInput {
    * rounding difference.
    */
   readonly includeRamp: boolean;
+  /** How the ramp climbs. Passed through to `layoutParkingLevel`. */
+  readonly rampForm?: RampForm;
   readonly angle?: ParkingAngle;
   readonly structuralGridM?: Decimal;
   /** Passed through to `placeVehicleAccess` — the sheet's stated access side. */
@@ -256,6 +285,7 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     footprint: { widthM, depthM },
     deductionsTraced,
     includeRamp: input.includeRamp,
+    ...(input.rampForm === undefined ? {} : { rampForm: input.rampForm }),
     ...(input.core && coreRect ? { core: { rect: coreRect, areaM2: input.core.areaM2 } } : {}),
     ...(input.angle === undefined ? {} : { angle: input.angle }),
     ...(input.structuralGridM === undefined ? {} : { structuralGridM: input.structuralGridM }),
@@ -328,6 +358,88 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
         }
       : undefined;
 
+  const flightOf = (f: RampFlight): WorldFlight => {
+    const { x, y, width, height } = f.rect;
+    const x1 = x.plus(width);
+    const y1 = y.plus(height);
+    const lo: readonly [Pt, Pt] = f.axis === 'y' ? [local(x, y), local(x1, y)] : [local(x, y), local(x, y1)];
+    const hi: readonly [Pt, Pt] = f.axis === 'y' ? [local(x, y1), local(x1, y1)] : [local(x1, y), local(x1, y1)];
+    return {
+      world: toWorld({ ...f.rect, kind: 'RAMP', row: -1 }),
+      foot: f.footAtMin ? lo : hi,
+      head: f.footAtMin ? hi : lo,
+      footRise: f.footRise,
+      headRise: f.headRise,
+    };
+  };
+
+  /*
+    THE LOOP'S PATH: the rectangle of the aisles' centre lines with each corner
+    rounded to a quarter circle — the turn a car makes from one aisle into the
+    next, which is what gives the loop the oval the client draws. The radius is
+    half the aisle width, or the shorter half-side where that is less.
+  */
+  const loopOf = (c: Rect, aisle: Decimal): NonNullable<LevelPlan['rampLoop']> => {
+    /*
+      A quarter of an aisle inside the centre lines, on the island's side: the
+      aisles' own labels stand on their centre lines, and a path drawn through
+      them struck every one of them out.
+    */
+    const inset = aisle.div(4).toNumber();
+    const x0 = c.x.toNumber() + inset;
+    const y0 = c.y.toNumber() + inset;
+    const x1 = c.x.plus(c.width).toNumber() - inset;
+    const y1 = c.y.plus(c.height).toNumber() - inset;
+    /*
+      THE PATH RUNS THE WAY THE LOOP CLIMBS. Laid out anticlockwise in the local
+      frame; reversed when the aisle that leaves this level runs the other way —
+      which it does whenever the orientation sweep packed the level transposed,
+      a reflection that turns anticlockwise into clockwise.
+    */
+    const leaving = layout.flights.find((f) => f.footRise === 0 && f.headRise > 0);
+    let reverse = false;
+    if (leaving) {
+      const r = leaving.rect;
+      const mx = r.x.plus(r.width.div(2)).toNumber();
+      const my = r.y.plus(r.height.div(2)).toNumber();
+      const sign = leaving.footAtMin ? 1 : -1;
+      const dir = leaving.axis === 'x' ? { x: sign, y: 0 } : { x: 0, y: sign };
+      const sides = [
+        { d: Math.abs(my - y0), t: { x: 1, y: 0 } },
+        { d: Math.abs(mx - x1), t: { x: 0, y: 1 } },
+        { d: Math.abs(my - y1), t: { x: -1, y: 0 } },
+        { d: Math.abs(mx - x0), t: { x: 0, y: -1 } },
+      ].sort((a, b) => a.d - b.d);
+      const t = sides[0]!.t;
+      reverse = t.x * dir.x + t.y * dir.y < 0;
+    }
+    // Half an aisle: the turn then stays inside the square where the two aisles
+    // cross, rather than cutting over the end bays.
+    const r = Math.max(0, Math.min(aisle.toNumber() / 2, (x1 - x0) / 2, (y1 - y0) / 2));
+    const corners = [
+      { cx: x1 - r, cy: y0 + r, from: -90 },
+      { cx: x1 - r, cy: y1 - r, from: 0 },
+      { cx: x0 + r, cy: y1 - r, from: 90 },
+      { cx: x0 + r, cy: y0 + r, from: 180 },
+    ];
+    const path: Pt[] = [];
+    for (const k of corners) {
+      for (let i = 0; i <= 6; i += 1) {
+        const a = ((k.from + i * 15) * Math.PI) / 180;
+        path.push(fromLocal(rect, Math.round((k.cx + r * Math.cos(a)) * 1000), Math.round((k.cy + r * Math.sin(a)) * 1000)));
+      }
+    }
+    if (reverse) path.reverse();
+    const h = aisle.div(2).toNumber() + inset;
+    const ring = [
+      [x0 - h, y0 - h],
+      [x1 + h, y0 - h],
+      [x1 + h, y1 + h],
+      [x0 - h, y1 + h],
+    ].map(([x, y]) => fromLocal(rect, Math.round(x! * 1000), Math.round(y! * 1000)));
+    return { path, outline: ring };
+  };
+
   const notAssessed = [...layout.notes, ...access.notAssessed];
   const marginal = layout.losses.marginalAreaPerBayM2;
   let footprintLostM2 = new Decimal(0);
@@ -372,6 +484,12 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     podiumRing: input.podiumRing,
     reservedZone,
     rampStrip,
+    rampForm: layout.rampForm,
+    rampFlights: layout.flights.map(flightOf),
+    rampTravelM: layout.travelM,
+    rampLoop: layout.loopCentre
+      ? loopOf(layout.loopCentre, new Decimal(layout.standard.drivewayWidthM))
+      : undefined,
     bayCount: layout.bayCount,
     areaPerBayM2: layout.areaPerBayM2,
     losses: {

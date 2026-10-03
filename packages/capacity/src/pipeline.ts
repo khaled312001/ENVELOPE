@@ -29,6 +29,7 @@ import {
   type CapacityResult,
   Decimal,
   EDGE_LABEL,
+  RampForm,
   levelCode,
   type LevelSchedule,
   parkingLevels,
@@ -113,6 +114,20 @@ export type SaleableEfficiencyInput = {
   | { readonly value: Decimal; readonly saleableAreaM2?: undefined }
   | { readonly saleableAreaM2: Decimal; readonly value?: undefined }
 );
+
+/**
+ * Why a straight strip, when nobody said how cars climb.
+ *
+ * It is what the layout reserved before ramp forms existed, so a run that states
+ * nothing keeps the drawing and the count it always had — and now says that this
+ * was an assumption about the design, not a fact about the plot.
+ */
+const RAMP_FORM_BASIS =
+  'A straight ramp strip down one edge of each parking level: the simplest form, ' +
+  'and the one this engine laid out before the form could be stated. A U-turn ramp ' +
+  'takes a strip twice as wide and two-thirds as long; a sloped loop takes no strip ' +
+  'and climbs on the aisles round the island. Which one the building uses is a design ' +
+  'decision — state it on the Rules step to replace this.';
 
 export interface RunInput {
   readonly plot: Plot;
@@ -219,6 +234,12 @@ export interface RunInput {
      * that needs the old packing; nothing in the product sends it.
      */
     readonly avoidCore?: boolean;
+    /**
+     * How cars climb between the parking levels. Absent, a straight ramp strip is
+     * assumed and declared; sent, it is `USER_SET` by `actor`. The engine never
+     * chooses a form for the bays it would win: that is a design decision.
+     */
+    readonly rampForm?: RampForm;
   };
   /**
    * Levels standing on the podium footprint, **the ground floor included**.
@@ -863,6 +884,25 @@ export function runPipeline(input: RunInput): RunOutput {
   let levelPlan: LevelPlan | undefined;
   let levelPlanRefusal: string | undefined;
   const avoidCore = input.levelPlan?.avoidCore ?? true;
+  const includeRamp = input.levelPlan?.includeRamp ?? true;
+  /*
+    THE FORM OF THE RAMP, as a value of its own: a person's statement, or the
+    straight strip the layout has always reserved, declared as the assumption it
+    always was. The gradient names it, so whose decision the ramp's form was is one
+    click from the figure it moves.
+  */
+  const statedForm = input.levelPlan?.rampForm;
+  const rampForm = includeRamp
+    ? statedForm
+      ? tracer.userSet('parking.ramp_form', statedForm, {
+          actor: input.actor,
+          label: 'how cars climb between parking levels',
+        })
+      : tracer.assumed('parking.ramp_form', RampForm.STRAIGHT, {
+          basis: RAMP_FORM_BASIS,
+          label: 'how cars climb between parking levels',
+        })
+    : undefined;
   try {
     levelPlan = planParkingLevel({
       tracer,
@@ -870,7 +910,8 @@ export function runPipeline(input: RunInput): RunOutput {
       edges: input.plot.edges,
       podiumRing: envelope.podiumRing,
       usableFraction: parking.usableFraction,
-      includeRamp: input.levelPlan?.includeRamp ?? true,
+      includeRamp,
+      ...(statedForm === undefined ? {} : { rampForm: statedForm }),
       ...(avoidCore ? { core: parkingObstruction } : {}),
       ...(input.levelPlan?.structuralGridM === undefined
         ? {}
@@ -908,6 +949,7 @@ export function runPipeline(input: RunInput): RunOutput {
     parkingLevels: parking.levelsAvailable,
     levelPlan,
     levelPlanRefusal,
+    ...(rampForm ? { rampForm } : {}),
     answerLevels: capacity.levels,
     /*
       The schedule, when there is one — and it stops the placement being an

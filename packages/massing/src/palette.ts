@@ -17,8 +17,8 @@ import type { ScenePalette } from './scene.js';
  */
 const FILE_INKS = {
   derived: 'var(--derived, #1f6b45)',
-  assumed: 'var(--uncertain, #854b00)',
-  userSet: 'var(--accent, #2b5cd9)',
+  assumed: 'var(--uncertain, #55555f)',
+  userSet: 'var(--accent, #3355e0)',
   neutral: 'var(--text-secondary, #55555f)',
   ground: 'var(--surface-sunken, #eef1f8)',
   car: 'var(--border-strong, #77797f)',

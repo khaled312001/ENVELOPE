@@ -2107,10 +2107,19 @@
   border-block-start: var(--border-width-emphasis) solid var(--border-strong);
   background: var(--surface-sunken);
 }
+/* EVERY COLOUR IN THIS BLOCK IS A BAND INK, and it is worth saying why once
+   rather than five times. The footer went dark on 5 Oct 2026, which made it the
+   second `--surface-contrast` band on the site — the one ground deliberately
+   left out of the nine every ink is measured against. The grey ladder
+   (`--text-secondary`, `--text-tertiary`) has no measured row against it, so
+   each of these was an unmeasured pair the moment the background changed, and
+   all five were still printing green until `assertNoChromeOnBand` was widened to
+   read text colour as well as state colour. Use `--text-on-contrast` and
+   `--text-on-contrast-dim` here, nothing else. */
 .colophon p {
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
-  color: var(--text-secondary);
+  color: var(--text-on-contrast-dim);
   max-inline-size: var(--measure-fine);
   text-wrap: pretty;
 }
@@ -2132,35 +2141,46 @@
   font-weight: var(--weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--tracking-label);
-  color: var(--text-tertiary);
-  margin-block-end: var(--space-3);
+  color: var(--text-on-contrast);
+  margin-block-end: var(--space-2);
 }
-.colophon__group li + li { margin-block-start: var(--space-1); }
+.colophon__group li + li { margin-block-start: 0; }
 .colophon__group a {
   display: inline-flex;
   align-items: center;
-  min-block-size: var(--tap-min);
+  /* 36px rather than the 44px `--tap-min`. The client asked for a shorter
+     footer and a ten-link column is what makes it tall; 36px with the rows
+     unspaced keeps every link comfortably hittable while taking roughly a
+     quarter off the block. Below `--tap-min` the rows would have to regain
+     their gap, which is the trade this stops at rather than crossing. */
+  min-block-size: 2.25rem;
   font-size: var(--text-sm);
-  color: var(--text-secondary);
+  color: var(--text-on-contrast-dim);
   text-decoration: none;
 }
-/* THE ONE PLACE THIS PASS ADDS THE BLUE, and it adds it in a STATE and never at
-   rest. A sitemap of thirty links painted blue is a brand wash; the same thirty
-   links answering the pointer in the interactive colour is the colour doing its
-   declared job — one blue, interactive affordance and nothing else — and it costs
-   the page nothing that a screenshot can measure, because a hover has no area
-   until somebody hovers. That is the discipline the whole colour pass runs on:
-   the page gains colour in RESPONSE, so the amber-to-accent filled-area ratio is
-   exactly what it was before. */
+/* THIS USED TO BE THE ONE PLACE THIS PASS ADDED THE BLUE — in a STATE and never
+   at rest, on the argument that a hover has no area until somebody hovers.
+
+   THE ARGUMENT WAS SOUND AND THE GROUND MOVED UNDER IT. The client asked for a
+   dark footer on 5 Oct 2026, so the colophon now paints `--surface-contrast`,
+   which is the one surface deliberately EXCLUDED from the nine grounds every ink
+   is measured against — on it, in light, `--accent` falls to 3.12. The blue here
+   would have been an unmeasured pair on an excluded ground, and it was found by
+   `assertNoChromeOnBand` only because that assertion's selector list was widened
+   to include `colophon` in the same change. It would otherwise have shipped
+   green.
+
+   The hover signal is now the band's own full ink plus the underline, which is
+   the stronger of the two cues on a dark ground anyway. */
 .colophon__group a:hover {
-  color: var(--accent);
+  color: var(--text-on-contrast);
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
 .colophon__group a:active,
 .colophon__group a:focus-visible {
-  color: var(--accent);
-  background-color: var(--surface-inset);
+  color: var(--text-on-contrast);
+  background-color: color-mix(in srgb, var(--text-on-contrast) 10%, transparent);
   text-decoration: underline;
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -2192,18 +2212,18 @@
   font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: var(--tracking-label);
-  color: var(--text-tertiary);
+  color: var(--text-on-contrast);
 }
 .colophon__claim dd {
   margin: 0;
   text-wrap: pretty;
 }
 .colophon__build {
-  margin-block-start: var(--space-4);
+  margin-block-start: var(--space-3);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums lining-nums slashed-zero;
-  color: var(--text-tertiary);
+  color: var(--text-on-contrast-dim);
 }
 
 /* ==========================================================================

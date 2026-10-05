@@ -354,7 +354,12 @@ function Colophon({
             // link to a page that does not exist is a promise with a date attached.
             if (members.length === 0 && !isReference) return null;
             return (
-              <div className="colophon__group" key={group}>
+              /* `data-group` is for the stylesheet, not for the reader: the
+                 footer flows its lists into two sub-columns to halve the band's
+                 height, and a two-item list split one-and-one reads as a layout
+                 fault. CSS cannot count children, so the one long group names
+                 itself. */
+              <div className="colophon__group" data-group={group} key={group}>
                 <h2>
                   <Icon glyph={GROUP_GLYPH[group]} className="colophon__glyph" />
                   {t.colophon.groups[group]}

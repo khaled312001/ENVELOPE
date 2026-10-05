@@ -5,12 +5,22 @@ mobile i7 -- large-v3 would mean a 3 GB download and roughly 3x the wall clock
 for a recording we need today. Language is pinned to Arabic: the meeting is two
 Egyptians talking, and auto-detect on a code-switched opening minute has a habit
 of latching onto English and never recovering.
+
+Paths are arguments, not constants. The first version hardcoded one meeting's
+file and one session's scratchpad, so the second meeting could not be run
+through it without editing the script -- and a script edited per run is a script
+whose last run cannot be reproduced.
+
+    python scripts/extract/transcribe-meeting.py <audio-file> <out-dir>
 """
-import sys, time, json
+import os, sys, time, json
 from faster_whisper import WhisperModel
 
-SRC = r"E:\ENVELOPE\last meating.mp4"
-OUT = r"C:\Users\KHALE\AppData\Local\Temp\claude\e--ENVELOPE\b497bc93-60c6-4d45-8627-bc9aad1cb443\scratchpad\mtg"
+if len(sys.argv) < 3:
+    sys.exit("usage: transcribe-meeting.py <audio-file> <out-dir>")
+SRC = sys.argv[1]
+OUT = sys.argv[2]
+os.makedirs(OUT, exist_ok=True)
 
 t0 = time.time()
 model = WhisperModel("medium", device="cpu", compute_type="int8", cpu_threads=8)

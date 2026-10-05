@@ -28,6 +28,13 @@ import { WorkspaceProvider } from './workspace.js';
  * its own class prefix and never a chassis rule.
  */
 import './styles/tokens.css';
+/* THE 2026 LANGUAGE, straight after the tokens and BEFORE the old chassis.
+   Before, not after, because it declares its own `m*` prefix and never competes
+   for a chassis selector — so the one thing its position decides is that the
+   custom properties it adds (the display scale, the gradients, the glass) are
+   defined by the time anything reads them. A property read before it is
+   declared is invalid at computed-value time, which is silent. */
+import './styles/modern.css';
 import './styles/site.css';
 /* Straight after the chassis, because it ADDS to the chrome's own link rules
    rather than replacing them — the nav's underline and press are `site.css`'s
@@ -52,6 +59,14 @@ import './styles/not-found.css';
 import './styles/work.css';
 import './styles/antechamber.css';
 import './styles/workspace.css';
+/* The 2026 shell. After every page stylesheet because it RESTYLES `.nav` and
+   `.colophon` rather than defining a second shell, so its position is the whole
+   of how it wins — and before `rtl.css`, which must stay last. */
+import './styles/chrome.css';
+/* The console: sign-in, the sidebar and the signed-in plates. Same argument as
+   `chrome.css` and after it, because the auth card's submit is the nav's primary
+   button and the later sheet is the one that may finish the sentence. */
+import './styles/console.css';
 /* Last, and it is the only sheet whose position matters: it turns 235 logical
    properties into a right-to-left layout and overrides the Latin font stack for
    Arabic, so anything it touches has to already be defined. */

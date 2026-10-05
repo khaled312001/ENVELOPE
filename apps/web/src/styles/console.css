@@ -1,0 +1,398 @@
+/*
+ * THE CONSOLE, 2026 — sign-in, the sidebar, and the signed-in surfaces.
+ *
+ * Imported after every page sheet and after `chrome.css`, for the same reason
+ * that one is: it restyles selectors those files already define, so it has to
+ * win on order. NO MARKUP IS TOUCHED by this file — the auth form's labels,
+ * its `aria-live` region, the reveal control's `aria-pressed`, the sidebar's
+ * collapse state and the account panel's field help are all behaviour, and a
+ * restyle has no business re-deriving any of it.
+ *
+ * WHAT THE CLIENT ASKED FOR, AND WHAT HE ALREADY HAD.
+ *
+ * *«وعاوز الدخول دايماً كلوحة تحكم احترافية بحسابات دخول وصلاحيات وتصميم عصري
+ * وألوان وأنيميشن سواء أدمن أو مستخدم عادي»*.
+ *
+ * Accounts and permissions are built: `/sign-in`, `/sign-up`, `/settings`,
+ * `/workspace` and `/accept-invite` are real screens, and `apps/api/src/access.ts`
+ * grants a run to its author plus named accounts as `reviewer` or `reader`, with
+ * anyone else getting 404 rather than 403 so a run's existence does not leak.
+ * What was missing was that none of it LOOKED like a console. That is this file.
+ *
+ * WHAT THIS FILE DOES NOT DO, SAID HERE SO IT IS NOT MISTAKEN FOR DONE: there is
+ * no administrator role. `reviewer` and `reader` are per-run grants, not an
+ * account rank, and there is no tenancy. A stylesheet cannot add one and must
+ * not look as though it has — so nothing below paints a badge, a crown or an
+ * "admin" affordance for a permission the server does not issue. Styling a role
+ * that does not exist is how a demo starts claiming an access model it has not
+ * got, which is the same class of defect as a drawing rebuilt from area figures.
+ *
+ * Colour rule, inherited from `chrome.css` and non-negotiable: DECORATION SPENDS
+ * THE BRAND, NEVER A STATE. No `--derived`, `--variance`, `--deferred` or
+ * `--uncertain` is used here for ornament. And no colour literals — `pnpm
+ * contrast` assertion (7).
+ */
+
+/* ==========================================================================
+ * SIGN IN / SIGN UP — a two-column console door.
+ * ======================================================================= */
+
+.auth__split {
+  position: relative;
+  isolation: isolate;
+}
+
+/* The brand wash behind the door. Behind everything via an isolated stacking
+   context, so no measured text pair ever composites onto an unmeasured ground. */
+.auth__split::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset-block-start: -6rem;
+  inset-inline-start: -14rem;
+  inline-size: 46rem;
+  block-size: 46rem;
+  border-radius: var(--radius-round);
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--accent) 9%, transparent) 0%,
+    transparent 68%
+  );
+  pointer-events: none;
+}
+
+.auth__title {
+  letter-spacing: var(--tracking-tight);
+}
+
+.auth__lede {
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-lede);
+}
+
+/* --- The form card ----------------------------------------------------- */
+
+.auth__form {
+  position: relative;
+  padding: var(--space-6);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  animation: console-rise var(--duration-reveal) var(--ease-out) both;
+}
+
+/* The card's own top rule, the same gradient as the nav's. Two surfaces a
+   reader meets in sequence, marked as the same product. */
+.auth__form::before {
+  content: '';
+  position: absolute;
+  inset-inline: var(--space-6);
+  top: 0;
+  block-size: 2px;
+  border-radius: var(--radius-pill);
+  background-image: var(--gradient-brand);
+}
+
+.auth__form-col {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* --- Fields ------------------------------------------------------------ */
+
+.auth .field { display: grid; gap: var(--space-2); }
+
+.auth .input {
+  border-radius: var(--radius-sm);
+  border: var(--border-width) solid var(--border-control);
+  background: var(--surface-base);
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+/* The focus ring is a RING, not a glow that replaces the outline: the outline
+   is what a Windows high-contrast theme keeps. */
+.auth .input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+.auth .field__help,
+.auth .field__optional {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+/* --- The submit -------------------------------------------------------- */
+
+.auth__form .button--primary {
+  inline-size: 100%;
+  min-block-size: var(--control-h-lg);
+  border-radius: var(--radius-pill);
+  background-image: var(--gradient-brand);
+  border-color: transparent;
+  box-shadow: var(--shadow-glow);
+  font-weight: 600;
+  transition:
+    transform var(--duration-fast) var(--ease-spring),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+.auth__form .button--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+.auth__form .button--primary:active { transform: translateY(0); }
+
+.auth__switch {
+  margin-block-start: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.auth__switch a { color: var(--accent); }
+
+/* --- The aside --------------------------------------------------------- */
+
+.auth__aside {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  background: var(--surface-sunken);
+  border: var(--border-width) solid var(--border-subtle);
+}
+
+.auth__aside-body { color: var(--text-secondary); }
+
+/* The sentence that says what an account does NOT do keeps the strongest
+   treatment on the panel. It is the honest half of a sign-up page and it is the
+   half a reader skips, so it is the one thing here with a rule beside it. */
+.auth__aside-not {
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--border-width-emphasis) solid var(--border-strong);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.auth__aside-guest {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.auth__error {
+  border-radius: var(--radius-md);
+}
+
+/* ==========================================================================
+ * THE SIDEBAR — the console's spine.
+ * ======================================================================= */
+
+.sidebar {
+  background: var(--surface-sunken);
+  border-inline-end: var(--border-width) solid var(--border-subtle);
+}
+
+.sidebar__inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sidebar__head {
+  padding-block-end: var(--space-4);
+  border-block-end: var(--border-width) solid var(--border-subtle);
+}
+
+.sidebar__eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.sidebar__list {
+  display: grid;
+  gap: var(--space-hair);
+  list-style: none;
+  /* A `*{margin:0}` reset does NOT clear a list's 40px inline-start padding,
+     and that padding is what silently mis-aligns a rail against its header. */
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 2.5rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-spring);
+}
+
+/* The active marker is a rail at the leading edge, drawn with a scale so the
+   row never reflows between states. */
+.sidebar__item::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 0.35rem;
+  inline-size: 3px;
+  border-radius: var(--radius-pill);
+  background-image: var(--gradient-brand);
+  transform: scaleY(0);
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+
+.sidebar__item:hover {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  color: var(--text-primary);
+}
+
+.sidebar__item[aria-current='page'] {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-weight: 600;
+}
+.sidebar__item[aria-current='page']::before { transform: scaleY(1); }
+
+.sidebar__glyph {
+  inline-size: 1rem;
+  block-size: 1rem;
+  flex: none;
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+.sidebar__item:hover .sidebar__glyph { transform: scale(1.14); }
+
+.sidebar__who {
+  margin-block-start: auto;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-subtle);
+}
+.sidebar__who-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-tertiary);
+}
+.sidebar__who-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* A guest's identity is a key in one browser, and the sidebar is where that is
+   read. It is said in words by the markup; this only keeps it from reading as a
+   signed-in account. */
+.sidebar__guest {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.sidebar__collapse { border-radius: var(--radius-pill); }
+
+/* ==========================================================================
+ * THE ACCOUNT PANEL — the antechamber's own door.
+ * ======================================================================= */
+
+.ac-account {
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-subtle);
+  box-shadow: var(--shadow-md);
+}
+
+.ac-account__heading { letter-spacing: var(--tracking-tight); }
+
+.ac-account__form { display: grid; gap: var(--space-4); }
+
+.ac-account__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.ac-account__actions .button--primary {
+  border-radius: var(--radius-pill);
+  background-image: var(--gradient-brand);
+  border-color: transparent;
+  box-shadow: var(--shadow-glow);
+}
+
+.ac-account__terms {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* ==========================================================================
+ * PLATES — the repeated card across /work, /settings and /workspace.
+ * ======================================================================= */
+
+.plate {
+  border-radius: var(--radius-lg);
+  border: var(--border-width) solid var(--border-subtle);
+  background: var(--surface-raised);
+  transition:
+    border-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-spring);
+}
+
+a.plate:hover,
+.plate:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border-default));
+  box-shadow: var(--shadow-md);
+}
+a.plate:hover { transform: translateY(-2px); }
+
+/* ==========================================================================
+ * ENTRANCE — one keyframe, used by the auth card and nothing else.
+ * ======================================================================= */
+
+@keyframes console-rise {
+  from { opacity: 0; transform: translateY(0.75rem); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ==========================================================================
+ * REDUCED MOTION — transforms fold flat, colour stays.
+ * ======================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .auth__form { animation: none; }
+  .auth__form .button--primary:hover,
+  .sidebar__item:hover,
+  .sidebar__item:hover .sidebar__glyph,
+  a.plate:hover { transform: none; }
+  .sidebar__item::before { transition: none; }
+}
+
+/* ==========================================================================
+ * PRINT — a console is not a document, and the one thing worth keeping on
+ * paper from a signed-in screen is the content, not its furniture.
+ * ======================================================================= */
+
+@media print {
+  .auth__split::before,
+  .auth__form::before { display: none; }
+  .auth__form,
+  .ac-account,
+  .plate { box-shadow: none; }
+  .sidebar { display: none; }
+}

@@ -1,0 +1,417 @@
+/*
+ * THE 2026 VISUAL LANGUAGE.
+ *
+ * Written on the client’s direction of 5 Oct 2026: delete the existing design of
+ * the public site and the workspace, and build a current one — colour, motion,
+ * icons, "like a world-class site". This file is the new language's own layer;
+ * `tokens.css` keeps the measured palette underneath it and every value here
+ * reads a semantic token, because `pnpm contrast` assertion (7) fails any
+ * component stylesheet that writes a colour literal, and that rule survived the
+ * redesign on purpose.
+ *
+ * ---------------------------------------------------------------------------
+ * THE DIRECTION, AND WHY THIS ONE.
+ *
+ * The 2026 split is between techno-futurist (deep grounds, a confident accent,
+ * real elevation, bento composition) and editorial (cream, serif, whitespace),
+ * and the research is unanimous that picking ONE and executing it is worth more
+ * than sampling both. This product computes building envelopes from regulatory
+ * instruments; its reader is an architect or a funder, not a reader of essays.
+ * So: technical precision, executed with depth — the Linear/Vercel register —
+ * and no serif, no cream, no mascots.
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT THIS LAYER ADDS THAT THE OLD ONE COULD NOT EXPRESS.
+ *
+ * 1. GRADIENTS AND GLASS, as tokens. The old language had neither, so every
+ *    surface was a flat fill and the page had exactly one depth. A gradient
+ *    here is always built FROM semantic tokens with `color-mix`, never from a
+ *    hex, so a theme swap carries it and the contrast checker can still resolve
+ *    the endpoints.
+ * 2. A DISPLAY SCALE. The old scale topped out at a size that reads as a
+ *    document heading. A landing page needs a size that reads as a statement.
+ * 3. MOTION THAT IS COMPOSITOR-ONLY. `transform` and `opacity` and nothing
+ *    else — and the reveal animates TRANSFORM ALONE, never opacity, because a
+ *    scroll-driven animation holds its start state for anything that has never
+ *    entered a viewport and an opacity start of 0 prints three blank sections.
+ *    That defect shipped once here and the rule is kept verbatim.
+ * ======================================================================== */
+
+:root {
+  /* --- The display scale. Tight tracking, because a large size set at normal
+     tracking reads as a document rather than as a statement. --- */
+  --text-display-sm: clamp(2rem, 4.5vw, 2.75rem);
+  --text-display: clamp(2.5rem, 6.5vw, 4.5rem);
+  --text-display-lg: clamp(3rem, 9vw, 6rem);
+  --tracking-display: -0.03em;
+  --tracking-tight: -0.015em;
+  --tracking-wide: 0.08em;
+
+  /* --- Gradients, mixed from the semantic layer so a theme carries them. --- */
+  --gradient-brand: linear-gradient(
+    135deg,
+    var(--accent) 0%,
+    color-mix(in oklab, var(--accent) 65%, var(--derived)) 100%
+  );
+  --gradient-ink: linear-gradient(
+    180deg,
+    var(--surface-raised) 0%,
+    var(--surface-sunken) 100%
+  );
+  /* The hero wash. Three stops of the brand at low alpha over the page, which
+     reads as a lit ground rather than as a coloured panel. */
+  --gradient-hero: radial-gradient(
+      62rem 42rem at 78% -10%,
+      color-mix(in oklab, var(--accent) 16%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      48rem 34rem at 8% 4%,
+      color-mix(in oklab, var(--derived) 10%, transparent) 0%,
+      transparent 55%
+    );
+  /* A hairline that fades — the single most effective modern separator, and it
+     cannot be expressed as a border at all. */
+  --gradient-rule: linear-gradient(
+    90deg,
+    transparent,
+    var(--border-default) 18%,
+    var(--border-default) 82%,
+    transparent
+  );
+
+  /* --- Glass. One recipe, so a sticky header and a floating card agree. --- */
+  --glass-blur: saturate(180%) blur(14px);
+  --glass-surface: color-mix(in srgb, var(--surface-base) 72%, transparent);
+  --glass-border: color-mix(in srgb, var(--border-default) 60%, transparent);
+
+  /* --- Motion. The old file had durations; this adds the two the new language
+     spends and nothing more. --- */
+  --duration-slow: 620ms;  /* a hero element arriving, and only that */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* a control answering a press */
+}
+
+/* ==========================================================================
+ * MOTION — declared once, consumed by class, OFF when the reader asked.
+ * ======================================================================= */
+
+@media (prefers-reduced-motion: no-preference) {
+  .m-rise {
+    animation: m-rise var(--duration-slow) var(--ease-out) both;
+    animation-delay: calc(var(--m-order, 0) * 70ms);
+  }
+  .m-reveal {
+    /* TRANSFORM ONLY. See the header: a scroll-driven reveal that starts at
+       opacity 0 leaves anything which never entered a viewport permanently
+       invisible — in a full-page screenshot and on paper. */
+    animation: m-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 22%;
+  }
+}
+
+@keyframes m-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--motion-rise), 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes m-reveal {
+  from {
+    transform: translate3d(0, calc(var(--motion-rise) * 1.6), 0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+ * PRIMITIVES OF THE NEW LANGUAGE
+ * ======================================================================= */
+
+/* --- The section shell: one column, one rhythm, everywhere. --- */
+.mx {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+}
+
+.msection {
+  padding-block: var(--rhythm-major);
+}
+
+.mrule {
+  height: 1px;
+  border: 0;
+  background: var(--gradient-rule);
+}
+
+/* --- Eyebrow: the small tracked label above a heading. --- */
+.meyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* --- Display headings. --- */
+.mdisplay {
+  font-size: var(--text-display);
+  line-height: 1.02;
+  letter-spacing: var(--tracking-display);
+  color: var(--text-primary);
+  text-wrap: balance;
+  margin: 0;
+}
+.mdisplay--lg { font-size: var(--text-display-lg); }
+.mdisplay--sm { font-size: var(--text-display-sm); line-height: 1.08; }
+
+.mlede {
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+  max-width: 46ch;
+  margin: 0;
+}
+
+/* ==========================================================================
+ * BUTTONS — the new action language.
+ *
+ * The primary is the brand gradient with a coloured lift. `--shadow-glow` is
+ * written in the token file from the accent's own channels, so a theme that
+ * re-pitches the blue carries the glow instead of leaving a stale tint.
+ * ======================================================================= */
+
+.mbtn {
+  --mbtn-pad: var(--space-3) var(--space-5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--mbtn-pad);
+  min-block-size: 2.75rem;      /* 44px — the 2.5.8 target, not a look */
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    transform var(--duration-fast) var(--ease-spring),
+    box-shadow var(--duration-base) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.mbtn:active { transform: translateY(1px) scale(0.985); transition-duration: var(--duration-instant); }
+
+.mbtn--primary {
+  background-image: var(--gradient-brand);
+  background-color: var(--action);
+  color: var(--text-on-action);
+  box-shadow: var(--shadow-glow);
+}
+.mbtn--primary:hover { box-shadow: var(--shadow-glow), var(--shadow-md); }
+
+.mbtn--ghost {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-color: var(--border-control);
+  box-shadow: var(--shadow-sm);
+}
+.mbtn--ghost:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+
+.mbtn--quiet {
+  background: transparent;
+  color: var(--text-secondary);
+  padding-inline: var(--space-3);
+}
+.mbtn--quiet:hover { color: var(--text-primary); background: var(--surface-sunken); }
+
+.mbtn--lg { --mbtn-pad: var(--space-4) var(--space-6); font-size: var(--text-base); min-block-size: 3.25rem; }
+
+.mbtn .lucide { inline-size: 1.125em; block-size: 1.125em; flex: none; }
+
+/* ==========================================================================
+ * CARDS AND THE BENTO GRID
+ *
+ * `auto-fit`, never `auto-fill`: `auto-fill` keeps empty phantom tracks, so
+ * three cards cluster left with a void on the right. And every `minmax` min is
+ * wrapped in `min(…, 100%)` or the track is wider than a 320px viewport and the
+ * page scrolls sideways.
+ * ======================================================================= */
+
+.mcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mcard--lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border-default);
+  }
+}
+
+.mcard__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: var(--radius-md);
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+.mcard__icon .lucide { inline-size: 1.25rem; block-size: 1.25rem; }
+
+.mcard__title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.mcard__body {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.mbento {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+}
+/* The one tile that carries more weight. Below the breakpoint every tile is
+   one column, so the span must not apply — a `span 2` in a one-column grid
+   silently creates a second track. */
+@media (min-width: 52rem) {
+  .mbento__wide { grid-column: span 2; }
+}
+
+/* ==========================================================================
+ * THE STICKY GLASS HEADER
+ * ======================================================================= */
+
+.mnav {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: var(--glass-surface);
+  border-block-end: var(--border-width) solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+/* `backdrop-filter` is not universal. Without it the bar is 72% transparent
+   over scrolling content, which is unreadable — so the fallback is opaque. */
+@supports not (backdrop-filter: blur(1px)) {
+  .mnav { background: var(--surface-base); }
+}
+
+.mnav__in {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-block-size: var(--header-h);
+}
+
+.mnav__spacer { margin-inline-start: auto; }
+
+/* ==========================================================================
+ * THE HERO
+ * ======================================================================= */
+
+.mhero {
+  position: relative;
+  overflow: clip;
+  padding-block: clamp(var(--space-8), 11vw, var(--space-10));
+  background-image: var(--gradient-hero);
+}
+
+/* A grid lattice behind the hero: the one decorative mark in the language, and
+   it is the product's own subject — a plot grid — rather than an ornament. */
+.mhero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  mask-image: radial-gradient(60% 50% at 50% 0%, #000 0%, transparent 75%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.mhero__in { position: relative; }
+
+.mhero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* ==========================================================================
+ * STAT ROW
+ * ======================================================================= */
+
+.mstats {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+}
+
+.mstat__figure {
+  font-family: var(--font-mono);
+  font-size: var(--text-display-sm);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  line-height: 1.05;
+}
+
+.mstat__label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+/* ==========================================================================
+ * RESPONSIVE — every rule above is fluid; these are the two that are not.
+ * ======================================================================= */
+
+@media (max-width: 48rem) {
+  .mnav__links { display: none; }
+  .mbtn--lg { inline-size: 100%; }
+  .mhero__actions .mbtn { flex: 1 1 100%; }
+}

@@ -2,23 +2,36 @@
  * The step primer, on all ten steps and in both languages.
  *
  * ---------------------------------------------------------------------------
- * THIS IS A TEST ABOUT SHAPE, BECAUSE THE SHAPE IS THE FIX.
+ * THIS FILE USED TO ASSERT THE OPPOSITE OF WHAT IT ASSERTS NOW, AND THAT IS THE
+ * POINT OF READING THE COMMENT BEFORE THE CODE.
  *
- * Three of the nine points in the client's reply are the same point — he read a
- * panel and could not tell what it was for. The answer was not more words: each
- * of those panels already said something true and important. It was an order.
- * Fact first, then what it costs the reader, then the argument behind a closed
- * disclosure.
+ * It was written to hold a three-layer structure in place — a fact, then what
+ * the step costs the reader, then the argument behind a closed disclosure, with
+ * a commissioned drawing beside it. That structure answered a note in which the
+ * client said he could not tell what a panel was for, and the test guarded the
+ * ORDER rather than the copy, because a test that only checked the words were
+ * present would have passed on a panel that opened with the argument again.
  *
- * A test asserting the copy is present would pass on a step whose primer opened
- * with the argument again, which is the exact defect. So what is held here is the
- * ORDER, the CLOSED disclosure, and the completeness of the set — plus the two
- * prohibitions that apply to every surface on this site.
+ * On 4 Oct 2026 he drove the product himself and asked for all of it back, five
+ * times in one call, and then said why: *«اللي هيستعمل حاجة زي كده … هيبقى مهندس
+ * لازم»* (37:43). In writing afterwards: *«مش عاوز في الخطوات صور ثابتة أو شرح»*.
  *
- * AND THE AMBER SENTENCE IS HELD BOTH WAYS. It must be on the three steps where
- * an ASSUMED value is actually on screen, and absent from the other seven: a
- * sentence explaining a colour that is not there teaches a reader that the colour
- * is decoration, which is the precise opposite of what §13.1 reserves it for.
+ * So the assertions are inverted rather than deleted. A REMOVAL THAT LEAVES NO
+ * TEST BEHIND IS NOT A DECISION, IT IS AN ABSENCE — the next contributor who
+ * finds a bare `fact` on ten screens has nothing telling them it is deliberate,
+ * and the three-layer primer grows back one step at a time. What is held now:
+ *
+ *   1. One line renders, and it is the fact.
+ *   2. NOTHING ELSE renders — no second paragraph, no disclosure, no image, no
+ *      state swatch. Each is asserted by its own absence, by name.
+ *   3. Everything that was ALWAYS true stays true: ten steps, both languages,
+ *      no compliance claim, no banned vocabulary, no English left in the Arabic,
+ *      and no sentence repeated from the panel below it.
+ *
+ * THE DICTIONARIES STILL CARRY ALL FOUR FIELDS and the tests below still read
+ * them. `means`, `why` and `amber` are translated, reviewed prose that nothing
+ * renders today; holding them to the no-repetition rule costs one loop and keeps
+ * them usable if he asks for any of it back.
  */
 
 import { readdirSync, readFileSync } from 'node:fs';
@@ -26,8 +39,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { STEP_IMAGE, StepPrimer } from '../src/components/StepPrimer.js';
-import { hasImage } from '../src/img.js';
+import { StepPrimer } from '../src/components/StepPrimer.js';
 import { StaticLocale } from '../src/i18n/locale.js';
 import { EN, type PrimerStep } from '../src/i18n/primer.en.js';
 import { AR } from '../src/i18n/primer.ar.js';
@@ -60,9 +72,6 @@ const STEPS: readonly PrimerStep[] = [
   'export',
 ];
 
-/** The three steps that put an ASSUMED value on screen. */
-const AMBER_STEPS: readonly PrimerStep[] = ['assumptions', 'capacity', 'parking'];
-
 const en = (step: PrimerStep): string => renderToStaticMarkup(<StepPrimer step={step} />);
 const ar = (step: PrimerStep): string =>
   renderToStaticMarkup(
@@ -86,47 +95,57 @@ describe('every step in the flow', () => {
       const out = en(step);
       const p = EN.steps[step];
 
-      it('opens with the fact and not with the argument', () => {
+      it('renders the fact and nothing before it', () => {
         const text = stripTags(out).replace(/\s+/g, ' ').trim();
-        expect(text.startsWith(p.fact.replace(/\s+/g, ' ')), `${step} opens: ${text.slice(0, 80)}`).toBe(
-          true,
-        );
-        // The fact before what it means, and both before the disclosure.
-        expect(out.indexOf(p.fact.slice(0, 20))).toBeLessThan(out.indexOf(p.means.slice(0, 20)));
-        expect(out.indexOf(p.means.slice(0, 20))).toBeLessThan(out.indexOf('<details'));
+        expect(text).toBe(p.fact.replace(/\s+/g, ' ').trim());
       });
 
       it('states one fact, not a paragraph of them', () => {
         /*
           A `fact` that has grown to three sentences has become the argument
-          again, which is what this whole component exists to move. One sentence
-          — a single terminal full stop, at the end.
+          again, which is what this whole component exists to keep out. One
+          sentence — a single terminal full stop, at the end.
         */
         const sentences = p.fact.split(/\.\s/).length;
         expect(sentences, `${step}: "${p.fact}"`).toBe(1);
       });
 
-      it('keeps the argument available and out of the way', () => {
-        expect(out).toMatch(/<details[^>]*class="disclosure"/);
-        expect(out, `${step} opens its disclosure`).not.toMatch(/<details[^>]*\sopen[\s>]/);
-        expect(stripTags(out)).toContain(p.whySummary);
+      /*
+        THE FOUR ABSENCES, EACH BY NAME.
+
+        One assertion that the markup is short would pass on a primer that had
+        regrown a disclosure and lost its fact. These name the four things that
+        were removed on 5 Oct 2026, so a reinstated one fails on the line that
+        says which.
+      */
+      it('carries no second paragraph', () => {
+        expect(out, `${step} renders "means" again`).not.toContain(p.means.slice(0, 24));
+        expect((out.match(/<p[\s>]/g) ?? []).length, `${step} paragraphs`).toBe(1);
+      });
+
+      it('carries no disclosure', () => {
+        expect(out, `${step} has a <details>`).not.toMatch(/<details/);
+        expect(stripTags(out), `${step} shows the summary`).not.toContain(p.whySummary);
+      });
+
+      it('carries no image and reserves no space for one', () => {
+        expect(out, `${step} renders an <img>`).not.toMatch(/<img\b/);
+        expect(out, `${step} keeps the figure layout`).not.toContain('figured');
+      });
+
+      it('carries no state swatch', () => {
+        /*
+          `traced--assumed` was the amber swatch beside the sentence that taught
+          the colour. The colour itself was removed the same day — *«احذف التمييز
+          نهائيًا»* — so a swatch here would now be a mark for a distinction the
+          product no longer draws.
+        */
+        expect(out, `${step} renders a swatch`).not.toContain('traced--assumed');
       });
 
       it('claims no compliance and uses none of the banned vocabulary', () => {
         expectNoComplianceClaim(stripTags(out), step);
         expectNoBannedVocabulary(stripTags(out), step);
-      });
-
-      it(`${AMBER_STEPS.includes(step) ? 'teaches amber, where amber is on screen' : 'does not teach a colour this step does not show'}`, () => {
-        const shows = AMBER_STEPS.includes(step);
-        expect(p.amber !== undefined, `${step} amber`).toBe(shows);
-        expect(out.includes('traced--assumed'), `${step} swatch`).toBe(shows);
-        if (shows) {
-          // In words, not in the colour alone — 1.4.1, and a client who read the
-          // colour and wrote back that he did not understand it.
-          expect(stripTags(out).toLowerCase()).toContain('amber');
-          expect(stripTags(out).toLowerCase()).toMatch(/assumed/);
-        }
       });
 
       it('says it in Arabic, with no English prose left in it', () => {
@@ -148,23 +167,22 @@ describe('every step in the flow', () => {
   }
 });
 
-describe('the amber sentence', () => {
-  it('names the colour and refuses the reading a Dubai reader arrives with', () => {
-    /*
-      The UAE Design System makes amber the government warning colour, so a
-      reader trained on Dubai portals arrives holding the opposite meaning. This
-      cannot be left to convention, and it is the one sentence in the primer that
-      may not be shortened away.
-    */
-    for (const step of AMBER_STEPS) {
-      const text = stripTags(en(step)).toLowerCase();
-      expect(text, `${step}`).toMatch(/not a warning|not unsafe|nothing has gone wrong/);
-    }
-  });
-
-  it('is beside the colour, not a paragraph away from it', () => {
-    for (const step of AMBER_STEPS) {
-      expect(en(step)).toContain('<p class="primer__amber"><span class="traced traced--assumed"');
+/**
+ * THE HONESTY THE REMOVAL DID NOT TOUCH.
+ *
+ * Cutting prose is safe exactly as far as the prose was teaching. The moment it
+ * starts cutting things a reader is entitled to rely on it is a different change
+ * wearing the same commit message, so the boundary is asserted rather than
+ * described: the masthead sentence, the ASSUMED marks on values and the refusals
+ * page are all outside this component and none of them moved. What is checkable
+ * from here is that the primer never carried one of them in the first place.
+ */
+describe('what the primer never carried', () => {
+  it('never carried the validity sentence, so removing it moved nothing', () => {
+    for (const step of STEPS) {
+      const text = stripTags(en(step)).toUpperCase();
+      expect(text, `${step}`).not.toContain('NOT ASSESSED');
+      expect(text, `${step}`).not.toContain('REGULATORY VALIDITY');
     }
   });
 });
@@ -184,6 +202,11 @@ describe('the amber sentence', () => {
  * and another dictionary is one of them repeating the other — forty is long
  * enough that no idiom reaches it by chance, and short enough to catch a
  * sentence that was lightly reworded rather than moved.
+ *
+ * IT STILL READS `means` AND `amber` THOUGH NOTHING RENDERS THEM. They are kept
+ * in the dictionary against him asking for them back, and a sentence that has
+ * quietly drifted into duplicating a panel while nobody was rendering it is the
+ * one that would be reinstated.
  *
  * COMMENTS ARE STRIPPED FIRST, because the comments in these files quote the
  * copy they are explaining, and in the primer's case quote the very sentences
@@ -219,65 +242,6 @@ describe('the primer and the panels under it', () => {
           }
         }
       }
-    }
-  });
-});
-
-/**
- * THE FIGURE, AND THE TWO WAYS IT COMES APART.
- *
- * A step's drawing is named here and described in `imagery.en.ts` /
- * `imagery.ar.ts`, which `imagery.test.ts` holds to the brief that commissioned
- * it. What is left for this file is the half that is the primer's own: that the
- * right steps have a figure at all, that the names are ones the brief
- * commissions, and that the panel does not change shape until a file exists.
- *
- * THE SECOND OF THOSE IS THE ONE WITH NO FILES IN IT. None of the twenty-five
- * images exists yet; `img.tsx` makes absence silent, and the assertion below is
- * written so that it holds BEFORE and AFTER they land - an `<img>` is present in
- * the markup exactly when the file is on disk, never on the strength of a name
- * in a table.
- */
-describe('the step figure', () => {
-  const ILLUSTRATED = STEPS.filter((s) => STEP_IMAGE[s] !== undefined);
-
-  it('is commissioned for every step but the confirmation screen', () => {
-    expect(ILLUSTRATED).toEqual(STEPS.filter((s) => s !== 'parameters'));
-  });
-
-  /*
-    THE NAMES ARE HELD TO THE BRIEF, not to themselves. `image-prompts.md` is what
-    was commissioned and what will be delivered; a name invented here would be a
-    slot no file ever lands in, and the panel would go on rendering nothing with
-    every gate green.
-  */
-  it('names the files image-prompts.md commissions for a step', () => {
-    const brief = readFileSync(
-      new URL('../../../docs/06-plan/image-prompts.md', import.meta.url),
-      'utf8',
-    );
-    const commissioned = new Set(
-      [...brief.matchAll(/^### #\d+ \u2014 `(step-[a-z0-9-]+)\.[a-z]+`/gm)].map((m) => m[1]!),
-    );
-    expect(commissioned.size).toBe(ILLUSTRATED.length);
-    for (const step of ILLUSTRATED) {
-      expect(commissioned.has(STEP_IMAGE[step]!), `${step}: ${STEP_IMAGE[step]}`).toBe(true);
-    }
-  });
-
-  it('renders an image exactly when the file is on disk', () => {
-    for (const step of STEPS) {
-      const markup = renderToStaticMarkup(
-        <StaticLocale locale="en">
-          <StepPrimer step={step} />
-        </StaticLocale>,
-      );
-      const name = STEP_IMAGE[step];
-      const expected = name !== undefined && hasImage(name);
-      expect(
-        /<img\b/.test(markup),
-        `${step}: an image while the file is ${expected ? 'present' : 'absent'}`,
-      ).toBe(expected);
     }
   });
 });

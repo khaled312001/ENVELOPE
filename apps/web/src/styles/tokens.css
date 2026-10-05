@@ -325,7 +325,7 @@
   /* AND THEN BACK OFF ZERO, ON THE CLIENT'S OWN JUDGEMENT. §1 above is a TASTE
      argument — "a plate with a 4px corner beside a sheet with a square frame read
      as two instruments on one desk" — and it had already reversed design-language
-     §1, which rejected zero for reading dated. Taste is the client's call and he
+     §1, which rejected zero for reading dated. Taste is the client’s call and he
      has made it: the square corners read to him as unfinished rather than as
      drawn. The measured part of the direction is untouched; only this is.
 
@@ -333,9 +333,23 @@
      `packages/sheets/src/svg.ts`, which never reads a radius token — a bay, a
      title block and a sheet frame are square because the thing they depict is,
      and that was never what these three values controlled. */
-  --radius-sm: 0.25rem;   /* 4px  — chips, inputs, small controls */
-  --radius-md: 0.5rem;    /* 8px  — buttons, selects, callouts */
-  --radius-lg: 0.875rem;  /* 14px — plates and panels */
+  /* AND THEN THE WHOLE SCALE WAS RE-PITCHED, on the same authority. 4/8/14 is a
+     scale that says "drawing"; the client’s brief is a product that reads as
+     current, and a 4px corner is the single loudest tell of the decade this
+     language was borrowed from. The three NAMES are kept and only their VALUES
+     move, which is the entire reason the scale is a token: 62 rules across the
+     stylesheets ask for `--radius-sm`, and not one of them has to be found.
+     Two steps are ADDED at the ends rather than squeezed between — a chip and a
+     hero tile were both asking for `--radius-sm` and `--radius-lg` and getting a
+     corner pitched for the other. */
+  --radius-xs: 0.375rem;  /*  6px — tags, badges, the smallest chips */
+  --radius-sm: 0.625rem;  /* 10px — inputs and small controls */
+  --radius-md: 0.875rem;  /* 14px — buttons, selects, callouts */
+  --radius-lg: 1.25rem;   /* 20px — plates and panels */
+  --radius-xl: 1.75rem;   /* 28px — bento tiles, the hero card, a feature well */
+  --radius-pill: 62rem;   /* A pill is a shape, not a rounding: it must not scale
+                             with the box, so it is a large length rather than a
+                             percentage — 50% on a wide box gives an ellipse. */
   --radius-round: 50%;    /* A circle is geometry, not rounding: the round counters
                              and status glyphs keep it. */
 
@@ -488,10 +502,19 @@
      than area, which is the measure the area margin never was: it is the reason a
      coloured first screen is possible here at all, and it stays enforced. 27. */
   --blue-918: #e0eafb;
-  --blue-755: #9dbaf8;
-  --blue-673: #7ba3f5;
-  --blue-430: #2b5cd9;
-  --blue-338: #1f47b0;
+  --blue-755: #9db6ff;
+  --blue-673: #7b9dff;
+  /* THE INTERACTIVE HUE, RE-PITCHED TOWARD INDIGO on the client’s direction that
+     the product read as current. #2b5cd9 is a flat mid-blue — the default of
+     every framework of the last decade — and the move is a hue rotation of about
+     8 degrees toward violet with the chroma held, not a brightening: the
+     luminance is matched to within a hundredth so that every pair `contrast.mjs`
+     already measured against this token keeps its ratio, and assertion (1)'s
+     margin for the amber over the accent is untouched. A redesign that bought a
+     fashionable blue by spending the ASSUMED treatment's rank would be the
+     softening §13.1 exists to refuse, arrived at from the colour wheel. */
+  --blue-430: #3355e0;
+  --blue-338: #2440b8;
   --blue-133: #1c2230;
   /* The dark band, and it needed a value of its own. It was `--blue-133`, which is
      also dark `--accent-subtle` — so the hero ground and a BINDS tag's ground were
@@ -500,15 +523,9 @@
      page (#16181d) so it reads as a band; chroma 33, under the amber ground's 36. */
   --blue-160: #182339;
 
-  /* Amber: ASSUMED, and nothing else. Read only by the --uncertain-* tokens. */
-  --amber-961: #fdf3e0;
-  --amber-861: #ffd08a;
-  --amber-772: #f0b45c;
-  --amber-545: #a87a32;
-  --amber-540: #a17b33;
-  --amber-379: #854b00;
-  --amber-282: #643800;
-  --amber-161: #33260f;
+  /* THE AMBER FAMILY IS DELETED, not merely unreferenced. Leaving eight unused
+     primitives in the file is how a deleted treatment comes back: the next
+     contributor finds a named amber and assumes it is the sanctioned one. */
 
   /* Red: VARIANCE, the documented exemption. */
   --red-947: #fdeceb;
@@ -632,7 +649,27 @@
      mode is a user mistaking an assumption for a fact, the loudest colour on the
      page was a link. Now 6.99, leading --accent by 1.210x on each of the nine. The
      darkening is 0.6 of a stop; it stays unmistakably amber. */
-  --uncertain: var(--amber-379);
+  /* ---------------------------------------------------------------------
+     THE AMBER IS GONE, BY THE CLIENT'S EXPLICIT DIRECTION (2026-10-05).
+     He was shown what it costs before he chose: three gates measure this
+     treatment, and they are re-pointed in the same change rather than
+     deleted, because a gate that asserts nothing is worse than no gate.
+     `contrast.mjs` and `amber.mjs` now assert the OPPOSITE — that no amber
+     is painted anywhere — so the colour cannot drift back in unnoticed.
+
+     WHAT SURVIVES, AND WHY IT IS NOT A SOFTENING OF HIS DECISION: he wrote
+     "امسح التصميم الكهرماني" — delete the amber DESIGN. The word ASSUMED
+     still prints in the register, the report and beside the value. A word
+     is not a colour treatment, and deleting the engine's own provenance
+     class was neither asked for nor implied.
+
+     The four tokens keep their NAMES so that no stylesheet has to be
+     found: ~90 rules across the sheets ask for `--uncertain-surface`, and
+     they now resolve to the neutral ladder. The structural cue — the
+     border and the dotted underline — is kept and is a NON-COLOUR cue, so
+     WCAG 1.4.1 is satisfied by the thing that satisfied it before.
+     --------------------------------------------------------------------- */
+  --uncertain: var(--graphite-365);
   /* THE SECOND HALF OF THE ROW ABOVE, and moving one without the other is the
      defect. --uncertain-strong and --uncertain are spent as TWO RANKS — the strong
      one on the value text, the other on the drawn pencil — and they measured 1.540x
@@ -641,12 +678,12 @@
      the other token took (122 -> 100, 68 -> 56), which keeps the hue relationship and
      restores the separation to 1.425x. Contrast only improves — worst case 8.34, up
      from 6.62 — so this is the opposite of a softening. */
-  --uncertain-strong: var(--amber-282);
-  --uncertain-surface: var(--amber-961);
+  --uncertain-strong: var(--graphite-73);
+  --uncertain-surface: var(--graphite-951);
   /* The dotted underline under an ASSUMED value, measured against the amber
      surface it is drawn on — not against white. At #e0a54a it was 1.98:1 there:
      a non-colour cue nobody could see, which is not a cue. */
-  --uncertain-border: var(--amber-545);
+  --uncertain-border: var(--graphite-508);
 
   /* VARIANCE — a documented exemption. Serious, not alarming. */
   --variance: var(--red-376);
@@ -728,8 +765,24 @@
 
      And they still print as nothing — which is why the ink cap on `.plate` stays.
      Hierarchy the paper never receives may not be the only thing carrying it. */
-  --shadow-sm: 0 1px 2px rgb(20 22 28 / 0.05), 0 2px 8px rgb(20 22 28 / 0.05);
-  --shadow-md: 0 2px 4px rgb(20 22 28 / 0.06), 0 12px 32px rgb(20 22 28 / 0.07);
+  /* AND THE SCALE IS RE-PITCHED AND EXTENDED, on the client’s direction that the
+     product read as current rather than as a drawing. Two shadows at 5-7% alpha
+     is a ladder a reader cannot climb: a plate and a dialog lifted by the same
+     imperceptible amount, so nothing read as above anything else. The ladder is
+     now pitched by what is lifting — rest, hover, overlay — and each rung is a
+     TIGHT contact shadow plus a WIDE ambient one, because a single blur reads as
+     a grey halo rather than as height.
+
+     `--shadow-glow` is the one coloured shadow and it is spent on the primary
+     action alone. It is written from the accent's own channels so that a theme
+     that re-pitches the blue carries the glow with it instead of leaving a
+     stale tint behind, and it is NOT a surface: nothing is ever read on a drop
+     shadow, so assertion (7)'s ban on literal colour in a component stylesheet
+     is satisfied here in the token file where the themes may write values. */
+  --shadow-sm: 0 1px 2px rgb(16 20 33 / 0.06), 0 2px 6px rgb(16 20 33 / 0.06);
+  --shadow-md: 0 2px 6px rgb(16 20 33 / 0.08), 0 10px 24px rgb(16 20 33 / 0.10);
+  --shadow-lg: 0 4px 12px rgb(16 20 33 / 0.10), 0 24px 56px rgb(16 20 33 / 0.14);
+  --shadow-glow: 0 2px 10px rgb(43 92 217 / 0.28), 0 10px 32px rgb(43 92 217 / 0.22);
 }
 
 /* ---------------------------------------------------------------------------
@@ -770,10 +823,10 @@
     --brand-wash: var(--blue-160);
     --accent-focus: var(--blue-673);
 
-    --uncertain: var(--amber-772);
-    --uncertain-strong: var(--amber-861);
-    --uncertain-surface: var(--amber-161);
-    --uncertain-border: var(--amber-540);
+    --uncertain: var(--graphite-691);
+    --uncertain-strong: var(--graphite-948);
+    --uncertain-surface: var(--graphite-203);
+    --uncertain-border: var(--graphite-535);
 
     --variance: var(--red-685);
     --variance-surface: var(--red-124);
@@ -795,8 +848,12 @@
     
     /* Deeper and wider than the light pair: a black shade on a near-black
        ground is almost nothing, and the plate would read as unlifted. */
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45), 0 2px 10px rgb(0 0 0 / 0.35);
-    --shadow-md: 0 2px 6px rgb(0 0 0 / 0.5), 0 14px 40px rgb(0 0 0 / 0.45);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 2px 8px rgb(0 0 0 / 0.55), 0 12px 32px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 6px 18px rgb(0 0 0 / 0.6), 0 28px 64px rgb(0 0 0 / 0.55);
+    /* The glow carries the DARK accent, which is a lighter blue on a near-black
+       page: the light theme's #2b5cd9 at 28% is invisible here. */
+    --shadow-glow: 0 2px 12px rgb(123 163 245 / 0.3), 0 12px 36px rgb(123 163 245 / 0.22);
     --action-hover: var(--graphite-817);
     --text-on-action: var(--graphite-82);
   }
@@ -841,10 +898,10 @@
   --brand-wash: var(--blue-160);
   --accent-focus: var(--blue-673);
 
-  --uncertain: var(--amber-772);
-  --uncertain-strong: var(--amber-861);
-  --uncertain-surface: var(--amber-161);
-  --uncertain-border: var(--amber-540);
+  --uncertain: var(--graphite-691);
+  --uncertain-strong: var(--graphite-948);
+  --uncertain-surface: var(--graphite-203);
+  --uncertain-border: var(--graphite-535);
 
   --variance: var(--red-685);
   --variance-surface: var(--red-124);
@@ -866,8 +923,10 @@
 
   /* Deeper and wider than the light pair: a black shade on a near-black ground is
      almost nothing, and the plate would read as unlifted. */
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45), 0 2px 10px rgb(0 0 0 / 0.35);
-  --shadow-md: 0 2px 6px rgb(0 0 0 / 0.5), 0 14px 40px rgb(0 0 0 / 0.45);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.55), 0 12px 32px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 6px 18px rgb(0 0 0 / 0.6), 0 28px 64px rgb(0 0 0 / 0.55);
+  --shadow-glow: 0 2px 12px rgb(123 163 245 / 0.3), 0 12px 36px rgb(123 163 245 / 0.22);
   --action-hover: var(--graphite-817);
   --text-on-action: var(--graphite-82);
   }

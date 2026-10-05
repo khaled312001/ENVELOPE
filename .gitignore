@@ -38,6 +38,11 @@ Desktop.ini
 # Large client source binaries — kept on disk under docs/00-source, never in git.
 # The extracted text in docs/01-extracted is what the repo actually reasons over.
 docs/00-source/client/meeting-*/*.mp4
+# The 4 Oct 2026 recording landed at the repo root as `audio.mp4` — 62 MB of a
+# client call, which `git add -A` stages without comment. Same rule as above: the
+# recording stays on disk, `docs/01-extracted/meeting-03/transcript.txt` is what
+# the repo reasons over.
+/audio.mp4
 docs/00-source/regulations/*.pdf
 docs/00-source/developer-standards/**
 docs/01-extracted/meeting-*/screens/

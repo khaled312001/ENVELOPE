@@ -1,0 +1,554 @@
+/*
+ * THE SHELL, 2026 — the nav and the colophon, rebuilt.
+ *
+ * Imported AFTER `site.css` and that is the only thing about its position that
+ * matters: it restyles the existing `.nav` and `.colophon` rather than defining
+ * a parallel one, so it has to win on order. The MARKUP is untouched — the
+ * disclosure's `aria-expanded`/`aria-controls`, its Escape handler, the route
+ * sentinel and the "Run a plot" button that never collapses into the menu are
+ * all accessibility work that a restyle has no business re-deriving.
+ *
+ * TWO RULES THIS FILE IS HELD TO, AND THE SECOND IS THE INTERESTING ONE.
+ *
+ * 1. No colour literals. `pnpm contrast` assertion (7) fails a component
+ *    stylesheet that writes a hex, and the redesign did not buy an exemption.
+ *
+ * 2. DECORATION MAY SPEND THE BRAND, NEVER A STATE. The client asked for more
+ *    colour here, and the obvious way to get it is to reach for `--derived`,
+ *    `--variance` and `--deferred` — a green, a red and a grey already sitting
+ *    in the palette. Doing that would teach a reader that green is a footer
+ *    accent, and the next time green appears on a value meaning "this reached a
+ *    cited rule" it would read as decoration. That is precisely the failure the
+ *    amber reservation existed to prevent, and the amber is gone BECAUSE the
+ *    client asked for it to be, not because the principle stopped applying.
+ *    So every colour below is the accent, the brand wash, or a `color-mix` of
+ *    one of them with a surface.
+ *
+ * Motion is spring-eased and under 400ms everywhere except the one entrance,
+ * and the whole file folds flat under `prefers-reduced-motion`.
+ */
+
+/* ==========================================================================
+ * THE NAV — glass, sticky, one row, with a brand rule across the top.
+ * ======================================================================= */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-block-end: var(--border-width) solid transparent;
+  transition:
+    border-color var(--duration-base) var(--ease-standard),
+    background-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+/* The brand rule. 3px of gradient across the full width, which is the single
+   loudest colour on the page and costs no vertical rhythm. */
+.nav::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  block-size: 3px;
+  background-image: var(--gradient-brand);
+  opacity: 0.9;
+}
+
+/* Without `backdrop-filter` the bar is 72% transparent over scrolling content,
+   which is unreadable rather than merely plainer. */
+@supports not (backdrop-filter: blur(1px)) {
+  .nav { background: var(--surface-base); }
+}
+
+/* The sentinel sets this once the page has left the top. */
+.nav[data-scrolled='true'] {
+  border-block-end-color: var(--glass-border);
+  box-shadow: var(--shadow-sm);
+  background: color-mix(in srgb, var(--surface-base) 86%, transparent);
+}
+
+.nav__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-block-size: var(--header-h);
+}
+
+/* --- The brand --------------------------------------------------------- */
+
+.nav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--text-primary);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  border-radius: var(--radius-sm);
+  padding-inline: var(--space-1);
+}
+
+/* THE MARK'S THREE FILLS, RESTORED HERE AFTER A REGRESSION I SHIPPED.
+
+   `Mark()` draws three rects — a ground, the plot, and the plot with its setback
+   taken off — and every one of them was filled by a rule in the old 1,932-line
+   `landing.css`. The 2026 rewrite cut that file to a third of its length and
+   took these with it, so the brand rendered as a solid black square in the
+   header of every page on the site. No gate saw it: an unfilled `<rect>`
+   inherits a fill, the contrast gate measures declared token pairs and there was
+   no longer a declaration to measure. It was found by looking at a screenshot.
+
+   They live in `chrome.css` now rather than back in `landing.css`, because the
+   mark is the NAV's and the nav is on every page — the landing page is simply
+   one of the places it appears.
+
+   THE INNER RECT IS `--accent` AND MUST NOT BECOME A STATE COLOUR. A logo is the
+   most-repeated element on a site, and teaching a reader that a state colour
+   means nothing in particular is what the amber reservation existed to prevent.
+   The amber is gone by the client's instruction; the reasoning is not. */
+.lp-mark__ground { fill: var(--surface-contrast); }
+.lp-mark__plot   { fill: var(--surface-base); }
+.lp-mark__inner  { fill: var(--accent); }
+
+/* The mark leans into the page on hover. `transform` only — a brand mark that
+   animated its colour would be animating meaning. */
+.nav__brand .lp-mark {
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+.nav__brand:hover .lp-mark { transform: rotate(-6deg) scale(1.08); }
+
+/* The wordmark takes the gradient, with `color` set first so a browser without
+   `background-clip: text` renders ink rather than nothing. */
+.nav__wordmark {
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  letter-spacing: var(--tracking-tight);
+}
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .nav__brand:hover .nav__wordmark {
+    background-image: var(--gradient-brand);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* --- The links --------------------------------------------------------- */
+
+.nav__links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-inline-start: auto;
+}
+
+.nav__links a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  min-block-size: 2.25rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-spring);
+}
+
+/* The underline grows from the centre. `transform` on a pseudo-element, so it
+   composites and never reflows the bar. */
+.nav__links a::after {
+  content: '';
+  position: absolute;
+  inset-inline: var(--space-3);
+  bottom: 0.3rem;
+  block-size: 2px;
+  border-radius: var(--radius-pill);
+  background-image: var(--gradient-brand);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+
+.nav__links a:hover {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  transform: translateY(-1px);
+}
+.nav__links a:hover::after { transform: scaleX(1); }
+
+.nav__links a[aria-current='page'] {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-weight: 600;
+}
+.nav__links a[aria-current='page']::after { transform: scaleX(1); }
+
+/* The glyph answers the hover a beat after the label does. */
+.nav__glyph {
+  inline-size: 1rem;
+  block-size: 1rem;
+  flex: none;
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+.nav__links a:hover .nav__glyph { transform: scale(1.14); }
+.nav__links a[aria-current='page'] .nav__glyph { color: var(--accent); }
+
+/* --- The tools --------------------------------------------------------- */
+
+.nav__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: var(--space-2);
+}
+
+/* The call to action in the bar takes the new button language, plus a sheen
+   that sweeps once per hover. The sheen is a gradient of the PAGE's own ink at
+   low alpha — not a white literal, which is the usual way this effect smuggles
+   a colour past a token checker and then glows wrongly in dark mode. */
+.nav__tools .button--primary {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background-image: var(--gradient-brand);
+  box-shadow: var(--shadow-glow);
+  border-color: transparent;
+  font-weight: 600;
+  transition:
+    transform var(--duration-fast) var(--ease-spring),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+.nav__tools .button--primary::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inline-size: 40%;
+  inset-inline-start: -45%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    color-mix(in srgb, var(--text-on-action) 34%, transparent),
+    transparent
+  );
+  transform: skewX(-18deg);
+}
+
+.nav__tools .button--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+.nav__tools .button--primary:hover::after {
+  animation: nav-sheen 620ms var(--ease-out);
+}
+
+@keyframes nav-sheen {
+  from { inset-inline-start: -45%; }
+  to   { inset-inline-start: 115%; }
+}
+
+/* ==========================================================================
+ * THE DISCLOSURE — shown only where the links are not.
+ * ======================================================================= */
+
+.nav__disclosure {
+  display: none;
+  border-radius: var(--radius-pill);
+}
+
+@media (max-width: 52rem) {
+  .nav__disclosure {
+    display: inline-flex;
+    margin-inline-start: auto;
+    border-color: var(--border-default);
+  }
+
+  /* The panel drops out of the bar rather than pushing it open, so the bar
+     keeps one height at every width. */
+  .nav__links {
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: var(--space-2);
+    background: var(--surface-raised);
+    border-block-end: var(--border-width) solid var(--border-default);
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav__links[data-open='false'] { display: none; }
+  .nav__links[data-open='true'] {
+    animation: nav-drop var(--duration-base) var(--ease-out) both;
+  }
+
+  .nav__links a {
+    border-radius: var(--radius-sm);
+    min-block-size: 2.75rem;   /* 44px — a touch target, not a look */
+  }
+  /* The centre-grown underline is a desktop device; in a stacked list it reads
+     as an underline under a list item, which is just an underline. */
+  .nav__links a::after { display: none; }
+
+  .nav { position: sticky; }
+  .nav__inner { position: relative; flex-wrap: wrap; }
+}
+
+@keyframes nav-drop {
+  from { opacity: 0; transform: translateY(-0.5rem); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ==========================================================================
+ * THE MASTHEAD — the never-claimed strip above the bar.
+ *
+ * It stays. It is the sentence the whole product is sold on, and a redesign
+ * that quietly dropped it would be the exact failure a marketing page is where
+ * "never claim compliance" dies quietly.
+ *
+ * It is also the one band in the chrome that may NOT gain colour: it carries a
+ * claim, and a claim dressed as decoration is a claim a reader skims.
+ * ======================================================================= */
+
+.masthead {
+  background: var(--surface-contrast);
+  color: var(--text-on-contrast);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+}
+
+.masthead__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-5);
+  padding-block: var(--space-2);
+}
+
+.masthead__validity {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-on-contrast);
+}
+
+.masthead__item {
+  display: inline-flex;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-on-contrast-dim);
+}
+.masthead__item dt, .masthead__item dd { margin: 0; }
+
+/* ==========================================================================
+ * THE COLOPHON — dark, short, and a second inverted band.
+ *
+ * *«قلل ارتفاع الفوتر واجعله عصري ولونه غامق»* — 5 Oct 2026.
+ *
+ * THE DARK GROUND IS `--surface-contrast`, AND THAT HAS A CONSEQUENCE THE
+ * COLOUR PICKER DOES NOT SHOW. That token is deliberately excluded from the
+ * nine grounds `pnpm contrast` measures every ink against, and the exclusion is
+ * only safe because assertion (2) keeps every state and chrome ink OFF it —
+ * on the band in light, `--accent` measures 3.12 and the rule that an ink
+ * out-contrasts chrome stops holding. Until today the only band was the
+ * masthead, so that assertion matched `/contrast|status-band/` and would not
+ * have looked at a footer.
+ *
+ * So the footer was not quietly slipped past it. `scripts/contrast.mjs` now
+ * matches `colophon` as well, and everything below is held to the three inks
+ * the band HAS a measured row for: `--text-on-contrast` (4.5),
+ * `--text-on-contrast-dim` (4.5) and `--border-on-contrast` (3.0). The accent
+ * survives here only as a gradient rule and as decoration, never as a letter or
+ * an edge a reader has to resolve.
+ *
+ * SHORTER: `--space-6` of padding instead of `--rhythm-minor`, 11rem columns
+ * instead of 13, link rows at `--space-hair` instead of `--space-2`, and the
+ * build line folded onto the end rather than given a row of its own.
+ * ======================================================================= */
+
+.colophon {
+  position: relative;
+  background: var(--surface-contrast);
+  color: var(--text-on-contrast-dim);
+  border-block-start: 0;
+  padding-block: var(--space-6) var(--space-5);
+}
+
+/* The rule. Full-bleed gradient rather than a 1px border — this is the seam
+   between the page and the footer and it is the last colour a reader sees. It
+   is a BAND, not a letter: nothing has to be read off it. */
+.colophon::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  block-size: 3px;
+  background-image: var(--gradient-brand);
+}
+
+.colophon__grid,
+.colophon__columns,
+.colophon__map {
+  display: grid;
+  gap: var(--space-5) var(--space-6);
+  /* `auto-fit`, never `auto-fill`: `auto-fill` keeps empty phantom tracks, so
+     three columns cluster at the start and leave a void at the end. */
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+  margin-block-end: var(--space-5);
+}
+
+/* THE HEIGHT WAS ONE COLUMN, NOT THE PADDING. The product group holds ten
+   routes and the two beside it hold two and three, so the footer was as tall as
+   the longest list while two thirds of the band sat empty. Flowing the lists
+   into sub-columns from 48rem up halves that without shortening a single link
+   row or dropping a destination — a footer that gets shorter by hiding where
+   things are is a shorter footer and a worse one.
+
+   `break-inside: avoid` because a link is an icon and a label on one baseline,
+   and a column break between them puts the mark at the foot of one column and
+   its word at the head of the next. */
+.colophon__group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ONLY THE LONG GROUP. The claim column holds two links and the reference
+   column three short lines; split, either reads as a layout fault rather than as
+   two columns — which is what the first attempt shipped and a screenshot caught.
+   `data-group` is on the element for exactly this, because CSS cannot count
+   children and `:nth-child` would bind the rule to an ORDER that `GROUP_ORDER`
+   owns and may reorder. */
+@media (min-width: 48rem) {
+  .colophon__group[data-group='product'] ul {
+    columns: 2;
+    column-gap: var(--space-6);
+  }
+  /* A link is a mark and a label on one baseline; a column break between them
+     leaves the icon at the foot of one column and its word at the head of the
+     next. */
+  .colophon__group[data-group='product'] li { break-inside: avoid; }
+}
+
+.colophon h2,
+.colophon__heading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-end: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-on-contrast);
+  font-weight: 600;
+}
+
+.colophon a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-hair);
+  min-block-size: 1.75rem;
+  font-size: var(--text-sm);
+  color: var(--text-on-contrast-dim);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-spring);
+}
+
+/* The link steps toward the reading direction and brightens to the band's full
+   ink. On a dark ground that IS the hover signal — reaching for the accent here
+   would be an unmeasured pair on an excluded ground. `translate` on the inline
+   axis is direction-aware under `:dir()`, which the Arabic build needs. */
+.colophon a:hover {
+  color: var(--text-on-contrast);
+  transform: translateX(0.1875rem);
+}
+.colophon a:hover:dir(rtl) { transform: translateX(-0.1875rem); }
+
+.colophon__glyph,
+.colophon__mark {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  flex: none;
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+.colophon a:hover .colophon__mark { transform: scale(1.18); }
+
+.colophon__build {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-on-contrast-dim);
+}
+
+
+/* ==========================================================================
+ * FOCUS — one ring, everywhere, and it composites over any ground.
+ * ======================================================================= */
+
+.nav a:focus-visible,
+.nav button:focus-visible,
+.mbtn:focus-visible {
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* The colophon is deliberately NOT in that list. It is an inverted band now, and
+   `--accent-focus` is a chrome ink with no measured row against
+   `--surface-contrast` — so the band gets the one edge token that does have one.
+   A focus ring is the single most important thing on the page to get right for a
+   keyboard user, which is exactly why it may not rest on an unmeasured pair. */
+.colophon a:focus-visible {
+  outline: var(--focus-width) solid var(--border-on-contrast);
+  outline-offset: var(--focus-offset);
+}
+
+/* ==========================================================================
+ * REDUCED MOTION — every transform above folds flat. The COLOUR changes stay:
+ * a hover that stops telling you it is a link is an accessibility regression
+ * dressed as an accessibility feature.
+ * ======================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .nav__brand:hover .lp-mark,
+  .nav__links a:hover,
+  .nav__links a:hover .nav__glyph,
+  .nav__tools .button--primary:hover,
+  .colophon a:hover,
+  .colophon a:hover:dir(rtl),
+  .colophon a:hover .colophon__mark {
+    transform: none;
+  }
+  .nav__links a::after { transition: none; }
+  .nav__links[data-open='true'] { animation: none; }
+  .nav__tools .button--primary:hover::after { animation: none; }
+}
+
+/* ==========================================================================
+ * PRINT — the chrome is not part of the document.
+ * ======================================================================= */
+
+@media print {
+  .nav::before,
+  .colophon::before,
+  .colophon::after { display: none; }
+  .nav { position: static; box-shadow: none; background: none; }
+}

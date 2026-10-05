@@ -273,7 +273,28 @@ describe('the workspace shell', () => {
     expect(railed('/app', 'Khaled', true)).toContain('Expand the workspace rail');
   });
 
-  it('draws its own glyphs rather than borrowing an icon set', () => {
+  it('gives every rail item exactly one mark, and announces none of them', () => {
+    /*
+      RENAMED AND RE-POINTED, 5 Oct 2026.
+
+      This used to be "draws its own glyphs rather than borrowing an icon set",
+      and the twelve hand-drawn marks it guarded were argued from the old visual
+      language: 16px, a 1.5px square cap, no radius, every line borrowed from a
+      drawing sheet. The client replaced that language and asked for a current
+      icon set by name, so the marks are Lucide now and the old assertion is
+      asserting a decision that has been reversed.
+
+      WHAT IT WAS ACTUALLY BUYING SURVIVES, and is what is asserted here: one
+      mark per rail item counted from the route record, and every mark
+      `aria-hidden`. Both are real — a route with no glyph still fails, and an
+      announced mark would read every destination twice, since each sits beside
+      its own label in the same link.
+
+      The class match is a SUBSTRING now rather than a whole attribute, because
+      Lucide composes `class="lucide lucide-scan-line sidebar__glyph"`. Matching
+      the whole attribute here would be asserting the icon library's internal
+      class-name format, which is not this repository's business.
+    */
     const markup = railed('/app', 'Khaled');
     /*
       ONE MARK PER ITEM, COUNTED FROM THE ROUTE RECORD.
@@ -288,7 +309,13 @@ describe('the workspace shell', () => {
     const rail = ROUTES.filter((r) => PAGE_META[r].shell === 'workspace');
     expect(rail.length).toBeGreaterThan(2);
     expect((markup.match(/sidebar__glyph/g) ?? []).length).toBe(rail.length);
-    expect(markup).toMatch(/<svg[^>]*class="sidebar__glyph"[^>]*aria-hidden="true"/);
+    expect(markup).toMatch(/<svg[^>]*class="[^"]*sidebar__glyph[^"]*"[^>]*aria-hidden="true"/);
+    // Not one mark escapes the hiding: every svg on the rail is aria-hidden.
+    for (const svg of markup.match(/<svg[^>]*sidebar__glyph[^>]*>/g) ?? []) {
+      expect(svg, 'a rail mark is announced to a screen reader').toContain(
+        'aria-hidden="true"',
+      );
+    }
   });
 
   it('paints no amber', () => {

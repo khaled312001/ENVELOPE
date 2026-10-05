@@ -243,6 +243,11 @@ describe('where the commissioned images are wired', () => {
     'empty-members':
       '/settings/members is not built, and /workspace has no "only the owner" state to hang it on',
     'guide-cover': 'the cover of the delivered user guide, which is not this site',
+    'lp-hero-backdrop':
+      'the 2026 rebuild draws the hero ground in CSS instead — a mesh gradient and ' +
+      'a plot lattice, both from semantic tokens, so it follows the theme and costs ' +
+      'no bytes. The commissioned plate is kept rather than deleted because the ' +
+      'decision to re-introduce imagery is the client’s and not a cleanup’s',
   };
 
   it('is a call site, or a named reason', () => {

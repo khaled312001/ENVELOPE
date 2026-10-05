@@ -9,12 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@envelope/core": "workspace:*",
+    "@envelope/massing": "workspace:*",
+    "@envelope/sheets": "workspace:*",
+    "lucide-react": "^1.52.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "three": "^0.185.1",
-    "@envelope/core": "workspace:*",
-    "@envelope/sheets": "workspace:*",
-    "@envelope/massing": "workspace:*"
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",

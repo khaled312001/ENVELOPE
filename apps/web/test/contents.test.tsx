@@ -41,8 +41,25 @@ import { arabicReadingText, pageProps, stripTags } from './prohibitions.js';
  * The five pages, rendered the way their own tests render them.
  * --------------------------------------------------------------------- */
 
+/*
+ * `/` LEFT THIS LIST ON 5 Oct 2026, AND THE REASON IS RECORDED RATHER THAN
+ * IMPLIED BY ITS ABSENCE.
+ *
+ * The contents block exists for the four long documents below: each is a reading
+ * page of numbered sections where a reader needs to see the shape before
+ * committing to the scroll, and 2.4.5's "more than one way" is satisfied by it.
+ *
+ * The landing page was one of those and is no longer. The client cut it to
+ * headings and buttons; what is left is a hero, a figure row, a bento and two
+ * short tables — four landmarks a reader takes in by scrolling, with the nav and
+ * the colophon both offering the other routes. A contents block over four
+ * sections is chrome describing chrome.
+ *
+ * It is an EXEMPTION FOR ONE PAGE and not a weakening of the rule: the four
+ * below are still asserted, and a fifth long page added here is covered the day
+ * it is listed.
+ */
 const PAGES: readonly (readonly [string, () => ReactNode])[] = [
-  ['/', () => <Landing navigate={() => {}} />],
   ['/parking', () => <Parking {...pageProps()} />],
   ['/exports', () => <Exports {...pageProps()} />],
   ['/refusals', () => <Refusals {...pageProps()} />],

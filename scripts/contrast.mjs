@@ -611,18 +611,56 @@ function assertAmberOutranksChrome(themes, grounds = GROUNDS) {
  * worth exactly as much as the check that nothing is. So here is the check:
  * inside any rule whose selector mentions the band, the only colour tokens
  * permitted are the band's own three.
+ *
+ * `colophon` WAS ADDED ON 5 OCT 2026, AND THE REASON IS THE WHOLE VALUE OF THIS
+ * ASSERTION. The client asked for a dark footer, the footer took
+ * `--surface-contrast`, and it thereby became a second inverted band — on a
+ * selector this check had never looked at, because when it was written the only
+ * band was the masthead. Every ink in that footer would have gone unmeasured on
+ * a ground deliberately excluded from the nine, with the run still printing
+ * green. A check whose coverage is a selector list goes stale the moment a
+ * surface moves, which is why the list is edited here rather than worked around
+ * in the stylesheet.
  */
 const BAND_OK = /^--(text-on-contrast|text-on-contrast-dim|border-on-contrast|surface-contrast)$/;
 function assertNoChromeOnBand() {
   for (const [file, css] of SHEETS) {
     for (const [sel, decl, line] of declarations(css, file)) {
-      if (!/contrast|status-band/.test(sel)) continue;
+      if (!/contrast|status-band|colophon/.test(sel)) continue;
       for (const m of decl.matchAll(/var\((--[\w-]+)\)/g)) {
         if (/^--(uncertain|accent|variance|derived|deferred)/.test(m[1]) && !BAND_OK.test(m[1])) {
           fail(
             `${file}:${line} paints ${m[1]} on the inverted band (${sel}). ` +
               `--surface-contrast is excluded from the nine grounds on the ` +
               `strength of this never happening.`,
+          );
+        }
+      }
+      /*
+        AND THE GREY LADDER, WHICH THE LOOP ABOVE NEVER LOOKED AT.
+
+        That loop guards STATE and CHROME inks. It says nothing about
+        `--text-secondary`, `--text-tertiary` or `--text-primary`, and on a band
+        those are the inks most likely to be reached for — they are what every
+        other surface uses. `.colophon p` shipped `--text-secondary` on
+        `--surface-contrast` the moment the footer went dark, which is a pair no
+        row in this file measures, on a ground excluded from the nine. It was
+        found by LOOKING at a screenshot, not by this gate, and that is the
+        reason the gate now covers it.
+
+        Only text and edge colour, because those are what a reader has to
+        resolve. A gradient or a fill named on a band selector is decoration and
+        is left alone.
+      */
+      for (const d of decl.matchAll(/(^|;)\s*((?:-webkit-)?(?:color|[a-z-]*border[a-z-]*color|outline-color|fill|stroke))\s*:\s*([^;]+)/g)) {
+        const prop = d[2];
+        for (const v of (d[3] ?? '').matchAll(/var\((--[\w-]+)\)/g)) {
+          if (BAND_OK.test(v[1])) continue;
+          fail(
+            `${file}:${line} sets ${prop} to ${v[1]} on the inverted band (${sel}). ` +
+              `The band has three measured inks — --text-on-contrast, ` +
+              `--text-on-contrast-dim and --border-on-contrast — and every other ` +
+              `token is an unmeasured pair on a ground the nine deliberately omit.`,
           );
         }
       }
@@ -643,16 +681,44 @@ function assertNoChromeOnBand() {
  * Screen themes only: in print EVERY state surface is white, which is a uniform
  * rule and not an amber exception.
  */
-function assertAmberSurfaceMostChromatic(themes, surfaces = GROUNDS) {
+/*
+ * RE-POINTED, 2026-10-05, ON THE CLIENT'S EXPLICIT DIRECTION.
+ *
+ * This assertion used to hold `--uncertain-surface` as the most chromatic
+ * surface in the system — the measurement behind §13.1's "amber is the loudest
+ * thing on the page". The client was shown what removing the amber treatment
+ * costs and removed it anyway, which is his call to make about his product.
+ *
+ * It is RE-POINTED rather than deleted, and the distinction is the whole of why
+ * this file exists. A deleted assertion lets the colour drift back in one
+ * stylesheet at a time, which is exactly how it would return: half-applied,
+ * unmeasured, meaning nothing. So the gate now asserts the OPPOSITE and with
+ * the same force — that NO uncertainty token carries chroma at all. The day
+ * someone reintroduces an amber `--uncertain-*`, the build fails and says so.
+ *
+ * `CHROMA_FLOOR` is 6 rather than 0 because the neutral ladder these tokens now
+ * resolve to is deliberately COOL — the grounds carry chroma 7 to 12 — and a
+ * floor of zero would fail on the page's own blue-grey.
+ */
+const UNCERTAIN_TOKENS = [
+  '--uncertain',
+  '--uncertain-strong',
+  '--uncertain-surface',
+  '--uncertain-border',
+];
+const CHROMA_FLOOR = 14;
+
+function assertNoAmberRemains(themes) {
   for (const [name, T] of themes) {
-    const amber = chromaOf(T, '--uncertain-surface');
-    for (const s of surfaces) {
-      if (s === '--uncertain-surface') continue;
-      const other = chromaOf(T, s);
-      if (other >= amber) {
+    for (const token of UNCERTAIN_TOKENS) {
+      const c = chromaOf(T, token);
+      if (c >= CHROMA_FLOOR) {
         fail(
-          `§13.1: ${s} (chroma ${other}) is at least as chromatic as ` +
-            `--uncertain-surface (${amber}) in ${name}.`,
+          `${token} carries chroma ${c} in ${name}. The amber ASSUMED treatment ` +
+            `was removed on the client's direction; an uncertainty token with a ` +
+            `hue is that treatment coming back unmeasured. Keep it on the ` +
+            `neutral ladder, or restore the treatment deliberately and ` +
+            `re-point this assertion back.`,
         );
       }
     }
@@ -678,6 +744,11 @@ const AMBER_OK = [
   /\[data-state=['"]assumed['"]\]/, //  the state layer: an ASSUMED value, the
   //  canonical case the whole token exists for.
   /\.traced--assumed/, //               the inline treatment on an ASSUMED value.
+  //  NOT the landing page. Its fold statement was granted an entry here on
+  //  5 Oct 2026 and the entry was taken back the same day: the client asked
+  //  for the distinction removed, and a whitelist seat is the thing that
+  //  would have kept it under a new name. `.lp-assumed` draws the neutral
+  //  ladder instead, and `apps/web/test/landing.test.tsx` asserts it.
   /\.margin-tally/, //                  channel 5, the rail-gutter tally: a count of
   //  the assumptions a section rests on. Its
   //  --none zero state is the same device saying
@@ -1128,7 +1199,7 @@ const SCREEN_THEMES = THEMES.filter(([n]) => n !== 'print');
 
 assertAmberOutranksChrome(THEMES);
 assertNoChromeOnBand();
-assertAmberSurfaceMostChromatic(SCREEN_THEMES);
+assertNoAmberRemains(SCREEN_THEMES);
 assertAmberExclusive();
 assertRailWidths();
 assertEveryPaintedTokenIsMeasured();

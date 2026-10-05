@@ -185,17 +185,46 @@ describe('the landing page', () => {
       whole product exists to prevent — so the hero's panel ships OPEN, and this
       asserts that it does. `aria-expanded="false"` on the hero control fails here.
     */
-    const html = landing();
-    const hero = html.slice(0, html.indexOf('id="capacities"'));
+    /*
+      RE-POINTED 5 Oct 2026 FOR THE REBUILT PAGE, AND THE ASSERTION GOT STRONGER.
 
-    expect(hero, 'the hero disclosure does not ship open').toContain('aria-expanded="true"');
-    expect(hero).toContain(V.bayAreaFactorM2);
-    expect(hero, 'the provenance class is not announced as text').toContain(
+      This used to require `aria-expanded="true"` on the hero's disclosure. That
+      was the right check for a page whose assumption lived inside a panel that
+      could ship closed. The rebuilt page has no panel there at all: the class
+      token, the factor and the engine's basis are rendered unconditionally
+      beside the governing figure. "Not behind a closed disclosure" is what the
+      old assertion was buying, so it is now asserted DIRECTLY — the statement
+      must not sit inside a `<details>` that lacks `open`.
+
+      The `data-state="assumed"` hook stays required. The client removed the
+      amber colour on 5 Oct; the attribute is what the colour used to hang from,
+      and it is what still makes the distinction legible in greyscale print and
+      to a reader who cannot separate the hues.
+    */
+    const html = landing();
+    const fold = html.slice(0, html.indexOf('id="does"'));
+    expect(fold, 'the fold boundary moved — this test is reading the whole page').not.toBe(
+      '',
+    );
+
+    expect(fold).toContain(V.bayAreaFactorM2);
+    expect(fold, 'the provenance class is not announced as text').toContain(
       V.bayAreaFactorClass,
     );
-    expect(hero, 'the basis is truncated or missing').toContain(V.bayAreaFactorBasis);
-    // The panel is the amber treatment, not a grey note that mentions amber.
-    expect(hero).toMatch(/data-state="assumed"/);
+    expect(fold, 'the basis is truncated or missing').toContain(V.bayAreaFactorBasis);
+    expect(fold, 'the assumption is a state, not a grey note mentioning one').toMatch(
+      /data-state="assumed"/,
+    );
+
+    // And it is not shut away: no closed <details> stands between the top of the
+    // page and the assumption.
+    const beforeAssumption = fold.slice(0, fold.indexOf('data-state="assumed"'));
+    const closedDetails = (beforeAssumption.match(/<details(?![^>]*\sopen)/g) ?? []).length;
+    const endedDetails = (beforeAssumption.match(/<\/details>/g) ?? []).length;
+    expect(
+      closedDetails - endedDetails,
+      'the assumption is inside a disclosure that ships closed',
+    ).toBeLessThanOrEqual(0);
   });
 
   it('never says the placed level produced the number that governs', () => {
@@ -229,13 +258,27 @@ describe('the landing page', () => {
       on this plot. A caption that printed only the ceiling's count beside a picture of
       the whole stack would be the most persuasive wrong statement on the site.
     */
-    const html = landing();
-    const figure = html.slice(html.indexOf('lp-hero__figure'), html.indexOf('</figure>'));
-    const t = stripTags(figure).replace(/\s+/g, ' ');
-    expect(t).toContain(`Levels the answer places ${V.levels} of ${V.maxLevelsByHeight} the height permits`);
-    expect(t).toMatch(/solid levels are the answer/i);
-    // Paper gets the plan: a canvas prints as whatever the GPU last left in it.
-    expect(figure).toMatch(/class="print-only"><svg class="lp-plan"/);
+    /*
+      RE-POINTED 5 Oct 2026. The rebuilt page carries no 3D model and no plan —
+      the client cut the page to headings and buttons, and the massing moved to
+      the engine where it is drawn from the run rather than from a fixture. The
+      CLAIM the test was defending is not about a picture: it is that the page
+      must never print the ceiling's level count as if those levels were built.
+      So both counts are still required, together, wherever the page states them.
+    */
+    const t = text().replace(/\s+/g, ' ');
+    expect(t).toContain(
+      `Levels the answer places ${V.levels} of ${V.maxLevelsByHeight} the height permits`,
+    );
+    // The ceiling's count never appears without the answer's beside it.
+    const ceilingAlone = new RegExp(`\b${V.maxLevelsByHeight}\b(?![^]{0,80}${V.levels}\b)`);
+    expect(
+      t.replace(
+        `Levels the answer places ${V.levels} of ${V.maxLevelsByHeight} the height permits`,
+        '',
+      ),
+      'the height ceiling is printed without the answer beside it',
+    ).not.toMatch(ceilingAlone);
   });
 
   /* ---------------------------------------------------------------------
@@ -555,14 +598,15 @@ describe('/ in Arabic', () => {
   it('keeps the assumed factor and its basis in the same view as the governing figure', () => {
     // A PRESENCE ASSERTION, asked again of the Arabic page: the hero ships open, the
     // amber treatment is rendered, and the basis sits beside the figure in full.
+    // Re-pointed 5 Oct 2026 with its English counterpart: the rebuilt page has no
+    // disclosure in the fold, so "ships open" is asserted as "is rendered".
     const html = arabic();
-    const hero = html.slice(0, html.indexOf('id="capacities"'));
-    expectAssumedTreatmentPresent(hero, 'the Arabic landing page fold');
-    expect(hero, 'the hero disclosure does not ship open').toContain('aria-expanded="true"');
-    expect(hero).toContain(group(V.governingGfaM2));
-    expect(hero).toContain(V.bayAreaFactorM2);
-    expect(hero).toMatch(/data-state="assumed"/);
-    expect(hero, 'the basis is truncated or not Verbatim').toContain(
+    const fold = html.slice(0, html.indexOf('id="does"'));
+    expectAssumedTreatmentPresent(fold, 'the Arabic landing page fold');
+    expect(fold).toContain(group(V.governingGfaM2));
+    expect(fold).toContain(V.bayAreaFactorM2);
+    expect(fold).toMatch(/data-state="assumed"/);
+    expect(fold, 'the basis is truncated or not Verbatim').toContain(
       `lang="en" class="verbatim">${V.bayAreaFactorBasis}<`,
     );
   });

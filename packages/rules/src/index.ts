@@ -6,3 +6,4 @@ export * from './seed/dubai-residential.js';
 export * from './standards/index.js';
 export * from './statements/index.js';
 export * from './instruments/sheet.js';
+export * from './instruments/dewa-2017.js';

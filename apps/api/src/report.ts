@@ -659,15 +659,41 @@ function gfaStatementSection(statement: RunOutput['gfaStatement']) {
     },
     allowed: wire(statement.allowedGfaM2),
     allowedFt2: ft(statement.ft2.allowed, 'allowedFt2'),
+    /*
+      THE TWO CAPS, AND A NULL IS NEVER FILLED. `GfaCap` makes every field but the
+      kind nullable, and each null is a distinct fact its own `notes` name: no
+      allowance was stated, or nothing was proposed against one. Reaching for `??
+      '0'` here to make the JSON tidy would be this adapter computing a number a
+      user will see — rule 1 of this file, and the number it would compute is the
+      one that says a scheme has spent none of a ceiling nobody stated.
+    */
+    caps: statement.caps.map((c, i) => ({
+      kind: c.kind,
+      allowed: c.allowedM2 ? wire(c.allowedM2) : null,
+      allowedFt2: c.allowedFt2 ? ft(c.allowedFt2, `caps[${i}].allowedFt2`) : null,
+      proposed: c.proposedM2 ? wire(c.proposedM2) : null,
+      proposedFt2: c.proposedFt2 ? ft(c.proposedFt2, `caps[${i}].proposedFt2`) : null,
+      remaining: c.remainingM2 ? wire(c.remainingM2) : null,
+      remainingFt2: c.remainingFt2 ? ft(c.remainingFt2, `caps[${i}].remainingFt2`) : null,
+      notes: c.notes,
+    })),
     rows: statement.rows.map((r, i) => ({
       kind: r.kind,
+      cap: r.cap,
       levelIds: r.levelIds,
       count: r.count,
       perLevel: r.perLevelM2 ? wire(r.perLevelM2) : null,
       perLevelFt2: r.perLevelFt2 ? ft(r.perLevelFt2, `rows[${i}].perLevelFt2`) : null,
+      /* The count as the graph holds it, so the row's area reads as a product.
+         `wire` and not `r.count`: the plain integer is beside it already. */
+      levelCount: r.levelCount ? wire(r.levelCount) : null,
       area: wire(r.areaM2),
       areaFt2: ft(r.areaFt2, `rows[${i}].areaFt2`),
     })),
+    /* Named and not counted — see the section type's header. Passed through as
+       the engine wrote them; a reason reworded here would be a second account. */
+    omissions: statement.omissions.map((o) => ({ kind: o.kind, cap: o.cap, reason: o.reason })),
+    reconciliation: statement.reconciliation,
     proposed: wire(statement.proposedGfaM2),
     proposedFt2: ft(statement.ft2.proposed, 'proposedFt2'),
     remaining: wire(statement.remainingGfaM2),

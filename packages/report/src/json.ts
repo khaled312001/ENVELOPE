@@ -379,19 +379,74 @@ export interface StatedArea {
   readonly ft2: DecimalString;
 }
 
+/**
+ * The area table a submission drawing carries.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY `kind` IS SEVEN VALUES AND NOT TWO, AND WHY THE TWO CAPS ARE SEPARATE.
+ *
+ * The client sent his own worked scheme on 5 Oct —
+ * `docs/03-analysis/client-drawings-2026-10-05.md` §4 transcribes it — and asked
+ * for this table by name: *«podium / Calculations»*. Three things in it were not
+ * expressible in the shape above.
+ *
+ * 1. **Levels are grouped the way the drawing groups them.** His table prints
+ *    "Typical floor 02/04/06 — 625.55 × 3 = 1,876.66": one row, a per-level area,
+ *    a count, and the product shown AS a product because the reader checks the
+ *    multiplication. That is why `perLevel` and `count` are joined by `levelCount`
+ *    as a traced operand rather than a loose integer — the row's total is a
+ *    multiplication in the provenance graph, not a figure beside two figures that
+ *    happen to produce it.
+ * 2. **Commercial and residential are capped separately and summed at the end**,
+ *    and the ground floor is where the two meet: his ground floor holds a SHOP.
+ *    One cap could not say that, and merging them would report a scheme as
+ *    compliant with a ceiling it crosses on one of the two.
+ * 3. **A floor the table names and does not count is a row, not an absence.** His
+ *    roof floor is 92.90 m² of stair head and lift motor room; ours models no roof
+ *    level at all. §20.3's "an invariant silently absent from the table reads as an
+ *    invariant that passed" is just as true of a floor, so `omissions` states what
+ *    stands there and why no area is given — a zero would say the floor is empty.
+ *
+ * `reconciliation` carries what the uniform-plate model does not model, in words,
+ * changing neither side: `reconcileCore`'s discipline applied to the one figure a
+ * reader of this table will check against a drawing they already have.
+ */
 export interface GfaStatementSection {
   readonly plotArea: StatedArea;
   readonly allowed: TracedWire;
   readonly allowedFt2: DecimalString;
+  /** Residential first. Flat totals only; the rows carry their own `cap`. */
+  readonly caps: readonly {
+    readonly kind: 'RESIDENTIAL' | 'COMMERCIAL';
+    readonly allowed: TracedWire | null;
+    readonly allowedFt2: DecimalString | null;
+    readonly proposed: TracedWire | null;
+    readonly proposedFt2: DecimalString | null;
+    readonly remaining: TracedWire | null;
+    readonly remainingFt2: DecimalString | null;
+    /** Why an allowance or a proposal is absent. A null is never a zero. */
+    readonly notes: readonly string[];
+  }[];
   readonly rows: readonly {
-    readonly kind: 'RESIDENTIAL' | 'PARKING';
+    readonly kind: 'GROUND' | 'PODIUM' | 'TYPICAL' | 'UNPLACED' | 'PARKING' | 'COMMERCIAL' | 'ROOF';
+    readonly cap: 'RESIDENTIAL' | 'COMMERCIAL';
     readonly levelIds: readonly string[];
     readonly count: number;
     readonly perLevel: TracedWire | null;
     readonly perLevelFt2: DecimalString | null;
+    /** The count as an operand of `area`, so the product is in the graph. */
+    readonly levelCount: TracedWire | null;
     readonly area: TracedWire;
     readonly areaFt2: DecimalString;
   }[];
+  /** Floors the table names and does not count. See the header. */
+  readonly omissions: readonly {
+    readonly kind: 'GROUND' | 'PODIUM' | 'TYPICAL' | 'UNPLACED' | 'PARKING' | 'COMMERCIAL' | 'ROOF';
+    readonly cap: 'RESIDENTIAL' | 'COMMERCIAL';
+    readonly reason: string;
+  }[];
+  /** What the uniform-plate model does not model. Changes no figure. */
+  readonly reconciliation: readonly string[];
   readonly proposed: TracedWire;
   readonly proposedFt2: DecimalString;
   readonly remaining: TracedWire;

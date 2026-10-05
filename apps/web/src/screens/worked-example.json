@@ -177,7 +177,7 @@
     "levelPlan": {
       "bayCount": {
         "value": "46",
-        "node": "n149",
+        "node": "n151",
         "parameterId": "parking.laid_out_bays",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -185,7 +185,7 @@
       },
       "areaPerBayM2": {
         "value": "41.68",
-        "node": "n151",
+        "node": "n153",
         "parameterId": "parking.area_per_bay_m2",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -201,7 +201,7 @@
       },
       "moduleDepthM": {
         "value": "17",
-        "node": "n139",
+        "node": "n141",
         "parameterId": "parking.module_depth_m",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -209,7 +209,7 @@
       },
       "usableAreaM2": {
         "value": "1629.88",
-        "node": "n141",
+        "node": "n143",
         "parameterId": "parking.layout_usable_area_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -217,7 +217,7 @@
       },
       "orientation": {
         "value": "modules along the width",
-        "node": "n145",
+        "node": "n147",
         "parameterId": "parking.module_orientation",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION"
@@ -1459,7 +1459,7 @@
           },
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-          "node": "n163",
+          "node": "n168",
           "provenanceClass": "DERIVED"
         },
         "candidates": [
@@ -1520,6 +1520,8 @@
         "8.08 m of depth is left unused — too shallow for a bay (5.5 m) plus its aisle (6 m). It is reported rather than quietly filled.",
         "The runs are laid modules along the width: 46 bays against 42 the other way round, in the same rectangle. Both were packed.",
         "The 288 m² deducted for cores, plant and the ramp landing costs about 13 bays at 21.25 m² each — the area one more bay takes inside a module, not the gross area per bay.",
+        "Ramp arrangement: Straight, one 6.00 m two-way run. Two cars pass on the ramp as they do in the aisle. B.7.2.2 sets its own ramp widths and they are not encoded, so this width is NOT ASSESSED against them. The other 2 enumerated arrangement(s) are reported beside it. The engine does not rank them and does not search for the best one: that is the ramp-and-core optimiser of 34:37, a TRADEOFF value Phase 0 refuses to emit.",
+        "WHICH WAY THE RAMP RUNS IS NOT ESTABLISHED. No level schedule reached the layout, so this strip is a plan rectangle with no direction: a ramp to a basement descends, a ramp to a podium parking level climbs, and nothing here knows which this is. It is reported rather than filled, because what it would be filled with is the figure that drew every ramp in every scheme sloping the same way — wrong in the DXF, and not only on screen.",
         "Whether a T junction sits opposite the chosen opening (B.7.2.1: \"Vehicle access shall not be located opposite a T junction\"). That needs the surrounding road network, which no affection plan carries.",
         "RTA approval. B.7.2.1 defers the location to RTA requirements and the Dubai access management manual; nothing here substitutes for that.",
         "Whether a traffic impact study is required for this development."
@@ -1544,7 +1546,7 @@
         },
         "rank": 1,
         "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-        "node": "n163",
+        "node": "n168",
         "provenanceClass": "DERIVED"
       },
       "candidates": [
@@ -1964,7 +1966,7 @@
         },
         {
           "name": "GFA calculation",
-          "note": "Allowed is FAR × plot area, before the parking-in-FAR treatment. Proposed is whole floors of the tower plate, plus parking only where it counts toward FAR. There is no commercial row: this engine places no commercial area."
+          "note": "Allowed is FAR × plot area, before the parking-in-FAR treatment. Proposed is whole floors of the tower plate, plus parking only where it counts toward FAR. The residential and commercial allowances are capped separately and summed at the end. Statements with no figure — an allowance nobody stated, a floor named and not counted — are below the table, not in the value column."
         },
         {
           "name": "Parking level",
@@ -1997,7 +1999,7 @@
           "Pedestrian entrance, refuse room and escape distances — NOT ASSESSED until their rules are encoded.",
           "Ramp transitions, headroom and the approach from the street — NOT ASSESSED (DBC B.7.2.2). Only the gradient over the reserved run is computed.",
           "The core, as a design. Its outline is the tower plate scaled to the core area, and only that area is a computed quantity. The stairs, lifts and lobby drawn inside it are an indicative layout, assumed: egress, lift traffic and fire-fighting are NOT ASSESSED, and no riser or core wall is placed.",
-          "The ground floor, as a services design. The entrance and plant rooms in its reserved strip are an indicative program, assumed: no room is sized, ventilated or access-checked against a DEWA, Civil Defence or municipality requirement."
+          "The ground floor, as a services design. Every room in its reserved strip whose width is a typical figure is an assumption: it is not sized, ventilated or access-checked against a Civil Defence or municipality requirement. The substation and the LV room are sized from DEWA §11.4.1 and §11.2.3, and neither is ventilated or access-checked either — §11.5.1 is only partly mechanizable and is NOT ASSESSED. SUBSTATION: DEWA §11.4.1 requires 33 m² at a minimum width of 4.57 m for 1 transformer(s). The reserved strip is 4.42 m deep, so no room drawn in it reaches that width however long it is made — a 33 m² room 4.42 m wide meets the area and fails the clause. The substation was not drawn rather than drawn undersized. LV ROOM: DEWA §11.2.3 puts the LV room adjacent to the substation, and the substation was not drawn, so there is nothing for it to be adjacent to. It is not drawn elsewhere in the strip: its position is the only thing a clause on file states about it."
         ]
       },
       "jsonFields": [

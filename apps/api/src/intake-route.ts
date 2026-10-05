@@ -94,6 +94,24 @@ function present(facts: AffectionPlanFacts): unknown {
     setbacks: traced(facts.setbacks),
     coverage: traced(facts.coverage),
 
+    /*
+      THE BOUNDARY READINGS, PASSED THROUGH WHOLE AND NOT RESHAPED.
+
+      `EdgeReadings` is JSON-safe by construction — its own header states it and
+      holds no `Decimal` anywhere in the tree — so this is the one field on this
+      object that needs no presenter. Mapping it through a `traced(...)` per
+      proposal would build a second description of a shape `edges.ts` already
+      publishes, and the scar in this file's own footnote is what that costs: a
+      value that becomes the string its wire type declares only when something
+      serialises it, and a screen handed the unserialised one throwing on a field
+      whose type says `string`.
+
+      It is what answers the client's complaint of 5 Oct — the readings arriving
+      at step 1 instead of four empty selects. Without this line the module, its
+      tests and the panel all exist and the browser receives none of it.
+    */
+    edges: facts.edges,
+
     missing: facts.missing,
     crossChecks: facts.crossChecks,
     crossChecksPassed: crossChecksPassed(facts),

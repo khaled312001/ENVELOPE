@@ -476,6 +476,65 @@ export interface AffectionPlanRead {
       };
       readonly provenanceClass: string;
     } | null;
+    /**
+     * What the sheet says about its boundaries, and what it does not.
+     *
+     * OPTIONAL ON THE WIRE, AND THAT IS NOT CAUTION. A reading taken before this
+     * field existed — stored in a tab, restored from an autosaved draft, or
+     * replayed by a test fixture — has no `edges`, and a required field would make
+     * the screen throw on it. `packages/intake` types it as REQUIRED, because a
+     * sheet parsed now always has one, even if every list in it is empty: "the
+     * sheet supports no proposal" and "nobody asked" are different facts and the
+     * empty object is how the first one is said.
+     *
+     * `classification` is a structured `Traced` rather than a `TracedWire`: the
+     * route's `present` passes this subtree through whole — it is JSON-safe by
+     * construction, with no `Decimal` anywhere in it — so there is no
+     * `renderHint`, and the panel marks the class with the product's own chip.
+     */
+    readonly edges?: {
+      readonly proposals: readonly {
+        readonly role: 'FRONT' | 'SIDE' | 'REAR';
+        readonly classification: {
+          readonly value: string;
+          readonly node: string;
+          readonly parameterId: string;
+          readonly provenanceClass: string;
+        };
+        readonly basedOn: readonly string[];
+        readonly evidence: readonly {
+          readonly verbatim: string;
+          readonly page: number;
+          readonly bbox: readonly [number, number, number, number];
+          readonly label: string;
+          readonly mass?: string;
+        }[];
+        /**
+         * Prose on both fields. `effect` is NOT the assumption register's
+         * `relativeEffect`, which is a decimal string this screen formats as a
+         * percentage — the names are kept apart so the two cannot be crossed.
+         */
+        readonly sensitivity: {
+          readonly perturbation: string;
+          readonly effect: string;
+        };
+      }[];
+      readonly missing: readonly {
+        readonly field: string;
+        readonly label: string;
+        readonly consequence: string;
+      }[];
+      readonly roadLabels: readonly {
+        readonly verbatim: string;
+        readonly page: number;
+        readonly bbox: readonly [number, number, number, number];
+        readonly label: string;
+      }[];
+      readonly accessSide?: {
+        readonly value: string;
+        readonly provenanceClass: string;
+      };
+    };
     readonly missing: readonly {
       readonly field: string;
       readonly label: string;
@@ -1031,16 +1090,59 @@ export interface TracedArea extends AreaPair {
   readonly traced: TracedWire;
 }
 
+/** What a row of the schedule is. Seven, because a drawing's table has seven. */
+export type GfaRowKindView =
+  | 'GROUND'
+  | 'PODIUM'
+  | 'TYPICAL'
+  | 'UNPLACED'
+  | 'PARKING'
+  | 'COMMERCIAL'
+  | 'ROOF';
+
+/** Which allowance a row draws on. Two, capped separately and summed at the end. */
+export type GfaCapKindView = 'RESIDENTIAL' | 'COMMERCIAL';
+
+/**
+ * The area table, as the client's own drawings print one.
+ *
+ * `docs/03-analysis/client-drawings-2026-10-05.md` §4 is the specification — his
+ * worked scheme, transcribed. Three things in it are why this type is wider than
+ * a list of areas: a row is a GROUP of identical levels printed as "625.55 × 3",
+ * commercial and residential are capped separately and meet on the ground floor,
+ * and a floor the table names without counting is a ROW rather than an absence.
+ * `packages/report/src/json.ts`'s `GfaStatementSection` carries the argument in
+ * full; this is the same shape in the run view's units.
+ */
 export interface GfaStatementView {
   readonly plotArea: AreaPair;
   readonly allowed: TracedArea;
+  /** Residential first. A null is a stated absence, never a zero. */
+  readonly caps: readonly {
+    readonly kind: GfaCapKindView;
+    readonly allowed: TracedArea | null;
+    readonly proposed: TracedArea | null;
+    readonly remaining: TracedArea | null;
+    readonly notes: readonly string[];
+  }[];
   readonly rows: readonly {
-    readonly kind: 'RESIDENTIAL' | 'PARKING';
+    readonly kind: GfaRowKindView;
+    readonly cap: GfaCapKindView;
     readonly levelIds: readonly string[];
     readonly count: number;
     readonly perLevel: TracedArea | null;
+    /** The count as an operand of `area`, so the product is openable. */
+    readonly levelCount: TracedWire | null;
     readonly area: TracedArea;
   }[];
+  /** Floors named and not counted — the roof's stair head, a part floor. */
+  readonly omissions: readonly {
+    readonly kind: GfaRowKindView;
+    readonly cap: GfaCapKindView;
+    readonly reason: string;
+  }[];
+  /** What the uniform-plate model does not model. Moves no figure. */
+  readonly reconciliation: readonly string[];
   readonly proposed: TracedArea;
   readonly remaining: TracedArea;
   readonly partFloorNotPlaced: AreaPair;

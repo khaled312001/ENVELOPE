@@ -109,6 +109,31 @@ export const AR: PlotFormDictionary = {
     edgesHelp: 'طول واتجاه لكل حد كما ينص عليهما مخطط الأفكشن، ومنهما تحسب الأركان.',
     switched:
       'مستطيلك الآن في الحقول أدناه بأربعة حدود. عدل ما تشاء منها، وأضف حدا أو احذفه بحسب القطعة.',
+    map: 'ارسمه على خريطة',
+    mapHelp:
+      'ارسم الحدود على صور الأقمار الصناعية، ومخطط الأفكشن فوقها. وتصل الأطوال والاتجاهات إلى الحقول أدناه قابلة للتعديل.',
+    traced: (n: string): string =>
+      `${n} حدود مرسومة في الحقول أدناه. والرسم ليس مساحة: راجع كل طول أمام المخطط وعدل ما يخالفه.`,
+  },
+
+  /**
+   * The sheet's own boundary readings. See the English twin for the argument:
+   * the sheet states a reading per FACE and never says which boundary of this
+   * plot holds which, so that one question is what is asked.
+   */
+  roles: {
+    legend: 'من مخطط الأفكشن',
+    help: 'ينص المخطط على قراءة لكل واجهة. حدد أي حد هو أيها، فتطبق القراءة.',
+    which: (n: string): string => `الحد ${n} هو`,
+    choose: 'غير محدد',
+    FRONT: 'الواجهة الأمامية',
+    SIDE: 'الواجهة الجانبية',
+    REAR: 'الواجهة الخلفية',
+    appliesBefore: 'يقرأ المخطط هذه الواجهة ',
+    appliesAfter: '.',
+    assumed: 'مفترض',
+    evidence: (page: string): string => `قرئت في صفحة ${page}`,
+    missing: 'لا ينص المخطط على قراءة لكل واجهة. وما يتركه يبقى غير محدد هنا.',
   },
 
   traverse: {

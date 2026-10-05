@@ -46,6 +46,7 @@ import {
   type TracedDecimal,
   type Tracer,
 } from '@envelope/core';
+import { readBoundaries, type EdgeReadings } from './edges.js';
 import {
   locate,
   pageLines,
@@ -82,6 +83,14 @@ export type {
   SetbackValue,
 } from '@envelope/core';
 
+/*
+ * `AffectionPlanFacts.edges` is typed by `edges.ts`, and those names are NOT
+ * re-exported from here. `index.ts` exports that module directly, and doing
+ * both would give the barrel two `export *` paths to one name — legal when they
+ * resolve to the same binding and a confusing failure the day one of them stops
+ * doing so. One route to a type.
+ */
+
 /** A field the sheet does not print. Never filled in by this module. */
 export interface MissingField {
   readonly field: string;
@@ -116,6 +125,16 @@ export interface AffectionPlanFacts {
   readonly crossChecks: readonly CrossCheck[];
   /** Whether the sheet defers parking to another instrument. */
   readonly parkingDeferredTo?: Traced<string>;
+  /**
+   * What the sheet says about its boundaries — the bridge from its FACES to the
+   * form's EDGES. See `edges.ts`; every entry is `ASSUMED` and offered, never
+   * written into a mandatory field.
+   *
+   * Required rather than optional, like `missing` and `crossChecks`: an absent
+   * field reads as "not computed" and an empty one reads as "the sheet supports
+   * none", and on `DJAZ1MED12RES011` the second is the whole answer.
+   */
+  readonly edges: EdgeReadings;
 }
 
 // ---------------------------------------------------------------------------
@@ -165,7 +184,28 @@ function cite(
   };
 }
 
-/** `G+2P+8`, `G+3P+6`, `G+11`. */
+/**
+ * `G+2P+8`, `G+3P+6`, `G+11`.
+ *
+ * NOT THE CAUSE OF THE `G+4` → 13 DEFECT, and this note is here so nobody
+ * "fixes" it twice. `docs/03-analysis/meeting-03-2026-10-04.md` §2.1 records the
+ * client reading `G+4` off a plan while the screen reported 13 levels, and names
+ * two candidate causes that had to be told apart before either was touched. They
+ * were, and it is the second:
+ *
+ *   `parseHeight('G+4')` returns `typicalFloors 4, podiumLevels 0,
+ *   totalLevels 5`. The test below asserts it by name.
+ *
+ * The 13 is the FAR-driven level count, uncapped by the stated height. The
+ * sheet's `G+N` deliberately binds nothing — `packages/rules/src/instruments/
+ * sheet.ts` pushes it to `notBound` because `height.max` is a ceiling in metres
+ * and converting a level count into one needs a floor-to-floor that is itself a
+ * resolved parameter — so the solver's ceiling is the generic seed rule
+ * `R-HEIGHT-MAX-RES` at 45.00 m over `floor_to_floor` 3.20 m, which is 14, and
+ * the answer is `min(14, ceil(permitted GFA ÷ plate))`. Nothing in that formula
+ * is the number printed on the sheet. The fix belongs to the envelope solver and
+ * the rule builder, not here; this parser's job is to read `4` and it reads `4`.
+ */
 export function parseHeight(raw: string): HeightAllowance | undefined {
   const withPodium = /\bG\s*\+\s*(\d+)\s*P\s*\+\s*(\d+)\b/i.exec(raw);
   if (withPodium?.[1] !== undefined && withPodium[2] !== undefined) {
@@ -204,24 +244,77 @@ function parseSetbackValue(clause: string): SetbackValue | undefined {
   return fixed?.[1] === undefined ? undefined : { kind: 'FIXED', metres: new Decimal(fixed[1]) };
 }
 
+/** The two masses a Trakhees sheet sets back separately. */
+export const SetbackMass = {
+  PODIUM: 'PODIUM',
+  TOWER: 'TOWER',
+} as const;
+export type SetbackMass = (typeof SetbackMass)[keyof typeof SetbackMass];
+
 /**
- * Split a setback line into faces.
+ * One face named by one clause of a setback line, with the clause kept.
+ *
+ * THE CLAUSE IS THE POINT. `parseSetbackFace` used to recognise a face and throw
+ * the words away, which is all a setback *distance* needs — and it is why nothing
+ * could bridge the sheet's faces to the form's edges. "6m to adjacent plot" and
+ * "3m" are the same distance to a setback and completely different evidence about
+ * what lies beyond the boundary. `edges.ts` reads these clauses; the schedule is
+ * folded out of the same list, so the two cannot drift.
+ */
+export interface FaceClause {
+  readonly face: keyof SetbackFace;
+  readonly value: SetbackValue;
+  /** The clause as the sheet wrote it, trimmed and nothing else. */
+  readonly clause: string;
+  /** The words that named the face: "Front", "street front", "adjacent plot". */
+  readonly label: string;
+  /**
+   * True where the clause named this face only by implication.
+   *
+   * "6m to adjacent plot" names every face that is not the street without
+   * writing either word, so it must not overwrite a face the sheet did name.
+   * This is the `??=` the fold below applies, kept as data so that the order of
+   * assignment survives being read by two callers.
+   */
+  readonly onlyIfUnset: boolean;
+}
+
+/** One mass's setback line, split into the faces it names. */
+export interface MassSetbackClauses {
+  readonly mass: SetbackMass;
+  /** The whole line as printed, including its "GF & Podium:" / "Tower:" label. */
+  readonly line: string;
+  readonly faces: readonly FaceClause[];
+}
+
+/**
+ * Split a setback line into the faces it names, keeping each clause.
  *
  * The two sample grammars are genuinely different — "Front = 0m, Sides & Rear =
  * 3m" versus "0m to street front, Side and rear setback is 0m to solid wall and
  * 4.0m to window wall" — so this recognises phrases rather than positions, and
- * leaves a face `undefined` when it recognises nothing. An unrecognised face is
- * a missing field, not a zero.
+ * names no face it does not recognise. An unrecognised face is a missing field,
+ * not a zero.
  */
-export function parseSetbackFace(line: string): SetbackFace {
-  const face: { front?: SetbackValue; side?: SetbackValue; rear?: SetbackValue } = {};
-
-  const all = /(\d+(?:\.\d+)?)\s*m\s+from\s+all\s+sides/i.exec(line);
+export function parseFaceClauses(line: string): readonly FaceClause[] {
+  // "0m from all sides" states one distance for every face and names NONE of
+  // them. That distinction is invisible to a setback and decisive to a boundary
+  // reading, so the label is the sheet's own "all sides" rather than a face
+  // name, and `edges.ts` refuses to read a road frontage out of it.
+  const all = /(\d+(?:\.\d+)?)\s*m\s+from\s+(all\s+sides)/i.exec(line);
   if (all?.[1] !== undefined) {
-    const v: SetbackValue = { kind: 'FIXED', metres: new Decimal(all[1]) };
-    return { front: v, side: v, rear: v };
+    const value: SetbackValue = { kind: 'FIXED', metres: new Decimal(all[1]) };
+    const shared = { value, clause: line.trim(), label: all[2] ?? 'all sides', onlyIfUnset: false };
+    // Returned instead of continuing, exactly as the early return did before:
+    // a line that states every face has no further clause to read.
+    return [
+      { face: 'front', ...shared },
+      { face: 'side', ...shared },
+      { face: 'rear', ...shared },
+    ];
   }
 
+  const out: FaceClause[] = [];
   // Split on commas only. Splitting on "and" as well looks tempting but breaks
   // the one grammar that matters most: "Side and rear setback is 0m to solid
   // wall and 4.0m to window wall" would lose the word "Side" from the clause
@@ -231,33 +324,83 @@ export function parseSetbackFace(line: string): SetbackFace {
     if (c === '') continue;
     const value = parseSetbackValue(c);
     if (!value) continue;
-    if (/front|street/i.test(c)) face.front = value;
-    if (/side/i.test(c)) face.side = value;
+    const named = (
+      face: keyof SetbackFace,
+      pattern: RegExp,
+      onlyIfUnset = false,
+    ): void => {
+      const label = pattern.exec(c)?.[0];
+      if (label === undefined) return;
+      out.push({ face, value, clause: c, label: label.trim(), onlyIfUnset });
+    };
+    named('front', /street\s+front|front|street/i);
+    named('side', /sides?/i);
     // Whole words: "setback" ends in "back", and "Side setback 0m" used to set
     // the rear face too — a value for a face the sheet never named.
-    if (/\brear\b|\bback\b/i.test(c)) face.rear = value;
+    named('rear', /\brear\b|\bback\b/i);
     // "6m to adjacent plot" names every face that is not the street: a plot
     // boundary is a side or a rear, and the sheet does not distinguish them.
-    if (/adjacent\s+plot/i.test(c)) {
-      face.side ??= value;
-      face.rear ??= value;
-    }
+    named('side', /adjacent\s+plot/i, true);
+    named('rear', /adjacent\s+plot/i, true);
+  }
+  return out;
+}
+
+/** The face distances, folded out of {@link parseFaceClauses}. */
+export function parseSetbackFace(line: string): SetbackFace {
+  const face: { front?: SetbackValue; side?: SetbackValue; rear?: SetbackValue } = {};
+  for (const c of parseFaceClauses(line)) {
+    if (c.onlyIfUnset) face[c.face] ??= c.value;
+    else face[c.face] = c.value;
   }
   return face;
 }
 
-function parseSetbacks(text: string): SetbackSchedule | undefined {
+/**
+ * The two setback lines a sheet prints, matched once.
+ *
+ * One function because `parseSetbacks` and {@link setbackClauses} must agree
+ * about which text is a setback line — two copies of these patterns would
+ * eventually read the schedule and the boundary proposals off different
+ * sentences, and the proposals would still look right.
+ */
+function setbackLines(
+  text: string,
+): readonly { readonly mass: SetbackMass; readonly whole: string; readonly content: string }[] {
   const podiumLine = /(?:GF\s*[&/]\s*Podium|GF\s*and\s*Podium)\s*:?\s*([^\n]*)/i.exec(text);
   const towerLine = /\bTower\s*:?\s*([^\n]*)/i.exec(text);
-  if (!podiumLine && !towerLine) return undefined;
+  const out: { mass: SetbackMass; whole: string; content: string }[] = [];
+  // Podium first, because `SetbackSchedule.raw` quotes them in that order and
+  // that string is shown to the reader as "as printed".
+  if (podiumLine)
+    out.push({ mass: SetbackMass.PODIUM, whole: podiumLine[0], content: podiumLine[1] ?? '' });
+  if (towerLine)
+    out.push({ mass: SetbackMass.TOWER, whole: towerLine[0], content: towerLine[1] ?? '' });
+  return out;
+}
 
-  const podium = parseSetbackFace(podiumLine?.[1] ?? '');
-  const tower = parseSetbackFace(towerLine?.[1] ?? '');
+/** Each mass's line split face by face — what `edges.ts` reads. */
+export function setbackClauses(text: string): readonly MassSetbackClauses[] {
+  return setbackLines(text).map((l) => ({
+    mass: l.mass,
+    line: l.whole.replace(/\s+/g, ' ').trim(),
+    faces: parseFaceClauses(l.content),
+  }));
+}
+
+function parseSetbacks(text: string): SetbackSchedule | undefined {
+  const lines = setbackLines(text);
+  if (lines.length === 0) return undefined;
+
+  const contentOf = (mass: SetbackMass): string =>
+    lines.find((l) => l.mass === mass)?.content ?? '';
+  const podium = parseSetbackFace(contentOf(SetbackMass.PODIUM));
+  const tower = parseSetbackFace(contentOf(SetbackMass.TOWER));
   const faces = [podium.front, podium.side, podium.rear, tower.front, tower.side, tower.rear];
   return {
     podium,
     tower,
-    raw: [podiumLine?.[0], towerLine?.[0]].filter(Boolean).join(' | ').replace(/\s+/g, ' ').trim(),
+    raw: lines.map((l) => l.whole).join(' | ').replace(/\s+/g, ' ').trim(),
     requiresDecision: faces.some((f) => f?.kind === 'CONDITIONAL'),
   };
 }
@@ -480,9 +623,21 @@ export function readFacts(
     });
   }
 
+  // --- boundaries ---------------------------------------------------------
+  // Read from the same clauses the schedule was folded out of, so the proposals
+  // and the distances cannot come from different sentences. It runs whether or
+  // not a schedule was found: a sheet with no setback line still has an `Access
+  // Side` box, and still owes the reader a reason per unanswered boundary.
+  const edges = readBoundaries(page, {
+    documentUri,
+    issueDate,
+    tracer,
+    clauses: setbackClauses(text),
+  });
+
   const facts: {
     -readonly [K in keyof AffectionPlanFacts]: AffectionPlanFacts[K];
-  } = { missing, crossChecks };
+  } = { missing, crossChecks, edges };
 
   if (totalAreaSqm) facts.totalAreaSqm = totalAreaSqm;
   if (far) facts.far = far;

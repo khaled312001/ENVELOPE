@@ -121,11 +121,7 @@ export const EN = {
   opening: {
     eyebrow: 'Phase 0 · the parking band',
     title: 'The number that governs this plot rests on an assumption.',
-    lede:
-      'Here is the assumption, with the basis it was recorded against. Then the level ' +
-      'is drawn — bay by bay, aisle and ramp, inside the podium the setbacks left — ' +
-      'and this page reports what the drawing costs against what the assumption ' +
-      'predicted. The gap is the argument, not the embarrassment.',
+    lede: 'The assumption, its basis, and what the drawing cost against it.',
     evidenceLabel: 'The governing figure, and the assumption it rests on',
     governingLabel: 'Governing capacity, this run',
     /** The band token is the run's, and it is the argument: R10, templated never typed. */
@@ -137,65 +133,53 @@ export const EN = {
   /** §2 — the six links, in the order the engine computes them. */
   chain: {
     title: 'Where the governing number comes from',
-    lede:
-      'Six links, in the order the engine computes them. The fourth is a division, and ' +
-      'its divisor is an assumption with a written basis and a measured sensitivity ' +
-      'rather than a constant. Everything below this section is downstream of it.',
+    lede: 'Six links, in the order the engine computes them. The fourth is an assumption.',
     mix: {
       name: 'Bays per unit, from the mix',
-      note:
-        'The declared unit mix sets how many bays each unit owes. It is the demand side ' +
-        'of the model and it is fixed before any area is divided.',
     },
     probe: {
       name: 'Demand at the probe scheme',
-      note:
-        'The engine takes the unit count that floor area and geometry would allow and ' +
-        'asks what that scheme would need. This is a probe used to find the ceiling, and ' +
-        'it is not the demand of the answer. The next section is about nothing else.',
     },
     available: {
       name: 'Available area across the declared levels',
-      note:
-        'The podium footprint, taken across the levels the run declared, reduced by the ' +
-        'fraction of a level that cores, ramps and plant consume.',
       levels: 'levels declared',
       usable: 'usable',
       /** Followed by the engine's basis string, verbatim, and a full stop. */
       basis: 'Basis, in full: ',
     },
+    /*
+      THE SIX NOTES ARE GONE AND THE BASIS IS NOT.
+
+      Each note paraphrased, in interface copy, what the engine already emits as a
+      basis string — and `available.basis` prints that string verbatim two rows
+      above. Two accounts of why the divisor is an assumption, one signed by the
+      engine and one typed by us, is the shape of drift this repository refuses for
+      figures and had been tolerating for reasons. The signed one stays.
+
+      The client asked for the results plainly three times: «النتائج تكون سهلة
+      واحترافية مش معقدة ومش عاوز شرح وكلام كتير». A link's NAME is the label doing
+      the work — "Supply is that area divided by an area factor" is the sentence —
+      and a paragraph under it was the second telling.
+    */
     divide: {
       name: 'Supply is that area divided by an area factor',
-      note:
-        'This is the division the whole page is about. No cited rule fixes the gross area ' +
-        'a bay consumes once its share of aisle, column and circulation is charged to it, ' +
-        'so the engine records an assumption, demands a basis for it, and ranks it in the ' +
-        'register by how far the answer moves when it is perturbed.',
     },
     ceiling: {
       name: 'The supportable unit ceiling',
-      note:
-        'Supply, converted back into units at the same bays-per-unit rate. It is a floor ' +
-        'division, so the ceiling it produces is never rounded up into units the parking ' +
-        'cannot serve.',
     },
     band: 'The parking band',
     /** Around the band token and the governing figure, both the run's. */
     verdictBefore: 'On this run the ',
     verdictMid: ' band is the smallest of the three, so the governing capacity is ',
-    verdictAfter:
-      '. Trace that figure back through the six links above and the fourth one is an ' +
-      'assumption. That is the honest shape of the headline number on this site, and it ' +
-      'is stated here rather than found later.',
+    /* The claim, kept; the essay about the claim, cut. Link four is marked ASSUMED
+       in the chain above, which is where a reader checks it. */
+    verdictAfter: '. Link four of the six above is an assumption.',
   },
 
   /** §3 — three quantities carry the word "bays", and no two are the same number. */
   demand: {
     title: 'Demand and supply are different numbers',
-    lede:
-      'This section exists because the site would otherwise print one of them as the ' +
-      'other. Three quantities carry the word “bays” and no two of them are the same ' +
-      'number.',
+    lede: 'Three quantities carry the word “bays”. No two of them are the same number.',
     probeLabel: 'Demand, probe scheme',
     /** The unit this page supplies for `totalBays`, which has none on the wire. */
     bays: 'bays',
@@ -217,19 +201,14 @@ export const EN = {
   /** §4, when the engine returned a reason instead of a plan. */
   refused: {
     title: 'No level was laid out for this run',
-    lede:
-      'The engine returns a reason rather than an empty object, because an empty plan ' +
-      'reads as “no bays” and that is a different statement.',
+    lede: 'An empty plan would read as “no bays”. The engine returns the reason instead.',
     callout: 'The layout was refused.',
   },
 
   /** §4 — the level, drawn, and the same level stood up in 3D. */
   level: {
     title: 'The level, drawn',
-    lede:
-      'Every rectangle here is one the engine placed, in the coordinates the geometry ' +
-      'kernel used. The drawing runs after the band above, on a supply figure that was ' +
-      'already settled, and nothing in it reaches back into that figure.',
+    lede: 'Every rectangle is one the engine placed, in the geometry kernel’s own coordinates.',
     figureLabel: 'Parking level · as placed',
     legendLabel: 'What the drawing shows',
     bayMeta: (width: string, length: string, placed: string): string =>
@@ -266,11 +245,7 @@ export const EN = {
   /** §5 — the section this product is for. */
   cost: {
     title: 'What the drawing costs the assumption',
-    lede:
-      'The section this product is for. The supply model spent a fixed area on every ' +
-      'bay; the layout then had to find room for aisles, a ramp strip and the depth a ' +
-      'module actually needs. Set the two against each other and the assumption is ' +
-      'either vindicated or it is not.',
+    lede: 'What the supply model spent per bay, against what the drawing achieved.',
     spent: 'What the supply model spent, per bay',
     achieved: 'What the drawing achieved, per bay',
     heavierTitle: 'The drawing came out heavier than the factor predicted on this plot.',
@@ -303,10 +278,7 @@ export const EN = {
   /** §6 — packed inside the podium, never its bounding box. */
   losses: {
     title: 'Where the bays went, and to what',
-    lede:
-      'Three different losses, kept apart. One efficiency percentage would hide which ' +
-      'of them you can do something about, and they are three different arguments with ' +
-      'three different people.',
+    lede: 'Three losses, kept apart. One percentage would hide which of them you can act on.',
     regionLabel: 'What the level gave up',
     caption: 'Bays and area given up on this level, by cause.',
     cause: 'Where it went',
@@ -340,9 +312,8 @@ export const EN = {
   pack: {
     title: 'Packed inside the podium, never its bounding box',
     lede:
-      'A bounding box is easy to pack and it is not the site. The layout targets the ' +
-      'largest rectangle that fits inside the podium outline, so the error runs by ' +
-      'containment and the bay count is a floor rather than a hope.',
+      'The largest rectangle inside the podium outline, not its bounding box. The error ' +
+      'runs by containment, so the bay count is a floor.',
     width: 'Pack rectangle, width',
     depth: 'Pack rectangle, depth',
     module: 'Module depth',
@@ -365,12 +336,7 @@ export const EN = {
   /** §7 — only the row the run used, and the two things it holds and does not print. */
   dims: {
     title: 'The dimensions this run was cut to',
-    lede:
-      'Only the row the run actually used. The full minimum-dimensions table is not ' +
-      'republished here: the engine holds six rows, not the ten a ' +
-      'five-angles-by-two-driveways grid implies, so a page promising the grid would be ' +
-      'describing a table that does not exist — and republishing a code table wholesale ' +
-      'is an exposure that citing a clause is not.',
+    lede: 'Only the row this run used. The code table is not republished here.',
     regionLabel: 'Bay dimensions used by this run',
     caption: 'The bay and driveway dimensions this run was cut to.',
     dimension: 'Dimension',
@@ -395,10 +361,8 @@ export const EN = {
   ramp: {
     title: 'The ramp is placed; its gradient is not assessed',
     lede:
-      'The strip below is reserved in plan and nothing more. Drawing a ramp that reads ' +
-      'as checked when only its footprint was considered would be worse than drawing ' +
-      'none, so it keeps the deferred treatment — the hatch, the dashed edge and the ' +
-      'italic — everywhere it appears on this page.',
+      'Reserved in plan and nothing more — no gradient, no headroom, no turning check. ' +
+      'It keeps the deferred treatment everywhere it appears.',
     width: 'Ramp strip, width',
     length: 'Ramp strip, length',
     /** Follows the NOT ASSESSED chip in the same sentence. */
@@ -414,11 +378,7 @@ export const EN = {
   /** §9 — where the cars get in, and every frontage refused with its reason. */
   access: {
     title: 'Where the cars get in',
-    lede:
-      'The recommendation, the frontages it beat, and every frontage that was refused ' +
-      'with the reason it was refused. The refusals are the half a spreadsheet never ' +
-      'gives you, and they are the reason a reviewer can argue with the placement ' +
-      'instead of taking it.',
+    lede: 'The recommendation, the frontages it beat, and every refusal with its reason.',
     /** «Frontage 0 · local road · 6.00 m wide», around three values off the run. */
     frontage: 'Frontage ',
     roadBefore: '',
@@ -458,10 +418,8 @@ export const EN = {
     excluded: 'Parking excluded from floor area',
     title: 'The declaration with no default',
     lede:
-      'Whether parking counts toward floor area is not something this engine decides. ' +
-      'It is derived from a citation, or set by a named person, or the run is refused — ' +
-      'and rather than quote a range from a specification, this is the same plot run ' +
-      'both ways.',
+      'Derived from a citation, or set by a named person, or the run is refused. Here is ' +
+      'the same plot run both ways.',
     declared: 'declared on this run',
     regulatoryLimit: 'Regulatory limit',
     governingCapacity: 'Governing capacity',
@@ -481,9 +439,7 @@ export const EN = {
   /** §11 — refused rather than unbuilt. The optimiser refusal is shared, not here. */
   not: {
     title: 'What it does not do here',
-    lede:
-      'Each of these is refused rather than unbuilt, and the first is refused by the type ' +
-      'system rather than by a decision anyone could reverse in a sprint.',
+    lede: 'Refused rather than unbuilt. The first is refused by the type system.',
     items: [
       {
         h: 'It does not design a structural grid.',

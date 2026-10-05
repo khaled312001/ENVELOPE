@@ -63,23 +63,35 @@ const PLOT = {
   community: 'TEST',
 } as unknown as Plot;
 
+function planWithGraph(
+  podium: Ring = RECT_60x40,
+  classes: readonly string[] = ['ROAD', 'ADJACENT_PLOT', 'ADJACENT_PLOT', 'ADJACENT_PLOT'],
+  usable = '0.85',
+): { readonly plan: LevelPlan; readonly graph: ProvenanceGraph } {
+  const graph = new ProvenanceGraph();
+  const tracer = new Tracer(graph);
+  return {
+    graph,
+    plan: planParkingLevel({
+      tracer,
+      plot: PLOT,
+      edges: edges(classes),
+      podiumRing: podium,
+      includeRamp: true,
+      usableFraction: tracer.assumed('parking.usable_fraction', new Decimal(usable), {
+        basis: 'test fixture; the fraction of a level left after cores, ramps and plant',
+        unit: 'ratio',
+      }),
+    }),
+  };
+}
+
 function plan(
   podium: Ring = RECT_60x40,
   classes: readonly string[] = ['ROAD', 'ADJACENT_PLOT', 'ADJACENT_PLOT', 'ADJACENT_PLOT'],
   usable = '0.85',
 ): LevelPlan {
-  const tracer = new Tracer(new ProvenanceGraph());
-  return planParkingLevel({
-    tracer,
-    plot: PLOT,
-    edges: edges(classes),
-    podiumRing: podium,
-    includeRamp: true,
-    usableFraction: tracer.assumed('parking.usable_fraction', new Decimal(usable), {
-      basis: 'test fixture; the fraction of a level left after cores, ramps and plant',
-      unit: 'ratio',
-    }),
-  });
+  return planWithGraph(podium, classes, usable).plan;
 }
 
 describe('planParkingLevel on a rectangular podium', () => {
@@ -124,6 +136,56 @@ describe('the deduction', () => {
     expect(plan(RECT_60x40, undefined, '0.7').bayCount.value).toBeLessThan(
       plan(RECT_60x40, undefined, '0.95').bayCount.value,
     );
+  });
+});
+
+/*
+  THE FLOOR AREA ON A PARKING LEVEL THAT IS NOT PARKING.
+
+  The operand the GFA statement needs in order to say anything at all about what
+  a parking ground floor contributes — the client's own worked scheme counts
+  118.00 m² of residential floor area on a 1,355 m² parking ground floor, and
+  this engine counts none. Emitted here, with a derivation, rather than
+  reassembled by whoever prints it: "nothing in the composition root computes a
+  number a user will see."
+
+  Two properties, and the second one is the one that matters: the figure is ONE
+  number with the deduction, and it is an UPPER BOUND rather than a GFA figure.
+*/
+describe('the floor area that is not parking', () => {
+  it('is the deduction, derived from it so the two cannot drift apart', () => {
+    const { plan: p, graph } = planWithGraph();
+    expect(p.nonParkingFloorAreaM2.value.toString()).toBe(p.deductionsM2.value.toString());
+    // Not a second declaration of the same quantity: value → computation → the
+    // deduction itself, by name.
+    const json = graph.toJSON();
+    const computation = json.edges.find((e) => e.from === p.nonParkingFloorAreaM2.node)?.to;
+    const operands = json.edges.filter((e) => e.from === computation).map((e) => e.to);
+    expect(operands).toContain(p.deductionsM2.node);
+    expect(p.nonParkingFloorAreaM2.provenanceClass).toBe('ASSUMED');
+  });
+
+  it('moves with the fraction, because it is the same number', () => {
+    expect(plan(RECT_60x40, undefined, '0.7').nonParkingFloorAreaM2.value.toFixed(2)).toBe(
+      '720.00',
+    );
+  });
+
+  it('says it is an upper bound and that the GFA share is NOT ASSESSED', () => {
+    /*
+      ASSERTED BY NAME, because the whole value of this node is the claim on it.
+      The deduction also covers the ramp landing, which the same annex calls
+      parking circulation — so anything that printed this as the level's GFA
+      would be overstating it, and the node has to say so where a reader lands.
+    */
+    const { plan: p, graph } = planWithGraph();
+    const json = graph.toJSON();
+    const computation = json.edges.find((e) => e.from === p.nonParkingFloorAreaM2.node)?.to;
+    const note = String(json.nodes.find((n) => n.id === computation)?.detail?.['note'] ?? '');
+    expect(note).toContain('UPPER BOUND');
+    expect(note).toContain('NOT ASSESSED');
+    expect(note).toContain('PARKING_AREA');
+    expect(note).toContain('GFA');
   });
 });
 

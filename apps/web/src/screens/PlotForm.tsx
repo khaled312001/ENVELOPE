@@ -33,6 +33,7 @@ import {
   type PlotView,
 } from '../api/client.js';
 import { PlotCanvas } from '../components/PlotCanvas.js';
+import { PlotMap } from '../components/PlotMap.js';
 import { AR } from '../i18n/plotForm.ar.js';
 import { EN } from '../i18n/plotForm.en.js';
 import { useDict } from '../i18n/locale.js';
@@ -79,8 +80,18 @@ interface PlotDraft {
  * side say how the boundary leaves that chord between them. That is how an
  * affection plan states a curve, and it is the only description of one that
  * survives being read off a document rather than dragged on a screen.
+ *
+ * A THIRD WAY IN, AND IT IS A TRACING SURFACE RATHER THAN A FOURTH MODEL.
+ *
+ * `'map'` draws the boundary on satellite imagery with the affection plan laid
+ * over it, and hands the result to the traverse above — the legs land in the same
+ * boxes a typed traverse uses, editable, and the mode flips to `'edges'` on the
+ * handoff. That is deliberate and it is the answer to the fight in this file's
+ * header: `AC2` blocks on a 2% area disagreement, a hand-trace lands 2–5% off, so
+ * a traced figure must arrive as something a reader SEES and OVERTYPES. It never
+ * becomes the authoritative number by arriving.
  */
-type Shape = 'rectangle' | 'edges';
+type Shape = 'rectangle' | 'edges' | 'map';
 
 interface EdgeDraft {
   readonly classification: Classification;
@@ -138,6 +149,37 @@ export interface PlotFormProps {
     readonly statedAreaM2: string;
     /** The sheet itself, carried through so the SERVER reads its limits. */
     readonly attachment?: Attachment;
+    /**
+     * THE BOUNDARY READINGS — four fields now, and the fourth is the reason the
+     * paragraph above needed amending rather than contradicting.
+     *
+     * The client's complaint on 5 Oct was that after reading a sheet, step 1 still
+     * showed "4 STILL UNCLASSIFIED" with four empty selects:
+     * *«المفروض القراءات تطلع كاملة من الرسمة بتاعت الافكشن بلان»*. It was right,
+     * and the reason was a vocabulary gap: `packages/intake` reads setbacks per
+     * FACE — front, rear, side — and this form asks a classification per BOUNDARY,
+     * and nothing crossed between them.
+     *
+     * What the sheet states and what it does not are different things, and this
+     * field keeps them apart. It states a reading per face. It does NOT state
+     * which boundary of this plot is the front — no affection plan does; the
+     * drawing shows it to a person and the text does not say it. So the readings
+     * arrive as PROPOSALS against a face, the form asks the one question the sheet
+     * cannot answer, and the reading applies to whichever boundary the reader says
+     * holds that face. A boundary nobody answers for stays unanswered, because
+     * `AC3` has no default and a document does not create one.
+     */
+    readonly edges?: {
+      readonly proposals: readonly {
+        readonly role: 'FRONT' | 'SIDE' | 'REAR';
+        readonly classification: {
+          readonly value: string;
+          readonly provenanceClass: string;
+        };
+        readonly evidence: readonly { readonly page: number }[];
+      }[];
+      readonly missing: readonly { readonly label: string }[];
+    };
   } | null;
   /**
    * The worked example, when the reader arrived by `?demo=worked-example`.
@@ -257,6 +299,71 @@ export function PlotForm({
   };
 
   /*
+    WHICH BOUNDARY HOLDS WHICH FACE — the reader's answer, not the sheet's.
+
+    Kept per boundary index rather than on `EdgeDraft`, and deliberately OUT of
+    the autosaved draft: it is not a field of the plot. It is the key that joins
+    the sheet's per-face readings to the boundaries on screen, and a restored
+    draft taken against a different sheet would be joining on a key from another
+    document. The classification it applies IS saved, because that is the answer.
+  */
+  const [roles, setRoles] = useState<readonly ('' | 'FRONT' | 'SIDE' | 'REAR')[]>([]);
+  const proposals = prefill?.edges?.proposals ?? null;
+
+  const assignRole = (i: number, role: '' | 'FRONT' | 'SIDE' | 'REAR'): void => {
+    setRoles((prev) => {
+      const next = [...prev];
+      while (next.length <= i) next.push('');
+      next[i] = role;
+      return next;
+    });
+    /*
+      CLEARING A ROLE CLEARS WHAT IT APPLIED. Leaving the classification behind
+      would leave an answer on screen whose stated reason the reader has just
+      withdrawn — an answer with no author, which is the one thing this form has
+      no state for.
+    */
+    const found = role === '' ? undefined : proposals?.find((p) => p.role === role);
+    const value = (found?.classification.value ?? '') as Classification;
+    setEdges((prev) =>
+      prev.map((e, j) =>
+        j === i ? { ...e, classification: value, roadHierarchy: value === 'ROAD' ? e.roadHierarchy : '' } : e,
+      ),
+    );
+  };
+
+  /*
+    THE TRACE ARRIVES IN THE BOXES, AND IT OVERWRITES.
+
+    Unlike `toEdges`, which preserves anything already typed, a handoff from the
+    map replaces the lengths and bearings: the reader drew a shape and pressed a
+    button meaning "use this", and keeping a stale typed length under a new trace
+    would show a traverse that is neither. The classifications are untouched — a
+    photograph cannot know whether a boundary faces a road.
+
+    A trace of more boundaries than the form holds grows the list; of fewer, the
+    surplus boundaries keep their classification and lose their geometry, which
+    makes the traverse unusable and visibly so rather than quietly short.
+  */
+  const [traced, setTraced] = useState(0);
+  const applyTrace = (legs: readonly { readonly lengthM: string; readonly bearingDeg: string }[]): void => {
+    setEdges((prev) => {
+      const next = legs.map((leg, i) => ({
+        ...(prev[i] ?? BLANK_EDGE),
+        lengthM: leg.lengthM,
+        bearingDeg: leg.bearingDeg,
+        /* A traced boundary is a chord. A curve is read off a document, not off a
+           tile, so a trace never asserts one. */
+        curve: '' as const,
+        radiusM: '',
+      }));
+      return next.length >= 3 ? next : [...prev];
+    });
+    setTraced(legs.length);
+    setShape('edges');
+  };
+
+  /*
     AUTOSAVE, AND THE ONE DECISION IN IT THAT MATTERS.
 
     A recovered draft is OFFERED and never applied. Overwriting what somebody is
@@ -362,8 +469,12 @@ export function PlotForm({
     (e) => e.classification !== '' && (e.classification !== 'ROAD' || e.roadHierarchy !== ''),
   );
   /* In edge mode the shape itself can be incomplete, and a traverse that cannot
-     be walked has no corners to send. */
-  const complete = classified && (shape === 'rectangle' || walk.usable);
+     be walked has no corners to send.
+
+     `'map'` is never complete: the handoff is what flips the mode, so being in it
+     means no trace has been accepted yet. Submitting from the map would send the
+     rectangle still sitting in the width and depth boxes behind it. */
+  const complete = classified && (shape === 'rectangle' || (shape === 'edges' && walk.usable));
   const unclassified = edges.filter((e) => e.classification === '').length;
 
   const computedArea =
@@ -470,6 +581,14 @@ export function PlotForm({
         </div>
       ) : null}
 
+      {/* WHAT THE SHEET LEFT OUT, SAID WHERE THE READINGS ARE OFFERED. A panel
+          that lists what a document states and stays silent about what it omits
+          reads as a complete reading — the `DJAZ1MED12RES011` failure, in a
+          different field. */}
+      {prefill?.edges && prefill.edges.missing.length > 0 ? (
+        <p className="fine-print">{t.roles.missing}</p>
+      ) : null}
+
       <div className="field-group">
         <p className="field-group__legend">{t.which.legend}</p>
         <div className="grid grid--2">
@@ -531,8 +650,45 @@ export function PlotForm({
               <span className="field__help">{t.shape.edgesHelp}</span>
             </span>
           </label>
+          <label className="pf-shape__choice">
+            <input
+              type="radio"
+              name="plot-shape"
+              value="map"
+              checked={shape === 'map'}
+              onChange={() => setShape('map')}
+            />
+            <span>
+              <strong>{t.shape.map}</strong>
+              <span className="field__help">{t.shape.mapHelp}</span>
+            </span>
+          </label>
         </div>
       </fieldset>
+
+      {/*
+        THE TRACER, AND IT IS LOADED ONLY WHEN IT IS ASKED FOR.
+
+        maplibre and its GL context are the heaviest thing in this bundle and the
+        plots that are rectangles never need them, so the component mounts on the
+        mode rather than on the page. Unmounting on the way out is also what
+        releases the context: a browser caps how many live WebGL contexts a
+        document may hold, and a map left mounted behind a hidden panel spends one
+        of them for a reader who went back to typing.
+      */}
+      {shape === 'map' ? (
+        <PlotMap
+          onTraced={applyTrace}
+          busy={busy}
+          {...(statedArea ? { statedAreaM2: statedArea } : {})}
+        />
+      ) : null}
+
+      {traced > 0 && shape === 'edges' ? (
+        <div className="callout" role="status">
+          <div className="callout__body">{t.shape.traced(String(traced))}</div>
+        </div>
+      ) : null}
 
       <div className="field-group">
         <p className="field-group__legend">{t.size.legend}</p>
@@ -716,6 +872,55 @@ export function PlotForm({
                     )}
                   </>
                 ) : null}
+                {/*
+                  THE SHEET'S READING, APPLIED BY THE ONE ANSWER IT CANNOT GIVE.
+
+                  Above the classification, not instead of it: the select below
+                  stays, stays required, and stays editable, so a reader who
+                  disagrees with the sheet overrules it in the control they would
+                  have used anyway. This row only fills that control, and says
+                  where the value came from while it is filled.
+                */}
+                {proposals ? (
+                  <div className="field field--compact pf-role">
+                    <label htmlFor={`edge-${i}-role`}>{t.roles.which(String(i + 1))}</label>
+                    <select
+                      id={`edge-${i}-role`}
+                      className="input"
+                      value={roles[i] ?? ''}
+                      onChange={(e) =>
+                        assignRole(i, e.target.value as '' | 'FRONT' | 'SIDE' | 'REAR')
+                      }
+                    >
+                      <option value="">{t.roles.choose}</option>
+                      {proposals.map((p) => (
+                        <option key={p.role} value={p.role}>
+                          {t.roles[p.role]}
+                        </option>
+                      ))}
+                    </select>
+                    {(() => {
+                      const r = roles[i];
+                      const p = r ? proposals.find((q) => q.role === r) : undefined;
+                      if (!p) return i === 0 ? <p className="field__help">{t.roles.help}</p> : null;
+                      return (
+                        /* THE WORD TRAVELS WITH THE INK. §13.1, and
+                           `parking-page.test.tsx` asserts the rule by name for its
+                           own page: amber without the word beside it teaches a
+                           reader a colour instead of a fact, and a reader who
+                           cannot separate the hues is taught nothing at all. */
+                        <p className="field__help" data-state="assumed">
+                          <span className="chip">{t.roles.assumed}</span>
+                          {t.roles.appliesBefore}
+                          <span className="value">{p.classification.value}</span>
+                          {t.roles.appliesAfter}
+                          {p.evidence[0] ? ` ${t.roles.evidence(String(p.evidence[0].page))}` : ''}
+                        </p>
+                      );
+                    })()}
+                  </div>
+                ) : null}
+
                 <div className="field field--compact">
                   <label htmlFor={`edge-${i}-class`}>{t.edges.faces(String(i + 1))}</label>
                   <select

@@ -50,27 +50,73 @@ interface StatedTracedArea {
   readonly ft2: string;
 }
 
+type GfaRowKindWire =
+  | 'GROUND'
+  | 'PODIUM'
+  | 'TYPICAL'
+  | 'UNPLACED'
+  | 'PARKING'
+  | 'COMMERCIAL'
+  | 'ROOF';
+type GfaCapKindWire = 'RESIDENTIAL' | 'COMMERCIAL';
+
 interface GfaStatementRows {
   readonly allowed: StatedTracedArea;
+  readonly caps: readonly {
+    readonly kind: GfaCapKindWire;
+    readonly allowed: StatedTracedArea | null;
+    readonly proposed: StatedTracedArea | null;
+    readonly remaining: StatedTracedArea | null;
+    readonly notes: readonly string[];
+  }[];
   readonly rows: readonly {
-    readonly kind: 'RESIDENTIAL' | 'PARKING';
+    readonly kind: GfaRowKindWire;
+    readonly cap: GfaCapKindWire;
     readonly count: number;
     readonly perLevel: StatedTracedArea | null;
     readonly area: StatedTracedArea;
   }[];
+  readonly omissions: readonly {
+    readonly kind: GfaRowKindWire;
+    readonly cap: GfaCapKindWire;
+    readonly reason: string;
+  }[];
+  readonly reconciliation: readonly string[];
   readonly proposed: StatedTracedArea;
   readonly remaining: StatedTracedArea;
 }
 
-const GFA_ROW_LABEL = {
-  RESIDENTIAL: 'Residential floors',
+/*
+  THE LABELS ARE THE DRAWING'S OWN WORDS. His schedule reads "Ground floor",
+  "Podium floor area", "Typical floor", "Roof floor" — and the reader of this
+  workbook is reconciling it against that sheet. `Record` over the full kind, so a
+  kind added to the engine fails the build instead of exporting its enum name into
+  a spreadsheet a client opens.
+*/
+const GFA_ROW_LABEL: Readonly<Record<GfaRowKindWire, string>> = {
+  GROUND: 'Ground floor',
+  PODIUM: 'Podium floor area',
+  TYPICAL: 'Typical floor',
+  UNPLACED: 'Counted, not placed under the height ceiling',
   PARKING: 'Parking, counted toward FAR',
+  COMMERCIAL: 'Commercial tenancy',
+  ROOF: 'Roof floor',
+} as const;
+
+const GFA_CAP_LABEL: Readonly<Record<GfaCapKindWire, string>> = {
+  RESIDENTIAL: 'Residential G.F.A.',
+  COMMERCIAL: 'Commercial G.F.A.',
 } as const;
 
 /**
- * The GFA calculation as rows: allowed, each floor group, proposed, what is left.
- * The square feet ride in the label because a row's value column is the traced
- * square metres, and both figures are the engine's.
+ * The GFA calculation as rows: allowed, each allowance, each floor group,
+ * proposed, what is left. The square feet ride in the label because a row's value
+ * column is the traced square metres, and both figures are the engine's.
+ *
+ * A FLOOR THAT IS NAMED AND NOT COUNTED IS NOT A ROW. A workbook is the one
+ * export a reader sums by hand, so a roof level sitting in the value column as a
+ * blank totals to zero and a roof level left out is never asked about. Those
+ * statements go to `SheetSpec.notes`, under the table — see `gfaNotes` below.
  */
 function gfaRows(s: GfaStatementRows, index: GraphIndex): readonly ValueRow[] {
   const row = (label: string, a: StatedTracedArea): ValueRow => ({
@@ -79,13 +125,46 @@ function gfaRows(s: GfaStatementRows, index: GraphIndex): readonly ValueRow[] {
     source: sourceText(a.traced, index),
   });
   const out: ValueRow[] = [row('Gross floor area allowed', s.allowed)];
-  s.rows.forEach((r, i) => {
-    const name = `${i + 1}. ${GFA_ROW_LABEL[r.kind]}`;
-    if (r.perLevel) out.push(row(`${name} — one level`, r.perLevel));
-    out.push(row(r.perLevel ? `${name} — × ${r.count}` : name, r.area));
-  });
+
+  for (const cap of s.caps) {
+    const name = GFA_CAP_LABEL[cap.kind];
+    /* A null is a stated absence, and the note says which absence. Printing
+       nothing would make the two allowances look like one. */
+    if (cap.allowed) out.push(row(`${name} — allowed`, cap.allowed));
+    if (cap.proposed) out.push(row(`${name} — proposed`, cap.proposed));
+    if (cap.remaining) out.push(row(`${name} — left within the allowance`, cap.remaining));
+
+    s.rows
+      .filter((r) => r.cap === cap.kind)
+      .forEach((r, i) => {
+        const label = `${name} · ${i + 1}. ${GFA_ROW_LABEL[r.kind]}`;
+        if (r.perLevel) out.push(row(`${label} — one level`, r.perLevel));
+        out.push(row(r.perLevel ? `${label} — × ${r.count}` : label, r.area));
+      });
+  }
+
   out.push(row('Total gross floor area proposed', s.proposed));
   out.push(row('Left within the allowance', s.remaining));
+  return out;
+}
+
+/**
+ * The statements the schedule carries and the value column must not.
+ *
+ * An allowance nobody stated, a floor the table names without counting, and what
+ * the uniform-plate model does not model. Each is prefixed with what it is about,
+ * because under the table they have lost the column that said so.
+ */
+function gfaNotes(s: GfaStatementRows): readonly string[] {
+  const out: string[] = [];
+  for (const cap of s.caps) {
+    const name = GFA_CAP_LABEL[cap.kind];
+    for (const note of cap.notes) out.push(`${name} — ${note}`);
+    for (const o of s.omissions.filter((x) => x.cap === cap.kind)) {
+      out.push(`${name} · ${GFA_ROW_LABEL[o.kind]} — NOT ASSESSED. ${o.reason}`);
+    }
+  }
+  for (const r of s.reconciliation) out.push(`Not modelled — ${r}`);
   return out;
 }
 
@@ -258,8 +337,11 @@ export function runWorkbookSpec(run: ExportableRun, generatedAt: string): Workbo
       note:
         'Allowed is FAR × plot area, before the parking-in-FAR treatment. Proposed is ' +
         'whole floors of the tower plate, plus parking only where it counts toward FAR. ' +
-        'There is no commercial row: this engine places no commercial area.',
+        'The residential and commercial allowances are capped separately and summed at ' +
+        'the end. Statements with no figure — an allowance nobody stated, a floor named ' +
+        'and not counted — are below the table, not in the value column.',
       rows: gfaRows(run.gfaStatement, index),
+      notes: gfaNotes(run.gfaStatement),
     });
   }
 

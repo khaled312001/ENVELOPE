@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-02T17:51:18.793Z",
+  "generatedAt": "2026-10-05T20:19:59.766Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
@@ -35,7 +35,7 @@
       "parameterId": "building.core_area_m2",
       "runs": 1,
       "maxRelativeEffect": "0",
-      "basis": "A core of 18% of the tower plate: the middle of the 15–22% a residential tower core takes for lift shafts, the lift lobby, escape stairs and risers. No clause of the Dubai Building Code states a core area and no developer standard on file gives one, so this is an assumption and not a derivation. It moves the drawing and the two reconciliations under it; it moves no capacity figure, because a core is inside GFA and outside saleable area and the saleable efficiency this run was given already carries it. Enter the core area to replace it."
+      "basis": "A core of 18% of the tower plate: the middle of the 15–22% a residential tower core takes for lift shafts, the lift lobby, escape stairs and risers, and the lower end of the 18–20% the architect this engine is built for stated on 4 October 2026. His statement is recorded as a practice statement, STMT-CORE-PLATE-FRACTION-2026-10-04, and is offered separately: a named practitioner agreeing with an assumption is agreement and not a citation, so this figure stays ASSUMED until somebody accepts his statement under his name. No clause of the Dubai Building Code states a core area and no developer standard on file gives one, so this is an assumption and not a derivation. At his upper end, 20%, the core is 11.1% larger and the two reconciliations below move with it; no capacity figure moves either way, because a core is inside GFA and outside saleable area and the saleable efficiency this run was given already carries it. Enter the core area to replace it."
     },
     {
       "parameterId": "parking.bay_area_factor",
@@ -68,16 +68,28 @@
       "basis": "A 30 m run reserved for the ramp in plan, or the whole packable depth when that is shorter. It sets the gradient the ramp needs to climb one level, which is reported but not assessed: B.7.2.2 is not encoded. A longer run costs bays; a shorter one steepens the ramp."
     },
     {
+      "parameterId": "parking.ramp_type",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "A straight 6.00 m two-way run — the arrangement this engine has always drawn, and the one the client's ground-floor drawing uses. Nobody chose a type for this run. The alternatives are enumerated and reported beside it; the engine does not rank them, because what separates them is turning radius and headroom under B.7.2.2, which is not encoded, and a ranking invented here would be a preference presented as a finding."
+    },
+    {
       "parameterId": "building.tower_placement",
       "runs": 1,
       "maxRelativeEffect": "0",
       "basis": "The tower plate cap fixes the plate's area, not where it stands on the podium roof. It is drawn as the podium outline scaled about its centre to the capped area. Where the tower actually sits is a design decision this engine does not make, and the massing has always said so."
     },
     {
+      "parameterId": "plant.substation.transformers",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "Nobody stated how many transformers this building takes, and DEWA §11.4.1 is a table read with that count: 33 m² for one, 55 m² for two, 25 m² for each after that and 10 m² more once at four and above. 1 transformer is assumed because it is the smallest count the clause tabulates, so the substation area is 33 m² — the smallest §11.4.1 ever requires — and no electrical load has been invented. This errs LOW: a scheme needing two transformers needs 55 m², 22 m² more of the reserved strip, and a scheme needing four needs 115 m². The count is a load calculation this engine does not perform and is not derivable from an affection plan. Enter it to replace this, and the area, the minimum width and whether the room fits the strip all move with it."
+    },
+    {
       "parameterId": "building.ground_floor_program",
       "runs": 1,
       "maxRelativeEffect": "0",
-      "basis": "An indicative ground floor for a residential tower, drawn in the strip the parking layout reserves for plant and circulation: an entrance lobby 6 m wide, a substation 9 m, LV and generator rooms and a pump room 5 m each, a water tank 6 m, a garbage room 4 m, and TEL and MM rooms 2.5 m, each the depth of the strip up to 7 m, along its outer side. These are typical widths, not figures from a DEWA, Civil Defence or municipality requirement on file, so the program is an assumption; no room is sized, ventilated or access-checked."
+      "basis": "An indicative ground floor for a residential tower, drawn in the strip the parking layout reserves for plant and circulation. The SUBSTATION is the one room here that is not a typical figure: its area is the table in DEWA Regulations for Electrical Installations 2017 §11.4.1 read with the transformer count, its minimum width is the figure stated beside that area in the same clause, and the end of the strip it is laid at is §11.3.1 — \"Substation room/RMU room to be directly located on RTA/Public Road or Sikka\" — applied to the boundaries this plot classifies. Each is cited to a page, a bounding box and the verbatim clause. The LV ROOM is drawn hard against the substation because §11.2.3 requires that adjacency, but its own 5 m width is a typical figure: Section 11 states no LV room area. Every other room is a typical width and nothing more — ENTRANCE LOBBY 6 m, GENERATOR ROOM 5 m, PUMP ROOM 5 m, WATER TANK 6 m, GARBAGE ROOM 4 m, TEL ROOM 2.5 m, MM ROOM 2.5 m — each the depth of the strip up to 7 m, along its outer side; no DEWA, Civil Defence or municipality requirement on file sizes any of them. And no room in this program is ventilated, access-checked, height-checked or routed: §11.5.1 is PARTIALLY MECHANIZED in its own rule record and is not evaluated here, and DEWA_NOT_MECHANIZED names the clauses of Section 11 left out of the engine with the reason for each. REGULATORY VALIDITY: NOT ASSESSED. On this run the substation was read with 1 transformer(s) (assumed), which §11.4.1 sizes at 33 m²; it was not drawn, and the reason is reported with the room."
     }
   ],
   "deferred": [

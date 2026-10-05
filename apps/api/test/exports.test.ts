@@ -282,10 +282,38 @@ describe('XLSX export', () => {
       expect.arrayContaining([
         expect.stringMatching(/^Gross floor area allowed \(m²\) — [\d.]+ ft²$/),
         expect.stringMatching(/^Total gross floor area proposed \(m²\) — [\d.]+ ft²$/),
-        expect.stringMatching(/^1\. Residential floors — × \d+ \(m²\)/),
+        /*
+          THE ROW IS NOW NAMED BY ITS CAP AND ITS FLOOR KIND, which is the schedule
+          the client asked for on 5 Oct: his table groups levels the way a drawing
+          groups them and measures each group against one of two allowances. "1.
+          Residential floors" was the single undifferentiated row that replaced.
+        */
+        expect.stringMatching(/^Residential G\.F\.A\. · \d+\. [A-Z][a-z].* — × \d+ \(m²\)/),
       ]),
     );
     for (const row of sheet!.rows) expect(row.source).toBeTruthy();
+  });
+
+  /*
+    A FLOOR NAMED AND NOT COUNTED MUST NOT BE IN THE COLUMN A READER SUMS.
+
+    This is the one export somebody totals by hand. A roof level present as a
+    blank cell is added in as zero by `=SUM()`, and a roof level left out
+    altogether is never asked about — so it is a note under the table, and the
+    value column holds nothing but figures. The test asserts both halves: the
+    statement is PRESENT in `notes`, and ABSENT from `rows`.
+  */
+  it('states the floors it does not count under the table, never in the value column', async () => {
+    const view = (
+      await app.inject({ method: 'GET', url: `/api/runs/${run.runId}`, headers: REVIEWER })
+    ).json() as { gfaStatement?: { omissions?: readonly unknown[] } };
+    expect(view.gfaStatement?.omissions?.length ?? 0).toBeGreaterThan(0);
+    const spec = runWorkbookSpec(view as unknown as ExportableRun, '2026-10-02T00:00:00.000Z');
+    const sheet = spec.sheets.find((s) => s.name === 'GFA calculation')!;
+    expect(sheet.notes?.some((n) => n.includes('NOT ASSESSED'))).toBe(true);
+    for (const row of sheet.rows) expect(row.label).not.toContain('NOT ASSESSED');
+    // Every row still carries a real traced value, which is why notes exist at all.
+    for (const row of sheet.rows) expect(row.traced.value.trim()).not.toBe('');
   });
 });
 

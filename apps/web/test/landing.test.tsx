@@ -447,6 +447,32 @@ describe('the landing page', () => {
     expect(t).toMatch(/not quotable to a third party/i);
   });
 
+  it('keeps the hook a browser measures that stamp’s position by', () => {
+    /*
+      THE SENTENCE ABOVE SAYS THE GAP OUT LOUD: "a design pass that moved it below
+      the fold would leave every prohibition passing." That was true for as long as
+      this page existed. jsdom lays nothing out, so no test in this file can tell a
+      stamp in the fold from a stamp two screens down, and `scripts/amber.mjs` is
+      the only gate in this repository that opens a browser on `/` — it now fails
+      when `[data-claim="regulatory"]` is not on the first screen at 900px.
+
+      This asserts the HOOK, which is the half of that gate a unit test can reach.
+      A rename or a refactor that drops the attribute does not break the page and
+      does not break the browser gate either: the gate finds zero elements, which is
+      indistinguishable from zero elements above the fold, and the measurement that
+      replaced the honour system quietly becomes an honour system again. Asserting
+      the attribute separately is what stops a passing `pnpm amber` from being
+      evidence about a page it could no longer see.
+    */
+    const html = landing();
+    const hero = html.slice(0, html.indexOf('id="capacities"'));
+    expect(hero).toContain('data-claim="regulatory"');
+    // On the stamp itself, not on some other element that happens to precede it.
+    const stamp = /<p[^>]*data-claim="regulatory"[^>]*>(.*?)<\/p>/s.exec(hero);
+    expect(stamp, 'the regulatory hook is not on a <p>').not.toBeNull();
+    expect(stripTags(stamp![1]!)).toMatch(/regulatory validity — not assessed/i);
+  });
+
   /* ---------------------------------------------------------------------
    * THE STYLESHEET, because a design pass edits CSS and not TSX.
    * ------------------------------------------------------------------ */

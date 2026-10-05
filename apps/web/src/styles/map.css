@@ -1,0 +1,472 @@
+/*
+ * THE PLOT TRACED ON IMAGERY — `components/PlotMap.tsx`.
+ *
+ * CLASS PREFIX: `.pm-`. Everything else on the panel is the chassis: `.panel`,
+ * `.field-group`, `.field`, `.input`, `.button`, `.callout`, `.schedule`,
+ * `.dropzone`, `.value`, `.fine-print`. A map panel is not a new kind of page and
+ * a second definition of a table or a callout here would be two definitions of
+ * one chassis, which the first edit splits.
+ *
+ * ---------------------------------------------------------------------------
+ * NO STATE COLOUR IS DECLARED IN THIS FILE, AND THAT IS THE DESIGN.
+ *
+ * The one assumption on this panel — an uncalibrated sheet placement — is marked
+ * with `data-state="assumed"` on a `.callout`, which reaches the single place the
+ * amber mapping lives (`site.css` §5, "the mechanism that makes the amber rule
+ * VERIFIABLE ONCE instead of auditable per component"). So this sheet paints no
+ * `var(--uncertain*)` at all: there is nothing here for `assertAmberExclusive` to
+ * whitelist, and nothing to drift from the state layer.
+ *
+ * Semantic tokens only, as everywhere else. `scripts/contrast.mjs` enumerates
+ * this directory rather than reading a hand-written list, so this file was
+ * measured by assertion (4), (6), (7) and (9) the moment it was saved.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY MAPLIBRE'S OWN STYLESHEET IS NOT IMPORTED.
+ *
+ * `maplibre-gl/dist/maplibre-gl.css` is eighty-three kilobytes of minified CSS
+ * carrying its own palette, its own hex literals and its own icon data URIs. It
+ * is not in `apps/web/src/styles/`, so `pnpm contrast` would never read it — and
+ * a checker that prints a green summary over the ink on the product's most
+ * persuasive surface is the vacuous pass this repository refuses everywhere else.
+ *
+ * So the panel uses none of maplibre's chrome: no `NavigationControl` (its
+ * buttons are drawn by that stylesheet's background images and would be blank),
+ * no `AttributionControl` (ours is always visible and in the markup, where a test
+ * can read it), and no DOM `Marker` (the vertices are a GL circle layer, so there
+ * is no absolutely-positioned element needing its positioning rules). What is
+ * left is the handful of STRUCTURAL rules below, which carry no colour at all.
+ */
+
+/* ==========================================================================
+ * 1. THE MAPLIBRE STRUCTURE WE DEPEND ON — four rules, no colour
+ * ======================================================================= */
+
+/*
+ * These are maplibre's own class names and they are the only ones this panel
+ * needs: the canvas is absolutely positioned inside a relatively positioned
+ * container, and the container must clip. Without them the canvas lays out at
+ * its intrinsic pixel size and pushes the page sideways — which at 320px is the
+ * horizontal-scroll defect `pnpm smoke` exists to catch.
+ */
+.maplibregl-map {
+  position: relative;
+  overflow: hidden;
+}
+.maplibregl-canvas {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+}
+/*
+ * A drag on the map must not select the text around it, and the cursor says what
+ * a click will do: a crosshair, because on this panel a click drops a survey
+ * point rather than panning to somewhere.
+ */
+.maplibregl-canvas-container {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.maplibregl-canvas-container.maplibregl-interactive {
+  cursor: crosshair;
+}
+
+/* ==========================================================================
+ * 2. THE PANEL
+ * ======================================================================= */
+
+/*
+ * The one sentence that governs the panel sits directly under the title and is
+ * set as prose rather than as fine print. A caveat in small grey type is a
+ * caveat the page has decided not to make.
+ */
+.pm-authority {
+  max-inline-size: var(--measure-lede);
+}
+
+.pm-subhead {
+  margin-block: var(--space-5) 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.pm-how {
+  display: grid;
+  gap: var(--space-2);
+}
+.pm-how__list {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  display: grid;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-prose);
+}
+
+/* ==========================================================================
+ * 3. THE MAP FRAME
+ * ======================================================================= */
+
+/*
+ * THE FRAME IS SIZED BY ASPECT RATIO AND CLAMPED BY HEIGHT.
+ *
+ * A map given a percentage height inside a flex column collapses to nothing, and
+ * a map given a fixed pixel height is a letterbox on a phone and a stamp on a
+ * desktop. The aspect ratio gives it a shape at every width; the clamp stops it
+ * from becoming taller than a phone's viewport, where a reader would have to
+ * scroll the page to reach the controls under it.
+ *
+ * `min-inline-size: 0` is not decoration: a canvas is a replaced element with an
+ * intrinsic width, and inside a grid or flex track that intrinsic width wins over
+ * `100%` and widens the document. Every horizontal-scroll defect found on this
+ * site so far has been some version of that.
+ */
+.pm-frame {
+  position: relative;
+  inline-size: 100%;
+  min-inline-size: 0;
+  aspect-ratio: 4 / 3;
+  max-block-size: min(70vh, 34rem);
+  background: var(--surface-sunken);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.pm-map {
+  position: absolute;
+  inset: 0;
+}
+
+/*
+ * THE CANVAS KEEPS A VISIBLE FOCUS RING, and it is drawn on the FRAME rather
+ * than on the canvas: an outline on an element that fills its clipping container
+ * is clipped away on all four sides, so the ring would be invisible on the one
+ * control that most needs it. `:focus-within` on the frame puts the same ring one
+ * level out, where there is room for it.
+ */
+.pm-frame:focus-within {
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/*
+ * The controls, over the canvas. `pointer-events` is reset on the buttons rather
+ * than left on the strip, so the gap between them is still map a reader can click
+ * a corner on.
+ */
+.pm-chrome {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  z-index: var(--z-raised);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.pm-chrome > * {
+  pointer-events: auto;
+}
+/*
+ * 44px, from the box itself and never from an absolutely positioned expander.
+ * `--tap-min` is the house floor; a `+` glyph in a 32px button is a target nobody
+ * on a phone can hit, and the glyph is the whole label here.
+ */
+.pm-chrome__button {
+  min-inline-size: var(--tap-min);
+  min-block-size: var(--tap-min);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+/*
+ * THE CREDITS. Always visible, never behind a disclosure, and on a ground of
+ * their own because they sit on a photograph: a credit set straight on satellite
+ * imagery is unreadable over half of Dubai and illegible over the rest.
+ *
+ * It is the only text on this panel with a measured pair against
+ * `--surface-raised` rather than against the page, which is why the plate is
+ * opaque rather than a translucent wash — an alpha over imagery is an
+ * unresolvable pair, and this repository counts unresolvable as a failure.
+ */
+.pm-credit {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline: 0;
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  z-index: var(--z-raised);
+  background: var(--surface-raised);
+  border-block-start: var(--border-width) solid var(--border-default);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  /* A credit may wrap; it may never be clipped, because a clipped credit is an
+     attribution that was not given. */
+  overflow-wrap: break-word;
+}
+
+/* What the OpenStreetMap overlay is, directly under the frame it draws into. */
+.pm-osm-note {
+  max-inline-size: var(--measure-prose);
+}
+
+/* ==========================================================================
+ * 4. THE TRACE CONTROLS
+ * ======================================================================= */
+
+.pm-controls {
+  display: grid;
+  gap: var(--space-3);
+}
+.pm-controls__state {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+/*
+ * The rows wrap, and every child keeps the 44px floor. At 320px three buttons
+ * become three lines rather than three squeezed boxes — the row is allowed to
+ * grow because the alternative is a target that fails 2.5.8.
+ */
+.pm-controls__row,
+.pm-coords__row,
+.pm-calibrate__row,
+.pm-underlay__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+.pm-controls__row > .button,
+.pm-coords__row > .button,
+.pm-calibrate__row > .button,
+.pm-underlay__row > .button {
+  min-block-size: var(--tap-min);
+}
+
+.pm-coords {
+  display: grid;
+  gap: var(--space-2);
+}
+/*
+ * A coordinate box is five or six digits wide and no wider. Given the row's
+ * `flex-wrap` it would otherwise stretch to fill the line, and a 320px-wide input
+ * holding "25.2048" reads as a field expecting a sentence.
+ */
+.pm-coords__row .field {
+  flex: 1 1 9rem;
+  min-inline-size: 0;
+}
+
+/* ==========================================================================
+ * 5. THE READOUTS
+ * ======================================================================= */
+
+.pm-coord {
+  /* A coordinate is a figure quoted inside a sentence, and it is Latin digits
+     whatever the page's direction. Without the isolate the degree marks and the
+     comma migrate to the wrong end of an Arabic table cell. */
+  unicode-bidi: isolate;
+  direction: ltr;
+  white-space: nowrap;
+}
+
+.pm-areas {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+/*
+ * The gap between the two areas is set in the body size and not as fine print.
+ * It is the figure `FR-PLT-001 AC2` turns on, and demoting it to small grey type
+ * would be the softening §13.1 argues against for the amber treatment, applied to
+ * a number instead of to a colour.
+ */
+.pm-areas__gap {
+  margin: 0;
+  color: var(--text-primary);
+  max-inline-size: var(--measure-prose);
+}
+
+.pm-handoff {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+.pm-handoff > .button {
+  min-block-size: var(--tap-min);
+}
+.pm-handoff__done {
+  margin: 0;
+  color: var(--text-primary);
+  max-inline-size: var(--measure-prose);
+}
+
+/* ==========================================================================
+ * 6. THE UNDERLAY
+ * ======================================================================= */
+
+.pm-underlay {
+  display: grid;
+  gap: var(--space-3);
+}
+.pm-underlay__lede,
+.pm-underlay__drop {
+  max-inline-size: var(--measure-prose);
+}
+.pm-underlay__lede {
+  margin: 0;
+  color: var(--text-secondary);
+}
+.pm-underlay__opacity {
+  flex: 1 1 14rem;
+  min-inline-size: 0;
+}
+.pm-underlay__percent {
+  margin-inline-start: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/*
+ * THE SLIDER. 44px of hit area from the control's own box, with a track and a
+ * thumb drawn from the palette — a native range input is styled by the platform,
+ * which means it carries the operating system's accent colour and not the one
+ * measured here.
+ */
+.pm-slider {
+  inline-size: 100%;
+  min-block-size: var(--tap-min);
+  margin: 0;
+  background: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.pm-slider:focus-visible {
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: var(--focus-offset);
+}
+.pm-slider::-webkit-slider-runnable-track {
+  block-size: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  border: var(--border-width) solid var(--border-strong);
+}
+.pm-slider::-moz-range-track {
+  block-size: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  border: var(--border-width) solid var(--border-strong);
+}
+/* The thumb is the accent because it is the thing the pointer takes hold of, and
+   the accent is this language's one interactive affordance. */
+.pm-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: var(--space-5);
+  block-size: var(--space-5);
+  margin-block-start: calc((var(--space-2) - var(--space-5)) / 2);
+  border-radius: var(--radius-round);
+  background: var(--accent);
+  border: var(--border-width-emphasis) solid var(--surface-raised);
+}
+.pm-slider::-moz-range-thumb {
+  inline-size: var(--space-5);
+  block-size: var(--space-5);
+  border-radius: var(--radius-round);
+  background: var(--accent);
+  border: var(--border-width-emphasis) solid var(--surface-raised);
+}
+
+.pm-calibrate {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-sunken);
+  border-inline-start: var(--rail-w) solid var(--border-strong);
+}
+/*
+ * The current step is the one line a reader has to find, so it carries the
+ * neutral rail's weight in type rather than in a second colour: the panel already
+ * spends its one state colour on the assumed placement above it.
+ */
+.pm-calibrate__step {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+  max-inline-size: var(--measure-prose);
+}
+
+.pm-claim {
+  margin-block-start: var(--space-5);
+  max-inline-size: var(--measure-fine);
+}
+
+/* ==========================================================================
+ * 7. NARROW SCREENS, AND MOTION
+ * ======================================================================= */
+
+/*
+ * At phone width the frame gets taller in proportion, because a 4:3 box 288px
+ * wide is 216px of map — not enough to see a plot and its context at the zoom a
+ * boundary is traced at. The height cap stays, so the controls under it are still
+ * reachable without scrolling past the map.
+ */
+@media (max-width: 40rem) {
+  .pm-frame {
+    aspect-ratio: 3 / 4;
+  }
+  /* Full-width controls rather than a wrapped row of narrow ones: two 44px
+     buttons side by side at 288px leaves 100px each, and a label does not fit. */
+  .pm-controls__row > .button,
+  .pm-handoff > .button {
+    inline-size: 100%;
+  }
+}
+
+/*
+ * NO TRANSITION IS DECLARED IN THIS FILE, so there is none to suppress — the
+ * camera animations are the only motion on this panel and they are guarded in
+ * `PlotMap.tsx`, where `prefers-reduced-motion` sets the easing duration to zero.
+ * This block exists to say that out loud and to hold the one case a stylesheet
+ * can reach: a focus ring never animates, here or anywhere.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .pm-frame,
+  .pm-frame:focus-within,
+  .pm-slider,
+  .pm-slider:focus-visible {
+    transition: none;
+  }
+}
+
+/*
+ * ON PAPER THERE IS NO MAP.
+ *
+ * A GL canvas prints blank in most browsers and as a low-resolution bitmap in the
+ * rest, and neither is a drawing anybody should file. The frame and its controls
+ * come out; the TABLE stays, because the table is the trace — which is the same
+ * reason it is the screen reader's version of this panel.
+ */
+@media print {
+  .pm-frame,
+  .pm-chrome,
+  .pm-underlay__drop,
+  .pm-slider,
+  .pm-handoff > .button,
+  .pm-controls__row {
+    display: none;
+  }
+  .pm-areas,
+  .pm-calibrate {
+    background: none;
+    padding: 0;
+  }
+}

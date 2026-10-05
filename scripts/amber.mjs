@@ -85,6 +85,29 @@ const MIN_RATIO = 3;
  */
 const MUST_SHOW_AMBER = ['/'];
 
+/**
+ * WHERE THE ASSUMPTION MUST BE NAMED IN WORDS ABOVE THE FOLD — and this is the
+ * rule that replaced the one above rather than the one that survived it.
+ *
+ * `MUST_SHOW_AMBER` is no longer gated: the client asked for the amber surface off
+ * the landing page on 2026-09-29 and reaffirmed it, and the long comment beside
+ * the `fail` that used to enforce it is the record of that exchange.
+ *
+ * What that decision did NOT settle is the obligation the rule existed to protect.
+ * The landing page quotes a governing capacity to a reader who has not yet been
+ * told what the product refuses to claim; a first screen that quotes the figure and
+ * says nothing about the assumption under it is the product misrepresenting itself,
+ * which is not a styling preference and was never the client's to waive — he
+ * objected to the COLOUR, with numbers, and that is what he was answered on.
+ *
+ * So the obligation is carried in words instead of in ink. It is a weaker gate than
+ * the one it replaces and it is a real one: a landing fold with no named assumption
+ * on it fails here. The alternative was leaving two `notes.push` calls and nothing
+ * enforced, and this repository's own rule is that a removal which leaves no test
+ * behind is an absence rather than a decision.
+ */
+const MUST_NAME_ASSUMPTION = ['/'];
+
 const failures = [];
 /*
  * NOTED, NOT FAILED — and the distinction is the point.
@@ -339,6 +362,43 @@ async function measure(page, fold) {
          shows none above the fold; a page with several and none visible is the
          defect. */
       assumedInDocument: document.querySelectorAll('[data-state="assumed"]').length,
+      /*
+        THE ASSUMPTION NAMED IN WORDS ABOVE THE FOLD, which is what is left to
+        enforce once colour is no longer enforced — see the `MUST_NAME_ASSUMPTION`
+        block below for the argument. Counted in the DOM rather than inferred from
+        the amber area, because the whole point is that these two can now diverge.
+
+        Text, not presence: an element carrying the hook and no words is a hook, and
+        a reader cannot read a hook. `innerText` rather than `textContent` so a
+        visually-hidden span does not satisfy it — the claim being gated is that
+        somebody looking at the first screen is told, and a sighted reader does not
+        hear the hidden copy that `.visually-hidden` exists to give a screen reader.
+      */
+      assumedNamedAboveFold: [...document.querySelectorAll('[data-state="assumed"]')].filter(
+        (el) => {
+          const r = el.getBoundingClientRect();
+          if (r.top >= foldPx || r.width === 0 || r.height === 0 || r.bottom <= 0) return false;
+          return (el.innerText ?? '').trim().length > 0;
+        },
+      ).length,
+      /*
+        THE REFUSAL ITSELF, ABOVE THE FOLD. §16.5's five-way claim statement ends on
+        the regulatory row, and the landing hero carries that row as a stamp with a
+        comment saying it must sit IN the fold because below it, it is a footnote to
+        a claim the reader has already formed.
+
+        Nothing checked that. `landing.test.tsx` can see the stamp is PRESENT in the
+        markup — it cannot see where it landed, and the whole history of this file is
+        correct content arriving 51px and then 165px below the fold with every other
+        gate green.
+      */
+      regulatoryStampAboveFold: [...document.querySelectorAll('[data-claim="regulatory"]')].filter(
+        (el) => {
+          const r = el.getBoundingClientRect();
+          if (r.top >= foldPx || r.width === 0 || r.height === 0 || r.bottom <= 0) return false;
+          return (el.innerText ?? '').trim().length > 0;
+        },
+      ).length,
     };
   }, fold);
 }
@@ -495,6 +555,34 @@ for (const route of routes) {
           `${label}: amber ${m.amberArea}px2 against accent ${m.accentArea}px2 is ` +
             `${ratio.toFixed(2)}x, under the ${MIN_RATIO}x margin this file used to ` +
             `enforce. Amber is not the loudest thing on this surface. Recorded.`,
+        );
+      }
+
+      /*
+        AND THIS ONE FAILS. The colour was the client's call; being told is not.
+
+        The stamp and not the assumption, and the difference is deliberate. The
+        named assumption sits with the figures it qualifies, which is where it
+        belongs and which is below the fold on a 900px window — gating THAT would
+        be demanding the page be rebuilt around a measurement. The regulatory
+        refusal is the one line whose author wrote "below it, it would be a footnote
+        to a claim the reader has already formed", and it is in the hero for that
+        reason. So that is the line held in place, and the assumption is reported.
+      */
+      if (MUST_NAME_ASSUMPTION.includes(route) && m.regulatoryStampAboveFold === 0) {
+        fail(
+          `${label}: the regulatory validity stamp is not on the first screen. ` +
+            `Amber is no longer required here — being told is. Either it moved below ` +
+            `the fold, or [data-claim="regulatory"] was dropped from it; a reader who ` +
+            `meets a governing capacity before meeting the refusal has been shown a ` +
+            `claim this product does not make.`,
+        );
+      }
+      if (MUST_NAME_ASSUMPTION.includes(route) && m.assumedNamedAboveFold === 0) {
+        notes.push(
+          `${label}: the refusal is on the first screen but no assumption is named ` +
+            `on it (${m.assumedInDocument} in the document). Recorded — the figures ` +
+            `and their assumption share a section, one fold lower.`,
         );
       }
     } catch (e) {

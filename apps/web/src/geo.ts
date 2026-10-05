@@ -199,6 +199,40 @@ export interface TracedLeg {
 const norm360 = (d: number): number => ((d % 360) + 360) % 360;
 
 /**
+ * THE BEARING CONVENTION ITSELF, OVER A DISPLACEMENT IN THE PROJECTED PLANE.
+ *
+ * `atan2(east, north)` — 0 is grid north, 90 is east — and it is exported because
+ * three call sites need it and the second copy of an `atan2` is the kind of thing
+ * that is written with the arguments the other way round. A transposed bearing is
+ * a plot of exactly the right size, mirrored about the north–south axis, which
+ * passes every area check there is.
+ *
+ * It takes metres rather than two points on purpose: the map's underlay
+ * calibration measures a direction across a SHEET IMAGE, in fractions of that
+ * image's width, where there is no longitude to project. One convention, both
+ * spaces.
+ */
+export function gridBearingDeg(eastM: number, northM: number): number {
+  return norm360(deg(Math.atan2(eastM, northM)));
+}
+
+/**
+ * One boundary, from one point to the next: how long and which way.
+ *
+ * The single implementation. `ringToLegs` walks it pair by pair, and the map's
+ * readouts — the calibration residual, the leg table, the distance from a pointer
+ * to the vertex it is about to pick up — all measure through here, so there is one
+ * answer to "how far apart are these two points" in the whole of the web app.
+ */
+export function legBetween(from: LngLat, to: LngLat): TracedLeg {
+  const a = toUtm40(from);
+  const b = toUtm40(to);
+  const de = b.e - a.e;
+  const dn = b.n - a.n;
+  return { lengthM: Math.hypot(de, dn), bearingDeg: gridBearingDeg(de, dn) };
+}
+
+/**
  * Turn a traced ring into the traverse the plot form already speaks.
  *
  * THE RING IS CLOSED BY THE CALLER'S LAST LEG, NOT BY REPEATING A VERTEX. The
@@ -207,18 +241,9 @@ const norm360 = (d: number): number => ((d % 360) + 360) % 360;
  */
 export function ringToLegs(ring: readonly LngLat[]): readonly TracedLeg[] {
   if (ring.length < 3) return [];
-  const pts = ring.map(toUtm40);
   const legs: TracedLeg[] = [];
-  for (let i = 0; i < pts.length; i += 1) {
-    const a = pts[i]!;
-    const b = pts[(i + 1) % pts.length]!;
-    const de = b.e - a.e;
-    const dn = b.n - a.n;
-    legs.push({
-      lengthM: Math.hypot(de, dn),
-      // atan2(east, north) is the bearing convention: 0 is north, 90 is east.
-      bearingDeg: norm360(deg(Math.atan2(de, dn))),
-    });
+  for (let i = 0; i < ring.length; i += 1) {
+    legs.push(legBetween(ring[i]!, ring[(i + 1) % ring.length]!));
   }
   return legs;
 }

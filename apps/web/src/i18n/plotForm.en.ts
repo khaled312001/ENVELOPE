@@ -113,6 +113,42 @@ export const EN = {
       'A length and a direction for each boundary, as the affection plan states them. The corners are computed from them.',
     switched:
       'Your rectangle is in the boxes below as four boundaries. Change any of them, and add or remove boundaries as the plot needs.',
+    map: 'Trace it on a map',
+    mapHelp:
+      'Draw the boundary on satellite imagery, with the affection plan laid over it. The lengths and directions arrive in the boxes below, editable.',
+    /* Said when the trace hands over. Not "imported": the figures are now the
+       reader's to accept or overtype, which is the whole reason the handoff lands
+       in the same boxes a typed traverse uses. */
+    traced: (n: string): string =>
+      `${n} traced boundaries are in the boxes below. A tracing is not a survey — check each length against the sheet and change what disagrees.`,
+  },
+
+  /**
+   * The sheet's own boundary readings, offered per boundary.
+   *
+   * THE ONE FACT THE SHEET DOES NOT STATE is which of this plot's boundaries is
+   * the front. It states a setback for FRONT, for REAR and for each SIDE, and the
+   * reader is the only party who knows which boundary on screen holds which. So
+   * the question asked here is exactly that one, and answering it applies the
+   * reading the sheet printed for that face. A boundary left unanswered stays
+   * unanswered — `AC3` has no default and a sheet does not create one.
+   */
+  roles: {
+    legend: 'From the affection plan',
+    help: 'The sheet states a reading per face. Say which boundary is which, and the reading applies.',
+    which: (n: string): string => `Boundary ${n} is the plot’s`,
+    choose: 'Not answered',
+    FRONT: 'Front',
+    SIDE: 'Side',
+    REAR: 'Rear',
+    /** Around the classification the sheet's reading implies. */
+    appliesBefore: 'The sheet reads this face as ',
+    appliesAfter: '.',
+    assumed: 'Assumed',
+    /** The page and box, so a reader can open the document at the reading. */
+    evidence: (page: string): string => `Read on page ${page}`,
+    missing:
+      'The sheet does not state a reading for every face. What it leaves out stays unanswered here.',
   },
 
   traverse: {

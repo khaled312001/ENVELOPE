@@ -27,6 +27,18 @@
  *    surveyed. The area is carried across as the *stated* area, where the 2%
  *    cross-check can catch a mistyped dimension, and the dimensions stay the
  *    user's to enter.
+ *
+ * 4. **It offers the boundary readings; it does not apply them.** On 4 Oct 2026
+ *    the client read a sheet, reached step 1 and met "4 STILL UNCLASSIFIED" over
+ *    four empty dropdowns: «لسه برضو مش جايب الرسم على الخريطه الحقيقيه والمفروض
+ *    القراءات تطلع كامله من الرسمه بتاعت الافكشن بلان». He was right, and the
+ *    cause was a vocabulary gap — the sheet prints setbacks per FACE and the form
+ *    asks a classification per EDGE. `packages/intake/src/edges.ts` now bridges
+ *    the two, and this panel shows the result the only way it may: as `ASSUMED`
+ *    proposals about a ROLE, amber, carried to step 1 for the reader to apply.
+ *    Writing them into the dropdowns would put a default on a field
+ *    `FR-PLT-001 AC3` says has none — the same refusal as the practice
+ *    statements, which are "offered with a button, never pre-selected".
  */
 
 import { Fragment, useRef, useState, type ReactNode } from 'react';
@@ -46,6 +58,8 @@ import { TracedValue } from '../components/TracedValue.js';
 import { AR } from '../i18n/intake.ar.js';
 import { EN } from '../i18n/intake.en.js';
 import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
+import { AR as TRACED_AR } from '../i18n/traced.ar.js';
+import { EN as TRACED_EN } from '../i18n/traced.en.js';
 
 /**
  * What the sheet and the API said, isolated on the Arabic page and untouched on
@@ -77,6 +91,39 @@ export type IntakeError =
   /** The API's own sentence, or the thrown value's; rendered as it arrived. */
   | { readonly kind: 'reported'; readonly text: string };
 
+/**
+ * One sheet's boundary readings, as the API sends them.
+ *
+ * ALIASED OFF THE WIRE TYPE, NOT RE-DECLARED. These were three interfaces here,
+ * written before `api/client.ts` declared the field; now that it does, a second
+ * declaration of the same shape is the drifted fixture this repository has
+ * already paid for once — a shape frozen at the moment it was copied, going on
+ * compiling against something the API no longer sends. Three aliases cannot
+ * drift, because there is one declaration.
+ *
+ * `classification` is a structured `Traced` as `packages/intake` emits it, not a
+ * `TracedWire` — the route passes this subtree through whole — so there is no
+ * `renderHint` on it and this panel does not need one. It marks the assumption
+ * with the product's own class chip, read from the dictionary every figure reads.
+ */
+export type EdgeReadingsView = NonNullable<AffectionPlanRead['facts']['edges']>;
+export type EdgeProposalView = EdgeReadingsView['proposals'][number];
+export type EdgeEvidenceView = EdgeProposalView['evidence'][number];
+
+/**
+ * The sheet's boundary readings, or null on a reading taken before they existed.
+ *
+ * THE CAST IS GONE. `api/client.ts` now declares `facts.edges` and
+ * `apps/api/src/intake-route.ts` now sends it, which was the wiring this change
+ * was waiting on. The function stays, because `edges` is optional on the wire for
+ * a real reason — a reading restored from a tab or replayed by a fixture predates
+ * the field — and one place that turns "absent" into `null` is better than an
+ * `?? null` at each use.
+ */
+function edgeReadingsOf(facts: AffectionPlanRead['facts']): EdgeReadingsView | null {
+  return facts.edges ?? null;
+}
+
 export interface Prefill {
   readonly plotNumber: string;
   readonly community: string;
@@ -88,6 +135,23 @@ export interface Prefill {
    * against. Absent when the sheet prints no height code at all.
    */
   readonly podiumLevels?: { readonly value: number; readonly raw: string };
+  /**
+   * What the sheet says about its boundaries, carried as PROPOSALS.
+   *
+   * Keyed by role — front, side, rear — and not by edge index, because the sheet
+   * does not say which boundary of this plot is the front. The one field that
+   * would say so is its `Access Side` box, and on all three real sheets that box
+   * is empty; `edges.missing` carries that as a named gap. So step 1 asks the
+   * reader which boundary holds the front, applies the proposal they accept, and
+   * leaves every boundary they do not answer unanswered. Nothing here may be
+   * written into an edge's classification unasked: `FR-PLT-001 AC3` gives that
+   * field no default, and an `ASSUMED` value pre-selected in a mandatory control
+   * is a default however it is labelled.
+   *
+   * Absent when the reading predates the field — a stored run keeps its own
+   * answer, exactly as `levels` does.
+   */
+  readonly edges?: EdgeReadingsView;
   /**
    * The sheet itself, so the SERVER can read its limits when the plot is created.
    *
@@ -283,6 +347,118 @@ function Faces({ face }: { readonly face: SetbackFaceView }): JSX.Element {
   );
 }
 
+/** The face each boundary role is named by, so the three words live in one place. */
+const FACE_OF_ROLE = { FRONT: 'front', SIDE: 'side', REAR: 'rear' } as const;
+
+/**
+ * The boundary readings — what the sheet supports, and where it stops.
+ *
+ * Its own component and exported, like `Reading`, because it renders only after
+ * an upload. Three decisions about what it may show:
+ *
+ * 1. **Amber, because every line is `ASSUMED`.** The chip reads the class off
+ *    the value and prints it through the same dictionary every figure in the
+ *    product reads, so the word here cannot drift from the word in a derivation
+ *    tree. §13.1 reserves amber for uncertainty and nothing else; a proposal
+ *    about what lies beyond a boundary is exactly that.
+ *
+ * 2. **The sheet's clause is quoted, not summarised.** The reader is holding the
+ *    PDF. "Read from “Tower: Front = 0m, Sides & Rear = 3m”" lets them check the
+ *    inference in one glance; "front boundary: road" asks them to trust it.
+ *
+ * 3. **The gaps are rendered as loudly as the proposals**, in the engine's own
+ *    words, because on `DJAZ1MED12RES011` they are the whole answer — and the
+ *    one the client's complaint is really about. A panel that showed two
+ *    proposals and silently dropped three roles would read as complete.
+ */
+export function Boundaries({
+  edges,
+}: {
+  readonly edges: EdgeReadingsView | null;
+}): JSX.Element | null {
+  const t = useDict(EN, AR);
+  const traced = useDict(TRACED_EN, TRACED_AR);
+  const ltr = useVerbatim();
+  if (!edges) return null;
+
+  /**
+   * One of the four types, named in the reader's language — or the engine's own
+   * token where the table does not know it, which is the rule `traced.ar.ts`
+   * already applies to a provenance class. Never the word "undefined" in a
+   * classification.
+   */
+  const typeNode = (value: string): ReactNode => {
+    const label = (t.boundaries.types as Readonly<Record<string, string>>)[value];
+    return label === undefined ? ltr(value) : label;
+  };
+
+  return (
+    <>
+      <h4 className="panel__subheading">{t.boundaries.title}</h4>
+      {edges.proposals.length === 0 ? (
+        <p className="reading__lead">{t.boundaries.none}</p>
+      ) : (
+        <>
+          <p className="reading__lead">{t.boundaries.lead}</p>
+          <ul className="reason-list reason-list--uncertain">
+            {edges.proposals.map((p) => {
+              const first = p.evidence[0];
+              return (
+                <li key={p.role}>
+                  <strong>{t.faces[FACE_OF_ROLE[p.role]]}</strong> —{' '}
+                  {typeNode(p.classification.value)}{' '}
+                  <span className="chip chip--warn">
+                    {traced.classChip(p.classification.provenanceClass)}
+                  </span>
+                  {first ? (
+                    <>
+                      {' '}
+                      <span className="fine-print">
+                        {t.boundaries.readFromBefore}
+                        {ltr(first.verbatim)}
+                        {t.boundaries.readFromAfter}
+                      </span>
+                    </>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+          <details className="disclosure">
+            <summary>{t.boundaries.whySummary}</summary>
+            <p>{t.boundaries.why}</p>
+          </details>
+        </>
+      )}
+
+      {edges.accessSide ? (
+        <p className="callout">
+          <strong>{t.boundaries.accessSide}</strong> {ltr(edges.accessSide.value)}{' '}
+          <span className="chip chip--warn">
+            {traced.classChip(edges.accessSide.provenanceClass)}
+          </span>
+        </p>
+      ) : null}
+
+      {edges.missing.length > 0 ? (
+        <>
+          <h4 className="panel__subheading">
+            {t.boundaries.gapsTitle}
+            <span className="chip chip--warn">{edges.missing.length}</span>
+          </h4>
+          <ul className="reason-list reason-list--uncertain">
+            {edges.missing.map((m) => (
+              <li key={m.field}>
+                <strong>{ltr(m.label)}</strong> — {ltr(m.consequence)}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </>
+  );
+}
+
 /**
  * What was read off one sheet. Exported because it renders only after an upload,
  * which a static render never performs — `app-arabic.test.tsx` feeds it the API's
@@ -325,6 +501,7 @@ export function Reading({
   const ltr = useVerbatim();
   const { locale } = useLocale();
   const f = read.facts;
+  const edges = edgeReadingsOf(f);
   const blocked = f.blocking.length > 0;
   const percent = (fraction: string): string => (Number(fraction) * 100).toFixed(0);
 
@@ -393,6 +570,14 @@ export function Reading({
           ) : null}
         </>
       ) : null}
+
+      {/*
+        THE BOUNDARY READINGS, in the setback block's own shape — a subheading,
+        a reason list, the sheet's words quoted beneath. The client's complaint
+        was that the readings did not come out complete; this is as complete as
+        the sheet allows, and the gaps underneath say in words where it stops.
+      */}
+      <Boundaries edges={edges} />
 
       {f.coverage ? (
         <p className="callout">
@@ -495,6 +680,11 @@ export function Reading({
                     },
                   }
                 : {}),
+              // Carried whole, proposals and gaps together. The gaps are half
+              // the answer: step 1 needs to say which boundaries the sheet
+              // declined to classify and why, in the engine's own words, or the
+              // reader is back to four dropdowns with no explanation.
+              ...(edges ? { edges } : {}),
               ...(attachment ? { attachment } : {}),
             })
           }

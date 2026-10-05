@@ -67,6 +67,12 @@ import './styles/chrome.css';
    `chrome.css` and after it, because the auth card's submit is the nav's primary
    button and the later sheet is the one that may finish the sentence. */
 import './styles/console.css';
+/* The plot tracer's own surface. After `app.css`, because the map sits inside a
+   `.panel` in step 1 and overrides that panel's padding for a full-bleed canvas;
+   before `rtl.css`, like everything else. The canvas's own ink is NOT here — a
+   WebGL paint cannot read a custom property, so `PlotMap` reads the semantic
+   tokens off the document element and hands maplibre the computed strings. */
+import './styles/map.css';
 /* Last, and it is the only sheet whose position matters: it turns 235 logical
    properties into a right-to-left layout and overrides the Latin font stack for
    Arabic, so anything it touches has to already be defined. */

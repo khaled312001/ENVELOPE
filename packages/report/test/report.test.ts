@@ -880,32 +880,97 @@ describe('the GFA calculation', () => {
     has none and must render none; a run that has one prints every figure as the
     engine stated it, the square feet included.
   */
+  /*
+    THE FIXTURE IS THE CLIENT'S OWN SCHEME, not a round number.
+
+    `docs/03-analysis/client-drawings-2026-10-05.md` §4 transcribes the table he
+    sent on 5 October and asked for by name — *«Calculations»* — on a 1,365.23 m²
+    plot at FAR 3.50. Three of its features are what this block has to render and
+    none of them survives a one-row fixture: a GROUPED row printed as "× 3", TWO
+    allowances capped separately, and a floor the table NAMES without counting.
+
+    So the fixture carries all three, with his figures. A test written against a
+    single residential row would pass on a renderer that ignored the cap entirely.
+  */
   const withStatement = (): RunReport => {
     const run = makeRun();
-    const plate = wire('envelope.tower_plate_cap', '1060.00', ProvenanceClass.DERIVED, 'm²');
+    const typical = wire('envelope.tower_plate_cap', '625.55', ProvenanceClass.DERIVED, 'm²');
+    const count = wire('gfa_statement.typical_level_count', '3', ProvenanceClass.DERIVED, 'levels');
     return {
       ...run,
       capacity: {
         ...run.capacity,
         gfaStatement: {
-          plotArea: { m2: d('3200.00'), ft2: d('34444.51') },
-          allowed: wire('gfa_statement.allowed_gfa_m2', '16000.00', ProvenanceClass.DERIVED, 'm²'),
-          allowedFt2: d('172222.56'),
-          rows: [
+          plotArea: { m2: d('1365.23'), ft2: d('14695.23') },
+          allowed: wire('gfa_statement.allowed_gfa_m2', '4778.31', ProvenanceClass.DERIVED, 'm²'),
+          allowedFt2: d('51433.24'),
+          caps: [
             {
               kind: 'RESIDENTIAL',
-              levelIds: ['L01', 'L15'],
-              count: 15,
-              perLevel: plate,
-              perLevelFt2: d('11409.75'),
-              area: wire('gfa_statement.residential_gfa_m2', '15900.00', ProvenanceClass.DERIVED, 'm²'),
-              areaFt2: d('171146.18'),
+              allowed: wire('gfa_statement.residential_allowed_m2', '4718.31', ProvenanceClass.DERIVED, 'm²'),
+              allowedFt2: d('50787.42'),
+              proposed: wire('gfa_statement.residential_proposed_m2', '4717.53', ProvenanceClass.DERIVED, 'm²'),
+              proposedFt2: d('50779.03'),
+              remaining: wire('gfa_statement.residential_remaining_m2', '0.78', ProvenanceClass.DERIVED, 'm²'),
+              remainingFt2: d('8.40'),
+              notes: [],
+            },
+            {
+              /* NO ALLOWANCE AND NOTHING PROPOSED, which is three nulls and a
+                 sentence rather than three zeros. A zero here would report a
+                 commercial ceiling of nothing, which is a limit nobody stated. */
+              kind: 'COMMERCIAL',
+              allowed: null,
+              allowedFt2: null,
+              proposed: null,
+              proposedFt2: null,
+              remaining: null,
+              remainingFt2: null,
+              notes: ['No affection plan on file states a commercial allowance for this plot.'],
             },
           ],
-          proposed: wire('gfa_statement.proposed_gfa_m2', '15900.00', ProvenanceClass.DERIVED, 'm²'),
-          proposedFt2: d('171146.18'),
-          remaining: wire('gfa_statement.remaining_gfa_m2', '100.00', ProvenanceClass.DERIVED, 'm²'),
-          remainingFt2: d('1076.39'),
+          rows: [
+            {
+              kind: 'GROUND',
+              cap: 'RESIDENTIAL',
+              levelIds: ['G'],
+              count: 1,
+              perLevel: null,
+              perLevelFt2: null,
+              levelCount: null,
+              area: wire('gfa_statement.ground_gfa_m2', '118.00', ProvenanceClass.DERIVED, 'm²'),
+              areaFt2: d('1270.14'),
+            },
+            {
+              kind: 'TYPICAL',
+              cap: 'RESIDENTIAL',
+              levelIds: ['L02', 'L04', 'L06'],
+              count: 3,
+              perLevel: typical,
+              perLevelFt2: d('6733.40'),
+              levelCount: count,
+              area: wire('gfa_statement.typical_gfa_m2', '1876.65', ProvenanceClass.DERIVED, 'm²'),
+              areaFt2: d('20200.19'),
+            },
+          ],
+          omissions: [
+            {
+              kind: 'ROOF',
+              cap: 'RESIDENTIAL',
+              reason:
+                'A stair head, lift motor room and tank room stand on the roof. The engine ' +
+                'models no roof level, so no area is stated — not zero, which would say the ' +
+                'roof is clear.',
+            },
+          ],
+          reconciliation: [
+            'Every level is stated at the tower plate. A real scheme steps, so a drawing of ' +
+              'this envelope will not match it floor for floor.',
+          ],
+          proposed: wire('gfa_statement.proposed_gfa_m2', '4777.53', ProvenanceClass.DERIVED, 'm²'),
+          proposedFt2: d('51424.84'),
+          remaining: wire('gfa_statement.remaining_gfa_m2', '0.78', ProvenanceClass.DERIVED, 'm²'),
+          remainingFt2: d('8.40'),
           partFloorNotPlaced: { m2: d('0.00'), ft2: d('0.00') },
         },
       },
@@ -921,11 +986,46 @@ describe('the GFA calculation', () => {
     expect(html).toContain('<h3>GFA calculation</h3>');
     expect(html).toContain('Gross floor area allowed');
     expect(html).toContain('Total gross floor area proposed');
-    expect(html).toContain('1 · Residential floors');
-    expect(html).toContain('L01 to L15');
-    expect(html).toContain('× 15');
-    expect(html).toContain('171,146.18');
-    expect(html).toContain('There is no commercial table');
+    expect(html).toContain('Ground floor');
+    expect(html).toContain('L02 to L06');
+    expect(html).toContain('20,200.19');
+  });
+
+  it('prints a grouped row as the multiplication a reader checks, not a product', () => {
+    /*
+      "625.55 × 3", which is how his own table prints it. A renderer that
+      pre-multiplied would show 1,876.65 alone and the reader would have to take
+      it — and the two figures either side of that × are the two the engine traced.
+    */
+    const html = toHtml(withStatement());
+    expect(html).toContain('× 3');
+    expect(html).toContain('625.55');
+  });
+
+  it('keeps the two allowances apart, and states the one nobody set', () => {
+    const html = toHtml(withStatement());
+    expect(html).toContain('Residential G.F.A.');
+    expect(html).toContain('Commercial G.F.A.');
+    // The commercial cap has no allowance. It must say so rather than print 0.00.
+    expect(html).toContain('states a commercial allowance');
+    const commercial = html.slice(html.indexOf('Commercial G.F.A.'));
+    expect(commercial).not.toMatch(/>0\.00</);
+  });
+
+  it('names the roof floor it does not count, rather than omitting it', () => {
+    /*
+      §20.3 — "an invariant silently absent from the table reads as an invariant
+      that passed" — and a floor is no different. The row is present, the area is
+      NOT ASSESSED, and the reason says what stands there.
+    */
+    const html = toHtml(withStatement());
+    expect(html).toContain('Roof floor');
+    expect(html).toContain('floors named and not counted');
+    expect(html).toContain('which would say the roof is clear');
+  });
+
+  it('says what the uniform-plate model does not model', () => {
+    expect(toHtml(withStatement())).toContain('A real scheme steps');
   });
 });
 

@@ -975,22 +975,107 @@ function capacitySection(run: RunReport, indexes: Indexes): string {
 function gfaStatementBlock(run: RunReport, indexes: Indexes): string {
   const s = run.capacity.gfaStatement;
   if (!s) return '';
-  const label = (kind: 'RESIDENTIAL' | 'PARKING'): string =>
-    kind === 'RESIDENTIAL' ? 'Residential floors' : 'Parking, counted toward FAR';
-  const rows = s.rows.map((r, i) => {
-    const ids = r.levelIds.length
-      ? ` <span class="note">${esc(
-          r.levelIds.length === 1 ? r.levelIds[0]! : `${r.levelIds[0]!} to ${r.levelIds[r.levelIds.length - 1]!}`,
-        )}</span>`
-      : '';
-    return [
-      `${i + 1} · ${esc(label(r.kind))}${ids}`,
-      r.perLevel ? `${value(r.perLevel, indexes)} × ${r.count}` : '—',
-      value(r.area, indexes),
-      plain(r.areaFt2, 'ft²'),
-    ];
-  });
-  rows.push(['Total', '', value(s.proposed, indexes), plain(s.proposedFt2, 'ft²')]);
+
+  /*
+    THE ROW LABELS ARE THE DRAWING'S. His table reads "Ground floor", "Podium
+    floor area", "Typical floor 02/04/06", "Roof floor" — a consultant's own
+    schedule, not a data model's field names — and a reviewer matches our table to
+    his by these words. `Record` and not a function with a fallback: a kind added
+    to the engine and not labelled here should fail the build, because the
+    alternative is a row printing "UNPLACED" to a client.
+  */
+  const ROW_LABEL: Readonly<Record<typeof s.rows[number]['kind'], string>> = {
+    GROUND: 'Ground floor',
+    PODIUM: 'Podium floor area',
+    TYPICAL: 'Typical floor',
+    UNPLACED: 'Counted, not placed under the height ceiling',
+    PARKING: 'Parking, counted toward FAR',
+    COMMERCIAL: 'Commercial tenancy',
+    ROOF: 'Roof floor',
+  };
+  const CAP_LABEL: Readonly<Record<typeof s.caps[number]['kind'], string>> = {
+    RESIDENTIAL: 'Residential G.F.A.',
+    COMMERCIAL: 'Commercial G.F.A.',
+  };
+
+  const ids = (levelIds: readonly string[]): string =>
+    levelIds.length === 0
+      ? ''
+      : ` <span class="note">${esc(
+          levelIds.length === 1
+            ? levelIds[0]!
+            : `${levelIds[0]!} to ${levelIds[levelIds.length - 1]!}`,
+        )}</span>`;
+
+  /*
+    ONE TABLE PER CAP, which is how his sheet prints it and not a presentation
+    choice: the two allowances are different ceilings and a single table summing
+    across them would report a total against neither. A cap with no rows still
+    gets its heading and its own notes — "nothing is proposed against this
+    allowance" is an answer, and an omitted table is silence.
+  */
+  const capBlock = (cap: typeof s.caps[number]): string => {
+    const rows = s.rows
+      .filter((r) => r.cap === cap.kind)
+      .map((r, i) => [
+        `${i + 1} · ${esc(ROW_LABEL[r.kind])}${ids(r.levelIds)}`,
+        /* THE PRODUCT, SHOWN AS A PRODUCT. "625.55 × 3", because the reader checks
+           the multiplication — which is the whole reason the row carries a count
+           and a per-level area instead of one pre-multiplied figure. */
+        r.perLevel ? `${value(r.perLevel, indexes)} × ${r.count}` : '—',
+        value(r.area, indexes),
+        plain(r.areaFt2, 'ft²'),
+      ]);
+    const omitted = s.omissions
+      .filter((o) => o.cap === cap.kind)
+      .map((o) => [
+        `${esc(ROW_LABEL[o.kind])}`,
+        notAssessedChip('no area stated'),
+        esc(o.reason),
+        '',
+      ]);
+    return (
+      `<h4>${esc(CAP_LABEL[cap.kind])}</h4>` +
+      `<dl>` +
+      definitionRows([
+        [
+          'Allowed',
+          cap.allowed
+            ? `${value(cap.allowed, indexes)} · ${plain(cap.allowedFt2!, 'ft²')}`
+            : notAssessedChip('no allowance stated'),
+        ],
+        [
+          'Proposed',
+          cap.proposed
+            ? `${value(cap.proposed, indexes)} · ${plain(cap.proposedFt2!, 'ft²')}`
+            : notAssessedChip('nothing proposed'),
+        ],
+        [
+          'Left within the allowance',
+          cap.remaining
+            ? `${value(cap.remaining, indexes)} · ${plain(cap.remainingFt2!, 'ft²')}`
+            : notAssessedChip('not computable'),
+        ],
+      ]) +
+      `</dl>` +
+      (rows.length === 0
+        ? ''
+        : table(
+            `${CAP_LABEL[cap.kind]} — floor by floor`,
+            ['Description', 'Area per level', 'Area', 'Area (ft²)'],
+            rows,
+          )) +
+      (omitted.length === 0
+        ? ''
+        : table(
+            `${CAP_LABEL[cap.kind]} — floors named and not counted`,
+            ['Description', 'Area', 'Why', ''],
+            omitted,
+          )) +
+      cap.notes.map((n) => `<p class="note">${esc(n)}</p>`).join('')
+    );
+  };
+
   return (
     `<h3>GFA calculation</h3>` +
     `<dl>` +
@@ -1004,14 +1089,19 @@ function gfaStatementBlock(run: RunReport, indexes: Indexes): string {
       ['Left within the allowance', `${value(s.remaining, indexes)} · ${plain(s.remainingFt2, 'ft²')}`],
     ]) +
     `</dl>` +
-    table('Gross floor area proposed, floor by floor', ['Description', 'Area per level', 'Area', 'Area (ft²)'], rows) +
+    s.caps.map(capBlock).join('') +
+    /* WHAT THE MODEL DOES NOT MODEL, SAID AND CHANGING NOTHING. `reconcileCore`'s
+       discipline: this table states a uniform plate on every level and a real
+       scheme steps, and a reader holding his own drawing will find the difference
+       whether or not we name it. Naming it is the only version that is honest. */
+    s.reconciliation.map((r) => `<p class="note">${esc(r)}</p>`).join('') +
     `<p class="note">Allowed is FAR × plot area, before the parking-in-FAR treatment. Proposed is ` +
     `whole floors of the tower plate` +
     (Number(s.partFloorNotPlaced.m2) > 0
       ? `; the ${plain(s.partFloorNotPlaced.m2, 'm²')} the governing capacity holds above the ` +
         `last whole floor is not placed and not counted`
       : '') +
-    `. There is no commercial table: this engine places no commercial area.</p>`
+    `.</p>`
   );
 }
 

@@ -83,18 +83,57 @@ export class CoreRefusedError extends Error {
  * stairs, risers and the lift lobby; 0.18 is the middle of it. It errs neither
  * way on purpose — a core is not a limit, so there is no conservative direction
  * to err in, and picking one end would make the drawing quietly argumentative.
+ *
+ * ---------------------------------------------------------------------------
+ * AND IT HAS SINCE BEEN CORROBORATED, WHICH CHANGES NOTHING HERE.
+ *
+ * On 2026-10-04 at 32:58 the architect this engine is built for said, unprompted,
+ * *«الكور في الغالب من 18 إلى 20% من الـ GFA»* — the core is usually 18 to 20% of
+ * the GFA. A constant fraction of every plate is the same fraction of their sum,
+ * so his figure and this one are the same quantity, and 0.18 is the low end of his
+ * range as well as the middle of the published one.
+ *
+ * THE FIGURE IS NOT PROMOTED. `DERIVED` in this system means a value reached a
+ * cited regulatory instrument; a practitioner agreeing with an assumption produces
+ * agreement, not a citation, and `CLAUDE.md` names dressing the one as the other
+ * as the most consequential laundering available in this codebase. His answer is a
+ * `PracticeStatement` — `STMT-CORE-PLATE-FRACTION-2026-10-04`, `USER_SET` by him,
+ * offered from `/api/statements` with a button and never pre-selected. Until
+ * somebody presses it this stays what it is: an assumption nobody signed.
+ *
+ * So what his statement buys is in the basis string below, where a reader can see
+ * it, and in `CORE_SHARE_SENSITIVITY`, where 18→20% stops being notional.
  */
 const ASSUMED_PLATE_SHARE = '0.18';
 
+/*
+  HIS UPPER END IS ALREADY MEASURED, SO NOTHING NEW IS ADDED FOR IT.
+
+  `FR-ASM-001` perturbs every ASSUMED value by ±10% and recomputes; 0.18 × 1.10 is
+  0.198, which is within a thousandth of the 0.20 he gave. The register therefore
+  already runs his range and already publishes what it does to the answer — which
+  is nothing, because a core moves no capacity figure.
+
+  A second constant here, with its own perturbation, would be a parallel
+  sensitivity mechanism reporting the same number by a different route: the exact
+  shape of drift `pnpm parity` exists to catch between renderers. So the figure is
+  stated in the basis string, where a reader meets it, and the arithmetic stays in
+  the one place that does it.
+*/
 const ASSUMED_BASIS =
   'A core of 18% of the tower plate: the middle of the 15–22% a residential ' +
-  'tower core takes for lift shafts, the lift lobby, escape stairs and risers. ' +
+  'tower core takes for lift shafts, the lift lobby, escape stairs and risers, ' +
+  'and the lower end of the 18–20% the architect this engine is built for stated ' +
+  'on 4 October 2026. His statement is recorded as a practice statement, ' +
+  'STMT-CORE-PLATE-FRACTION-2026-10-04, and is offered separately: a named ' +
+  'practitioner agreeing with an assumption is agreement and not a citation, so ' +
+  'this figure stays ASSUMED until somebody accepts his statement under his name. ' +
   'No clause of the Dubai Building Code states a core area and no developer ' +
   'standard on file gives one, so this is an assumption and not a derivation. ' +
-  'It moves the drawing and the two reconciliations under it; it moves no ' +
-  'capacity figure, because a core is inside GFA and outside saleable area and ' +
-  'the saleable efficiency this run was given already carries it. Enter the ' +
-  'core area to replace it.';
+  'At his upper end, 20%, the core is 11.1% larger and the two reconciliations ' +
+  'below move with it; no capacity figure moves either way, because a core is ' +
+  'inside GFA and outside saleable area and the saleable efficiency this run was ' +
+  'given already carries it. Enter the core area to replace it.';
 
 const PLACEMENT_BASIS =
   'The core area fixes how much plate the core takes, not where on the plate it ' +

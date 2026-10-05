@@ -390,16 +390,49 @@ function presentGfaStatement(statement: GfaStatement) {
       traced: toWire(statement.allowedGfaM2),
       ...areaPair(statement.allowedGfaM2.value, ft2.allowed),
     },
+    /*
+      THE TWO ALLOWANCES, SEPARATE ON THE WIRE AS THEY ARE IN THE ENGINE.
+
+      Every field but the kind is nullable and each null is its own fact, named in
+      `notes`: nobody stated this allowance, or nothing is proposed against it. A
+      `?? 0` to keep the shape rectangular would publish "this scheme has used
+      none of a ceiling that does not exist", which is a figure nobody computed —
+      and the screen has a row for a null and no row for a lie.
+    */
+    caps: statement.caps.map((c) => ({
+      kind: c.kind,
+      allowed:
+        c.allowedM2 && c.allowedFt2
+          ? { traced: toWire(c.allowedM2), ...areaPair(c.allowedM2.value, c.allowedFt2) }
+          : null,
+      proposed:
+        c.proposedM2 && c.proposedFt2
+          ? { traced: toWire(c.proposedM2), ...areaPair(c.proposedM2.value, c.proposedFt2) }
+          : null,
+      remaining:
+        c.remainingM2 && c.remainingFt2
+          ? { traced: toWire(c.remainingM2), ...areaPair(c.remainingM2.value, c.remainingFt2) }
+          : null,
+      notes: c.notes,
+    })),
     rows: statement.rows.map((r) => ({
       kind: r.kind,
+      cap: r.cap,
       levelIds: r.levelIds,
       count: r.count,
       perLevel:
         r.perLevelM2 && r.perLevelFt2
           ? { traced: toWire(r.perLevelM2), ...areaPair(r.perLevelM2.value, r.perLevelFt2) }
           : null,
+      /* The count as the graph holds it. `r.count` is beside it for the table's
+         "× 3"; this is what makes the row's area a PRODUCT a reader can open. */
+      levelCount: r.levelCount ? toWire(r.levelCount) : null,
       area: { traced: toWire(r.areaM2), ...areaPair(r.areaM2.value, r.areaFt2) },
     })),
+    /* A floor the table names and does not count. Carried as the engine worded
+       it: a reason rephrased here would be a second account of the same floor. */
+    omissions: statement.omissions.map((o) => ({ kind: o.kind, cap: o.cap, reason: o.reason })),
+    reconciliation: statement.reconciliation,
     proposed: {
       traced: toWire(statement.proposedGfaM2),
       ...areaPair(statement.proposedGfaM2.value, ft2.proposed),

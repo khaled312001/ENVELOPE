@@ -189,9 +189,20 @@ export function Landing({
 
           {/* The validity stamp sits IN the fold, at the same weight as the
               action beside it. Below it, it would be a footnote to a claim the
-              reader has already formed. */}
+              reader has already formed.
+
+              `data-claim="regulatory"` is not styling and nothing reads it as
+              styling. It is the hook `scripts/amber.mjs` measures the POSITION of,
+              and a semantic attribute rather than the `lp-validity` class because a
+              gate bound to a class name is a gate a rename silently deletes — the
+              same reason the colophon carries `data-group`. That sentence above
+              needed something to hold it to, because for as long as this page has
+              existed its placement has been enforced by nothing: the unit test can
+              see the stamp is PRESENT and only a browser knows it is above the fold,
+              and amber.mjs is the only gate in this repository that opens one here. */}
           <p
             className="lp-validity m-rise"
+            data-claim="regulatory"
             style={{ '--m-order': 4 } as React.CSSProperties}
           >
             <strong>{t.validity.stamp}</strong>

@@ -24,6 +24,7 @@
 
 import {
   Decimal,
+  metric,
   type Mm,
   type Plot,
   type PlotEdge,
@@ -123,6 +124,33 @@ export interface LevelPlan {
   /** What was taken off the level before packing, and where the number came from. */
   readonly deductionsM2: TracedDecimal;
   /**
+   * The floor area on this level that is neither a bay nor a drive aisle — the
+   * core, the reserved strip and the ramp landing, together.
+   *
+   * ONE NUMBER, TWO CLAIMS, AND THE SECOND ONE IS WHY THIS NODE EXISTS. It
+   * carries the same figure as `deductionsM2` and `uses` it, so the two cannot
+   * drift apart. What differs is what is being asserted. `deductionsM2` says
+   * *this came off the level before a bay was placed* — a fact about the
+   * packing. This says *this floor area is not parking area*, which is a claim
+   * against the metric definitions annex, and the annex is explicit on both
+   * halves: `PARKING_AREA` excludes "Residential lobbies within a parking
+   * level" and "Plant serving the tower above", and `GFA` includes "Internal
+   * circulation (corridors, lobbies)", "Vertical cores … measured once per
+   * level" and "Enclosed plant and service rooms".
+   *
+   * It is emitted here rather than reassembled by whoever needs it, because the
+   * only alternative is an adapter computing a number a user will see.
+   *
+   * **IT IS AN UPPER BOUND, NOT A GFA FIGURE, AND NOTHING MAY PRINT IT AS ONE.**
+   * The deduction also covers the ramp landing, which the same annex calls
+   * parking circulation (`CORE_AREA` excludes "The ramp and its landing, which
+   * are parking circulation"; `PARKING_AREA` includes "Ramps"). Nothing on file
+   * splits the strip between lobby, plant and landing, and the annex that would
+   * settle it is unsigned — so how much of this is GFA is NOT ASSESSED, and the
+   * GFA statement says exactly that rather than quoting the figure as an area.
+   */
+  readonly nonParkingFloorAreaM2: TracedDecimal;
+  /**
    * The reserved strip's own area: the deduction less the core, which now stands
    * where it is drawn. Equal to `deductionsM2` when no core was given.
    */
@@ -202,6 +230,12 @@ const mmToM = (v: Mm | number): Decimal => new Decimal(v).div(1000);
  * together.
  */
 export function planParkingLevel(input: LevelPlanInput): LevelPlan {
+  // `FR-DEF-001 AC5`, applied to this module because it now states a floor-area
+  // term of its own — see `nonParkingFloorAreaM2`. The call is the gate: an area
+  // term absent from the annex throws here rather than reaching a drawing.
+  metric('PARKING_AREA');
+  metric('GFA');
+
   const rect: InscribedRect = largestInscribedRectangle(input.podiumRing);
   const widthM = mmToM(rect.widthMm);
   const depthM = mmToM(rect.depthMm);
@@ -226,6 +260,35 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
           'Cores, plant, the ramp landing and any circulation that is not drive ' +
           'aisle. Taken off the level before a bay is placed, so the drawing and ' +
           'the level count are deducting the same thing.',
+      },
+    },
+  );
+
+  /*
+    THE SAME AREA, RESTATED AS WHAT IT IS RATHER THAN AS WHAT IT COST.
+
+    Derived from the deduction rather than recomputed from the fraction, so the
+    two are one number by construction: perturb the usable fraction and both
+    move, and neither can be edited into disagreeing with the other.
+  */
+  const nonParkingFloorAreaM2 = input.tracer.computed(
+    'parking.non_parking_floor_area_m2',
+    deductionM2,
+    {
+      formula:
+        `${deductionM2.toString()} m² of this level is neither bay nor drive aisle ` +
+        '— core, plant, ramp landing and circulation',
+      uses: { deductions: deductionsTraced },
+      unit: 'm²',
+      detail: {
+        note:
+          'Floor area on a parking level that the annex does not count as parking ' +
+          'area: PARKING_AREA excludes residential lobbies within a parking level ' +
+          'and plant serving the tower above, and GFA includes lobbies, cores and ' +
+          'enclosed plant rooms. An UPPER BOUND on what a parking level contributes ' +
+          'to GFA, never that contribution itself — it also covers the ramp landing, ' +
+          'which the same annex calls parking circulation, and nothing on file ' +
+          'splits the strip between the three. How much of it is GFA is NOT ASSESSED.',
       },
     },
   );
@@ -383,6 +446,7 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
       },
     },
     deductionsM2: deductionsTraced,
+    nonParkingFloorAreaM2,
     reservedAreaM2: layout.reservedAreaM2,
     notAssessed,
   };

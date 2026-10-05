@@ -513,12 +513,41 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
         source: source(program.program),
         notPlaced: program.notPlaced,
       };
+      /*
+        THE REFUSAL'S OWN REASON, NOT A SENTENCE ABOUT IT.
+
+        This read "The strip had no length left for: substation, lv room", which
+        was the only reason a room could be refused while every width in the
+        program was a typical figure. It is not any more: §11.4.1 sizes the
+        substation from its area and its minimum width, and a strip too SHALLOW
+        for that width refuses the room however long it is — "no length left" is
+        then a wrong sentence about a right refusal, which is the defect
+        `GroundRoomRefusal` was added to prevent and which this line was still
+        producing.
+
+        `refused` carries one sentence per room naming both figures, so a reader
+        can argue with the refusal instead of taking it. `notPlaced` stays on the
+        model for the sheets, which key a hatch off the name.
+      */
       notModelled.push(
-        'The ground floor, as a services design. The entrance and plant rooms in its ' +
-          'reserved strip are an indicative program, assumed: no room is sized, ventilated ' +
-          'or access-checked against a DEWA, Civil Defence or municipality requirement.' +
-          (program.notPlaced.length
-            ? ` The strip had no length left for: ${program.notPlaced.join(', ').toLowerCase()}.`
+        'The ground floor, as a services design. Every room in its reserved strip whose ' +
+          'width is a typical figure is an assumption: it is not sized, ventilated or ' +
+          /*
+            "DEWA §11.4.1", NOT "DEWA 2017 §11.4.1", and the year is not a
+            shortening. `/refusals` renders this list and holds itself to printing
+            no date anywhere — "an owner is a plan; a date is a promise, and this
+            product does not make those" — so a bare `2017` in a sentence trips
+            it, correctly: a reader scanning that page cannot tell an edition from
+            a roadmap. The edition is already recorded where a version belongs,
+            as `instrumentVersion` on every one of these clauses' citations, and
+            the clause reference identifies the clause without it.
+          */
+          'access-checked against a Civil Defence or municipality requirement. The ' +
+          'substation and the LV room are sized from DEWA §11.4.1 and §11.2.3, and ' +
+          'neither is ventilated or access-checked either — §11.5.1 is only partly ' +
+          'mechanizable and is NOT ASSESSED.' +
+          (program.refused.length
+            ? ` ${program.refused.map((r) => `${r.name}: ${r.reason}`).join(' ')}`
             : ''),
       );
     } else {

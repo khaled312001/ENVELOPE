@@ -36,6 +36,24 @@ export interface SheetSpec {
   /** Shown above the table. Say what the sheet is for, not what it contains. */
   readonly note?: string;
   readonly rows: readonly ValueRow[];
+  /**
+   * Statements that belong to the sheet and have no value — a floor the schedule
+   * names and does not count, an allowance nobody stated, what the model does not
+   * model.
+   *
+   * SEPARATE FROM `rows` BECAUSE EVERY ROW HAS A TRACED VALUE, and that is this
+   * module's whole discipline: a row carries a figure, its provenance class and
+   * its basis, and the fill and the dashed border are read off that class. A
+   * label-only row would need a `traced` of `null`, and the first thing anyone
+   * would do is give it an empty one — a value with a provenance class and no
+   * provenance, in the export a reader sums by hand.
+   *
+   * Printed BELOW the table, so the column a reader totals holds only figures.
+   * That is the trade and it is deliberate: a NOT ASSESSED floor inside the
+   * column is a cell somebody drags over, and `=SUM()` over a blank is 0, which
+   * is the one answer this product may not give about a floor nobody measured.
+   */
+  readonly notes?: readonly string[];
 }
 
 export interface WorkbookSpec {
@@ -165,6 +183,24 @@ function addValueSheet(wb: ExcelJS.Workbook, sheet: SheetSpec): void {
         left: { style: 'dashed' },
         right: { style: 'dashed' },
       };
+    }
+  }
+
+  /*
+    THE VALUELESS STATEMENTS, UNDER THE TABLE AND INSIDE THE AUTOFILTER'S REACH.
+
+    Placed after the rows rather than before them, because a reader scrolls to the
+    bottom of a schedule to find its total and these qualify that total. The blank
+    row keeps them out of a drag-selection of the figures above.
+  */
+  const notes = sheet.notes ?? [];
+  if (notes.length > 0) {
+    ws.addRow([]);
+    for (const text of notes) {
+      const added = ws.addRow([text]);
+      added.font = { italic: true, color: { argb: 'FF55565F' } };
+      ws.mergeCells(added.number, 1, added.number, 5);
+      added.alignment = { wrapText: true, vertical: 'top' };
     }
   }
 

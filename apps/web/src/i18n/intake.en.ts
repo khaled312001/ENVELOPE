@@ -101,6 +101,58 @@ export const EN = {
     },
   },
 
+  /**
+   * THE BOUNDARY READINGS. The client's complaint of 4 Oct 2026, in full:
+   *
+   *   «لسه برضو مش جايب الرسم على الخريطه الحقيقيه والمفروض القراءات تطلع كامله
+   *    من الرسمه بتاعت الافكشن بلان»
+   *
+   * He had reached step 1 after reading a sheet and met "4 STILL UNCLASSIFIED"
+   * over four empty dropdowns. The copy here is held to what the sheet actually
+   * supports: each line is a PROPOSAL about a role, the amber chip is the
+   * product's own word for an assumption, and every gap is the engine's own
+   * sentence rendered as it arrived.
+   *
+   * `roles` reuses `faces` rather than translating "front", "side" and "rear" a
+   * second time — the same three words twice in one dictionary is the
+   * `.chip--assumed` / `.chip--warn` defect in a dictionary.
+   *
+   * The four types ARE translated, like the provenance class labels: they are a
+   * closed set of interface vocabulary, not a sentence the engine wrote. A type
+   * this table does not know is shown as the engine sent it.
+   */
+  boundaries: {
+    title: 'Boundaries, as the setback schedule names them',
+    /** Fact, then action — the structure the missing-fields panel was fixed into. */
+    lead:
+      'Each line is a proposal. Apply it to a boundary on the next step, or classify that boundary yourself.',
+    types: {
+      ROAD: 'Road',
+      ADJACENT_PLOT: 'Adjacent plot',
+      OPEN_SPACE: 'Open space',
+      OTHER: 'Other',
+    },
+    /** The sheet's own clause sits between these, quoted as printed. */
+    readFromBefore: 'Read from “',
+    readFromAfter: '”',
+    whySummary: 'Why these are proposals and not readings',
+    why:
+      'The sheet states a setback for a face. It does not classify a boundary, and it does not say which boundary of this plot is the front. So each line is an inference from the sheet’s own wording. A boundary type has no default in this product: you confirm it, and it is recorded against your name.',
+    /** The empty state. Value, then the first action. */
+    none:
+      'This sheet classifies no boundary. Its setback schedule is absent or silent on every face, and the drawing panel carries no text to read. Classify each boundary on the next step.',
+    /**
+     * NOT "What this sheet does not say about its boundaries", which was the
+     * first wording and was wrong twice. `screens.test.tsx` asserts that a sheet
+     * stating every limit shows no "What this sheet does not say" heading, and a
+     * heading that merely CONTAINS that phrase trips it — correctly, because the
+     * two sections are different findings and a reader scanning two headings that
+     * open on the same seven words reads one of them.
+     */
+    gapsTitle: 'Boundaries this sheet leaves open',
+    accessSide: 'Access side, as printed',
+  },
+
   coverage: {
     label: 'Coverage:',
     podium: (percent: string): string => `podium ${percent}% of plot area`,
@@ -149,9 +201,17 @@ export const EN = {
   },
 
   use: 'Use these values',
-  /** The tolerance is supplied by the component. */
+  /**
+   * The tolerance is supplied by the component.
+   *
+   * THE WIDTH-AND-DEPTH PARAGRAPH STANDS, and the boundary clause was added
+   * beside it rather than in place of it. The two refusals are different: a
+   * rectangle inferred from an area is a shape nobody surveyed, and a boundary
+   * type written into the form without being confirmed is a mandatory field with
+   * a default. Adding boundary readings answers the second only by offering.
+   */
   carryOver: (tolerance: string): string =>
-    'The plot number, community and stated area carry over, and the podium count waits for you to confirm it on the rules step. Width and depth do not carry over: the sheet gives an area, and a rectangle inferred from an area is a plot shape nobody surveyed. ' +
+    'The plot number, community and stated area carry over, and the podium count waits for you to confirm it on the rules step. The boundary readings carry over as proposals: each one waits for you to apply it, because a boundary type has no default. Width and depth do not carry over: the sheet gives an area, and a rectangle inferred from an area is a plot shape nobody surveyed. ' +
     `Enter the dimensions and the ${tolerance} check will compare them against the area above.`,
 };
 

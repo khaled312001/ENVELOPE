@@ -73,6 +73,34 @@ describe('parseHeight', () => {
     });
   });
 
+  it('reads G+4 as four typical floors and is therefore not the 13-level defect', () => {
+    /*
+      THE TEST THAT TELLS THE TWO CANDIDATES APART.
+
+      `docs/03-analysis/meeting-03-2026-10-04.md` §2.1: the client read `G+4`
+      off a plan and the screen reported 13 levels, and the note names two
+      possible causes that had to be separated before either was touched —
+      either this parser misreads the plain `G+N` form, or the FAR-driven floor
+      count is not capped by the stated height. This assertion rules out the
+      first, permanently, so nobody re-opens it.
+
+      The second is the real one. The sheet's `G+N` binds nothing by design:
+      `packages/rules/src/instruments/sheet.ts` pushes it to `notBound` because
+      `height.max` is a ceiling in metres and converting a level count into one
+      needs a floor-to-floor, which is itself a resolved parameter. So the
+      solver's ceiling is the generic seed rule `R-HEIGHT-MAX-RES` at 45.00 m
+      over `floor_to_floor` 3.20 m — 14 — and the answer is
+      `min(14, ceil(permitted GFA ÷ plate))`. The printed 4 is not in it.
+    */
+    expect(parseHeight('G+4')).toMatchObject({
+      podiumLevels: 0,
+      typicalFloors: 4,
+      totalLevels: 5,
+    });
+    // And with whitespace and a trailing note, as sheets print it.
+    expect(parseHeight('Height: G + 4 (Residential)')).toMatchObject({ typicalFloors: 4 });
+  });
+
   it('returns undefined rather than guessing on an unrecognised code', () => {
     expect(parseHeight('B+G+M+15')).toBeUndefined();
   });

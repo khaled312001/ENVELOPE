@@ -51,8 +51,11 @@
 
 import {
   Decimal,
+  parkingLevels,
   qArea,
+  type Actor,
   type Citation,
+  type LevelSchedule,
   type Traced,
   type TracedDecimal,
   type Tracer,
@@ -236,6 +239,24 @@ export interface ParkingLayoutInput {
   /** Include a ramp in this level's layout. A basement below grade needs one. */
   readonly includeRamp?: boolean;
   /**
+   * What the ramp serves, and what kind of ramp it is.
+   *
+   * WITHOUT IT THE DIRECTION IS NOT ESTABLISHED, AND THE RESULT SAYS SO rather
+   * than falling back on the `+1` that was there before. That is the whole point
+   * of this field: the old behaviour was not a default anybody had chosen, it was
+   * the absence of a decision, and an absence cannot be rendered amber. A run
+   * that does not supply this gets `ramp.runs === undefined` and a note in
+   * `notes` naming what is missing — never a direction nobody derived.
+   *
+   * The schedule is the caller's: stated by a named person, or the one the run
+   * inferred. See {@link RampRunInput.schedule} and {@link ASSUMED_BASEMENTS}.
+   */
+  readonly rampPlan?: {
+    readonly schedule: LevelSchedule;
+    readonly actor?: Actor;
+    readonly type?: RampType;
+  };
+  /**
    * The core, where it stands on this level, in the footprint's local metres —
    * x along the width, y along the depth.
    *
@@ -268,13 +289,40 @@ export interface ParkingLayoutResult {
   readonly orientation: Traced<string>;
   readonly losses: ParkingLosses;
   /**
-   * The ramp strip's plan size, traced, when the level reserves one.
+   * The ramp strip's plan size, its kind and which way it runs, when the level
+   * reserves a strip.
    *
-   * Both were constants in this file with no derivation — a 6 m × 30 m strip
-   * that moved the bay count by a whole run of bays, and nothing a reader could
-   * open to ask why 30. They are assumptions and are now declared as such.
+   * The width and the run were constants in this file with no derivation — a
+   * 6 m × 30 m strip that moved the bay count by a whole run of bays, and nothing
+   * a reader could open to ask why 30. They are assumptions and are declared as
+   * such. The **direction** was worse than a constant: it was not a value at all.
+   * See the section above `RampDirection`.
    */
-  readonly ramp: { readonly widthM: TracedDecimal; readonly runM: TracedDecimal } | undefined;
+  readonly ramp:
+    | {
+        readonly widthM: TracedDecimal;
+        readonly runM: TracedDecimal;
+        /** Straight, split or turning. `USER_SET` where chosen, else `ASSUMED`. */
+        readonly type: Traced<RampType>;
+        /**
+         * Every enumerated type, reported whether or not it was chosen — the same
+         * discipline the orientation sweep follows. A reader who disagrees with
+         * the arrangement deserves to see what else was on the list, including
+         * the one the engine refuses to place and why.
+         */
+        readonly candidates: readonly RampTypeSpec[];
+        /**
+         * One entry per ramp in the scheme, each with a traced direction, or
+         * `undefined` when no level schedule reached the layout.
+         *
+         * `undefined` is a reported state, not an empty answer: `notes` names it.
+         * An empty array means something else entirely and is a legitimate answer
+         * — a scheme whose only parking is the ground floor, reached by the
+         * driveway, has a reserved strip and no ramp to run up it.
+         */
+        readonly runs: readonly RampRun[] | undefined;
+      }
+    | undefined;
   /**
    * The strip the deduction was taken from, in the same local metres as `rects`:
    * the full width, at the far end of the depth. Undefined when nothing was
@@ -313,6 +361,440 @@ const RAMP_RUN_BASIS =
   'is shorter. It sets the gradient the ramp needs to climb one level, which is ' +
   'reported but not assessed: B.7.2.2 is not encoded. A longer run costs bays; a ' +
   'shorter one steepens the ramp.';
+
+// ---------------------------------------------------------------------------
+// Which way the ramp runs — the sign, and where the sign comes from
+// ---------------------------------------------------------------------------
+
+/**
+ * THE RAMP'S LEVEL DELTA WAS A CONSTANT, AND THE CONSTANT WAS POSITIVE.
+ *
+ * Eng. Mohamed found it by driving the 3D view himself, 4 Oct 2026:
+ *
+ *   "العربية لو دخلت من هنا هتمشي وبعد كده الرامب هنا — شايفه؟ طلع لفوق. فهي غلط."
+ *                                                                 — 40:11–40:20
+ *
+ * He is right, and the sign was not merely wrong — it was *nowhere*. Three
+ * places each held a fragment of it and none of them held a value:
+ *
+ * - `level-plan.ts` made `foot` the packing rectangle's origin-side edge and
+ *   `head` the far one, unconditionally, and wrote the commitment down in a doc
+ *   comment: *"the ramp is taken to climb away from the origin"*;
+ * - `buildBuildingModel` paired `foot` with the LOWER of two consecutive parking
+ *   levels and `head` with the upper, also unconditionally, so every ramp in
+ *   every model climbed away from that origin;
+ * - and `building.ts`'s own header said the direction was *"part of the ramp-run
+ *   assumption in `layout.ts`"* — while this file traced a width and a run and
+ *   said nothing whatever about direction. The assumption it pointed at did not
+ *   exist. There was no node to open, no basis to read and no class to render
+ *   amber, which is the precise shape of failure "no hidden defaults" exists to
+ *   catch: there was no `+1` anywhere to argue with.
+ *
+ * **What that actually produces, measured rather than asserted.** Run the
+ * pipeline on the same 80 × 40 m plot twice — once as two basements over a
+ * parking ground floor, once as a parking ground floor under one podium parking
+ * level — and the ramps come out with *identical* geometry: foot at y = 35.130 m,
+ * head at y = 9.409 m, delta `+1` storey, while the vehicle entry sits at y = 0.
+ * **Two different buildings, one drawing.** Whether that drawing happens to be
+ * right is decided by where `largestInscribedRectangle` put its origin relative
+ * to where `access.ts` put the driveway, and those two have nothing to do with
+ * each other. He reported a ramp rising where it had to fall; the engine had no
+ * way to be right on purpose.
+ *
+ * The same run also draws every ramp in a stack as the same rectangle sloping the
+ * same way, so a car coming down from grade lands at the far end of the next ramp
+ * down and has to drive the length of the strip back to reach it. The ramps do
+ * not meet.
+ *
+ * It survived because it moves no number: `pnpm parity` counts cars against the
+ * engine's own figure and `pnpm dxf` checks ramp heights against the engine's own
+ * figure, and the engine's own figure carried the wrong sign in both. **A gate
+ * that compares the renderers to the engine cannot see a defect the engine is the
+ * source of** — which is why the fix is a value with a class and a basis, and why
+ * `test/ramp-direction.test.ts` asserts the sign and never its magnitude. A test
+ * written `expect(Math.abs(delta)).toBe(1)` passes on the defect.
+ *
+ * ---
+ *
+ * **The sign is a function of one signed integer, and that integer comes from
+ * the schedule.** Grade is the datum — Eng. Mohamed asked for exactly that at
+ * 25:01–25:28 (*"خلّي الأساس بتاعك هو الأرض"*) — so a parking level carries a
+ * signed storey index: basements negative, the ground floor zero, podium parking
+ * positive. A car enters at grade. Therefore a ramp reaching a level below grade
+ * **descends** and one reaching a level above grade **climbs**, and a scheme with
+ * both gets both answers because the answer is resolved per level rather than per
+ * run.
+ *
+ * **A ramp is identified by the level it serves, not by a pair of levels.** The
+ * old model made one ramp per *consecutive pair* of parking levels, and that has
+ * two consequences it never admitted. The ramp from the street down to the first
+ * basement is not modelled at all — `buildBuildingModel` says so in
+ * `notModelled`, and it is the one ramp a driver meets first. And a scheme with
+ * basements and podium parking over a non-parking ground floor produces a single
+ * "ramp" from B1 to P1 straight through the ground floor, which no sign can
+ * describe at all, because a car leaving grade descends to one of them and climbs
+ * to the other.
+ *
+ * Keyed on the level served, every parking level except the ground floor has
+ * exactly one ramp reaching it from the level one step nearer grade; every one of
+ * them has an unambiguous direction; and the ramp off the street exists.
+ */
+
+export const RampDirection = {
+  /** Toward a level below grade. A car leaving the entry goes down. */
+  DESCENDS: 'DESCENDS',
+  /** Toward a level above grade. A car leaving the entry goes up. */
+  CLIMBS: 'CLIMBS',
+} as const;
+export type RampDirection = (typeof RampDirection)[keyof typeof RampDirection];
+
+/**
+ * The level delta: storeys from the level the ramp leaves to the level it
+ * reaches. `−1` for a ramp to a basement, `+1` for one to a podium parking level.
+ *
+ * **This is the number that was hardcoded `+1`, and it is deliberately NOT
+ * expressed against the drawing.** The first version of this function said
+ * "storeys gained from the strip's origin-side edge to its far edge", which reads
+ * as the geometric fact a renderer wants and is not derivable from a schedule at
+ * all: the origin is wherever `largestInscribedRectangle` put it, and it bears no
+ * relation to the way onto the level. Measured on an 80 × 40 m plot, a two-
+ * basement scheme and a podium-parking scheme produce ramps with *identical*
+ * foot and head coordinates — foot at y = 35.130 m, head at y = 9.409 m — while
+ * the vehicle entry sits at y = 0. Two different buildings, one drawing. Which
+ * physical end of the strip is the high end therefore depends on where the
+ * driveway lands, which is `access.ts`'s answer and not this module's; what this
+ * module can answer, from the schedule and nothing else, is the signed delta.
+ *
+ * It is a total function of the direction rather than a field beside it. The two
+ * express one fact, and a field could disagree with the direction it is supposed
+ * to follow — the same reason `deductionsTraced` exists rather than a second
+ * declaration of the deduction.
+ */
+export function storeyDelta(direction: RampDirection): -1 | 1 {
+  return direction === RampDirection.CLIMBS ? 1 : -1;
+}
+
+/**
+ * Which way a ramp reaching `servedStorey` runs, or `null` at grade.
+ *
+ * `null` is not a failure and must not be treated as one: the ground floor is
+ * reached by the driveway off the street, so no ramp serves it. Returning
+ * `CLIMBS` for it — the shape the old constant had — would put a ramp on the
+ * level that carries the vehicle entrance.
+ */
+export function rampDirectionToStorey(servedStorey: number): RampDirection | null {
+  if (!Number.isInteger(servedStorey)) {
+    throw new ParkingLayoutError(
+      `a storey index must be a whole number; got ${servedStorey}. Grade is 0, ` +
+        'basements are negative and podium levels positive — a fractional level is ' +
+        'not a level.',
+    );
+  }
+  if (servedStorey === 0) return null;
+  return servedStorey < 0 ? RampDirection.DESCENDS : RampDirection.CLIMBS;
+}
+
+/**
+ * The basement count when nobody has stated one. Zero, and said so.
+ *
+ * Eng. Mohamed, 25:01–25:28: *"البيزمنت مش دايماً، أو نادراً أصلاً تلاقي فيها
+ * بيزمنت. فدايماً اعملها رقم 0، وخلّي الأساس بتاعك هو الأرض … وبعد كده البوديوم،
+ * وبعد كده لو فيه بيزمنت هيكتب لك."*
+ *
+ * **A zero the user did not type is still a filled gap.** So this is not a silent
+ * default: it is an `ASSUMED` value with the basis below, amber on screen and
+ * listed in the register, exactly like every other filled gap here. And it stays
+ * `ASSUMED` rather than becoming `USER_SET` when the engine applies it on its
+ * own — his sentence is a `PracticeStatement`, which this codebase serves with a
+ * button and never pre-selects, because a pre-selected statement is the default
+ * `FR-DEF-002` forbids wearing somebody else's name.
+ */
+export const ASSUMED_BASEMENTS = 0;
+
+export const ASSUMED_BASEMENTS_BASIS =
+  'Basements are rare on Dubai plots and the affection plan does not state one, so ' +
+  'the schedule starts at grade: ground, then podium, and a basement only where it ' +
+  'is entered — Mohamed Amin, 4 Oct 2026. It is his practice, not a regulation: no ' +
+  'instrument states it and it never becomes DERIVED. Entering a basement count ' +
+  'replaces this with that figure, USER_SET.';
+
+const RAMP_DIRECTION_BASIS =
+  'Which way a ramp runs follows from where the parking sits, and no instrument ' +
+  'states either. Grade is the datum, so a ramp reaching a level below it descends ' +
+  'and one reaching a level above it climbs. Nobody entered a level schedule for ' +
+  'this run, so the schedule the direction was read off is itself assumed. Entering ' +
+  'one makes the direction USER_SET by whoever entered it. Reversing the direction ' +
+  'moves NO capacity figure — the measured effect on the bay count is zero, which ' +
+  'is why a wrong sign survived every gate — and it changes every drawing, the DXF ' +
+  'included.';
+
+/**
+ * One ramp: the level it reaches, the level it leaves, and which way it runs.
+ *
+ * Levels are named by **signed storey index**, not by id. `buildBuildingModel`
+ * builds the ids (`B2, B1, G, P1, L03`) and they are DXF layer names; a second
+ * builder here would be the `L00` defect over again — one name meaning different
+ * levels in two files. The index is unambiguous and it is already the loop
+ * variable the stack is built on, so the two cannot drift.
+ */
+export interface RampRun {
+  /**
+   * The parking level this ramp reaches. Never 0: the ground floor is reached by
+   * the driveway, so no ramp serves it.
+   */
+  readonly servedStorey: number;
+  /** The level it leaves — one step nearer grade, and `0` for the entry ramp. */
+  readonly fromStorey: number;
+  readonly direction: Traced<RampDirection>;
+  /** `+1` or `−1`. See {@link storeyDelta}: the sign that was hardcoded `+1`. */
+  readonly storeyDelta: -1 | 1;
+}
+
+export interface RampRunInput {
+  readonly tracer: Tracer;
+  /**
+   * The schedule the directions are read off.
+   *
+   * Which schedule it is, is the caller's responsibility and not this module's:
+   * where the run states one it is that, and where it does not the caller passes
+   * the one it inferred — built on {@link ASSUMED_BASEMENTS}, which is where the
+   * zero and its basis live. Inferring a schedule here as well would put that
+   * arithmetic in two files and let them disagree about the same building.
+   */
+  readonly schedule: LevelSchedule;
+  /**
+   * Who stated the schedule.
+   *
+   * Present: the directions are `USER_SET`, because a person answered the
+   * question the direction depends on. Absent: nobody did, so they are `ASSUMED`
+   * with a basis. The class is not decoration here — it is the difference
+   * between a drawing that shows what somebody said and one that shows what the
+   * engine guessed, and amber is the only thing that tells the two apart.
+   */
+  readonly actor?: Actor;
+}
+
+/**
+ * Resolve every ramp in the scheme, each with a traced direction.
+ *
+ * One per parking level except the ground floor. Ordered from the lowest level
+ * served to the highest, so a reader walks the stack the way a section draws it.
+ */
+export function resolveRampRuns(input: RampRunInput): readonly RampRun[] {
+  const { tracer, schedule } = input;
+  const whole = (n: number): boolean => Number.isInteger(n) && n >= 0;
+  if (!whole(schedule.basements) || !whole(schedule.podiumParkingLevels)) {
+    throw new ParkingLayoutError(
+      'a level schedule states whole, non-negative counts of basements and podium ' +
+        `parking levels; got ${schedule.basements} and ${schedule.podiumParkingLevels}. ` +
+        'A schedule that does not describe a building is refused rather than rounded: ' +
+        'rounding answers a question about the building that whoever filled the form ' +
+        'got wrong.',
+    );
+  }
+
+  /*
+    ONE NODE PER FACT, AND TWO FACTS. A descending ramp exists because somebody
+    said how many basements there are; a climbing one exists because somebody said
+    how many podium levels hold parking. They are different answers and they can
+    have different classes — a stated podium count beside an assumed basement
+    count is an ordinary run — so each direction `uses` the count that put it
+    there, and the class propagates per ramp. Collapsing them into one node would
+    make a run with both carry one class for two answers, which is the collapse
+    the brief for this fix names: "do not collapse that into one sign".
+  */
+  const countNode = (parameterId: string, value: number, label: string, basis: string): Traced<number> =>
+    input.actor
+      ? tracer.userSet(parameterId, value, { actor: input.actor, label, unit: 'levels' })
+      : tracer.assumed(parameterId, value, { basis, label, unit: 'levels' });
+
+  const runs: RampRun[] = [];
+
+  if (schedule.basements > 0) {
+    const basements = countNode(
+      'parking.basement_levels',
+      schedule.basements,
+      'levels of parking below grade',
+      ASSUMED_BASEMENTS_BASIS,
+    );
+    for (let n = -schedule.basements; n <= -1; n += 1) {
+      runs.push(rampRun(tracer, n, basements));
+    }
+  }
+
+  if (schedule.podiumParkingLevels > 0) {
+    const podium = countNode(
+      'parking.podium_parking_levels',
+      schedule.podiumParkingLevels,
+      'podium levels holding parking',
+      RAMP_DIRECTION_BASIS,
+    );
+    for (let n = 1; n <= schedule.podiumParkingLevels; n += 1) {
+      runs.push(rampRun(tracer, n, podium));
+    }
+  }
+
+  /*
+    A CHECK AGAINST `levels.ts`'S OWN ARITHMETIC, not against a recount of it.
+    Every parking level needs a ramp except the ground floor, which the driveway
+    serves. If that stops holding, `parkingLevels` has changed meaning and this
+    module is drawing a stack the rest of the engine does not have.
+  */
+  const expected = parkingLevels(schedule) - (schedule.groundIsParking ? 1 : 0);
+  if (runs.length !== expected) {
+    throw new ParkingLayoutError(
+      `${runs.length} ramp(s) were resolved for a schedule with ${expected} parking ` +
+        'level(s) that a ramp has to reach. Every parking level but the ground floor ' +
+        'is reached by one ramp; the ground floor is reached by the driveway.',
+    );
+  }
+  return runs;
+}
+
+function rampRun(tracer: Tracer, servedStorey: number, from: Traced<number>): RampRun {
+  const direction = rampDirectionToStorey(servedStorey);
+  if (direction === null) {
+    // Unreachable by construction — the loops above never emit 0 — and asserted
+    // rather than assumed, because a ramp onto the level holding the vehicle
+    // entrance is the defect this whole section exists to remove.
+    throw new ParkingLayoutError(
+      'no ramp serves the ground floor: it is reached by the driveway off the street.',
+    );
+  }
+  const below = servedStorey < 0;
+  const depth = Math.abs(servedStorey);
+  const fromStorey = below ? servedStorey + 1 : servedStorey - 1;
+  const traced = tracer.computed('parking.ramp_direction', direction, {
+    formula:
+      `the level this ramp serves is ${depth} level(s) ` +
+      `${below ? 'below' : 'above'} the entry at grade, so a car leaving the entry ` +
+      `${below ? 'descends' : 'climbs'}: ${storeyDelta(direction)} storey`,
+    uses: { levels: from },
+    detail: {
+      servedStorey,
+      fromStorey,
+      storeyDelta: storeyDelta(direction),
+      note:
+        'Grade is the datum and a car enters at grade. The old model emitted ' +
+        '+1 storey on every ramp in every scheme, so a basement ramp climbed away ' +
+        'from the entry — in the 3D view, on the A3 sheets, and in the DXF.',
+    },
+  });
+  return {
+    servedStorey,
+    fromStorey,
+    direction: traced,
+    storeyDelta: storeyDelta(direction),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Ramp types — enumerated, all reported, one of them refused by name
+// ---------------------------------------------------------------------------
+
+/**
+ * The ramp arrangements, as Eng. Mohamed enumerated them, 25:57–27:23:
+ *
+ *   *"ممكن يبقى فيه كذا رسمة للرامب، مش ستريت … هنا مدخل وهنا مخرج، فبيكون 3 متر
+ *    و 3 … فيه كذا نوع لفكرة الرامب نفسه. عايز تعمل لي الأنواع نفسها، وكمان أحسن
+ *    نوع لكل حالة — اللي هو الـ best case."*
+ *
+ * Two of the three things in that sentence are buildable and the third is not.
+ * The types are a list with dimensions: buildable, and below. **"Best case" read
+ * as searching ramp position for maximum yield is the optimiser of meeting 02's
+ * 34:37, a `TRADEOFF` value, and `PHASE_0_CLASSES` refuses to emit one by
+ * construction.** It is wanted, it is out of scope, and the refusal is the design.
+ *
+ * **Nor does this engine rank straight against split.** They occupy the same
+ * 6.00 m of width over the same run, so no bay count tells them apart; what tells
+ * them apart is turning radius and headroom, which is B.7.2.2, which is not
+ * encoded. A ranking rule invented here would be a preference presented as a
+ * finding — so the type is `USER_SET` where somebody picks one and `ASSUMED`
+ * straight where nobody has, every candidate is reported, and the reason the
+ * engine does not choose is stated rather than implied.
+ */
+export const RampType = {
+  /** One 6.00 m two-way run. What the engine has always drawn. */
+  STRAIGHT: 'STRAIGHT',
+  /** 3.00 m in and 3.00 m out, side by side — *"هنا مدخل وهنا مخرج"*. */
+  SPLIT: 'SPLIT',
+  /** A turning or helical run. Enumerated, and never placed — see `placed`. */
+  TURNING: 'TURNING',
+} as const;
+export type RampType = (typeof RampType)[keyof typeof RampType];
+
+export interface RampTypeSpec {
+  readonly type: RampType;
+  readonly label: string;
+  readonly laneCount: number;
+  /** Metres. A string, because it is a stated dimension and not a computed one. */
+  readonly laneWidthM: string;
+  readonly totalWidthM: string;
+  /**
+   * Whether this engine places it. `TURNING` is `false`, and it is enumerated
+   * anyway: a candidate missing from a list reads as one nobody thought of, and
+   * this one is in the client's own drawings.
+   */
+  readonly placed: boolean;
+  readonly note: string;
+}
+
+export const RAMP_TYPES: readonly RampTypeSpec[] = [
+  {
+    type: RampType.STRAIGHT,
+    label: 'Straight, one 6.00 m two-way run',
+    laneCount: 1,
+    laneWidthM: '6',
+    totalWidthM: '6',
+    placed: true,
+    note:
+      'Two cars pass on the ramp as they do in the aisle. B.7.2.2 sets its own ramp ' +
+      'widths and they are not encoded, so this width is NOT ASSESSED against them.',
+  },
+  {
+    type: RampType.SPLIT,
+    label: 'Split, 3.00 m in and 3.00 m out side by side',
+    laneCount: 2,
+    laneWidthM: '3',
+    totalWidthM: '6',
+    placed: true,
+    note:
+      'The same 6.00 m of width as the straight run and the same run, so it places ' +
+      'the same bays — the difference is turning and headroom, which is B.7.2.2 and ' +
+      'NOT ASSESSED. The two lanes are not drawn apart: the strip is one rectangle ' +
+      'and a centre line through it would imply a lane division nothing checked.',
+  },
+  {
+    type: RampType.TURNING,
+    label: 'Turning or helical run — NOT PLACED',
+    laneCount: 1,
+    laneWidthM: '6',
+    totalWidthM: '6',
+    placed: false,
+    note:
+      'The client\'s own podium drawing is a sloped parking floor at 4% drawn as a ' +
+      'closed oval, with bays on the slope itself. This engine packs a flat ' +
+      'rectangle and stands a rectangular ramp on it, so it cannot draw that by ' +
+      'changing a parameter — the floor would have to be the ramp. Enumerated here ' +
+      'with the reason, never selected, and scoped as its own piece of work.',
+  },
+];
+
+export function rampTypeSpec(type: RampType): RampTypeSpec {
+  const found = RAMP_TYPES.find((t) => t.type === type);
+  if (!found) {
+    throw new ParkingLayoutError(`no ramp type is enumerated as ${String(type)}.`);
+  }
+  return found;
+}
+
+const RAMP_TYPE_BASIS =
+  'A straight 6.00 m two-way run — the arrangement this engine has always drawn, ' +
+  'and the one the client\'s ground-floor drawing uses. Nobody chose a type for this ' +
+  'run. The alternatives are enumerated and reported beside it; the engine does not ' +
+  'rank them, because what separates them is turning radius and headroom under ' +
+  'B.7.2.2, which is not encoded, and a ranking invented here would be a preference ' +
+  'presented as a finding.';
 
 // ---------------------------------------------------------------------------
 // The packer
@@ -1053,6 +1535,108 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     });
     const drawnWidth = packing.ramp.widthM;
     const drawnRun = packing.ramp.runM;
+
+    // --- what kind of ramp ------------------------------------------------
+    const chosenType = input.rampPlan?.type ?? RampType.STRAIGHT;
+    const spec = rampTypeSpec(chosenType);
+    if (!spec.placed) {
+      throw new ParkingLayoutError(
+        `a ${spec.label} cannot be laid out by this engine: ${spec.note} It is ` +
+          'enumerated in RAMP_TYPES so that it is a named candidate with a reason ' +
+          'rather than an omission, and refused rather than approximated.',
+      );
+    }
+    const stated = input.rampPlan?.type !== undefined;
+    const statedBy = input.rampPlan?.actor;
+    const rampType = ((): Traced<RampType> => {
+      if (stated && statedBy) {
+        return tracer.userSet('parking.ramp_type', chosenType, {
+          actor: statedBy,
+          label: 'ramp arrangement',
+        });
+      }
+      /*
+        A TYPE UNDER NOBODY'S NAME IS NOT `USER_SET`. A caller can hand a type in
+        without an actor — a test, or a screen that has not asked who is asking —
+        and taking that as a user's statement would attribute a choice to a person
+        who is not identified. It is an assumption with a basis saying so, which is
+        the weaker and the true answer.
+      */
+      return tracer.assumed('parking.ramp_type', chosenType, {
+        basis: stated
+          ? `${spec.label}. ${spec.note} The arrangement was handed to the layout ` +
+            'with no named user attached, so it is reported as an assumption rather ' +
+            'than as somebody\'s statement.'
+          : RAMP_TYPE_BASIS,
+        label: 'ramp arrangement',
+      });
+    })();
+    notes.push(
+      `Ramp arrangement: ${spec.label}. ${spec.note} The other ` +
+        `${RAMP_TYPES.length - 1} enumerated arrangement(s) are reported beside it. ` +
+        'The engine does not rank them and does not search for the best one: that is ' +
+        'the ramp-and-core optimiser of 34:37, a TRADEOFF value Phase 0 refuses to emit.',
+    );
+
+    // --- which way it runs --------------------------------------------------
+    /*
+      THE SIGN, DERIVED FROM THE SCHEDULE OR NOT AT ALL. Where no schedule
+      reached the layout the direction is left `undefined` and said in words,
+      because the thing that was there before was not a default somebody chose —
+      it was the absence of a decision, and an absence renders no amber.
+    */
+    const runs = input.rampPlan
+      ? resolveRampRuns({
+          tracer,
+          schedule: input.rampPlan.schedule,
+          ...(input.rampPlan.actor ? { actor: input.rampPlan.actor } : {}),
+        })
+      : undefined;
+    if (runs === undefined) {
+      notes.push(
+        'WHICH WAY THE RAMP RUNS IS NOT ESTABLISHED. No level schedule reached the ' +
+          'layout, so this strip is a plan rectangle with no direction: a ramp to a ' +
+          'basement descends, a ramp to a podium parking level climbs, and nothing ' +
+          'here knows which this is. It is reported rather than filled, because what ' +
+          'it would be filled with is the figure that drew every ramp in every scheme ' +
+          'sloping the same way — wrong in the DXF, and not only on screen.',
+      );
+    } else if (runs.length === 0) {
+      notes.push(
+        'A ramp strip is reserved and no ramp runs up it: this schedule puts every ' +
+          'parking level on the ground floor, which is reached by the driveway. The ' +
+          'strip still costs its width in bays, and that cost is in the losses.',
+      );
+    } else {
+      const down = runs.filter((r) => r.direction.value === RampDirection.DESCENDS).length;
+      const up = runs.length - down;
+      notes.push(
+        `${runs.length} ramp(s), each serving one parking level: ` +
+          `${down} descending to a level below grade and ${up} climbing to a level ` +
+          'above it. Grade is the datum and a car enters at grade. Gradient, ' +
+          'transitions and headroom under B.7.2.2 remain NOT ASSESSED.',
+      );
+      /*
+        A MEASURED ZERO, NOT AN UNMEASURED NULL. "We reversed it and the answer did
+        not change" is an answer; `null` is not — the same argument `core.ts` makes
+        for the core area. And the measurement is the explanation of how this
+        shipped: the direction is an operand of no capacity formula and of no bay
+        count, so every gate that compares a renderer against the engine agreed
+        with the engine about the wrong sign. `parking.ramp_direction` cannot be
+        perturbed by ±10% — it is categorical — so the register cannot rank it, and
+        this edge is where the zero is recorded instead of being left unsaid.
+      */
+      for (const r of runs) {
+        tracer.sensitiveTo(bayCountTraced, r.direction, {
+          relativeEffect: '0',
+          perturbation:
+            'the ramp direction reversed — it enters no bay-count and no capacity ' +
+            'formula, so the measured effect on both is exactly zero, and the effect ' +
+            'on every drawing and every DXF is total',
+        });
+      }
+    }
+
     ramp = {
       widthM: drawnWidth.eq(widthAssumed.value)
         ? widthAssumed
@@ -1068,6 +1652,9 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
             uses: { run: runAssumed, usable: usableArea },
             unit: 'm',
           }),
+      type: rampType,
+      candidates: RAMP_TYPES,
+      runs,
     };
   }
 

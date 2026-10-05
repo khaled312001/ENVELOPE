@@ -330,7 +330,16 @@ describe('GfaStatement', () => {
     expect(out).toContain('Plot area');
     expect(out).toContain('Gross floor area allowed');
     expect(out).toContain('Total gross floor area proposed');
-    expect(out).toContain('Residential floors');
+    /*
+      THE CAP HEADING, NOT A ROW LABEL. This read "Residential floors" until the
+      schedule became the one the client sent on 5 Oct: the rows are now the
+      drawing's own kinds — ground, podium, typical, roof — grouped under the
+      allowance each draws on, and "Residential" is the heading of that allowance.
+      Asserted here rather than deleted, because the cap heading is what makes the
+      two ceilings visibly separate and a table with one heading and no caps would
+      pass every other line of this test.
+    */
+    expect(out).toContain('Residential G.F.A.');
     // Every traced area carries the engine's own unrounded figure on the element.
     for (const traced of [statement.allowed, statement.proposed, statement.rows[0]!.area]) {
       expect(out).toContain(`data-full="${traced.traced.value}"`);
@@ -339,6 +348,39 @@ describe('GfaStatement', () => {
     expect(out).toContain(statement.proposed.ft2);
     expect(out).toContain(`× ${statement.rows[0]!.count}`);
     expectSitewideProhibitions(out, 'GfaStatement');
+  });
+
+  it('groups identical levels into one row and prints the multiplication', () => {
+    /*
+      *«Typical floor 02/04/06 — 625.55 × 3 = 1,876.66»* is how his own table
+      prints it, and the × is the point: the reader checks the product. A row that
+      pre-multiplied would show the total alone, which is a figure to be taken.
+
+      The row's level ids are asserted too. "× 3" against three unnamed levels is
+      a count nobody can place on a drawing.
+    */
+    const statement = run.gfaStatement!;
+    const grouped = statement.rows.find((r) => r.count > 1 && r.perLevel !== null);
+    expect(grouped, 'this run places no repeated level, so the grouping is untested').toBeDefined();
+    const out = html(<GfaStatement statement={statement} onInspect={() => {}} />);
+    expect(out).toContain(`data-full="${grouped!.perLevel!.traced.value}"`);
+    expect(out).toContain(`× ${grouped!.count}`);
+    expect(out).toContain(grouped!.levelIds[0]!);
+  });
+
+  it('names a floor it does not count, rather than leaving it out', () => {
+    /*
+      §20.3's rule about a silently absent invariant, applied to a floor: his table
+      counts 92.90 m² on its roof level and this engine models no roof at all. A
+      zero would say the roof is clear and an absence would say nobody looked, so
+      the row is present and its area is NOT ASSESSED.
+    */
+    const statement = run.gfaStatement!;
+    expect(statement.omissions.length).toBeGreaterThan(0);
+    const out = html(<GfaStatement statement={statement} onInspect={() => {}} />);
+    expect(out).toContain('Not assessed');
+    // And the omitted floor contributes nothing to the total the table prints.
+    expect(out).toContain(`data-full="${statement.proposed.traced.value}"`);
   });
 
   it('prints no parking row on a run where parking is excluded from FAR', () => {

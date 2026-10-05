@@ -52,6 +52,21 @@ export const StatementSubject = {
    * `resolveParameter` — a dotted parameter id would suggest they could.
    */
   PARKING_IN_FAR: 'PARKING_IN_FAR',
+  /**
+   * The core's share of the tower plate, as a fraction — `"0.18"`, `"0.20"`.
+   *
+   * A RANGE IS NOT A SUBJECT, which is why the value is a single fraction. The
+   * practitioner gave 18–20%; the engine needs one number to size a core and the
+   * other end of his range is a **sensitivity**, measured by running it. Storing
+   * "0.18–0.20" here would put an interval in a field the composition root has to
+   * hand the engine as a scalar, and the parse that pulled one end out of it would
+   * be choosing for him in a place nobody looks. So the statement carries the end
+   * he named first, and `limits` carries the other end in his own words.
+   *
+   * It is not a `parameterId` for the same reason as above: `building.core_area_m2`
+   * is resolvable by `resolveParameter` and this must never reach it.
+   */
+  CORE_PLATE_FRACTION: 'CORE_PLATE_FRACTION',
 } as const;
 export type StatementSubject = (typeof StatementSubject)[keyof typeof StatementSubject];
 

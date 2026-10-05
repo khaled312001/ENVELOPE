@@ -812,18 +812,26 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
         tally={<Tally count={SUPPLY_ASSUMPTIONS.length} />}
         lede={<>{t.chain.lede}</>}
       >
+        {/*
+          SIX NAMES AND THE EVIDENCE UNDER THE FOURTH. The paragraph that used to sit
+          under each name paraphrased, in our words, what the engine emits as a basis
+          — and the engine's own basis is printed two rows down, verbatim, inside the
+          assumed callout. Two accounts of the same reasoning, one signed and one
+          typed, is the drift this repository refuses for figures.
+
+          The names carry it: "Supply is that area divided by an area factor" IS the
+          sentence. The client asked three times for the results without the second
+          telling: «مش عاوز شرح وكلام كتير».
+        */}
         <ol className="pk-chain">
           <li className="pk-chain__item">
             <p className="pk-chain__name">{t.chain.mix.name}</p>
-            <p className="pk-chain__note">{t.chain.mix.note}</p>
           </li>
           <li className="pk-chain__item">
             <p className="pk-chain__name">{t.chain.probe.name}</p>
-            <p className="pk-chain__note">{t.chain.probe.note}</p>
           </li>
           <li className="pk-chain__item">
             <p className="pk-chain__name">{t.chain.available.name}</p>
-            <p className="pk-chain__note">{t.chain.available.note}</p>
             <p className="pk-chain__fig">
               <span className="pk-chain__op" aria-hidden="true">
                 ×
@@ -848,7 +856,6 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
 
           <li className="pk-chain__item pk-chain__item--pivot">
             <p className="pk-chain__name">{t.chain.divide.name}</p>
-            <p className="pk-chain__note">{t.chain.divide.note}</p>
             <div className="callout" data-state="assumed">
               <span className="callout__mark" aria-hidden="true">
                 <Glyph name="assumed" />
@@ -868,7 +875,6 @@ export default function Parking({ navigate }: PageProps): JSX.Element {
 
           <li className="pk-chain__item">
             <p className="pk-chain__name">{t.chain.ceiling.name}</p>
-            <p className="pk-chain__note">{t.chain.ceiling.note}</p>
           </li>
           <li className="pk-chain__item pk-chain__item--result">
             <p className="pk-chain__name">{t.chain.band}</p>

@@ -36,7 +36,7 @@ import { PlotCanvas } from '../components/PlotCanvas.js';
 import { PlotMap } from '../components/PlotMap.js';
 import { AR } from '../i18n/plotForm.ar.js';
 import { EN } from '../i18n/plotForm.en.js';
-import { useDict } from '../i18n/locale.js';
+import { useDict, Verbatim } from '../i18n/locale.js';
 
 /**
  * `FR-PLT-001 AC2`'s tolerance between the computed and the stated area. Named here
@@ -179,6 +179,31 @@ export interface PlotFormProps {
         readonly evidence: readonly { readonly page: number }[];
       }[];
       readonly missing: readonly { readonly label: string }[];
+    };
+    /**
+     * The ring the sheet's own drawing describes, and the picture it came from.
+     *
+     * A LEG HERE IS WHAT `applyTrace` ALREADY TAKES — a length in metres and a
+     * grid bearing — which is not a coincidence worth leaving unsaid: a traverse
+     * is a traverse whether its legs were read off a satellite tile or off an
+     * affection plan, and giving the sheet its own second path into this form
+     * would have made two ways to hold one shape. `lengthM` is optional because
+     * a sheet that prints no total area gives the extractor no scale, and an
+     * angle without a length is still worth offering.
+     */
+    readonly sitePlan?: {
+      readonly image?: { readonly pngBase64: string };
+      readonly outline?: {
+        readonly legs: {
+          readonly value: readonly {
+            readonly lengthM?: string;
+            readonly bearingDeg: string;
+          }[];
+        };
+        readonly areaM2?: string;
+        readonly notModelled: readonly string[];
+      };
+      readonly refusals: readonly string[];
     };
   } | null;
   /**
@@ -346,6 +371,29 @@ export function PlotForm({
     makes the traverse unusable and visibly so rather than quietly short.
   */
   const [traced, setTraced] = useState(0);
+
+  /*
+    THE SHEET'S OWN SHAPE, OFFERED AND NOT APPLIED.
+
+    Two things are read off one reading and they are kept apart on purpose. The
+    PICTURE goes to the map as an underlay the moment the reader opens it: a
+    backdrop asserts nothing, and showing him his own drawing under the imagery
+    is the whole point of the map mode. The RING waits for a button, because
+    accepting it OVERWRITES every length and bearing in the form — the one thing
+    on this screen a reader cannot recover by remembering what he typed.
+
+    A ring with no lengths is not offered at all. The sheet prints "Scale: NTS",
+    so an outline read from a sheet that also prints no total area has angles and
+    nothing else, and filling four bearings while leaving four lengths blank
+    would hand back a traverse that cannot close, under a button that says the
+    sheet described it.
+  */
+  const sitePlanImage = prefill?.sitePlan?.image ?? null;
+  const sheetLegs = prefill?.sitePlan?.outline?.legs.value ?? null;
+  const sheetRing =
+    sheetLegs && sheetLegs.length >= 3 && sheetLegs.every((l) => l.lengthM !== undefined)
+      ? sheetLegs.map((l) => ({ lengthM: l.lengthM as string, bearingDeg: l.bearingDeg }))
+      : null;
   const applyTrace = (legs: readonly { readonly lengthM: string; readonly bearingDeg: string }[]): void => {
     setEdges((prev) => {
       const next = legs.map((leg, i) => ({
@@ -618,6 +666,52 @@ export function PlotForm({
         </div>
       </div>
 
+      {/*
+        THE OFFER, ABOVE THE QUESTION IT ANSWERS.
+
+        Placed before the shape chooser rather than inside it, because accepting
+        it ANSWERS that chooser — it fills the boundaries and switches the form to
+        them. A button that sat inside the control it was about to change would be
+        asking the reader to pick a mode and then moving him out of it.
+
+        Amber, and the word travels with the ink: the ring is ASSUMED, the basis
+        is one sentence long on screen and the derivation carries the rest.
+      */}
+      {sheetRing ? (
+        <div className="callout" data-state="assumed">
+          <div className="callout__body">
+            <span className="chip">{t.sheetShape.chip}</span>{' '}
+            {t.sheetShape.body(
+              String(sheetRing.length),
+              prefill?.sitePlan?.outline?.areaM2 ?? '',
+            )}
+          </div>
+          <div className="actions actions--row">
+            <button
+              type="button"
+              className="button"
+              onClick={() => applyTrace(sheetRing)}
+              disabled={busy}
+            >
+              {t.sheetShape.use}
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {/* A refusal is a reading too, and the reason belongs where the shape would
+          have been. The engine's own sentence, not a paraphrase of it. */}
+      {!sheetRing && (prefill?.sitePlan?.refusals.length ?? 0) > 0 ? (
+        <div className="callout" role="status">
+          <div className="callout__body">
+            <strong>{t.sheetShape.refusedTitle}</strong>{' '}
+            {/* The engine's own sentence, quoted rather than translated: it
+                names a threshold and a measured figure, and a paraphrase of a
+                measurement is a different claim. */}
+            <Verbatim>{prefill?.sitePlan?.refusals.join(' ') ?? ''}</Verbatim>
+          </div>
+        </div>
+      ) : null}
+
       <fieldset className="field-group pf-shape">
         <legend className="field-group__legend">{t.shape.legend}</legend>
         {/* A radio pair rather than a segmented button: these are two answers to
@@ -676,11 +770,20 @@ export function PlotForm({
         document may hold, and a map left mounted behind a hidden panel spends one
         of them for a reader who went back to typing.
       */}
+      {/*
+        THE SHEET'S OWN DRAWING IS HANDED TO THE MAP RATHER THAN ASKED FOR.
+
+        The underlay was built to take a file the reader picks — which asked a
+        reader who had just uploaded his affection plan to go and screenshot the
+        drawing out of it. The sheet is already on the server, its raster is
+        already decoded, and the picture handed over is the sheet's own.
+      */}
       {shape === 'map' ? (
         <PlotMap
           onTraced={applyTrace}
           busy={busy}
           {...(statedArea ? { statedAreaM2: statedArea } : {})}
+          {...(sitePlanImage ? { sheetPngBase64: sitePlanImage.pngBase64 } : {})}
         />
       ) : null}
 

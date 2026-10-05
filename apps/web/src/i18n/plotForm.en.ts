@@ -124,6 +124,27 @@ export const EN = {
   },
 
   /**
+   * The shape read off the sheet's own drawing.
+   *
+   * THE COPY CARRIES THE SCALE, because the scale is the assumption. The sheet
+   * prints "Scale: NTS" and states an area, so the drawing's proportions are its
+   * own and its size is the area's — and a reader who is told only "from your
+   * affection plan" would reasonably think a surveyor's dimension had arrived.
+   * One sentence, two facts: the angles are drawn, the size is the stated area.
+   *
+   * It names what to check it against, and names the right thing. Not the area —
+   * the area matches by construction and cannot disagree. A dimension printed on
+   * the drawing can.
+   */
+  sheetShape: {
+    chip: 'Assumed — you may edit this',
+    body: (n: string, area: string): string =>
+      `Your affection plan draws this plot with ${n} boundaries. Their angles are the drawing's own. Their lengths are not: the sheet says "Scale: NTS", so the shape was scaled until its area came to the ${area} m² the sheet prints. Check one length against a dimension printed on the drawing before you build on it.`,
+    use: 'Use the shape from the sheet',
+    refusedTitle: 'No shape was read from the drawing.',
+  },
+
+  /**
    * The sheet's own boundary readings, offered per boundary.
    *
    * THE ONE FACT THE SHEET DOES NOT STATE is which of this plot's boundaries is

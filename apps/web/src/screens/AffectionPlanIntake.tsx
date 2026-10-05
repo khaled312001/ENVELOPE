@@ -108,6 +108,7 @@ export type IntakeError =
  */
 export type EdgeReadingsView = NonNullable<AffectionPlanRead['facts']['edges']>;
 export type EdgeProposalView = EdgeReadingsView['proposals'][number];
+export type SitePlanView = NonNullable<AffectionPlanRead['facts']['sitePlan']>;
 export type EdgeEvidenceView = EdgeProposalView['evidence'][number];
 
 /**
@@ -152,6 +153,22 @@ export interface Prefill {
    * answer, exactly as `levels` does.
    */
   readonly edges?: EdgeReadingsView;
+  /**
+   * The plot's own shape, read off the drawing on the sheet.
+   *
+   * THE OTHER HALF OF THE SAME COMPLAINT. `edges` carries what the sheet's TEXT
+   * says about its boundaries; this carries what its DRAWING says — the ring at
+   * the angles and proportions the sheet draws it at, scaled by the area the
+   * sheet prints, because the drawing itself says "Scale: NTS".
+   *
+   * Offered on a button and never applied on arrival, for the reason the
+   * paragraph above gives about classifications and for one more of its own:
+   * accepting it REPLACES whatever geometry the form holds. A reader who has
+   * typed a traverse and then reads a sheet would lose it to a prefill that
+   * applied itself, and the shape is the one thing on that form nobody can
+   * recover by remembering.
+   */
+  readonly sitePlan?: SitePlanView;
   /**
    * The sheet itself, so the SERVER can read its limits when the plot is created.
    *
@@ -685,6 +702,11 @@ export function Reading({
               // declined to classify and why, in the engine's own words, or the
               // reader is back to four dropdowns with no explanation.
               ...(edges ? { edges } : {}),
+              // The drawing travels with the readings: the shape it carries and
+              // the classifications above describe the same four boundaries, and
+              // a reader who accepts one and not the other is answering half a
+              // question about one plot.
+              ...(f.sitePlan ? { sitePlan: f.sitePlan } : {}),
               ...(attachment ? { attachment } : {}),
             })
           }

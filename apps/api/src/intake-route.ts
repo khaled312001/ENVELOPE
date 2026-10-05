@@ -112,6 +112,22 @@ function present(facts: AffectionPlanFacts): unknown {
     */
     edges: facts.edges,
 
+    /*
+      THE DRAWING, PASSED THROUGH THE SAME WAY AND FOR THE SAME REASON.
+
+      `SitePlanReading` is JSON-safe by construction too, and the picture inside
+      it is base64 rather than a buffer precisely so that this line can be a
+      pass-through: a `Buffer` here would serialise to `{"type":"Buffer",…}` over
+      HTTP and arrive as an object on a field whose type says `string` — the
+      scar above, one layer down.
+
+      It is the other half of the 5 Oct complaint: the plot the engine draws
+      should be the plot on his affection plan, at its angles and dimensions.
+      Optional on the facts, so optional here — absent means the raster was
+      never looked at, while `refusals` inside means it was and says why.
+    */
+    ...(facts.sitePlan ? { sitePlan: facts.sitePlan } : {}),
+
     missing: facts.missing,
     crossChecks: facts.crossChecks,
     crossChecksPassed: crossChecksPassed(facts),

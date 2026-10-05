@@ -535,6 +535,48 @@ export interface AffectionPlanRead {
         readonly provenanceClass: string;
       };
     };
+    /**
+     * The sheet's own site plan, and the plot's shape read off it.
+     *
+     * `pngBase64` is the picture as a file, for the map underlay — the whole
+     * reason the extractor encodes rather than hands back pixels. `lengthM` is
+     * absent on every leg when the sheet prints no total area: the drawing says
+     * "Scale: NTS", so there is then nothing to scale it by and the angles
+     * stand alone. Prose on both sensitivity fields, as on `edges`.
+     */
+    readonly sitePlan?: {
+      readonly image?: {
+        readonly pngBase64: string;
+        readonly widthPx: number;
+        readonly heightPx: number;
+        readonly boxPt: readonly [number, number, number, number];
+      };
+      readonly outline?: {
+        readonly legs: {
+          readonly value: readonly {
+            readonly index: number;
+            readonly lengthM?: string;
+            readonly bearingDeg: string;
+            readonly lengthPx: string;
+          }[];
+          readonly node: string;
+          readonly parameterId: string;
+          readonly provenanceClass: string;
+        };
+        readonly areaM2?: string;
+        readonly fit: {
+          readonly residualPx: string;
+          readonly pixelM?: string;
+          readonly fillOfHull: string;
+        };
+        readonly sensitivity: {
+          readonly perturbation: string;
+          readonly effect: string;
+        };
+        readonly notModelled: readonly string[];
+      };
+      readonly refusals: readonly string[];
+    };
     readonly missing: readonly {
       readonly field: string;
       readonly label: string;

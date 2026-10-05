@@ -640,6 +640,18 @@ export interface PlotMapProps {
   readonly initialRing?: readonly LngLat[];
   /** True while the form is submitting, which disables the handoff. */
   readonly busy?: boolean;
+  /**
+   * The sheet's own site plan, base64, laid over the imagery on open.
+   *
+   * THE PICTURE, NOT A PLACEMENT. It arrives with no position, no rotation and
+   * no scale — the server reads a raster out of a PDF and the PDF says nothing
+   * about where on the earth the drawing sits. So it opens at `assumedPlacement`
+   * exactly as a picked file does, dashed, and the calibration below is what
+   * turns it into something a boundary may be traced from. Nothing downstream
+   * can tell the two apart, which is correct: a drawing is a drawing whether a
+   * reader found it on his disk or the engine found it in his sheet.
+   */
+  readonly sheetPngBase64?: string;
 }
 
 type MapState = 'pending' | 'ready' | 'unavailable';
@@ -762,6 +774,7 @@ export function PlotMap({
   onRingChange,
   initialRing,
   busy,
+  sheetPngBase64,
 }: PlotMapProps): JSX.Element {
   const t = useDict(EN, AR);
 
@@ -1277,7 +1290,7 @@ export function PlotMap({
      THE SHEET IMAGE. Read in this browser, never uploaded.
      -------------------------------------------------------------------- */
 
-  const takeSheet = (file: File | undefined): void => {
+  const takeSheet = (file: Blob | undefined): void => {
     if (!file) return;
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -1326,6 +1339,37 @@ export function PlotMap({
     setStage('idle');
     setCalibrationRefusal(null);
   };
+
+  /*
+    THE SHEET'S OWN DRAWING, THROUGH THE SAME DOOR A PICKED FILE USES.
+
+    Decoded into a Blob and handed to `takeSheet`, rather than set as a data URL
+    on `sheetUrl` directly. Three things come free from that and each of them was
+    a bug waiting in the shorter version: the aspect is read off the decoded
+    image instead of assumed, the opening placement is computed from the view the
+    reader is actually looking at, and the object URL is revoked by the one
+    effect below that revokes every other one. A data URL set straight into
+    `sheetUrl` would have been revoked too — harmlessly, which is worse, because
+    the next person would read that line as proof the lifetimes were handled.
+
+    `sheetUrl === null` guards it, so this runs once and a reader who drops the
+    sheet is not handed it back on the next render. Dropping it is an answer.
+  */
+  useEffect(() => {
+    if (!sheetPngBase64 || sheetUrl !== null) return;
+    try {
+      const binary = atob(sheetPngBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      takeSheet(new Blob([bytes], { type: 'image/png' }));
+    } catch {
+      /* A sheet that will not decode is a sheet the reader never sees, and the
+         map is still a map. The file picker below remains the way in. */
+    }
+    // `takeSheet` is re-created every render and depending on it would re-run
+    // this on every keystroke; the `sheetUrl` guard is what makes it once-only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheetPngBase64, sheetUrl]);
 
   /* An object URL outlives the component unless it is revoked, and a leaked one
      pins the whole image in memory for the life of the tab. */

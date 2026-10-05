@@ -47,6 +47,7 @@ import {
   type Tracer,
 } from '@envelope/core';
 import { readBoundaries, type EdgeReadings } from './edges.js';
+import { readSitePlan, type SitePlanReading } from './site-plan.js';
 import {
   locate,
   pageLines,
@@ -135,6 +136,17 @@ export interface AffectionPlanFacts {
    * none", and on `DJAZ1MED12RES011` the second is the whole answer.
    */
   readonly edges: EdgeReadings;
+  /**
+   * The sheet's own drawing, and the plot's shape read off it.
+   *
+   * OPTIONAL WHERE `edges` IS REQUIRED, and the asymmetry is the point: `edges`
+   * is a reading of the sheet's TEXT, which `readFacts` always has in hand, so
+   * an absent field there would be indistinguishable from "the sheet supports
+   * none". This is a reading of its RASTER, which only the async entry point
+   * can reach — `readFacts` is pure and sync and stays that way. Absent here
+   * means nobody looked; `refusals` inside means somebody looked and says why.
+   */
+  readonly sitePlan?: SitePlanReading;
 }
 
 // ---------------------------------------------------------------------------
@@ -445,7 +457,30 @@ export async function parseAffectionPlan(
 ): Promise<AffectionPlanFacts> {
   const [page] = await readPdfText(bytes, { pages: [1] });
   if (!page) throw new Error('affection plan has no first page');
-  return readFacts(page, opts);
+  const facts = readFacts(page, opts);
+
+  /*
+    THE DRAWING IS READ AFTER THE TEXT, AND NEEDS WHAT THE TEXT FOUND.
+
+    The site plan prints "Scale: NTS", so the only thing that can turn the
+    drawing's proportions into metres is the total area the text panel states —
+    which is why this runs second and is handed `facts.totalAreaSqm` rather than
+    re-reading the sheet for it. A sheet that prints no area still gets its
+    shape, with angles and no lengths; see `readSitePlan`.
+
+    It opens the document a second time, which is a cost paid deliberately:
+    `readFacts` is pure and synchronous over `PdfPageText`, every test drives it
+    from fixture text without a PDF, and threading a pdfjs document through it to
+    save a parse would put the raster reader inside the text reader's signature.
+  */
+  const sitePlan = await readSitePlan(bytes, {
+    documentUri: opts.documentUri,
+    issueDate: facts.issueDate?.value ?? 'UNDATED',
+    tracer: opts.tracer,
+    ...(facts.totalAreaSqm ? { statedAreaSqm: facts.totalAreaSqm.value.toString() } : {}),
+  });
+
+  return { ...facts, sitePlan };
 }
 
 /** The pure half, so tests can drive it from fixture text without a PDF. */

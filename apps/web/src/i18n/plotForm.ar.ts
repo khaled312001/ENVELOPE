@@ -117,6 +117,20 @@ export const AR: PlotFormDictionary = {
   },
 
   /**
+   * The shape read off the drawing. See the English twin for the argument: the
+   * copy carries the scale because the scale is the assumption, and it names a
+   * printed dimension as the check rather than the area, which matches by
+   * construction and so cannot disagree.
+   */
+  sheetShape: {
+    chip: 'مفترض — ولك تعديله',
+    body: (n: string, area: string): string =>
+      `مخطط الأفكشن يرسم القطعة بـ ${n} حدود. زواياها زوايا الرسمة نفسها، أما أطوالها فلا: المخطط يقول «Scale: NTS»، فقيس الشكل حتى صارت مساحته ${area} م² وهي المساحة المطبوعة على المخطط. راجع طولا واحدا أمام بعد مكتوب على الرسمة قبل أن تبني عليه.`,
+    use: 'استخدم الشكل من المخطط',
+    refusedTitle: 'لم يقرأ أي شكل من الرسمة.',
+  },
+
+  /**
    * The sheet's own boundary readings. See the English twin for the argument:
    * the sheet states a reading per FACE and never says which boundary of this
    * plot holds which, so that one question is what is asked.

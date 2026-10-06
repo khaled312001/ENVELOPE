@@ -340,14 +340,92 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   font-variant-numeric: tabular-nums;
 }
 .stepper__step.is-current .stepper__num {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: transparent;
+  background-image: var(--gradient-brand);
+  background-color: var(--accent);
   color: var(--text-inverse);
 }
 .stepper__step.is-locked .stepper__num {
   border-color: var(--border-subtle);
   background-color: transparent;
   color: var(--text-tertiary);
+}
+
+/*
+ * THE STEPS AS A PROGRESSION, NOT AS TEN BUTTONS IN A ROW.
+ *
+ * «انيمشن احترافيه كخطوات» — 6 Oct 2026. Three things make a strip of controls
+ * read as a sequence, and none of them is colour alone.
+ *
+ * A CONNECTOR between the numbers, which is what says these are ordered rather
+ * than parallel. It is a flex sibling and not an absolutely positioned pseudo on
+ * the button: an out-of-flow 1.5rem rule inside a horizontally scrolling strip
+ * is exactly the shape that extended the document's scroll width the last time
+ * it was tried here, and the comment on `.stepper` records that bug.
+ *
+ * A REACHED step that looks different from a locked one. Three states existed in
+ * the markup — current, reachable, locked — and only two were drawn, so every
+ * step a reader had already passed looked identical to one they could not open
+ * yet. That is the whole of what a stepper is for.
+ *
+ * MOTION ON ARRIVAL, on `transform` and `background-color` only. The number
+ * settles; nothing reflows, because a navigation that moves its own text when
+ * you reach it reads as broken. It folds flat under `prefers-reduced-motion`
+ * with the rest of this sheet's motion, below.
+ */
+.stepper li {
+  display: flex;
+  align-items: center;
+}
+
+.stepper li + li::before {
+  content: '';
+  flex: none;
+  inline-size: var(--space-4);
+  block-size: var(--border-width-emphasis);
+  border-radius: var(--radius-pill);
+  background-color: var(--border-default);
+  transition: background-color var(--duration-base) var(--ease-standard);
+}
+
+/* The connector INTO a step the reader has reached is the brand; the rest is the
+   chrome rule. It says how far along the sequence they are without a figure. */
+.stepper li:has(.stepper__step:not(.is-locked)) + li::before,
+.stepper li + li:has(.stepper__step:not(.is-locked))::before {
+  background-color: var(--accent);
+}
+
+.stepper__num {
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-spring);
+}
+
+.stepper__step.is-current .stepper__num {
+  transform: scale(1.12);
+}
+
+/* Reached, and not where the reader is. Drawn, because a step already answered
+   and a step still locked looked the same until now. */
+.stepper__step:not(.is-current):not(.is-locked) .stepper__num {
+  border-color: var(--accent);
+  background-color: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.stepper__step:hover:not(:disabled) .stepper__num {
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stepper__num,
+  .stepper li + li::before {
+    transition: none;
+  }
+  .stepper__step:hover:not(:disabled) .stepper__num {
+    transform: none;
+  }
 }
 
 /* ==========================================================================
@@ -370,81 +448,32 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
  * its own 56px strip is counted.
  * ======================================================================= */
 
+/*
+  THE RAIL IS GONE AND THE STRIP IS THE ARRANGEMENT AT EVERY WIDTH.
+
+  «وعاوز الشريط دا يكون فوق بالعرض وفيها انيمشن احترافيه كخطوات» — 6 Oct 2026.
+  Between 64rem and here the ten steps stood in a 13.5rem column down the left of
+  the canvas, which cost a sixth of the widest viewport permanently and put a
+  list of ten words beside a drawing. The strip was always the phone arrangement
+  and it is the better one everywhere: a reader going through ten steps in order
+  reads a PROGRESSION, and a progression is horizontal.
+
+  So there is one layout and one set of rules for it, which is also the end of
+  the hazard the deleted block carried — two treatments of `is-current` whose
+  order in this file decided which one rendered.
+
+  The strip stays sticky at the wide widths where it does not eat the viewport,
+  so the steps remain reachable down a long capacity screen.
+*/
 @media (min-width: 64rem) {
-  .flow {
-    display: grid;
-    grid-template-columns: var(--steprail-w) minmax(0, 1fr);
-    gap: var(--rhythm-block);
-    align-items: start;
-  }
-
-  /*
-    The strip's own chrome comes off: a rail is separated by a rule on its inline
-    edge, not by a heavy underline, and it does not scroll horizontally because
-    nothing in it is wide.
-  */
   .stepper {
-    border-bottom: none;
-    border-inline-end: var(--border-width) solid var(--border-subtle);
-    background: transparent;
-    overflow-x: visible;
-    /* Sticky, so the steps stay reachable down a long capacity screen. `top` is
-       the masthead and the nav, which are above this and which it must not slide
-       under; the same offset the workspace rail uses. */
     position: sticky;
-    top: var(--space-5);
+    top: 0;
+    z-index: 1;
   }
 
-  .stepper ol {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-hair);
-    padding: 0 var(--space-3) 0 0;
-    min-width: 0;
-  }
-
-  .stepper li { display: flex; }
-
-  .stepper__step {
-    inline-size: 100%;
-    justify-content: flex-start;
-    /*
-      THE CURRENT MARKER MOVES EDGE, and it has to move rather than be added: a
-      3px border that appears on arrival shifts the label by 3px, and a navigation
-      that moves its own text when you reach it reads as broken. Transparent at
-      rest on the inline edge, and the block edge gives its width back.
-    */
-    border-bottom: none;
-    border-inline-start: var(--rail-w) solid transparent;
-    white-space: normal;   /* a phrase may take two lines in 13.5rem */
-    text-align: start;
-  }
-
-  .stepper__step.is-current {
-    border-inline-start-color: var(--accent);
-    /* No raised ground here. In the strip the current step was a TAB and lifted
-       to the plane of the panel below it; in a rail there is no panel below it to
-       join, and a raised block beside a page would read as the brightest thing on
-       a screen whose subject is a drawing. The inset ground and the marker carry
-       it, which is the same two channels the workspace rail uses. */
-    background-color: var(--surface-inset);
-  }
-
-  /* The footer's back/next is the rail's equivalent for a reader who is moving
-     one step at a time, so it keeps the canvas column rather than spanning. */
   .flow .step-footer { margin-inline: 0; }
 }
-
-/*
-  THE BLOCK ABOVE SITS AFTER THE BASE STEP RULES, AND THAT IS LOAD-BEARING.
-
-  It was written immediately after `.stepper ol`, which is before
-  `.stepper__step.is-current` — so the base rule's `border-bottom-color` and its
-  raised ground won on equal specificity by coming later, and the rail rendered a
-  step with the strip's tab treatment: a lifted block with a blue line under it
-  and no marker on the edge the rail actually has. A screenshot caught it; the
-  media query was applying the whole time, which is why the layout looked right.
-*/
 
 /* --- The step footer ----------------------------------------------------- */
 

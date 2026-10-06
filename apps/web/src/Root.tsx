@@ -300,7 +300,20 @@ export default function Root(): JSX.Element {
         painting an empty band across the top of every page.
       */
       {...(sidebar ? { sidebar } : {})}
-      {...(actor
+      /*
+        AND NOT WHEN THE NAV ALREADY SAYS IT.
+
+        Since the nav carries the account — name, work, sign out — this strip was
+        a second copy of the same name directly under the first, with a button
+        called "Change" beside it. Two identity controls one above the other is
+        the state a reader cannot resolve: which of them is me, and what does the
+        other one change?
+
+        It stays for a GUEST, who has no account for the nav to show and whose
+        name is the only identity the run will carry. That is the case this strip
+        was built for, and the only one left where it says something new.
+      */
+      {...(actor && sessionState !== 'signed-in'
         ? {
             aside: (
               <Header

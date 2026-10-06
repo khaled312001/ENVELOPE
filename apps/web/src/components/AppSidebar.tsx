@@ -85,6 +85,40 @@ import { Link, ROUTES, type Href, type Location, type Route } from '../router.js
 const WORKSPACE: readonly Route[] = ROUTES.filter((r) => PAGE_META[r].shell === 'workspace');
 
 /**
+ * THE RAIL IN TWO SECTIONS, AND THE RECORD IS EXHAUSTIVE OVER EVERY ROUTE.
+ *
+ * Four items in one undifferentiated list read as four unrelated places. They
+ * are not: two of them are the work itself and two are the account the work is
+ * filed under, and a reader looking for "who else can open this" is looking in
+ * the second kind. The reference the client sent groups its rail the same way,
+ * and the reason is older than the reference.
+ *
+ * `Readonly<Record<Route, …>>` and not `Partial`: a `Partial` compiles, and a
+ * new workspace route would then appear in no section at all — which, with the
+ * render below, means it would not appear. `null` is the answer for every route
+ * that is not in the rail, written out rather than left absent, so adding a
+ * route is a compile error here instead of a silent omission.
+ */
+type RailSection = 'work' | 'account';
+
+const RAIL_SECTION: Readonly<Record<Route, RailSection | null>> = {
+  '/': null,
+  '/parking': null,
+  '/exports': null,
+  '/refusals': null,
+  '/readiness': null,
+  '/sign-in': null,
+  '/sign-up': null,
+  '/accept-invite': null,
+  '/app': 'work',
+  '/work': 'work',
+  '/settings': 'account',
+  '/workspace': 'account',
+};
+
+const SECTIONS: readonly RailSection[] = ['work', 'account'];
+
+/**
  * THE GLYPHS ARE DRAWN HERE, AND THAT IS A DECISION RATHER THAN AN OMISSION.
  *
  * The obvious move is an icon set, and the obvious failure is approximating its
@@ -119,8 +153,18 @@ const WORKSPACE: readonly Route[] = ROUTES.filter((r) => PAGE_META[r].shell === 
  */
 const GLYPH = ROUTE_GLYPH;
 
+/*
+  THE MARK IN A TILE. The tile is what fills on the current page — see
+  `console.css` — and it is the whole of a row once the rail is collapsed and the
+  labels are clipped. `aria-hidden` on both: the label beside them in the same
+  link is the accessible name.
+*/
 function Glyph({ route }: { readonly route: Route }): JSX.Element {
-  return <Icon glyph={GLYPH[route]} className="sidebar__glyph" />;
+  return (
+    <span className="sidebar__tile" aria-hidden="true">
+      <Icon glyph={GLYPH[route]} className="sidebar__glyph" />
+    </span>
+  );
 }
 
 /** The chevron on the collapse control. It points the way the rail will move. */
@@ -211,8 +255,26 @@ export function AppSidebar({
           </button>
         </div>
 
-        <ul className="sidebar__list">
-          {WORKSPACE.map((r) => (
+        {/*
+          ONE LIST PER SECTION, EACH WITH ITS OWN HEADING, AND THE HEADING IS NOT
+          DECORATION: it is the list's accessible name, so a screen reader
+          announces "Work, list, two items" rather than four items in a row with
+          no account of why they are together.
+
+          The heading is hidden when the rail is collapsed — there is no room for
+          a word — but hidden visually rather than removed, so the list keeps its
+          name either way.
+        */}
+        {SECTIONS.map((section) => {
+          const items = WORKSPACE.filter((r) => RAIL_SECTION[r] === section);
+          if (items.length === 0) return null;
+          return (
+            <div key={section} className="sidebar__group">
+              <p className="sidebar__group-label" id={`rail-${section}`}>
+                {t.rail.sections[section]}
+              </p>
+              <ul className="sidebar__list" aria-labelledby={`rail-${section}`}>
+          {items.map((r) => (
             <li key={r}>
               <Link
                 to={r}
@@ -241,7 +303,10 @@ export function AppSidebar({
               </Link>
             </li>
           ))}
-        </ul>
+              </ul>
+            </div>
+          );
+        })}
 
         {/*
           THE FOOT OF THE RAIL SAYS WHO THIS IS, and for a guest it says what a

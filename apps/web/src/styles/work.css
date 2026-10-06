@@ -121,9 +121,21 @@
 
 .wk__annex { font-family: var(--font-mono); }
 
-/* --- The meters -------------------------------------------------------- */
+/* --- The meters --------------------------------------------------------
+ *
+ * `wk-meter` AND NOT `meter`, WHICH IS ALREADY TAKEN AND IS A DIFFERENT THING.
+ *
+ * `site.css` §10 defines `.meter` as the chassis's bar primitive: `display:
+ * block`, `block-size: var(--meter-h)` — eight pixels. A list item wearing that
+ * name was therefore eight pixels tall with a two-line label and a figure inside
+ * it, and every row of this panel painted over the one below. The class name was
+ * the whole of the bug and nothing in the markup looked wrong.
+ *
+ * A prefixed name rather than a more specific selector: out-specifying the
+ * primitive would leave the collision in place for the next component to find.
+ * ---------------------------------------------------------------------- */
 
-.meters {
+.wk-meters {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -132,20 +144,20 @@
   inline-size: 100%;
 }
 
-.meter {
+.wk-meter {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-1) var(--space-3);
   align-items: baseline;
 }
 
-.meter__label {
+.wk-meter__label {
   font-size: var(--text-sm);
   color: var(--text-secondary);
   text-wrap: pretty;
 }
 
-.meter__figure {
+.wk-meter__figure {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   white-space: nowrap;
@@ -163,7 +175,7 @@
   1.4.1 requires be conveyed in words — and three of these read zero, which is a
   bar with nothing in it at all.
 */
-.meter__bar {
+.wk-meter__bar {
   grid-column: 1 / -1;
   inline-size: 100%;
   block-size: 0.5rem;
@@ -174,15 +186,15 @@
   overflow: hidden;
 }
 
-.meter__bar::-webkit-progress-bar {
+.wk-meter__bar::-webkit-progress-bar {
   background-color: var(--surface-inset);
   border-radius: var(--radius-pill);
 }
-.meter__bar::-webkit-progress-value {
+.wk-meter__bar::-webkit-progress-value {
   background-image: var(--gradient-brand);
   border-radius: var(--radius-pill);
 }
-.meter__bar::-moz-progress-bar {
+.wk-meter__bar::-moz-progress-bar {
   background-image: var(--gradient-brand);
   border-radius: var(--radius-pill);
 }

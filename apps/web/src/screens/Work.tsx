@@ -328,16 +328,24 @@ function ReadinessPanel({ navigate }: { readonly navigate: (to: Href) => void })
       </h2>
       <p className="wk__side-note">{t.readiness.note}</p>
 
-      <ul className="meters">
+      {/*
+        `wk-meter`, NOT `meter`. `.meter` is the chassis's own primitive and it is
+        a BAR — `display: block`, eight pixels tall — so a list item wearing that
+        name was eight pixels tall with two lines of label inside it, and every
+        row printed over the one below. Borrowing a primitive's name for a
+        different kind of thing is how that happens, and the class is the only
+        part of it a reader of this file would have seen.
+      */}
+      <ul className="wk-meters">
         {meters.map((m) => (
-          <li key={m.key} className="meter">
-            <span className="meter__label">{m.label}</span>
-            <span className="meter__figure">
+          <li key={m.key} className="wk-meter">
+            <span className="wk-meter__label">{m.label}</span>
+            <span className="wk-meter__figure">
               <span className="value">{m.now}</span>
               {t.table.of}
               <span className="value">{m.max}</span>
             </span>
-            <progress className="meter__bar" value={m.now} max={m.max} />
+            <progress className="wk-meter__bar" value={m.now} max={m.max} />
           </li>
         ))}
       </ul>

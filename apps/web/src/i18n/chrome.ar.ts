@@ -70,6 +70,11 @@ export const AR: ChromeDictionary = {
     personal: 'حسابي الشخصي',
     /* «طي» و«فتح» — مصدران بلا تشكيل. The name changes with the state for the
        reason the English carries. */
+    /* قسما الشريط. «العمل» لما ينجز، و«الحساب» لما يحفظ تحته. */
+    sections: {
+      work: 'العمل',
+      account: 'الحساب',
+    },
     collapse: 'طي شريط مساحة العمل',
     expand: 'فتح شريط مساحة العمل',
     guest: 'أنت تعمل كضيف. هذا المتصفح وحده يحمل مفتاح هذه الدراسات: إذا مسحت بياناته فقدتها، ولا يمكن الوصول إليها من جهاز آخر.',

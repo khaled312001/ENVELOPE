@@ -496,6 +496,39 @@
   color: var(--text-tertiary);
 }
 
+/* --- The sections ------------------------------------------------------
+ *
+ * Each group is a labelled list. The label is the list's accessible name, and it
+ * is CLIPPED rather than removed when the rail collapses — removed, the list
+ * would lose its name along with its width.
+ * -------------------------------------------------------------------- */
+
+.sidebar__group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sidebar__group-label {
+  margin: 0;
+  padding-inline-start: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+:root[data-sidebar-collapsed] .sidebar__group-label {
+  /* The `sr-only` pattern, inline, so the name survives the collapse. */
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .sidebar__list {
   display: grid;
   gap: var(--space-hair);
@@ -547,6 +580,40 @@
   font-weight: 600;
 }
 .sidebar__item[aria-current='page']::before { transform: scaleY(1); }
+
+/*
+  THE MARK SITS IN A TILE, AND THE TILE IS WHAT CARRIES THE STATE.
+
+  A 16px glyph changing ink is a state change most readers do not see at a
+  glance; a 1.75rem tile that fills is one they cannot miss. It is also what
+  makes a COLLAPSED rail legible — with the labels clipped, the tile is the whole
+  of each row, and an unfilled tile beside a filled one says which page this is
+  without a word.
+
+  `aria-current` still carries it for assistive technology and the 3px rail still
+  carries it without colour, so this is a third channel rather than the only one.
+*/
+.sidebar__tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    color var(--duration-base) var(--ease-standard);
+}
+
+.sidebar__item:hover .sidebar__tile {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.sidebar__item[aria-current='page'] .sidebar__tile {
+  background-image: var(--gradient-brand);
+  color: var(--text-on-action);
+}
 
 .sidebar__glyph {
   inline-size: 1rem;

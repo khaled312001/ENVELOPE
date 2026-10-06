@@ -43,7 +43,7 @@ import { StaticLocale } from '../src/i18n/locale.js';
 import { expectNoEnglishProse, expectSitewideProhibitions } from './prohibitions.js';
 import { DrawingSet, SheetView } from '../src/components/DrawingSet.js';
 import { AssumptionRegister } from '../src/components/AssumptionRegister.js';
-import { formatTraced } from '../src/components/TracedValue.js';
+import { formatTraced, TracedValue } from '../src/components/TracedValue.js';
 import { MassingPanel } from '../src/components/MassingPanel.js';
 import { ParkingPlan, VehicleAccessPanel } from '../src/components/ParkingPlan.js';
 import { StepFooter, type FlowState } from '../src/App.js';
@@ -747,6 +747,39 @@ describe('a traced figure on screen', () => {
     // Counts stay counts, and areas keep the policy's one place.
     expect(formatTraced('42', 'bays')).toBe('42');
     expect(formatTraced('1365.23', 'm²')).toBe('1,365.2');
+  });
+
+  /*
+    AN IDENTIFIER IS NOT A QUANTITY, and nothing on the wire says which is which.
+
+    The formatter groups a unitless figure in thousands, which is right for a bay
+    count and wrong for a plot number: the affection plan screen printed Trakhees
+    plot 6211383 as 6,211,383 and DDA plot 5134565 as 5,134,565 — figures a reader
+    would copy into a submission, matching no plot on either sheet. Both arrive as
+    a numeric string with no unit, so the formatter cannot tell them apart and the
+    caller says instead.
+  */
+  it('prints an identifier exactly as the sheet does, when the caller says it is one', () => {
+    const plotNumber = {
+      value: '5134565',
+      node: 'n1',
+      parameterId: 'affection_plan.parcel_id',
+      provenanceClass: 'DERIVED',
+      renderHint: '',
+    } as const;
+
+    const grouped = html(<TracedValue traced={plotNumber} onInspect={() => {}} />);
+    expect(grouped).toContain('5,134,565');
+
+    const verbatim = html(
+      <TracedValue traced={plotNumber} onInspect={() => {}} format="verbatim" />,
+    );
+    expect(verbatim).toContain('5134565');
+    expect(verbatim).not.toContain('5,134,565');
+    // Everything else about the treatment is unchanged: it is still the engine's
+    // value, still DERIVED, still openable.
+    expect(verbatim).toContain('traced--derived');
+    expect(verbatim).toContain('data-full="5134565"');
   });
 });
 

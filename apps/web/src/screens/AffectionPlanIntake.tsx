@@ -315,11 +315,14 @@ function Field({
   label,
   traced,
   prose,
+  identifier,
 }: {
   readonly label: string;
   readonly traced: TracedWire | null;
   /** The value is a phrase, not a quantity — let it wrap. */
   readonly prose?: boolean;
+  /** The value is an identifier, not a quantity — print it as the sheet does. */
+  readonly identifier?: boolean;
 }): JSX.Element {
   const t = useDict(EN, AR);
   return (
@@ -331,7 +334,11 @@ function Field({
           // provenance graph to open yet. The chip still carries the class, and
           // the class is the part that matters here — every field read off an
           // affection plan is DERIVED, because the sheet is a citable instrument.
-          <TracedValue traced={traced} onInspect={() => undefined} />
+          <TracedValue
+            traced={traced}
+            onInspect={() => undefined}
+            {...(identifier ? { format: 'verbatim' as const } : {})}
+          />
         ) : (
           <span className="value value--absent">{t.notPrinted}</span>
         )}
@@ -545,14 +552,17 @@ export function Reading({
       <h3 className="panel__section">{ltr(read.filename)}</h3>
 
       <dl className="kv kv--grid">
-        <Field label={t.fields.plotNumber} traced={f.parcelId} />
+        <Field label={t.fields.plotNumber} traced={f.parcelId} identifier />
         <Field label={t.fields.community} traced={f.community} prose />
         <Field label={t.fields.landUse} traced={f.landUse} prose />
         <Field label={t.fields.plotArea} traced={f.totalAreaSqm} />
         <Field label={t.fields.far} traced={f.far} />
         <Field label={t.fields.gfa} traced={f.gfaSqm} />
         <Field label={t.fields.issued} traced={f.issueDate} />
-        <Field label={t.fields.drawingRef} traced={f.drawingRef} />
+        {/* A drawing reference is an identifier too, and the ones on file are
+            alphanumeric — so the grouping never fired on them and the defect sat
+            one field away from where it was found. */}
+        <Field label={t.fields.drawingRef} traced={f.drawingRef} identifier />
       </dl>
 
       {f.height ? (

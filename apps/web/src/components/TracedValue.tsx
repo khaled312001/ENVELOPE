@@ -162,6 +162,24 @@ export interface TracedValueProps {
   /** Who set it, shown as a badge for USER_SET. */
   readonly actorName?: string;
   readonly size?: 'inline' | 'display';
+  /**
+   * AN IDENTIFIER IS NOT A QUANTITY, and the formatter cannot tell them apart.
+   *
+   * `formatTraced` groups a unitless figure in thousands, which is right for a
+   * bay count and wrong for a plot number: the affection plan screen printed
+   * Trakhees plot 6211383 as **6,211,383** and DDA plot 5134565 as
+   * **5,134,565** — a number a reader would copy into a submission and a number
+   * that matches no plot. It is not a rounding bug and it cannot be fixed in the
+   * formatter, because nothing on the wire distinguishes the two: both arrive as
+   * a numeric string with no unit.
+   *
+   * So the caller says. `verbatim` prints `traced.value` exactly as the engine
+   * sent it, with no grouping and no rounding, and every other treatment — the
+   * class, the chip, the derivation, the screen-reader announcement — is
+   * unchanged. Spend it on identifiers only: a plot number, a drawing reference,
+   * a parcel id. A figure that means a quantity is still formatted.
+   */
+  readonly format?: 'auto' | 'verbatim';
   readonly children?: ReactNode;
 }
 
@@ -171,6 +189,7 @@ export function TracedValue({
   onEdit,
   actorName,
   size = 'inline',
+  format = 'auto',
 }: TracedValueProps): JSX.Element {
   const t = useDict(EN, AR);
   const cls = traced.provenanceClass;
@@ -186,7 +205,8 @@ export function TracedValue({
 
   const description = t.classDescription[cls];
   const action = isAssumed && onEdit ? t.editAction : t.inspectAction;
-  const figure = `${formatTraced(traced.value, traced.unit)}${traced.unit ? ` ${traced.unit}` : ''}`;
+  const shown = format === 'verbatim' ? traced.value : formatTraced(traced.value, traced.unit);
+  const figure = `${shown}${traced.unit ? ` ${traced.unit}` : ''}`;
 
   return (
     <span className={size === 'display' ? 'traced-display' : undefined}>
@@ -201,7 +221,7 @@ export function TracedValue({
             precision the engine computed is on the element rather than in a
             tooltip nobody can reach. */}
         <span className="value" data-full={traced.value}>
-          <EngineValue>{formatTraced(traced.value, traced.unit)}</EngineValue>
+          <EngineValue>{shown}</EngineValue>
           {traced.unit ? <span className="value__unit">{traced.unit}</span> : null}
         </span>
         <span className="traced__marker" aria-hidden="true">

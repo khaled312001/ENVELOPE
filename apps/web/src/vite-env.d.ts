@@ -16,6 +16,19 @@
  * actually configure.
  */
 
+/**
+ * A worker Vite bundles as its own entry, imported for the url it was emitted
+ * at. `PlotMap` hands this to maplibre's `setWorkerUrl`, because maplibre's own
+ * guess — a sibling file next to itself — does not survive bundling.
+ *
+ * Declared for exactly this suffix rather than for `?worker` or `?url` alone, so
+ * the two other forms stay unavailable until something needs one.
+ */
+declare module '*?worker&url' {
+  const url: string;
+  export default url;
+}
+
 interface ImportMeta {
   /**
    * Vite's build-time directory read. Eager with `query: '?url'` and

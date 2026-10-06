@@ -97,6 +97,11 @@ import type {
   MapLayerTouchEvent,
 } from 'maplibre-gl';
 
+/* The url Vite emitted the bundled worker at — see `setWorkerUrl` below for why
+   maplibre's own guess at it cannot be used. A value import, so the bundler
+   resolves it at build time and a missing file is a build error. */
+import MAPLIBRE_WORKER_URL from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+
 /* -------------------------------------------------------------------------
  * CONSTANTS. Every one of them named, because none may be typed into a
  * dictionary and none may appear twice.
@@ -1405,6 +1410,33 @@ export function PlotMap({
       try {
         const mod = await import('maplibre-gl');
         if (cancelled) return;
+        /*
+          THE WORKER, WITHOUT WHICH THIS PANEL DRAWS THE WORLD AND NOTHING ON IT.
+
+          maplibre does every geometry on a worker it starts itself, and it works
+          out that worker's url from `import.meta.url` — "the file called
+          `maplibre-gl-worker.mjs` sitting beside me". That holds for the package
+          as published and does not survive a bundler: Vite rewrites this module
+          into a hashed chunk under `/assets/` and emits no such sibling, so the
+          url 404s and the worker never starts.
+
+          The failure is silent in the only way that matters. Raster tiles are
+          fetched on the main thread, so the imagery, the OpenStreetMap overlay
+          and the laid-over sheet all painted perfectly — and every GeoJSON
+          source, which is to say the boundary, its fill and its corner handles,
+          was parsed on the worker and painted nothing. The panel's own readout
+          still had the numbers, because they are computed here and not by
+          maplibre, so the dimension labels floated over imagery with no line
+          under them: "the drawing is not there". One console line said
+          `Worker failed to load`, and nothing on screen said anything.
+
+          `?worker&url` makes Vite build the worker as its own entry — pulling in
+          `maplibre-gl-shared.mjs`, which the published worker also expects as a
+          sibling — and hands back the url it was actually emitted at. The gate
+          for it is in `apps/web/test/plotMap.test.tsx`: an import that stops
+          resolving fails a test rather than a map.
+        */
+        mod.setWorkerUrl(MAPLIBRE_WORKER_URL);
         map = new mod.Map({
           container: host,
           /*

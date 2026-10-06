@@ -1066,3 +1066,31 @@ describe('finding the place', () => {
     expect(hits[0]!.at.lat).toBeCloseTo(25.16, 5);
   });
 });
+
+/**
+ * THE WORKER, WHICH IS THE DIFFERENCE BETWEEN A MAP AND A DRAWING ON ONE.
+ *
+ * maplibre parses every GeoJSON source on a worker it starts itself, and it
+ * locates that worker as a file beside its own module. Bundled, there is no such
+ * file: the url 404s, the worker never starts, and the raster layers — imagery,
+ * the OpenStreetMap overlay, the laid-over sheet — all keep painting while the
+ * boundary, its fill and its corner handles paint nothing. The panel's own
+ * dimension labels are computed here rather than by maplibre, so they go on
+ * floating over the imagery with no line under them. That shipped.
+ *
+ * So the url is imported and handed to `setWorkerUrl`, and this holds the import
+ * itself: a specifier that stops resolving, or a Vite query that stops producing
+ * a url, fails here instead of silently emptying a map.
+ */
+describe('the geometry worker', () => {
+  it('resolves to a url the build emitted', async () => {
+    const mod = await import('maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url');
+    expect(typeof mod.default).toBe('string');
+    expect(mod.default.length).toBeGreaterThan(0);
+  });
+
+  it('is settable on maplibre, which is the only way a bundled worker is found', async () => {
+    const maplibre = await import('maplibre-gl');
+    expect(typeof maplibre.setWorkerUrl).toBe('function');
+  });
+});

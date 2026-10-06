@@ -67,6 +67,41 @@ export const EN = {
     note: 'Counts of what is listed below, and nothing more. Two runs on two plots share no input, so no single figure describes both.',
   },
 
+  /**
+   * THE DEPLOYMENT'S OWN STATE, BESIDE THE WORK IT APPLIES TO.
+   *
+   * These label figures read out of `readiness.json`, which the engine writes and
+   * `pnpm check` re-verifies — not counts of rows like the strip above. The
+   * heading leads with what is NOT ready, because that is the true summary and
+   * because `/readiness` is held to the same rule.
+   *
+   * There is no fourth meter combining the three. A single number is something a
+   * reader stops at, and two of these three reading zero is exactly what it would
+   * bury.
+   */
+  readiness: {
+    heading: 'What is not ready here',
+    note: 'True of every run in this workspace, and of none of them in particular. Read off the engine, not typed.',
+    rules: 'Rules approved by a named approver',
+    definitions: 'Metric definitions signed',
+    invariants: 'Invariants that can run on a Phase 0 output',
+    /** The annex version follows this, verbatim. */
+    annex: 'Metric definitions annex: ',
+    cta: 'Read the whole of it',
+  },
+
+  /**
+   * The ways on. Each is a route that exists; there is no disabled card here,
+   * because a disabled control is a promise with no date attached.
+   */
+  quick: {
+    heading: 'Start somewhere',
+    run: { label: 'Run a plot', hint: 'From the affection plan, or from dimensions you type.' },
+    parking: { label: 'Parking', hint: 'How a level is packed, and what the packing costs.' },
+    exports: { label: 'What comes out', hint: 'The drawing set, the model, the data files.' },
+    workspace: { label: 'Workspace', hint: 'Who else can open a run, and with what role.' },
+  },
+
   checking: 'Checking whether you are signed in…',
 
   signedOut: {

@@ -45,7 +45,19 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
+import {
+  FileDown,
+  FileSignature,
+  FolderOpen,
+  LayoutGrid,
+  type LucideIcon,
+  PencilLine,
+  ScanLine,
+  Users,
+} from 'lucide-react';
 
+import { Icon } from '../icons.js';
+import READINESS from './readiness.json' with { type: 'json' };
 import { AR } from '../i18n/work.ar.js';
 import { EN, type WorkDictionary } from '../i18n/work.en.js';
 import { useDict, useLocale, useT, Verbatim } from '../i18n/locale.js';
@@ -220,11 +232,22 @@ function WorkTally({ view }: { readonly view: WorkView }): JSX.Element {
   const t = useDict(EN, AR);
   const signed = view.authored.filter((r) => r.gatesSatisfied >= EXPORT_GATES).length;
 
-  const tiles: readonly { readonly key: string; readonly n: number; readonly label: string }[] = [
-    { key: 'authored', n: view.authored.length, label: t.tally.authored },
-    { key: 'shared', n: view.shared.length, label: t.tally.shared },
-    { key: 'signed', n: signed, label: t.tally.signed },
-    { key: 'drafts', n: view.drafts.length, label: t.tally.drafts },
+  /*
+    THE MARK ON EACH TILE NAMES THE LIST, NOT A SENTIMENT. A folder for the runs
+    this account authored, two people for the ones shared with it, a signature
+    for the ones carrying both export gates, and a half-written form for a draft.
+    Each is `aria-hidden` beside its own label, as every mark on this site is.
+  */
+  const tiles: readonly {
+    readonly key: string;
+    readonly n: number;
+    readonly label: string;
+    readonly glyph: LucideIcon;
+  }[] = [
+    { key: 'authored', n: view.authored.length, label: t.tally.authored, glyph: FolderOpen },
+    { key: 'shared', n: view.shared.length, label: t.tally.shared, glyph: Users },
+    { key: 'signed', n: signed, label: t.tally.signed, glyph: FileSignature },
+    { key: 'drafts', n: view.drafts.length, label: t.tally.drafts, glyph: PencilLine },
   ];
 
   return (
@@ -234,7 +257,10 @@ function WorkTally({ view }: { readonly view: WorkView }): JSX.Element {
       </h2>
       <ul className="tally">
         {tiles.map((tile) => (
-          <li key={tile.key} className="tally__tile">
+          <li key={tile.key} className={`tally__tile tally__tile--${tile.key}`}>
+            <span className="tally__chip" aria-hidden="true">
+              <Icon glyph={tile.glyph} size={18} />
+            </span>
             {/* The figure first and the label under it: on a tile the number is
                 what is read, and a label above it is read as a heading for a
                 section rather than as the name of the figure. */}
@@ -244,6 +270,136 @@ function WorkTally({ view }: { readonly view: WorkView }): JSX.Element {
         ))}
       </ul>
       <p className="tally__note">{t.tally.note}</p>
+    </section>
+  );
+}
+
+/**
+ * WHAT IS NOT READY, ON THE PAGE SOMEBODY ACTUALLY OPENS.
+ *
+ * The client asked for the workspace to read as a control panel, and the panel
+ * he showed carries a readiness checklist with meters. This product has one and
+ * it is the most important thing on the site: no rule in this deployment is
+ * approved, the metric definitions annex is unsigned, and eight of the eighteen
+ * invariants have never run. `/readiness` is where that is argued in full; this
+ * is the same four figures where a reader is standing.
+ *
+ * EVERY NUMBER HERE IS READ OUT OF `readiness.json`, which
+ * `scripts/verify-readiness.mjs` writes from the real engine and `pnpm check`
+ * re-verifies. Nothing on this panel is computed in the view layer, nothing is
+ * divided into a score, and the four meters are deliberately NOT summed into
+ * one: a single health number is something a reader stops at, and three of these
+ * four reading zero is the fact the summary would bury.
+ *
+ * The meter is a `<progress>`, so the ratio is in the accessibility tree without
+ * a `role` and an `aria-valuenow` written by hand — and the figures are beside
+ * it in text as well, because a bar alone conveys by width what 1.4.1 requires
+ * be conveyed in words.
+ */
+function ReadinessPanel({ navigate }: { readonly navigate: (to: Href) => void }): JSX.Element {
+  const t = useDict(EN, AR);
+  const r = READINESS.readiness;
+
+  const meters: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly now: number;
+    readonly max: number;
+  }[] = [
+    { key: 'rules', label: t.readiness.rules, now: r.rulesApproved, max: r.rulesTotal },
+    {
+      key: 'definitions',
+      label: t.readiness.definitions,
+      now: r.definitionsSigned,
+      max: r.definitionsTotal,
+    },
+    {
+      key: 'invariants',
+      label: t.readiness.invariants,
+      now: r.invariantsRan,
+      max: r.invariantsTotal,
+    },
+  ];
+
+  return (
+    <section className="plate wk__side-plate" aria-labelledby="wk-ready">
+      <h2 id="wk-ready" className="wk__side-head">
+        {t.readiness.heading}
+      </h2>
+      <p className="wk__side-note">{t.readiness.note}</p>
+
+      <ul className="meters">
+        {meters.map((m) => (
+          <li key={m.key} className="meter">
+            <span className="meter__label">{m.label}</span>
+            <span className="meter__figure">
+              <span className="value">{m.now}</span>
+              {t.table.of}
+              <span className="value">{m.max}</span>
+            </span>
+            <progress className="meter__bar" value={m.now} max={m.max} />
+          </li>
+        ))}
+      </ul>
+
+      {/* The annex is signed or it is not — a meter over one item would be a bar
+          that is only ever empty or full, which is a checkbox drawn wrong. */}
+      <p className="wk__annex">
+        {t.readiness.annex}
+        <Verbatim>{READINESS.readiness.annexVersion}</Verbatim>
+      </p>
+
+      <Link to="/readiness" navigate={navigate} className="button button--sm">
+        {t.readiness.cta}
+      </Link>
+    </section>
+  );
+}
+
+/**
+ * The way on, as cards rather than as a sentence with links in it.
+ *
+ * Every one is a route that exists. There is no greyed "coming soon" here for
+ * the reason `site-map.md` gives for the footer: a disabled control is a promise
+ * with no date attached.
+ */
+function QuickActions({ navigate }: { readonly navigate: (to: Href) => void }): JSX.Element {
+  const t = useDict(EN, AR);
+  const actions: readonly {
+    readonly to: Href;
+    readonly label: string;
+    readonly hint: string;
+    readonly glyph: LucideIcon;
+  }[] = [
+    { to: '/app', label: t.quick.run.label, hint: t.quick.run.hint, glyph: ScanLine },
+    { to: '/parking', label: t.quick.parking.label, hint: t.quick.parking.hint, glyph: LayoutGrid },
+    { to: '/exports', label: t.quick.exports.label, hint: t.quick.exports.hint, glyph: FileDown },
+    {
+      to: '/workspace',
+      label: t.quick.workspace.label,
+      hint: t.quick.workspace.hint,
+      glyph: Users,
+    },
+  ];
+
+  return (
+    <section className="shell section section--minor" aria-labelledby="wk-quick">
+      <h2 id="wk-quick" className="wk__side-head">
+        {t.quick.heading}
+      </h2>
+      <ul className="quick">
+        {actions.map((a) => (
+          <li key={a.to}>
+            <Link to={a.to} navigate={navigate} className="plate quick__card">
+              <span className="quick__chip" aria-hidden="true">
+                <Icon glyph={a.glyph} size={18} />
+              </span>
+              <span className="quick__label">{a.label}</span>
+              <span className="quick__hint">{a.hint}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -400,9 +556,21 @@ export default function Work({ navigate, search }: PageProps): JSX.Element {
 
   return (
     <div className="wk">
-      <section className="shell section section--opening" aria-labelledby="wk-h">
-        <h1 id="wk-h">{t.hero.title}</h1>
-        <p className="wk__lede">{t.hero.lede}</p>
+      {/*
+        THE CONSOLE BAR. A title, the one sentence that says what this list is,
+        and the single action somebody opens a workspace to take. The action is a
+        link and not a button that opens a dialog: a run starts at step 0, on its
+        own route, and a modal over a list would be a second place the engine can
+        be entered from.
+      */}
+      <section className="shell section section--opening wk__bar" aria-labelledby="wk-h">
+        <div className="wk__bar-text">
+          <h1 id="wk-h">{t.hero.title}</h1>
+          <p className="wk__lede">{t.hero.lede}</p>
+        </div>
+        <Link to="/app" navigate={navigate} className="button button--primary wk__bar-cta">
+          {chrome.runAPlot}
+        </Link>
       </section>
 
       {state === 'checking' ? (
@@ -444,69 +612,93 @@ export default function Work({ navigate, search }: PageProps): JSX.Element {
         <>
           <WorkTally view={view} />
 
-          <section className="shell section" aria-labelledby="wk-authored">
-            <div className="section__head">
-              <h2 id="wk-authored">{t.authored.title}</h2>
-            </div>
-            <RunTable
-              rows={view.authored}
-              caption={t.authored.caption}
-              empty={t.authored.empty(chrome.runAPlot)}
-              navigate={navigate}
-            />
-          </section>
+          {/*
+            TWO COLUMNS, AND THE SPLIT IS BY KIND RATHER THAN BY SIZE.
 
-          <section className="shell section" aria-labelledby="wk-shared">
-            <div className="section__head">
-              <h2 id="wk-shared">{t.shared.title}</h2>
-              <p className="wk__note">
-                {/*
-                  The one sentence on this page that describes a control, so it says
-                  exactly what the control is and stops. Being named a reviewer means
-                  the run is readable; it does not mean the licence was checked, and
-                  the export still records an assertion rather than a verification.
-                */}
-                {t.shared.note}
-              </p>
-            </div>
-            <RunTable
-              rows={view.shared}
-              caption={t.shared.caption}
-              empty={t.shared.empty}
-              navigate={navigate}
-            />
-          </section>
+            The main column is this account's work — runs it authored, runs shared
+            with it, forms it has not finished. The side column is this
+            DEPLOYMENT's state, which is true of every run in the main column and
+            of none of them in particular. Mixing the two would put "no rule here
+            is approved" inside a list of runs, where it reads as a property of
+            one of them.
 
-          <section className="shell section section--minor" aria-labelledby="wk-drafts">
-            <div className="section__head">
-              <h2 id="wk-drafts">{t.drafts.title}</h2>
-              <p className="wk__note">{t.drafts.note}</p>
+            It is one column below the breakpoint, main first, because the side
+            column is context and context does not go above the thing it is
+            context for.
+          */}
+          <div className="shell section wk__grid">
+            <div className="wk__main">
+              <section aria-labelledby="wk-authored">
+                <div className="section__head">
+                  <h2 id="wk-authored">{t.authored.title}</h2>
+                </div>
+                <RunTable
+                  rows={view.authored}
+                  caption={t.authored.caption}
+                  empty={t.authored.empty(chrome.runAPlot)}
+                  navigate={navigate}
+                />
+              </section>
+
+              <section aria-labelledby="wk-shared">
+                <div className="section__head">
+                  <h2 id="wk-shared">{t.shared.title}</h2>
+                  <p className="wk__note">
+                    {/*
+                      The one sentence on this page that describes a control, so it says
+                      exactly what the control is and stops. Being named a reviewer means
+                      the run is readable; it does not mean the licence was checked, and
+                      the export still records an assertion rather than a verification.
+                    */}
+                    {t.shared.note}
+                  </p>
+                </div>
+                <RunTable
+                  rows={view.shared}
+                  caption={t.shared.caption}
+                  empty={t.shared.empty}
+                  navigate={navigate}
+                />
+              </section>
+
+              <section aria-labelledby="wk-drafts">
+                <div className="section__head">
+                  <h2 id="wk-drafts">{t.drafts.title}</h2>
+                  <p className="wk__note">{t.drafts.note}</p>
+                </div>
+                {view.drafts.length === 0 ? (
+                  <p className="muted wk__empty">{t.drafts.empty}</p>
+                ) : (
+                  <ul className="wk__drafts">
+                    {view.drafts.map((d) => (
+                      <li key={d.draftKey}>
+                        <span>
+                          {/* A key the product does not name is the form's own word, as written. */}
+                          {(t.drafts.labels as Readonly<Record<string, string>>)[d.draftKey] ?? (
+                            <Ltr>{d.draftKey}</Ltr>
+                          )}
+                        </span>
+                        <span className="wk__when">
+                          <Ltr>
+                            {day(d.updatedAt)} {time(d.updatedAt)}
+                          </Ltr>
+                        </span>
+                        <Link to="/app" navigate={navigate}>
+                          {t.drafts.resume}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
             </div>
-            {view.drafts.length === 0 ? (
-              <p className="muted wk__empty">{t.drafts.empty}</p>
-            ) : (
-              <ul className="wk__drafts">
-                {view.drafts.map((d) => (
-                  <li key={d.draftKey}>
-                    <span>
-                      {/* A key the product does not name is the form's own word, as written. */}
-                      {(t.drafts.labels as Readonly<Record<string, string>>)[d.draftKey] ?? (
-                        <Ltr>{d.draftKey}</Ltr>
-                      )}
-                    </span>
-                    <span className="wk__when">
-                      <Ltr>
-                        {day(d.updatedAt)} {time(d.updatedAt)}
-                      </Ltr>
-                    </span>
-                    <Link to="/app" navigate={navigate}>
-                      {t.drafts.resume}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+
+            <div className="wk__side">
+              <ReadinessPanel navigate={navigate} />
+            </div>
+          </div>
+
+          <QuickActions navigate={navigate} />
 
           <section className="shell section section--minor">
             <p className="fine-print">

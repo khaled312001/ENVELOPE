@@ -56,6 +56,33 @@ export const AR: WorkDictionary = {
     note: 'هذه أعداد لما هو مدرج أدناه، لا أكثر. دراستان على قطعتين لا تشتركان في مدخل، فلا يوجد رقم واحد يصف الاثنتين.',
   },
 
+  /**
+   * See the English twin. These label figures the engine wrote, not counts of
+   * rows — and the heading leads with ما ليس جاهزا، كصفحة الجاهزية نفسها.
+   *
+   * «معتمدة» for approved, never «مطابقة»: the glossary gives «مطابقة» to
+   * compliance, which this deployment never claims.
+   */
+  readiness: {
+    heading: 'ما ليس جاهزا في هذا النشر',
+    note: 'هذا يصدق على كل دراسة في مساحة العمل هذه، ولا يخص واحدة منها. يقرأ من المحرك ولا يكتب يدويا.',
+    rules: 'قواعد اعتمدها معتمد مسمى',
+    definitions: 'تعريفات مقاييس موقعة',
+    invariants: 'ثوابت يمكن تشغيلها على مخرج المرحلة صفر',
+    annex: 'ملحق تعريفات المقاييس: ',
+    cta: 'اقرأه كاملا',
+  },
+
+  quick: {
+    heading: 'ابدأ من هنا',
+    run: { label: 'ادرس قطعة', hint: 'من مخطط أفكشن (Affection Plan)، أو من أبعاد تكتبها.' },
+    parking: { label: 'المواقف', hint: 'كيف يرص المنسوب، وما ثمن الرص.' },
+    /* «لوحات الرسم» وليس «مجموعة الرسومات»: الاختبار يمسح هذا الملف عن كلمة
+       «مجموع» ولا يفرق بين الجمع وبين اسم الحزمة. */
+    exports: { label: 'ما يخرج', hint: 'لوحات الرسم، والمجسم، وملفات البيانات.' },
+    workspace: { label: 'مساحة العمل', hint: 'من يستطيع فتح الدراسة، وبأي دور.' },
+  },
+
   checking: 'يجري فحص ما إذا كنت مسجل الدخول…',
 
   signedOut: {

@@ -181,11 +181,29 @@ export function AuthScreen({ mode, page }: { readonly mode: Mode; readonly page:
   }
 
   return (
-    <div className="auth">
-      <div className="shell section section--opening auth__split">
-        <div className="auth__form-col">
-          <h1 className="auth__title">{copy.title}</h1>
-          <p className="auth__lede">{copy.lede}</p>
+    <div className="auth auth--gate">
+      {/*
+        A DOOR, AND THE DOOR SAYS WHAT IS BEHIND IT.
+
+        «بوابه دخول» — 6 Oct 2026. The two columns are not decoration and they
+        are not symmetrical: the left is the product's claim and its limit, the
+        right is the one control a reader came here to use. A sign-in page is
+        where a product is most tempted to sell and least likely to be read by
+        anyone who could check it, so the panel carries `aside.not` at full
+        weight — "it does not make a run reviewed, verified, approved or
+        compliant" — rather than a row of logos.
+
+        The brand column is `aria-hidden` to nobody and `<aside>` to everybody:
+        its sentences are the same ones the antechamber and `/refusals` carry,
+        and a screen-reader user meets them here as a sighted one does. It comes
+        SECOND in the source and is placed first by the grid, so the form is what
+        a keyboard reaches on the first Tab.
+      */}
+      <div className="gate">
+        <div className="gate__panel">
+          <div className="gate__card">
+            <h1 className="auth__title">{copy.title}</h1>
+            <p className="auth__lede">{copy.lede}</p>
 
           <form className="auth__form" onSubmit={submit} noValidate>
             {mode === 'up' ? (
@@ -333,34 +351,53 @@ export function AuthScreen({ mode, page }: { readonly mode: Mode; readonly page:
             </div>
           </form>
 
-          <p className="auth__switch">
-            {copy.switchPrompt}{' '}
-            <Link to={mode === 'in' ? '/sign-up' : '/sign-in'} navigate={page.navigate}>
-              {copy.switchCta}
-            </Link>
-          </p>
+            <p className="auth__switch">
+              {copy.switchPrompt}{' '}
+              <Link to={mode === 'in' ? '/sign-up' : '/sign-in'} navigate={page.navigate}>
+                {copy.switchCta}
+              </Link>
+            </p>
 
-          {mode === 'in' ? <p className="auth__note">{t.noRecovery}</p> : null}
-        </div>
+            {mode === 'in' ? <p className="auth__note">{t.noRecovery}</p> : null}
+          </div>
 
-        {/*
-          THE ASIDE IS THE OFFER AND ITS LIMIT, and the image is behind it.
+          {/*
+            THE GUEST OFFER SITS UNDER THE CARD AND NOT INSIDE IT.
 
-          `Figure` renders NOTHING while the file is absent — no element and
-          no request — so this column is the two paragraphs today and the two
-          paragraphs over a drawing when #18 arrives. The layout does not change
-          shape either way, which is why the panel is a background layer rather
-          than a sibling column that would collapse.
-        */}
-        <aside className="auth__aside" aria-label={t.aside.what}>
-          <Figure name="auth-panel" className="auth__panel-img" />
-          <div className="auth__aside-body">
-            <p>{t.aside.what}</p>
-            <p className="auth__aside-not">{t.aside.not}</p>
+            It is a way past this page rather than a field on it, and a reader
+            who has started typing a password should not find a second route out
+            inside the same box. It keeps `auth__aside-guest`, which is the class
+            the sentence has always carried.
+          */}
+          <div className="gate__guest">
             <p className="auth__aside-guest">{t.aside.guest}</p>
             <Link to="/app" className="button button--sm" navigate={page.navigate}>
               {t.aside.guestCta}
             </Link>
+          </div>
+        </div>
+
+        {/*
+          THE BRAND COLUMN IS THE OFFER AND ITS LIMIT, and the image is behind it.
+
+          `Figure` renders NOTHING while the file is absent — no element and
+          no request — so this column is the sentences today and the sentences
+          over a drawing when #18 arrives. The layout does not change shape
+          either way, which is why the panel is a background layer rather than a
+          sibling column that would collapse.
+        */}
+        <aside className="gate__brand auth__aside" aria-label={t.aside.what}>
+          <Figure name="auth-panel" className="auth__panel-img" />
+          <div className="gate__brand-body auth__aside-body">
+            <p className="gate__mark">{t.gate.mark}</p>
+            <h2 className="gate__headline">{t.gate.headline}</h2>
+            <p>{t.aside.what}</p>
+            <ul className="gate__points">
+              {t.gate.points.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ul>
+            <p className="auth__aside-not gate__claim">{t.aside.not}</p>
           </div>
         </aside>
       </div>

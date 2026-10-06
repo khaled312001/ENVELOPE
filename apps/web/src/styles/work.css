@@ -40,6 +40,201 @@
   gap: var(--space-4);
 }
 
+/* ==========================================================================
+ * THE CONSOLE BAR — a title and the one action a workspace is opened to take.
+ * ======================================================================= */
+
+.wk__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-4);
+}
+
+/* The action is pushed to the trailing edge by the TEXT growing, not by a gap:
+   a flex item capped by a max width stops growing and leaves the space after
+   the last item instead of between them. */
+.wk__bar-text {
+  flex: 1 1 22rem;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.wk__bar-cta { flex: none; }
+
+/* ==========================================================================
+ * THE TWO COLUMNS — this account's work, and this deployment's state.
+ *
+ * `minmax(0, …)` on the main track, or a long plot number in a card sets a
+ * minimum content width and the grid stops being able to shrink — which is the
+ * usual cause of a page that scrolls sideways on a phone with no element
+ * visibly overflowing.
+ * ======================================================================= */
+
+.wk__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.wk__main {
+  display: grid;
+  gap: var(--space-7);
+  min-inline-size: 0;
+}
+
+.wk__side {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  min-inline-size: 0;
+}
+
+@media (min-width: 64rem) {
+  .wk__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 20rem); }
+  /* The side column travels with the reader down a long list of runs. */
+  .wk__side { position: sticky; inset-block-start: var(--space-6); }
+}
+
+.wk__side-plate {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  padding: var(--space-5);
+}
+
+.wk__side-head {
+  font-size: var(--text-base);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+}
+
+.wk__side-note,
+.wk__annex {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  color: var(--text-tertiary);
+  text-wrap: pretty;
+}
+
+.wk__annex { font-family: var(--font-mono); }
+
+/* --- The meters -------------------------------------------------------- */
+
+.meters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+}
+
+.meter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+}
+
+.meter__label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.meter__figure {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+/*
+  A `<progress>` ELEMENT, RESET IN BOTH ENGINES.
+
+  The ratio is in the accessibility tree for free, which a styled div would need
+  `role`, `aria-valuenow` and `aria-valuemax` written by hand to match. The two
+  pseudo-element families are the whole of the styling: `-webkit-` for Blink and
+  WebKit, `-moz-` for Gecko, and the bare element for the track in Gecko.
+
+  The figures are beside it in text as well. A bar alone conveys by width what
+  1.4.1 requires be conveyed in words — and three of these read zero, which is a
+  bar with nothing in it at all.
+*/
+.meter__bar {
+  grid-column: 1 / -1;
+  inline-size: 100%;
+  block-size: 0.5rem;
+  appearance: none;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-inset);
+  overflow: hidden;
+}
+
+.meter__bar::-webkit-progress-bar {
+  background-color: var(--surface-inset);
+  border-radius: var(--radius-pill);
+}
+.meter__bar::-webkit-progress-value {
+  background-image: var(--gradient-brand);
+  border-radius: var(--radius-pill);
+}
+.meter__bar::-moz-progress-bar {
+  background-image: var(--gradient-brand);
+  border-radius: var(--radius-pill);
+}
+
+/* ==========================================================================
+ * THE WAYS ON — four cards, each a route that exists.
+ * ======================================================================= */
+
+.quick {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* `auto-fit`, never `auto-fill`: with four cards and a wide viewport,
+     `auto-fill` keeps empty tracks and the row clusters to one side of a void. */
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  gap: var(--space-4);
+}
+
+.quick__card {
+  block-size: 100%;
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-5);
+  text-decoration: none;
+  color: inherit;
+}
+
+.quick__chip,
+.tally__chip {
+  display: grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: var(--radius-md);
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.quick__label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.quick__hint {
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  color: var(--text-tertiary);
+  text-wrap: pretty;
+}
+
 .tally__tile {
   position: relative;
   display: grid;
@@ -88,6 +283,33 @@
   font-size: var(--text-sm);
   color: var(--text-secondary);
   text-wrap: pretty;
+}
+
+/*
+  FOUR TILES, FOUR GROUNDS, ONE HUE.
+  «بالونيه» — 6 Oct 2026. The client asked for colour and the rule above it has
+  not moved: decoration spends the BRAND, never a state. `--derived`,
+  `--variance`, `--deferred` and `--uncertain` mean something on this site, and a
+  tile tinted with one of them would be teaching a reader that the meaning is
+  decorative.
+
+  So the four chips are one hue at four strengths — a ramp, which reads as
+  deliberate where four unrelated hues read as a palette picked at random, and
+  which keeps every ground a mix of the brand with the surface under it. The ink
+  stays `--accent` on all four: it is the measured pair, and the grounds below
+  are lighter than the one it was measured against.
+*/
+.tally__tile--authored .tally__chip {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
+}
+.tally__tile--shared .tally__chip {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-raised));
+}
+.tally__tile--signed .tally__chip {
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface-raised));
+}
+.tally__tile--drafts .tally__chip {
+  background: color-mix(in srgb, var(--accent) 28%, var(--surface-raised));
 }
 
 .tally__note {

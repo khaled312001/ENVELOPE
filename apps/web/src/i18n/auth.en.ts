@@ -84,6 +84,26 @@ export const EN = {
   noRecovery:
     'There is no password reset. This deployment sends no email, so a reset link would be a link to nothing — and the honest version of that is this sentence rather than a form that fails.',
 
+  /**
+   * THE DOOR'S OWN COLUMN — what is behind this page, in three lines.
+   *
+   * Every line names something the engine DOES, in the engine's own terms, and
+   * none of them is a benefit, a percentage or a time saved. The limit is not
+   * here: it is `aside.not`, which sits under these at full weight, because a
+   * panel that listed three capabilities and no refusal would be the sales page
+   * this product spends its landing page arguing against.
+   */
+  gate: {
+    /** The product's name. Not copy — it is the same word in both languages. */
+    mark: 'TOP.ai',
+    headline: 'Everything it works out, and everywhere the figure came from.',
+    points: [
+      'Reads the affection plan and cites every figure to the box it was printed in.',
+      'Lays the parking out as bays, aisles and a ramp — never an area divided by a factor.',
+      'Marks every assumption, and blocks rather than quietly filling a gap.',
+    ],
+  },
+
   aside: {
     what: 'An account keeps your runs, exactly as they were computed, with their inputs, their assumptions and their provenance graph.',
     not: 'It does not make a run reviewed, verified, approved or compliant. Regulatory validity is never assessed, with an account or without one.',

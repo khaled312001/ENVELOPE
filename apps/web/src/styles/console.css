@@ -109,12 +109,31 @@
   pointer-events: none;
 }
 
+/*
+  THE INK IS SET FROM THE COLUMN AND THE SELECTOR HAS TO OUT-SPECIFY THE PANEL'S.
+
+  This element also carries `auth__aside-body`, which is the class
+  `auth-pages.test.tsx` asserts and which paints `--text-secondary` — a page ink,
+  measured against the page. On the brand ground it is dark on blue and
+  unreadable, and `color: inherit` alone loses the tie by source order. So every
+  ink on this column is set through the column, which beats a single class.
+
+  The contrast gate could not have caught this: it measures token PAIRS as
+  written, and both pairs here are real and both pass. What was wrong is which
+  one the cascade chose — a browser fact, which is `pnpm smoke`'s ground.
+*/
+.gate__brand .gate__brand-body,
+.gate__brand .gate__brand-body p,
+.gate__brand .gate__headline,
+.gate__brand .gate__points,
+.gate__brand .gate__claim,
+.gate__brand .gate__mark {
+  color: var(--text-on-action);
+}
+
 .gate__brand-body {
   display: grid;
   gap: var(--space-4);
-  /* Inherited from the column, so every line on the brand ground is the pair
-     the contrast gate measured. */
-  color: inherit;
   max-inline-size: var(--measure-prose);
   margin-inline: auto;
 }
@@ -157,6 +176,12 @@
 .gate__claim {
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
+}
+
+/* The rule beside it is the page's `--border-strong`, which is a page ink on a
+   page ground. On the brand column it takes the column's own. */
+.gate__brand .gate__claim {
+  border-inline-start-color: currentColor;
 }
 
 .gate__panel {

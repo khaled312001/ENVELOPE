@@ -239,6 +239,21 @@
   background: transparent;
   color: var(--text-secondary);
   padding-inline: var(--space-3);
+  /*
+    THIS VARIANT CARRIES A SENTENCE, AND `.mbtn` FORBIDS IT FROM WRAPPING.
+
+    `white-space: nowrap` is right for a short action — a verb broken across two
+    lines is misread — and wrong for "see every refusal the engine will make".
+    Two of these links measured 364px and 405px inside a 320px viewport, which is
+    the 101px of horizontal page scroll `pnpm smoke` reported on `/`: WCAG 1.4.10,
+    caused by a rule that was correct for the buttons it was written for. Lifted
+    here rather than dropped from the base, so a one-word action keeps it.
+
+    The 2.5.8 target survives: wrapping makes the box taller, never shorter.
+  */
+  white-space: normal;
+  text-align: start;
+  max-inline-size: 100%;
 }
 .mbtn--quiet:hover { color: var(--text-primary); background: var(--surface-sunken); }
 

@@ -126,6 +126,8 @@ export const EN = {
       run: 'Run',
     },
     /** Between the gates signed and the gates there are. Both figures are the row's. */
+    /** The card's own way in. A verb and its object: the run, opened. */
+    open: 'Open this run',
     of: ' of ',
     signedBy: 'signed by ',
     notSigned: 'not signed',

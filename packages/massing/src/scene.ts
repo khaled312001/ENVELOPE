@@ -291,7 +291,27 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
       as standing on its podium rather than floating over it.
     */
     const slabColour = colourOf(level.outlineSource.provenanceClass, palette);
-    const slab = new THREE.Mesh(track(fill([level.outline], at, 0).geometry), surface(slabColour, 0.92));
+    /*
+      THE RAMP VOID.
+
+      A car drives up a ramp through an opening in the slab of the level it
+      arrives at, so that slab has a hole the size of the ramp's own plan
+      footprint. Drawing it whole was a floor plate laid over the ramp beneath
+      it — visible as long as every surface was glass, and sealed over the moment
+      the slabs became solid. The ring arrangement made it worse by putting the
+      ramp on the island the aisle encloses, where nothing shows it from outside:
+      isolate the level and you were looking at an unbroken plate.
+
+      Nothing is invented, which is the condition for doing this in the renderer
+      at all. The void is `ramp.outline` — the model's own rectangle — cut from
+      the model's own ring, for whichever level the ramp climbs to; `ringContains`
+      drops it rather than force it where it would not fit, which leaves the slab
+      exactly as it was drawn before.
+    */
+    const voids = model.ramps
+      .filter((r) => (r.toElevationMm >= r.fromElevationMm ? r.toLevelId : r.fromLevelId) === level.id)
+      .map((r) => r.outline);
+    const slab = new THREE.Mesh(track(fill([level.outline], at, 0, voids).geometry), surface(slabColour, 0.92));
     slab.name = `${level.id} slab`;
     slab.receiveShadow = true;
     slab.castShadow = true;
@@ -614,16 +634,60 @@ function centreOf(ring: ModelRing, at: At): THREE.Vector2 {
   return ring.map(at).reduce((sum, v) => sum.add(v), new THREE.Vector2()).divideScalar(Math.max(ring.length, 1));
 }
 
-/** Flat fills for several rings, triangulated, remembering which ring each triangle came from. */
-function fill(rings: readonly ModelRing[], at: At, z: number): { geometry: THREE.BufferGeometry; triangleRing: number[] } {
+/**
+ * Is every vertex of `hole` strictly inside `ring`?
+ *
+ * The guard on a void, and it is a guard rather than a formality. `triangulateShape`
+ * takes holes on trust: a hole that crosses the contour it is cut from produces
+ * folded triangles rather than an error, and a slab drawn like that is a defect
+ * nobody sees until a screenshot. A ray-crossing test, so a concave podium is
+ * answered correctly and not by a bounding box that would say yes to a void in the
+ * notch of an L.
+ */
+function ringContains(ring: readonly THREE.Vector2[], hole: readonly THREE.Vector2[]): boolean {
+  const inside = (p: THREE.Vector2): boolean => {
+    let hit = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const a = ring[i]!;
+      const b = ring[j]!;
+      if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) hit = !hit;
+    }
+    return hit;
+  };
+  return hole.length >= 3 && hole.every(inside);
+}
+
+/**
+ * Flat fills for several rings, triangulated, remembering which ring each triangle
+ * came from.
+ *
+ * `holes` are cut from whichever of `rings` contains them — the ramp void in a slab,
+ * and nothing else so far. A hole no ring contains is dropped rather than forced,
+ * which leaves the slab whole: the behaviour before voids existed.
+ */
+function fill(
+  rings: readonly ModelRing[],
+  at: At,
+  z: number,
+  holes: readonly ModelRing[] = [],
+): { geometry: THREE.BufferGeometry; triangleRing: number[] } {
   const positions: number[] = [];
   const triangleRing: number[] = [];
+  const holeContours = holes.map((h) => h.map(at));
   rings.forEach((ring, r) => {
     const contour = ring.map(at);
     if (contour.length < 3) return;
-    for (const triangle of THREE.ShapeUtils.triangulateShape(contour, [])) {
+    const cut = holeContours.filter((h) => ringContains(contour, h));
+    /*
+      `triangulateShape` indexes into the contour FOLLOWED BY every hole's points,
+      the way `ExtrudeGeometry` reads it. Indexing into the contour alone is
+      correct only while there are no holes — and silently wrong, not an error,
+      once there is one.
+    */
+    const points = cut.length === 0 ? contour : [...contour, ...cut.flat()];
+    for (const triangle of THREE.ShapeUtils.triangulateShape(contour, cut)) {
       for (const n of triangle) {
-        const p = contour[n]!;
+        const p = points[n]!;
         positions.push(p.x, p.y, z);
       }
       triangleRing.push(r);

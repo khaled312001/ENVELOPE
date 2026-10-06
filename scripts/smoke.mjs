@@ -1553,7 +1553,18 @@ await step('every contents jump clears the sticky nav (WCAG 2.2 · 2.4.11)', asy
     Sampled at three points per page rather than one: the defect was uniform here,
     but a section that had opted out of the chassis would not be.
   */
-  for (const route of ['/', '/parking', '/exports', '/refusals', '/readiness']) {
+  /*
+    `/` IS NOT IN THIS LIST ANY MORE, AND THAT IS NOT THE CHECK BEING WEAKENED.
+
+    This step holds a contents list to clearing the sticky nav. The redesigned
+    landing page carries no contents list at all — it is short, and its sections
+    are reached by scrolling rather than by an index — so there is nothing here
+    for the step to measure. Four pages still render one and all four are still
+    sampled at three entries each; the rule is unchanged, the page simply left
+    the set of pages it applies to. A route kept in this list with no list on it
+    fails forever and reports nothing, which is how this was found.
+  */
+  for (const route of ['/parking', '/exports', '/refusals', '/readiness']) {
     await page.goto(new URL(route, BASE).href, { waitUntil: 'domcontentloaded' });
     // `domcontentloaded` is before React paints, and the list is React's.
     await page.locator('nav.contents').first().waitFor({ timeout: wait(10000) });

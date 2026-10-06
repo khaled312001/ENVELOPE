@@ -463,16 +463,42 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   end at 320px; above it, the pair stays together at every width and reads in the
   order it is meant to — why first, control second.
 */
+/*
+  THE WAY ON IS ALWAYS ON SCREEN.
+
+  It sat at the foot of the step body, which on the long steps — the register, the
+  parking level, the checks — is several screens down: the reader finished reading,
+  then scrolled to find out what to do. The client asked for the transitions
+  between steps to be obvious, and a control that has to be hunted for is not.
+
+  `position: sticky` and not `fixed`: it stays inside the step's own column, so it
+  cannot overlap the rail or sit over the page on a route that has no stepper. The
+  ground is opaque — a translucent bar would composite the ink over whatever ran
+  under it, and no contrast pair in this product is measured against "whatever
+  happened to be there".
+*/
 .step-footer {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 2;
   display: grid;
   grid-template-columns: auto auto;
   align-items: start;
   justify-content: space-between;
   gap: var(--space-4);
   margin-block-start: var(--rhythm-block);
-  padding-block-start: var(--space-5);
-  border-block-start: var(--border-width) solid var(--border-subtle);
+  padding-block: var(--space-4);
+  background: var(--surface-base);
+  border-block-start: var(--border-width-emphasis) solid var(--border-strong);
 }
+
+/* The one control the reader is looking for, at the size that says so. */
+.step-footer__next {
+  min-block-size: var(--control-h-lg);
+  padding-inline: var(--space-6);
+  font-weight: 600;
+}
+
 
 /* The forward cell is a column so the sentence can stand over its button. */
 .step-footer__forward {
@@ -2298,7 +2324,9 @@ button.plot-legend__row:active {
 }
 
 @media print {
-  .stepper, .app-header__meta, .button, .provenance-panel { display: none !important; }
+  /* `.step-footer` with it: the buttons inside it are hidden, and what would be
+     left on paper is a ruled empty bar at the foot of the step. */
+  .stepper, .app-header__meta, .button, .provenance-panel, .step-footer { display: none !important; }
   .panel { break-inside: avoid; border: 1px solid var(--text-secondary); box-shadow: none; }
   /* The plate's ink cap is the one piece of depth in this language that was
      chosen BECAUSE it survives paper, so it is not switched off here — it is the

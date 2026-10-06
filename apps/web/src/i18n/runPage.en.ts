@@ -139,6 +139,15 @@ export const EN = {
 
   files: {
     title: 'Files',
+    /**
+     * The two things already drawn on this page, by name.
+     *
+     * "Look at" rather than "open" or "download": nothing is fetched, nothing
+     * leaves the page, and the file buttons below say "open" and "download" for
+     * the things that do. The distinction is the gate — these answer before it.
+     */
+    viewModel: 'Look at the 3D model',
+    viewDrawings: 'Look at the drawings',
     locked: 'The files open once both gates are signed.',
     html: 'Open the report',
     sheets: 'Open the drawing set',

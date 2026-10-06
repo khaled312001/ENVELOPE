@@ -717,18 +717,29 @@ export function PlotForm({
         {/* A radio pair rather than a segmented button: these are two answers to
             one question, the reader can be on only one of them, and a radio group
             is the control a screen reader already knows how to say that about. */}
+        {/*
+          THE MAP IS FIRST, AND THE RECTANGLE IS LAST.
+
+          The order was rectangle → boundaries → map, which put the one answer
+          that is almost never true of a real plot at the top of the list and the
+          one a reader actually has — the plot, where it stands — at the bottom.
+          The client asked for the reversal in those words. It also matches what
+          the three cost: tracing the boundary hands the legs to the traverse
+          already filled in and editable, and typing a frontage and a depth is
+          the shortcut for the plots that really are rectangles.
+        */}
         <div className="pf-shape__choices">
           <label className="pf-shape__choice">
             <input
               type="radio"
               name="plot-shape"
-              value="rectangle"
-              checked={shape === 'rectangle'}
-              onChange={() => setShape('rectangle')}
+              value="map"
+              checked={shape === 'map'}
+              onChange={() => setShape('map')}
             />
             <span>
-              <strong>{t.shape.rectangle}</strong>
-              <span className="field__help">{t.shape.rectangleHelp}</span>
+              <strong>{t.shape.map}</strong>
+              <span className="field__help">{t.shape.mapHelp}</span>
             </span>
           </label>
           <label className="pf-shape__choice">
@@ -748,13 +759,13 @@ export function PlotForm({
             <input
               type="radio"
               name="plot-shape"
-              value="map"
-              checked={shape === 'map'}
-              onChange={() => setShape('map')}
+              value="rectangle"
+              checked={shape === 'rectangle'}
+              onChange={() => setShape('rectangle')}
             />
             <span>
-              <strong>{t.shape.map}</strong>
-              <span className="field__help">{t.shape.mapHelp}</span>
+              <strong>{t.shape.rectangle}</strong>
+              <span className="field__help">{t.shape.rectangleHelp}</span>
             </span>
           </label>
         </div>

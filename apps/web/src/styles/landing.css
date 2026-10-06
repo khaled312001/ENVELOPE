@@ -26,6 +26,26 @@
   margin-block-start: var(--space-5);
 }
 
+/*
+  THE 3D FIGURE IN THE FOLD.
+
+  Below the words, not beside them. It was beside them once and what a phone
+  opened on was a disabled viewer above a table of dimensions, with nothing on
+  the first screen saying what the product is — the note that moved the headline
+  out of the copy column records it. The order here is head → claim → artefact
+  at every width, so the reader knows what they are looking at before they look.
+
+  The plate's own height comes from `.massing-viewer` in `app.css`; this rule
+  only places the figure and caps how wide the caption's prose may run.
+*/
+.lp-hero__figure {
+  margin: var(--space-7) 0 0;
+}
+
+.lp-hero__figure .figure__caption {
+  max-inline-size: var(--measure-prose);
+}
+
 .lp-validity {
   display: block;
   max-inline-size: 60ch;

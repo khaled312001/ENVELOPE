@@ -157,6 +157,37 @@ export function group(value: string): string {
   return frac ? `${grouped}.${frac}` : grouped;
 }
 
+/**
+ * The runs, as cards.
+ *
+ * ---------------------------------------------------------------------------
+ * IT WAS A SIX-COLUMN TABLE, AND THE CLIENT ASKED FOR A SHOP.
+ *
+ * «واجعل الداشبورد احترافيه فى تصميمها كأني داخل موقع E-Commerce» (6 Oct 2026).
+ * A schedule is the right shape for figures a reader compares column by column,
+ * and comparing runs column by column is exactly what this list may not invite:
+ * a column of capacities beside a column of plots is a portfolio valuation, and
+ * the three-band model exists to refuse that reading. So the card is not only the
+ * look he asked for — it is the shape that puts each run's figure with the band
+ * that produced it and keeps the next run a card away rather than a row below.
+ *
+ * WHAT A CARD MAY NOT DO, and none of these are styling decisions:
+ *
+ *   - nothing is computed across the cards. No total, no average, no "best", no
+ *     difference. The page shows runs; the reader compares them.
+ *   - the band travels with the figure, in words, inside the same block.
+ *   - `draft rules` stays on the card it belongs to. A run computed against rules
+ *     nobody approved is a demonstration, and a grid that dropped the chip to
+ *     tidy the layout would be presenting it as a record.
+ *   - the assumption count is a count and is not painted. The ASSUMED treatment
+ *     belongs to a value that IS assumed; teaching a reader that it means "there
+ *     were some" is the reservation §13.1 protects.
+ *
+ * A LIST, NOT A GRID OF DIVS. Each card is an `<li>`, each run's figures are a
+ * `<dl>` with real terms, and the whole thing keeps the caption the table had as
+ * the list's accessible name — so a screen reader still hears "plot", "governing
+ * capacity", "what binds it" against each value instead of a wall of text.
+ */
 export function RunTable({
   rows,
   caption,
@@ -166,106 +197,94 @@ export function RunTable({
   readonly rows: readonly RunRow[];
   readonly caption: string;
   readonly empty: string;
-  /** With it, each run's time is a link to the run's own page. */
+  /** With it, each card's heading is a link to the run's own page. */
   readonly navigate?: (to: Href) => void;
 }): JSX.Element {
   const t = useDict(EN, AR);
   if (rows.length === 0) {
-    return (
-      <p className="muted wk__empty">{empty}</p>
-    );
+    return <p className="muted wk__empty">{empty}</p>;
   }
   return (
-    <div className="schedule">
-      <table>
-        <caption className="sr-only">{caption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t.table.columns.plot}</th>
-            <th scope="col">{t.table.columns.governing}</th>
-            <th scope="col">{t.table.columns.binds}</th>
-            <th scope="col">{t.table.columns.assumed}</th>
-            <th scope="col">{t.table.columns.gates}</th>
-            <th scope="col">{t.table.columns.run}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.runId}>
-              <td>
-                <span className="wk__plot">
+    <ul className="runcards" aria-label={caption}>
+      {rows.map((r) => {
+        const to: Href = `/work?run=${encodeURIComponent(r.runId)}`;
+        return (
+          <li key={r.runId} className="runcard">
+            <div className="runcard__head">
+              <p className="runcard__plot">
+                <span className="runcard__number">
                   <Ltr>{r.plotNumber}</Ltr>
                 </span>
-                <span className="wk__community">
+                <span className="runcard__community">
                   <Ltr>{r.community}</Ltr>
                 </span>
-              </td>
-              <td>
-                {/*
-                  THE FIGURE AND THE BAND THAT PRODUCED IT ARE ONE CELL.
+              </p>
+              <p className="runcard__when">
+                <Ltr>
+                  {day(r.createdAt)} {time(r.createdAt)}
+                </Ltr>
+              </p>
+            </div>
 
-                  Splitting them puts a column of capacities beside a column of
-                  bands, and a column of capacities is a portfolio valuation — the
-                  comparison the three-band model exists to refuse. Together they
-                  are one statement: this many square metres, from this band.
-                */}
-                <span className="value">{group(r.governingGfaM2)}</span> m²
-                <span className="wk__band">{bandLabel(t, r.governingBand)}</span>
-              </td>
-              <td>
-                <Ltr>{r.bindingLabel}</Ltr>
-              </td>
-              <td>
-                {/*
-                  Not a badge and not a colour. The amber treatment belongs to a
-                  value that IS assumed; a count of assumptions is a fact about a
-                  run, and painting it amber would teach a reader that amber means
-                  "there were some", which is the reservation §13.1 exists to
-                  protect.
-                */}
-                <span className="value">{r.assumptionCount}</span>
-              </td>
-              <td>
-                <span className="value">{r.gatesSatisfied}</span>
-                {t.table.of}
-                <span className="value">{EXPORT_GATES}</span>
-                {r.reviewer ? (
-                  <span className="wk__reviewer">
-                    {t.table.signedBy}
-                    <Ltr>{r.reviewer.name}</Ltr>
-                  </span>
-                ) : (
-                  <span className="wk__reviewer muted">{t.table.notSigned}</span>
-                )}
-              </td>
-              <td>
-                {navigate ? (
-                  <Link to={`/work?run=${encodeURIComponent(r.runId)}`} navigate={navigate} className="wk__when">
-                    <Ltr>
-                      {day(r.createdAt)} {time(r.createdAt)}
-                    </Ltr>
-                  </Link>
-                ) : (
-                  <span className="wk__when">
-                    <Ltr>
-                      {day(r.createdAt)} {time(r.createdAt)}
-                    </Ltr>
-                  </span>
-                )}
-                {r.sharedRole ? <span className="chip">{t.table.roles[r.sharedRole]}</span> : null}
-                {r.draftRules ? (
-                  /* The run was computed against rules nobody approved. It is the
-                     single most important qualifier a stored run carries, and a
-                     list that omitted it would be presenting a demonstration as a
-                     record. */
-                  <span className="chip chip--deferred">{t.table.draftRules}</span>
-                ) : null}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+            {/*
+              THE FIGURE AND THE BAND THAT PRODUCED IT ARE ONE BLOCK.
+
+              Separating them would put a capacity where a price goes on the kind
+              of card this is modelled on, and a price is a number that stands on
+              its own. This one does not: it is this many square metres, from this
+              band, and the band is in words beneath it on every card.
+            */}
+            <p className="runcard__figure">
+              <span className="value">{group(r.governingGfaM2)}</span>
+              <span className="runcard__unit">m²</span>
+            </p>
+            <p className="runcard__band">{bandLabel(t, r.governingBand)}</p>
+
+            <dl className="runcard__facts">
+              <div>
+                <dt>{t.table.columns.binds}</dt>
+                <dd>
+                  <Ltr>{r.bindingLabel}</Ltr>
+                </dd>
+              </div>
+              <div>
+                <dt>{t.table.columns.assumed}</dt>
+                <dd>
+                  <span className="value">{r.assumptionCount}</span>
+                </dd>
+              </div>
+              <div>
+                <dt>{t.table.columns.gates}</dt>
+                <dd>
+                  <span className="value">{r.gatesSatisfied}</span>
+                  {t.table.of}
+                  <span className="value">{EXPORT_GATES}</span>
+                  {r.reviewer ? (
+                    <span className="wk__reviewer">
+                      {t.table.signedBy}
+                      <Ltr>{r.reviewer.name}</Ltr>
+                    </span>
+                  ) : (
+                    <span className="wk__reviewer muted">{t.table.notSigned}</span>
+                  )}
+                </dd>
+              </div>
+            </dl>
+
+            <p className="runcard__chips">
+              {r.sharedRole ? <span className="chip">{t.table.roles[r.sharedRole]}</span> : null}
+              {r.draftRules ? <span className="chip chip--deferred">{t.table.draftRules}</span> : null}
+            </p>
+
+            {navigate ? (
+              <Link to={to} navigate={navigate} className="button button--primary runcard__open">
+                {t.table.open}
+              </Link>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

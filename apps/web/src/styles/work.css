@@ -14,6 +14,146 @@
  * itself, inside the run.
  */
 
+/* ==========================================================================
+ * THE RUN CARDS
+ *
+ * The shape the client asked for — "as if I were on an e-commerce site" — in
+ * this product's own language rather than a shop's. Square corners, one hairline
+ * border, no shadow at rest; the lift on hover is a border and a ground, because
+ * a shadow is the one piece of depth `docs/05-design/direction.md` argues out.
+ *
+ * `auto-fit`, never `auto-fill`: with three runs, `auto-fill` keeps the empty
+ * tracks and the cards cluster to one side of a void.
+ * ======================================================================= */
+
+.runcards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(19rem, 100%), 1fr));
+  gap: var(--space-4);
+}
+
+.runcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-subtle);
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.runcard:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-base);
+}
+
+.runcard__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.runcard__plot {
+  margin: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.runcard__number {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: var(--weight-display);
+}
+
+.runcard__community,
+.runcard__when {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.runcard__when {
+  font-family: var(--font-mono);
+}
+
+/* The figure a reader came for. Large, but never alone: `.runcard__band` is
+   directly under it and says which of the three bands produced it. */
+.runcard__figure {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.runcard__figure .value {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-display);
+}
+
+.runcard__unit {
+  color: var(--text-secondary);
+}
+
+.runcard__band {
+  margin: 0;
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.runcard__facts {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: var(--border-width) solid var(--border-subtle);
+}
+
+.runcard__facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.runcard__facts dt {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.runcard__facts dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  text-align: end;
+}
+
+.runcard__chips {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.runcard__chips:empty {
+  display: none;
+}
+
+/* Last, and it fills the card's width: the one action, in the one place it is
+   on every card, so a reader stops looking for it after the first. */
+.runcard__open {
+  margin-block-start: auto;
+  justify-content: center;
+}
+
 .wk__lede {
   max-inline-size: var(--measure-prose);
   color: var(--text-secondary);
@@ -190,10 +330,41 @@
 .rn__model {
   margin: 0;
 }
+
+/*
+  Both are jump targets from the Files panel, so both have to clear the sticky
+  nav — the rule `.section` already carries and the one `every contents jump
+  clears the sticky nav` measures. A figure is not a section and would have
+  landed under the bar.
+*/
+#rn-model,
+#rn-drawings {
+  scroll-margin-block-start: calc(var(--control-h-lg) + var(--space-4));
+}
+
+/* Looking at what is already on the page, beside the files that leave it. */
+.rn__file-view {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-5);
+}
 .rn__nomodel {
   margin: 0;
   max-inline-size: var(--measure-prose);
   color: var(--text-secondary);
+}
+
+/*
+  The engine's own panels, stacked on the run page.
+
+  A grid with a gap rather than margins on the children: the panels come from the
+  ten-step flow, where the step body spaces them, and giving them margins here
+  would put the spacing in two places for the same components.
+*/
+.rn__results {
+  display: grid;
+  gap: var(--space-5);
 }
 
 .rn__share {

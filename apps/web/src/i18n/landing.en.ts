@@ -187,6 +187,18 @@ export const EN = {
       levelsAfter: ' the height permits',
     },
 
+    /**
+     * What stands where the model would, on a browser that cannot draw it.
+     *
+     * It names the figures rather than apologising for the picture: the stats
+     * above the figure are the same run, so a reader without WebGL has lost the
+     * view and not the answer. The engine flow says the same on its own view.
+     */
+    noWebgl:
+      'This browser could not start 3D drawing — WebGL is switched off or ' +
+      'unavailable. The figures above are this run, and the levels are stated ' +
+      'in words below.',
+
     source:
       'This run, to scale, as the engine stacked it · solid levels are the answer, ' +
       'outlines are height the answer leaves unused · amber marks what the engine ' +

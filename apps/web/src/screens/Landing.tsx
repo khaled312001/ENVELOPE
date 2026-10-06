@@ -59,6 +59,7 @@ import { AR } from '../i18n/landing.ar.js';
 import { EN } from '../i18n/landing.en.js';
 import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 import { Link, type Href } from '../router.js';
+import { WorkedExampleModel } from '../components/WorkedExampleModel.js';
 import { group } from './Work.js';
 import SNAPSHOT from './readiness.json' with { type: 'json' };
 import example from './worked-example.json' with { type: 'json' };
@@ -177,7 +178,22 @@ export function Landing({
             className="mhero__actions m-rise"
             style={{ '--m-order': 3 } as React.CSSProperties}
           >
-            <Link className="mbtn mbtn--primary mbtn--lg" to="/app" navigate={navigate}>
+            {/*
+              `?demo=worked-example` IS THE BUTTON'S PROMISE, NOT A CONVENIENCE.
+
+              It reads "run this plot yourself", and the redesign of this page sent
+              it to a blank `/app`: the strongest button on the site named the plot
+              every figure above is read from and then handed over an empty form.
+              `demo.ts` fills the plot step from `worked-example.json` — the same
+              file the figures come from — so the visitor runs THIS plot and reaches
+              the number they have just read. Any other input and they would be
+              right to conclude the page was decorated.
+            */}
+            <Link
+              className="mbtn mbtn--primary mbtn--lg"
+              to="/app?demo=worked-example"
+              navigate={navigate}
+            >
               {t.cta.run}
               <ArrowRight aria-hidden="true" />
             </Link>
@@ -208,6 +224,58 @@ export function Landing({
             <strong>{t.validity.stamp}</strong>
             {t.validity.body}
           </p>
+
+        {/*
+          THE RUN, STOOD UP — and it is back because a gate kept asking for it.
+
+          The redesign of this page dropped the hero's 3D figure, and
+          `scripts/smoke.mjs` went on waiting twenty seconds for a frame from it
+          on every run: the check could no longer pass, so it was no longer
+          telling anyone anything. Two ways out, and only one of them is honest.
+          Deleting the check would have left the most persuasive artefact the
+          product has off the page it sells from, and this is the page where a
+          reader decides whether the numbers above came from anywhere.
+
+          It is the SAME model as every figure above — `worked-example.json` and
+          `worked-example.building.json` are written from one real run by
+          `scripts/verify-worked-example.mjs` — so the picture and the stats
+          cannot disagree. It is still until the reader turns it on, which is why
+          a wheel over it scrolls the page; the gate asserts both.
+        */}
+        <figure className="figure lp-hero__figure m-reveal">
+          <div className="figure__plate">
+            <WorkedExampleModel
+              label={t.figure.modelLabel(V.levels, V.maxLevelsByHeight)}
+              fallback={<p className="massing-viewer__failed">{t.figure.noWebgl}</p>}
+            />
+          </div>
+          <figcaption className="figure__caption">
+            <p className="figure__label">
+              <span className="figure__no">{t.figure.number}</span>
+              <span>{t.figure.landUse(example.input.plot.landUse)}</span>
+            </p>
+            {/* The one specification line the picture cannot carry: how much of
+                the permitted stack the answer actually places. A 3D view of a
+                full-height envelope beside a figure for a shorter building is
+                the drawing winning over the number. */}
+            <dl className="figure__spec">
+              <div>
+                <dt>{t.figure.spec.levels}</dt>
+                <dd>
+                  <span className="value">
+                    <Verbatim>{V.levels}</Verbatim>
+                  </span>
+                  {t.figure.spec.levelsOf}
+                  <span className="value">
+                    <Verbatim>{V.maxLevelsByHeight}</Verbatim>
+                  </span>
+                  {t.figure.spec.levelsAfter}
+                </dd>
+              </div>
+            </dl>
+            <p className="figure__source">{t.figure.source}</p>
+          </figcaption>
+        </figure>
         </div>
       </section>
 

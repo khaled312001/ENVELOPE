@@ -118,6 +118,7 @@ export const AR: WorkDictionary = {
       gates: 'بوابات التصدير',
       run: 'الدراسة',
     },
+    open: 'افتح هذه الدراسة',
     of: ' من ',
     signedBy: 'وقعها ',
     notSigned: 'غير موقعة',

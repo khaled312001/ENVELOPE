@@ -441,6 +441,53 @@ describe('AssumptionRegister', () => {
     expect(out).toContain('class="data-table__text"');
     for (const item of items) expect(out).toContain(item);
   });
+
+  /*
+    THE REGISTER AS A RECORD — the run page on `/work`.
+
+    Two things must both hold, and they pull in opposite directions. A stored run's
+    assumption may not be edited: the answer was computed, stored and possibly
+    signed against the value, and a page offering to change it would show a figure
+    the run never had. But the amber may not go with the control, because the amber
+    IS the disclosure §13.1 exists for; a read-only register that printed the value
+    as plain text would be reporting an assumption as a fact.
+  */
+  it('is a record, not an input, where the run is stored — and keeps the amber', () => {
+    const editable = html(
+      <AssumptionRegister
+        assumptions={run.assumptions}
+        onInspect={() => {}}
+        onAcknowledge={() => {}}
+        onEdit={() => {}}
+        acknowledged={false}
+      />,
+    );
+    const record = html(
+      <AssumptionRegister
+        assumptions={run.assumptions}
+        onInspect={() => {}}
+        onAcknowledge={() => {}}
+        onEdit={() => {}}
+        acknowledged={false}
+        readOnly
+      />,
+    );
+
+    // Every value still carries the ASSUMED treatment, once per assumption.
+    const amber = (s: string): number => s.match(/traced--assumed/g)?.length ?? 0;
+    expect(amber(record)).toBe(amber(editable));
+    expect(amber(record)).toBeGreaterThanOrEqual(run.assumptions.length);
+
+    // And none of it is a control: no edit button, and no gate to sign.
+    expect(editable).toContain('<button');
+    expect(record).not.toMatch(/<button[^>]*class="traced traced--assumed"/);
+    expect(record).not.toMatch(/class="button button--primary"/);
+    expect(editable).toMatch(/class="button button--primary"/);
+
+    // The derivation link survives: a figure with no way into its graph is the
+    // defect provenance exists to prevent, and read-only does not excuse it.
+    expect(record).toContain('class="link-button"');
+  });
 });
 
 describe('EvidenceStep', () => {

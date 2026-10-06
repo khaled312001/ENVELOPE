@@ -40,6 +40,19 @@
 .auth__split {
   position: relative;
   isolation: isolate;
+  /*
+    THE WASH BELOW IS 46rem WIDE AND ABSOLUTELY POSITIONED, SO IT SCROLLS THE PAGE.
+
+    An out-of-flow box past the inline-END edge is scrollable overflow, not clipped
+    overflow — and in Arabic the inline end is the LEFT, which is why this only ever
+    showed in one language: `/sign-in` and `/sign-up` scrolled 192px sideways at
+    320px and 122px at 390px, with no element box overflowing at all, because the
+    width came from a pseudo-element. WCAG 1.4.10, caused by a decoration.
+
+    `clip` and not `hidden`: `hidden` would make this a scroll container, which
+    takes the sticky nav's scrolling with it and would be a second defect.
+  */
+  overflow: clip;
 }
 
 /* The brand wash behind the door. Behind everything via an isolated stacking

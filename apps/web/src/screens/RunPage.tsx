@@ -35,7 +35,15 @@ import { type FormEvent, type ReactNode, useEffect, useId, useState } from 'reac
 
 import { AuthFailure, accountRuns, type RunAccess, type RunFileFormat } from '../api/auth.js';
 import type { RunView } from '../api/client.js';
+import { EnvelopePanel, ParkingStep } from '../App.js';
+import { AssumptionRegister } from '../components/AssumptionRegister.js';
+import { CapacityBands } from '../components/CapacityBands.js';
+import { DrawingSet } from '../components/DrawingSet.js';
+import { GfaStatement } from '../components/GfaStatement.js';
 import { ModelFigure } from '../components/ModelFigure.js';
+import { ParkingPlan, VehicleAccessPanel } from '../components/ParkingPlan.js';
+import { ProvenanceTree, type ProvTree } from '../components/ProvenanceTree.js';
+import { ChecksStep } from './ChecksStep.js';
 import { hashOf } from '../gateHash.js';
 import { AR } from '../i18n/runPage.ar.js';
 import { downloadObject, openObject, printObject } from '../documents.js';
@@ -114,6 +122,24 @@ export function RunPage({
       cancelled = true;
     };
   }, [runId]);
+
+  /*
+    THE DERIVATION DRAWER, ON THE RUN PAGE TOO.
+
+    Every figure in the sections below is a button that opens the value's own
+    graph — the same route, the same tree component and the same panel the engine
+    flow uses. A run page that printed the figures without them would be showing
+    traced values as plain numbers, which is the one thing this product may not
+    do: the trace is not a feature of the step, it is a property of the value.
+  */
+  const [inspecting, setInspecting] = useState<{ nodeId: string; tree: ProvTree | null } | null>(null);
+  const inspect = (nodeId: string): void => {
+    setInspecting({ nodeId, tree: null });
+    accountRuns
+      .provenance(runId, nodeId)
+      .then((tree) => setInspecting({ nodeId, tree }))
+      .catch(() => setInspecting(null));
+  };
 
   const row = rows.find((r) => r.runId === runId);
   const siblings = run
@@ -236,7 +262,7 @@ export function RunPage({
                 </div>
               </dl>
 
-              <figure className="figure rn__model">
+              <figure className="figure rn__model" id="rn-model">
                 <div className="figure__plate">
                   {run.building ? (
                     <ModelFigure model={run.building} label={t.model.label(run.capacity.levels.value)} />
@@ -253,6 +279,56 @@ export function RunPage({
               </figure>
             </div>
           </section>
+
+          {/*
+            THE WHOLE ANSWER, ON THE PAGE THAT HOLDS THE RUN.
+
+            These are the engine's own panels — the same components the ten-step
+            flow renders, given the same run — and that is the point rather than a
+            convenience. A run page that re-stated the capacity, the parking or
+            the checks in its own markup would be a second renderer of the same
+            figures, free to drift from the first; the defect `pnpm parity`
+            exists to catch between the screen, the paper and the DXF is the same
+            defect between two screens.
+
+            Nothing is recomputed and nothing is editable. The run is a record:
+            the assumptions are read-only (see `AssumptionRegister`), the gates
+            are given where they are given, and `plot` is passed as null because
+            the sheets draw the building model and the plot outline belongs to the
+            step that is still choosing one.
+          */}
+          <div className="shell section rn__results">
+            <CapacityBands
+              capacity={run.capacity}
+              onInspect={inspect}
+              governingAssumption={
+                run.capacity.governingBand === 'PARKING'
+                  ? run.assumptions.find((a) => a.parameterId === 'parking.bay_area_factor')
+                  : undefined
+              }
+            />
+            {run.gfaStatement ? <GfaStatement statement={run.gfaStatement} onInspect={inspect} /> : null}
+            <EnvelopePanel run={run} onInspect={inspect} />
+          </div>
+
+          <div className="shell section rn__results" id="rn-drawings">
+            <ParkingStep run={run} plot={null} onInspect={inspect} />
+          </div>
+
+          <div className="shell section rn__results">
+            <ChecksStep run={run} />
+          </div>
+
+          <div className="shell section rn__results">
+            <AssumptionRegister
+              assumptions={run.assumptions}
+              acknowledged={Boolean(run.gates?.[ASSUMPTIONS_KEY])}
+              onAcknowledge={() => undefined}
+              onEdit={() => undefined}
+              onInspect={inspect}
+              readOnly
+            />
+          </div>
 
           <ReviewPanel run={run} licence={session.account?.licence ?? null} onSigned={reload} />
 
@@ -284,6 +360,17 @@ export function RunPage({
             )}
           </section>
         </>
+      ) : null}
+
+      {/* The derivation of whichever figure was clicked, in the drawer the engine
+          flow uses. Last in the document so it does not come between the sections,
+          and `inspect` closes it by setting the state back to null. */}
+      {inspecting ? (
+        <ProvenanceTree
+          tree={inspecting.tree}
+          loading={inspecting.tree === null}
+          onClose={() => setInspecting(null)}
+        />
       ) : null}
     </div>
   );
@@ -487,6 +574,29 @@ export function ReviewPanel({
 
       <div className="rn__files">
         <h3>{t.files.title}</h3>
+
+        {/*
+          LOOKING AT IT IS NOT EXPORTING IT, so these two sit OUTSIDE the gate.
+
+          The panel offered the 3D model and the drawing set as downloads and as
+          nothing else: to see either, a reader had to satisfy both gates, fetch a
+          file and open it in another program. Both are already drawn on this page
+          from the same model the files are written from — so these are links to
+          what is here, not a second renderer, and they answer before G3 and G4
+          because reading your own run is not a thing to be gated.
+
+          G3 and G4 still hold everything they held: a FILE leaves this page, and
+          the server checks both gates again on every request for one.
+        */}
+        <p className="rn__file-view">
+          <a className="button" href="#rn-model">
+            {t.files.viewModel}
+          </a>
+          <a className="button" href="#rn-drawings">
+            {t.files.viewDrawings}
+          </a>
+        </p>
+
         {ready ? (
           <>
             <ul className="rn__file-list">

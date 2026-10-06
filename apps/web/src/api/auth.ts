@@ -14,6 +14,7 @@
  * cross-origin deployment sent the session to somewhere it should not.
  */
 
+import type { ProvTree } from '../components/ProvenanceTree.js';
 import type { RunView } from './client.js';
 
 export interface Account {
@@ -129,6 +130,17 @@ export type RunAccess = 'author' | 'reviewer' | 'reader';
 export const accountRuns = {
   get: (runId: string): Promise<RunView & { readonly access: RunAccess }> =>
     call(`/api/runs/${encodeURIComponent(runId)}`),
+
+  /**
+   * One value's derivation, for a run this session may read.
+   *
+   * The same route the engine's own inspector calls. It is listed here rather
+   * than reached through `api.provenance` because that one takes an `actor` —
+   * the engine flow's identity — and a run page has a session instead; the
+   * server resolves both the same way and authorises the run the same way.
+   */
+  provenance: (runId: string, nodeId: string): Promise<ProvTree> =>
+    call<ProvTree>(`/api/runs/${encodeURIComponent(runId)}/provenance/${encodeURIComponent(nodeId)}`),
 
   /** `{ shared: true }` whether or not an account uses the address: see the route. */
   share: (runId: string, email: string, role: 'reviewer' | 'reader'): Promise<{ shared: boolean }> =>

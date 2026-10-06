@@ -60,7 +60,6 @@ import { EN } from './i18n/app.en.js';
 import { useDict, useLocale, Verbatim } from './i18n/locale.js';
 import { hashOf } from './gateHash.js';
 import { demoFrom, type Demo } from './demo.js';
-import { StepPrimer } from './components/StepPrimer.js';
 
 /*
   `gated` is DELETED. It was metadata nobody read: the flag said `plot` was gated
@@ -501,7 +500,24 @@ export function EngineApp({
               — and the shape is the whole of the fix. See `StepPrimer.tsx` for the
               three layers and the client's reply they answer.
             */}
-            <StepPrimer step={step} />
+            {/*
+              AND NOW IT IS NOT RENDERED AT ALL — 6 Oct 2026, in his words:
+              «وشيل كل الشرح فى كل الخطوات عاوز الاستخدام فقط».
+
+              What was left here was one sentence a step, already cut back twice.
+              It named the screen the reader was on, which the stepper above and
+              the panel heading below both already do, so a third naming is the
+              prose he is asking to stop reading.
+
+              THE SAME TEST THE LAST CUT HAD TO PASS, and it passes again: not one
+              of these ten lines carried a claim, a refusal, a provenance class or
+              a limit. The claim statement is on `/`, the refusals are on
+              `/refusals`, every ASSUMED value still says ASSUMED on the value, and
+              REGULATORY VALIDITY: NOT ASSESSED is in the masthead above every one
+              of these screens. The component and both dictionaries are kept, whole
+              and tested, because he has changed his mind about this before and the
+              file should let him change it back.
+            */}
 
             {step === 'intake' ? (
               <AffectionPlanIntake

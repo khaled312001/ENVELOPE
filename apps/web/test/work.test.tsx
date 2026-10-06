@@ -346,6 +346,40 @@ describe('the run page', () => {
     }
   });
 
+  /*
+    THE WHOLE ANSWER IS ON THE RUN PAGE, AND IT IS THE FLOW'S OWN PANELS.
+
+    The page used to show five figures and a small picture, and everything else the
+    engine produced — the bands, the area table, the envelope, the parking level and
+    its sheets, the checks, the assumptions — existed only inside the ten-step flow,
+    which a stored run is no longer in.
+
+    The assertion is on the COMPONENTS, not on the text, and that is the point. A
+    page that restated the capacity or the bay count in its own markup would be a
+    second renderer of the same figures, free to drift from the first — the defect
+    `pnpm parity` catches between the screen, the paper and the DXF, between two
+    screens instead. Rendering the flow's components makes the drift impossible.
+  */
+  it('shows the whole answer, by rendering the engine’s own panels', () => {
+    for (const panel of [
+      'CapacityBands',
+      'GfaStatement',
+      'EnvelopePanel',
+      'ParkingStep',
+      'ChecksStep',
+      'AssumptionRegister',
+      'ProvenanceTree',
+    ]) {
+      expect(code, `RunPage.tsx does not render ${panel}`).toContain(`<${panel}`);
+    }
+    // Read-only, because a stored run is a record: an edit here would change the
+    // value under an answer already computed, stored and possibly signed.
+    expect(code, 'RunPage.tsx offers an editable assumption register').toContain('readOnly');
+    expect(code, 'RunPage.tsx offers the assumption gate it does not own').toContain(
+      'onAcknowledge={() => undefined}',
+    );
+  });
+
   it('answers a missing run and a run that is not yours in one sentence', () => {
     // The server gives one 404 for both so a run's existence does not leak; a page
     // that told them apart would leak it anyway.

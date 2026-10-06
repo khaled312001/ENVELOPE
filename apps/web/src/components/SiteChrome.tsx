@@ -144,16 +144,34 @@ export function Glyph({ name }: { readonly name: MarkName }): JSX.Element {
  * ======================================================================= */
 
 /**
- * The deployment's own state, permanently, in the most-repeated position on the
- * site.
+ * The deployment's own state, in the most-repeated position on the site.
  *
- * This is the rare case where the premium editorial ornament and the product's
- * central refusal are the same element. `REGULATORY VALIDITY — NOT ASSESSED` never
- * drops, at any width; the two counts beside it do, because they are the items a
- * phone can afford to lose and that one is not.
+ * ---------------------------------------------------------------------------
+ * THE VALIDITY STRIP WAS TAKEN OFF THIS BAR ON 6 OCT 2026, AT THE CLIENT'S
+ * REQUEST — «وشيل شريط REGULATORY VALIDITY — NOT ASSESSED» — AND THE SENTENCE
+ * WAS NOT REMOVED FROM THE PRODUCT.
  *
+ * He asked for the strip. The strip is a band of chrome repeated above every
+ * screen; the sentence is the product's central refusal, and the two are not the
+ * same thing to remove. What it said is still said:
+ *
+ *   - in the colophon, on EVERY route, from the one `DISCLAIMER` constant;
+ *   - in the fold of `/`, as the validity stamp `amber.mjs` measures the position
+ *     of;
+ *   - on every export — the report, the drawing set, every sheet's title block,
+ *     the DXF, the JSON and the workbook — which `pnpm dxf` and `pnpm example`
+ *     read back out of the files themselves.
+ *
+ * A screen that has stopped saying its answer is not checked against the
+ * regulator reads as though it has been. That is the one claim this product
+ * exists not to make, so if a later edit finds itself taking the sentence out of
+ * the colophon or out of an export, it is not doing what this change did.
+ *
+ * ---------------------------------------------------------------------------
  * The counts are passed in rather than read here, so this component cannot become
- * the place where a figure is typed.
+ * the place where a figure is typed. With neither of them the bar has nothing to
+ * carry, so it is not rendered at all — an empty rule above every page is chrome
+ * for its own sake, which is what he is asking to be rid of.
  */
 export function Masthead({
   rulesApproved,
@@ -161,8 +179,9 @@ export function Masthead({
 }: {
   readonly rulesApproved?: string | undefined;
   readonly definitionsSigned?: string | undefined;
-}): JSX.Element {
+}): JSX.Element | null {
   const t = useT();
+  if (rulesApproved === undefined && definitionsSigned === undefined) return null;
   return (
     <div className="masthead">
       <div className="shell masthead__inner">
@@ -178,10 +197,6 @@ export function Masthead({
             <dd>{definitionsSigned}</dd>
           </dl>
         ) : null}
-        <p className="masthead__validity">
-          <Glyph name="never-claimed" />
-          {t.masthead.validity}
-        </p>
       </div>
     </div>
   );

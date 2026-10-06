@@ -49,6 +49,18 @@ export interface AssumptionRegisterProps {
   readonly onAcknowledge: () => void;
   readonly onEdit: (parameterId: string, value: string) => void;
   readonly onInspect: (nodeId: string) => void;
+  /**
+   * The register as a record rather than as an input — the run page on `/work`.
+   *
+   * A STORED RUN'S ASSUMPTIONS ARE NOT EDITABLE, AND THE REASON IS NOT TIDINESS.
+   * Editing one here would change the value under an answer that was already
+   * computed, stored, and possibly signed: the page would show a figure the run
+   * never had. So the value stays amber and keeps its derivation link — it is
+   * still an assumption and must still read as one — but it is text, not a
+   * control, and the G3 footer states what the record says instead of offering
+   * to sign it. The gate is given on the step that owns it.
+   */
+  readonly readOnly?: boolean;
 }
 
 export function AssumptionRegister({
@@ -57,6 +69,7 @@ export function AssumptionRegister({
   onAcknowledge,
   onEdit,
   onInspect,
+  readOnly = false,
 }: AssumptionRegisterProps): JSX.Element {
   const t = useDict(EN, AR);
   const measured = assumptions.filter((a) => a.sensitivity !== null);
@@ -134,6 +147,7 @@ export function AssumptionRegister({
                 strongest={strongest}
                 onEdit={onEdit}
                 onInspect={onInspect}
+                readOnly={readOnly}
               />
             ))}
           </tbody>
@@ -152,9 +166,11 @@ export function AssumptionRegister({
               <span aria-hidden="true">!</span>
               {t.pending}
             </p>
-            <button type="button" className="button button--primary" onClick={onAcknowledge}>
-              {t.acknowledge}
-            </button>
+            {readOnly ? null : (
+              <button type="button" className="button button--primary" onClick={onAcknowledge}>
+                {t.acknowledge}
+              </button>
+            )}
           </>
         )}
       </footer>
@@ -168,12 +184,14 @@ function AssumptionRow({
   strongest,
   onEdit,
   onInspect,
+  readOnly,
 }: {
   readonly entry: AssumptionEntry;
   readonly rank: number;
   readonly strongest: number;
   readonly onEdit: (parameterId: string, value: string) => void;
   readonly onInspect: (nodeId: string) => void;
+  readonly readOnly: boolean;
 }): JSX.Element {
   const t = useDict(EN, AR);
   const [editing, setEditing] = useState(false);
@@ -200,6 +218,26 @@ function AssumptionRow({
     if (draft !== entry.value) onEdit(entry.parameterId, draft);
   };
 
+  /*
+    The figure itself, written once. It is the same ink in both places — the
+    editable control and the record — because the amber IS the disclosure, and a
+    read-only register that dropped it would be showing an assumption as a fact.
+  */
+  const figure = (
+    <span className="value">
+      {isText ? (
+        lines.map((line, i) => (
+          <span key={`${i}:${line}`} className="value__line">
+            <EngineText>{line}</EngineText>
+          </span>
+        ))
+      ) : (
+        <EngineValue>{entry.value}</EngineValue>
+      )}
+      {entry.unit ? <span className="value__unit">{entry.unit}</span> : null}
+    </span>
+  );
+
   return (
     <tr>
       <td className="data-table__rank">{rank}</td>
@@ -219,7 +257,12 @@ function AssumptionRow({
       </th>
 
       <td className={isText ? 'data-table__text' : 'data-table__num'}>
-        {editing ? (
+        {readOnly ? (
+          <span className="traced traced--assumed">
+            {figure}
+            <span className="traced__marker" aria-hidden="true" />
+          </span>
+        ) : editing ? (
           <span className="inline-edit">
             <label className="sr-only" htmlFor={`edit-${entry.nodeId}`}>
               <EngineText>{entry.label}</EngineText>
@@ -248,18 +291,7 @@ function AssumptionRow({
             onClick={() => setEditing(true)}
             aria-label={t.editLabel(entry.label, `${entry.value}${entry.unit ? ` ${entry.unit}` : ''}`)}
           >
-            <span className="value">
-              {isText ? (
-                lines.map((line, i) => (
-                  <span key={`${i}:${line}`} className="value__line">
-                    <EngineText>{line}</EngineText>
-                  </span>
-                ))
-              ) : (
-                <EngineValue>{entry.value}</EngineValue>
-              )}
-              {entry.unit ? <span className="value__unit">{entry.unit}</span> : null}
-            </span>
+            {figure}
             <span className="traced__marker" aria-hidden="true" />
           </button>
         )}

@@ -147,6 +147,8 @@ export const AR: RunPageDictionary = {
 
   files: {
     title: 'الملفات',
+    viewModel: 'شاهد المجسم ثلاثي الأبعاد',
+    viewDrawings: 'شاهد الرسومات',
     locked: 'تفتح الملفات متى وقعت البوابتان.',
     html: 'افتح التقرير',
     sheets: 'افتح مجموعة الرسومات',

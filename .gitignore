@@ -54,3 +54,7 @@ docs/00-source/samples/rfp/D1005*.pdf
 
 # Throwaway probes written while debugging a screen. Not tools; not kept.
 scripts/.*.tmp.mjs
+
+# Ad-hoc screenshot scripts written while reviewing a deployment.
+.shoot-*.mjs
+.shots-*/

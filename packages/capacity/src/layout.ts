@@ -167,6 +167,10 @@ export type RectKind = (typeof RectKind)[keyof typeof RectKind];
 export const CROSS_AISLE_ROW = -2;
 /** The row the ramp strip carries. */
 export const RAMP_ROW = -1;
+/** The row the perimeter arrangement's ring aisle carries. */
+export const RING_AISLE_ROW = -3;
+/** The row the drive that crosses the bay run to reach the ring carries. */
+export const ENTRY_DRIVE_ROW = -4;
 
 export interface PlacedRect extends Rect {
   readonly kind: RectKind;
@@ -1200,6 +1204,290 @@ function packLevel(o: PackOptions): Packing {
 }
 
 /**
+ * The perimeter arrangement — bays against all four walls, one ring aisle, and
+ * an island in the middle that the core stands in.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY A THIRD CANDIDATE, AND WHY NOT A SEARCH.
+ *
+ * On 5 Oct 2026 the client sent his own podium and ground floor for a
+ * 50.85 × 26.85 m plot. Both are laid out this way and neither is laid out in
+ * stacked double-loaded modules: the bays line the four walls, the drive loops
+ * round once, and the stairs, lifts and lift lobby sit on the island the loop
+ * encloses. That is not a preference about drafting. It is what makes the core
+ * free: in the module arrangement the core stands in the middle of the level and
+ * cuts the one aisle a shallow plot has room for — the reason `avoidCore` has
+ * been shipped off, at 11 bays down to 4 on exactly this plot. In the perimeter
+ * arrangement the core costs nothing, because the island is where it already is.
+ *
+ * So this is enumerated beside the two module orientations, packed every time,
+ * and reported whether or not it wins — the same discipline the orientation
+ * sweep follows and for the same reason. **It is not the optimiser of 34:37.**
+ * Nothing here searches for where the core or the ramp should go to raise the
+ * yield: the arrangement is fixed, the core stands where the run already put it,
+ * and the candidate list is the same on every run, so the answer is reproducible.
+ * A reader who disagrees with the arrangement can see what the other two came to.
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT IT REFUSES.
+ *
+ * It returns a refusal — never a worse layout — when the level cannot hold the
+ * ring (a plot narrower than two bay runs plus two aisles), when the island it
+ * encloses cannot hold the core, or when there is no room for the ramp inside
+ * the island. A refusal leaves the module candidates standing; a silent fallback
+ * would report a perimeter layout that is really a module one.
+ */
+function packPerimeter(o: PackOptions): Packing {
+  const notes: string[] = [];
+  const W = o.widthM;
+  const D = o.grossDepthM;
+  const band = o.bayLength.plus(o.aisleWidth);
+
+  if (W.lte(band.times(2)) || D.lte(band.times(2))) {
+    return refused(
+      `a ${W.toFixed(2)} × ${D.toFixed(2)} m level does not hold a ring: two bay runs ` +
+        `and two aisles need ${band.times(2).toFixed(2)} m each way`,
+    );
+  }
+
+  /*
+    THE CORNERS GO TO THE HORIZONTAL RUNS, and the side runs start past the
+    aisle that turns there. Giving a corner to both runs would count one bay
+    twice; giving it to neither would leave a bay-sized hole at each corner that
+    a reader would read as a column nobody placed. The client's own drawing does
+    the same: his top run reaches both walls and his side runs start below it.
+  */
+  const inner = { x0: o.bayLength, y0: o.bayLength, x1: W.minus(o.bayLength), y1: D.minus(o.bayLength) };
+  const island = {
+    x0: inner.x0.plus(o.aisleWidth),
+    y0: inner.y0.plus(o.aisleWidth),
+    x1: inner.x1.minus(o.aisleWidth),
+    y1: inner.y1.minus(o.aisleWidth),
+  };
+  const islandW = island.x1.minus(island.x0);
+  const islandD = island.y1.minus(island.y0);
+
+  /*
+    THE CORE MAY STAND IN A BAY RUN; IT MAY NOT STAND IN THE RING.
+
+    The client's own ground floor puts the lift lobby and the stairs in the wall
+    band, between the shop and the garbage room, not on the island — so a core in
+    a bay run is a real arrangement and costs only the bays it covers. A core
+    across the ring is a different thing: there is exactly one loop on this level
+    and cutting it strands everything beyond the cut. The module arrangement can
+    answer a cut aisle with a second cross aisle; a ring has no second ring, so
+    this candidate refuses and leaves the module candidates standing rather than
+    reporting a loop no car can complete.
+  */
+  const ring = { x0: inner.x0, y0: inner.y0, x1: inner.x1, y1: inner.y1 };
+  for (const b of o.obstructions) {
+    const insideIsland =
+      b.x.gte(island.x0) && b.y.gte(island.y0) && b.x.plus(b.width).lte(island.x1) && b.y.plus(b.height).lte(island.y1);
+    const outsideRing =
+      b.x.plus(b.width).lte(ring.x0) || b.x.gte(ring.x1) || b.y.plus(b.height).lte(ring.y0) || b.y.gte(ring.y1);
+    if (!insideIsland && !outsideRing) {
+      return refused(
+        `the core (${b.width.toFixed(2)} × ${b.height.toFixed(2)} m at ` +
+          `${b.x.toFixed(2)}, ${b.y.toFixed(2)}) stands across the ring aisle, and a level ` +
+          `with one loop has no second way round it. The island it encloses is ` +
+          `${Decimal.max(ZERO, islandW).toFixed(2)} × ${Decimal.max(ZERO, islandD).toFixed(2)} m`,
+      );
+    }
+  }
+
+  const rects: PlacedRect[] = [];
+  const bayAt = (x: Decimal, y: Decimal, w: Decimal, h: Decimal, row: number): void => {
+    rects.push({ kind: RectKind.BAY, row, x, y, width: w, height: h });
+  };
+
+  // --- the four bay runs ---------------------------------------------------
+  const acrossCount = W.div(o.effectiveBayWidth).floor().toNumber();
+  const sideStart = inner.y0.plus(o.aisleWidth);
+  const sideEnd = inner.y1.minus(o.aisleWidth);
+  const downCount = sideEnd.minus(sideStart).div(o.effectiveBayWidth).floor().toNumber();
+  if (acrossCount < 1 || downCount < 0) {
+    return refused(
+      `a ${W.toFixed(2)} m wall holds no ${o.effectiveBayWidth.toString()} m bay run`,
+    );
+  }
+  for (let i = 0; i < acrossCount; i += 1) {
+    const x = o.effectiveBayWidth.times(i);
+    bayAt(x, ZERO, o.bayWidth, o.bayLength, 0);
+    bayAt(x, D.minus(o.bayLength), o.bayWidth, o.bayLength, 1);
+  }
+  for (let i = 0; i < downCount; i += 1) {
+    const y = sideStart.plus(o.effectiveBayWidth.times(i));
+    bayAt(ZERO, y, o.bayLength, o.bayWidth, 2);
+    bayAt(W.minus(o.bayLength), y, o.bayLength, o.bayWidth, 3);
+  }
+
+  // --- the ring ------------------------------------------------------------
+  // Four bands that overlap at the corners, so the loop is one network by
+  // construction rather than four strips that happen to meet.
+  const ringArea = W.times(D).minus(islandW.times(islandD)).minus(
+    W.times(o.bayLength).times(2).plus(o.bayLength.times(sideEnd.minus(sideStart)).times(2)),
+  );
+  rects.push({ kind: RectKind.AISLE, row: RING_AISLE_ROW, x: ZERO, y: inner.y0, width: W, height: o.aisleWidth });
+  rects.push({
+    kind: RectKind.AISLE,
+    row: RING_AISLE_ROW,
+    x: ZERO,
+    y: inner.y1.minus(o.aisleWidth),
+    width: W,
+    height: o.aisleWidth,
+  });
+  rects.push({
+    kind: RectKind.AISLE,
+    row: RING_AISLE_ROW,
+    x: inner.x0,
+    y: sideStart,
+    width: o.aisleWidth,
+    height: Decimal.max(ZERO, sideEnd.minus(sideStart)),
+  });
+  rects.push({
+    kind: RectKind.AISLE,
+    row: RING_AISLE_ROW,
+    x: inner.x1.minus(o.aisleWidth),
+    y: sideStart,
+    width: o.aisleWidth,
+    height: Decimal.max(ZERO, sideEnd.minus(sideStart)),
+  });
+
+  /*
+    THE WAY IN CROSSES THE BAY RUN, because the ring does not touch the slab
+    edge — the bays do. On the ground floor that crossing is the driveway, and
+    the client's own ground floor draws it exactly so: the entrance cuts through
+    the wall run to reach the loop. It costs the bays it crosses, which are not
+    placed rather than placed and then found unreachable.
+  */
+  const entryWidth = Decimal.min(o.aisleWidth, W);
+  rects.push({
+    kind: RectKind.AISLE,
+    row: ENTRY_DRIVE_ROW,
+    x: ZERO,
+    y: ZERO,
+    width: entryWidth,
+    height: o.bayLength,
+  });
+
+  // --- the ramp, on the island ---------------------------------------------
+  let ramp: Packing['ramp'];
+  if (o.includeRamp) {
+    const rampWidth = Decimal.min(new Decimal(RAMP_WIDTH_M), islandW);
+    const rampRun = Decimal.min(new Decimal(RAMP_RUN_M), islandD);
+    if (rampWidth.lt(o.aisleWidth) || rampRun.lte(ZERO)) {
+      return refused(
+        `the ${Decimal.max(ZERO, islandW).toFixed(2)} × ${Decimal.max(ZERO, islandD).toFixed(2)} m ` +
+          'island does not hold a ramp, and a ramp outside it would cut the ring',
+      );
+    }
+    ramp = { widthM: rampWidth, runM: rampRun };
+    rects.push({
+      kind: RectKind.RAMP,
+      row: RAMP_ROW,
+      x: island.x0,
+      y: island.y0,
+      width: rampWidth,
+      height: rampRun,
+    });
+    notes.push(
+      `The ramp runs down the island the ring encloses, ${rampWidth.toFixed(2)} × ` +
+        `${rampRun.toFixed(2)} m. Gradient, transitions and headroom under B.7.2.2 are ` +
+        'NOT ASSESSED — only the plan area is reserved.',
+    );
+  }
+
+  // --- the core, where it stands -------------------------------------------
+  let baysUnderCore = 0;
+  const standing: PlacedRect[] = [];
+  for (const r of rects) {
+    const hits = o.obstructions.filter((b) => collides(r, b));
+    if (hits.length === 0) standing.push(r);
+    else if (r.kind === RectKind.BAY || r.kind === RectKind.ACCESSIBLE_BAY) baysUnderCore += 1;
+    else standing.push(...piecesOutside(r, hits));
+  }
+
+  // --- does a car reach every bay? -----------------------------------------
+  const drivableIdx: number[] = [];
+  for (let i = 0; i < standing.length; i += 1) {
+    const k = standing[i]!.kind;
+    if (k === RectKind.AISLE || k === RectKind.RAMP) drivableIdx.push(i);
+  }
+  const drivable: CircRect[] = drivableIdx.map((i) => standing[i]!);
+  const entries: number[] = [];
+  for (let n = 0; n < drivable.length; n += 1) {
+    const r = standing[drivableIdx[n]!]!;
+    if (ramp ? r.kind === RectKind.RAMP : r.row === ENTRY_DRIVE_ROW) entries.push(n);
+  }
+  const { reachable } = traceCirculation({ drivable, entries, minOpeningM: o.aisleWidth });
+
+  const reachableRect = new Set(drivableIdx.filter((_, n) => reachable.has(n)));
+  const kept: PlacedRect[] = [];
+  let bayCount = 0;
+  let strandedBays = 0;
+  for (let i = 0; i < standing.length; i += 1) {
+    const r = standing[i]!;
+    if ((r.kind === RectKind.AISLE || r.kind === RectKind.RAMP) && !reachableRect.has(i)) continue;
+    if (r.kind !== RectKind.BAY && r.kind !== RectKind.ACCESSIBLE_BAY) {
+      kept.push(r);
+      continue;
+    }
+    if (bayIsServed(r, drivable, reachable)) {
+      kept.push(r);
+      bayCount += 1;
+    } else {
+      strandedBays += 1;
+    }
+  }
+  if (bayCount === 0) {
+    return refused('every bay against the four walls was placed and none of them can be reached');
+  }
+  notes.push(
+    `Bays stand against all four walls and one ${o.aisleWidth.toString()} m ring aisle serves ` +
+      `them: ${acrossCount} to each long wall and ${downCount} to each short one, less the ` +
+      `${strandedBays + baysUnderCore} the way in and the core take. The island the ring ` +
+      `encloses is ${Decimal.max(ZERO, islandW).toFixed(2)} × ${Decimal.max(ZERO, islandD).toFixed(2)} m.`,
+  );
+  if (strandedBays > 0) {
+    notes.push(
+      `${strandedBays} bay(s) were placed and then dropped: no aisle a car can reach runs ` +
+        'past their open end. They are not counted and not drawn.',
+    );
+  }
+
+  /*
+    THE DEDUCTION STANDS ON THE ISLAND TOO, for the same reason the core does:
+    anywhere else it cuts the ring. What the island has left after the core and
+    the ramp is what the strip gets, and a strip that does not fit is said rather
+    than packed over a bay run.
+  */
+  const stripArea = o.deductedDepthM.times(W);
+  const reserved: Rect | undefined = stripArea.gt(0)
+    ? { x: island.x0, y: island.y0, width: islandW, height: Decimal.min(islandD, stripArea.div(islandW)) }
+    : undefined;
+  if (reserved && stripArea.gt(islandW.times(islandD))) {
+    notes.push(
+      `The ${stripArea.toFixed(0)} m² reserved for plant and circulation is larger than the ` +
+        `${islandW.times(islandD).toFixed(0)} m² island, so it is drawn at the island's size. ` +
+        'The deduction is still charged in full against the bay count.',
+    );
+  }
+
+  return {
+    rects: kept,
+    bayCount,
+    reserved,
+    ramp,
+    crossAisleAreaM2: Decimal.max(ZERO, ringArea),
+    baysLostToCrossAisle: 0,
+    strandedBays,
+    baysUnderCore,
+    notes,
+    refusal: undefined,
+  };
+}
+
+/**
  * Reflect a packing about the diagonal: what was packed `D × W` reads `W × D`.
  *
  * A reflection, not a rotation. For a field of axis-aligned rectangles the two
@@ -1414,42 +1702,71 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     }),
   );
 
-  if (alongWidth.bayCount === 0 && alongDepth.bayCount === 0) {
+  /*
+    THE THIRD CANDIDATE — bays against all four walls, one ring, the core on the
+    island. The client's own drawings of this plot are laid out this way, and on
+    a level too shallow for two modules it is the arrangement that lets the core
+    stand on the level at all. Packed every time and reported whether or not it
+    wins, exactly as the two orientations are. See `packPerimeter`.
+  */
+  const perimeter = packPerimeter({
+    ...common,
+    widthM: footprint.widthM,
+    grossDepthM: footprint.depthM,
+    deductedDepthM: stripM2.div(footprint.widthM),
+    obstructions: input.core ? [input.core.rect] : [],
+    nearCrossAisle: true,
+    farCrossAisle: false,
+    offsetM: ZERO,
+  });
+
+  const ORIENTATION = {
+    WIDTH: 'modules along the width',
+    DEPTH: 'modules along the depth',
+    PERIMETER: 'bays to the walls, one ring aisle',
+  } as const;
+  const candidates = [
+    { packing: alongWidth, name: ORIENTATION.WIDTH },
+    { packing: alongDepth, name: ORIENTATION.DEPTH },
+    { packing: perimeter, name: ORIENTATION.PERIMETER },
+  ] as const;
+
+  if (candidates.every((c) => c.packing.bayCount === 0)) {
     throw new ParkingLayoutError(
       `no parking level can be laid out in ${footprint.widthM.toFixed(2)} × ` +
         `${footprint.depthM.toFixed(2)} m. Modules along the width: ` +
         `${alongWidth.refusal ?? 'no bays placed'}. Modules along the depth: ` +
-        `${alongDepth.refusal ?? 'no bays placed'}.`,
+        `${alongDepth.refusal ?? 'no bays placed'}. Bays to the walls: ` +
+        `${perimeter.refusal ?? 'no bays placed'}.`,
     );
   }
-  const alongTheWidth = alongWidth.bayCount >= alongDepth.bayCount;
-  const packing = alongTheWidth ? alongWidth : alongDepth;
-  const ORIENTATION = {
-    WIDTH: 'modules along the width',
-    DEPTH: 'modules along the depth',
-  } as const;
-  const chosen = alongTheWidth ? ORIENTATION.WIDTH : ORIENTATION.DEPTH;
+  // Ties go to the earlier candidate, so the answer does not depend on the order
+  // two equal packings happened to be built in.
+  const winner = candidates.reduce((a, b) => (b.packing.bayCount > a.packing.bayCount ? b : a));
+  const packing = winner.packing;
+  const chosen = winner.name;
   const orientation = tracer.derived('parking.module_orientation', chosen, {
     rule: { ruleId: 'DBC.B.7.2.4.TABLE_B11', citation: TABLE_B11 },
-    formula:
-      `max(${alongWidth.bayCount} bays with the runs along the ` +
-      `${footprint.widthM.toFixed(2)} m side, ${alongDepth.bayCount} bays along the ` +
-      `${footprint.depthM.toFixed(2)} m side)`,
+    formula: `max(${candidates.map((c) => `${c.packing.bayCount} ${c.name}`).join(', ')})`,
     uses: { moduleDepth },
     detail: {
       note:
-        'Two orientations are packed and the better is taken. This searches an ' +
-        'orientation, not a design: there are exactly two candidates, both are ' +
-        'reported, and the answer is reproducible. It is not the ramp-and-core ' +
-        'optimiser, which is a TRADEOFF value Phase 0 refuses to emit.',
+        'Three arrangements are packed and the best is taken. This searches an ' +
+        'arrangement, not a design: the candidate list is the same on every run, ' +
+        'all three are reported, the core stands where the run already put it, and ' +
+        'the answer is reproducible. It is not the ramp-and-core optimiser, which ' +
+        'is a TRADEOFF value Phase 0 refuses to emit.',
     },
   });
   notes.push(...packing.notes);
-  if (alongWidth.bayCount !== alongDepth.bayCount) {
-    const other = alongTheWidth ? alongDepth : alongWidth;
+  const losers = candidates.filter((c) => c !== winner);
+  if (losers.some((c) => c.packing.bayCount !== packing.bayCount)) {
     notes.push(
-      `The runs are laid ${chosen}: ${packing.bayCount} bays against ${other.bayCount} ` +
-        'the other way round, in the same rectangle. Both were packed.',
+      `Laid out as ${chosen}: ${packing.bayCount} bays, against ` +
+        losers
+          .map((c) => `${c.packing.bayCount} ${c.name}${c.packing.refusal ? ` (${c.packing.refusal})` : ''}`)
+          .join(' and ') +
+        ', in the same rectangle. All three were packed.',
     );
   }
 

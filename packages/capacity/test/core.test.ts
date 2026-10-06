@@ -119,10 +119,23 @@ describe('the core on the parking level', () => {
     for (const bay of bays) expect(overlaps(bay.world, core)).toBe(false);
   });
 
-  it('says how many bays the shafts took, and takes their area off the reserved strip', () => {
+  /*
+    THE SHAFTS NO LONGER COST A BAY ON THIS PLOT, AND THAT IS THE POINT.
+
+    This asserted `baysUnderCore > 0` while the only arrangement was stacked
+    modules, where a centred core stands in a bay run whatever else happens. The
+    perimeter arrangement encloses an island and the shafts stand on it, so on
+    this plot — and at every core share from 0.1 to 0.4 — they take no bay at
+    all. The count is still emitted and is still checked below where a core is
+    put in a bay run on purpose; what is asserted here is the arithmetic that
+    holds either way: the strip is the deduction less the shafts, because the
+    shafts stand where they are drawn and deducting them twice would charge the
+    level for them twice.
+  */
+  it('takes the shafts’ area off the reserved strip rather than deducting it twice', () => {
     const out = runPipeline(input({ levelPlan: { avoidCore: true } }));
     const shaft = out.building.core!.shaft!;
-    expect(out.levelPlan!.layout.baysUnderCore).toBeGreaterThan(0);
+    expect(out.levelPlan!.layout.baysUnderCore).toBe(0);
     expect(
       out.levelPlan!.reservedAreaM2.value.eq(
         Decimal.max(0, out.levelPlan!.deductionsM2.value.minus(shaft.areaM2.value)),

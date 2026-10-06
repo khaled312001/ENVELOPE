@@ -264,7 +264,9 @@ describe('the orientation sweep', () => {
         basis: 'test fixture takes no deduction so the packing itself is what is measured',
       },
     });
-    expect(level.orientation.value).toMatch(/^modules along the (width|depth)$/);
+    expect(level.orientation.value).toMatch(
+      /^(modules along the (width|depth)|bays to the walls, one ring aisle)$/,
+    );
     expect(level.orientation.provenanceClass).toBe('DERIVED');
 
     // The formula names what the other orientation came to. A sweep that only
@@ -274,7 +276,11 @@ describe('the orientation sweep', () => {
       .map((n) => n.formula as string);
     const sweep = formulas.find((f) => f.startsWith('max('));
     expect(sweep).toBeDefined();
-    expect(sweep).toMatch(/max\(\d+ bays with the runs along the 80\.00 m side, \d+ bays along the 40\.00 m side\)/);
+    // All three arrangements, each with what it came to. A sweep that only
+    // reported its winner would be indistinguishable from one that never tried.
+    expect(sweep).toMatch(
+      /^max\(\d+ modules along the width, \d+ modules along the depth, \d+ bays to the walls, one ring aisle\)$/,
+    );
   });
 
   it('gives the same answer for a rectangle and its transpose', () => {

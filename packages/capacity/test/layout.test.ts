@@ -193,3 +193,100 @@ describe('layoutParkingLevel', () => {
     expect(run('40', '51').bayCount.provenanceClass).toBe('DERIVED');
   });
 });
+
+/**
+ * The perimeter arrangement — the one the client's own drawings are laid out in.
+ *
+ * He sent his podium and his ground floor for a 50.85 × 26.85 m plot on
+ * 5 Oct 2026. Both put the bays against the four walls with one drive looping
+ * round an island, and the engine packed stacked double-loaded modules, which on
+ * a level that shallow fits two aisles and wastes the middle. These assert the
+ * third candidate is packed every time, that it wins where it is better, that it
+ * loses where it is not, and that it refuses rather than returning a loop no car
+ * can complete.
+ */
+describe('bays to the walls, one ring aisle', () => {
+  /** The client's own plot, from `docs/03-analysis/client-drawings-2026-10-05.md`. */
+  const CLIENT = ['50.85', '26.85'] as const;
+
+  /** The sweep's own formula, read off the graph the run wrote it to. */
+  function sweepOf(
+    widthM: string,
+    depthM: string,
+    extra: Partial<Parameters<typeof layoutParkingLevel>[0]> = {},
+  ): { readonly result: ParkingLayoutResult; readonly sweep: string } {
+    const graph = new ProvenanceGraph();
+    const result = layoutParkingLevel({
+      tracer: new Tracer(graph),
+      footprint: { widthM: d(widthM), depthM: d(depthM) },
+      deductions: { areaM2: d(0), source: 'ASSUMED', basis: 'test fixture' },
+      ...extra,
+    });
+    const sweep = graph.nodes
+      .map((n) => n.formula)
+      .find((f): f is string => typeof f === 'string' && f.startsWith('max('));
+    expect(sweep).toBeDefined();
+    return { result, sweep: sweep! };
+  }
+
+  it('wins on the client’s own plot, and by more than a rounding', () => {
+    const { result: out, sweep } = sweepOf(...CLIENT, { includeRamp: true });
+    expect(out.orientation.value).toBe('bays to the walls, one ring aisle');
+    const [, ring] = /(\d+) bays to the walls/.exec(sweep) ?? [];
+    const [, width] = /(\d+) modules along the width/.exec(sweep) ?? [];
+    expect(Number(ring)).toBeGreaterThan(Number(width));
+  });
+
+  it('names all three arrangements and what each came to', () => {
+    const { sweep } = sweepOf(...CLIENT);
+    expect(sweep).toMatch(
+      /^max\(\d+ modules along the width, \d+ modules along the depth, \d+ bays to the walls, one ring aisle\)$/,
+    );
+  });
+
+  it('loses on a plot deep enough for stacked modules, and is still reported', () => {
+    const { result: out, sweep } = sweepOf('80', '60');
+    expect(out.orientation.value).toMatch(/^modules along the (width|depth)$/);
+    expect(sweep).toContain('bays to the walls, one ring aisle');
+  });
+
+  /*
+    REACHABILITY, ON THE ARRANGEMENT THAT HAS ONE LOOP AND NO SECOND ONE.
+
+    The ring is four bands that overlap at the corners, so it is one network by
+    construction — which is exactly the kind of claim that is true until someone
+    changes a number. Every bay the result reports must have its open end on it.
+  */
+  it('places no bay the ring does not reach', () => {
+    const out = run(...CLIENT, { includeRamp: true });
+    const bays = out.rects.filter((r) => r.kind === RectKind.BAY);
+    const drive = out.rects.filter((r) => r.kind === RectKind.AISLE || r.kind === RectKind.RAMP);
+    expect(bays.length).toBe(out.bayCount.value);
+    for (const bay of bays) {
+      const upright = bay.width.lte(bay.height);
+      const onAisle = drive.some((a) => {
+        const ox = Decimal.min(bay.x.plus(bay.width), a.x.plus(a.width)).minus(Decimal.max(bay.x, a.x));
+        const oy = Decimal.min(bay.y.plus(bay.height), a.y.plus(a.height)).minus(Decimal.max(bay.y, a.y));
+        return upright ? oy.isZero() && ox.gte(bay.width) : ox.isZero() && oy.gte(bay.height);
+      });
+      expect(onAisle).toBe(true);
+    }
+  });
+
+  it('refuses when the core would stand across the ring, and the modules still answer', () => {
+    const tracer = new Tracer(new ProvenanceGraph());
+    const out = layoutParkingLevel({
+      tracer,
+      footprint: { widthM: d(CLIENT[0]), depthM: d(CLIENT[1]) },
+      deductions: { areaM2: d(0), source: 'ASSUMED', basis: 'test fixture' },
+      core: {
+        // Centred on the level, so it straddles the band the ring runs in.
+        rect: { x: d('18'), y: d('10.5'), width: d('16'), height: d('5') },
+        areaM2: tracer.assumed('core', d('80'), { basis: 'test fixture', unit: 'm²' }),
+      },
+    });
+    expect(out.orientation.value).toMatch(/^modules along the (width|depth)$/);
+    expect(out.notes.join(' ')).toContain('stands across the ring aisle');
+    expect(out.bayCount.value).toBeGreaterThan(0);
+  });
+});

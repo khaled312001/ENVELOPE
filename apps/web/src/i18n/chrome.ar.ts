@@ -24,6 +24,19 @@ export const AR: ChromeDictionary = {
   runAPlot: 'ابدأ دراسة',
 
   /*
+    See the English twin. «تسجيل الدخول» is the market's own phrase for the door;
+    «الدخول» alone is "the entry" and reads as a noun on a sign. «الخروج» for
+    signing out, never «تغيير» — which beside a name reads as "edit this name",
+    and which is what the engine's own header used to say.
+  */
+  account: {
+    signIn: 'تسجيل الدخول',
+    yourWork: 'أعمالك',
+    signOut: 'الخروج',
+    whoLabel: (name: string): string => `مسجل الدخول باسم ${name} — افتح أعمالك`,
+  },
+
+  /*
     «الوضع» for a visual mode, not «السمة» — which a reader meets first as a
     character trait — and not «الثيم». «الداكن» and «الفاتح» are what the market
     writes. «التبديل إلى» rather than the imperative «حوّل», which needed a shadda.

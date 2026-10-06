@@ -53,6 +53,28 @@ export const EN = {
   runAPlot: 'Run a plot',
 
   /**
+   * THE NAV'S ONE ACTION, AND IT CHANGES WITH WHO IS READING.
+   *
+   * It used to be "Run a plot" in both states, which is the CTA a marketing site
+   * puts there and the wrong one here: the engine is not what somebody who has
+   * already signed in comes back for, and somebody who has not is being offered
+   * work before an account. «غير الهيدر ويكون زر دخول بدل زر البلوت» — 6 Oct 2026.
+   *
+   * Signed out it is the door. Signed in it is the name and the way out, and the
+   * action moves to `/work`, where the list it acts on is.
+   *
+   * `signOut` is a VERB AND AN OBJECT, not "Change". The engine's own header
+   * called it that, and "Change" beside a name reads as "edit this name".
+   */
+  account: {
+    signIn: 'Sign in',
+    yourWork: 'Your work',
+    signOut: 'Sign out',
+    /** Names the chip for a screen reader: the name alone is not a destination. */
+    whoLabel: (name: string): string => `Signed in as ${name} — open your work`,
+  },
+
+  /**
    * THE THEME CONTROL'S ONLY WORDS, and they were the last English left in the nav.
    *
    * The visible glyph is `◐`, so this span is the whole accessible name of the

@@ -33,6 +33,7 @@ import { GROUP_GLYPH, Icon, ROUTE_GLYPH } from '../icons.js';
 import { useLocale, useT } from '../i18n/locale.js';
 import { NOT_FOUND_META, PAGE_META, type PageMeta } from '../page-meta.js';
 import { Link, ROUTES, type Href, type Location, type Route } from '../router.js';
+import { useSession } from '../session.js';
 
 /* ==========================================================================
  * THE MARK
@@ -245,6 +246,7 @@ function Nav({
   readonly tool?: React.ReactNode;
 }): JSX.Element {
   const t = useT();
+  const session = useSession();
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const navRef = useRef<HTMLElement>(null);
@@ -317,11 +319,56 @@ function Nav({
             ))}
           </div>
 
+          {/*
+            THE TOOLS, AND THE ONE ACTION THAT CHANGES WITH WHO IS READING.
+
+            «غير الهيدر ويكون زر دخول بدل زر البلوت واجعله احترافي» — 6 Oct 2026.
+            The CTA was "Run a plot" in both states, which is what a marketing
+            page puts there and the wrong thing here twice over: a reader who has
+            already signed in does not come back for the engine, they come back
+            for their runs, and a reader who has not is being offered work before
+            a door. So signed out it is the door, and signed in it is the name,
+            the way to the work and the way out.
+
+            `useSession` and not a prop: this component is rendered by `Root`,
+            which is inside the provider, and the context's default is signed out
+            — so the static renders every test in this repository drives still
+            produce the signed-out nav with no provider at all.
+
+            THE NAME IS A LINK AND ITS ACCESSIBLE NAME IS A SENTENCE. A chip
+            carrying a person's name and nothing else announces as that name,
+            which tells a screen-reader user who they are and not where the link
+            goes. `aria-label` says both.
+          */}
           <div className="nav__tools">
             {tool}
-            <Link to="/app" navigate={navigate} className="button button--primary">
-              {t.runAPlot}
-            </Link>
+            {session.state === 'signed-in' && session.account ? (
+              <div className="nav__account">
+                <Link
+                  to="/work"
+                  navigate={navigate}
+                  className="nav__who"
+                  aria-label={t.account.whoLabel(session.account.name)}
+                >
+                  <Icon glyph={ROUTE_GLYPH['/work']} className="nav__glyph" />
+                  <span className="nav__who-name">{session.account.name}</span>
+                </Link>
+                <button
+                  type="button"
+                  className="button button--sm nav__signout"
+                  onClick={() => {
+                    void session.signOut();
+                  }}
+                >
+                  {t.account.signOut}
+                </button>
+              </div>
+            ) : (
+              <Link to="/sign-in" navigate={navigate} className="button button--primary nav__cta">
+                <Icon glyph={ROUTE_GLYPH['/sign-in']} className="nav__glyph" />
+                {t.account.signIn}
+              </Link>
+            )}
           </div>
         </div>
       </nav>

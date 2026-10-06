@@ -389,6 +389,86 @@
 }
 
 /* ==========================================================================
+ * THE NAV'S ACCOUNT CONTROL.
+ *
+ * Signed out: one primary button, the door. Signed in: the name as a link to
+ * the work, and the way out beside it as a quiet control — a sign-out styled as
+ * loudly as a sign-in is a product inviting people to leave.
+ *
+ * The chip is a LINK and not a badge. `.badge-user` means "this value was set by
+ * this person" everywhere else on the site, and borrowing it for the nav would
+ * teach a reader that the name in the corner is a provenance mark.
+ * ======================================================================= */
+
+.nav__account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.nav__who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  /* The nav is a touch surface and this is its densest control. */
+  min-block-size: var(--control-h-sm);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: var(--border-width) solid var(--border-subtle);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.nav__who:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border-default));
+  background: var(--accent-subtle);
+}
+
+/* A long name shortens rather than pushing the sign-out off the bar. */
+.nav__who-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-inline-size: 12ch;
+}
+
+.nav__signout { flex: none; }
+
+/* The door. A pill with the brand along it, the same treatment the auth card's
+   submit carries, so the control a reader presses here and the one they press
+   on the next screen are visibly the same action. */
+.nav__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-pill);
+  background-image: var(--gradient-brand);
+  border-color: transparent;
+  box-shadow: var(--shadow-glow);
+  font-weight: 600;
+  transition:
+    transform var(--duration-fast) var(--ease-spring),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+.nav__cta:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+.nav__cta:active { transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav__cta:hover { transform: none; }
+}
+
+/* ==========================================================================
  * THE SIDEBAR — the console's spine.
  * ======================================================================= */
 

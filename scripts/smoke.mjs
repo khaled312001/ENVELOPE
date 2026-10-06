@@ -389,7 +389,16 @@ await step('the landing page reflows on a phone', async () => {
 });
 
 await step('the landing page leads into the engine', async () => {
-  await page.getByRole('link', { name: /run a plot/i }).first().click();
+  /*
+    THE NAV'S BUTTON IS THE DOOR NOW, NOT THE ENGINE.
+
+    It said "Run a plot" in both states until 6 Oct 2026 and now says "Sign in"
+    signed out, so the engine is reached from the PAGE rather than from the
+    chrome — which is the arrangement this walk should have been testing all
+    along: a reader arrives on the landing page, reads it, and takes the way on
+    that the page itself offers.
+  */
+  await page.getByRole('link', { name: /open the engine anyway/i }).first().click();
   await page.waitForURL('**/app', { timeout: wait(8000) });
 });
 
@@ -1264,7 +1273,13 @@ await step('no screen scrolls sideways on a phone', async () => {
     await noSidewaysScroll(`readiness at ${width}px`);
     await nothingIsInvisible(`readiness at ${width}px`);
 
-    await page.getByRole('link', { name: /run a plot/i }).first().click();
+    /*
+      Back into the engine by its own address. The nav's button is the sign-in
+      door now, and `/readiness` offers a way into the engine only when it has no
+      runs to list — so a click here would pass on an empty deployment and fail
+      on a used one, which is the worst kind of step to leave in a gate.
+    */
+    await page.goto(new URL('/app', BASE).href, { waitUntil: 'domcontentloaded' });
     await page.waitForURL('**/app', { timeout: wait(8000) });
     await page.waitForTimeout(300);
   }

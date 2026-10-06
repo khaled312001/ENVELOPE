@@ -275,20 +275,45 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
       return;
     }
 
+    /*
+      THE SLAB IS SOLID, AND THAT IS NOT A NEW CLAIM.
+
+      Every surface in this scene used to be drawn at between 7% and 30% opacity,
+      which made the whole building one pale glass box: the client's word for it
+      was that it did not look like professional work, and he was right — a floor
+      plate nobody can see is a floor plate nobody can read a level off. The
+      slab, the core and the cars are elements THE ENGINE PLACED, so they are
+      drawn as objects. What stays glass is the envelope and the storey volume,
+      because those are the space the rules permit rather than anything built,
+      and a solid façade would be a building nobody computed.
+
+      It receives shadow as well as casting it, which is what makes a tower read
+      as standing on its podium rather than floating over it.
+    */
     const slabColour = colourOf(level.outlineSource.provenanceClass, palette);
-    const slab = new THREE.Mesh(track(fill([level.outline], at, 0).geometry), surface(slabColour, 0.28, false));
+    const slab = new THREE.Mesh(track(fill([level.outline], at, 0).geometry), surface(slabColour, 0.92));
     slab.name = `${level.id} slab`;
+    slab.receiveShadow = true;
+    slab.castShadow = true;
     pickable(slab, { node: level.outlineSource.node, rank: 6, name: `${level.id} slab` });
     group.add(slab);
     group.add(named(new THREE.LineLoop(track(ringLine(level.outline, at, 0)), ink(slabColour)), `${level.id} floor line`));
 
-    // The storey above the slab, as the volume a reader sees the building as. Faint on
-    // a parking level, so the cars inside it stay legible.
+    // The storey above the slab: the volume a reader sees the building as, and not
+    // a façade. Fainter on a parking level, so the cars inside it stay legible.
     const storeyM = level.heightMm / 1000;
-    const storey = new THREE.Mesh(track(walls(level.outline, at, 0, storeyM)), surface(slabColour, level.parking ? 0.1 : 0.2, false));
+    const storey = new THREE.Mesh(track(walls(level.outline, at, 0, storeyM)), surface(slabColour, level.parking ? 0.12 : 0.26, false));
     storey.name = `${level.id} storey`;
     storey.castShadow = true;
     group.add(storey);
+    // The storey's own edges, so a stack of levels reads as storeys and not as a
+    // gradient: a transparent prism with no arrises has no corners on screen.
+    group.add(
+      named(
+        new THREE.LineSegments(track(prismEdges(level.outline, at, 0, storeyM)), ink(slabColour, 0.45)),
+        `${level.id} storey edges`,
+      ),
+    );
 
     if (level.parking) addParking(group, level, level.parking);
 
@@ -313,8 +338,10 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
         onParking ? core.shaft!.areaM2.provenanceClass : core.source.provenanceClass,
         palette,
       );
-      const shaft = new THREE.Mesh(track(walls(outline, at, 0, storeyM)), surface(coreColour, 0.3, false));
+      const shaft = new THREE.Mesh(track(walls(outline, at, 0, storeyM)), surface(coreColour, 0.72));
       shaft.name = `${level.id} core`;
+      shaft.castShadow = true;
+      shaft.receiveShadow = true;
       pickable(shaft, { node: core.areaM2.node, rank: 4, name: core.label });
       group.add(shaft);
       group.add(named(new THREE.LineLoop(track(ringLine(core.outline, at, 0)), ink(coreColour)), `${level.id} core outline`));
@@ -340,15 +367,26 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
   function addParking(group: THREE.Group, level: ModelLevel, parking: NonNullable<ModelLevel['parking']>): void {
     const baysColour = colourOf(parking.baysSource.provenanceClass, palette);
 
+    /*
+      THE FLOOR OF A PARKING LEVEL IS READ, NOT LOOKED THROUGH.
+
+      The aisle, the bays and the reserved zone are the whole content of a car
+      park and they were drawn at 12–22% over a 28% slab, so a reader saw a
+      green haze and a row of cars. They are opaque now and the level is read
+      the way its own sheet is read. They still sit flat on the slab, lifted in
+      depth and not in space (`polygonOffset` on the shared material), so none of
+      them floats above the floor it belongs to.
+    */
     for (const aisle of parking.aisles) {
-      const mesh = new THREE.Mesh(track(fill([aisle.outline], at, 0).geometry), surface(palette.neutral, 0.16, false));
+      const mesh = new THREE.Mesh(track(fill([aisle.outline], at, 0).geometry), surface(palette.neutral, 0.55, false));
       mesh.name = `${level.id} ${aisle.label}`;
+      mesh.receiveShadow = true;
       group.add(mesh);
     }
 
     if (parking.reserved) {
       const cls = parking.reserved.areaM2.provenanceClass;
-      const mesh = new THREE.Mesh(track(fill([parking.reserved.outline], at, 0).geometry), surface(colourOf(cls, palette), 0.22, false));
+      const mesh = new THREE.Mesh(track(fill([parking.reserved.outline], at, 0).geometry), surface(colourOf(cls, palette), 0.6, false));
       mesh.name = `${level.id} reserved zone`;
       pickable(mesh, { node: parking.reserved.areaM2.node, rank: 3, name: parking.reserved.label });
       group.add(mesh);
@@ -366,8 +404,9 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
     group.add(bayLines);
     const accessible = parking.bays.filter((b) => b.accessible);
     const bayFill = fill(bayRings, at, 0);
-    const fillMesh = new THREE.Mesh(track(bayFill.geometry), surface(baysColour, 0.12, false));
+    const fillMesh = new THREE.Mesh(track(bayFill.geometry), surface(baysColour, 0.45, false));
     fillMesh.name = `${level.id} bay floor`;
+    fillMesh.receiveShadow = true;
     pickable(fillMesh, {
       node: parking.baysSource.node,
       rank: 2,
@@ -379,7 +418,7 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
     });
     group.add(fillMesh);
     if (accessible.length > 0) {
-      const acc = new THREE.Mesh(track(fill(accessible.map((b) => b.outline), at, 0).geometry), surface(baysColour, 0.4, false));
+      const acc = new THREE.Mesh(track(fill(accessible.map((b) => b.outline), at, 0).geometry), surface(baysColour, 0.85, false));
       acc.name = `${level.id} accessible bays`;
       group.add(acc);
     }
@@ -416,8 +455,10 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
   for (const ramp of model.ramps) {
     const colour = colourOf(ramp.gradientPct.provenanceClass, palette);
     const geometry = track(new THREE.BufferGeometry());
-    const mesh = new THREE.Mesh(geometry, surface(colour, 0.6, false));
+    const mesh = new THREE.Mesh(geometry, surface(colour, 0.95));
     mesh.name = `ramp ${ramp.id}`;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     pickable(mesh, { node: ramp.gradientPct.node, rank: 2, name: ramp.label });
     const edges = new THREE.LineLoop(track(new THREE.BufferGeometry()), ink(colour));
     edges.name = `ramp ${ramp.id} edge`;

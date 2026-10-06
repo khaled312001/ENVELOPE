@@ -98,6 +98,8 @@ interface Handle {
   setView(view: View): void;
   isolate(levelId: string | null): void;
   spread(on: boolean): void;
+  /** Show or hide the permitted volume. See the toggle's own comment. */
+  envelope(on: boolean): void;
   cut(heightM: number | null): void;
   live(on: boolean): void;
   reset(): void;
@@ -168,14 +170,16 @@ export function BuildingViewer({
   const [levelId, setLevelId] = useState<string | null>(focusLevelId ?? null);
   const [live, setLive] = useState(!figure);
   const [spread, setSpread] = useState(false);
+  /* On by default: what the rules permit is the frame the answer sits in. */
+  const [envelope, setEnvelope] = useState(true);
   const [cutM, setCutM] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
   const [themeKey, setThemeKey] = useState(0);
 
   // The world is rebuilt when the model or the theme changes; the controls below are
   // re-applied to it from here, so a rebuild never resets what the reader chose.
-  const chosen = useRef({ view, levelId, spread, cutM, live });
-  chosen.current = { view, levelId, spread, cutM, live };
+  const chosen = useRef({ view, levelId, spread, cutM, live, envelope });
+  chosen.current = { view, levelId, spread, cutM, live, envelope };
   const inspect = useRef(onInspect);
   inspect.current = onInspect;
   // The words beside the model follow the page's language without rebuilding the
@@ -221,17 +225,44 @@ export function BuildingViewer({
     // figure on the same screen. Counted off the scene, not copied from the model.
     host.dataset['cars'] = String([...carsPerLevel(built).values()].reduce((n, m) => n + m.count, 0));
 
-    // --- light: legibility, not realism -------------------------------------------
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a84, 2.2));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.3);
+    /*
+      LIGHT: LEGIBILITY FIRST, BUT A MODEL HAS TO BE MODELLED.
+
+      One hemisphere at 2.2 against a sun at 1.3 is nearly flat light: every face
+      of the building came back at almost the same value, which is why the view
+      read as a wireframe box rather than as a massing. The balance is reversed —
+      a sun that does the modelling, an ambient that stops the shadow side going
+      black, and a dim fill from behind so the far corners keep an edge. The fill
+      casts nothing: two shadow maps on this model would double the cost to say
+      something the first one already said.
+    */
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a84, 1.1));
+    const sun = new THREE.DirectionalLight(0xffffff, 2.4);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
-    scene.add(sun, sun.target);
+    /* The slabs are coplanar with what they carry; without a bias each one
+       shadow-acnes itself into stripes. Normal bias rather than constant,
+       because the model's scale is metres and a constant tuned for a villa
+       detaches the shadow of a tower. */
+    sun.shadow.bias = -0.0005;
+    sun.shadow.normalBias = 0.05;
+    const fill = new THREE.DirectionalLight(0xffffff, 0.45);
+    /* Both targets go in the scene: a directional light aims at its target's
+       WORLD position, and a target outside the graph never gets one. */
+    scene.add(sun, sun.target, fill, fill.target);
 
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.localClippingEnabled = true;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    /*
+      TONE MAPPING, because a transparent stack is a long chain of multiplies
+      and the top of it clips to white without one. ACES keeps the glass
+      readable where three or four surfaces overlap — which on this model is
+      everywhere the envelope crosses a storey.
+    */
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
     const canvas = renderer.domElement;
     canvas.className = 'massing-viewer__canvas';
     // The canvas repeats what the table beside it states. Announced, it would read geometry.
@@ -292,6 +323,8 @@ export function BuildingViewer({
 
     sun.position.copy(centre).add(new THREE.Vector3(-0.55, 1, 0.75).multiplyScalar(radius * 2));
     sun.target.position.copy(centre);
+    fill.position.copy(centre).add(new THREE.Vector3(0.8, 0.45, -0.9).multiplyScalar(radius * 2));
+    fill.target.position.copy(centre);
     const shadow = sun.shadow.camera;
     shadow.left = -radius;
     shadow.right = radius;
@@ -522,6 +555,23 @@ export function BuildingViewer({
         // The scene shows the glass again whenever the levels close up; a focused
         // figure keeps it hidden.
         if (focusGroup && envelopeGroup) envelopeGroup.visible = false;
+        else if (envelopeGroup) envelopeGroup.visible = chosen.current.envelope;
+        syncTags();
+        request();
+      },
+      /*
+        THE PERMITTED VOLUME, SWITCHED OFF.
+
+        It is the one thing in the scene that is not the building, it wraps
+        everything else, and a reader who wants to look at the parking is looking
+        through it. It stays ON by default, because what the rules permit is the
+        frame the answer sits inside and hiding it by default would be the engine
+        quietly dropping the limit from the picture — but it comes off in one
+        click, and the levels, the cores, the ramp and the cars are what is left.
+      */
+      envelope(on) {
+        if (!envelopeGroup) return;
+        envelopeGroup.visible = focusGroup ? false : on;
         syncTags();
         request();
       },
@@ -584,6 +634,7 @@ export function BuildingViewer({
     handle.current.setView(now.view);
     handle.current.isolate(now.levelId);
     handle.current.spread(now.spread);
+    handle.current.envelope(now.envelope);
     handle.current.cut(now.cutM);
     handle.current.live(now.live);
     const observer = new ResizeObserver(() => {
@@ -611,6 +662,7 @@ export function BuildingViewer({
   useEffect(() => handle.current?.setView(view), [view]);
   useEffect(() => handle.current?.isolate(levelId), [levelId]);
   useEffect(() => handle.current?.spread(spread), [spread]);
+  useEffect(() => handle.current?.envelope(envelope), [envelope]);
   useEffect(() => handle.current?.cut(cutM), [cutM]);
   useEffect(() => handle.current?.live(live), [live]);
   useEffect(() => {
@@ -661,6 +713,10 @@ export function BuildingViewer({
       <label className="toggle">
         <input type="checkbox" checked={spread} onChange={(e) => setSpread(e.target.checked)} />
         {t.spread}
+      </label>
+      <label className="toggle">
+        <input type="checkbox" checked={envelope} onChange={(e) => setEnvelope(e.target.checked)} />
+        {t.envelope}
       </label>
       <label className="massing-tools__field massing-tools__cut">
         <span>{t.cutAt}</span>

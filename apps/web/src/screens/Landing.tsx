@@ -106,28 +106,28 @@ const DOES: readonly {
   {
     icon: Ruler,
     en: ['Enter the plot', 'Edge by edge, curves included. Nothing is adjusted to close the shape.'],
-    ar: ['أدخل القطعة', 'حدًا حدًا، والمنحني بانحنائه. ولا يُعدَّل شيء ليُقفل الشكل.'],
+    ar: ['أدخل القطعة', 'حدا حدا، والمنحني بانحنائه. ولا يعدل شيء ليقفل الشكل.'],
   },
   {
     icon: Layers,
     en: ['Solve the envelope', 'Setbacks, plate cap and height ceiling, as a fixpoint.'],
-    ar: ['حُلّ الغلاف', 'الارتدادات وسقف المسطح وسقف الارتفاع، بحلٍّ تقاربي.'],
+    ar: ['حل الغلاف', 'الارتدادات وسقف المسطح وسقف الارتفاع، بحل تقاربي.'],
   },
   {
     icon: Grid3x3,
     en: ['Lay out the parking', 'Bays, aisles and a ramp — placed, not divided out of an area.'],
-    ar: ['ارصف المواقف', 'مواقف وممرات ومنحدر — تُرصف فعلًا، لا تُقسم مساحة على معامل.'],
+    ar: ['ارصف المواقف', 'مواقف وممرات ومنحدر — ترصف فعلا، لا تقسم مساحة على معامل.'],
     wide: true,
   },
   {
     icon: Boxes,
     en: ['Inspect the massing', 'Every level at its floor, every car in its bay.'],
-    ar: ['عاينه مجسَّمًا', 'كل دور عند منسوبه، وكل سيارة في موقفها.'],
+    ar: ['عاينه مجسما', 'كل دور عند منسوبه، وكل سيارة في موقفها.'],
   },
   {
     icon: FileDown,
     en: ['Export the set', 'Report, drawings, DXF, glTF, JSON and XLSX — behind two gates.'],
-    ar: ['صدّر المجموعة', 'تقرير ورسومات وDXF وglTF وJSON وXLSX — خلف بوابتين.'],
+    ar: ['صدر المجموعة', 'تقرير ورسومات وDXF وglTF وJSON وXLSX — خلف بوابتين.'],
   },
 ];
 

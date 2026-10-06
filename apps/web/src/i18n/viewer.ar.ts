@@ -28,6 +28,7 @@ export const AR: ViewerDictionary = {
   everyLevel: 'كل الأدوار',
   notPlaced: ' · مسموح به، ولم يوضع',
   spread: 'باعد بين الأدوار',
+  envelope: 'اعرض ما تسمح به القواعد',
   cutAt: 'اقطع عند',
   noCut: 'بلا قطع',
 

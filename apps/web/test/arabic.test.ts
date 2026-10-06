@@ -106,3 +106,58 @@ describe('the Arabic dictionaries', () => {
     }
   });
 });
+
+/*
+  NO DIACRITICS, AND NOW SOMETHING CHECKS — §5, in the client's own words:
+  "No diacritics. None."
+
+  It was checked over the printed user guide (`scripts/guide/build.mjs`) and over
+  nothing the site itself ships, so the app carried forty-three of them in live
+  copy: the map panel said «تتبّع» in its own title and the landing page's five
+  steps were vowelled throughout. A reader who does not read vowelled text reads
+  them as noise, and this is the one rule the client stated twice.
+
+  Over EVERY Arabic surface, not only the dictionaries, because Landing.tsx
+  carries its own five bilingual strings inline — which is exactly where this
+  went unseen.
+
+  U+0640 (tatweel) is not matched: it is a letter-stretching character, and a
+  rule that caught it would fail on type nobody set wrong. The .en.ts files are
+  not scanned either: Arabic inside them is evidence quoted verbatim — the
+  client's own words in `parking.en.ts`, the retired wording in `readiness.en.ts`
+  — and evidence keeps its marks.
+*/
+describe('no diacritics anywhere the site prints Arabic (§5)', () => {
+  const MARKS = /[ً-ْٰ]/gu;
+  const SURFACES = ['../src/i18n/', '../src/content/', '../src/screens/', '../src/components/'].map(
+    (d) => new URL(d, import.meta.url),
+  );
+  const FILES = SURFACES.flatMap((dir) =>
+    readdirSync(dir, { withFileTypes: true })
+      .filter((f) => f.isFile() && /\.tsx?$/.test(f.name) && !/\.en\.tsx?$/.test(f.name))
+      .map((f) => ({
+        file: f.name,
+        code: readFileSync(new URL(f.name, dir), 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/^\s*\/\/.*$/gm, ''),
+      })),
+  );
+
+  it('scans every surface', () => {
+    expect(FILES.length).toBeGreaterThan(40);
+  });
+
+  it('prints not one mark', () => {
+    const found: string[] = [];
+    for (const f of FILES) {
+      for (const hit of f.code.matchAll(MARKS)) {
+        const at = hit.index ?? 0;
+        found.push(`${f.file}: …${f.code.slice(Math.max(0, at - 24), at + 24).replace(/\n/g, ' ')}…`);
+      }
+    }
+    // Where a word needs its marks to be read, the word changes — «لم يقيم» for
+    // «لم يُقيَّم» became «لم يخضع للتقييم». Stripping the marks off that one
+    // would have shipped "he did not stay".
+    expect(found.slice(0, 8).join('\n')).toBe('');
+  });
+});

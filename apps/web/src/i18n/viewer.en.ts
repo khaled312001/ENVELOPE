@@ -35,6 +35,8 @@ export const EN = {
   everyLevel: 'Every level',
   notPlaced: ' · permitted, not placed',
   spread: 'Pull the levels apart',
+  /** The glass case: the volume the rules permit, not the building. */
+  envelope: 'Show what the rules permit',
   cutAt: 'Cut through at',
   noCut: 'no cut',
 

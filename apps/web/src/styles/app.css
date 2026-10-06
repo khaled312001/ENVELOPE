@@ -462,16 +462,16 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   the hazard the deleted block carried — two treatments of `is-current` whose
   order in this file decided which one rendered.
 
-  The strip stays sticky at the wide widths where it does not eat the viewport,
-  so the steps remain reachable down a long capacity screen.
+  AND IT DOES NOT STICK. The first version of this pinned the strip at `top: 0`
+  so the steps stayed reachable down a long capacity screen, and the nav is
+  sticky at `top: 0` too — so the strip slid under it and was invisible at every
+  scroll position but the first. A second sticky element needs the height of the
+  first, nothing here measures it, and a stepper that disappears is worse than
+  one that scrolls away honestly. The step footer carries back and next at the
+  bottom of every step, which is what a reader at the bottom of a long screen
+  actually reaches for.
 */
 @media (min-width: 64rem) {
-  .stepper {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-  }
-
   .flow .step-footer { margin-inline: 0; }
 }
 

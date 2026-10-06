@@ -35,7 +35,11 @@
   gap: var(--space-4);
 }
 
+/* Capped, so an account with one run gets a CARD and not a banner: `auto-fit`
+   collapses the empty tracks, which is what stops three cards clustering to one
+   side of a void, and the same collapse stretches a lone card across the row. */
 .runcard {
+  max-inline-size: 30rem;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);

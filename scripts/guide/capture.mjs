@@ -205,7 +205,10 @@ const pub = await context();
   const { page } = pub;
   await page.goto(url('/'), { waitUntil: 'networkidle' });
   await shot(page, 'p01-landing-fold', { top: true });
-  await shot(page, 'p02-landing-capacities', { sel: 'section#capacities' });
+  /* `section.lp-figures`, not `#capacities`. The redesign renamed the landing
+     sections and this crop timed out for a week of captures without failing the
+     build — a missing picture is a gap a reader notices and a build does not. */
+  await shot(page, 'p02-landing-capacities', { sel: 'section.lp-figures' });
   await shot(page, 'p03-landing-claims', { sel: 'section#claims' });
   await shot(page, 'p04-landing-limits', { sel: 'section#limits', maxH: 1100 });
   for (const [path, name] of [
@@ -318,6 +321,19 @@ await step('step 5 — capacity and the building in 3D', async () => {
   await A.locator('.governing__figure').waitFor();
   await shot(A, 'e13-capacity', { sel: 'section[aria-labelledby="capacity-heading"]' });
   await shot(A, 'e14-massing', { sel: 'section[aria-labelledby="massing-heading"]', maxH: 1150 });
+  /*
+    THE COVER'S PICTURE IS ITS OWN CROP, of the canvas and nothing else.
+
+    It used to be this chapter's screenshot, repositioned by a CSS rule in
+    `guide.css` calibrated in per-cent against one image's pixel dimensions
+    ("2400 × 2300 px, building near x 1300, y 900"). The viewport changed, the
+    shot came out 1442 wide, and the cover of the guide became a close-up of a
+    dropdown and a slider — still a valid picture, still the right file, framed
+    on the furniture instead of the building. A crop that is described in prose
+    and executed in arithmetic somewhere else drifts silently; a crop taken from
+    the element itself cannot.
+  */
+  await shot(A, 'e14-massing-cover', { sel: '.massing-viewer__stage' });
   await shot(A, 'e15-levels', { sel: 'section[aria-labelledby="massing-heading"] table.data-table', maxH: 1000 });
   await shot(A, 'e16-envelope', { sel: 'section[aria-labelledby="envelope-heading"]' });
 });

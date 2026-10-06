@@ -117,7 +117,38 @@ f['cap.levels'] = String(v(cap.levels));
 f['cap.headroom'] = fmt(cap.headroomToNextM2, 1);
 f['cap.explanation'] = v(cap.explanation);
 f['cap.impliedFar'] = (Number(v(cap.bandA)) / Number(run.plot.areaM2)).toFixed(2);
-if (f['cap.band'] !== 'C') throw new Error('the guide is written for a run parking governs; re-read chapter 5');
+/*
+  WHICH LIMIT BINDS IS A FACT ABOUT THE RUN, SO THE SENTENCE COMES FROM THE RUN.
+
+  This was `if (band !== 'C') throw` and a chapter that said, in the template,
+  "parking is what binds this plot". It was true when it was written and stopped
+  being true the moment the affection plan began binding `far.max` itself: the
+  regulatory band came in at 4,778 m² under the parking band's 4,864, and the
+  build refused — correctly, because the alternative was a guide whose prose
+  contradicted the figures printed beside it.
+
+  Refusing was right and freezing the answer was not. The guide quotes no figure
+  it has not been handed, and the governing band is a figure like any other; a
+  template that can only describe one of the three outcomes is a template that
+  will be wrong again on the next plot. So the sentence is filled here, one per
+  band, and the assertion that remains is that the band is one the guide has a
+  sentence for — which fails loudly if the engine ever adds a fourth.
+*/
+const GOVERNS = {
+  A:
+    'الحد التنظيمي هو الذي يلزم هذه القطعة: مخطط الأفكشن يثبت معامل البناء بنفسه، ' +
+    'فلا يبلغ المشروع ما يسمح به شكل القطعة ولا ما تستطيع المواقف خدمته. ويقول المحرك ذلك بجملته:',
+  B:
+    'شكل القطعة هو الذي يلزمها: بعد الارتدادات والارتفاع المسموح، لا تتسع الأرض لما ' +
+    'يسمح به معامل البناء. ويقول المحرك ذلك بجملته:',
+  C:
+    'المواقف هي التي تلزم هذه القطعة. يسمح النظام بمساحة أكبر مما يستطيع عرض المواقف ' +
+    'أن يخدمه، ويقول المحرك ذلك بجملته:',
+};
+if (!GOVERNS[f['cap.band']]) {
+  throw new Error(`no sentence for governing band ${v(cap.governingBand)}; add one to GOVERNS`);
+}
+f['cap.governs'] = GOVERNS[f['cap.band']];
 
 // Parking.
 const pk = run.parking;
@@ -170,7 +201,7 @@ f['asm.measured'] = String(asm.filter((a) => a.sensitivity).length);
 f['asm.rows'] = asm
   .map((a, i) => {
     const value = a.value.split('; ').map((line) => esc(line)).join('<br>');
-    const effect = a.sensitivity ? pct(a.sensitivity.relativeEffect) : 'لم يُقَس';
+    const effect = a.sensitivity ? pct(a.sensitivity.relativeEffect) : 'لم يقس';
     return (
       `<tr><td class="num">${i + 1}</td><td class="en">${esc(a.parameterId)}</td>` +
       `<td class="en small">${value}${a.unit ? ` ${esc(a.unit)}` : ''}</td><td class="num">${effect}</td></tr>`
@@ -339,6 +370,32 @@ for (const [id, p] of Object.entries(first.found)) {
 // What must never be in the guide.
 if (/azizi/i.test(second.text) || /azizi/i.test(readFileSync(INDEX, 'utf8'))) throw new Error('the guide names a developer whose brief was shared in confidence');
 if (/\[object Object\]/.test(second.text)) throw new Error('the guide prints a value as [object Object]');
+
+/*
+  NO DIACRITICS, AND NOW SOMETHING CHECKS.
+
+  `docs/05-design/arabic-glossary.md` §5 states the rule — "No diacritics. None."
+  — in the client's own words, and nothing enforced it, so this guide shipped
+  1,184 of them: a mark every seventy characters, in a document written for a
+  professional who does not read vowelled text. The glossary names the ranges and
+  it names the one trap in removing them: `لم يُقيَّم` unvowelled is `لم يقيم`,
+  which reads as "he did not stay". The answer there is not to keep the shadda
+  but to change the word, and the app had already done it — `checks.ar.ts` ships
+  `لم يخضع للتقييم` and says why. The guide now says what the screen says.
+
+  Checked over the PRINTED TEXT and not only the template, because the figures
+  are filled at build time and a diacritic can arrive in one of them. U+0640
+  (tatweel) is not a diacritic and is not matched: it is a letter-stretching
+  character, and a rule that caught it would fail on type nobody set wrong.
+*/
+const vowelled = second.text.match(/[ً-ْٰ]/g);
+if (vowelled) {
+  const where = /.{0,40}[ً-ْٰ].{0,40}/.exec(second.text)?.[0] ?? '';
+  throw new Error(
+    `the guide prints ${vowelled.length} diacritic(s); the glossary's rule is "none". ` +
+      `Where a word needs its marks to be read, change the word. First: …${where}…`,
+  );
+}
 const unused = Object.keys(f).filter((k) => !used.has(k));
 
 console.log(`guide: ${second.count} pages → ${PDF}`);

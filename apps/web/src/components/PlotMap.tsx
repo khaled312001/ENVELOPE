@@ -160,8 +160,25 @@ const DEGREE_DP = 6;
  * placement, and that one is reported as an assumption with a basis and a
  * sensitivity — see `assumedPlacement`.
  */
-const OPENING_VIEW: LngLat = { lng: 55.2708, lat: 25.2048 };
-const OPENING_ZOOM = 17;
+const OPENING_VIEW: LngLat = { lng: 54.6, lat: 24.3 };
+
+/**
+ * The whole country, and then the reader says where.
+ *
+ * It opened on one street corner in Bur Dubai at zoom 17, which answers a
+ * question nobody asked: a reader whose plot is in Al Ain or Ras Al Khaimah
+ * arrives already lost, and one whose plot IS in Dubai cannot tell whether the
+ * view followed his sheet or happened to land there. So the opening view is the
+ * seven emirates, and the first thing the panel offers is a search. A supplied
+ * `centre` still overrides it — that one came from a document.
+ *
+ * Still not a hidden default, by the same argument as before: it is a view, not
+ * a value. Nothing is computed from it, no output names it, and the reader's
+ * first gesture replaces it.
+ */
+const OPENING_ZOOM = 6.6;
+/** The zoom a search result or a picked footprint settles at: a plot fills it. */
+const PLOT_ZOOM = 18;
 
 /**
  * The sheet's opening opacity, and the width it falls back to.
@@ -354,6 +371,204 @@ export function compareArea(
 /* -------------------------------------------------------------------------
  * THE UNDERLAY — the sheet's own drawing, laid over the imagery
  * ---------------------------------------------------------------------- */
+
+/* =========================================================================
+   PICKING A FOOTPRINT OFF THE MAP, AND WHAT IT IS WORTH
+
+   Eng. Mohamed asked to be able to click a building or a parcel and get its
+   real dimensions out, editable. OpenStreetMap is the only footprint data this
+   panel can reach, and the honest version of the feature is narrow:
+
+   - **It is not a cadastral source and it is not a survey.** It is what a
+     contributor traced, usually off the same imagery the reader is looking at.
+     So a picked ring arrives as a DRAFT the reader is expected to correct, every
+     vertex draggable, and the panel says whose outline it is in the sentence
+     beside it — never "the plot boundary".
+   - **A building is not a plot.** A footprint is the building's outline, which
+     is inside the parcel and is not the parcel. The panel says that too, because
+     a reader who takes a villa's outline for his plot will under-report his own
+     land by the setbacks.
+   - **It refuses rather than guesses.** Nothing within reach, no network, or a
+     shape that is not a simple ring: a refusal naming which, not a nearest
+     rectangle.
+
+   Collinear vertices are dropped on the way in. A contributor's trace carries
+   points that are not corners — three nodes down one straight wall — and every
+   one of them would arrive as a boundary wanting its own classification and its
+   own setback. The tolerance is angular and generous for the same reason the
+   whole thing is a draft.
+   ========================================================================= */
+
+/** Why no footprint came back. Codes; the words live in the dictionary. */
+export type FootprintRefusal = 'offline' | 'none-here' | 'not-a-ring';
+
+export interface FootprintResult {
+  readonly ring: readonly LngLat[] | null;
+  readonly refusal: FootprintRefusal | null;
+  /** What OpenStreetMap calls it, when it calls it anything. Quoted verbatim. */
+  readonly name: string | null;
+  /** `building`, `landuse`, … — what kind of thing was picked. */
+  readonly kind: string | null;
+}
+
+const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+/** How far from the click to look. One villa plot, not one neighbourhood. */
+const FOOTPRINT_RADIUS_M = 40;
+/** A corner is a turn of at least this much. Below it the point is on a wall. */
+const COLLINEAR_TOLERANCE_DEG = 4;
+
+/** Drop the points that are not corners, keeping the ring's shape. */
+export function dropCollinear(
+  ring: readonly LngLat[],
+  toleranceDeg: number = COLLINEAR_TOLERANCE_DEG,
+): readonly LngLat[] {
+  if (ring.length < 4) return ring;
+  const kept: LngLat[] = [];
+  for (let i = 0; i < ring.length; i += 1) {
+    const before = kept.length > 0 ? kept[kept.length - 1]! : ring[(i - 1 + ring.length) % ring.length]!;
+    const here = ring[i]!;
+    const after = ring[(i + 1) % ring.length]!;
+    const a = legBetween(before, here).bearingDeg;
+    const b = legBetween(here, after).bearingDeg;
+    /* The deflection between the leg arriving and the leg leaving: zero down a
+       straight wall, signed and in (−180, 180]. A corner is a turn of at least
+       the tolerance; anything less is a node on a wall. */
+    const deflection = ((b - a + 540) % 360) - 180;
+    if (Math.abs(deflection) >= toleranceDeg) kept.push(here);
+  }
+  return kept.length >= 3 ? kept : ring;
+}
+
+interface OverpassWay {
+  readonly geometry?: readonly { readonly lat: number; readonly lon: number }[];
+  readonly tags?: Readonly<Record<string, string>>;
+}
+
+/** Is the point inside the ring? Ray casting, on degrees — a containment test
+ *  over forty metres does not need a projection. */
+function ringContains(ring: readonly LngLat[], p: LngLat): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
+    const a = ring[i]!;
+    const b = ring[j]!;
+    const straddles = a.lat > p.lat !== b.lat > p.lat;
+    if (straddles && p.lng < ((b.lng - a.lng) * (p.lat - a.lat)) / (b.lat - a.lat) + a.lng) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/**
+ * The outline OpenStreetMap holds at this point, as a draft ring.
+ *
+ * `fetchImpl` is a parameter so the refusals can be tested without a network,
+ * which is the only part of this worth testing: the happy path is a fetch and a
+ * map, and the refusals are the behaviour.
+ */
+export async function fetchFootprint(
+  at: LngLat,
+  radiusM: number = FOOTPRINT_RADIUS_M,
+  fetchImpl: typeof fetch = fetch,
+): Promise<FootprintResult> {
+  const query =
+    `[out:json][timeout:20];(` +
+    `way(around:${radiusM},${at.lat},${at.lng})["building"];` +
+    `way(around:${radiusM},${at.lat},${at.lng})["landuse"];` +
+    `);out geom;`;
+  let ways: readonly OverpassWay[];
+  try {
+    const res = await fetchImpl(OVERPASS_URL, { method: 'POST', body: query });
+    if (!res.ok) return { ring: null, refusal: 'offline', name: null, kind: null };
+    const body = (await res.json()) as { readonly elements?: readonly OverpassWay[] };
+    ways = body.elements ?? [];
+  } catch {
+    return { ring: null, refusal: 'offline', name: null, kind: null };
+  }
+  if (ways.length === 0) return { ring: null, refusal: 'none-here', name: null, kind: null };
+
+  const rings = ways
+    .map((w) => ({
+      way: w,
+      /* An OSM way repeats its first node to close itself; the ring this panel
+         holds does not, so the repeat comes off here rather than becoming a
+         zero-length boundary that then wants a classification. */
+      ring: (w.geometry ?? []).map((g) => ({ lng: g.lon, lat: g.lat })).slice(0, -1),
+    }))
+    .filter((r) => r.ring.length >= 3);
+  if (rings.length === 0) return { ring: null, refusal: 'not-a-ring', name: null, kind: null };
+
+  /* The one the reader clicked inside, else the smallest within reach — a click
+     between two villas should not pick the compound wall around both. */
+  const containing = rings.filter((r) => ringContains(r.ring, at));
+  const pool = containing.length > 0 ? containing : rings;
+  const picked = pool.reduce((a, b) => (ringAreaM2(b.ring) < ringAreaM2(a.ring) ? b : a));
+  const tags = picked.way.tags ?? {};
+  return {
+    ring: dropCollinear(picked.ring),
+    refusal: null,
+    name: tags['name'] ?? null,
+    kind: tags['building'] !== undefined ? 'building' : (tags['landuse'] ?? null),
+  };
+}
+
+/* =========================================================================
+   FINDING THE PLACE, since the map now opens on seven emirates
+   ========================================================================= */
+
+export interface PlaceHit {
+  readonly label: string;
+  readonly at: LngLat;
+}
+
+const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
+
+/** Search, restricted to the UAE. Returns an empty list on any failure: a
+ *  search that cannot reach the internet found nothing, which is the truth. */
+export async function searchPlaces(
+  query: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<readonly PlaceHit[]> {
+  const q = query.trim();
+  if (q === '') return [];
+  const url = `${NOMINATIM_URL}?format=jsonv2&countrycodes=ae&limit=6&q=${encodeURIComponent(q)}`;
+  try {
+    const res = await fetchImpl(url, { headers: { accept: 'application/json' } });
+    if (!res.ok) return [];
+    const body = (await res.json()) as readonly {
+      readonly display_name?: string;
+      readonly lat?: string;
+      readonly lon?: string;
+    }[];
+    return body
+      .filter((h) => h.lat !== undefined && h.lon !== undefined && h.display_name !== undefined)
+      .map((h) => ({
+        label: h.display_name!,
+        at: { lng: Number(h.lon), lat: Number(h.lat) },
+      }))
+      .filter((h) => Number.isFinite(h.at.lng) && Number.isFinite(h.at.lat));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * A measurement drawn over the canvas, in page pixels.
+ *
+ * The labels are DOM rather than a maplibre symbol layer, and that is not a
+ * stylistic preference: a symbol layer needs a `glyphs` endpoint, which is a
+ * font fetched from somebody else's server — on a panel whose whole premise is
+ * that it is opened on a plot with no wifi, and in a canvas no contrast gate can
+ * read. As DOM they are inked from `tokens.css`, measured by `pnpm contrast`
+ * like everything else, and read aloud in order by a screen reader.
+ */
+export interface MapLabel {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly text: string;
+  readonly kind: 'leg' | 'area' | 'tape';
+}
 
 /**
  * A point on the sheet image, in the image's own normalised space.
@@ -668,6 +883,8 @@ const ID = {
   points: 'pm-points',
   sheet: 'pm-sheet',
   sheetEdge: 'pm-sheet-edge',
+  tape: 'pm-tape',
+  tapePoints: 'pm-tape-points',
 } as const;
 
 const EMPTY_FC = { type: 'FeatureCollection' as const, features: [] };
@@ -713,6 +930,8 @@ function addTraceLayers(map: MapLibreMap): void {
   map.addSource(ID.ring, { type: 'geojson', data: EMPTY_FC });
   map.addSource(ID.points, { type: 'geojson', data: EMPTY_FC });
   map.addSource(ID.sheetEdge, { type: 'geojson', data: EMPTY_FC });
+  map.addSource(ID.tape, { type: 'geojson', data: EMPTY_FC });
+  map.addSource(ID.tapePoints, { type: 'geojson', data: EMPTY_FC });
 
   map.addLayer({
     id: ID.shape,
@@ -765,6 +984,37 @@ function addTraceLayers(map: MapLibreMap): void {
       ...(uncertain ? { 'line-color': uncertain } : {}),
     },
   });
+
+  /*
+    THE TAPE IS DRAWN LIKE A TAPE AND NOT LIKE A BOUNDARY.
+
+    Dashed, thinner, and in the chrome ink rather than the accent: a reader who
+    cannot tell at a glance which line is the plot and which is a distance he
+    measured will hand over the wrong one. It carries no fill, because a tape
+    encloses nothing even when its ends happen to meet.
+  */
+  map.addLayer({
+    id: ID.tape,
+    type: 'line',
+    source: ID.tape,
+    layout: { 'line-join': 'round', 'line-cap': 'butt' },
+    paint: {
+      'line-width': 2,
+      'line-dasharray': [2, 2],
+      ...(ink ? { 'line-color': ink } : {}),
+    },
+  });
+  map.addLayer({
+    id: ID.tapePoints,
+    type: 'circle',
+    source: ID.tapePoints,
+    paint: {
+      'circle-radius': 4,
+      'circle-stroke-width': 2,
+      ...(plate ? { 'circle-color': plate } : {}),
+      ...(ink ? { 'circle-stroke-color': ink } : {}),
+    },
+  });
 }
 
 export function PlotMap({
@@ -807,7 +1057,32 @@ export function PlotMap({
   */
   const [mapState, setMapState] = useState<MapState>('pending');
   const [tilesFailed, setTilesFailed] = useState(false);
+  /** Whether any tile has ever been drawn. See the `error` handler. */
+  const tilesSeenRef = useRef(false);
   const [osmVisible, setOsmVisible] = useState(false);
+
+  /**
+   * Which pointer tool the canvas is holding.
+   *
+   * `trace` adds a corner, `measure` lays a tape and adds nothing to the ring,
+   * and `pan` does neither. A map that is always armed to add a corner cannot be
+   * panned without adding one, and a map that is never armed gives a reader no
+   * way to start — the first draft had the second problem and the controls for
+   * it were below the fold, where nobody looked.
+   */
+  const [tool, setTool] = useState<'pan' | 'trace' | 'measure'>('trace');
+  /** The tape's points. Measured, never handed over: it is not the plot. */
+  const [tape, setTape] = useState<readonly LngLat[]>([]);
+  /** Label positions, re-projected whenever the map moves. */
+  const [labels, setLabels] = useState<readonly MapLabel[]>([]);
+
+  const [searchText, setSearchText] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [hits, setHits] = useState<readonly PlaceHit[]>([]);
+
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState<FootprintResult | null>(null);
 
   const [latText, setLatText] = useState('');
   const [lngText, setLngText] = useState('');
@@ -985,6 +1260,20 @@ export function PlotMap({
         if (stage !== 'distance') takePick(point);
         return;
       }
+      /*
+        THE TOOL DECIDES WHAT A CLICK IS, and `pan` means it is nothing.
+
+        The panel used to add a corner on every click, which is a map that
+        cannot be examined without being drawn on: a reader looking for his plot
+        left a trail of vertices behind the search. The tape adds nothing to the
+        ring for the same reason in reverse — a distance somebody measured is
+        not a boundary somebody surveyed, and the two must not share a geometry.
+      */
+      if (tool === 'measure') {
+        setTape((t0) => [...t0, point]);
+        return;
+      }
+      if (tool === 'pan') return;
       /* THE CLOSE AFFORDANCE. Clicking the first point again closes the ring,
          which is the gesture every drawing tool uses; the button beside it does
          the same thing for a reader who is not using a pointer. */
@@ -1002,7 +1291,7 @@ export function PlotMap({
       */
       addPoint(point);
     },
-    [stage, takePick, ring.length, addPoint],
+    [stage, takePick, ring.length, addPoint, tool],
   );
 
   /* Handlers the map effect reaches through, so it can be mounted once and
@@ -1048,7 +1337,9 @@ export function PlotMap({
           maplibreLogo: false,
           locale: { 'Map.Title': t.imagery.label },
           center: [centre?.lng ?? OPENING_VIEW.lng, centre?.lat ?? OPENING_VIEW.lat],
-          zoom: OPENING_ZOOM,
+          /* A supplied centre came from a document, so the view goes to the
+             plot. With none, the country — see `OPENING_ZOOM`. */
+          zoom: centre ? PLOT_ZOOM : OPENING_ZOOM,
           /* North-up and flat. A rotated or pitched view of a plot is a view in
              which a traced bearing cannot be read off the screen at all, and
              there is nothing here that an oblique view shows better. */
@@ -1077,11 +1368,30 @@ export function PlotMap({
         });
         mapRef.current = map;
 
+        /*
+          ONE ABORTED TILE IS NOT A FAILED BASEMAP.
+
+          `map.on('error')` fires for every tile that 404s at the edge of
+          coverage and for every request the renderer aborts while the reader is
+          still panning — so this banner read "the imagery tiles did not load"
+          over a screen full of imagery, which teaches a reader that the panel's
+          warnings are noise. The failure it exists to report is a basemap that
+          never arrived at all, so it is only claimed while no tile has ever
+          been drawn, and it is withdrawn the moment one is.
+
+          Reported, not thrown either way: a view without a photograph is still
+          a view, and the trace, the measurements and the table are arithmetic
+          that does not depend on one.
+        */
         map.on('error', () => {
-          /* Reported, not thrown. A tile that does not load is a view without a
-             photograph; the trace, the measurements and the table are arithmetic
-             and do not depend on one. */
-          if (!cancelled) setTilesFailed(true);
+          if (!cancelled && !tilesSeenRef.current) setTilesFailed(true);
+        });
+        map.on('data', (e) => {
+          if (cancelled) return;
+          if (e.dataType === 'source' && 'tile' in e && e.tile !== undefined) {
+            tilesSeenRef.current = true;
+            setTilesFailed(false);
+          }
         });
 
         map.on('load', () => {
@@ -1216,6 +1526,114 @@ export function PlotMap({
       })),
     });
   }, [ring, closed, mapState]);
+
+  /* The tape, in its own sources: it is a measurement, never a boundary. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || mapState !== 'ready') return;
+    const line = map.getSource(ID.tape) as GeoJSONSource | undefined;
+    const pts = map.getSource(ID.tapePoints) as GeoJSONSource | undefined;
+    if (!line || !pts) return;
+    void line.setData(
+      tape.length >= 2
+        ? {
+            type: 'Feature',
+            properties: {},
+            geometry: { type: 'LineString', coordinates: tape.map((p) => [p.lng, p.lat]) },
+          }
+        : EMPTY_FC,
+    );
+    void pts.setData({
+      type: 'FeatureCollection',
+      features: tape.map((p, i) => ({
+        type: 'Feature',
+        properties: { i },
+        geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+      })),
+    });
+  }, [tape, mapState]);
+
+  /*
+    THE DIMENSIONS ON THE DRAWING, RE-PROJECTED AS THE READER MOVES.
+
+    Every boundary carries its length and its grid bearing at its midpoint, and
+    the figure carries its area and perimeter at its centroid — which is what
+    makes the trace read as a survey traverse rather than as a shape somebody
+    sketched. The figures are the same ones the table below states, computed by
+    the same functions, so there is one set of numbers on this panel and not two.
+
+    Recomputed on `render` rather than on `move`, because a zoom animation and an
+    inertial pan both emit `render` and neither emits `move` on every frame; a
+    label that lags its line by two frames reads as a label that belongs to
+    something else.
+  */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || mapState !== 'ready') return;
+
+    const project = (): void => {
+      const next: MapLabel[] = [];
+      const legs = ring.length >= 3 ? legDrafts(ring) : [];
+      const shown = closed ? legs.length : Math.max(0, ring.length - 1);
+      for (let i = 0; i < shown; i += 1) {
+        const a = ring[i]!;
+        const b = ring[(i + 1) % ring.length]!;
+        const at = map.project([(a.lng + b.lng) / 2, (a.lat + b.lat) / 2]);
+        const leg = legs[i];
+        if (!leg) continue;
+        next.push({
+          id: `leg-${i}`,
+          x: at.x,
+          y: at.y,
+          text: `${leg.lengthM} m · ${leg.bearingDeg}°`,
+          kind: 'leg',
+        });
+      }
+      if (closed && ring.length >= 3) {
+        const read = ringReadout(ring);
+        const cx = ring.reduce((s, p) => s + p.lng, 0) / ring.length;
+        const cy = ring.reduce((s, p) => s + p.lat, 0) / ring.length;
+        const at = map.project([cx, cy]);
+        if (read.areaM2 !== null && read.perimeterM !== null) {
+          next.push({
+            id: 'area',
+            x: at.x,
+            y: at.y,
+            text: `${read.areaM2} m² · ${read.perimeterM} m`,
+            kind: 'area',
+          });
+        }
+      }
+      for (let i = 0; i + 1 < tape.length; i += 1) {
+        const a = tape[i]!;
+        const b = tape[i + 1]!;
+        const at = map.project([(a.lng + b.lng) / 2, (a.lat + b.lat) / 2]);
+        const leg = legBetween(a, b);
+        next.push({
+          id: `tape-${i}`,
+          x: at.x,
+          y: at.y,
+          text: `${new Decimal(leg.lengthM).toFixed(TRACE_DP)} m`,
+          kind: 'tape',
+        });
+      }
+      setLabels(next);
+    };
+
+    project();
+    map.on('render', project);
+    return () => {
+      map.off('render', project);
+    };
+  }, [ring, closed, tape, mapState]);
+
+  /* The pointer says what a click will do. A crosshair over a map that is only
+     going to pan is a lie the cursor tells before anything else can. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || mapState !== 'ready') return;
+    map.getCanvas().style.cursor = tool === 'pan' ? '' : 'crosshair';
+  }, [tool, mapState]);
 
   /* The overlay's visibility. */
   useEffect(() => {
@@ -1419,6 +1837,56 @@ export function PlotMap({
     map.easeTo({ zoom: map.getZoom() + delta, duration: reduced ? 0 : 200 });
   };
 
+  /** Move the view to a found place. Nothing about the trace changes. */
+  const goTo = (at: LngLat): void => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.jumpTo({ center: [at.lng, at.lat], zoom: PLOT_ZOOM });
+    setHits([]);
+  };
+
+  const runSearch = async (): Promise<void> => {
+    setSearching(true);
+    try {
+      const found = await searchPlaces(searchText);
+      setHits(found);
+      setSearched(true);
+      if (found.length === 1) goTo(found[0]!.at);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  /*
+    PICKING THE OUTLINE AT THE CENTRE OF THE VIEW, not at a click.
+
+    A click is already spoken for three ways over, and a fourth meaning on the
+    same gesture is how a reader ends up adding a corner when he meant to pick a
+    building. The centre of the view is unambiguous, works from the keyboard, and
+    is where a reader has already put the thing he is looking at.
+
+    It REPLACES the ring, and only when there is nothing to lose: a reader who
+    has already traced corners keeps them, because a picked outline silently
+    discarding somebody's work is the one failure this panel cannot apologise
+    for. He clears first if he wants the draft.
+  */
+  const pickFootprint = async (): Promise<void> => {
+    const map = mapRef.current;
+    if (!map) return;
+    const c = map.getCenter();
+    setPicking(true);
+    try {
+      const found = await fetchFootprint({ lng: c.lng, lat: c.lat });
+      setPicked(found);
+      if (found.ring && ring.length === 0) {
+        setRing(found.ring);
+        setClosed(true);
+      }
+    } finally {
+      setPicking(false);
+    }
+  };
+
   const handOver = (): void => {
     const legs = legDrafts(ring);
     if (!closed || legs.length < 3) return;
@@ -1454,12 +1922,119 @@ export function PlotMap({
         <p className="fine-print">{t.imagery.roofNote}</p>
       </div>
 
+      {/* ---- Finding the place ------------------------------------------- */}
+      <div className="field-group pm-search">
+        <p className="field-group__legend">{t.search.heading}</p>
+        <div className="pm-search__row">
+          <div className="field field--compact pm-search__field">
+            <label htmlFor="pm-search">{t.search.label}</label>
+            <input
+              id="pm-search"
+              className="input"
+              value={searchText}
+              placeholder={t.search.placeholder}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void runSearch();
+                }
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            className="button button--sm"
+            onClick={() => void runSearch()}
+            disabled={searching || searchText.trim() === ''}
+          >
+            {searching ? t.search.searching : t.search.run}
+          </button>
+        </div>
+        {hits.length > 0 ? (
+          <ul className="pm-search__hits">
+            {hits.map((h) => (
+              <li key={`${h.at.lng},${h.at.lat}`}>
+                <button type="button" className="button button--sm button--ghost" onClick={() => goTo(h.at)}>
+                  <span lang="en" dir="ltr">
+                    {h.label}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {searched && hits.length === 0 ? (
+          <p className="pm-controls__state" role="status">
+            {t.search.none}
+          </p>
+        ) : null}
+        <p className="fine-print">{t.search.note}</p>
+      </div>
+
       {/* ---- The map frame ---------------------------------------------- */}
       <div className="pm-frame">
         {/* maplibre builds the canvas inside this host and labels and describes
             it on load. Nothing is put here by React, because React and maplibre
             would then both own the same children. */}
         <div ref={hostRef} className="pm-map" />
+
+        {/*
+          THE TOOLBAR, ON THE MAP, BECAUSE THAT IS WHERE THE QUESTION IS ASKED.
+
+          These controls were below the fold in a field group under the table,
+          and the reader's complaint was the right one: the panel offered a map
+          with a plus, a minus and an overlay toggle, and nothing on it said that
+          a click would draw. A radio group states which of the three answers is
+          armed, in words, and the cursor agrees with it.
+
+          A radio group rather than toggle buttons: the three are exclusive, one
+          is always on, and that is exactly what a radio group means to a screen
+          reader without an `aria-pressed` on each saying it three times.
+        */}
+        <div className="pm-tools" role="radiogroup" aria-label={t.tools.heading}>
+          {(
+            [
+              ['trace', t.tools.trace],
+              ['measure', t.tools.measure],
+              ['pan', t.tools.pan],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={tool === id}
+              className="button button--sm pm-tools__button"
+              data-selected={tool === id ? 'true' : undefined}
+              onClick={() => setTool(id)}
+              disabled={mapState !== 'ready'}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/*
+          THE MEASUREMENTS, OVER THE CANVAS AND NOT INSIDE IT.
+
+          `aria-hidden`: every figure here is already a row in the table below,
+          read in order and with its corner coordinates beside it. Reading them
+          twice — once as floating text with no order and no context, once as the
+          table — would make the panel worse for the reader it is meant to serve.
+        */}
+        <div className="pm-labels" aria-hidden="true">
+          {labels.map((l) => (
+            <span
+              key={l.id}
+              className="pm-label"
+              data-kind={l.kind}
+              style={{ transform: `translate(${String(l.x)}px, ${String(l.y)}px) translate(-50%, -50%)` }}
+            >
+              {l.text}
+            </span>
+          ))}
+        </div>
 
         {/* My own controls, outside the canvas, every one a real button. */}
         <div className="pm-chrome">
@@ -1583,7 +2158,59 @@ export function PlotMap({
           >
             {t.controls.clear}
           </button>
+          <button
+            type="button"
+            className="button button--sm"
+            onClick={() => setTape([])}
+            disabled={tape.length === 0}
+          >
+            {t.tools.clearTape}
+          </button>
         </div>
+        <p className="fine-print">
+          {tool === 'trace' ? t.tools.traceHelp : tool === 'measure' ? t.tools.measureHelp : t.tools.panHelp}
+        </p>
+
+        {/* ---- Picking an outline off the map --------------------------- */}
+        <div className="pm-controls__row">
+          <button
+            type="button"
+            className="button button--sm"
+            onClick={() => void pickFootprint()}
+            disabled={picking || mapState !== 'ready'}
+          >
+            {picking ? t.tools.picking : t.tools.pick}
+          </button>
+        </div>
+        <p className="fine-print">{t.tools.pickHelp}</p>
+        {picked?.refusal ? (
+          <div className="callout" data-state="blocked" role="alert">
+            <div className="callout__body">
+              {picked.refusal === 'offline'
+                ? t.tools.refusals.offline
+                : picked.refusal === 'none-here'
+                  ? t.tools.refusals.noneHere
+                  : t.tools.refusals.notARing}
+            </div>
+          </div>
+        ) : null}
+        {picked?.ring ? (
+          /*
+            WHAT WAS PICKED, AND WHOSE IT IS — amber, because a contributor's
+            trace is an ASSUMED boundary in every sense this product uses the
+            word: nobody surveyed it, and the reader is expected to correct it.
+          */
+          <div className="callout" data-state="assumed" role="note">
+            <div className="callout__body">
+              <p>
+                {picked.name !== null
+                  ? t.tools.picked(picked.name, String(picked.ring.length))
+                  : t.tools.pickedUnnamed(String(picked.ring.length))}
+              </p>
+              <p className="fine-print">{t.tools.pickedNote}</p>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* ---- Coordinate entry ------------------------------------------- */}

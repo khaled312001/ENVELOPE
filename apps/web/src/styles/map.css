@@ -470,3 +470,120 @@
     padding: 0;
   }
 }
+
+/* ===========================================================================
+ * THE TOOLBAR, THE DIMENSIONS AND THE SEARCH
+ *
+ * Added after the reader's complaint that the panel offered a map he could not
+ * draw on: the trace controls were real but they were in a field group below
+ * the table, and nothing over the canvas said what a click would do.
+ * ======================================================================== */
+
+/*
+ * The tool group sits opposite the zoom buttons so neither covers the other on
+ * a narrow screen, and it wraps rather than scrolling: three short labels at
+ * 280px are two rows, and two rows of buttons a reader can hit beat one row he
+ * cannot read.
+ */
+.pm-tools {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  z-index: var(--z-raised);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  max-inline-size: calc(100% - var(--tap-min) - var(--space-4));
+}
+.pm-tools__button {
+  min-block-size: var(--tap-min);
+}
+/*
+ * THE SELECTED TOOL IS NOT MARKED BY COLOUR ALONE (1.4.1). The ink and the
+ * ground both change, and so does the weight — a reader who cannot separate the
+ * two surfaces still reads the selected tool as the heavier word.
+ */
+.pm-tools__button[data-selected='true'] {
+  background: var(--text-primary);
+  color: var(--surface-raised);
+  border-color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+}
+
+/*
+ * The dimensions over the canvas. `pointer-events: none` throughout: a label
+ * sitting on a boundary must not be the thing that swallows the click aimed at
+ * the corner under it.
+ */
+.pm-labels {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-raised);
+  pointer-events: none;
+  overflow: hidden;
+}
+.pm-label {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+  /*
+   * An opaque plate, not a wash. A figure set straight on satellite imagery is
+   * unreadable over half of Dubai, and an alpha over a photograph is an
+   * unresolvable contrast pair — which this repository counts as a failure
+   * rather than as a skip.
+   */
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border: var(--border-width) solid var(--border-default);
+}
+.pm-label[data-kind='area'] {
+  font-weight: var(--weight-semibold);
+}
+.pm-label[data-kind='tape'] {
+  border-style: dashed;
+  color: var(--text-secondary);
+}
+
+.pm-search {
+  margin-block-end: var(--space-3);
+}
+.pm-search__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+.pm-search__field {
+  flex: 1 1 14rem;
+  min-inline-size: 0;
+}
+.pm-search__hits {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.pm-search__hits > li {
+  margin: 0;
+}
+.pm-search__hits .button {
+  inline-size: 100%;
+  justify-content: flex-start;
+  text-align: start;
+}
+
+@media print {
+  .pm-tools,
+  .pm-labels,
+  .pm-search {
+    display: none;
+  }
+}

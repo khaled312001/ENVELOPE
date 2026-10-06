@@ -47,10 +47,13 @@ import {
   assumedPlacement,
   calibrateUnderlay,
   compareArea,
+  dropCollinear,
+  fetchFootprint,
   groundToSheetPoint,
   legDrafts,
   PlotMap,
   ringReadout,
+  searchPlaces,
   sheetPointToGround,
   underlayCorners,
   type SheetPoint,
@@ -870,5 +873,149 @@ describe('handing the trace to the traverse', () => {
       expect(leg).not.toHaveProperty('classification');
       expect(leg).not.toHaveProperty('roadHierarchy');
     }
+  });
+});
+
+/* ===========================================================================
+ * PICKING AN OUTLINE OFF THE MAP
+ *
+ * The happy path here is a fetch and a projection, and it is not what can go
+ * wrong. What can go wrong is the panel treating somebody else's trace as a
+ * survey, or filling a gap when the answer is that there is nothing there. So
+ * these drive the refusals, and the one transformation that changes the shape a
+ * reader is handed.
+ * ======================================================================== */
+
+describe('an outline picked off OpenStreetMap', () => {
+  const at = { lng: 55.2708, lat: 25.2048 };
+  /** A response, without a network. */
+  const reply = (body: unknown, ok = true): typeof fetch =>
+    (async () => ({ ok, json: async () => body })) as unknown as typeof fetch;
+
+  it('refuses rather than guessing when nothing can be reached', async () => {
+    const dead = (async () => {
+      throw new Error('offline');
+    }) as unknown as typeof fetch;
+    const out = await fetchFootprint(at, 40, dead);
+    expect(out.ring).toBeNull();
+    expect(out.refusal).toBe('offline');
+  });
+
+  it('refuses rather than guessing when there is nothing there', async () => {
+    const out = await fetchFootprint(at, 40, reply({ elements: [] }));
+    expect(out.ring).toBeNull();
+    expect(out.refusal).toBe('none-here');
+  });
+
+  it('refuses a way that is not a closed outline', async () => {
+    const out = await fetchFootprint(
+      at,
+      40,
+      reply({ elements: [{ geometry: [{ lat: 25, lon: 55 }, { lat: 25.001, lon: 55 }] }] }),
+    );
+    expect(out.refusal).toBe('not-a-ring');
+  });
+
+  /*
+    AN OSM WAY REPEATS ITS FIRST NODE TO CLOSE ITSELF and this panel's ring does
+    not. Left on, the repeat arrives in the form as a zero-length boundary that
+    then wants a classification and a setback of its own.
+  */
+  it('drops the repeated closing node, so no boundary is zero long', async () => {
+    const square = [
+      { lat: 25.2, lon: 55.2 },
+      { lat: 25.2, lon: 55.2005 },
+      { lat: 25.2005, lon: 55.2005 },
+      { lat: 25.2005, lon: 55.2 },
+      { lat: 25.2, lon: 55.2 },
+    ];
+    const out = await fetchFootprint(
+      { lng: 55.20025, lat: 25.20025 },
+      40,
+      reply({ elements: [{ geometry: square, tags: { building: 'yes', name: 'Villa 12' } }] }),
+    );
+    expect(out.ring).toHaveLength(4);
+    expect(out.name).toBe('Villa 12');
+    expect(out.kind).toBe('building');
+    for (const leg of legDrafts(out.ring!)) expect(Number(leg.lengthM)).toBeGreaterThan(0);
+  });
+
+  it('takes the smallest outline within reach, not the compound wall around both', async () => {
+    const box = (dLat: number, dLng: number): readonly { lat: number; lon: number }[] => [
+      { lat: 25.2 - dLat, lon: 55.2 - dLng },
+      { lat: 25.2 - dLat, lon: 55.2 + dLng },
+      { lat: 25.2 + dLat, lon: 55.2 + dLng },
+      { lat: 25.2 + dLat, lon: 55.2 - dLng },
+      { lat: 25.2 - dLat, lon: 55.2 - dLng },
+    ];
+    const out = await fetchFootprint(
+      { lng: 55.2, lat: 25.2 },
+      40,
+      reply({
+        elements: [
+          { geometry: box(0.0008, 0.0008), tags: { building: 'yes', name: 'the wall' } },
+          { geometry: box(0.0002, 0.0002), tags: { building: 'yes', name: 'the villa' } },
+        ],
+      }),
+    );
+    expect(out.name).toBe('the villa');
+  });
+});
+
+describe('dropping the points that are not corners', () => {
+  /* Three nodes down one straight wall is one boundary, and the two extra ones
+     would each arrive in the form wanting a classification and a setback. */
+  it('removes a node in the middle of a straight run', () => {
+    const ring = [
+      { lng: 55.2, lat: 25.2 },
+      { lng: 55.2005, lat: 25.2 },
+      { lng: 55.201, lat: 25.2 },
+      { lng: 55.201, lat: 25.2005 },
+      { lng: 55.2, lat: 25.2005 },
+    ];
+    const kept = dropCollinear(ring);
+    expect(kept).toHaveLength(4);
+  });
+
+  it('keeps every corner of a chamfered figure', () => {
+    const ring = [
+      { lng: 55.2, lat: 25.2 },
+      { lng: 55.201, lat: 25.2 },
+      { lng: 55.2012, lat: 25.2002 },
+      { lng: 55.2012, lat: 25.2008 },
+      { lng: 55.2, lat: 25.2008 },
+    ];
+    expect(dropCollinear(ring)).toHaveLength(5);
+  });
+
+  it('never returns fewer than three points, whatever the tolerance', () => {
+    const ring = [
+      { lng: 55.2, lat: 25.2 },
+      { lng: 55.201, lat: 25.2 },
+      { lng: 55.202, lat: 25.2 },
+    ];
+    expect(dropCollinear(ring, 180).length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('finding the place', () => {
+  it('finds nothing when it cannot reach the internet, and says so by returning nothing', async () => {
+    const dead = (async () => {
+      throw new Error('offline');
+    }) as unknown as typeof fetch;
+    expect(await searchPlaces('warsan', dead)).toEqual([]);
+  });
+
+  it('drops a hit with no coordinate rather than placing it at zero', async () => {
+    const reply = (async () => ({
+      ok: true,
+      json: async () => [
+        { display_name: 'Al Warsan, Dubai', lat: '25.16', lon: '55.41' },
+        { display_name: 'A place with no position' },
+      ],
+    })) as unknown as typeof fetch;
+    const hits = await searchPlaces('warsan', reply);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.at.lat).toBeCloseTo(25.16, 5);
   });
 });

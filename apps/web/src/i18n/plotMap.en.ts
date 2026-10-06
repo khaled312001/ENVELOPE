@@ -274,6 +274,50 @@ export const EN = {
       'The imagery tiles did not load. The trace, the measurements and the boundary table do not depend on them.',
   },
 
+  /**
+   * The tools over the canvas.
+   *
+   * Every one of them says what a click will do, because the panel now has three
+   * answers to that and a reader cannot be expected to infer which is armed.
+   */
+  tools: {
+    heading: 'Tool',
+    pan: 'Move the map',
+    panHelp: 'Clicking adds nothing. Use this to find the plot.',
+    trace: 'Trace the boundary',
+    traceHelp: 'Click each corner. Click the first corner again to close the figure.',
+    measure: 'Measure a distance',
+    measureHelp: 'Click two points or more. The tape measures; it is never handed over as a boundary.',
+    clearTape: 'Clear the tape',
+    pick: 'Pick the outline here',
+    picking: 'Looking…',
+    pickHelp:
+      'Takes the outline OpenStreetMap holds at the centre of the view as a draft you can drag, correct and add to.',
+    /** What was picked, quoted: OSM's own name and kind, never ours. */
+    picked: (what: string, points: string): string =>
+      `${what} — ${points} corners, as a draft. Drag any corner to correct it.`,
+    pickedUnnamed: (points: string): string =>
+      `An unnamed outline — ${points} corners, as a draft. Drag any corner to correct it.`,
+    pickedNote:
+      'This is what an OpenStreetMap contributor traced, usually off the same imagery. It is not a survey and not a cadastral boundary — and a building outline is not the plot it stands on.',
+    refusals: {
+      offline: 'OpenStreetMap could not be reached, so nothing was picked. Trace the corners instead.',
+      noneHere: 'OpenStreetMap holds no outline within forty metres of the centre of the view.',
+      notARing: 'What OpenStreetMap holds there is not a closed outline, so nothing was taken from it.',
+    },
+  },
+
+  /** Finding the place, since the map opens on the whole country. */
+  search: {
+    heading: 'Find the place',
+    label: 'Area, community or landmark',
+    placeholder: 'Al Warsan, Dubai',
+    run: 'Search',
+    searching: 'Searching…',
+    none: 'Nothing found by that name in the UAE. Pan the map, or type the corner coordinates below.',
+    note: 'Place names from OpenStreetMap. A name finds a view, never a boundary.',
+  },
+
   /** The last line, under everything. */
   claim:
     'Nothing on this map is a survey, and tracing a shape is not a finding about it. Regulatory validity is never assessed and never claimed.',

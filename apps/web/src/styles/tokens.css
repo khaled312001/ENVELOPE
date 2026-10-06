@@ -783,6 +783,14 @@
   --shadow-md: 0 2px 6px rgb(16 20 33 / 0.08), 0 10px 24px rgb(16 20 33 / 0.10);
   --shadow-lg: 0 4px 12px rgb(16 20 33 / 0.10), 0 24px 56px rgb(16 20 33 / 0.14);
   --shadow-glow: 0 2px 10px rgb(43 92 217 / 0.28), 0 10px 32px rgb(43 92 217 / 0.22);
+
+  /* THE GRADIENTS ARE NOT DECLARED HERE, and that is deliberate rather than an
+     omission. `modern.css` mixes them from the semantic tokens below with
+     `color-mix`, so a theme that re-pitches the accent carries every gradient
+     with it; a copy written here in literals would be a second declaration of
+     one token, in a file that loads FIRST and therefore silently loses. The
+     first draft of this pass added exactly that copy, and the gradients it
+     declared never painted a pixel. One declaration per token. */
 }
 
 /* ---------------------------------------------------------------------------

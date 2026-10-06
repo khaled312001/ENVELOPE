@@ -41,6 +41,32 @@ export const EN = {
       'assumptions and its provenance graph. Nothing here is recomputed to fill a column.',
   },
 
+  /**
+   * The four counts across the top. Every label names a LIST, not a quantity of
+   * anything in the world — see `WorkTally` for the line this page may not cross.
+   * "Runs you authored" is a length; "capacity authored" would be a sum over
+   * plots that share nothing.
+   */
+  tally: {
+    heading: 'How much is in this workspace',
+    authored: 'Runs you authored',
+    shared: 'Shared with you',
+    signed: 'Both export gates signed',
+    drafts: 'Drafts in progress',
+    /*
+      THE WORDING AVOIDS THE WORDS IT IS ABOUT, and the test is right to make it.
+
+      The first draft read "nothing here is a total, an average or a trend across
+      plots" — which is true, and which `states no aggregate over runs` rejects,
+      because that test scans this dictionary for those words and cannot tell a
+      denial from a claim. That is the same prohibition the landing page is held
+      to and it is not a limitation: a test that could read negation would pass on
+      a page that said "no averages" and then printed one. So the sentence makes
+      the point without naming them.
+    */
+    note: 'Counts of what is listed below, and nothing more. Two runs on two plots share no input, so no single figure describes both.',
+  },
+
   checking: 'Checking whether you are signed in…',
 
   signedOut: {

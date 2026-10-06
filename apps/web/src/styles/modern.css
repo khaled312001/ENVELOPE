@@ -58,6 +58,17 @@
     var(--surface-raised) 0%,
     var(--surface-sunken) 100%
   );
+  /* The primary action's lit face. Two stops either side of `--action` itself,
+     a few percent of luminance apart, so the control reads as a surface with a
+     light on it rather than as a second colour — and so the token
+     `contrast.mjs` holds at 3:1 (a filled control's fill IS its boundary) still
+     describes what is painted. The button declares `background-color: var(--action)`
+     under this, which is both the measured value and the fallback. */
+  --gradient-action: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--action) 92%, var(--surface-raised)) 0%,
+    color-mix(in oklab, var(--action) 94%, var(--text-primary)) 100%
+  );
   /* The hero wash. Three stops of the brand at low alpha over the page, which
      reads as a lit ground rather than as a coloured panel. */
   --gradient-hero: radial-gradient(

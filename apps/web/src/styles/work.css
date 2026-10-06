@@ -15,6 +15,91 @@
  */
 
 /* ==========================================================================
+ * THE TALLY STRIP
+ *
+ * Four counts across the top, and the restraint in here is the same one the
+ * component argues: these are lengths of lists, so they are set as figures and
+ * not dressed as metrics. No sparkline, no delta arrow, no percentage, no
+ * coloured "up since last week" — every one of those would be a claim about a
+ * trend across plots that share no input.
+ *
+ * What it does take from the chassis is the lift the rest of the product uses:
+ * a raised ground, a hairline, a soft shadow, and a brand rule along the top
+ * edge so the strip reads as the page's masthead rather than as four more
+ * cards. The rule is a gradient, which is the one place in this sheet a
+ * gradient earns its keep — it is 3px of decoration carrying no information,
+ * so there is nothing in it for a reader to miss.
+ * ======================================================================= */
+
+.tally {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+  gap: var(--space-4);
+}
+
+.tally__tile {
+  position: relative;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-5);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition:
+    box-shadow var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard);
+}
+
+.tally__tile::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 3px;
+  background-image: var(--gradient-brand);
+}
+
+.tally__tile:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tally__tile {
+    transition: none;
+  }
+  .tally__tile:hover {
+    transform: none;
+  }
+}
+
+.tally__n {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-display);
+  line-height: 1;
+}
+
+.tally__label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.tally__note {
+  margin: var(--space-4) 0 0;
+  max-inline-size: var(--measure-prose);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  line-height: var(--leading-relaxed);
+  text-wrap: pretty;
+}
+
+/* ==========================================================================
  * THE RUN CARDS
  *
  * The shape the client asked for — "as if I were on an e-commerce site" — in
@@ -39,6 +124,7 @@
    collapses the empty tracks, which is what stops three cards clustering to one
    side of a void, and the same collapse stretches a lone card across the row. */
 .runcard {
+  position: relative;
   max-inline-size: 30rem;
   display: flex;
   flex-direction: column;
@@ -46,14 +132,39 @@
   padding: var(--space-5);
   background: var(--surface-raised);
   border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
   transition:
     border-color var(--duration-fast) var(--ease-standard),
-    background-color var(--duration-fast) var(--ease-standard);
+    box-shadow var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard);
+}
+
+/* The same 3px brand rule the tally tiles carry, so a card and a tile read as
+   two members of one family rather than as two components. */
+.runcard::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 3px;
+  background-image: var(--gradient-brand);
 }
 
 .runcard:hover {
   border-color: var(--border-strong);
-  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .runcard {
+    transition: none;
+  }
+  .runcard:hover {
+    transform: none;
+  }
 }
 
 .runcard__head {

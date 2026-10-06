@@ -41,6 +41,21 @@ export const AR: WorkDictionary = {
   },
 
   /* The antechamber's own words for the same wait, so one state has one sentence. */
+  /**
+   * See the English twin: every label names a LIST and not a quantity in the
+   * world, because a sum across plots that share no input describes nothing.
+   */
+  tally: {
+    heading: 'ما في مساحة العمل هذه',
+    authored: 'دراسات أنشأتها',
+    shared: 'مشاركة معك',
+    signed: 'موقع عليها بالبوابتين',
+    drafts: 'مسودات قيد العمل',
+    /* See the English twin: the sentence makes its point without naming the
+       words the prohibition test scans this file for. */
+    note: 'هذه أعداد لما هو مدرج أدناه، لا أكثر. دراستان على قطعتين لا تشتركان في مدخل، فلا يوجد رقم واحد يصف الاثنتين.',
+  },
+
   checking: 'يجري فحص ما إذا كنت مسجل الدخول…',
 
   signedOut: {

@@ -868,9 +868,26 @@ select.input { cursor: pointer; }
 /* INK, NOT THE BLUE (direction.md §3). The heaviest mark on the page stays the
    primary action's; the hue goes back to links, focus and selection. */
 .button--primary {
-  background: var(--action);
+  background-color: var(--action);
+  /*
+    AND A GRADIENT OVER THE FLAT FILL, which is decoration and nothing else.
+
+    `background-color` is declared first and separately so the measured token is
+    still the control's colour: `contrast.mjs` holds `--action` at 3:1 against
+    every ground because a filled control's fill IS its boundary, and that
+    measurement must keep describing what is painted. The gradient is two stops
+    either side of the same ink — top lighter, bottom darker, under four percent
+    of luminance apart — so it reads as a lit surface rather than as a second
+    colour, and a browser that drops `background-image` gets the measured flat
+    fill underneath rather than nothing.
+
+    The glow is the one coloured shadow in the language and this is the one
+    control it is spent on.
+  */
+  background-image: var(--gradient-action);
   border-color: var(--action);
   color: var(--text-on-action);
+  box-shadow: var(--shadow-glow);
 }
 /*
   A FILLED CONTROL HAS NO LADDER UNDER IT, so hover and press share one tone and
@@ -888,7 +905,18 @@ select.input { cursor: pointer; }
 .button--primary:focus-visible:not(:disabled),
 .button--primary:active:not(:disabled) {
   background-color: var(--action-hover);
+  /* The lit surface flattens under the pointer. A gradient that stayed put while
+     the fill darkened would read as the control changing colour rather than as
+     the control being pressed, which is the opposite of what the paragraph above
+     is buying. */
+  background-image: none;
   border-color: var(--action-hover);
+}
+
+/* A pressed control sits DOWN, so it does not also float. The glow returning on
+   release is half of the asymmetry the note above describes. */
+.button--primary:active:not(:disabled) {
+  box-shadow: none;
 }
 
 .button--ghost { border-color: transparent; background-color: transparent; }

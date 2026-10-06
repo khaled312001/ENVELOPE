@@ -188,6 +188,66 @@ export function group(value: string): string {
  * the list's accessible name — so a screen reader still hears "plot", "governing
  * capacity", "what binds it" against each value instead of a wall of text.
  */
+/**
+ * THE STRIP ACROSS THE TOP OF THIS PAGE, AND THE LINE IT MAY NOT CROSS.
+ *
+ * This file's header refuses a dashboard, and it is right to: runs this month,
+ * total capacity, average levels, a sparkline — every one of those is a number
+ * the engine never produced, computed in the view layer, about a set of runs
+ * that share no input. An average of two governing capacities from two different
+ * plots is not a fact about anything.
+ *
+ * It also says what IS permitted, in the same paragraph: *"The only counts are
+ * counts of rows, which are facts about the list itself and are true by
+ * construction."* That is the whole of this component. Four counts, each of them
+ * the length of a list the API sent — how many runs this account authored, how
+ * many were shared with it, how many of them carry both export signatures, and
+ * how many forms are half-filled. Nothing here is divided, averaged, summed over
+ * a unit, or compared across plots; delete the list and the figure goes with it.
+ *
+ * Why it exists at all: the client asked for the workspace to read as a control
+ * panel rather than as a document. A count of rows is the one kind of figure a
+ * control panel can show here without inventing a fact, and four of them answer
+ * the question somebody opens this page with — how much is here, and how much of
+ * it is finished.
+ *
+ * THE GATE COUNT IS THE ONE WITH A DEFINITION, so it carries it on screen. A run
+ * is counted as signed when both export gates are signed, which is the same test
+ * the export screen applies; a run with one of two is not "half signed" on this
+ * strip, because the files are released on both or on neither.
+ */
+function WorkTally({ view }: { readonly view: WorkView }): JSX.Element {
+  const t = useDict(EN, AR);
+  const signed = view.authored.filter((r) => r.gatesSatisfied >= EXPORT_GATES).length;
+
+  const tiles: readonly { readonly key: string; readonly n: number; readonly label: string }[] = [
+    { key: 'authored', n: view.authored.length, label: t.tally.authored },
+    { key: 'shared', n: view.shared.length, label: t.tally.shared },
+    { key: 'signed', n: signed, label: t.tally.signed },
+    { key: 'drafts', n: view.drafts.length, label: t.tally.drafts },
+  ];
+
+  return (
+    <section className="shell section section--minor" aria-labelledby="wk-tally">
+      <h2 id="wk-tally" className="sr-only">
+        {t.tally.heading}
+      </h2>
+      <ul className="tally">
+        {tiles.map((tile) => (
+          <li key={tile.key} className="tally__tile">
+            {/* The figure first and the label under it: on a tile the number is
+                what is read, and a label above it is read as a heading for a
+                section rather than as the name of the figure. */}
+            <span className="tally__n value">{tile.n}</span>
+            <span className="tally__label">{tile.label}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="tally__note">{t.tally.note}</p>
+    </section>
+  );
+}
+
 export function RunTable({
   rows,
   caption,
@@ -382,6 +442,8 @@ export default function Work({ navigate, search }: PageProps): JSX.Element {
 
       {view ? (
         <>
+          <WorkTally view={view} />
+
           <section className="shell section" aria-labelledby="wk-authored">
             <div className="section__head">
               <h2 id="wk-authored">{t.authored.title}</h2>

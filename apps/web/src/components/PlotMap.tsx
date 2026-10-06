@@ -179,6 +179,13 @@ const OPENING_VIEW: LngLat = { lng: 54.6, lat: 24.3 };
 const OPENING_ZOOM = 6.6;
 /** The zoom a search result or a picked footprint settles at: a plot fills it. */
 const PLOT_ZOOM = 18;
+/**
+ * Below this, a plot is a speck and a corner dropped into the view is invisible
+ * in it. A district fills the frame at fifteen; a forty-metre boundary is a few
+ * pixels. It governs one thing only — whether a typed corner brings the camera
+ * with it — and never what is traced or measured.
+ */
+const TRACE_ZOOM_FLOOR = 15;
 
 /**
  * The sheet's opening opacity, and the width it falls back to.
@@ -1987,12 +1994,17 @@ export function PlotMap({
 
       Moving the camera asserts nothing: a view is not a value, it carries no
       provenance, and the ring it flies to is the ring the reader just typed. It
-      moves only when the point is outside the current view, so a reader working
-      corner by corner at plot zoom is never yanked around by his own typing.
+      moves when the point is outside the view, and when the view is too wide for
+      a plot to be more than a speck in it — a corner inside the frame at country
+      zoom is inside a frame it cannot be seen in, which is the same nothing.
+      Above `TRACE_ZOOM_FLOOR` the camera is left exactly where the reader put it,
+      so working corner by corner at plot scale is never interrupted by one's own
+      typing; and the first typed corner lifts the zoom past the floor, so at most
+      one move happens per ring.
     */
     const map = mapRef.current;
     const at = { lng: Number(lngText), lat: Number(latText) };
-    if (map && !map.getBounds().contains([at.lng, at.lat])) {
+    if (map && (map.getZoom() < TRACE_ZOOM_FLOOR || !map.getBounds().contains([at.lng, at.lat]))) {
       map.jumpTo({ center: [at.lng, at.lat], zoom: PLOT_ZOOM });
     }
   };

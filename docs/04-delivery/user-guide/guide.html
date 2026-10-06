@@ -149,6 +149,37 @@
     </tbody>
   </table>
   <p class="muted small">رقم الرخصة يدخل عند الإنشاء فقط، ولا يضاف لحساب قائم، ولا يتحقق منه لدى أي جهة. ولا شيء يمنع المنشئ من توقيع مراجعته بنفسه. في هذا الدليل: <span class="en">{{author}}</span> تعد، و<span class="en">{{reviewer}}</span> يوقع.</p>
+
+  <!--
+    THE TRIAL LOGIN.
+
+    Filled by `build.mjs` from the environment, never written into this file: the
+    guide is tracked and a password in it would be a password in the repository.
+    The account is a real one on the deployment and the screenshots in this guide
+    are its own work, so a reader who signs in finds the run the pages show.
+  -->
+  <h2>حساب للتجربة</h2>
+  <table>
+    <tbody>
+      <tr><td>العنوان</td><td><span class="en">{{demo.url}}</span></td></tr>
+      <tr><td>البريد</td><td><span class="en">{{demo.email}}</span></td></tr>
+      <tr><td>كلمة المرور</td><td><span class="en">{{demo.password}}</span></td></tr>
+    </tbody>
+  </table>
+  <p class="muted small">حساب مشترك للتجربة، والدراسات التي فيه هي نفسها الظاهرة في صور هذا الدليل. ويمكنك تغيير كلمة المرور من «الإعدادات» متى أردت. وأنشئ حسابك الخاص للعمل الحقيقي: كل قيمة تدخلها تسجل باسم صاحب الحساب وتطبع على المخرج.</p>
+
+  <h2>دراساتك</h2>
+  <p><span class="en">{{demo.url}}work</span> — كل دراسة بطاقة: الرقم الحاكم، والنطاق الذي أنتجه، وعدد الافتراضات، وبوابتا التصدير.</p>
+  <div class="pair">
+    <figure class="shot">
+      <img src="shots/d02-work-author.jpg" alt="قائمة الدراسات على الحساب">
+      <figcaption>قائمة الدراسات. لا يحسب شيء بين البطاقات: لا مجموع ولا متوسط ولا «أفضل».</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="shots/d03-run-answer.jpg" alt="صفحة دراسة واحدة">
+      <figcaption>دراسة واحدة مفتوحة: الإجابة، والمجسم، ثم بقية المخرج تحتها.</figcaption>
+    </figure>
+  </div>
 </section>
 
 <!-- ============================================================ chapter 2 -->

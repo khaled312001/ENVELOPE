@@ -236,6 +236,31 @@ f['g4.at'] = at(g4.at);
 f['author'] = manifest.author;
 f['reviewer'] = manifest.reviewer;
 
+/*
+  THE TRIAL LOGIN, FROM THE ENVIRONMENT AND FROM NOWHERE ELSE.
+
+  The guide gives a reader an account to try the site with, and a password is not
+  a fact about the run — it is a secret that must not be in a tracked file. So it
+  arrives the way the capture received it, as `GUIDE_*` environment variables,
+  and reaches only the built PDF, which is not tracked.
+
+  It is REFUSED rather than defaulted when the build is not given one. A guide
+  that printed "undefined" where the password goes, or worse a placeholder that
+  looked like a password, would send a reader to a door that does not open — and
+  the template cannot silently drop the section, because an unknown key throws.
+*/
+f['demo.url'] = process.env.GUIDE_URL ?? manifest.base;
+f['demo.email'] = process.env.GUIDE_AUTHOR_EMAIL ?? '';
+f['demo.password'] = process.env.GUIDE_AUTHOR_PASSWORD ?? '';
+for (const key of ['demo.email', 'demo.password']) {
+  if (f[key]) continue;
+  throw new Error(
+    `the guide prints a trial login and ${key} is not set. Build it with ` +
+      'GUIDE_AUTHOR_EMAIL and GUIDE_AUTHOR_PASSWORD in the environment — the same ' +
+      'pair the capture used — so the login in the guide is one that opens.',
+  );
+}
+
 // Readiness.
 const rd = dash.readiness;
 f['rd.rules'] = `${rd.rulesApproved} / ${rd.rulesTotal}`;

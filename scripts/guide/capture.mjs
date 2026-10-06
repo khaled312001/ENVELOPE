@@ -42,18 +42,35 @@ const FILES = join(OUT, 'files');
 for (const d of [SHOTS, FILES, join(OUT, 'structure')]) mkdirSync(d, { recursive: true });
 
 const PLAN = 'docs/00-source/samples/affection-plan/IC1-CTYL-16_011-warsan1-621.pdf';
+/*
+  THE TWO ACCOUNTS, AND WHY THEY CAN NOW BE FIXED.
+
+  They were stamped with `Date.now()`, which is right against a scratch database:
+  a fresh pair every run, nothing to collide with, nothing left behind that
+  matters. It is wrong against a DEPLOYMENT — every capture would leave another
+  account in the client's live database, and there is no route that deletes one.
+
+  So the four values are taken from the environment when it supplies them, and
+  `enter` below signs IN where the account already exists instead of failing on
+  the sign-up. One fixed demo account, reused by every capture, is also the thing
+  the guide needs: a login a reader can be given to try the site with.
+
+  NO PASSWORD IS WRITTEN IN THIS FILE OR ANY OTHER FILE IN THE REPOSITORY. The
+  defaults below are for the throwaway local pair; a real one is passed in, used,
+  and printed only into the built guide, which is not tracked.
+*/
 const stamp = Date.now().toString(36);
 const AUTHOR = {
-  name: 'Mona Architect',
-  email: `author-${stamp}@guide.example`,
-  password: 'guide-author-password',
-  licence: 'DM-ARCH-20417',
+  name: process.env.GUIDE_AUTHOR_NAME ?? 'Mona Architect',
+  email: process.env.GUIDE_AUTHOR_EMAIL ?? `author-${stamp}@guide.example`,
+  password: process.env.GUIDE_AUTHOR_PASSWORD ?? 'guide-author-password',
+  licence: process.env.GUIDE_AUTHOR_LICENCE ?? 'DM-ARCH-20417',
 };
 const REVIEWER = {
-  name: 'Yusuf Reviewer',
-  email: `reviewer-${stamp}@guide.example`,
-  password: 'guide-reviewer-password',
-  licence: 'DM-ENG-31188',
+  name: process.env.GUIDE_REVIEWER_NAME ?? 'Yusuf Reviewer',
+  email: process.env.GUIDE_REVIEWER_EMAIL ?? `reviewer-${stamp}@guide.example`,
+  password: process.env.GUIDE_REVIEWER_PASSWORD ?? 'guide-reviewer-password',
+  licence: process.env.GUIDE_REVIEWER_LICENCE ?? 'DM-ENG-31188',
 };
 
 const browser = await chromium.launch({ channel: 'msedge' });
@@ -196,6 +213,32 @@ async function signUp(page, who) {
   await page.locator('.ac-account input[type="password"]').fill(who.password);
 }
 
+/**
+ * Get past the door however it answers.
+ *
+ * A fixed demo account exists after its first capture, so the sign-up is refused
+ * the second time — correctly, and in the server's own sentence. This waits a
+ * moment for the engine to open and, if it has not, signs in with the same pair
+ * instead. It does NOT retry a wrong password: a refusal that is not "already
+ * taken" is left to fail the step, because a capture that quietly carried on
+ * would photograph the wrong account.
+ */
+async function enter(page, who) {
+  const opened = await page
+    .getByRole('heading', { name: /read an affection plan/i })
+    .waitFor({ timeout: 8000 })
+    .then(() => true)
+    .catch(() => false);
+  if (opened) return;
+  const taken = await page.getByText(/already|taken|in use/i).first().isVisible().catch(() => false);
+  if (!taken) return;
+  await page.goto(url('/sign-in'), { waitUntil: 'networkidle' });
+  await page.locator('input[type="email"]').first().fill(who.email);
+  await page.locator('input[type="password"]').first().fill(who.password);
+  await page.getByRole('button', { name: /^sign in$/i }).first().click();
+  await page.goto(url('/app'), { waitUntil: 'networkidle' });
+}
+
 // ---------------------------------------------------------------------------
 // 1. The public site
 // ---------------------------------------------------------------------------
@@ -259,7 +302,8 @@ await step('the antechamber, and an account made on it', async () => {
   await signUp(A, AUTHOR);
   await shot(A, 'a03-create-account', { sel: 'section.section--minor', nth: 0 });
   await A.getByRole('button', { name: /^create the account$/i }).click();
-  await A.getByRole('heading', { name: /read an affection plan/i }).waitFor();
+  await enter(A, AUTHOR);
+  await A.getByRole('heading', { name: /read an affection plan/i }).waitFor({ timeout: 30000 });
 });
 
 await step('step 0 — the affection plan', async () => {
@@ -405,7 +449,8 @@ const R = reviewer.page;
 await step('the reviewer makes an account, and cannot yet open the run', async () => {
   await signUp(R, REVIEWER);
   await R.getByRole('button', { name: /^create the account$/i }).click();
-  await R.getByRole('heading', { name: /read an affection plan/i }).waitFor();
+  await enter(R, REVIEWER);
+  await R.getByRole('heading', { name: /read an affection plan/i }).waitFor({ timeout: 30000 });
   await R.goto(url(`/work?run=${runId}`), { waitUntil: 'networkidle' });
   await R.locator('.banner--danger').waitFor();
   await shot(R, 'd01-run-not-shared', { sel: 'main', maxH: 520 });

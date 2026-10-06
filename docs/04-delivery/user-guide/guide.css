@@ -64,7 +64,9 @@ body {
   margin: 0;
   font-family: var(--sans);
   font-size: 10.2pt;
-  line-height: 1.85;
+  /* 1.7, down from 1.85 for the short edition. WCAG 1.4.12 asks for at least 1.5
+     and this stays above it; a tighter leading would be bought from the reader. */
+  line-height: 1.7;
   color: var(--ink);
   background: #fff;
   counter-reset: fig;
@@ -183,8 +185,8 @@ h1, h2, h3, h4 { font-weight: 500; line-height: 1.4; margin: 0; }
   grid-template-columns: auto 1fr;
   column-gap: 6mm;
   align-items: end;
-  padding-bottom: 5mm;
-  margin-bottom: 7mm;
+  padding-bottom: 4mm;
+  margin-bottom: 5mm;
   border-bottom: 0.6mm solid var(--ink);
 }
 .chapter__no {
@@ -197,7 +199,7 @@ h1, h2, h3, h4 { font-weight: 500; line-height: 1.4; margin: 0; }
 
 h2 {
   font-size: 13.5pt;
-  margin: 8mm 0 3mm;
+  margin: 6mm 0 3mm;
   padding-top: 2mm;
   break-after: avoid;
 }
@@ -223,26 +225,36 @@ strong { font-weight: 600; }
 
 /* ---------------------------------------------------------------- figures */
 
+/*
+  HEIGHTS FOR THE SHORT EDITION.
+
+  The guide was asked to fit under twenty pages without losing a step, so the
+  pictures were capped rather than dropped: a figure gets the height a reader
+  needs to recognise the screen, not the height the screenshot happens to be.
+  A paired figure is half the width, so it is also capped shorter — the caps are
+  a ceiling, never a stretch, and `max-width: 100%` still governs the narrow ones.
+*/
 figure.shot {
-  margin: 4mm 0 6mm;
+  margin: 3mm 0 4.5mm;
   break-inside: avoid;
   counter-increment: fig;
 }
 figure.shot img {
   display: block;
   max-width: 100%;
-  max-height: 200mm;
+  max-height: 96mm;
   margin-inline: auto;
   border: 0.25mm solid var(--rule);
   background: #fff;
 }
-figure.shot.half img { max-height: 118mm; }
-figure.shot.third img { max-height: 80mm; }
-figure.shot.tall img { max-height: 228mm; }
+figure.shot.half img { max-height: 84mm; }
+figure.shot.third img { max-height: 66mm; }
+figure.shot.tall img { max-height: 150mm; }
+.pair figure.shot img { max-height: 62mm; }
 figcaption {
-  margin-top: 2mm;
-  font-size: 8.6pt;
-  line-height: 1.65;
+  margin-top: 1.6mm;
+  font-size: 8.2pt;
+  line-height: 1.55;
   color: var(--ink-2);
 }
 figcaption::before {
@@ -257,7 +269,7 @@ figcaption::before {
   align-items: start;
   break-inside: avoid;
 }
-.pair figure.shot { margin: 4mm 0 5mm; }
+.pair figure.shot { margin: 3mm 0 4mm; }
 
 /* ---------------------------------------------------------------- callouts */
 

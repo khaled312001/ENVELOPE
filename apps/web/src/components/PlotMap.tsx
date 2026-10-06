@@ -1841,12 +1841,14 @@ export function PlotMap({
         ? { lng: map.getCenter().lng, lat: map.getCenter().lat }
         : (centre ?? OPENING_VIEW);
       let widthM = FALLBACK_SHEET_WIDTH_M;
+      let measured = false;
       if (view) {
         try {
           widthM = legBetween(
             { lng: view.getWest(), lat: viewCentre.lat },
             { lng: view.getEast(), lat: viewCentre.lat },
           ).lengthM;
+          measured = true;
         } catch {
           /* A view straddling the edge of zone 40N cannot be measured, so the
              sheet opens at `FALLBACK_SHEET_WIDTH_M`. Either way the placement is
@@ -1856,6 +1858,27 @@ export function PlotMap({
       /* The placement is set first and from the same frame, so the sheet never
          appears at one size and jumps to another while the flatten resolves. */
       setPlacement(assumedPlacement(viewCentre, widthM, aspect));
+      /*
+        AND THE CAMERA COMES DOWN TO IT, OR THE SHEET IS INVISIBLE AND THE PANEL
+        LIES ABOUT IT.
+
+        The map opens on the whole of the Emirates. A view that wide cannot be
+        measured in zone 40N, so `legBetween` throws and the placement falls back
+        to two hundred metres — which at the opening zoom is a fraction of one
+        pixel. The reader saw the opacity slider, the "this placement is assumed"
+        callout and the Remove button all appear, and no drawing anywhere on the
+        imagery: every piece of state said the sheet was laid down and the one
+        thing that mattered showed nothing. That was reported as "I uploaded the
+        sheet and it did not appear on the map", and it was exactly right.
+
+        So where the width is a FALLBACK rather than a measurement, the view goes
+        to the sheet. A camera move asserts nothing — the placement is still
+        `ASSUMED`, still says so, and still has to be calibrated against a printed
+        dimension before anything is traced from it. Where the width WAS measured
+        the sheet already fills the view, and the camera is left where the reader
+        put it.
+      */
+      if (map && !measured) map.jumpTo({ center: [viewCentre.lng, viewCentre.lat], zoom: PLOT_ZOOM });
       setFit(null);
       setStage('idle');
       setPicks({ sheetA: null, groundA: null, sheetB: null, groundB: null });
@@ -1952,6 +1975,26 @@ export function PlotMap({
     publish(admitted.ring);
     setLatText('');
     setLngText('');
+    /*
+      AND THE CAMERA FOLLOWS A TYPED CORNER THAT LANDS OFF SCREEN.
+
+      The map opens on the whole of the Emirates, by design, and a plot is forty
+      metres across. So a reader who enters his corners by coordinate — the
+      keyboard path, and the only path open to someone who has the surveyor's
+      numbers rather than a view of the roof — added four points, closed the
+      ring, and saw an unchanged picture of the coast. The trace was right, the
+      table was right, and nothing on the imagery moved.
+
+      Moving the camera asserts nothing: a view is not a value, it carries no
+      provenance, and the ring it flies to is the ring the reader just typed. It
+      moves only when the point is outside the current view, so a reader working
+      corner by corner at plot zoom is never yanked around by his own typing.
+    */
+    const map = mapRef.current;
+    const at = { lng: Number(lngText), lat: Number(latText) };
+    if (map && !map.getBounds().contains([at.lng, at.lat])) {
+      map.jumpTo({ center: [at.lng, at.lat], zoom: PLOT_ZOOM });
+    }
   };
 
   const zoomBy = (delta: number): void => {

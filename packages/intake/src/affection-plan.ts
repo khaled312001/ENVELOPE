@@ -46,6 +46,17 @@ import {
   type TracedDecimal,
   type Tracer,
 } from '@envelope/core';
+import {
+  isDdaSheet,
+  metricArea,
+  readSurveyTable,
+  surveyAreaM2,
+  surveyLegs,
+  valueBelow,
+  valueRightOf,
+  type SurveyLeg,
+  type SurveyPoint,
+} from './dda.js';
 import { readBoundaries, type EdgeReadings } from './edges.js';
 import { readSitePlan, type SitePlanReading } from './site-plan.js';
 import {
@@ -55,6 +66,7 @@ import {
   readPdfText,
   valueLeftOf,
   type PdfPageText,
+  type TextItem,
 } from './pdf-text.js';
 
 // ---------------------------------------------------------------------------
@@ -106,6 +118,27 @@ export interface CrossCheck {
   readonly detail: string;
 }
 
+/**
+ * The plot as its surveyor recorded it: a grid, a list of corners, and the
+ * boundaries that follow from them.
+ *
+ * `DERIVED`, every field, from the one box on the sheet that states the plot's
+ * shape in numbers rather than in ink. The legs are what the plot form's
+ * traverse already takes — a length and a grid bearing each — so a reader
+ * accepts this ring into the same editable boxes a typed traverse uses, and can
+ * still overtype any of it.
+ */
+export interface SurveyReading {
+  /** `DLTM`, read off the sheet's own footer. */
+  readonly system: Traced<string>;
+  readonly points: Traced<readonly SurveyPoint[]>;
+  readonly legs: Traced<readonly SurveyLeg[]>;
+  /** The shoelace area of the ring, which the caller cross-checks. */
+  readonly areaM2: TracedDecimal;
+  /** Said under every drawing made from this ring. */
+  readonly notModelled: readonly string[];
+}
+
 export interface AffectionPlanFacts {
   readonly parcelId?: Traced<string>;
   readonly community?: Traced<string>;
@@ -120,6 +153,18 @@ export interface AffectionPlanFacts {
   readonly coverage?: Traced<CoverageSchedule>;
   readonly issueDate?: Traced<string>;
   readonly drawingRef?: Traced<string>;
+  /**
+   * THE SURVEYED RING, when the sheet prints a coordinate table.
+   *
+   * Deliberately NOT folded into `sitePlan.outline`, which it superficially
+   * resembles. That outline is fitted to a raster, scaled by the printed area
+   * and published `ASSUMED`; this is a list of eastings and northings the
+   * surveyor wrote down, and its legs are plane trigonometry on them. One is a
+   * measurement of a picture, the other is the document's own answer, and
+   * giving them one field would make the stronger of the two inherit the
+   * weaker's caveats — or, worse, lend the weaker the stronger's standing.
+   */
+  readonly survey?: SurveyReading;
   /** Fields the sheet does not print. The caller must resolve these. */
   readonly missing: readonly MissingField[];
   /** Arithmetic the sheet asserts about itself, re-checked. */
@@ -493,8 +538,27 @@ export function readFacts(
   const missing: MissingField[] = [];
   const crossChecks: CrossCheck[] = [];
 
-  const issueDate =
-    /(\d{1,2}-\d{1,2}-\d{4})/.exec(text)?.[1] ?? 'UNDATED';
+  /*
+    SLASHES AS WELL AS HYPHENS, because the two generators punctuate differently.
+
+    Trakhees prints `22-12-2025`; the DDA footer prints `18/11/2025 02:27:59 PM`.
+    The hyphen-only pattern left every DDA sheet `UNDATED`, which is not a
+    cosmetic loss: `instrumentVersion` on every citation this function emits is
+    that string, so an undated sheet cites an undated instrument, and two
+    revisions of one plot's affection plan become indistinguishable in the
+    evidence pack.
+  */
+  const issueDate = /(\d{1,2}[-/]\d{1,2}[-/]\d{4})/.exec(text)?.[1] ?? 'UNDATED';
+
+  /*
+    WHICH SHEET THIS IS. See `dda.ts` for what differs and what it cost.
+
+    Read once and threaded through the readers below rather than sniffed inside
+    each: a field that decided its own dialect could read the area off one
+    generator's layout and the GFA off the other's, and the pair would still
+    cross-check against each other perfectly well.
+  */
+  const dda = isDdaSheet(page);
 
   /** Emit a `DERIVED` value citing the box it was read from. */
   const fromSheet = <T>(
@@ -516,6 +580,31 @@ export function readFacts(
     });
   };
 
+  /**
+   * The same, for a reader that already holds the box.
+   *
+   * `fromSheet` goes looking for its own citation by matching the text it just
+   * parsed, which is the only thing it can do when the value came out of a regex
+   * over the whole page. The DDA readers return the cell, so re-finding it by
+   * text would be a search that can fail — and on a sheet where `N/A` appears in
+   * five boxes, a search that can succeed on the wrong one.
+   */
+  const fromCell = <T>(
+    field: string,
+    value: T,
+    item: { readonly page: number; readonly bbox: readonly [number, number, number, number]; readonly text: string },
+    unit?: string,
+  ): Traced<T> =>
+    tracer.derived(`affection_plan.${field}`, value, {
+      rule: {
+        ruleId: `AFFECTION_PLAN.${field}`,
+        citation: cite(documentUri, issueDate, field, item),
+      },
+      formula: `read from affection plan field "${field}"`,
+      ...(unit !== undefined ? { unit } : {}),
+      detail: { verbatim: item.text.replace(/\s+/g, ' ').trim() },
+    });
+
   const absent = (field: string, label: string, consequence: string): undefined => {
     missing.push({ field, label, consequence });
     return undefined;
@@ -527,6 +616,19 @@ export function readFacts(
   // sheet hits "GFA=4778.31 Sq. m" first — which silently reports the permitted
   // floor area as the plot area, an error that then propagates into every
   // downstream number while looking entirely plausible.
+  /*
+    AND ON A DDA SHEET THE SCAN IS NOT USED AT ALL.
+
+    That sheet states its area in a labelled cell — `PLOT AREA` | `1,040.04 M` —
+    and running the scan over it read **150** out of the general note "ONE BAY
+    FOR EACH UNIT LESS THAN OR EQUAL TO 150 SQ.M GFA". The client was shown a
+    1,040 m² plot reported as 150 m². The lesson is not that the regex needs
+    another exclusion: a labelled cell is a reading and a page-wide scan is a
+    guess, so where the sheet labels the box, the label wins.
+  */
+  const ddaAreaCell = dda ? valueRightOf(page, 'PLOT AREA') : undefined;
+  const ddaArea = metricArea(ddaAreaCell);
+
   const areaLine = pageLines(page)
     .map((l) => l.text)
     .find((l) => /GFA\s*=/i.test(l) === false && new RegExp(String.raw`${NUM}\s*SQ\.?\s*M\.?`, 'i').test(l));
@@ -535,7 +637,9 @@ export function readFacts(
       ? null
       : new RegExp(String.raw`(${NUM})\s*SQ\.?\s*M\.?`, 'i').exec(areaLine);
   const totalAreaSqm =
-    areaMatch?.[1] !== undefined
+    ddaArea !== undefined && ddaAreaCell !== undefined
+      ? fromCell('total_area_sqm', qArea(toDecimal(ddaArea)), ddaAreaCell, 'm²')
+      : areaMatch?.[1] !== undefined
       ? fromSheet('total_area_sqm', qArea(toDecimal(areaMatch[1])), areaMatch[0], 'm²')
       : absent(
           'total_area_sqm',
@@ -548,8 +652,13 @@ export function readFacts(
     'i',
   ).exec(text);
 
+  const ddaGfaCell = dda ? valueRightOf(page, 'MAX. GFA') : undefined;
+  const ddaGfa = metricArea(ddaGfaCell);
+
   const gfaSqm =
-    gfaFar?.[1] !== undefined
+    ddaGfa !== undefined && ddaGfaCell !== undefined
+      ? fromCell('gfa_permitted_sqm', qArea(toDecimal(ddaGfa)), ddaGfaCell, 'm²')
+      : gfaFar?.[1] !== undefined
       ? fromSheet('gfa_permitted_sqm', qArea(toDecimal(gfaFar[1])), gfaFar[0], 'm²')
       : absent(
           'gfa_permitted_sqm',
@@ -557,6 +666,21 @@ export function readFacts(
           'Permitted GFA is not printed on this sheet. It must be obtained from the DCR or set by a named user; it must not be inferred from a neighbouring plot.',
         );
 
+  /*
+    A DDA SHEET STATES NO FAR, AND ONE IS NOT COMPUTED FOR IT.
+
+    `2,288.08 ÷ 1,040.04 = 2.2` is exact, and it is still not a reading. The
+    sheet prints a maximum GFA; whether that cap was set by a ratio, by a
+    massing study or by a plot-specific condition is not on the document, and
+    publishing 2.2 as `affection_plan.far` would put a figure no instrument
+    states into a field whose whole meaning is that an instrument states it.
+    `DJAZ1MED12RES011` is the same refusal from the other direction — a printed
+    height and no FAR — and it is the one this product exists for.
+
+    The ratio IS computed, below, as a cross-check on the two figures that ARE
+    printed. A cross-check is a statement about the document; a value is a
+    statement about the plot.
+  */
   const far =
     gfaFar?.[2] !== undefined
       ? // 'ratio', the unit the engine gives every FAR. Emitted with none, the screen
@@ -565,7 +689,9 @@ export function readFacts(
       : absent(
           'far',
           'FAR',
-          'Floor area ratio is not printed on this sheet. Required before any capacity figure may be produced.',
+          dda
+            ? 'This sheet prints a maximum GFA and no floor area ratio. The ratio implied by the two printed figures is reported as a cross-check and is not published as the plot’s FAR: the sheet does not state one. Obtain it from the DCR, or set it under a named user.'
+            : 'Floor area ratio is not printed on this sheet. Required before any capacity figure may be produced.',
         );
 
   // --- height -------------------------------------------------------------
@@ -588,7 +714,21 @@ export function readFacts(
       : absent(
           'setbacks',
           'Setback',
-          'No setback schedule on the sheet. Trakhees regulations and the master developer DCR govern instead and must be supplied.',
+          /*
+            `SEE NOTES` IS A DEFERRAL, AND IT IS REPORTED AS ONE.
+
+            The DDA setback table prints `SEE NOTES` in all four building cells
+            and `N/A` in all four podium cells, and the note it points at reads
+            "QUARTER OF THE HEIGHT FROM NEIGHBORING PLOTS AND FROM CENTER OF
+            SIKKA - MAXIMUM 7.5M AND A MINIMUM OF 3M". That is a rule whose input
+            is the storey count — exactly the fixpoint `FR-PLT-002` does not
+            describe — and not a distance. Resolving it here would mean this
+            module had computed a setback from a height, which is the engine's
+            work and would arrive with no fixpoint and no citation.
+          */
+          dda
+            ? 'This sheet prints "SEE NOTES" against every face instead of a distance, and defers to a general note setting the setback at a quarter of the building height, capped at 7.5 m and floored at 3 m. That is a rule with the storey count as its input, not a schedule of distances, so no setback is read from the sheet. It must be authored as a rule or set under a named user.'
+            : 'No setback schedule on the sheet. Trakhees regulations and the master developer DCR govern instead and must be supplied.',
         );
 
   const parsedCoverage = parseCoverage(text);
@@ -598,7 +738,13 @@ export function readFacts(
       : absent(
           'plot_coverage',
           'Plot Coverage',
-          'No coverage cap on the sheet; the footprint has no horizontal bound from this instrument.',
+          /* `N/A` printed against a cap is a statement — this instrument sets
+             none — and it is a different fact from a sheet that has no coverage
+             row at all. Both leave the footprint unbound; only one of them has
+             been answered. */
+          dda && /^N\/?A$/i.test(valueRightOf(page, 'MAX. COVERAGE')?.text.trim() ?? '')
+            ? 'This sheet prints "N/A" against the maximum coverage: it sets no coverage cap. The footprint has no horizontal bound from this instrument, and one must come from the DCR or from a named user.'
+            : 'No coverage cap on the sheet; the footprint has no horizontal bound from this instrument.',
         );
 
   // --- label/value fields -------------------------------------------------
@@ -621,11 +767,24 @@ export function readFacts(
     });
   };
 
+  /*
+    THE DDA SHEET ANSWERS THIS UNDER A HEADING, AND IT ANSWERS IT TWICE OVER.
+
+    `LAND USE / GFA SPLIT` sits over `RESIDENTIAL : APARTMENT`, which the
+    Trakhees pattern cannot match: it wants the word alone on its line, and here
+    it is followed by the sub-use on the same baseline. The sub-use is the half
+    that matters downstream — "residential" picks the rule set and "apartment"
+    is what makes a unit mix mean anything — so the line is taken whole rather
+    than trimmed back to the word the old pattern knew.
+  */
+  const ddaLandUse = dda ? valueBelow(page, 'LAND USE / GFA SPLIT') : undefined;
   const landUseRaw = /Mixed Use \([^)]*\)|(?:^|\n)(Residential|Commercial|Industrial)(?:\n|$)/i.exec(
     text,
   )?.[0];
   const landUse =
-    landUseRaw !== undefined
+    ddaLandUse !== undefined && ddaLandUse.text.trim() !== ''
+      ? fromCell('land_use', ddaLandUse.text.replace(/\s+/g, ' ').trim(), ddaLandUse)
+      : landUseRaw !== undefined
       ? fromSheet('land_use', landUseRaw.trim(), landUseRaw.trim())
       : absent('land_use', 'Usage', 'Land use selects the applicable rule set; none can be chosen.');
 
@@ -658,6 +817,84 @@ export function readFacts(
     });
   }
 
+  /*
+    THE RATIO THE TWO PRINTED FIGURES IMPLY — as a cross-check, never as a FAR.
+
+    On a sheet that prints both an area and a maximum GFA and no ratio, the
+    quotient is the one piece of arithmetic a reader will do in his head within
+    a second of looking at it, and saying nothing about it is not neutrality: it
+    leaves him to do it himself and to assume the engine agrees. So it is stated,
+    in the one place in this module whose contents are explicitly statements
+    about the document rather than values of the plot.
+  */
+  if (dda && totalAreaSqm && gfaSqm && !far && totalAreaSqm.value.gt(0)) {
+    const implied = gfaSqm.value.div(totalAreaSqm.value);
+    crossChecks.push({
+      name: 'gfa ÷ plot_area (this sheet prints no FAR)',
+      /* Nothing is being checked AGAINST anything, so there is nothing that can
+         fail. `true` here means "stated", and the name says what it is. */
+      passed: true,
+      detail:
+        `${gfaSqm.value.toString()} m² ÷ ${totalAreaSqm.value.toString()} m² = ` +
+        `${qRatio(implied).toString()}. This sheet states no FAR, and this ratio is not ` +
+        'published as one — it is the quotient of two printed figures, not a reading.',
+    });
+  }
+
+  /*
+    THE SURVEYED RING, AND THE ONE THING THAT MAKES IT SAFE TO OFFER.
+
+    The coordinate table is the only description of the plot's SHAPE on the sheet
+    that is written in numbers. Everything else — the drawing, its dimension
+    strings — is ink, and the raster reader in `site-plan.ts` fits a polygon to
+    it and publishes the result `ASSUMED` for exactly that reason.
+    Six eastings and northings are not fitted to anything.
+
+    But a misread table is also a perfectly plausible ring, so the shoelace area
+    is checked against the printed plot area before the shape is offered at all.
+    On plot 5134565 it returns 1040.04 m² against a printed 1,040.04 m². A table
+    that does NOT reproduce the printed area has been misread — a dropped row
+    closes the ring across a corner and loses a triangle, quietly — and the ring
+    is withheld rather than published with a warning nobody reads.
+  */
+  const surveyTable = dda ? readSurveyTable(page) : undefined;
+  let survey: SurveyReading | undefined;
+  if (surveyTable) {
+    const ringArea = toDecimal(surveyAreaM2(surveyTable.points));
+    /* A tenth of a percent. The coordinates are printed to the millimetre, so
+       the only slack needed is the rounding of the printed area itself. */
+    const agrees =
+      totalAreaSqm === undefined
+        ? false
+        : ringArea.minus(totalAreaSqm.value).abs().lte(totalAreaSqm.value.mul('0.001'));
+
+    crossChecks.push({
+      name: 'plot_area = area of the surveyed ring',
+      passed: agrees,
+      detail:
+        `${surveyTable.points.length} coordinates on the ${surveyTable.system} grid close a ring ` +
+        `of ${qArea(ringArea).toString()} m²` +
+        (totalAreaSqm
+          ? ` against a printed plot area of ${totalAreaSqm.value.toString()} m².`
+          : ', and the sheet prints no plot area to check it against.'),
+    });
+
+    if (agrees) {
+      const legs = surveyLegs(surveyTable.points);
+      survey = {
+        system: fromCell('survey_system', surveyTable.system, surveyTable.box),
+        points: fromCell('survey_points', surveyTable.points, surveyTable.box),
+        legs: fromCell('survey_legs', legs, surveyTable.box),
+        areaM2: fromCell('survey_area_sqm', qArea(ringArea), surveyTable.box, 'm²'),
+        notModelled: [
+          `Bearings are clockwise from ${surveyTable.system} grid north, as the coordinates give them. The convergence between grid north and true north is not applied: the sheet states no value for it.`,
+          'Every boundary is taken as a straight line between two surveyed corners. A boundary the sheet draws as a curve is reported here as its chord.',
+          'Corner elevations are not printed, so the ring is flat and its area is a plan area.',
+        ],
+      };
+    }
+  }
+
   // --- boundaries ---------------------------------------------------------
   // Read from the same clauses the schedule was folded out of, so the proposals
   // and the distances cannot come from different sentences. It runs whether or
@@ -683,15 +920,38 @@ export function readFacts(
   if (landUse) facts.landUse = landUse;
   if (parkingDeferredTo) facts.parkingDeferredTo = parkingDeferredTo;
 
-  const parcelId = labelled('parcel_id', 'Parcel ID');
+  /*
+    THREE FIELDS, TWO LAYOUTS, AND THE HAND CHANGES WITH THE SHEET.
+
+    Trakhees sets a bilingual label with its value in the cell to its LEFT, which
+    is what `labelled` reads. The DDA sheet puts the plot number to the RIGHT of
+    its label in a plain table, and the community and master developer BELOW
+    theirs in a side panel. None of the three was found at all, so the client was
+    shown "not printed on this sheet" against a plot number printed in 14-point
+    type at the top of the page.
+  */
+  const ddaCell = (field: string, item: TextItem | undefined): Traced<string> | undefined => {
+    const value = item?.text.replace(/\s+/g, ' ').trim() ?? '';
+    if (!item || value === '') return undefined;
+    return fromCell(field, value, item);
+  };
+
+  const parcelId =
+    (dda ? ddaCell('parcel_id', valueRightOf(page, 'PLOT NUMBER')) : undefined) ??
+    labelled('parcel_id', 'Parcel ID');
   if (parcelId) facts.parcelId = parcelId;
-  const community = labelled('community', 'Community');
+  const community =
+    (dda ? ddaCell('community', valueBelow(page, 'COMMUNITY')) : undefined) ??
+    labelled('community', 'Community');
   if (community) facts.community = community;
-  const developer = labelled('developer', 'Developer');
+  const developer =
+    (dda ? ddaCell('developer', valueBelow(page, 'MASTER DEVELOPER')) : undefined) ??
+    labelled('developer', 'Developer');
   if (developer) facts.developer = developer;
   const drgRef = /Drg\.\s*Ref\.?\s*:\s*(\S+)/i.exec(text)?.[1];
   const drawingRef = drgRef === undefined ? undefined : fromSheet('drawing_ref', drgRef, drgRef);
   if (drawingRef) facts.drawingRef = drawingRef;
+  if (survey) facts.survey = survey;
   if (issueDate !== 'UNDATED') {
     const issued = fromSheet('issue_date', issueDate, issueDate);
     if (issued) facts.issueDate = issued;

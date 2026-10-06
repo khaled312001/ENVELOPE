@@ -54,6 +54,7 @@ import {
   PlotMap,
   ringReadout,
   searchPlaces,
+  setLegLength,
   sheetPointToGround,
   underlayCorners,
   type SheetPoint,
@@ -649,11 +650,57 @@ describe('the panel without a canvas', () => {
     expect(markup).toContain('scope="col"');
     expect(markup).toContain('scope="row"');
     expect((markup.match(/<tr>/g) ?? []).length).toBe(1 + RING.length); // header + four
+    /*
+      THE LENGTHS ARE READ OUT OF THE INPUTS, because that is where they now are.
+
+      A boundary's length is the one figure in this table a reader may overtype —
+      the affection plan prints it and a trace on imagery cannot hit it — so it
+      renders as a box with its measured value in it. Asserting on the stripped
+      text would silently pass on a table that had lost the column, since a value
+      attribute is not text; asserting on the attribute is what checks that the
+      box arrives carrying the measurement rather than empty.
+    */
+    const lengths = [...markup.matchAll(/class="[^"]*pm-ring__length[^"]*"[^>]*value="([^"]*)"/g)].map(
+      (m) => m[1],
+    );
+    expect(lengths).toEqual(['80.000', '40.000', '80.000', '40.000']);
     const text = visible(markup);
-    expect(text).toContain('80.000');
-    expect(text).toContain('40.000');
-    expect(text).toContain('90.000');
+    expect(text).toContain('90.000'); // a bearing, which is not editable
     expect(text).toContain(EN.table.caption);
+  });
+
+  /*
+    THE CLIENT'S OWN CASE, 6 Oct 2026: the trace measured 33 m and the sheet says
+    40, so the boundary becomes 40 along the direction it was traced at.
+
+    Asserted on the pure function rather than through the input, because what
+    needs checking is the geometry: the far corner moves, the near one does not,
+    and the direction is unchanged. A test driving the box would mostly be
+    testing React.
+  */
+  it('sets a boundary to a typed length, sliding its far corner along its own bearing', () => {
+    const before = ringReadout(RING);
+    const next = setLegLength(RING, 0, 40);
+    const after = ringReadout(next);
+
+    expect(before.rows[0]?.lengthM).toBe('80.000');
+    expect(after.rows[0]?.lengthM).toBe('40.000');
+    // Same direction, to the millidegree the readout prints.
+    expect(after.rows[0]?.bearingDeg).toBe(before.rows[0]?.bearingDeg);
+    // The corner it starts from is where the reader put it.
+    expect(after.rows[0]?.lat).toBe(before.rows[0]?.lat);
+    expect(after.rows[0]?.lng).toBe(before.rows[0]?.lng);
+    // And the next boundary changed, because its start moved. That is the point.
+    expect(after.rows[1]?.lengthM).not.toBe(before.rows[1]?.lengthM);
+    // Nothing else moved: the third corner is untouched.
+    expect(after.rows[2]?.lat).toBe(before.rows[2]?.lat);
+  });
+
+  it('refuses a length that is not a positive number, and leaves the ring alone', () => {
+    expect(setLegLength(RING, 0, 0)).toBe(RING);
+    expect(setLegLength(RING, 0, -5)).toBe(RING);
+    expect(setLegLength(RING, 0, Number.NaN)).toBe(RING);
+    expect(setLegLength(RING, 9, 40)).toBe(RING);
   });
 
   it('prints the traced area and the boundary each row starts from', () => {

@@ -128,6 +128,28 @@ function present(facts: AffectionPlanFacts): unknown {
     */
     ...(facts.sitePlan ? { sitePlan: facts.sitePlan } : {}),
 
+    /*
+      THE SURVEYED RING — the same pass-through, and the strongest field here.
+
+      Every other shape this endpoint sends is a measurement of ink. This one is
+      the surveyor's own coordinate table, so its legs are `DERIVED` rather than
+      `ASSUMED` and the form offers them without the amber the traced outline
+      carries. `Traced` values are presented through `traced(...)` so their node
+      ids reach the screen and a reader can open the derivation on any of them;
+      `points` and `legs` are plain JSON by construction.
+    */
+    ...(facts.survey
+      ? {
+          survey: {
+            system: traced(facts.survey.system),
+            points: traced(facts.survey.points),
+            legs: traced(facts.survey.legs),
+            areaM2: fieldOf(facts.survey.areaM2),
+            notModelled: facts.survey.notModelled,
+          },
+        }
+      : {}),
+
     missing: facts.missing,
     crossChecks: facts.crossChecks,
     crossChecksPassed: crossChecksPassed(facts),

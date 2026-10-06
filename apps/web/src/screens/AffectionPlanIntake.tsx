@@ -109,6 +109,7 @@ export type IntakeError =
 export type EdgeReadingsView = NonNullable<AffectionPlanRead['facts']['edges']>;
 export type EdgeProposalView = EdgeReadingsView['proposals'][number];
 export type SitePlanView = NonNullable<AffectionPlanRead['facts']['sitePlan']>;
+export type SurveyView = NonNullable<AffectionPlanRead['facts']['survey']>;
 export type EdgeEvidenceView = EdgeProposalView['evidence'][number];
 
 /**
@@ -169,6 +170,22 @@ export interface Prefill {
    * recover by remembering.
    */
   readonly sitePlan?: SitePlanView;
+  /**
+   * The plot's shape as its SURVEYOR wrote it, when the sheet prints a
+   * coordinate table — which outranks both of the readings above.
+   *
+   * `edges` is what the sheet's text says about its boundaries and `sitePlan` is
+   * what its drawing says; this is what its survey says, in eastings and
+   * northings, and the engine's traverse is plane trigonometry on them. It is
+   * `DERIVED` where the traced outline is `ASSUMED`, and it is only sent at all
+   * when its own area reproduces the plot area printed on the same sheet.
+   *
+   * Still offered on a button rather than applied: accepting it replaces every
+   * length and bearing in the form, and that is the reader's call however good
+   * the number is. Strength decides which offer is shown first, never whether
+   * one is made.
+   */
+  readonly survey?: SurveyView;
   /**
    * The sheet itself, so the SERVER can read its limits when the plot is created.
    *
@@ -707,6 +724,12 @@ export function Reading({
               // a reader who accepts one and not the other is answering half a
               // question about one plot.
               ...(f.sitePlan ? { sitePlan: f.sitePlan } : {}),
+              // And the surveyed ring, where the sheet prints one. It travels
+              // beside the traced outline rather than instead of it: which of
+              // the two a reader is offered is a question about what the sheet
+              // states, and dropping the weaker one here would answer it in the
+              // transport layer.
+              ...(f.survey ? { survey: f.survey } : {}),
               ...(attachment ? { attachment } : {}),
             })
           }

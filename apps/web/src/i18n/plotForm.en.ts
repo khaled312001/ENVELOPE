@@ -145,6 +145,24 @@ export const EN = {
   },
 
   /**
+   * The surveyed ring, and the copy's job is to be a different kind of sentence
+   * from the one above it.
+   *
+   * No hedge, because there is nothing to hedge: the coordinates are printed on
+   * the sheet, the legs are trigonometry on them, and the ring's own area has
+   * already been checked against the plot area printed beside it — which is the
+   * check the traced outline cannot have, since its size comes FROM that area.
+   * The one caveat is real and is stated: a boundary the sheet draws as a curve
+   * arrives here as the straight line between its two surveyed corners.
+   */
+  surveyShape: {
+    chip: 'From the sheet’s coordinate table',
+    body: (n: string, system: string, area: string): string =>
+      `Your affection plan prints ${n} surveyed corners on the ${system} grid. The boundaries below are computed from them, and the ring they close measures ${area} m² — the plot area printed on the same sheet. A boundary the sheet draws as a curve arrives as the straight line between its two corners.`,
+    use: 'Use the surveyed boundaries',
+  },
+
+  /**
    * The sheet's own boundary readings, offered per boundary.
    *
    * THE ONE FACT THE SHEET DOES NOT STATE is which of this plot's boundaries is

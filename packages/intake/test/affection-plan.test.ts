@@ -47,6 +47,8 @@ const SHEETS = {
   warsan: 'docs/00-source/samples/affection-plan/IC1-CTYL-16_011-warsan1-621.pdf',
   med12: 'docs/00-source/developer-standards/azizi/Plot DJAZ1MED12RES011-178.pdf',
   tre10: 'docs/00-source/developer-standards/azizi/Plot DJAZ1TRE10RES022-196.pdf',
+  /** The second dialect — see `dda.ts`. Issued by the DDA, 18/11/2025. */
+  dda: 'docs/00-source/samples/affection-plan/DDA-5134565-saih-shuaib-1.pdf',
 } as const;
 
 async function parse(key: keyof typeof SHEETS): Promise<AffectionPlanFacts> {
@@ -305,5 +307,124 @@ describe('DJAZ1MED12RES011 — the sheet that omits its own limits', () => {
 
   it('runs no cross-check it lacks the operands for', () => {
     expect(facts.crossChecks).toEqual([]);
+  });
+});
+
+/*
+  THE SECOND DIALECT — a DDA sheet, which not one Trakhees reader could read.
+
+  Before `dda.ts` this sheet produced six fields reading "not printed on this
+  sheet" and a plot area of 150 m² against a printed 1,040.04 — the 150 came
+  from "ONE BAY FOR EACH UNIT LESS THAN OR EQUAL TO 150 SQ.M GFA" in the general
+  notes, because the area reader scans the page for the first `<n> SQ. M` it
+  finds. These tests assert the figures a reader can see printed on the sheet,
+  for the reason the header of this file gives: a synthesised fixture would be
+  the parser agreeing with itself.
+*/
+describe('the DDA dialect — plot 5134565, Saih Shuaib 1', () => {
+  let facts: AffectionPlanFacts;
+  beforeAll(async () => {
+    facts = await parse('dda');
+  }, HOOK_TIMEOUT_MS);
+
+  it('reads the labelled table down the left margin', () => {
+    expect(facts.parcelId?.value).toBe('5134565');
+    expect(facts.totalAreaSqm?.value.toString()).toBe('1040.04');
+    expect(facts.gfaSqm?.value.toString()).toBe('2288.08');
+    expect(facts.height?.value).toMatchObject({ typicalFloors: 4, raw: 'G+4' });
+  });
+
+  /*
+    THE DEFECT THIS DIALECT WAS WRITTEN FOR, named so it cannot come back. A
+    plot area is the denominator of every capacity figure downstream, and 150 is
+    plausible enough to be believed all the way to a pro forma.
+  */
+  it('does not read the plot area out of the parking note', () => {
+    expect(facts.totalAreaSqm?.value.toString()).not.toBe('150');
+  });
+
+  it('reads the right-hand panel, whose values sit below their labels', () => {
+    expect(facts.community?.value).toBe('SAIH SHUAIB 1');
+    expect(facts.developer?.value).toBe('MERAAS ESTATES (L.L.C)');
+    expect(facts.landUse?.value).toBe('RESIDENTIAL : APARTMENT');
+  });
+
+  /* The footer punctuates with slashes where Trakhees uses hyphens, and an
+     undated sheet cites an undated instrument on every value read from it. */
+  it('dates the instrument', () => {
+    expect(facts.issueDate?.value).toBe('18/11/2025');
+  });
+
+  /*
+    2,288.08 ÷ 1,040.04 = 2.2 exactly, and it is still not this plot's FAR: the
+    sheet does not state one, and a field whose meaning is that an instrument
+    states it may not be filled by arithmetic. The quotient is reported as a
+    cross-check, which is a statement about the document.
+  */
+  it('publishes no FAR, and says what the two printed figures imply instead', () => {
+    expect(facts.far).toBeUndefined();
+    expect(blockingGaps(facts).map((m) => m.field)).toContain('far');
+    const stated = facts.crossChecks.find((c) => c.name.includes('prints no FAR'));
+    expect(stated).toBeDefined();
+    /* `2.199992`, not `2.2`: the quotient is quantised to the engine's ratio
+       precision and printed as it falls out, because rounding it to the figure a
+       reader expects would be the first step towards publishing it as one. */
+    expect(stated?.detail).toContain('2.199992');
+    expect(stated?.detail).toContain('not published as one');
+  });
+
+  /* `SEE NOTES` is a deferral to a rule with the storey count as its input, and
+     `N/A` against the coverage cap is this instrument setting none. Both leave
+     the envelope unbound, and both are said rather than left blank. */
+  it('treats "SEE NOTES" and "N/A" as answers, not as values', () => {
+    expect(facts.setbacks).toBeUndefined();
+    expect(facts.coverage).toBeUndefined();
+    const setback = facts.missing.find((m) => m.field === 'setbacks');
+    expect(setback?.consequence).toContain('SEE NOTES');
+    expect(setback?.consequence).toContain('quarter of the building height');
+    expect(facts.missing.find((m) => m.field === 'plot_coverage')?.consequence).toContain('N/A');
+  });
+
+  /*
+    THE SURVEYED RING. Six DLTM corners close to 1040.04 m² against a printed
+    1,040.04 — and the leg lengths reproduce the dimensions drawn on the same
+    sheet: 27.76, 6.36, 30.51, 0.42, 33.15, 30.82. That agreement is what makes
+    the ring safe to offer, and it is why `readFacts` withholds the ring
+    entirely when the areas disagree.
+  */
+  it('reads the coordinate table and closes it to the printed plot area', () => {
+    expect(facts.survey).toBeDefined();
+    expect(facts.survey?.system.value).toBe('DLTM');
+    expect(facts.survey?.points.value).toHaveLength(6);
+    expect(facts.survey?.points.value[0]).toEqual({
+      id: '1',
+      east: '464118.299',
+      north: '2755567.369',
+    });
+    expect(facts.survey?.areaM2.value.toString()).toBe('1040.04');
+  });
+
+  it('computes the boundaries the sheet draws dimensions for', () => {
+    const lengths = facts.survey?.legs.value.map((l) => l.lengthM) ?? [];
+    expect(lengths).toEqual(['27.762', '6.359', '30.506', '0.424', '33.147', '30.817']);
+    const bearings = facts.survey?.legs.value.map((l) => Number(l.bearingDeg)) ?? [];
+    for (const b of bearings) {
+      expect(b).toBeGreaterThanOrEqual(0);
+      expect(b).toBeLessThan(360);
+    }
+  });
+
+  /* DERIVED, not ASSUMED — the whole reason this is a field of its own rather
+     than a second `sitePlan.outline`. */
+  it('publishes the ring as read from an instrument, not as an assumption', () => {
+    expect(facts.survey?.legs.provenanceClass).toBe(ProvenanceClass.DERIVED);
+    expect(facts.survey?.areaM2.provenanceClass).toBe(ProvenanceClass.DERIVED);
+  });
+
+  it('says under the ring what it does not model', () => {
+    const notes = facts.survey?.notModelled ?? [];
+    expect(notes.length).toBeGreaterThanOrEqual(3);
+    expect(notes.join(' ')).toContain('curve');
+    expect(notes.join(' ')).toContain('convergence');
   });
 });

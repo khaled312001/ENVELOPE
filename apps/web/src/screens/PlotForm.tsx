@@ -60,20 +60,27 @@ interface PlotDraft {
   readonly plotNumber: string;
   readonly community: string;
   readonly shape: Shape;
-  readonly width: string;
-  readonly depth: string;
   readonly statedArea: string;
   readonly edges: EdgeDraft[];
 }
 
 /**
- * HOW THE SHAPE IS ENTERED, and it is a mode rather than a replacement.
+ * HOW THE SHAPE IS ENTERED. Two ways in, and there used to be three.
  *
- * A rectangle is a shortcut and it is the right one for the plots that are
- * rectangles. It is not a model of a plot: the client's second point was that
- * real ones carry several dimensions, fractions and curves. So the rectangle
- * stays and the traverse is the other way in — the boundaries as the affection
- * plan states them, a length and a direction each, with the corners computed.
+ * THE RECTANGLE IS GONE, on the client's instruction of 6 Oct 2026 —
+ * *«مش عاوز... لو هفترض ان الارض rectangle الغي اختيار المستطيل دا شيله نهائي»*.
+ * It was a shortcut and it was the wrong default to leave standing: the form
+ * opened on it, so a reader who pressed through arrived at step 2 with an 80×40
+ * rectangle the sheet never described, and the plot on screen was a plot nobody
+ * had entered. The three real sheets on file are a six-sided DDA plot, a
+ * four-sided one with a 0.42 m chamfer, and one with a curve. None of them is a
+ * rectangle, and the one control that made it easy to pretend otherwise is the
+ * one the product could least afford.
+ *
+ * What is left is the two descriptions a plot actually has: the boundaries as
+ * the document states them, and a trace on imagery for the plots whose document
+ * is not to hand. A frontage and a depth are still enterable — as two of four
+ * boundaries, in the same table every other plot uses.
  *
  * A boundary may curve, which is the rest of the same answer. The corners do
  * not move: the length and the bearing stay the chord's, and a radius and a
@@ -91,7 +98,7 @@ interface PlotDraft {
  * a traced figure must arrive as something a reader SEES and OVERTYPES. It never
  * becomes the authoritative number by arriving.
  */
-type Shape = 'rectangle' | 'edges' | 'map';
+type Shape = 'edges' | 'map';
 
 interface EdgeDraft {
   readonly classification: Classification;
@@ -205,6 +212,40 @@ export interface PlotFormProps {
       };
       readonly refusals: readonly string[];
     };
+    /**
+     * THE SURVEYED RING, and it outranks everything else that describes a shape.
+     *
+     * A DDA affection plan prints a `PLOT COORDINATES` table — six eastings and
+     * northings on the DLTM grid for plot 5134565 — and a leg between two of
+     * them is plane trigonometry, not a measurement of ink. `packages/intake`
+     * only sends it when its own shoelace area reproduces the plot area printed
+     * on the same sheet, so by the time it arrives here the document has already
+     * agreed with itself.
+     *
+     * It lands in the same boxes `applyTrace` fills, for the same reason the
+     * traced outline does: a traverse is a traverse, and the reader can overtype
+     * any leg of it. What it does NOT do is arrive amber — these legs are
+     * `DERIVED`, and dressing them as an assumption would be as wrong in that
+     * direction as the reverse.
+     */
+    readonly survey?: {
+      readonly system: { readonly value: string };
+      readonly points: {
+        readonly value: readonly {
+          readonly id: string;
+          readonly east: string;
+          readonly north: string;
+        }[];
+      };
+      readonly legs: {
+        readonly value: readonly {
+          readonly lengthM: string;
+          readonly bearingDeg: string;
+        }[];
+      };
+      readonly areaM2: { readonly value: string } | null;
+      readonly notModelled: readonly string[];
+    };
   } | null;
   /**
    * The worked example, when the reader arrived by `?demo=worked-example`.
@@ -263,8 +304,6 @@ export function PlotForm({
     prefill?.plotNumber || demo?.plotNumber || '345-1234',
   );
   const [community, setCommunity] = useState(prefill?.community ?? demo?.community ?? '');
-  const [width, setWidth] = useState(demo?.widthM ?? '80');
-  const [depth, setDepth] = useState(demo?.depthM ?? '40');
   const [statedArea, setStatedArea] = useState(prefill?.statedAreaM2 ?? '');
   const [edges, setEdges] = useState<EdgeDraft[]>(
     /*
@@ -279,28 +318,33 @@ export function PlotForm({
       and the form still refuses.
     */
     demo
-      ? demo.edges.map((e) => ({
+      ? demo.edges.map((e, i) => ({
           ...BLANK_EDGE,
           classification: e.classification as Classification,
           roadHierarchy: e.roadHierarchy as Hierarchy,
+          /*
+            THE DEMO'S GEOMETRY ARRIVES AS BOUNDARIES NOW, not as a frontage and
+            a depth. It is the same 80 × 40 plot the landing page's worked
+            example was run on — `rectangleLegs` is the engine-side shape of that
+            rectangle, so the four legs it produces are the four the run used —
+            but it lands in the table every other plot is entered in, because
+            there is no longer a second one.
+          */
+          lengthM: rectangleLegs(demo.widthM, demo.depthM)[i]?.lengthM ?? '',
+          bearingDeg: rectangleLegs(demo.widthM, demo.depthM)[i]?.bearingDeg ?? '',
         }))
       : [BLANK_EDGE, BLANK_EDGE, BLANK_EDGE, BLANK_EDGE],
   );
-  const [shape, setShape] = useState<Shape>('rectangle');
-
   /*
-    SWITCHING TO EDGE ENTRY SEEDS THE BOXES WITH THE RECTANGLE THAT WAS THERE.
+    THE FORM OPENS ON THE MAP, and on the boundaries when a demo seeded them.
 
-    An empty table is a form that has thrown away what the reader already typed
-    and asks them to type it again. Seeding is not a hidden default: the four
-    numbers are the four they entered, and every one of them is on screen and
-    editable the moment they arrive. The banner above the table says where they
-    came from.
-
-    Switching BACK leaves the traverse alone. The width and depth are still in
-    their own state, and a reader who flips modes to look at something should not
-    lose the boundaries they typed by doing it.
+    Opening on a mode that already holds a shape is the whole reason the
+    rectangle had to go: whatever the form opens on is what a reader who presses
+    through will submit. The map holds nothing until somebody draws on it, which
+    is the correct state for a plot nobody has described yet.
   */
+  const [shape, setShape] = useState<Shape>(demo ? 'edges' : 'map');
+
   /*
     A NEW BOUNDARY IS BLANK, and it is added at the end of the walk.
 
@@ -311,17 +355,10 @@ export function PlotForm({
   */
   const addEdge = (): void => setEdges((prev) => [...prev, BLANK_EDGE]);
 
-  const toEdges = (): void => {
-    const legs = rectangleLegs(width, depth);
-    setEdges((prev) =>
-      prev.map((edge, i) => ({
-        ...edge,
-        lengthM: edge.lengthM || legs[i]?.lengthM || '',
-        bearingDeg: edge.bearingDeg || legs[i]?.bearingDeg || '',
-      })),
-    );
-    setShape('edges');
-  };
+  /* Switching to the boundary table leaves it exactly as it is. It used to seed
+     four legs from the width and depth boxes, and there are no width and depth
+     boxes: the table is now the only place a length is typed. */
+  const toEdges = (): void => setShape('edges');
 
   /*
     WHICH BOUNDARY HOLDS WHICH FACE — the reader's answer, not the sheet's.
@@ -389,7 +426,17 @@ export function PlotForm({
     sheet described it.
   */
   const sitePlanImage = prefill?.sitePlan?.image ?? null;
-  const sheetLegs = prefill?.sitePlan?.outline?.legs.value ?? null;
+  /*
+    THE SURVEYED RING, WHICH DISPLACES THE TRACED ONE WHEN BOTH EXIST.
+
+    Not because two offers are confusing — they would be, but that is not the
+    argument. A reader shown both would have to choose between a coordinate
+    table and a polygon fitted to a picture of the same plot, which is not a
+    question he has any way to answer and not one the document leaves open. The
+    sheet already settled it by printing the coordinates.
+  */
+  const surveyRing = prefill?.survey?.legs.value ?? null;
+  const sheetLegs = surveyRing ? null : (prefill?.sitePlan?.outline?.legs.value ?? null);
   const sheetRing =
     sheetLegs && sheetLegs.length >= 3 && sheetLegs.every((l) => l.lengthM !== undefined)
       ? sheetLegs.map((l) => ({ lengthM: l.lengthM as string, bearingDeg: l.bearingDeg }))
@@ -459,23 +506,28 @@ export function PlotForm({
        "not asked yet" are the same value, and recording during that window is what
        overwrote the draft while its own banner was on screen. */
     if (!draft.ready || draft.recovered) return;
-    draft.record({ plotNumber, community, shape, width, depth, statedArea, edges });
+    draft.record({ plotNumber, community, shape, statedArea, edges });
     /* `draft.record` is a stable callback and the values are what changed; listing
        the callback here would re-record on every render of a memo boundary. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plotNumber, community, shape, width, depth, statedArea, edges, draft.recovered, draft.ready]);
+  }, [plotNumber, community, shape, statedArea, edges, draft.recovered, draft.ready]);
 
   const applyRecovered = (): void => {
     const p = draft.recovered?.payload;
     if (!p) return;
     setPlotNumber(p.plotNumber);
     setCommunity(p.community);
-    setWidth(p.width);
-    setDepth(p.depth);
     setStatedArea(p.statedArea);
-    /* A draft written before this form had two modes has no `shape`; it was a
-       rectangle, because that is all there was. */
-    setShape(p.shape === 'edges' ? 'edges' : 'rectangle');
+    /*
+      A DRAFT SAVED IN RECTANGLE MODE RESTORES INTO THE BOUNDARY TABLE.
+
+      Its width and depth are gone with the mode, and the boundaries it saved
+      alongside them are what the table takes. A draft that held a rectangle and
+      nothing else restores four blank boundaries, which is honest: the form can
+      no longer describe that plot as two numbers, and inventing four legs from
+      the two it used to hold would re-create the shortcut one layer down.
+    */
+    setShape(p.shape === 'map' ? 'map' : 'edges');
     /* The edge count is whatever was saved, because a plot is not always four-sided
        and a restore that silently kept four would be inventing a shape. */
     if (Array.isArray(p.edges) && p.edges.length >= 3) setEdges(p.edges.map(asEdgeDraft));
@@ -500,39 +552,21 @@ export function PlotForm({
     [edges],
   );
 
-  const vertices = useMemo(
-    () =>
-      shape === 'edges'
-        ? walk.corners
-        : [
-            { x: '0', y: '0' },
-            { x: width || '0', y: '0' },
-            { x: width || '0', y: depth || '0' },
-            { x: '0', y: depth || '0' },
-          ],
-    [shape, walk, width, depth],
-  );
+  /* One description of the shape, so there is nothing to keep in step. The
+     corners are walked from the boundaries whatever mode the form is in — the
+     map hands its trace to the same boundaries. */
+  const vertices = walk.corners;
 
   const classified = edges.every(
     (e) => e.classification !== '' && (e.classification !== 'ROAD' || e.roadHierarchy !== ''),
   );
-  /* In edge mode the shape itself can be incomplete, and a traverse that cannot
-     be walked has no corners to send.
-
-     `'map'` is never complete: the handoff is what flips the mode, so being in it
-     means no trace has been accepted yet. Submitting from the map would send the
-     rectangle still sitting in the width and depth boxes behind it. */
-  const complete = classified && (shape === 'rectangle' || (shape === 'edges' && walk.usable));
+  /* A traverse that cannot be walked has no corners to send, whichever mode
+     filled it. There is no longer a second shape behind the map that could be
+     submitted by accident — removing the rectangle removed that hazard with it. */
+  const complete = classified && walk.usable;
   const unclassified = edges.filter((e) => e.classification === '').length;
 
-  const computedArea =
-    shape === 'edges'
-      ? walk.usable
-        ? walk.areaM2
-        : null
-      : Number(width) > 0 && Number(depth) > 0
-        ? (Number(width) * Number(depth)).toFixed(2)
-        : null;
+  const computedArea = walk.usable ? walk.areaM2 : null;
 
   const submit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -677,6 +711,39 @@ export function PlotForm({
         Amber, and the word travels with the ink: the ring is ASSUMED, the basis
         is one sentence long on screen and the derivation carries the rest.
       */}
+      {/*
+        AND WHEN THE SHEET PRINTS COORDINATES, THE OFFER IS NOT AN ASSUMPTION.
+
+        No `data-state="assumed"` on this one, and that is the whole difference
+        between the two callouts: the legs below are plane trigonometry on
+        eastings and northings a surveyor wrote down, checked against the plot
+        area printed on the same sheet before the server would send them. Amber
+        here would teach a reader that the product cannot tell a measurement from
+        a tracing, on the one screen where it can.
+      */}
+      {surveyRing ? (
+        <div className="callout callout--ok">
+          <div className="callout__body">
+            <span className="chip">{t.surveyShape.chip}</span>{' '}
+            {t.surveyShape.body(
+              String(surveyRing.length),
+              prefill?.survey?.system.value ?? '',
+              prefill?.survey?.areaM2?.value ?? '',
+            )}
+          </div>
+          <div className="actions actions--row">
+            <button
+              type="button"
+              className="button button--primary"
+              onClick={() => applyTrace(surveyRing)}
+              disabled={busy}
+            >
+              {t.surveyShape.use}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {sheetRing ? (
         <div className="callout" data-state="assumed">
           <div className="callout__body">
@@ -718,15 +785,14 @@ export function PlotForm({
             one question, the reader can be on only one of them, and a radio group
             is the control a screen reader already knows how to say that about. */}
         {/*
-          THE MAP IS FIRST, AND THE RECTANGLE IS LAST.
+          THE MAP IS FIRST, AND THERE IS NO LONGER A THIRD.
 
           The order was rectangle → boundaries → map, which put the one answer
           that is almost never true of a real plot at the top of the list and the
           one a reader actually has — the plot, where it stands — at the bottom.
-          The client asked for the reversal in those words. It also matches what
-          the three cost: tracing the boundary hands the legs to the traverse
-          already filled in and editable, and typing a frontage and a depth is
-          the shortcut for the plots that really are rectangles.
+          The client asked for the reversal, and then for the rectangle to go
+          entirely; see the note on `Shape` for why the second half of that was
+          the more important half.
         */}
         <div className="pf-shape__choices">
           <label className="pf-shape__choice">
@@ -753,19 +819,6 @@ export function PlotForm({
             <span>
               <strong>{t.shape.edges}</strong>
               <span className="field__help">{t.shape.edgesHelp}</span>
-            </span>
-          </label>
-          <label className="pf-shape__choice">
-            <input
-              type="radio"
-              name="plot-shape"
-              value="rectangle"
-              checked={shape === 'rectangle'}
-              onChange={() => setShape('rectangle')}
-            />
-            <span>
-              <strong>{t.shape.rectangle}</strong>
-              <span className="field__help">{t.shape.rectangleHelp}</span>
             </span>
           </label>
         </div>
@@ -807,34 +860,6 @@ export function PlotForm({
       <div className="field-group">
         <p className="field-group__legend">{t.size.legend}</p>
         <div className="grid grid--2">
-        {shape === 'rectangle' ? (
-        <>
-        <div className="field">
-          <label htmlFor="width">{t.size.width}</label>
-          <input
-            id="width"
-            className="input input--num"
-            inputMode="decimal"
-            value={width}
-            onChange={(e) => setWidth(e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="depth">{t.size.depth}</label>
-          <input
-            id="depth"
-            className="input input--num"
-            inputMode="decimal"
-            value={depth}
-            onChange={(e) => setDepth(e.target.value)}
-            required
-          />
-        </div>
-        </>
-        ) : null}
-
         <div className="field">
           <label htmlFor="stated-area">
             {t.size.stated}
@@ -1133,12 +1158,7 @@ export function PlotForm({
               drawing with the typed figure would put a number on a line that is
               not that long.
             */
-            lengthM:
-              shape === 'edges'
-                ? (walk.drawnLengthsM[seq] ?? e.lengthM)
-                : seq % 2 === 0
-                  ? width
-                  : depth,
+            lengthM: walk.drawnLengthsM[seq] ?? e.lengthM,
             /* The legend quotes the curve, and only once the radius resolves —
                a half-typed one would flick figures in and out on every
                keystroke. The shape itself comes from `drawnRing` above. */

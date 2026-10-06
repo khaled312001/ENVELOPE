@@ -577,6 +577,48 @@ export interface AffectionPlanRead {
       };
       readonly refusals: readonly string[];
     };
+    /**
+     * The plot as its surveyor wrote it down, when the sheet prints a
+     * coordinate table.
+     *
+     * NOT a second `sitePlan.outline`, and the difference is the whole point:
+     * that one is a polygon fitted to a raster and published `ASSUMED`, this is
+     * plane trigonometry on printed eastings and northings and is `DERIVED`. The
+     * ring is only sent when its shoelace area reproduces the sheet's own
+     * printed plot area, so a misread table never reaches this field.
+     */
+    readonly survey?: {
+      readonly system: {
+        readonly value: string;
+        readonly node: string;
+        readonly parameterId: string;
+        readonly provenanceClass: string;
+      };
+      readonly points: {
+        readonly value: readonly {
+          readonly id: string;
+          readonly east: string;
+          readonly north: string;
+        }[];
+        readonly node: string;
+        readonly parameterId: string;
+        readonly provenanceClass: string;
+      };
+      readonly legs: {
+        readonly value: readonly {
+          readonly lengthM: string;
+          readonly bearingDeg: string;
+        }[];
+        readonly node: string;
+        readonly parameterId: string;
+        readonly provenanceClass: string;
+      };
+      readonly areaM2: {
+        readonly value: string;
+        readonly provenanceClass: string;
+      } | null;
+      readonly notModelled: readonly string[];
+    };
     readonly missing: readonly {
       readonly field: string;
       readonly label: string;

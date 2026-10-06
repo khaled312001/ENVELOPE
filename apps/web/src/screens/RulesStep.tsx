@@ -166,15 +166,23 @@ export function RulesStep({
    * podium level is bound by the podium setback — and "5 parking levels" said
    * none of it.
    *
-   * The default is the old default said out loud: two levels of parking, one
-   * below grade and the ground floor. It is on screen, it is editable, and what
-   * is sent is recorded under the name of whoever sent it — which is the same
-   * treatment every other pre-filled field on this step gets.
+   * EVERY COUNT STARTS AT ZERO, on the client's instruction of 6 Oct 2026 —
+   * *«وخلي دايما الرقم 0 واحنا نزود»*. It opened on one basement and one podium
+   * level, which was the old two-integer default said out loud, and that was
+   * still a building this screen had described rather than the reader: a basement
+   * costs ramp length and excavation and nobody had asked for one. The ground
+   * floor stays ticked because something must hold the parking — a schedule with
+   * no parking level at all is one the engine refuses, and opening on a refusal
+   * is a form that starts by telling the reader he is wrong.
+   *
+   * The order on screen is the building from the ground up — the ground floor,
+   * then the podium, then what is under it — which is the order he reads the
+   * height code in and the order he asked for.
    */
-  const [basements, setBasements] = useState('1');
+  const [basements, setBasements] = useState('0');
   const [groundIsParking, setGroundIsParking] = useState(true);
   const [podiumAbove, setPodiumAbove] = useState<string>(
-    sheetPodiumLevels ? String(sheetPodiumLevels.value) : '1',
+    sheetPodiumLevels ? String(sheetPodiumLevels.value) : '0',
   );
   const [podiumParking, setPodiumParking] = useState('0');
   /**
@@ -198,16 +206,26 @@ export function RulesStep({
     : (scheduleRefusal(schedule) ?? '');
   const scheduleOk = scheduleProblem === '' && !Number.isNaN(schedule.basements);
   const [comparison, setComparison] = useState<ParkingComparison | null>(null);
-  /**
-   * The recorded statements, and which of them is still answering for the reader.
-   *
-   * `fromStatement` holds the id while the pre-filled answer is untouched, and
-   * is cleared by any click. It is what decides whether the run is attributed to
-   * a named practitioner or to the person running it — and the rule is simply
-   * whose answer it actually is.
-   */
-  const [statements, setStatements] = useState<StatementsView | null>(null);
-  const [fromStatement, setFromStatement] = useState<string | null>(null);
+  /*
+    THE PRACTITIONER'S STATEMENT IS NO LONGER OFFERED ON THIS SCREEN.
+
+    Removed on the client's instruction of 6 Oct 2026 — *«دي زي ما قلنا الغيها»* —
+    and it belongs to the same instruction as the step primers: he wants the
+    screens to ask their question and stop talking. The panel was five paragraphs
+    deep: a disclaimer that it is not a regulation, the statement in Arabic, a
+    translation, a note on where the claim stops, and a button.
+
+    WHAT IS LOST AND WHAT IS NOT. The question keeps all three answers, keeps no
+    default, and keeps the refusal to compute until one is chosen — `FR-DEF-002`
+    is untouched, and it was never the statement that enforced it. What is gone
+    is the shortcut that let a reader adopt Eng. Mohamed's answer under his name
+    in one click. `PracticeStatement`, `/api/statements` and the server-side
+    refusal of a run that names a statement while sending a different answer all
+    remain; nothing on this screen reaches them, so no run can now be attributed
+    to a statement at all. That is strictly the safer direction — the hazard the
+    whole mechanism was built around was a named person's opinion arriving
+    looking like a citation — and it is reversible from one component.
+  */
   const [standards, setStandards] = useState<StandardsView | null>(null);
   const [scenarioId, setScenarioId] = useState<string>('');
   /**
@@ -265,17 +283,6 @@ export function RulesStep({
     answer is his, and the run carries his name — which is everything the plan
     wanted from a pre-selection except the part that made it a default.
   */
-  useEffect(() => {
-    void api
-      .statements(actor)
-      .then(setStatements)
-      .catch((e) => {
-        // A statement that will not load leaves the question unanswered, which
-        // is the state the product is designed for. It is not an error to show.
-        if (!(e instanceof ApiError)) throw e;
-      });
-  }, [actor]);
-
   useEffect(() => {
     void api
       .standards(actor, plot.plotNumber)
@@ -339,17 +346,9 @@ export function RulesStep({
   const body = (treatment: RunRequestBody['parkingInFar']): RunRequestBody => ({
     plotId: plot.plotId,
     parkingInFar: treatment,
-    /*
-      THE ID TRAVELS ONLY WHEN THE ANSWER IS STILL THE STATEMENT'S.
-
-      Both conditions are needed. `fromStatement` says the reader has not touched
-      the control; the equality says the treatment being sent is the one the
-      statement records — which matters because this same `body()` builds the
-      one-click comparison, and that call names a treatment of its own.
-    */
-    ...(fromStatement && treatment === parkingInFar
-      ? { parkingInFarStatementId: fromStatement }
-      : {}),
+    /* No `parkingInFarStatementId`: this screen no longer offers a statement, so
+       every answer it sends is the answer of whoever is signed in. See the note
+       where the state used to be declared. */
     unitMix: mix,
     /*
       BOTH FORMS TRAVEL, AND THE SCHEDULE WINS.
@@ -464,17 +463,6 @@ export function RulesStep({
           </div>
         </header>
 
-        <StatementNote
-          statement={statements?.statements.find(
-            (s) => s.statementId === statements.parkingInFar,
-          )}
-          used={fromStatement !== null}
-          onUse={(statement) => {
-            setParkingInFar(statement.value as RunRequestBody['parkingInFar']);
-            setFromStatement(statement.statementId);
-          }}
-        />
-
         <fieldset className="choice-set">
           <legend className="sr-only">{t.parkingInFar.legend}</legend>
 
@@ -494,18 +482,11 @@ export function RulesStep({
               name="parking-far"
               value="EXCLUDED_FROM_FAR"
               checked={parkingInFar === 'EXCLUDED_FROM_FAR'}
-              onChange={() => {
-                setParkingInFar('EXCLUDED_FROM_FAR');
-                // Their click, their answer — even when it agrees with the file.
-                setFromStatement(null);
-              }}
+              onChange={() => setParkingInFar('EXCLUDED_FROM_FAR')}
             />
             <span>
               <strong>{t.parkingInFar.excluded.label}</strong>
               <span className="choice__detail">{t.parkingInFar.excluded.detail}</span>
-              {fromStatement ? (
-                <span className="choice__detail">{t.parkingInFar.statement.badge}</span>
-              ) : null}
             </span>
           </label>
 
@@ -515,10 +496,7 @@ export function RulesStep({
               name="parking-far"
               value="COUNTS_TOWARD_FAR"
               checked={parkingInFar === 'COUNTS_TOWARD_FAR'}
-              onChange={() => {
-                setParkingInFar('COUNTS_TOWARD_FAR');
-                setFromStatement(null);
-              }}
+              onChange={() => setParkingInFar('COUNTS_TOWARD_FAR')}
             />
             <span>
               <strong>{t.parkingInFar.counts.label}</strong>
@@ -534,10 +512,7 @@ export function RulesStep({
               name="parking-far"
               value="OPEN_REGULATORY_QUESTION"
               checked={parkingInFar === 'OPEN_REGULATORY_QUESTION'}
-              onChange={() => {
-                setParkingInFar('OPEN_REGULATORY_QUESTION');
-                setFromStatement(null);
-              }}
+              onChange={() => setParkingInFar('OPEN_REGULATORY_QUESTION')}
             />
             <span>
               <strong>{t.parkingInFar.open.label}</strong>
@@ -742,24 +717,15 @@ export function LevelSchedulePanel({
         </div>
       </header>
 
-      <div className="field field--compact">
-        <label htmlFor="basements">{t.basements}</label>
-        <input
-          id="basements"
-          className="input input--num"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          max={8}
-          value={basements}
-          onChange={(e) => onBasements(e.target.value)}
-          aria-describedby="basements-hint"
-        />
-        <p id="basements-hint" className="field__help">
-          {t.basementsHelp}
-        </p>
-      </div>
+      {/*
+        THE BUILDING FROM THE GROUND UP, which is the order it is read in.
 
+        Ground floor, then the podium over it, then what is under both. The panel
+        used to open on the basement count, so the first question a reader was
+        asked about his building was how far he was digging — before he had said
+        whether the ground floor parks cars. He asked for the reversal in those
+        words on 6 Oct 2026.
+      */}
       <div className="field field--compact">
         <label className="choice">
           <input
@@ -821,6 +787,24 @@ export function LevelSchedulePanel({
         />
         <p id="podium-parking-hint" className="field__help">
           {t.podiumParkingHelp}
+        </p>
+      </div>
+
+      <div className="field field--compact">
+        <label htmlFor="basements">{t.basements}</label>
+        <input
+          id="basements"
+          className="input input--num"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={8}
+          value={basements}
+          onChange={(e) => onBasements(e.target.value)}
+          aria-describedby="basements-hint"
+        />
+        <p id="basements-hint" className="field__help">
+          {t.basementsHelp}
         </p>
       </div>
 
@@ -1517,10 +1501,26 @@ function RuleGroup({
   if (rules.length === 0) return null;
   return (
     <div className={`rule-group${deferred ? ' rule-group--deferred' : ''}`}>
+      {/*
+        THE GROUP'S LEDE AND EACH RULE'S NOTE ARE NO LONGER SHOWN.
+
+        Client, 6 Oct 2026, on this screen: *«نفس الكلام الغي الشرح الي بيبان هنا»*.
+        The notes are the rule author's working comments — "THIS is the circular
+        rule. Its lookup key is a solver output…" — and they are addressed to
+        whoever reviews the rule store, not to the person running a plot. They
+        are still on every `RuleRecord`, still served by `/api/rules`, and still
+        in the evidence pack; what changed is that a screen asking "which rules
+        will apply" now answers that and nothing else.
+
+        WHAT STAYED. The rule id, the parameter it binds, the instrument and the
+        clause. Every one of those is a fact about what will be applied, and the
+        count beside the heading is the only number here. The unapproved-rules
+        banner above this list is not copy either and does not move: it is the
+        refusal, and it is the one thing on the screen a reader must not miss.
+      */}
       <h3 className="panel__section">
         {title} <span className="chip">{rules.length}</span>
       </h3>
-      <p className="fine-print">{note}</p>
       <ul className="rule-list">
         {rules.map((r) => (
           <li key={r.ruleId}>
@@ -1534,7 +1534,6 @@ function RuleGroup({
             <span className="muted">
               {ltr(`${r.parameterId} · ${r.citation.instrumentId} ${r.citation.clauseReference}`)}
             </span>
-            {r.note ? <p className="rule-list__note">{ltr(r.note)}</p> : null}
           </li>
         ))}
       </ul>

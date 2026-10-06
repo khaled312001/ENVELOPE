@@ -126,9 +126,12 @@ export const EN = {
       a paragraph describing a shape.
     */
     caption:
-      'One row per boundary of the traced ring: its length, its direction, and the corner it starts from. Every figure is measured from the points on the imagery and is editable once it reaches the boundary table.',
+      'One row per boundary of the traced ring: its length, its direction, and the corner it starts from. The lengths are measured from the points on the imagery, and each one can be replaced with the dimension the affection plan prints — the boundary then takes that length along the direction it was traced at, and its far corner moves.',
     boundary: 'Boundary',
     length: 'Length (m)',
+    /** On the one editable figure in the table. Names the boundary, because the
+        row header is the only thing that tells the boxes apart. */
+    setLength: (n: string): string => `Length of boundary ${n}, in metres`,
     bearing: 'Direction (°)',
     corner: 'Starts at',
     remove: 'Remove',

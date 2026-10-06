@@ -131,6 +131,19 @@ export const AR: PlotFormDictionary = {
   },
 
   /**
+   * The surveyed ring. See the English twin: no hedge, because the figures are
+   * the surveyor's and the ring has already been checked against the printed
+   * plot area. The one real caveat — a drawn curve arrives as its chord — is
+   * stated rather than left to the reader to discover on a boundary.
+   */
+  surveyShape: {
+    chip: 'من جدول الإحداثيات في المخطط',
+    body: (n: string, system: string, area: string): string =>
+      `مخطط الأفكشن يطبع ${n} أركان مساحية على شبكة ${system}. الحدود أدناه محسوبة منها، والحلقة التي تغلقها مساحتها ${area} م² وهي مساحة القطعة المطبوعة على المخطط نفسه. والحد الذي يرسمه المخطط منحنيا يصل هنا خطا مستقيما بين ركنيه.`,
+    use: 'استخدم الحدود المساحية',
+  },
+
+  /**
    * The sheet's own boundary readings. See the English twin for the argument:
    * the sheet states a reading per FACE and never says which boundary of this
    * plot holds which, so that one question is what is asked.

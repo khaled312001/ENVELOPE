@@ -326,6 +326,62 @@ export function ringReadout(ring: readonly LngLat[]): RingReadout {
   };
 }
 
+/**
+ * Set one boundary's length, by sliding its far corner along its own bearing.
+ *
+ * THE TRACE IS A DRAWING, AND A DRAWING IS MEASURED AND THEN CORRECTED. The
+ * client's words on 6 Oct 2026, having traced a plot on imagery:
+ * *«لما أرسمه طلع 33 متر لا أنا عايز أخليه 40 متر فا يمدلي الضلع لـ40 متر»* — the
+ * trace measured 33 m, the affection plan says 40, and the boundary should
+ * become 40. Dragging a corner on a satellite tile cannot hit a figure to the
+ * centimetre and nobody should be asked to try; the dimension is on the
+ * document, and this is how it gets onto the shape.
+ *
+ * WHAT MOVES, AND WHAT DOES NOT. The corner this boundary STARTS at stays where
+ * the reader put it, and the corner it ENDS at slides along the bearing already
+ * traced until the leg measures what was typed. Every other corner is untouched.
+ * So the boundary becomes exactly the stated length, its direction is unchanged,
+ * and the NEXT boundary changes as a consequence — which is what happens on
+ * paper too, and is why the table shows every length rather than the one being
+ * edited.
+ *
+ * It does not rotate, scale or close anything. A ring whose boundaries each came
+ * from a printed dimension is a traverse, and `walkTraverse` on the plot form is
+ * where a traverse's closure is reported — this is a drawing tool, and it would
+ * be dishonest for it to quietly fix a misclosure the reader has not seen.
+ *
+ * Returns the ring unchanged for a length that is not a positive number, or on a
+ * leg of zero length, which has no direction to slide along.
+ */
+export function setLegLength(
+  ring: readonly LngLat[],
+  index: number,
+  lengthM: number,
+): readonly LngLat[] {
+  if (!Number.isFinite(lengthM) || lengthM <= 0) return ring;
+  if (ring.length < 2 || index < 0 || index >= ring.length) return ring;
+
+  const endIndex = (index + 1) % ring.length;
+  const from = ring[index];
+  const to = ring[endIndex];
+  if (!from || !to) return ring;
+
+  /* In metres on the grid, not in degrees: a degree of longitude in Dubai is
+     about 101 km and a degree of latitude about 111, so scaling the lng/lat
+     difference would shorten the leg in one axis and not the other and swing
+     its bearing while claiming to change only its length. */
+  const a = toUtm40(from);
+  const b = toUtm40(to);
+  const de = b.e - a.e;
+  const dn = b.n - a.n;
+  const current = Math.hypot(de, dn);
+  if (!(current > 0)) return ring;
+
+  const k = lengthM / current;
+  const moved = fromUtm40({ e: a.e + de * k, n: a.n + dn * k });
+  return ring.map((p, i) => (i === endIndex ? moved : p));
+}
+
 export interface AreaComparison {
   readonly tracedM2: string;
   readonly statedM2: string;
@@ -1145,6 +1201,29 @@ export function PlotMap({
     [ring, publish],
   );
 
+  /*
+    THE LENGTH BEING TYPED, held apart from the ring it will change.
+
+    A boundary's length is derived from two corners, so an input bound straight
+    to it cannot be typed into: clearing the box to type "40" would publish a
+    ring with a zero-length leg on the first keystroke, and `4` would move the
+    corner four metres away before the `0` arrived. The text lives here until it
+    is committed, and `null` means the table is showing measurements again.
+  */
+  const [lengthEdit, setLengthEdit] = useState<{ readonly n: number; readonly text: string } | null>(
+    null,
+  );
+
+  const commitLength = useCallback(() => {
+    if (lengthEdit === null) return;
+    const wanted = Number(lengthEdit.text);
+    setLengthEdit(null);
+    /* A blank or unparseable box is a reader who changed their mind, and the
+       boundary they were editing keeps the length it was traced at. */
+    if (!Number.isFinite(wanted) || wanted <= 0) return;
+    publish(setLegLength(ring, lengthEdit.n - 1, wanted));
+  }, [lengthEdit, ring, publish]);
+
   const removePoint = useCallback(
     (index: number) => {
       const next = ring.filter((_, i) => i !== index);
@@ -1708,6 +1787,42 @@ export function PlotMap({
      THE SHEET IMAGE. Read in this browser, never uploaded.
      -------------------------------------------------------------------- */
 
+  /*
+    THE SHEET IS FLATTENED ONTO WHITE BEFORE IT IS LAID ON THE MAP.
+
+    A PDF page rastered with an alpha channel has NO white background — it has
+    nothing where the paper is, and every pixel the drawing does not ink is
+    transparent. Laid over satellite imagery at 60% that reads as a dark
+    rectangle with a few faint blue lines in it, which is exactly what the client
+    photographed on 6 Oct 2026 and described as the sheet not showing: it was
+    showing, and it was unreadable, which for a tracing underlay is the same
+    thing.
+
+    Compositing here rather than painting a white rectangle under the layer, for
+    two reasons. The layer is positioned by four corners that move as the sheet
+    is calibrated, so a second layer would have to be kept in step with it
+    forever. And the opacity slider must fade the sheet TOWARDS the imagery — a
+    white rectangle under a fading drawing fades to white, not to the ground.
+
+    A sheet that is already opaque is unchanged by this: drawing it onto white
+    and reading it back is a no-op for every pixel whose alpha is 1.
+  */
+  const onWhite = (img: HTMLImageElement): Promise<Blob | null> =>
+    new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((blob) => resolve(blob), 'image/png');
+    });
+
   const takeSheet = (file: Blob | undefined): void => {
     if (!file) return;
     const url = URL.createObjectURL(file);
@@ -1738,11 +1853,25 @@ export function PlotMap({
              the one this screen chose, which is what the callout says. */
         }
       }
-      setSheetUrl(url);
+      /* The placement is set first and from the same frame, so the sheet never
+         appears at one size and jumps to another while the flatten resolves. */
       setPlacement(assumedPlacement(viewCentre, widthM, aspect));
       setFit(null);
       setStage('idle');
       setPicks({ sheetA: null, groundA: null, sheetB: null, groundB: null });
+
+      void onWhite(img).then((flat) => {
+        if (flat === null) {
+          /* No 2D context — a browser with canvas disabled, or an image the
+             canvas refuses. The sheet is still laid down, transparent where the
+             paper is: harder to read on dark imagery, and better than no
+             underlay at all. */
+          setSheetUrl(url);
+          return;
+        }
+        URL.revokeObjectURL(url);
+        setSheetUrl(URL.createObjectURL(flat));
+      });
     };
     img.src = url;
   };
@@ -2291,8 +2420,35 @@ export function PlotMap({
                     the reader. Dressing them in the engine's own styling is the
                     laundering this component's header refuses.
                   */}
+                  {/*
+                    THE ONE FIGURE ON THIS TABLE A READER MAY OVERTYPE.
+
+                    The bearing is not editable and the corner is not editable,
+                    and that is not an omission. A length is printed on an
+                    affection plan; a grid bearing almost never is, and a corner
+                    never is in lng/lat. Offering boxes for the other two would
+                    invite a reader to type figures no document states, into the
+                    one shape the whole run is built on.
+                  */}
                   <td className="schedule__num" data-label={t.table.length}>
-                    <span className="value">{row.lengthM}</span>
+                    <input
+                      className="input input--num pm-ring__length"
+                      inputMode="decimal"
+                      aria-label={t.table.setLength(String(row.n))}
+                      value={lengthEdit?.n === row.n ? lengthEdit.text : row.lengthM}
+                      onChange={(e) => setLengthEdit({ n: row.n, text: e.target.value })}
+                      onBlur={commitLength}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          /* A table inside a form: Enter would submit it, and the
+                             plot would be created from the ring as traced rather
+                             than as corrected. */
+                          e.preventDefault();
+                          commitLength();
+                        }
+                        if (e.key === 'Escape') setLengthEdit(null);
+                      }}
+                    />
                   </td>
                   <td className="schedule__num" data-label={t.table.bearing}>
                     <span className="value">{row.bearingDeg}</span>

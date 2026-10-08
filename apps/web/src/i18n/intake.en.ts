@@ -23,7 +23,7 @@
 export const EN = {
   title: 'Read an affection plan',
   subtitle:
-    'Drop the PDF in. We read the printed values, re-check the sheet’s own arithmetic, and list what it does not say. Nothing is saved until you have looked at it.',
+    'Drop the PDF in. We read the printed values and list what the sheet does not say. Nothing is saved until you have looked at it.',
 
   dropzone: {
     busy: 'Reading the sheet…',
@@ -211,7 +211,7 @@ export const EN = {
    * a default. Adding boundary readings answers the second only by offering.
    */
   carryOver: (tolerance: string): string =>
-    'The plot number, community and stated area carry over, and the podium count waits for you to confirm it on the rules step. The boundary readings carry over as proposals: each one waits for you to apply it, because a boundary type has no default. Width and depth do not carry over: the sheet gives an area, and a rectangle inferred from an area is a plot shape nobody surveyed. ' +
+    'The plot number, community and stated area carry over. The boundary readings carry over as proposals, each waiting for you to apply it, because a boundary type has no default. Width and depth do not: a rectangle inferred from an area is a plot shape nobody surveyed. ' +
     `Enter the dimensions and the ${tolerance} check will compare them against the area above.`,
 };
 

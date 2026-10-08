@@ -47,7 +47,20 @@ declare const MM2: unique symbol;
 /** An integer number of millimetres. Exact. */
 export type Mm = number & { readonly [MM]: true };
 
-/** An integer number of square millimetres. Exact. */
+/**
+ * A number of square millimetres. Exact.
+ *
+ * NOT an integer, and that is a fact about lattice polygons rather than a
+ * tolerance. The shoelace sum of a ring whose vertices are integers is twice
+ * the area, and twice the area is odd for a great many perfectly ordinary
+ * polygons — any triangle on the grid, and any plot a user traces by hand. So
+ * the area lands on the half-millimetre², which a double holds exactly.
+ *
+ * Demanding an integer here rejected real plots at the boundary with
+ * `area is not an exact integer of mm²`, and the run stopped: the whole study
+ * refused because the area ended in `.5`. Nothing is approximated by admitting
+ * it — `asMm2` still refuses anything off the half grid.
+ */
 export type Mm2 = number & { readonly [MM2]: true };
 
 /** Millimetres per metre — the snap grid denominator. */
@@ -92,10 +105,17 @@ export function mm2ToM2(mm2: Mm2 | number): Decimal {
   return new Decimal(mm2).div(SCALE * SCALE);
 }
 
-/** Brand a square-millimetre integer produced by the geometry kernel. */
+/**
+ * Brand an exact square-millimetre area produced by the geometry kernel.
+ *
+ * The admissible grid is the HALF millimetre², for the reason given on
+ * {@link Mm2}. `value * 2` being a safe integer says exactly that, and says it
+ * without a tolerance: a half-integer doubles to an integer and anything else
+ * does not.
+ */
 export function asMm2(value: number): Mm2 {
-  if (!Number.isSafeInteger(value)) {
-    throw new RangeError(`area is not an exact integer of mm²: ${value}`);
+  if (!Number.isSafeInteger(value * 2)) {
+    throw new RangeError(`area is not an exact half-integer of mm²: ${value}`);
   }
   return value as Mm2;
 }

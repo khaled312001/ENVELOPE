@@ -327,3 +327,35 @@ describe('orientRing — a ring is stored counter-clockwise, and its edges come 
     ).toBe(180);
   });
 });
+
+/**
+ * THE HALF MILLIMETRE², AND WHY IT IS NOT A TOLERANCE.
+ *
+ * A ring on the 1 mm grid has an area on the HALF mm² grid — twice the area is
+ * the shoelace sum, and that sum is odd for any triangle on the lattice and for
+ * a great many plots traced by hand. `asMm2` demanded an integer and threw
+ * `area is not an exact integer of mm²`, which refused the whole study at the
+ * boundary over a `.5`. It is caught here by the three methods that must agree,
+ * not by a looser comparison: the half is exact in a double, so `===` still
+ * holds.
+ */
+describe('a ring whose doubled area is odd', () => {
+  const TRIANGLE: readonly { x: Mm; y: Mm }[] = [
+    { x: asMm(0), y: asMm(0) },
+    { x: asMm(40_001), y: asMm(0) },
+    { x: asMm(0), y: asMm(30_001) },
+  ];
+
+  it('is an area of exactly n + 0.5 mm², not a rounded one', () => {
+    expect(signedArea2Shoelace(TRIANGLE) % 2).not.toBe(0);
+    expect(area(TRIANGLE)).toBe(600_035_000.5);
+  });
+
+  it('is agreed on by Clipper to the same half, so nothing is being tolerated', () => {
+    expect(clipperArea(TRIANGLE)).toBe(area(TRIANGLE));
+  });
+
+  it('converts to m² exactly, which is what a reader is shown', () => {
+    expect(mm2ToM2(area(TRIANGLE)).toFixed(7)).toBe('600.0350005');
+  });
+});

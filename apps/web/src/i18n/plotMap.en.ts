@@ -126,7 +126,7 @@ export const EN = {
       a paragraph describing a shape.
     */
     caption:
-      'One row per boundary of the traced ring: its length, its direction, and the corner it starts from. The lengths are measured from the points on the imagery, and each one can be replaced with the dimension the affection plan prints — the boundary then takes that length along the direction it was traced at, and its far corner moves.',
+      'One row per boundary: its length, its direction, and the corner it starts from. A length measured off the imagery can be replaced with the dimension the affection plan prints, and the far corner moves with it.',
     boundary: 'Boundary',
     length: 'Length (m)',
     /** On the one editable figure in the table. Names the boundary, because the

@@ -50,11 +50,10 @@ export const EN = {
     open: {
       label: 'I don’t know yet',
       detail:
-        'A legitimate answer. We will not compute a capacity, but we will show you what each treatment would be worth.',
+        'No capacity is computed, and each treatment is still priced for you.',
     },
     compare: 'Show me what each answer is worth',
-    compareNeeds:
-      'The comparison runs the pipeline twice, so it needs the saleable share of GFA below first.',
+    compareNeeds: 'Needs the saleable share of GFA below first.',
     ifCounts: 'If it counts',
     ifExcluded: 'If it is excluded',
 
@@ -116,33 +115,29 @@ export const EN = {
   core: {
     title: 'The core',
     subtitle:
-      'Lifts, escape stairs, risers and the lift lobby, as one area on a typical floor. ' +
-      'Leave it empty and the engine assumes one, in amber, and says what it assumed.',
+      'Lifts, stairs, risers and the lobby, as one area on a typical floor. ' +
+      'Leave it empty and the engine assumes one, and says so.',
     label: 'Core area on a typical floor (m²)',
     placeholder: (example: string): string => `e.g. ${example}`,
     /** The assumed share sits between these. */
     help: {
       before: 'Left empty, the engine takes ',
       after:
-        ' of the tower plate — the middle of what a residential tower core takes — and ' +
-        'marks it as assumed wherever it appears. Enter a figure and it is recorded as ' +
-        'yours. It is refused only if it cannot be a core of this plate, and the refusal ' +
-        'names both areas.',
+        ' of the tower plate and marks it assumed. Enter a figure and it is recorded as yours.',
     },
     invalid: 'A core area is a number greater than zero.',
     /** The figure the run will post sits between these, when it is not what was typed. */
     readAs: { before: 'The engine reads this as ', after: '.' },
     notSubtracted:
-      'Nothing above is reduced for the core. A core is inside GFA and outside saleable ' +
-      'area, so the saleable figure you gave already accounts for it, and on a parking ' +
-      'level it is inside what the usable fraction deducts. The engine draws the core and ' +
-      'compares it against both, on the results screen.',
+      'Nothing above is reduced for the core. It is inside GFA and outside saleable ' +
+      'area, so the saleable figure you gave already carries it. The engine draws it ' +
+      'and compares it, on the results screen.',
   },
 
   levels: {
     title: 'The levels',
     subtitle:
-      'What the building is made of, from the bottom up. The tower is not entered here — it comes out of the run.',
+      'What the building is made of, bottom up. The tower comes out of the run.',
     basements: 'Basements',
     basementsHelp: 'Below grade, all parking. Nothing else below grade is modelled.',
     groundIsParking: 'The ground floor is parking',
@@ -162,8 +157,7 @@ export const EN = {
     },
     /** The live readout. The tower count is absent until the run produces one. */
     codeLabel: 'This schedule reads',
-    codeNote:
-      'The way a height code is written on an affection plan. The tower count is added once the run produces one.',
+    codeNote: 'The tower count is added once the run produces one.',
     /*
       The lead-in on the refusal. The sentence after it is the ENGINE'S, in
       English, in both languages — the same ruling as the error banner, which
@@ -173,7 +167,7 @@ export const EN = {
     */
     problemLead: 'This schedule does not describe a building.',
     parkingLabel: 'Parking levels',
-    parkingNote: 'Basements, plus the ground floor if it is parking, plus the podium levels that hold it.',
+    parkingNote: 'Basements, the ground floor if it is parking, and the podium levels that hold it.',
   },
 
   rules: {
@@ -214,7 +208,7 @@ export const EN = {
   mix: {
     title: 'The unit mix this run will use',
     subtitle:
-      'The unit count is the permitted floor area divided by what one unit takes. These are the areas it will be divided by.',
+      'The areas the permitted floor area will be divided by.',
     /** The share arrives already converted to a percentage. */
     share: (percent: string): string => `${percent}% `,
     area: (m2: string): string => ` at ${m2} m² net saleable`,
@@ -225,7 +219,7 @@ export const EN = {
   standard: {
     title: 'Build to a developer’s standard',
     subtitle:
-      'Optional, and it changes the answer. A developer’s brief fixes the unit mix and the areas a scheme is priced on — which is what turns a permitted GFA into a unit count.',
+      'Optional, and it changes the answer. A brief fixes the unit mix and the areas a scheme is priced on.',
     /** Amber, above the picker. The API's own disclaimer follows it verbatim. */
     notice: 'This is not a regulation.',
     brief: {
@@ -243,7 +237,7 @@ export const EN = {
     none: {
       label: 'None — use a generic mix',
       detail:
-        'A stand-in nobody entered. It is declared as an assumption, and it moves the unit count directly.',
+        'A stand-in nobody entered. Declared as an assumption, and it moves the unit count.',
     },
     fromBrief: 'from this plot’s brief',
     /** A unit type's share, then its label as the standard names it, then its area. */
@@ -261,7 +255,7 @@ export const EN = {
   efficiency: {
     title: 'How much of the GFA is saleable?',
     subtitle: (assumed: string): string =>
-      `Cores, corridors, structure, plant and amenity are all inside GFA and none of them sells. There is no default here: this engine used to take ${assumed} without saying so, and reported more units than any building holds.`,
+      `Cores, corridors, structure, plant and amenity are inside GFA and none of them sells. There is no default here — taking ${assumed} reports more units than any building holds.`,
     label: 'Saleable area ÷ GFA',
     placeholder: (example: string): string => `e.g. ${example}`,
     /**
@@ -307,19 +301,18 @@ export const EN = {
          consequence here is which of the two the engine treats as exact. */
       ratio: {
         label: 'A share of the GFA',
-        detail: 'Use this when what you have is a target — a brief stating 93% to 97% of GFA.',
+        detail: 'A target share — a brief stating 93% to 97% of GFA.',
       },
       area: {
         label: 'An area, in square metres',
-        detail:
-          'Use this when what you have is square metres. The engine divides it by the GFA this envelope yields and shows you the share.',
+        detail: 'Use this when what you have is square metres.',
       },
     },
     /* The unit goes in the label, as it does on the plot form's own area field. */
     areaLabel: 'Saleable area (m²)',
     areaPlaceholder: (example: string): string => `e.g. ${example}`,
     areaHelp:
-      'The engine divides this by the GFA this envelope yields and shows you the share it comes to, beside the answer. If that share is not what you expected, one of the two figures is wrong.',
+      'The engine divides this by the GFA this envelope yields and shows the share beside the answer.',
     areaInvalid: 'An area above zero, in square metres.',
   },
 
@@ -327,13 +320,11 @@ export const EN = {
     busy: 'Computing…',
     idle: 'Compute capacity',
     needsParking: 'Answer the parking question above to continue.',
-    needsEfficiency:
-      'Enter the saleable share of GFA to continue. It is not a formality — it moves the unit count by the whole of whatever it is not.',
+    needsEfficiency: 'Enter the saleable share of GFA to continue.',
     /* The same refusal, naming the field the reader is actually looking at.
        Telling somebody who chose square metres to "enter the share" sends them
        hunting for a control that is not on the screen. */
-    needsSaleableArea:
-      'Enter the saleable area to continue. It is not a formality — it moves the unit count by the whole of whatever is not saleable.',
+    needsSaleableArea: 'Enter the saleable area to continue.',
     needsCore: 'Correct the core area above, or leave it empty, to continue.',
     needsLevels: 'Correct the levels above to continue.',
   },

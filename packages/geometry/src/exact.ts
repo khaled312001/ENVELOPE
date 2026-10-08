@@ -67,16 +67,13 @@ export function signedArea2Trapezoid(ring: Ring): number {
 
 /** Signed area in mm². Positive for counter-clockwise rings. */
 export function signedArea(ring: Ring): number {
-  const a2 = signedArea2Shoelace(ring);
-  if (a2 % 2 !== 0) {
-    // Twice the area of an integer polygon is always an integer, and by Pick's
-    // theorem it is even iff the polygon has no odd half-cell remainder. An odd
-    // value is legitimate (a triangle on the lattice), so this is not an error —
-    // it just means the area is a half-integer of mm², which is exactly
-    // representable in a double.
-    return a2 / 2;
-  }
-  return a2 / 2;
+  // Twice the area of an integer polygon is always an integer, and by Pick's
+  // theorem it is even iff the polygon has no odd half-cell remainder. An odd
+  // value is legitimate (a triangle on the lattice, and most plots traced by
+  // hand), so this is not an error — it just means the area is a half-integer
+  // of mm², which is exactly representable in a double. `asMm2` admits that
+  // grid for the same reason; it used to demand an integer and refuse the run.
+  return signedArea2Shoelace(ring) / 2;
 }
 
 /** Unsigned area in mm², cross-checked across all independent methods. */

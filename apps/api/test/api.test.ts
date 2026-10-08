@@ -720,7 +720,15 @@ describe('gates — §21.1, enforced server-side', () => {
     expect(res.json().message).toMatch(/non-skippable/);
   });
 
-  it('refuses G4 from an actor with no asserted licence', async () => {
+  /*
+    THE LICENCE IS RECORDED, NOT REQUIRED — the inverse of what this test used to
+    assert, and the change is the owner's (2026-10-08). The system has never been
+    able to verify a licence, so demanding one tested that a box was not empty
+    while blocking a run that was computed, checked and read. What still holds is
+    the part that was ever load-bearing: the request must NAME somebody, and the
+    second test here is what keeps the first from being a removal of the gate.
+  */
+  it('takes G4 from a named actor who asserts no licence', async () => {
     const plot = await createPlot();
     const run = (
       await app.inject({
@@ -737,8 +745,32 @@ describe('gates — §21.1, enforced server-side', () => {
       headers: ACTOR,
       payload: { gate: 'G4_REVIEWER_NAMED', subjectHash: 'whatever' },
     });
-    expect(res.statusCode).toBe(403);
-    expect(res.json().message).toMatch(/asserts a professional licence/);
+    expect(res.statusCode).toBe(200);
+
+    // Named on the run's own row — the signature stands, licence or no licence.
+    const rows = (await app.inject({ method: 'GET', url: '/api/runs', headers: ACTOR })).json();
+    const row = rows.runs.find((r: { runId: string }) => r.runId === run.runId);
+    expect(row.reviewer.name).toBe('Test Architect');
+  });
+
+  it('still refuses G4 from a request that names nobody', async () => {
+    const plot = await createPlot();
+    const run = (
+      await app.inject({
+        method: 'POST',
+        url: '/api/runs',
+        headers: ACTOR,
+        payload: { ...RUN_BODY, plotId: plot.plotId },
+      })
+    ).json();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/runs/${run.runId}/gates`,
+      headers: { 'x-actor-id': 'u1' },
+      payload: { gate: 'G4_REVIEWER_NAMED', subjectHash: 'whatever' },
+    });
+    expect(res.statusCode).toBe(401);
   });
 
   it('refuses an acknowledgement given against different content', async () => {

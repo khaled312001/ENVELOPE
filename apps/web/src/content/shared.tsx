@@ -127,8 +127,9 @@ export const LIMITS: readonly Refusal[] = [
     heading: 'It does not replace a professional.',
     body: (
       <>
-        An export records a reviewer’s name and the licence number they typed beside it.
-        The system records that assertion; it cannot verify the licence with anybody, and
+        An export records a reviewer’s name, and the licence number they typed beside it
+        when they typed one. The system records that assertion; it cannot verify the
+        licence with anybody, which is why it records one rather than demanding one, and
         it does not check that the person signing is not the person who authored the run.
         Separation of duties is a control this software does not have.
       </>

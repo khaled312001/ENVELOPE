@@ -224,9 +224,14 @@ export const AR: AppDictionary = {
       said in the third person because the product does not say «نحن». The denial
       uses the reader's own word, «التحقق», as the antechamber does: softer here
       would answer a question nobody asked.
+
+      Both lines are now a STATE rather than a refusal — see the English twin.
+      The second is not «لم تضف رخصة», which reads as a reproach for a field that
+      is optional; it reports what the export will say, which is what the reader
+      is about to put their name to.
     */
-    noLicence:
-      'أضف رقم رخصتك المهنية حتى توقع. يسجل الرقم، ولا تستطيع هذه البرمجية التحقق منه.',
+    withLicence: 'ويسجل معه رقم رخصتك. ولا تستطيع هذه البرمجية التحقق منه.',
+    noLicence: 'لا يوجد رقم رخصة على حسابك. ويسجل الناتج أنه لم تذكر رخصة.',
     sign: 'أضف توقيعك على هذا الناتج',
 
     preparing: 'جاري الإعداد…',

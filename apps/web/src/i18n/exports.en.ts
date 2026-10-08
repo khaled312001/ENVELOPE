@@ -54,8 +54,8 @@ export const EN = {
     title: 'What comes out',
     lede:
       'Every file this engine writes says its regulatory validity is not assessed, and ' +
-      'none of them leaves until the assumption register is acknowledged and someone puts ' +
-      'their name and licence on the export.',
+      'none of them leaves until the assumption register is acknowledged and a named ' +
+      'person puts their name on the export.',
     note:
       'Every layer, sheet, note and version below was read out of the files the engine ' +
       'wrote for the worked example on the landing page, by the check that runs before ' +
@@ -202,8 +202,9 @@ export const EN = {
       'carry all of it: the claim statement, the register, the deferred constraints, the ' +
       'versions and the signature.',
     signature:
-      'The signature is described as what it is: a name, a licence number the signer ' +
-      'typed, and a time. The licence is recorded and never checked with anybody.',
+      'The signature is described as what it is: a name, a time, and the licence number ' +
+      'the signer typed — or, where they typed none, that they typed none. The licence ' +
+      'is recorded and never checked with anybody.',
   },
 
   gates: {

@@ -203,11 +203,10 @@ export const EN = {
     plots: 'Plots',
     runs: 'Runs',
     reviewed: 'Reviewed and signed',
-    reviewedNoteBefore:
-      'A run leaves the building only once a person has put a licence number beside it at ',
+    reviewedNoteBefore: 'A run leaves the building only once a named person has signed it at ',
     reviewedNoteAfter:
-      '. The licence is recorded, not verified, and the signer is not checked against ' +
-      'the author.',
+      '. A licence number is recorded when the signer asserts one and never verified, ' +
+      'and the signer is not checked against the author.',
     exported: 'Both export gates signed',
 
     bindsTitle: 'Which limit binds, across what has been run',

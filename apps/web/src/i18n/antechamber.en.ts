@@ -98,7 +98,10 @@ export const EN = {
         'anybody.',
       signOut: 'Sign out',
       licence: 'Licence number on this account: ',
-      noLicence: 'This account has no licence number, so it cannot sign a review.',
+      /* NOT "so it cannot sign a review" — it can, and that sentence was the
+         requirement this product removed. What stays true is what the export
+         will say about it. */
+      noLicence: 'This account has no licence number. An export it signs records that none was asserted.',
     },
 
     /*

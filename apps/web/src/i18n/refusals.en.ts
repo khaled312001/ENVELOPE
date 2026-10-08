@@ -248,16 +248,18 @@ export const EN = {
     titleAnd: 'And it does not enforce that the reviewer is not the author.',
     doesTitle: 'What the reviewer gate does',
     doesBody:
-      'It refuses the acknowledgement unless the actor asserts a professional licence ' +
-      'number, and it writes that name, that licence and that timestamp onto the ' +
-      'export. Nothing leaves the system unsigned, and the signature is a person’s ' +
-      'rather than the system’s: the engine never reports that it decided anything.',
+      'It refuses the acknowledgement from a request that names nobody, and it writes ' +
+      'that name, that timestamp and the licence number the signer asserted — or that ' +
+      'they asserted none — onto the export. Nothing leaves the system unsigned, and ' +
+      'the signature is a person’s rather than the system’s: the engine never reports ' +
+      'that it decided anything.',
     doesNotTitle: 'What it does not do',
     doesNotBody:
       'It does not verify the licence with anybody — no registry is consulted, because ' +
-      'no such integration has been scoped. And it does not compare the person signing ' +
-      'against the person who authored the run. The check is that a licence string is ' +
-      'non-empty, and it is the only check the handler makes.',
+      'no such integration has been scoped, and for that reason a licence is recorded ' +
+      'rather than required. And it does not compare the person signing against the ' +
+      'person who authored the run. The check is that the request carries a name, and ' +
+      'it is the only check the handler makes.',
     calloutTitle: 'So one person can author a run and sign it.',
     calloutBody:
       'One person, holding one licence number, can do both — and this deployment will ' +

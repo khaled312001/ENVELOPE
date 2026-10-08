@@ -1315,7 +1315,13 @@ export function ExportPanel({
   const t = useDict(EN, AR).export;
   const [done, setDone] = useState<ExportDoneState | null>(null);
   const [busy, setBusy] = useState(false);
-  const canSign = Boolean(actor.licence);
+  /*
+    EVERY IDENTIFIED ACTOR MAY SIGN. This was `Boolean(actor.licence)`, and the
+    licence is a number nothing verifies — see the note in `identity.ts`. What
+    the panel owes the reader now is the STATE of that field, not a refusal:
+    whose name goes on the export, and whether a licence went with it.
+  */
+  const hasLicence = Boolean(actor.licence);
   const ready =
     Boolean(gates['G3_ASSUMPTIONS_ACKNOWLEDGED']) && Boolean(gates['G4_REVIEWER_NAMED']);
 
@@ -1359,17 +1365,12 @@ export function ExportPanel({
           <div>
             <strong>{t.signedBy}</strong>
             <p>
-              {canSign ? (
-                <>
-                  {t.reviewerBefore}
-                  <PersonName name={actor.name} />
-                  {t.reviewerAfter}
-                </>
-              ) : (
-                t.noLicence
-              )}
+              {t.reviewerBefore}
+              <PersonName name={actor.name} />
+              {t.reviewerAfter}
             </p>
-            {!gates['G4_REVIEWER_NAMED'] && canSign ? (
+            <p className="note">{hasLicence ? t.withLicence : t.noLicence}</p>
+            {!gates['G4_REVIEWER_NAMED'] ? (
               <button
                 type="button"
                 className="button"

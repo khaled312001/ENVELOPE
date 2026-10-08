@@ -227,7 +227,14 @@ export const EN = {
     /** The actor's name sits between these, as they typed it. */
     reviewerBefore: '',
     reviewerAfter: ' will be recorded as the reviewer.',
-    noLicence: 'Add your licence number to sign. We record it; we cannot verify it.',
+    /*
+      THE LICENCE IS A STATE, NOT A GATE. It used to block the signature, and the
+      system has never been able to verify one — so the block tested that a box
+      was not empty. Both lines below say which of the two happened, because the
+      report prints that distinction and the reader is entitled to it first.
+    */
+    withLicence: 'Your licence number is recorded with it. We cannot verify it.',
+    noLicence: 'No licence number is on your account. The export records that none was asserted.',
     sign: 'Sign this export',
 
     preparing: 'Preparing…',

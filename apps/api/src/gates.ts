@@ -97,8 +97,10 @@ const REQUIREMENTS: Readonly<Record<Gate, { action: string; detail: string }>> =
   [Gate.G4_REVIEWER_NAMED]: {
     action: 'export',
     detail:
-      'a named reviewer with an asserted licence must sign the export. The system ' +
-      'never says "the AI decided", and it never issues an unsigned document.',
+      'a named reviewer must sign the export. The system never says "the AI ' +
+      'decided", and it never issues an unsigned document. A licence number is ' +
+      'recorded when the reviewer asserts one and declared absent when they do ' +
+      'not — it was never verified, so it was never what this gate rested on.',
   },
 };
 

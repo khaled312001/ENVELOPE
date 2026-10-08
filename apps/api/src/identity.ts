@@ -76,15 +76,26 @@ function header(request: FastifyRequest, key: string): string | undefined {
   return s && s.trim().length > 0 ? s.trim() : undefined;
 }
 
-/**
- * Whether an actor may act as the named reviewer on export (`G4`).
+/*
+ * THERE IS NO `canReview`, AND THE ABSENCE IS THE DECISION.
  *
- * Requires an asserted licence. The system cannot verify it — verification is a
- * regulatory-body integration nobody has scoped — so what this enforces is that
- * a person put their licence number next to the export. That is the same
- * standard a signed drawing meets, and it is honest about being an assertion
- * rather than a check.
+ * It used to require an asserted licence before an actor could sign `G4`, on the
+ * argument that a signed drawing carries one. The argument does not survive the
+ * product's own standard. The system CANNOT VERIFY A LICENCE — `/refusals` says
+ * so, the settings field says so, and the report prints the number as an
+ * assertion — so the check tested that a non-empty string had been typed into a
+ * box. A gate that passes on any non-empty string is the vacuous pass this
+ * codebase refuses everywhere else, and here it was charging a real price for
+ * it: a run that was computed, checked and read could not leave the building
+ * because of a field nothing reads.
+ *
+ * WHAT IS STILL ENFORCED is the part that was ever load-bearing. `actorFrom`
+ * refuses an unidentified request, so `G4` still records a NAMED person who put
+ * themselves next to this output, and `REQUIRED_GATES` still blocks every export
+ * until they have. The licence is recorded when given and said to be ABSENT when
+ * not — `role: 'named reviewer (no licence asserted)'` in `report.ts`, which was
+ * written for this case and until now could not be reached.
+ *
+ * Changed on the owner's instruction, 2026-10-08. Re-adding the requirement is a
+ * product decision, not a correctness fix; argue it here before you make it.
  */
-export function canReview(actor: Actor): boolean {
-  return typeof actor.licence === 'string' && actor.licence.length > 0;
-}

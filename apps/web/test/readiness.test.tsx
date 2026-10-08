@@ -390,7 +390,7 @@ describe('the readiness page', () => {
     }
     // The honest version of the same fact, on the tile that would otherwise imply
     // a control: the licence is recorded, not checked.
-    expect(markup).toMatch(/recorded, not verified/i);
+    expect(markup).toMatch(/recorded when the signer asserts one and never verified/i);
   });
 
   it('types no figure into its own copy', () => {

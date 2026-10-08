@@ -117,7 +117,7 @@ export const AR: AntechamberDictionary = {
         'ورقم الرخصة المسجل على الناتج يبقى دون تحقق لدى أحد.',
       signOut: 'الخروج من الحساب',
       licence: 'رقم الرخصة في هذا الحساب: ',
-      noLicence: 'لا يوجد رقم رخصة في هذا الحساب، فلا يمكنه توقيع مراجعة.',
+      noLicence: 'لا يوجد رقم رخصة في هذا الحساب. وما يوقعه يسجل أنه لم تذكر رخصة.',
     },
 
     /* A heading names the panel and a button commands an action; English spells

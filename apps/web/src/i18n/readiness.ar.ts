@@ -216,14 +216,14 @@ export const AR: ReadinessDictionary = {
     plots: 'قطع الأرض',
     runs: 'الدراسات',
     reviewed: 'المراجعة والموقعة',
-    reviewedNoteBefore: 'لا تغادر الدراسة المبنى إلا بعد أن يضع شخص رقم رخصته بجانبها عند ',
+    reviewedNoteBefore: 'لا تغادر الدراسة المبنى إلا بعد أن يوقعها شخص محدد بالاسم عند ',
     /*
       «تسجل الرخصة ولا يتحقق منها أحد» — recorded, not verified. The distinction is
       the whole sentence: the software performs no check here, and an Arabic verb
       that implied one would claim a control this deployment does not have.
     */
     reviewedNoteAfter:
-      '. وتسجل الرخصة ولا يتحقق منها أحد، ولا يقارن الموقع بمنشئ الدراسة.',
+      '. وتسجل الرخصة إن ذكرها الموقع ولا يتحقق منها أحد، ولا يقارن الموقع بمنشئ الدراسة.',
     exported: 'وقعت بوابتا التصدير فيها',
 
     bindsTitle: 'أي قيد يلزم، عبر ما جرى تشغيله',

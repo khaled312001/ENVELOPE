@@ -88,7 +88,7 @@ import {
 import { EXPORT_GATES, Gate, requireExportGates, subjectHash, type GateRecord } from './gates.js';
 import { ENGINE_VERSION, presentRun } from './present.js';
 import { buildRunReport } from './report.js';
-import { canReview, type Actor } from './identity.js';
+import { type Actor } from './identity.js';
 import { gateAck, plotInput, runRequest, shareRequest, type RunRequest } from './schemas.js';
 import { registerIntakeRoutes } from './intake-route.js';
 import {
@@ -1291,17 +1291,12 @@ export async function build(
       body.gate === Gate.G4_REVIEWER_NAMED ? ['author', 'reviewer'] : ['author'],
     );
 
-    if (body.gate === Gate.G4_REVIEWER_NAMED && !canReview(actor)) {
-      throw Object.assign(
-        new Error(
-          'G4 requires a named reviewer who asserts a professional licence. Send ' +
-            'X-Actor-Licence. The system cannot verify a licence — it records that a ' +
-            'person put theirs next to this export, which is the standard a signed ' +
-            'drawing meets.',
-        ),
-        { statusCode: 403 },
-      );
-    }
+    /*
+      NO LICENCE CHECK HERE, deliberately — see the note where `canReview` used to
+      be in `identity.ts`. `actorFrom` has already refused an unidentified
+      request, so `G4` still names a person; the licence is recorded when sent
+      and declared absent when not.
+    */
 
     const gates: GateRecord = JSON.parse(run.gates);
     gates[body.gate] = {

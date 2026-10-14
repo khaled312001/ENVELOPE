@@ -1,0 +1,82 @@
+# The gates, on every push and every pull request.
+#
+# Until this file there was no CI at all: every gate in CLAUDE.md ran when
+# somebody remembered to run it, on one laptop. `pnpm smoke` had been failing at
+# the plot step for weeks before anybody noticed, and every step after it had
+# stopped being checked — which is what a gate that runs by memory turns into.
+#
+#   check — boundaries, contrast, typecheck, every test, the worked example
+#           against the real API, and the DXF files read back by a parser that
+#           never saw our writer. On every push.
+#   smoke — the nine-step flow walked in a real browser against a running API
+#           and dev server. On pull requests, and by hand, because it takes
+#           several minutes and needs a browser.
+#
+# No secret is used here. The deploy workflow beside this one is the only one
+# that touches the host.
+
+name: Gates
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+
+  smoke:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build
+
+      # The two servers the walk needs, started apart: `pnpm dev` runs both under
+      # one parent, and a crash in either one then reads as a timeout in the walk.
+      - name: Start the API
+        run: (cd apps/api && node dist/main.js > ../../api.log 2>&1 &)
+      - name: Start the web dev server
+        run: (cd apps/web && pnpm exec vite --port 5173 --strictPort > ../../web.log 2>&1 &)
+      - name: Wait for both
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:4000/api/health > /dev/null && curl -sf http://localhost:5173/ > /dev/null && exit 0
+            sleep 2
+          done
+          echo "::error::the servers did not come up"; tail -50 api.log web.log; exit 1
+
+      - run: pnpm smoke
+      - name: Server logs
+        if: failure()
+        run: tail -100 api.log web.log

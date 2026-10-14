@@ -64,13 +64,16 @@ jobs:
             exit 1
           fi
 
+      # pnpm 11: the workspace's build allowlist (`allowBuilds` in
+      # pnpm-workspace.yaml) is the pnpm 11 spelling, and pnpm 10 would skip
+      # esbuild's install script. Node 24 is what Vitest 5 and Vite 8 are run on.
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 11
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile

@@ -148,8 +148,9 @@ const PLACEMENT_BASIS =
 export const CORE_NOT_MODELLED =
   'The core, as a design. Its outline is the tower plate scaled to the core ' +
   'area, and only that area is a computed quantity. The stairs, lifts and lobby ' +
-  'drawn inside it are an indicative layout, assumed: egress, lift traffic and ' +
-  'fire-fighting are NOT ASSESSED, and no riser or core wall is placed.';
+  'drawn inside it, and the door into it at ground level, are an indicative layout, ' +
+  'assumed: egress, lift traffic and fire-fighting are NOT ASSESSED, no riser or ' +
+  "core wall is placed, and no route from the street to the core's door is drawn.";
 
 export interface CoreInput {
   readonly tracer: Tracer;

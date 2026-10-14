@@ -183,6 +183,15 @@ export interface ModelCore {
    * obstruction — and on a run stored before the shaft existed.
    */
   readonly shaft?: { readonly outline: ModelRing; readonly areaM2: TracedWire; readonly label: string };
+  /**
+   * The way into the core, on the level at grade: a door in the lift lobby's
+   * open side. Part of the indicative layout, so `roomsSource` is its ink.
+   * Eng. Mohamed, meeting 3: the core is in the centre, *"بس في المدخل لازم
+   * يبقى فيه مدخل لجوه الكور"*. Where the building's own entrance is, and the
+   * route from the street to this door, are not placed. Absent where no layout
+   * fits, where no level stands at grade, and on a run stored before it existed.
+   */
+  readonly entrance?: { readonly levelId: string; readonly opening: readonly [ModelPoint, ModelPoint] };
 }
 
 export interface ModelLevel {

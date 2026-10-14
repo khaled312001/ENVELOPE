@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-06T09:30:21.763Z",
+  "generatedAt": "2026-10-14T11:25:53.095Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
@@ -53,7 +53,7 @@
       "parameterId": "building.core_layout",
       "runs": 1,
       "maxRelativeEffect": "0",
-      "basis": "An indicative core for a residential tower, drawn so a reader can see where the lifts and stairs stand: two stairs of 5.6 × 2.8 m (two flights of about 1.2 m and a landing at each end), lift shafts of 2.4 × 2.4 m for a 13-person car, and a lift lobby 2.4 m deep across their front. No clause of the Dubai Building Code on file is applied and no developer standard gives a core layout, so this is an assumption. Egress capacity, travel distance, lift traffic and fire-fighting provisions are NOT ASSESSED: the stairs drawn are not an egress design."
+      "basis": "An indicative core for a residential tower, drawn so a reader can see where the lifts and stairs stand: two stairs of 5.6 × 2.8 m (two flights of about 1.2 m and a landing at each end), lift shafts of 2.4 × 2.4 m for a 13-person car, and a lift lobby 2.4 m deep across their front, entered at ground level through a 1.8 m pair of doors a quarter of the way along its open side. No clause of the Dubai Building Code on file is applied and no developer standard gives a core layout, so this is an assumption. Egress capacity, travel distance, lift traffic and fire-fighting provisions are NOT ASSESSED: the stairs drawn are not an egress design."
     },
     {
       "parameterId": "parking.ramp_width_m",

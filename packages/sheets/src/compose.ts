@@ -375,7 +375,7 @@ function coreItems(model: BuildingModel, levelId: string, s: number): ModelItem[
   const core = model.core;
   if (!core || !core.levelIds.includes(levelId)) return [];
   const onParking = model.levels.some((l) => l.id === levelId && l.parking);
-  if (onParking && core.shaft) return shaftItems(core, core.shaft, s);
+  if (onParking && core.shaft) return [...shaftItems(core, core.shaft, s), ...coreEntranceItems(core, levelId, s)];
   const box = boxOf(core.outline);
   const wide = box.maxX - box.minX >= box.maxY - box.minY;
   const rooms = core.rooms ?? [];
@@ -397,6 +397,66 @@ function coreItems(model: BuildingModel, levelId: string, s: number): ModelItem[
       label(Role.CORE_ROOM, mm(below.x, below.y), CORE_CAVEAT, 1.2, wide ? 0 : 90, 'middle', core.roomsSource),
     );
   }
+  items.push(...coreEntranceItems(core, levelId, s));
+  return items;
+}
+
+/** The words beside the door. "Indicative" travels with them onto a cropped plan. */
+const CORE_ENTRANCE_LABEL = 'CORE ENTRANCE - INDICATIVE';
+
+/** Segments in a drawn door swing: enough to read as an arc at any sheet scale. */
+const SWING_STEPS = 8;
+
+/**
+ * The way into the core, on the level at grade only: a pair of doors in the lift
+ * lobby's open side, drawn the way every architect draws one — each leaf open
+ * into the lobby and the arc it swings through — with its words outside. A door
+ * swing is drafting, like a stair's treads, so it is not a symbol to key. In the
+ * indicative program's ink, because the door is part of that assumption: he said
+ * the core needs one and gave no width and no side.
+ *
+ * Nothing leads to it. The building's own entrance and the route from the street
+ * are not placed, and a path drawn up to this door would be a route nobody chose.
+ */
+function coreEntranceItems(
+  core: NonNullable<BuildingModel['core']>,
+  levelId: string,
+  s: number,
+): ModelItem[] {
+  const entrance = core.entrance;
+  const lobby = core.rooms?.find((r) => r.kind === 'LOBBY');
+  if (!entrance || entrance.levelId !== levelId || !lobby) return [];
+  const [a, b] = entrance.opening;
+  const mid = midpointOf(a, b);
+  const half = lengthOf(a, mid);
+  if (half === 0) return [];
+  // Inward: square to the opening, on the lobby's side of it. The door is not
+  // opposite the lobby's centre, so the direction to that centre is the side only.
+  const c = centroidOf(lobby.outline);
+  const normal = { x: -(b.y - a.y) / (2 * half), y: (b.x - a.x) / (2 * half) };
+  const side = (c.x - mid.x) * normal.x + (c.y - mid.y) * normal.y;
+  if (side === 0) return [];
+  const inward = side > 0 ? normal : { x: -normal.x, y: -normal.y };
+  const opts = { ...(core.roomsSource ? { source: core.roomsSource } : {}), name: 'Core entrance - indicative' };
+  const items: ModelItem[] = [];
+  for (const hinge of [a, b]) {
+    const shut = { x: (mid.x - hinge.x) / half, y: (mid.y - hinge.y) / half };
+    const swing: ModelPoint[] = [];
+    for (let i = 0; i <= SWING_STEPS; i++) {
+      const t = (Math.PI / 2) * (i / SWING_STEPS);
+      swing.push(
+        mm(
+          hinge.x + half * (Math.cos(t) * inward.x + Math.sin(t) * shut.x),
+          hinge.y + half * (Math.cos(t) * inward.y + Math.sin(t) * shut.y),
+        ),
+      );
+    }
+    items.push(shape(Role.CORE_ROOM, [hinge, swing[0]!], false, opts));
+    items.push(shape(Role.CORE_ROOM, swing, false, opts));
+  }
+  items.push(
+    label(Role.CORE_ROOM, offsetPoint(mid, inward, -2.4 * s), CORE_ENTRANCE_LABEL, 1.2, angleOf(a, b), 'middle', core.roomsSource),
+  );
   return items;
 }
 

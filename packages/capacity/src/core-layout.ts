@@ -45,6 +45,12 @@ const STAIR_ACROSS_MM = 2800;
 const LIFT_MM = 2400;
 /** The lift lobby, across the front of the stairs and lifts. */
 const LOBBY_DEPTH_MM = 2400;
+/**
+ * The way into the core at ground level: a pair of doors in the lobby's front.
+ * Meeting 3, 33:30 — "في المدخل لازم يبقى فيه مدخل لجوه الكور". He named the
+ * door and gave no width, so this is part of the assumed program, in its basis.
+ */
+const CORE_DOOR_MM = 1800;
 
 export const CoreRoomKind = {
   STAIR: 'STAIR',
@@ -70,6 +76,13 @@ export type CoreLayout =
        * floor lobby) and has no business on a car park.
        */
       readonly shaft: { readonly outline: CoreRoom['outline']; readonly areaM2: TracedDecimal };
+      /**
+       * The door into the core at ground level: a segment on the lift lobby's
+       * open side, a quarter of the way along; the lobby says which side is in. Where
+       * the building's own entrance is, and the route from the street to this
+       * door, are not placed — only that the core has a way in.
+       */
+      readonly entrance: readonly [CoreRoom['outline'][number], CoreRoom['outline'][number]];
     }
   | { readonly kind: 'NOT_LAID_OUT'; readonly reason: string };
 
@@ -77,7 +90,9 @@ export const CORE_LAYOUT_BASIS =
   'An indicative core for a residential tower, drawn so a reader can see where the ' +
   'lifts and stairs stand: two stairs of 5.6 × 2.8 m (two flights of about 1.2 m and a ' +
   'landing at each end), lift shafts of 2.4 × 2.4 m for a 13-person car, and a lift ' +
-  'lobby 2.4 m deep across their front. No clause of the Dubai Building Code on file ' +
+  'lobby 2.4 m deep across their front, entered at ground level through a ' +
+  `${CORE_DOOR_MM / 1000} m pair of doors a quarter of the way along its open side. ` +
+  'No clause of the Dubai Building Code on file ' +
   'is applied and no developer standard gives a core layout, so this is an assumption. ' +
   'Egress capacity, travel distance, lift traffic and fire-fighting provisions are NOT ' +
   'ASSESSED: the stairs drawn are not an egress design.';
@@ -170,5 +185,10 @@ export function layoutCore(input: { readonly tracer: Tracer; readonly ring: read
       unit: 'm²',
     }),
   };
-  return { kind: 'LAID_OUT', rooms, program, shaft };
+  // The lobby's open side is the far edge of the shaft box, away from the stairs.
+  // A quarter of the way along it, in front of the first stair and lift, not in
+  // the middle: the middle is where every sheet sets the core's own label.
+  const doorAt = start + (row / 2 - CORE_DOOR_MM) / 2;
+  const entrance = [at(doorAt, b0 + needDepth), at(doorAt + CORE_DOOR_MM, b0 + needDepth)] as const;
+  return { kind: 'LAID_OUT', rooms, program, shaft, entrance };
 }

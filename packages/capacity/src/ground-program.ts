@@ -402,6 +402,17 @@ export interface GroundProgramInput {
   /** Where the core stands, so the entrance is laid at the strip's nearer end. */
   readonly towards?: Pt;
   /**
+   * What already stands in the strip on this level — the core, the ramp — as
+   * rings in plot millimetres. No room is laid across one.
+   *
+   * The program was written for a core BESIDE the strip, and on the worked
+   * example the core and the ramp both stand IN it: the entrance lobby was drawn
+   * exactly on the ramp and five plant rooms under the core, hidden by it, and
+   * counted as placed. A room nobody can stand in is the bay nobody can drive to
+   * in another form.
+   */
+  readonly obstacles?: readonly (readonly Pt[])[];
+  /**
    * The plot's boundaries, so DEWA §11.3.1 can be applied to the substation's
    * position. Omitted — or carrying no `ROAD` edge — makes that position
    * `ASSUMED` with a basis saying the clause was not reached. It never makes the
@@ -575,28 +586,85 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
 
   const rooms: GroundRoom[] = [];
   const refused: GroundRoomRefusal[] = [];
-  /** Millimetres of the strip's length taken from each end. */
-  const consumed: [number, number] = [0, 0];
-  const remaining = (): number => frame.lengthMm - consumed[0] - consumed[1];
+
+  /*
+    WHAT IS ALREADY IN THE STRIP, as stretches of its length. An obstacle blocks
+    the stretch it spans along the strip wherever it reaches across into the band
+    the rooms take; one that stays on the band's far side blocks nothing. Whole
+    millimetres outward, so a room may touch an obstacle and never cross it.
+  */
+  const blocked = (input.obstacles ?? [])
+    .filter((ring) => ring.length > 0)
+    .flatMap((ring) => {
+      const as = ring.map(along);
+      const bs = ring.map(across);
+      const crosses = Math.max(...bs) > b0 && Math.min(...bs) < b0 + depth;
+      const lo = Math.max(0, Math.floor(Math.min(...as)));
+      const hi = Math.min(frame.lengthMm, Math.ceil(Math.max(...as)));
+      return crosses && hi > lo ? [{ lo, hi }] : [];
+    })
+    .sort((p, q) => p.lo - q.lo);
+
+  /*
+    THE CLEAR STRETCHES, kept as a list rather than as one cursor per end. A
+    cursor that jumps an obstacle abandons the gap behind it: on the worked
+    example 3.7 m stands clear between the core and the ramp, and two 2.5 m rooms
+    were refused while it sat empty.
+  */
+  let free: { lo: number; hi: number }[] = [{ lo: 0, hi: frame.lengthMm }];
+  const carve = (lo: number, hi: number): void => {
+    free = free.flatMap((f) =>
+      hi <= f.lo || lo >= f.hi
+        ? [f]
+        : [
+            ...(lo > f.lo ? [{ lo: f.lo, hi: lo }] : []),
+            ...(hi < f.hi ? [{ lo: hi, hi: f.hi }] : []),
+          ],
+    );
+  };
+  for (const b of blocked) carve(b.lo, b.hi);
+
+  /**
+   * Where a run of `width` goes, laid from `end`: the first clear stretch from
+   * that end long enough to hold it. With `at`, only exactly there — for a room
+   * whose clause is an adjacency.
+   */
+  const fit = (end: 0 | 1, width: number, exactly?: number): number | undefined => {
+    if (exactly !== undefined) {
+      return free.some((f) => exactly >= f.lo && exactly + width <= f.hi) ? exactly : undefined;
+    }
+    const order = end === 0 ? free : [...free].reverse();
+    const f = order.find((s) => s.hi - s.lo >= width);
+    return f === undefined ? undefined : end === 0 ? f.lo : f.hi - width;
+  };
+
+  /** The longest clear stretch still free. */
+  const longestClear = (): number => Math.max(0, ...free.map((f) => f.hi - f.lo));
+
+  const take = (_end: 0 | 1, a0: number, width: number): void => carve(a0, a0 + width);
 
   /** Place `width` of strip at `end`, or refuse it with the figures. */
-  const place = (name: string, end: 0 | 1, width: number): void => {
-    if (width > remaining()) {
+  const place = (name: string, end: 0 | 1, width: number, exactly?: number): void => {
+    const a0 = fit(end, width, exactly);
+    if (a0 === undefined) {
+      const left = longestClear();
       refused.push({
         name,
         reason:
           `${name} needs ${(width / 1000).toFixed(2)} m along the strip and ` +
-          `${(remaining() / 1000).toFixed(2)} m of its ${(frame.lengthMm / 1000).toFixed(2)} m ` +
-          'is left, so it was not drawn rather than drawn narrow.',
+          (blocked.length === 0
+            ? `${(left / 1000).toFixed(2)} m of its ${(frame.lengthMm / 1000).toFixed(2)} m is left`
+            : `the longest stretch of its ${(frame.lengthMm / 1000).toFixed(2)} m still clear of ` +
+              `the core and the ramp is ${(left / 1000).toFixed(2)} m`) +
+          ', so it was not drawn rather than drawn narrow.',
       });
       return;
     }
-    const a0 = end === 0 ? consumed[0] : frame.lengthMm - consumed[1] - width;
     rooms.push({
       name,
       outline: [at(a0, b0), at(a0 + width, b0), at(a0 + width, b0 + depth), at(a0, b0 + depth)],
     });
-    consumed[end] += width;
+    take(end, a0, width);
   };
 
   // --- the substation, sized from §11.4.1 -------------------------------------------
@@ -612,17 +680,22 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
   });
 
   let substationDrawn: SubstationSizing['drawn'];
+  const substationAt =
+    substation.refusal === undefined ? fit(substationEnd.at, substation.widthMm) : undefined;
   if (substation.refusal !== undefined) {
     refused.push({ name: SUBSTATION_NAME, reason: substation.refusal });
-  } else if (substation.widthMm > remaining()) {
+  } else if (substationAt === undefined) {
     refused.push({
       name: SUBSTATION_NAME,
       reason:
         `DEWA §11.4.1 requires ${substation.requiredAreaM2.value.toString()} m² for ` +
         `${substation.transformers.value} transformer(s), which in a ` +
         `${(depth / 1000).toFixed(2)} m deep strip is ${(substation.widthMm / 1000).toFixed(2)} m ` +
-        `along it. The strip is ${(frame.lengthMm / 1000).toFixed(2)} m long, so the room was ` +
-        'not drawn rather than drawn under the cited area.',
+        `along it. The strip is ${(frame.lengthMm / 1000).toFixed(2)} m long` +
+        (blocked.length === 0
+          ? ''
+          : ` and its longest stretch clear of the core and the ramp is ${(longestClear() / 1000).toFixed(2)} m`) +
+        ', so the room was not drawn rather than drawn under the cited area.',
     });
   } else {
     /*
@@ -632,12 +705,12 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
       for a room a clause sized.
     */
     const width = substation.widthMm;
-    const a0 = substationEnd.at === 0 ? consumed[0] : frame.lengthMm - consumed[1] - width;
+    const a0 = substationAt;
     rooms.push({
       name: SUBSTATION_NAME,
       outline: [at(a0, b0), at(a0 + width, b0), at(a0 + width, b0 + depth), at(a0, b0 + depth)],
     });
-    consumed[substationEnd.at] += width;
+    take(substationEnd.at, a0, width);
 
     const drawnAreaM2 = tracer.computed(
       'plant.substation.drawn_area_m2',
@@ -667,8 +740,23 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
     one drawn with no substation beside it would be adjacent to nothing while
     carrying a clause that is about adjacency.
   */
-  if (substationDrawn) {
-    place(LV_ROOM.name, substationEnd.at, LV_ROOM.widthMm);
+  if (substationDrawn && substationAt !== undefined) {
+    // Against the substation's inner side and nowhere else: §11.2.3 is an adjacency.
+    const lvAt =
+      substationEnd.at === 0 ? substationAt + substation.widthMm : substationAt - LV_ROOM.widthMm;
+    if (fit(substationEnd.at, LV_ROOM.widthMm, lvAt) === undefined) {
+      refused.push({
+        name: LV_ROOM.name,
+        reason:
+          `DEWA §11.2.3 puts the LV room adjacent to the substation, and the ` +
+          `${(LV_ROOM.widthMm / 1000).toFixed(2)} m beside it is not clear` +
+          (blocked.length === 0 ? '' : ' of the core and the ramp') +
+          '. It is not drawn elsewhere in the strip: its position is the only thing a ' +
+          'clause on file states about it.',
+      });
+    } else {
+      place(LV_ROOM.name, substationEnd.at, LV_ROOM.widthMm, lvAt);
+    }
   } else {
     refused.push({
       name: LV_ROOM.name,

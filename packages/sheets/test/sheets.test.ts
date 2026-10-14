@@ -110,6 +110,19 @@ describe('a parking level sheet', () => {
   });
 });
 
+describe('the core entrance', () => {
+  /* On the level at grade and nowhere else: a door into the core on P1 would be a
+     second entrance nobody asked for, drawn on every parking level alike. */
+  it('is drawn on the ground-floor sheet only, and says it is indicative', () => {
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2 }));
+    expect(out.building.core?.entrance?.levelId).toBe('G');
+    for (const sheet of composeSheets(out.building, META).filter((s) => s.kind === 'PARKING')) {
+      const drawn = sheetSvg(sheet).includes('CORE ENTRANCE - INDICATIVE');
+      expect(drawn, sheet.levelId ?? '').toBe(sheet.levelId === 'G');
+    }
+  });
+});
+
 describe('the section', () => {
   it('marks every level at the elevation the engine traced', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 2 }));

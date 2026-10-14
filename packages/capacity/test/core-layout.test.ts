@@ -51,6 +51,30 @@ describe('a core large enough for the full program', () => {
     expect(CORE_LAYOUT_BASIS).toMatch(/NOT\s+ASSESSED/);
     expect(CORE_LAYOUT_BASIS).toMatch(/not an egress design/);
   });
+
+  /* Meeting 3, 33:30: the core in the centre, "بس في المدخل لازم يبقى فيه مدخل
+     لجوه الكور". A door on the lobby's open side, not into a stair or a shaft. */
+  it('has a way in: a door on the lobby side the stairs and lifts do not close', () => {
+    if (layout.kind !== 'LAID_OUT') throw new Error('not laid out');
+    const [a, b] = layout.entrance;
+    expect(Math.hypot(b.x - a.x, b.y - a.y)).toBe(1800);
+    const lobby = layout.rooms.find((r) => r.kind === 'LOBBY')!;
+    const ys = lobby.outline.map((p) => p.y);
+    const stairs = layout.rooms.filter((r) => r.kind !== 'LOBBY').flatMap((r) => r.outline.map((p) => p.y));
+    // The lobby's far edge from the stairs and lifts — the open side.
+    const open = Math.min(...stairs) < Math.min(...ys) ? Math.max(...ys) : Math.min(...ys);
+    expect(a.y).toBe(open);
+    expect(b.y).toBe(open);
+    const xs = lobby.outline.map((p) => p.x);
+    for (const p of [a, b]) {
+      expect(p.x).toBeGreaterThanOrEqual(Math.min(...xs));
+      expect(p.x).toBeLessThanOrEqual(Math.max(...xs));
+    }
+  });
+
+  it('says in its basis that the door is part of the assumption', () => {
+    expect(CORE_LAYOUT_BASIS).toMatch(/1\.8 m pair of doors/);
+  });
 });
 
 describe('a core with room for one lift only', () => {

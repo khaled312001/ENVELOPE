@@ -442,6 +442,9 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     drawing a core through it would be drawing a shaft in a building that is not
     there.
   */
+  // The level at grade, where the core is entered. Only a placed one: a door on
+  // a level the answer does not reach is a door in a building that is not there.
+  const groundLevel = levels.find((l) => l.placed && l.elevationMm === 0);
   const core: ModelCore | null = input.core
     ? {
         outline: input.core.result.ring.map(pt),
@@ -455,6 +458,14 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
           ? {
               rooms: input.core.layout.rooms.map((r) => ({ kind: r.kind, outline: r.outline })),
               roomsSource: source(input.core.layout.program),
+              ...(groundLevel
+                ? {
+                    entrance: {
+                      levelId: groundLevel.id,
+                      opening: [pt(input.core.layout.entrance[0]), pt(input.core.layout.entrance[1])] as const,
+                    },
+                  }
+                : {}),
             }
           : {}),
         ...(input.core.layout?.kind === 'LAID_OUT' && input.core.shaftOnParking
@@ -494,9 +505,16 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   const zone = levelPlan?.reservedZone;
   let groundRooms: BuildingModel['groundRooms'];
   if (ground && zone) {
+    // What already stands in the strip at grade, as the sheets draw it: the core
+    // (its shafts, where only they pass through a parking level) and the ramp.
+    const coreHere = core && core.levelIds.includes(ground.id) ? (core.shaft?.outline ?? core.outline) : null;
+    const obstacles = [coreHere, ground.parking?.rampStrip ?? null].filter(
+      (ring): ring is NonNullable<typeof ring> => ring !== null,
+    );
     const program = layoutGroundProgram({
       tracer,
       zone,
+      obstacles,
       ...(core
         ? {
             towards: {

@@ -45,7 +45,7 @@ import { initGeometry } from '@envelope/geometry';
 import { SINGLE_ROOM_SUBSTATION_M2, singleRoomSubstationAreaM2 } from '@envelope/rules';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { RECT_120x80, runInput } from '../../../test-support/pipeline.js';
+import { RECT_120x80, RECT_80x40, runInput } from '../../../test-support/pipeline.js';
 import {
   GROUND_PROGRAM_BASIS,
   GROUND_PROGRAM_NOT_MODELLED,
@@ -595,4 +595,76 @@ describe('in a run', () => {
     expect(out.building.groundRooms?.levelId).toBe(ground?.id);
     expect(out.building.groundRooms?.source.provenanceClass).toBe(ProvenanceClass.ASSUMED);
   });
+
+  /*
+    The worked example drew its entrance lobby exactly on the ramp and five plant
+    rooms under the core, hidden by it and counted as placed. Both stand in the
+    reserved strip; the program was written as if the core stood beside it.
+  */
+  it('lays no room across the core or the ramp', () => {
+    for (const ring of [RECT_80x40, RECT_120x80]) {
+      const b = runPipeline(runInput(ring)).building;
+      const ground = b.levels.find((l) => l.id === b.groundRooms?.levelId)!;
+      const solids = [b.core?.shaft?.outline ?? b.core?.outline, ground.parking?.rampStrip].filter(
+        (r): r is NonNullable<typeof r> => !!r,
+      );
+      expect(solids.length).toBeGreaterThan(0);
+      for (const room of b.groundRooms?.rooms ?? []) {
+        for (const solid of solids) expect(overlapMm2(room.outline, solid), room.name).toBe(0);
+      }
+    }
+  });
 });
+
+describe('a strip with something already standing in it', () => {
+  const program = laidOut(
+    layoutGroundProgram({
+      tracer: tracer(),
+      zone: rect(0, 0, 60_000, 6_000),
+      obstacles: [rect(20_000, -2_000, 14_000, 10_000), rect(54_000, 0, 6_000, 6_000)],
+    }),
+  );
+
+  it('steps every room past it rather than across it', () => {
+    for (const room of program.rooms) {
+      expect(overlapMm2(room.outline, rect(20_000, -2_000, 14_000, 10_000)), room.name).toBe(0);
+      expect(overlapMm2(room.outline, rect(54_000, 0, 6_000, 6_000)), room.name).toBe(0);
+    }
+  });
+
+  it('names what no clear stretch could hold, with the stretch it had', () => {
+    for (const r of program.refused) {
+      if (r.name === 'SUBSTATION' || r.name === 'LV ROOM') continue;
+      expect(r.reason).toMatch(/clear of the core and the ramp/);
+    }
+  });
+
+  it('blocks nothing with an obstacle that stays clear of the rooms\' band', () => {
+    const clear = laidOut(
+      layoutGroundProgram({
+        tracer: tracer(),
+        zone: rect(0, 0, 60_000, 12_000),
+        // The rooms take at most 7 m of a 12 m strip, on one side; this sits on the other.
+        towards: pt(30_000, 11_000),
+        obstacles: [rect(20_000, 9_000, 14_000, 3_000)],
+      }),
+    );
+    const open = laidOut(
+      layoutGroundProgram({ tracer: tracer(), zone: rect(0, 0, 60_000, 12_000), towards: pt(30_000, 11_000) }),
+    );
+    expect(clear.rooms.map((r) => r.outline)).toEqual(open.rooms.map((r) => r.outline));
+  });
+});
+
+/** Area shared by two axis-aligned rectangles, mm². Every ring tested here is one. */
+function overlapMm2(
+  a: readonly { readonly x: number; readonly y: number }[],
+  b: readonly { readonly x: number; readonly y: number }[],
+): number {
+  const span = (r: typeof a, k: 'x' | 'y') => [Math.min(...r.map((p) => p[k])), Math.max(...r.map((p) => p[k]))];
+  const [ax0, ax1] = span(a, 'x');
+  const [bx0, bx1] = span(b, 'x');
+  const [ay0, ay1] = span(a, 'y');
+  const [by0, by1] = span(b, 'y');
+  return Math.max(0, Math.min(ax1!, bx1!) - Math.max(ax0!, bx0!)) * Math.max(0, Math.min(ay1!, by1!) - Math.max(ay0!, by0!));
+}

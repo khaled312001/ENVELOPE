@@ -19,7 +19,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const BASE = process.env.VIDEO_URL ?? 'https://tob.khaledahmed.net/';
+const BASE = process.env.VIDEO_URL ?? 'https://plotlogic.dev/';
 const PDF = resolve(ROOT, 'docs/00-source/samples/affection-plan/IC1-CTYL-16_011-warsan1-621.pdf');
 
 const browser = await chromium.launch();

@@ -31,7 +31,7 @@ const ROUTE_DATA = JSON.parse(
 
 const errors = [];
 // SMOKE_HOST_RULES points a hostname at an address, e.g.
-// "MAP tob.khaledahmed.net 84.32.84.123": a release can be checked on the real host
+// "MAP plotlogic.dev 82.25.113.109": a release can be checked on the real host
 // before its DNS record exists, rather than after a reader has already met it.
 const browser = await chromium.launch({
   channel: 'msedge',

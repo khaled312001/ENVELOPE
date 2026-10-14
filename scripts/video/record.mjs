@@ -42,7 +42,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../..');
 const OUT = resolve(ROOT, 'out/video');
-const BASE = process.env.VIDEO_URL ?? 'https://tob.khaledahmed.net/';
+const BASE = process.env.VIDEO_URL ?? 'https://plotlogic.dev/';
 const PDF = resolve(ROOT, 'docs/00-source/samples/affection-plan/IC1-CTYL-16_011-warsan1-621.pdf');
 
 /* A demonstration is watched, not raced. Every wait here is a pacing decision:

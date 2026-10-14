@@ -54,7 +54,7 @@ export const OVERPASS_SERVERS = [
 ] as const;
 
 /** Who is asking, as Overpass's policy wants it said. The site's address, never a person's. */
-const USER_AGENT = 'Plotlogic/1.0 (plot outline lookup; +https://tob.khaledahmed.net)';
+const USER_AGENT = 'Plotlogic/1.0 (plot outline lookup; +https://plotlogic.dev)';
 
 /** How long after one server the next is asked. */
 const HEDGE_MS = 6_000;

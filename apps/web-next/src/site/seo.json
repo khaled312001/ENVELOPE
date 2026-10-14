@@ -1,6 +1,6 @@
 {
   "_": "Every public page, its title and description in both languages. Read by the pages (usePageMeta) AND by scripts/prerender.mjs, which writes them into each route's own index.html, so a crawler or a link preview that never runs JavaScript reads the same words the page shows. Pages that file work (the studio, the studies, sign-in) are not here: they are noindex.",
-  "origin": "https://tob.khaledahmed.net",
+  "origin": "https://plotlogic.dev",
   "base": "",
   "siteName": "Plotlogic",
   "image": "/og-cover.png",

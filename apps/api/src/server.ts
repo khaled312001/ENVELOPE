@@ -282,8 +282,9 @@ export async function build(
    * CORS does not do this. It decides who may READ a response; a cross-origin
    * form post, or a body-less `POST /export`, is still executed by the server
    * before the browser throws the answer away. The session cookie's
-   * `SameSite=Lax` stops a foreign SITE sending it — but every
-   * `*.khaledahmed.net` is the same site as `tob.khaledahmed.net`, so a sibling
+   * `SameSite=Lax` stops a foreign SITE sending it — but every subdomain of the
+   * registrable domain is the same site (`*.khaledahmed.net` was, while the app
+   * lived at `tob.khaledahmed.net`; any `*.plotlogic.dev` is now), so a sibling
    * subdomain is inside that fence.
    *
    * So the browser's own statement of where a request came from is checked

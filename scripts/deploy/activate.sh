@@ -13,10 +13,12 @@
 #   sh activate.sh rollback  put the previous release back
 set -eu
 
-DOMAIN="$HOME/domains/khaledahmed.net"
-APP="$DOMAIN/tob-app"
-WEB="$DOMAIN/public_html/tob"
-KEEP="$HOME/tob-releases/previous"
+# plotlogic.dev is its own website on the account: the site is its document root,
+# and the app sits beside it. (Until 14 Oct 2026 this was tob.khaledahmed.net.)
+DOMAIN="$HOME/domains/plotlogic.dev"
+APP="$DOMAIN/plotlogic-app"
+WEB="$DOMAIN/public_html"
+KEEP="$HOME/plotlogic-releases/previous"
 
 restart() {
   mkdir -p "$APP/tmp"

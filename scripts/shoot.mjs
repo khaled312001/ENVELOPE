@@ -27,12 +27,11 @@ const OUT = process.argv[2] ?? '.shots';
 const BASE = process.env.BASE ?? 'http://localhost:5173';
 mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ channel: 'msedge' });
-const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
+let page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
 // Straight to the engine. The landing page is shot separately below; starting
 // there and clicking through cost a step for no picture.
 await page.goto(`${BASE}/app`, { waitUntil: 'networkidle' });
 await page.getByLabel('Your name').fill('Khaled Haggagy');
-await page.getByLabel(/licence number/i).fill('DM-12345');
 await page.getByRole('button', { name: /open the engine/i }).first().click();
 
 // Step 0 twice: empty, then holding a real sheet. The empty state is the first
@@ -46,31 +45,32 @@ await page.setInputFiles(
 await page.locator('.reading').waitFor({ timeout: 20000 });
 await page.screenshot({ path: `${OUT}/00b-intake-read.png`, fullPage: true });
 
-await page.getByRole('button', { name: /skip/i }).click();
-await page.getByRole('heading', { name: /^the plot$/i }).waitFor();
-await page.screenshot({ path: `${OUT}/01-plot.png`, fullPage: true });
+/*
+  THE REST OF THE FLOW RUNS ON THE WORKED EXAMPLE, in a page of its own.
 
-await page.getByLabel('Community').fill('Business Bay');
-await page.getByLabel('Edge 1 faces').selectOption('ROAD');
-await page.getByLabel('Road type').first().selectOption('LOCAL');
-await page.getByLabel('Edge 2 faces').selectOption('ADJACENT_PLOT');
-await page.getByLabel('Edge 3 faces').selectOption('ROAD');
-await page.getByLabel('Road type').last().selectOption('COLLECTOR');
-await page.getByLabel('Edge 4 faces').selectOption('ADJACENT_PLOT');
-await page.getByRole('button', { name: /^Continue$/ }).click();
-await page.getByRole('heading', { name: /confirm the plot/i }).waitFor();
-await page.screenshot({ path: `${OUT}/02-parameters.png`, fullPage: true });
+  It used to type a width and a depth into a form that no longer has either,
+  and stopped at step 1 — so for as long as that lasted, `pnpm shots` produced
+  three pictures and every screen after the plot went unlooked-at. The demo
+  fills the plot and answers the rules step the way the recorded run did, so
+  this walk depends on what the screens ask, not on how the form is laid out.
+*/
+await page.close();
+const flow = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
+await flow.goto(`${BASE}/app?demo=worked-example`, { waitUntil: 'networkidle' });
+await flow.getByLabel('Your name').fill('Khaled Haggagy');
+await flow.getByRole('button', { name: /open the engine/i }).first().click();
+await flow.getByLabel(/plot number/i).waitFor({ timeout: 15000 });
+await flow.screenshot({ path: `${OUT}/01-plot.png`, fullPage: true });
 
-await page.getByRole('button', { name: /this is the plot/i }).click();
-await page.getByRole('heading', { name: /does parking count toward far/i }).waitFor();
-await page.screenshot({ path: `${OUT}/03-rules.png`, fullPage: true });
+await flow.getByRole('button', { name: /^Continue$/ }).first().click();
+await flow.getByRole('button', { name: /this is the plot/i }).waitFor({ timeout: 15000 });
+await flow.screenshot({ path: `${OUT}/02-parameters.png`, fullPage: true });
 
-await page.getByRole('radio', { name: /no, it is excluded/i }).check();
-// Select the developer standard, which fills the mix and the efficiency from
-// the cited document. The picker is the client's own priority, so it is shot.
-await page.getByRole('radio', { name: /Best case/i }).first().check();
-await page.screenshot({ path: `${OUT}/03b-standard.png`, fullPage: true });
-await page.getByRole('button', { name: /compute capacity/i }).click();
+await flow.getByRole('button', { name: /this is the plot/i }).click();
+await flow.getByRole('button', { name: /compute capacity/i }).waitFor({ timeout: 15000 });
+await flow.screenshot({ path: `${OUT}/03-rules.png`, fullPage: true });
+await flow.getByRole('button', { name: /compute capacity/i }).click();
+page = flow;
 await page.locator('.data-table').first().waitFor({ timeout: 10000 });
 await page.screenshot({ path: `${OUT}/04-assumptions.png`, fullPage: true });
 

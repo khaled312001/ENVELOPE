@@ -18,6 +18,9 @@ export const AR: InspectorDictionary = {
     number: 'رقم القطعة',
     area: 'المساحة المحسوبة',
     edges: 'أضلاع الحدود',
+    draft: 'قيد الرسم — لم تنشأ بعد',
+    unclassified: 'أضلاع لم تصنف بعد',
+    notClosed: 'لم يكتمل الشكل بعد',
   },
 
   answer: {

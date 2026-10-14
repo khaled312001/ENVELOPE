@@ -1973,9 +1973,26 @@ function summariseRun(run: StoredRun) {
       validation: { summary: { hardViolated: number; deferredDeclared: number; lifeSafetyDeferred: number } };
     };
     assumptions: { parameterId: string }[];
+    building?: {
+      plot: { outline: { x: number; y: number }[] };
+      setbackLine: { x: number; y: number }[];
+    };
   };
   const gates = JSON.parse(run.gates) as GateRecord;
   const reviewer = gates[Gate.G4_REVIEWER_NAMED] ?? null;
+  /*
+    THE PLAN ON EACH CARD, READ OFF THE STORED MODEL.
+
+    The plot ring and the setback line, in the model's integer millimetres, so
+    a run list can draw each plot without fetching each run. Both come from
+    `building` as it was stored. A run written before the model existed gets
+    `null` and draws no plan, because the list does not rebuild a shape from
+    its numbers: that rebuilding was the defect the model was made to end.
+  */
+  const ring = (r: { x: number; y: number }[]): [number, number][] => r.map((p) => [p.x, p.y]);
+  const outline = payload.building
+    ? { plot: ring(payload.building.plot.outline), setback: ring(payload.building.setbackLine) }
+    : null;
 
   return {
     runId: run.runId,
@@ -2010,6 +2027,7 @@ function summariseRun(run: StoredRun) {
     */
     gatesSatisfied: EXPORT_GATES.filter((g) => gates[g] !== undefined).length,
     reviewer: reviewer ? { name: reviewer.actorName, at: reviewer.at } : null,
+    outline,
   };
 }
 

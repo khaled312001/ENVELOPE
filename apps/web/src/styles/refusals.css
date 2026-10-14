@@ -116,7 +116,11 @@
  * normal wrapping are, and `overflow-wrap` is the backstop for a pathological
  * token rather than the mechanism.
  */
-.rf h1 {
+/* `/readiness` opens on the same specimen. Its heading is rendered by the route
+   in `pages.tsx`, outside any `.rf`, and fell back to the browser's h1 — one rung
+   smaller than the three public pages beside it in the header. */
+.rf h1,
+.rd > .section--opening h1 {
   font-size: var(--text-4xl);
   font-weight: var(--weight-display);
   line-height: var(--leading-display);

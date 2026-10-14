@@ -135,12 +135,29 @@ const BLANK_EDGE: EdgeDraft = {
  */
 const asEdgeDraft = (e: EdgeDraft): EdgeDraft => ({ ...BLANK_EDGE, ...e });
 
+/**
+ * The plot as it is being drawn, before the server has made it one.
+ *
+ * Reported to the workspace so the inspector is not blank on the step where the
+ * reader is doing the most work. Every figure is this form's own reading — the
+ * area is `walkTraverse`'s, the same one the form prints — and the inspector says
+ * in words that none of it has been sent.
+ */
+export interface PlotDraftFacts {
+  readonly plotNumber: string;
+  readonly computedAreaM2: string | null;
+  readonly edges: number;
+  readonly unclassified: number;
+}
+
 export interface PlotFormProps {
   readonly actor: Actor;
   readonly busy: boolean;
   readonly setBusy: (b: boolean) => void;
   readonly onCreated: (created: PlotCreated, view: PlotView) => void;
   readonly onError: (e: ApiError) => void;
+  /** Called whenever the draft's facts change. */
+  readonly onDraft?: (draft: PlotDraftFacts) => void;
   /**
    * Values carried over from a read affection plan.
    *
@@ -298,6 +315,7 @@ export function PlotForm({
   onError,
   prefill,
   demo,
+  onDraft,
 }: PlotFormProps): JSX.Element {
   const t = useDict(EN, AR);
   const [plotNumber, setPlotNumber] = useState(
@@ -567,6 +585,10 @@ export function PlotForm({
   const unclassified = edges.filter((e) => e.classification === '').length;
 
   const computedArea = walk.usable ? walk.areaM2 : null;
+
+  useEffect(() => {
+    onDraft?.({ plotNumber, computedAreaM2: computedArea, edges: edges.length, unclassified });
+  }, [onDraft, plotNumber, computedArea, edges.length, unclassified]);
 
   const submit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -897,7 +919,10 @@ export function PlotForm({
         )}
       </h3>
 
-      <div className="grid grid--2">
+      {/* `pf-edges`: the drawing holds still beside the list on a wide screen
+          (app.css), so boundary 4 is edited with the plot in view rather than
+          two screens below it. */}
+      <div className="grid grid--2 pf-edges">
         <ul className="edge-list">
           {edges.map((edge, i) => (
             <li key={i} className={edge.classification === '' ? 'edge-list__item is-unset' : 'edge-list__item'}>

@@ -20,6 +20,7 @@
 import type { ReactNode } from 'react';
 
 import type { PlotView, RunView } from '../api/client.js';
+import type { PlotDraftFacts } from '../screens/PlotForm.js';
 import { AR as BANDS_AR } from '../i18n/bands.ar.js';
 import { EN as BANDS_EN } from '../i18n/bands.en.js';
 import { AR } from '../i18n/inspector.ar.js';
@@ -42,8 +43,15 @@ export function WorkspaceInspector({
   onInspect,
   onOpenAssumptions,
   stepFacts,
+  draft = null,
   children,
 }: {
+  /**
+   * The plot form's own reading while no plot exists yet. Shown only then, and
+   * tagged as a draft in words: a figure here before the server has made the plot
+   * is the form's arithmetic, not the plot's.
+   */
+  readonly draft?: PlotDraftFacts | null;
   readonly plot: PlotView | null;
   readonly run: RunView | null;
   readonly gates: Readonly<Record<string, boolean>>;
@@ -84,6 +92,42 @@ export function WorkspaceInspector({
               </dd>
             </div>
           </dl>
+        ) : draft && draft.edges > 0 ? (
+          <>
+            <p className="inspector__draft">{t.plot.draft}</p>
+            <dl className="inspector__facts">
+              {draft.plotNumber.trim() !== '' ? (
+                <div>
+                  <dt>{t.plot.number}</dt>
+                  <dd>
+                    <Verbatim>{draft.plotNumber}</Verbatim>
+                  </dd>
+                </div>
+              ) : null}
+              <div>
+                <dt>{t.plot.area}</dt>
+                <dd>
+                  {draft.computedAreaM2 === null ? (
+                    <span className="inspector__aside">{t.plot.notClosed}</span>
+                  ) : (
+                    <Verbatim>{`${draft.computedAreaM2} m²`}</Verbatim>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>{t.plot.edges}</dt>
+                <dd>
+                  <Verbatim>{String(draft.edges)}</Verbatim>
+                </dd>
+              </div>
+              <div>
+                <dt>{t.plot.unclassified}</dt>
+                <dd>
+                  <Verbatim>{String(draft.unclassified)}</Verbatim>
+                </dd>
+              </div>
+            </dl>
+          </>
         ) : (
           <p className="inspector__empty">{t.plot.none}</p>
         )}

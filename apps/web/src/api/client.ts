@@ -1131,6 +1131,11 @@ export interface RunSummary {
   /** The export gates signed — G3 and G4, the only gates a stored run can hold. */
   readonly gatesSatisfied: number;
   readonly reviewer: { readonly name: string; readonly at: string } | null;
+  /** The plot ring and setback line off the stored model, in mm; `null` before it existed. */
+  readonly outline?: {
+    readonly plot: readonly (readonly [number, number])[];
+    readonly setback: readonly (readonly [number, number])[];
+  } | null;
 }
 
 export interface PlotSummary {

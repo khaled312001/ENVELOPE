@@ -68,7 +68,7 @@ import { AffectionPlanIntake, type Prefill } from './screens/AffectionPlanIntake
 import { ChecksStep } from './screens/ChecksStep.js';
 import { EvidenceStep } from './screens/EvidenceStep.js';
 import { ParametersStep } from './screens/ParametersStep.js';
-import { PlotForm } from './screens/PlotForm.js';
+import { PlotForm, type PlotDraftFacts } from './screens/PlotForm.js';
 import { RulesStep } from './screens/RulesStep.js';
 
 export type { FlowState, StepHint } from './engine/steps.js';
@@ -126,6 +126,9 @@ export function EngineApp({
     second plot.
   */
   const [sheet, setSheet] = useState<SheetReport | null>(null);
+  /* The plot while it is being drawn, for the inspector. Never sent anywhere and
+     never mistaken for `plot`: the inspector labels it a draft. */
+  const [draftPlot, setDraftPlot] = useState<PlotDraftFacts | null>(null);
   const [run, setRun] = useState<RunView | null>(null);
   const [request, setRequest] = useState<RunRequestBody | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
@@ -431,6 +434,7 @@ export function EngineApp({
                 }}
                 onError={setError}
                 setBusy={setBusy}
+                onDraft={setDraftPlot}
               />
             ) : null}
 
@@ -575,6 +579,7 @@ export function EngineApp({
             gates={gates}
             onInspect={inspect}
             onOpenAssumptions={() => goto('assumptions')}
+            draft={draftPlot}
             stepFacts={<StepFacts step={step} run={run} onInspect={inspect} />}
           >
             {inspecting ? (

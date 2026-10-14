@@ -233,6 +233,17 @@
   }
 
   .nav__inner { position: relative; flex-wrap: wrap; }
+
+  /* Signed in, the tools carry a name and a way out as well as the language and
+     the theme, and at 320px that row was 373px wide: the bar wrapped and the group
+     inside it did not, so every signed-in page scrolled sideways (1.4.10). The
+     group wraps now, and so does the account pair inside it. */
+  .nav__tools,
+  .nav__account {
+    flex-wrap: wrap;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) and (max-width: 52rem) {

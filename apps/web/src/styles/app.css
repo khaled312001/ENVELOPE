@@ -585,6 +585,17 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   color: var(--text-tertiary);
 }
 
+/* The draft tag: words, in the secondary ink, with a dashed rule — the drawing
+   convention for something not yet built. Not amber: a draft is unfinished, not
+   assumed. */
+.inspector__draft {
+  margin: 0;
+  padding-inline-start: var(--space-2);
+  border-inline-start: var(--border-width-emphasis) dashed var(--border-strong);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
 .inspector__empty {
   margin: 0;
   font-size: var(--text-sm);
@@ -2137,6 +2148,17 @@ select.input { cursor: pointer; }
 .rule-list__note { margin-top: var(--space-2); color: var(--text-secondary); max-width: var(--measure); }
 
 /* --- Edges --------------------------------------------------------------- */
+
+/* The drawing holds still while the boundary list scrolls past it. Only where
+   the two sit side by side and the step bar sticks: on a phone the drawing comes
+   after the list, and a sticky box there would cover the list it follows. */
+@media (min-width: 64rem) {
+  .pf-edges { align-items: start; }
+  .pf-edges > .plot-figure {
+    position: sticky;
+    inset-block-start: calc(var(--header-h) * 2 + var(--space-4));
+  }
+}
 
 .edge-list { display: flex; flex-direction: column; gap: var(--space-3); }
 .edge-list__item {

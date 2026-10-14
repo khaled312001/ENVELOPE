@@ -1006,6 +1006,26 @@ describe('export — the §3.4 artifact', () => {
     expect(row?.gatesSatisfied).toBe(2);
   });
 
+  /* The key plan on each card is the stored model's own rings, carried in the
+     list so no card has to fetch its run. Held to the run's building, so a list
+     that drew some other shape — or one rebuilt from the area — fails here. */
+  it('carries each run’s plot ring and setback line off the stored model', async () => {
+    const plot = await createPlot();
+    const run = (
+      await app.inject({ method: 'POST', url: '/api/runs', headers: ACTOR, payload: { ...RUN_BODY, plotId: plot.plotId } })
+    ).json();
+    const list = (await app.inject({ method: 'GET', url: '/api/dashboard', headers: ACTOR })).json();
+    const row = (list.recentRuns as { runId: string; outline: { plot: [number, number][]; setback: [number, number][] } | null }[])
+      .find((r) => r.runId === run.runId);
+    expect(row?.outline).not.toBeNull();
+    expect(row!.outline!.plot).toEqual(
+      (run.building.plot.outline as { x: number; y: number }[]).map((p) => [p.x, p.y]),
+    );
+    expect(row!.outline!.setback).toEqual(
+      (run.building.setbackLine as { x: number; y: number }[]).map((p) => [p.x, p.y]),
+    );
+  });
+
   it('returns a complete document once every gate is satisfied', async () => {
     const plot = await createPlot();
     const run = (

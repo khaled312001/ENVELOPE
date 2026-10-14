@@ -19,6 +19,11 @@ export const EN = {
     number: 'Plot number',
     area: 'Computed area',
     edges: 'Boundary edges',
+    /** Above the form's own reading, before the plot exists. */
+    draft: 'Being drawn — not created yet',
+    unclassified: 'Still to classify',
+    /** In place of an area while the boundaries do not yet make a closed shape. */
+    notClosed: 'not a closed shape yet',
   },
 
   answer: {

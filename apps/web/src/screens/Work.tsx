@@ -56,6 +56,7 @@ import {
   Users,
 } from 'lucide-react';
 
+import { PlotPlan, type PlanOutline } from '../components/PlotPlan.js';
 import { Icon } from '../icons.js';
 import READINESS from './readiness.json' with { type: 'json' };
 import { AR } from '../i18n/work.ar.js';
@@ -82,6 +83,11 @@ export interface RunRow {
   readonly gatesSatisfied: number;
   readonly reviewer: { readonly name: string; readonly at: string } | null;
   readonly sharedRole?: 'reviewer' | 'reader';
+  /**
+   * The plot ring and the setback line off the stored model, in millimetres.
+   * `null` for a run stored before the model existed; absent from an older API.
+   */
+  readonly outline?: PlanOutline | null;
 }
 
 interface WorkView {
@@ -434,6 +440,13 @@ export function RunTable({
         const to: Href = `/work?run=${encodeURIComponent(r.runId)}`;
         return (
           <li key={r.runId} className="runcard">
+            {/* The plot, drawn from the stored model: a key plan, so a list of
+                studies reads as a set of drawings rather than a set of rows. */}
+            {r.outline ? (
+              <div className="runcard__plan">
+                <PlotPlan outline={r.outline} />
+              </div>
+            ) : null}
             <div className="runcard__head">
               <p className="runcard__plot">
                 <span className="runcard__number">

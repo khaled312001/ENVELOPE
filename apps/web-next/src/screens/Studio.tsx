@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Box, Check, ClipboardCheck, FileDown, Layers, MapPinned, ScrollText } from 'lucide-react';
+import { Box, Check, ClipboardCheck, FileDown, FileText, Layers, MapPinned, ScrollText } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
@@ -8,14 +8,17 @@ import {
   type Actor,
   api,
   ApiError,
+  encodeAttachment,
   type ParkingComparison,
   type PlotCreated,
   type PlotView,
   type RunRequestBody,
   type RunView,
 } from '@web/api/client.js';
+import type { LngLat } from '@web/geo.js';
 
 import { DerivationDrawer } from '../components/Derivation.js';
+import type { MapTrace } from '../components/PlotMapView.js';
 import { TopBar } from '../components/Shell.js';
 import { InspectProvider } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
@@ -37,9 +40,11 @@ import {
   type RulesForm,
   rulesFrom,
 } from '../studio/model.js';
+import { ringToDraft } from '../studio/geometry.js';
 import { ParkingCanvas, ParkingPanel } from '../studio/ParkingStep.js';
-import { PlotCanvas, PlotPanel } from '../studio/PlotStep.js';
+import { PlotCanvas, PlotPanel, type PlotViewMode } from '../studio/PlotStep.js';
 import { RulesPanel } from '../studio/RulesStep.js';
+import { SHEET_MAX_BYTES, SheetCanvas, SheetPanel, type SheetState } from '../studio/SheetStep.js';
 
 /*
   THE STUDIO: A CANVAS IN THE MIDDLE, THE STEPS ON ONE SIDE, THE FIGURES ON THE OTHER.
@@ -53,8 +58,9 @@ import { RulesPanel } from '../studio/RulesStep.js';
   before a filed plot, no capacity before a run.
 */
 
-export type StepId = 'plot' | 'rules' | 'capacity' | 'parking' | 'checks' | 'export';
+export type StepId = 'sheet' | 'plot' | 'rules' | 'capacity' | 'parking' | 'checks' | 'export';
 const STEPS: readonly { id: StepId; icon: typeof Box }[] = [
+  { id: 'sheet', icon: FileText },
   { id: 'plot', icon: MapPinned },
   { id: 'rules', icon: ScrollText },
   { id: 'capacity', icon: Box },
@@ -77,11 +83,20 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   const [rules, setRules] = useState<RulesForm>(EMPTY_RULES);
   const [request, setRequest] = useState<RunRequestBody | null>(null);
   const [run, setRun] = useState<RunView | null>(null);
-  const [step, setStep] = useState<StepId>('plot');
-  const [busy, setBusy] = useState<'plot' | 'run' | 'load' | null>(null);
+  // A new study opens on the affection plan; the worked example and a stored run already have a plot.
+  const [step, setStep] = useState<StepId>(() => (runId || params.get('example') === '1' ? 'plot' : 'sheet'));
+  const [busy, setBusy] = useState<'plot' | 'run' | 'load' | 'sheet' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [node, setNode] = useState<string | null>(null);
   const [comparison, setComparison] = useState<ParkingComparison | null>(null);
+
+  // Step 0: the sheet as read, and whether the reader chose to use it for this study.
+  const [sheet, setSheet] = useState<SheetState | null>(null);
+  const [sheetUsed, setSheetUsed] = useState(false);
+  const [sheetError, setSheetError] = useState<string | null>(null);
+  const [statedArea, setStatedArea] = useState('');
+  const [trace, setTrace] = useState<MapTrace>({ ring: [], closed: false });
+  const [plotView, setPlotView] = useState<PlotViewMode>(() => (runId || params.get('example') === '1' ? 'plan' : 'map'));
 
   // The worked example, on request: the plot and the answers the landing page describes.
   useEffect(() => {
@@ -113,7 +128,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
         const body = recalledRequest(runId);
         setRequest(body);
         if (body) setRules(rulesFrom(body));
-        setStep((s) => (s === 'plot' || s === 'rules' ? 'capacity' : s));
+        setStep((s) => (s === 'sheet' || s === 'plot' || s === 'rules' ? 'capacity' : s));
       } catch (e) {
         if (live) setError(e instanceof ApiError ? e.message : t.studio.loadFailed);
       } finally {
@@ -141,6 +156,10 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
           classification: e.classification,
           ...(e.classification === 'ROAD' && e.roadHierarchy ? { roadHierarchy: e.roadHierarchy } : {}),
         })),
+        ...(statedArea.trim() ? { statedAreaM2: statedArea.trim() } : {}),
+        /* The PDF, not the numbers off it: the server reads the sheet again and its
+           limits bind the run with citations into a document it opened itself. */
+        ...(sheet && sheetUsed ? { affectionPlan: sheet.attachment } : {}),
       });
       const view = await api.getPlot(actor, made.plotId);
       setCreated(made);
@@ -153,7 +172,29 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
     } finally {
       setBusy(null);
     }
-  }, [actor, draft, t]);
+  }, [actor, draft, statedArea, sheet, sheetUsed, t]);
+
+  const readSheet = useCallback(
+    async (file: File) => {
+      setSheetError(null);
+      if (file.size > SHEET_MAX_BYTES) {
+        setSheetError(t.sheet.tooLarge(file.name, (file.size / 1024 / 1024).toFixed(1)));
+        return;
+      }
+      setBusy('sheet');
+      try {
+        const attachment = await encodeAttachment(file);
+        const read = await api.readAffectionPlan(actor, attachment);
+        setSheet({ read, attachment });
+        setSheetUsed(false);
+      } catch (e) {
+        setSheetError(e instanceof ApiError ? e.message : t.sheet.failed);
+      } finally {
+        setBusy(null);
+      }
+    },
+    [actor, t],
+  );
 
   const compute = useCallback(
     async (body: RunRequestBody) => {
@@ -196,9 +237,8 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
     setRun(await api.getRun(actor, run.runId));
   }, [actor, run]);
 
-  const editPlot = (next: DraftPlot): void => {
-    setDraft(next);
-    // A plot the engine already filed is not this plot any more.
+  // A plot the engine already filed is not this plot any more once anything it was filed with changes.
+  const unfile = (): void => {
     if (created || plot) {
       setCreated(null);
       setPlot(null);
@@ -207,8 +247,46 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
       if (runId) navigate('/studio', { replace: true });
     }
   };
+  const editPlot = (next: DraftPlot): void => {
+    setDraft(next);
+    unfile();
+  };
+  const editStatedArea = (next: string): void => {
+    setStatedArea(next);
+    unfile();
+  };
+
+  const applySheet = (): void => {
+    if (!sheet) return;
+    const f = sheet.read.facts;
+    // What the sheet prints, filled in where it prints it; a field it does not print keeps what the reader typed.
+    editPlot({
+      ...draft,
+      plotNumber: f.parcelId?.value ?? draft.plotNumber,
+      community: f.community?.value ?? draft.community,
+    });
+    if (f.totalAreaSqm) setStatedArea(f.totalAreaSqm.value);
+    // The podium count G+2P+8 prints, offered in the rules form where it can be read and changed.
+    if (f.height && rules.podiumAboveGround === '') setRules({ ...rules, podiumAboveGround: String(f.height.value.podiumLevels) });
+    setSheetUsed(true);
+    setStep('plot');
+  };
+  const clearSheet = (): void => {
+    setSheet(null);
+    setSheetError(null);
+    if (sheetUsed) {
+      setSheetUsed(false);
+      unfile();
+    }
+  };
+  const applyTrace = (ring: readonly LngLat[]): void => {
+    editPlot(ringToDraft(ring, draft));
+    // Back to the plan: the boundaries are numbered there, and each still needs classifying.
+    setPlotView('plan');
+  };
 
   const reachable: Record<StepId, boolean> = {
+    sheet: true,
     plot: true,
     rules: plotId !== null,
     capacity: run !== null,
@@ -217,6 +295,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
     export: run !== null,
   };
   const done: Record<StepId, boolean> = {
+    sheet: sheetUsed,
     plot: plotId !== null,
     rules: run !== null,
     capacity: run !== null,
@@ -234,9 +313,39 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
       );
     }
     switch (step) {
+      case 'sheet':
+        return <SheetCanvas sheet={sheet} />;
       case 'plot':
+        return (
+          <PlotCanvas
+            draft={draft}
+            plot={plot}
+            view={plotView}
+            onView={setPlotView}
+            trace={trace}
+            onTrace={setTrace}
+            statedArea={statedArea}
+            sheetImage={sheetUsed ? (sheet?.read.facts.sitePlan?.image ?? null) : null}
+            onUseTrace={applyTrace}
+          />
+        );
       case 'rules':
-        return <PlotCanvas draft={draft} plot={plot} />;
+        return (
+          <PlotCanvas
+            draft={draft}
+            plot={plot}
+            view="plan"
+            onView={(v) => {
+              setPlotView(v);
+              setStep('plot');
+            }}
+            trace={trace}
+            onTrace={setTrace}
+            statedArea={statedArea}
+            sheetImage={null}
+            onUseTrace={applyTrace}
+          />
+        );
       case 'capacity':
         return run ? <CapacityCanvas run={run} /> : null;
       case 'parking':
@@ -246,7 +355,8 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
       case 'export':
         return run ? <ParkingCanvas run={run} initialKind="SITE" /> : null;
     }
-  }, [busy, step, draft, plot, run, t]);
+    // `applyTrace` is rebuilt each render but reads only `draft`, which is listed.
+  }, [busy, step, draft, plot, run, t, sheet, sheetUsed, plotView, trace, statedArea]);
 
   return (
     <InspectProvider value={run ? setNode : null}>
@@ -367,8 +477,31 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 <Notice title={t.studio.refused}>{error}</Notice>
               </div>
             ) : null}
-            {step === 'plot' ? (
-              <PlotPanel draft={draft} onChange={editPlot} created={created} plot={plot} busy={busy === 'plot'} onFile={fileplot} onNext={() => setStep('rules')} />
+            {step === 'sheet' ? (
+              <SheetPanel
+                sheet={sheet}
+                using={sheetUsed}
+                busy={busy === 'sheet'}
+                error={sheetError}
+                onFile={(file) => void readSheet(file)}
+                onUse={applySheet}
+                onClear={clearSheet}
+                onSkip={() => setStep('plot')}
+                onNext={() => setStep('plot')}
+              />
+            ) : step === 'plot' ? (
+              <PlotPanel
+                draft={draft}
+                onChange={editPlot}
+                statedArea={statedArea}
+                onStatedArea={editStatedArea}
+                sheet={sheetUsed ? sheet : null}
+                created={created}
+                plot={plot}
+                busy={busy === 'plot'}
+                onFile={fileplot}
+                onNext={() => setStep('rules')}
+              />
             ) : step === 'rules' && plotId ? (
               <RulesPanel
                 form={rules}

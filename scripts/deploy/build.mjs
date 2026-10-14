@@ -185,7 +185,15 @@ renameSync(join(WEB, 'index.html'), join(WEB, 'classic.html'));
     readdirSync(join(dir, rel), { withFileTypes: true }).flatMap((e) =>
       e.isDirectory() ? walk(dir, join(rel, e.name)) : [join(rel, e.name)],
     );
-  const clashes = walk(NEXT).filter((f) => existsSync(join(WEB, f)) && !MAY_REPLACE.has(f));
+  /* A name both wrote with the SAME bytes is one file, not two: both studios now
+     load maplibre, and a content-hashed name that matches is the same chunk. Only
+     a name over different bytes is one application loading the other's file. */
+  const clashes = walk(NEXT).filter(
+    (f) =>
+      existsSync(join(WEB, f)) &&
+      !MAY_REPLACE.has(f) &&
+      !readFileSync(join(WEB, f)).equals(readFileSync(join(NEXT, f))),
+  );
   if (clashes.length) throw new Error(`both front ends wrote: ${clashes.join(', ')}`);
   cpSync(NEXT, WEB, { recursive: true });
 }
@@ -238,6 +246,22 @@ const redirects = JSON.parse(
 );
 // The classic site's "what it refuses" is this site's "what it does not do".
 redirects['/refusals'] = '/limits';
+/*
+  THE CLASSIC STUDIO'S DOORS LEAD INTO THIS ONE. The owner, 14 Oct 2026: nothing
+  of the old site is to be seen. Its engine, its studies, its sign-in and its
+  readiness page each have a page here now, so their addresses — bookmarked,
+  shared, printed in an old report — land on it rather than on the previous
+  front end. What is left on the classic shell (settings, workspace, an
+  invitation link) has no page here yet and is linked from nowhere on this site.
+*/
+Object.assign(redirects, {
+  '/app': '/studio',
+  '/work': '/studies',
+  '/sign-in': '/enter',
+  '/sign-up': '/enter?mode=up',
+  '/readiness': '/limits',
+  '/dashboard': '/limits',
+});
 const redirectRules = Object.entries(redirects)
   .map(([from, to]) => `  RewriteRule ^${from.replace(/^\//, '')}/?$ ${to} [R=301,L]`)
   .join('\n');

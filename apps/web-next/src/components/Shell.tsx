@@ -1,7 +1,7 @@
 import { DropdownMenu } from 'radix-ui';
 import { FolderOpen, Languages, LogOut, Moon, Plus, Sun, UserRound } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import type { ReactNode } from 'react';
+import { lazy, type ReactNode, Suspense, useState } from 'react';
 
 import logoDark from '../assets/img/logo-dark.webp';
 import logoLight from '../assets/img/logo-light.webp';
@@ -82,10 +82,14 @@ export function LocaleSwitch(): JSX.Element {
   );
 }
 
+// Loaded on the first open: the header is on every page, the form behind it is rarely used.
+const Profile = lazy(() => import('./Profile.js'));
+
 export function Account(): JSX.Element {
   const { actor, signOut, session } = useIdentity();
   const { t } = useLocale();
   const navigate = useNav();
+  const [profile, setProfile] = useState<boolean | null>(null);
   if (!actor) {
     return (
       <Button asChild variant="primary" size="sm">
@@ -115,6 +119,15 @@ export function Account(): JSX.Element {
             <p className="text-[12px] text-secondary">{guest ? t.shell.guest : session === 'signed-in' ? t.shell.signedIn : t.shell.named}</p>
           </div>
           <DropdownMenu.Separator className="my-1 h-px bg-line" />
+          {session === 'signed-in' ? (
+            <DropdownMenu.Item
+              onSelect={() => setProfile(true)}
+              className="flex cursor-pointer items-center gap-2 rounded-sm px-2.5 py-2 text-secondary outline-none data-[highlighted]:bg-hover data-[highlighted]:text-fg"
+            >
+              <UserRound className="size-4" aria-hidden="true" />
+              {t.shell.profile}
+            </DropdownMenu.Item>
+          ) : null}
           <DropdownMenu.Item
             onSelect={() => {
               void signOut().then(() => navigate('/'));
@@ -126,6 +139,11 @@ export function Account(): JSX.Element {
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
+      {profile !== null ? (
+        <Suspense fallback={null}>
+          <Profile open={profile} onOpenChange={setProfile} />
+        </Suspense>
+      ) : null}
     </DropdownMenu.Root>
   );
 }
@@ -157,10 +175,7 @@ export function TopBar({ children }: { readonly children?: ReactNode }): JSX.Ele
       ) : null}
       {children}
       <div className="ms-auto flex items-center gap-1.5">
-        {/* The previous studio, still served whole at /app for whatever this one does not do yet. */}
-        <a href="/app" className="hidden rounded-md px-2 py-1.5 text-[12.5px] text-secondary hover:bg-hover hover:text-fg md:inline">
-          {t.shell.classic}
-        </a>
+        {/* No door to the previous studio: the owner wants nothing of it seen (14 Oct 2026). */}
         <LocaleSwitch />
         <ThemeToggle />
         <Account />

@@ -443,7 +443,12 @@ is a defect even when it makes something easier.
   site's header, hero, footer and studio sidebar, made it open light whatever the OS
   prefers, and cut the explanatory captions. The stamp stays in every exported
   file, in the five-way claim statement and in the study's checks — do not put it
-  back in the chrome without asking him.
+  back in the chrome without asking him. He also asked that **nothing of the old
+  site be seen**: the new studio has its own step 0 (the affection plan) and its
+  own satellite map, built on the classic `PlotMap` helpers rather than a copy of
+  them; sign-up and the licence moved into the new site; and `/app`, `/work`,
+  `/sign-in`, `/sign-up` and `/readiness` are 301s to their new pages. Settings,
+  workspace and invitation links are still the classic shell, linked from nowhere.
 - Integer millimetres inside the kernel; `Decimal` for every non-geometric number. Never `number`
   for a quantity a user will see.
 - Public APIs carry explicit return types. `tsc --noEmit` clean before moving on.

@@ -22,13 +22,17 @@ import { Field, Input, Notice, Spinner } from '../ui/primitives.js';
 export function Enter(): JSX.Element {
   const { t } = useLocale();
   const s = useSite();
-  const { actor, signIn, continueAsGuest } = useIdentity();
+  const { actor, signIn, signUp, continueAsGuest } = useIdentity();
   const [params] = useSearchParams();
   const navigate = useNav();
   const next = safeNext(params.get('next'));
 
+  // Signing in and creating an account are one form with two modes: the same email and password either way.
+  const [mode, setMode] = useState<'in' | 'up'>(params.get('mode') === 'up' ? 'up' : 'in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [licence, setLicence] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -41,10 +45,11 @@ export function Enter(): JSX.Element {
     setBusy(true);
     setError(null);
     try {
-      await signIn(email.trim(), password);
+      if (mode === 'in') await signIn(email.trim(), password);
+      else await signUp({ email: email.trim(), password, name: fullName.trim(), ...(licence.trim() ? { licence: licence.trim() } : {}) });
       navigate(next, { replace: true });
     } catch (err) {
-      setError((err as Error).message || t.enter.failed);
+      setError((err as Error).message || (mode === 'in' ? t.enter.failed : t.enter.createFailed));
     } finally {
       setBusy(false);
     }
@@ -74,9 +79,16 @@ export function Enter(): JSX.Element {
               <form onSubmit={submit} className="grid content-start gap-4 rounded-lg border border-line bg-panel p-6" noValidate>
                 <div className="flex items-center gap-2.5">
                   <KeyRound className="size-4 text-accent" aria-hidden="true" />
-                  <h2 className="text-[15px] font-semibold text-fg">{t.enter.accountTitle}</h2>
+                  <h2 className="text-[15px] font-semibold text-fg">{mode === 'in' ? t.enter.accountTitle : t.enter.createTitle}</h2>
                 </div>
                 <p className="text-[13px] text-secondary">{t.enter.accountBody}</p>
+                {mode === 'up' ? (
+                  <Field label={t.enter.name}>
+                    {({ id, describedBy }) => (
+                      <Input id={id} autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} aria-describedby={describedBy} required />
+                    )}
+                  </Field>
+                ) : null}
                 <Field label={t.enter.email}>
                   {({ id, describedBy, invalid }) => (
                     <Input
@@ -96,7 +108,7 @@ export function Enter(): JSX.Element {
                     <Input
                       id={id}
                       type="password"
-                      autoComplete="current-password"
+                      autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       aria-describedby={describedBy}
@@ -104,16 +116,35 @@ export function Enter(): JSX.Element {
                     />
                   )}
                 </Field>
+                {mode === 'up' ? (
+                  <Field label={t.enter.licence} hint={t.enter.licenceHint}>
+                    {({ id, describedBy }) => (
+                      <Input id={id} value={licence} onChange={(e) => setLicence(e.target.value)} aria-describedby={describedBy} className="figure" />
+                    )}
+                  </Field>
+                ) : null}
                 {error ? <Notice>{error}</Notice> : null}
-                <Button type="submit" variant="primary" aria-busy={busy || undefined} disabled={busy || !email || !password}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  aria-busy={busy || undefined}
+                  disabled={busy || !email || !password || (mode === 'up' && fullName.trim() === '')}
+                >
                   {busy ? <Spinner /> : null}
-                  {t.enter.signIn}
+                  {mode === 'in' ? t.enter.signIn : t.enter.create}
                 </Button>
                 <p className="text-[12px] text-secondary">
-                  {t.enter.noAccount}{' '}
-                  <a href="/sign-up" className="text-accent-strong underline underline-offset-2 hover:text-fg">
-                    {t.enter.createOnClassic}
-                  </a>
+                  {mode === 'in' ? t.enter.noAccount : t.enter.haveAccount}{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode(mode === 'in' ? 'up' : 'in');
+                      setError(null);
+                    }}
+                    className="text-accent-strong underline underline-offset-2 hover:text-fg"
+                  >
+                    {mode === 'in' ? t.enter.createOne : t.enter.signInInstead}
+                  </button>
                 </p>
               </form>
 

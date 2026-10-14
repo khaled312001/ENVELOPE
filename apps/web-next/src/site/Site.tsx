@@ -262,9 +262,6 @@ function SiteFooter(): JSX.Element {
         <div className="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-3 px-4 py-4 text-[12px] text-secondary sm:px-6">
           <span>{s.footer.rights(String(new Date().getFullYear()))}</span>
           <span className="flex flex-wrap items-center gap-4">
-            <a href="/app" className="hover:text-fg">
-              {s.footer.classic}
-            </a>
             <motion.button
               type="button"
               onClick={() => window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })}

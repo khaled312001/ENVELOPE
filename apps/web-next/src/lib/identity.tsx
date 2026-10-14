@@ -44,6 +44,9 @@ interface IdentityValue {
   readonly account: Account | null;
   readonly session: SessionState;
   readonly signIn: (email: string, password: string) => Promise<void>;
+  readonly signUp: (input: { email: string; password: string; name: string; licence?: string }) => Promise<void>;
+  /** Name and licence. An empty licence withdraws it: somebody who no longer holds one must be able to say so. */
+  readonly updateProfile: (input: { name: string; licence: string }) => Promise<void>;
   readonly continueAsGuest: (name: string) => void;
   readonly signOut: () => Promise<void>;
 }
@@ -88,14 +91,29 @@ export function IdentityProvider({ children }: { readonly children: ReactNode })
     };
   }, []);
 
-  const signIn = useCallback(
-    async (email: string, password: string) => {
-      const { account: found } = await auth.login({ email, password });
+  const adopt = useCallback(
+    (found: Account) => {
       setAccount(found);
       setSession('signed-in');
       setActor({ id: found.accountId, name: found.name, ...(found.licence ? { licence: found.licence } : {}) });
     },
     [setActor],
+  );
+
+  const signIn = useCallback(
+    async (email: string, password: string) => adopt((await auth.login({ email, password })).account),
+    [adopt],
+  );
+
+  // The server opens a session on registration, so a new account is signed in by the same answer.
+  const signUp = useCallback(
+    async (input: { email: string; password: string; name: string; licence?: string }) => adopt((await auth.register(input)).account),
+    [adopt],
+  );
+
+  const updateProfile = useCallback(
+    async (input: { name: string; licence: string }) => adopt((await auth.updateProfile(input)).account),
+    [adopt],
   );
 
   const continueAsGuest = useCallback(
@@ -116,8 +134,8 @@ export function IdentityProvider({ children }: { readonly children: ReactNode })
   }, [session, setActor]);
 
   const value = useMemo<IdentityValue>(
-    () => ({ actor, account, session, signIn, continueAsGuest, signOut }),
-    [actor, account, session, signIn, continueAsGuest, signOut],
+    () => ({ actor, account, session, signIn, signUp, updateProfile, continueAsGuest, signOut }),
+    [actor, account, session, signIn, signUp, updateProfile, continueAsGuest, signOut],
   );
   return <IdentityContext.Provider value={value}>{children}</IdentityContext.Provider>;
 }

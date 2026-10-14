@@ -563,6 +563,11 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   }
 }
 
+/* A flex item will not shrink below its content by default, and the derivation
+   tree is wide: at 320px the panel held the column 3px past the screen, which the
+   live walk caught and the local one did not. Every child may shrink. */
+.inspector > * { min-inline-size: 0; }
+
 .inspector__section {
   display: grid;
   gap: var(--space-3);
@@ -616,6 +621,8 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 
 .inspector__facts dd {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
   margin: 0;
   font-family: var(--font-mono);
   font-size: var(--text-sm);

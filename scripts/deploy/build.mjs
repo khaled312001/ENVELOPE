@@ -261,7 +261,12 @@ const csp = [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  ...(forceHttps ? ['upgrade-insecure-requests'] : []),
+  /* ONLY WHEN ENFORCED. A browser ignores `upgrade-insecure-requests` in a
+     report-only policy and says so on the console of every page — 74 lines on
+     one live walk, burying the one real finding under them. The host already
+     sends it enforced, as a `Content-Security-Policy` header of its own (seen
+     on the live responses, 14 Oct 2026), so nothing is lost meanwhile. */
+  ...(forceHttps && process.env.CSP_MODE === 'enforce' ? ['upgrade-insecure-requests'] : []),
 ].join('; ');
 const cspHeader =
   process.env.CSP_MODE === 'enforce'

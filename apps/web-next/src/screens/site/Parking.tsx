@@ -5,7 +5,7 @@ import worked from '@web/screens/worked-example.json';
 
 import { cn } from '../../lib/cn.js';
 import { grouped } from '../../lib/figures.js';
-import { EngineText, useLocale } from '../../lib/locale.js';
+import { EngineNote, useLocale } from '../../lib/locale.js';
 import { Art, Illustration } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
 import { EASE, Item, Spotlight, Stagger } from '../../ui/motion.js';
@@ -217,7 +217,7 @@ export function Parking(): JSX.Element {
             <p className="text-[15px] leading-relaxed text-secondary">{s.parking.orientationBody}</p>
             {orientationNote ? (
               <blockquote className="mt-4 border-s-2 border-accent ps-4 text-[13.5px] leading-relaxed text-fg">
-                <EngineText>{orientationNote}</EngineText>
+                <EngineNote text={orientationNote} />
               </blockquote>
             ) : null}
             <Illustration name="parking-section-model" alt={s.art.sectionModel} className="mt-8" />
@@ -277,7 +277,7 @@ export function Parking(): JSX.Element {
               </div>
             </dl>
             <p className="border-t border-subtle pt-3 text-[13px] leading-relaxed text-fg">
-              <EngineText>{v.access.recommended.rationale}</EngineText>
+              <EngineNote text={v.access.recommended.rationale} />
             </p>
           </div>
           <div className="grid content-start gap-3 rounded-xl border border-line bg-panel p-6 shadow-soft">
@@ -286,7 +286,7 @@ export function Parking(): JSX.Element {
               {v.access.rejected.map((r) => (
                 <li key={r.edgeSeq} className="flex items-start gap-2.5 text-[13px] leading-relaxed text-secondary">
                   <span className="figure mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-strong text-[10.5px] text-fg">{r.edgeSeq}</span>
-                  <EngineText>{r.reason}</EngineText>
+                  <EngineNote text={r.reason} />
                 </li>
               ))}
             </ul>
@@ -300,7 +300,7 @@ export function Parking(): JSX.Element {
           {notes.map((n) => (
             <Item key={n} as="li" className="flex items-start gap-3 rounded-lg border border-line bg-base p-4 text-[13px] leading-relaxed text-secondary">
               <CircleSlash className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              <EngineText className="not-assessed">{n}</EngineText>
+              <EngineNote text={n} />
             </Item>
           ))}
           <Item as="li" className="flex items-start gap-3 rounded-lg border border-strong bg-panel p-4 text-[13.5px] leading-relaxed text-fg">

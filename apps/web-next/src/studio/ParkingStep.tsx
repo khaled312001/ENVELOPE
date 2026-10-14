@@ -7,7 +7,7 @@ import { SheetViewer, useSheets } from '../components/SheetViewer.js';
 import { Traced } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
-import { EngineText, useLocale } from '../lib/locale.js';
+import { EngineNote, EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, Notice, PanelHeader, Spinner } from '../ui/primitives.js';
 import { assumedFirst, Footer, Heading, More, NextStep, Row } from './parts.js';
@@ -98,7 +98,7 @@ export function ParkingPanel({
                 <Badge tone={chosen ? 'accent' : 'neutral'}>{chosen ? t.parking.chosen : t.parking.recommended}</Badge>
                 <span className="text-[14px] font-medium text-fg">{t.parking.onBoundary(inUse.edgeSeq)}</span>
               </p>
-              <EngineText className="text-[12px] leading-relaxed text-secondary">{inUse.rationale}</EngineText>
+              <EngineNote className="text-[12px] leading-relaxed text-secondary" text={inUse.rationale} />
               {chosen && recommended && recommended.edgeSeq !== chosen.edgeSeq ? (
                 <p className="text-[12px] text-secondary">{t.parking.recommendedWas(recommended.edgeSeq)}</p>
               ) : null}
@@ -158,7 +158,7 @@ export function ParkingPanel({
             <ul className="grid gap-1 text-[12px] text-secondary">
               {lp.notAssessed.map((n, i) => (
                 <li key={i}>
-                  <EngineText>{n}</EngineText>
+                  <EngineNote text={n} />
                 </li>
               ))}
             </ul>
@@ -201,7 +201,7 @@ export function ParkingPanel({
                 {lp.access.rejected.map((r) => (
                   <li key={r.edgeSeq}>
                     <span className="figure me-1.5 text-tertiary">{r.edgeSeq}</span>
-                    <EngineText>{r.reason}</EngineText>
+                    <EngineNote text={r.reason} />
                   </li>
                 ))}
               </ul>

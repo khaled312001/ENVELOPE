@@ -191,6 +191,22 @@ export const SITE_AR: SiteDict = {
     status: (code: string): string => (code === '200' ? `${code} — يكتب الملف` : `${code} — مرفوض`),
     stampTitle: 'الختم داخل كل ملف',
     stampBody: 'الملفات الستة كلها تحمل عبارة «الصلاحية التنظيمية: لم تخضع للتقييم» داخلها، أينما ذهبت.',
+    sheetName: (title: string): string => {
+      const fixed: Readonly<Record<string, string>> = {
+        'Site plan': 'مخطط الموقع',
+        'Typical floor': 'الدور المتكرر',
+        'About this file': 'عن هذا الملف',
+        Capacity: 'السعة',
+        Envelope: 'الغلاف البنائي',
+        'Parking demand': 'المواقف المطلوبة',
+        'GFA calculation': 'حساب إجمالي المساحة الطابقية',
+        'Parking level': 'دور المواقف',
+        'Assumption register': 'سجل الافتراضات',
+      };
+      const level = /^Parking level (.+)$/.exec(title);
+      const section = /^Section (.+)$/.exec(title);
+      return fixed[title] ?? (level ? `دور المواقف ${level[1]}` : section ? `قطاع ${section[1]}` : title);
+    },
   },
 
   limitsPage: {

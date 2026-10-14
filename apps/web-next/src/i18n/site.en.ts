@@ -194,6 +194,8 @@ export const SITE_EN = {
     status: (code: string): string => (code === '200' ? `${code} — the file is written` : `${code} — refused`),
     stampTitle: 'The stamp is inside every file',
     stampBody: 'All six files carry “Regulatory validity: not assessed” inside them, wherever they go.',
+    /** A sheet or workbook tab as the file names it; the Arabic page says it in Arabic. */
+    sheetName: (title: string): string => title,
   },
 
   limitsPage: {

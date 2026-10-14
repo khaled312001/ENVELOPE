@@ -3,6 +3,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import { type Location, useLocation, useNavigate } from 'react-router';
 
 import { AR } from '../i18n/ar.js';
+import { engineNote } from './engine-notes.js';
 import { EN, type Dict } from '../i18n/en.js';
 
 export type Locale = 'en' | 'ar';
@@ -140,4 +141,11 @@ export function EngineText({ children, className }: { readonly children: ReactNo
   ) : (
     <span className={className}>{children}</span>
   );
+}
+
+/** A parking or access sentence from the engine: short and in the page's language when known, verbatim otherwise. */
+export function EngineNote({ text, className }: { readonly text: string; readonly className?: string }): JSX.Element {
+  const { locale } = useLocale();
+  const said = engineNote(text, locale);
+  return said === null ? <EngineText {...(className ? { className } : {})}>{text}</EngineText> : <span className={className}>{said}</span>;
 }

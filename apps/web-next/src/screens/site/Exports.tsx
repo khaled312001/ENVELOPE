@@ -4,7 +4,6 @@ import { motion, useReducedMotion } from 'motion/react';
 import worked from '@web/screens/worked-example.json';
 
 import { cn } from '../../lib/cn.js';
-import { EngineText } from '../../lib/locale.js';
 import { Illustration } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
 import { EASE, Item, Stagger } from '../../ui/motion.js';
@@ -100,7 +99,7 @@ export function Exports(): JSX.Element {
             {x.drawingSheets.map((sh) => (
               <Item key={sh.id} as="li" className="flex items-center gap-3 rounded-lg border border-line bg-panel px-4 py-3 shadow-soft">
                 <span className="figure rounded-md border border-strong px-2 py-0.5 text-[12px] text-fg">{sh.number}</span>
-                <EngineText className="text-[13.5px] text-fg">{sh.title}</EngineText>
+                <span className="text-[13.5px] text-fg">{s.exportsPage.sheetName(sh.title)}</span>
               </Item>
             ))}
           </Stagger>
@@ -109,7 +108,7 @@ export function Exports(): JSX.Element {
             <ul className="grid gap-1.5">
               {x.workbookSheets.map((w) => (
                 <li key={w.name} className="text-[13px] text-secondary">
-                  <EngineText>{w.name}</EngineText>
+                  {s.exportsPage.sheetName(w.name)}
                 </li>
               ))}
             </ul>

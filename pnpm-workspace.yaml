@@ -2,8 +2,8 @@ packages:
   - "packages/*"
   - "apps/*"
 
+# pnpm 11 runs no dependency's install script unless it is named here. esbuild
+# needs its own to fetch the platform binary that `scripts/deploy/build.mjs`
+# and Vite both call.
 allowBuilds:
-  esbuild: set this to true or false
-
-onlyBuiltDependencies:
-  - esbuild
+  esbuild: true

@@ -60,6 +60,7 @@
     "packages/*/test/**/*.tsx",
     "apps/*/test/**/*.ts",
     "apps/*/test/**/*.tsx",
-    "apps/web/src/vite-env.d.ts"
+    "apps/web/src/vite-env.d.ts",
+    "apps/web/src/jsx.d.ts"
   ]
 }

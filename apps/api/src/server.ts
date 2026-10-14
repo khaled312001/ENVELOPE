@@ -898,6 +898,26 @@ export async function build(
     const runId = randomUUID();
     const ruleSetHash = store.contentHash(asOf);
 
+    /*
+      THE ENGINE'S TIME, LOGGED. It was measured on every run and shown on the
+      run's chip, and never written anywhere a person could read it back — so
+      "is the engine fast enough, or does the geometry need Rust?" had no data
+      behind it but the developer's laptop. One line per run, from the host
+      itself, is what p50 and p95 are read out of. Nothing identifying the
+      plot or the person: the shape of the work, and how long it took.
+    */
+    request.log.info(
+      {
+        event: 'run.computed',
+        runId,
+        elapsedMs: Math.round(elapsedMs),
+        edges: plot.edges.length,
+        shape: plot.shapeClass,
+        parkingLevels: input.parkingLevelsAvailable,
+      },
+      'run computed',
+    );
+
     // --- The two independent layers -------------------------------------
     //
     // Run before anything is persisted or returned. §12.3 and §16.1 both make

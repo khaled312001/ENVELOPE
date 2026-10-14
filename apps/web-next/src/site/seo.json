@@ -1,0 +1,93 @@
+{
+  "_": "Every public page, its title and description in both languages. Read by the pages (usePageMeta) AND by scripts/prerender.mjs, which writes them into each route's own index.html, so a crawler or a link preview that never runs JavaScript reads the same words the page shows. Pages that file work (the studio, the studies, sign-in) are not here: they are noindex.",
+  "origin": "https://tob.khaledahmed.net",
+  "base": "/next",
+  "siteName": "TOP.ai",
+  "image": "/next/og-cover.png",
+  "pages": [
+    {
+      "path": "/",
+      "priority": "1.0",
+      "en": {
+        "title": "TOP.ai — development capacity for Dubai plots, every figure traced",
+        "description": "Draw a plot, answer what no rule answers, and read the envelope, the parking laid out level by level and the building in 3D. Every number opens to the rule that produced it. Regulatory validity is never claimed."
+      },
+      "ar": {
+        "title": "TOP.ai — السعة التطويرية لقطع الأرض في دبي، وكل رقم بمصدره",
+        "description": "ارسم القطعة، وأجب عما لا تجيب عنه القواعد، ثم اقرأ الغلاف البنائي والمواقف موزعة دورا دورا والمبنى بأبعاده الثلاثة. كل رقم يفتح على القاعدة التي أنتجته، والصلاحية التنظيمية لا يؤكدها المنتج."
+      }
+    },
+    {
+      "path": "/product",
+      "priority": "0.9",
+      "en": {
+        "title": "The studio — TOP.ai",
+        "description": "One studio from affection plan to drawing set: plot, rules, three capacity bands, parking, checks and export, with every value traced to its rule, your entry or a stated assumption."
+      },
+      "ar": {
+        "title": "الاستوديو — TOP.ai",
+        "description": "استوديو واحد من مخطط أفكشن إلى مجموعة اللوحات: القطعة والقواعد ونطاقات السعة الثلاثة والمواقف والفحوصات والتصدير، وكل قيمة موثقة بقاعدتها أو بإدخالك أو بافتراض معلن."
+      }
+    },
+    {
+      "path": "/parking",
+      "priority": "0.9",
+      "en": {
+        "title": "Parking laid out, not divided — TOP.ai",
+        "description": "Bays, aisles and the ramp placed as rectangles to Dubai Building Code Table B.11, a bay nobody can drive to not counted, losses reported in bays and m², and the vehicle entrance recommended under B.7.2.1."
+      },
+      "ar": {
+        "title": "مواقف توزع ولا تقسم — TOP.ai",
+        "description": "المواقف وممرات المناورة والمنحدر توضع مستطيلات بأبعاد الجدول B.11 من كود دبي للمباني، والموقف الذي لا يصل إليه أحد لا يحتسب، والخسائر تعرض بالمواقف وبالمتر المربع، ومدخل المركبات موصى به وفق البند B.7.2.1."
+      }
+    },
+    {
+      "path": "/method",
+      "priority": "0.8",
+      "en": {
+        "title": "How a figure earns its place — TOP.ai method",
+        "description": "Rules that generate rather than judge, exact arithmetic on a millimetre grid, a derivation behind every value, and independent checks that block output. And the five things we claim, each answered separately."
+      },
+      "ar": {
+        "title": "كيف يستحق الرقم مكانه — منهجية TOP.ai",
+        "description": "قواعد تنتج الإجابة ولا تحكم عليها، وحساب دقيق على شبكة بالمليمتر، واشتقاق خلف كل قيمة، وفحوصات مستقلة توقف الناتج. ومعها الأمور الخمسة التي نؤكدها، كل منها بجواب مستقل."
+      }
+    },
+    {
+      "path": "/exports",
+      "priority": "0.8",
+      "en": {
+        "title": "Report, A3 drawings, DXF, 3D model and spreadsheet — TOP.ai",
+        "description": "Six files from one building model: a report, an A3 drawing set, DXF of the building or any sheet, a .glb model, a workbook and JSON. The same cars in every one, behind two signed gates."
+      },
+      "ar": {
+        "title": "التقرير ولوحات A3 وملف DXF والنموذج ثلاثي الأبعاد — TOP.ai",
+        "description": "ستة ملفات من نموذج مبنى واحد: تقرير ومجموعة لوحات A3 وملف DXF للمبنى أو لأي لوحة ونموذج glb وجدول بيانات وملف JSON. السيارات نفسها في كل ملف، خلف بوابتين موقعتين."
+      }
+    },
+    {
+      "path": "/limits",
+      "priority": "0.7",
+      "en": {
+        "title": "What it does not do — TOP.ai",
+        "description": "It does not design a building, does not check a scheme for approval and does not fill a gap on an affection plan from a neighbouring plot. The full list, and where this deployment stands today."
+      },
+      "ar": {
+        "title": "ما لا يفعله — TOP.ai",
+        "description": "لا يصمم مبنى، ولا يفحص مشروعا لاعتماده، ولا يسد فجوة في مخطط أفكشن من قطعة مجاورة. القائمة كاملة، وأين يقف هذا الإصدار اليوم."
+      }
+    },
+    {
+      "path": "/faq",
+      "priority": "0.7",
+      "en": {
+        "title": "Questions — TOP.ai",
+        "description": "Where each number comes from, what amber means, how the parking is laid out, which files you can download and who can see your studies."
+      },
+      "ar": {
+        "title": "الأسئلة الشائعة — TOP.ai",
+        "description": "من أين يأتي كل رقم، وماذا يعني اللون الكهرماني، وكيف توزع المواقف، وما الملفات التي يمكنك تنزيلها، ومن يستطيع رؤية دراساتك."
+      }
+    }
+  ]
+}

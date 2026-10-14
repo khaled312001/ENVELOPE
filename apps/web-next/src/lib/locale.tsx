@@ -1,5 +1,6 @@
 import { Direction } from 'radix-ui';
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo } from 'react';
+import { type Location, useLocation, useNavigate } from 'react-router';
 
 import { AR } from '../i18n/ar.js';
 import { EN, type Dict } from '../i18n/en.js';
@@ -7,19 +8,57 @@ import { EN, type Dict } from '../i18n/en.js';
 export type Locale = 'en' | 'ar';
 
 /*
-  THE SAME STORAGE KEY AS THE CURRENT SITE, so a reader who chose Arabic there
-  opens this one in Arabic too. `lang` and `dir` are set together and never one
-  without the other: `lang` picks the font and the screen-reader voice, `dir`
-  does the layout, and a page carrying one alone is wrong in a way that looks
-  deliberate.
+  THE LANGUAGE IS IN THE ADDRESS.
+
+  `/next/product` is English and `/next/ar/product` is the same page in Arabic.
+  A language held only in localStorage is invisible to a search engine, to a
+  link somebody pastes into a message, and to the `hreflang` pair each page
+  declares — so the path decides, and storage only remembers the last choice
+  under the key the current site uses, so a reader who chose Arabic there
+  arrives here in Arabic too.
+
+  The router sees ONE route tree for both languages: `App` strips the `/ar`
+  prefix before matching, so switching language keeps the screen mounted —
+  a half-drawn plot in the studio survives the switch.
+
+  `lang` and `dir` are set together and never one without the other: `lang`
+  picks the font and the screen-reader voice, `dir` does the layout.
 */
 const KEY = 'envelope.locale';
+const PREFIX = '/ar';
 
-function remembered(): Locale {
+export function localeOf(pathname: string): Locale {
+  return pathname === PREFIX || pathname.startsWith(`${PREFIX}/`) ? 'ar' : 'en';
+}
+
+/** The path without its language prefix — what the route tree matches. */
+export function bare(pathname: string): string {
+  return localeOf(pathname) === 'ar' ? pathname.slice(PREFIX.length) || '/' : pathname;
+}
+
+/** A path in a given language. Idempotent: a path already carrying the prefix keeps one. */
+export function localised(path: string, locale: Locale): string {
+  if (!path.startsWith('/')) return path;
+  const [pathname = '/', rest = ''] = path.split(/(?=[?#])/, 2);
+  const plain = bare(pathname);
+  if (locale === 'en') return plain + rest;
+  return (plain === '/' ? PREFIX : PREFIX + plain) + rest;
+}
+
+export function remembered(): Locale | null {
   try {
-    return localStorage.getItem(KEY) === 'ar' ? 'ar' : 'en';
+    const v = localStorage.getItem(KEY);
+    return v === 'ar' || v === 'en' ? v : null;
   } catch {
-    return 'en';
+    return null;
+  }
+}
+
+function remember(locale: Locale): void {
+  try {
+    localStorage.setItem(KEY, locale);
+  } catch {
+    /* not remembered; still applied */
   }
 }
 
@@ -28,6 +67,8 @@ interface LocaleValue {
   readonly dir: 'ltr' | 'rtl';
   readonly t: Dict;
   readonly setLocale: (next: Locale) => void;
+  /** An app path in the current language — for every `to` and `navigate`. */
+  readonly href: (path: string) => string;
 }
 
 const LocaleContext = createContext<LocaleValue | null>(null);
@@ -38,21 +79,31 @@ export function applyLocale(locale: Locale): void {
 }
 
 export function LocaleProvider({ children }: { readonly children: ReactNode }): JSX.Element {
-  const [locale, setState] = useState<Locale>(remembered);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const locale = localeOf(location.pathname);
 
-  useEffect(() => applyLocale(locale), [locale]);
+  useEffect(() => {
+    applyLocale(locale);
+    remember(locale);
+  }, [locale]);
 
-  const setLocale = useCallback((next: Locale) => {
-    try {
-      localStorage.setItem(KEY, next);
-    } catch {
-      /* not remembered; still applied */
-    }
-    setState(next);
-  }, []);
+  const setLocale = useCallback(
+    (next: Locale) => {
+      remember(next);
+      navigate(localised(location.pathname, next) + location.search + location.hash, { replace: true, preventScrollReset: true });
+    },
+    [navigate, location],
+  );
 
   const value = useMemo<LocaleValue>(
-    () => ({ locale, dir: locale === 'ar' ? 'rtl' : 'ltr', t: locale === 'ar' ? AR : EN, setLocale }),
+    () => ({
+      locale,
+      dir: locale === 'ar' ? 'rtl' : 'ltr',
+      t: locale === 'ar' ? AR : EN,
+      setLocale,
+      href: (path: string) => localised(path, locale),
+    }),
     [locale, setLocale],
   );
 
@@ -67,6 +118,11 @@ export function useLocale(): LocaleValue {
   const v = useContext(LocaleContext);
   if (!v) throw new Error('useLocale outside LocaleProvider');
   return v;
+}
+
+/** The location the route tree matches: the real one, without its language prefix. */
+export function bareLocation(location: Location): Location {
+  return { ...location, pathname: bare(location.pathname) };
 }
 
 /**

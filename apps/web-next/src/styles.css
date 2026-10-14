@@ -1,82 +1,161 @@
 @import 'tailwindcss';
 
+/* `dark:` follows the theme the reader chose, not only the operating system's. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 /*
   TOP.ai STUDIO — THE TOKENS.
 
   Two layers, as in the current app: primitives, which only this file reads,
   and semantic roles, which everything else reads. A component that writes
   `bg-[#151922]` or reaches for `--ink-900` is a defect `test/tokens.test.ts`
-  fails on.
+  fails on — and that test measures every text role on every surface in BOTH
+  themes, so a colour that only works in one of them does not ship.
 
-  DARK, AND ONLY DARK. This front end is a tool for the hours spent laying out
-  a plot, the way a CAD canvas is dark: the drawing is the brightest thing on
-  the screen and the chrome steps back from it. The printed report is still
-  written by the API on white paper — that document is not this one.
+  TWO THEMES. Light is the default where the reader has not chosen: it is the
+  register of a document put in front of a committee. Dark is one click away,
+  remembered under the same key the current site uses, for the hours spent at a
+  canvas. `<html data-theme>` is set by `lib/theme.tsx` before React renders.
 
   THE SEMANTIC NAMES ARE THE ONES THE ENGINE'S DRAWINGS ALREADY READ.
   `@envelope/sheets` inks every line with `var(--text-primary, #hex)` and the
   massing scene reads `--derived`, `--uncertain`, `--accent`. Defining the same
-  names here is what makes a parking sheet and the 3D model take this theme
-  without a second stylesheet for them — and without a renderer that knows
-  which front end it is in.
+  names here is what makes a parking sheet and the 3D model take either theme
+  without a second stylesheet for them.
 
-  AMBER IS `--uncertain` AND NOTHING ELSE. It marks a value the engine was told
-  to assume. No accent, no hover, no logo, no chart series may use it; the brand
-  colour is blue for that reason.
+  COLOUR WITH A JOB. Green is DERIVED, amber is ASSUMED, red is VARIANCE, and
+  none of them is ever decoration. The brand's colour lives in a separate
+  family — blue, violet, cyan — used for the identity, the motion and the
+  emphasis, and never for a provenance class. Amber in particular is
+  `--uncertain` and nothing else: no accent, hover, logo or gradient stop.
 */
 
 :root {
   /* — primitives — */
-  --ink-950: #07090c;
-  --ink-925: #0a0c10;
-  --ink-900: #0f1218;
-  --ink-875: #141821;
-  --ink-850: #1a1f29;
-  --ink-800: #222834;
-  --ink-750: #2c3341;
-  --ink-700: #3b4456;
-  --ink-500: #7f889b;
-  --ink-400: #a4acbc;
-  --ink-200: #d6dae3;
-  --ink-100: #e9ebf1;
+  --ink-0: #ffffff;
+  --ink-25: #f8f9fb;
+  --ink-50: #f2f4f7;
+  --ink-75: #eceff4;
+  --ink-100: #e4e8ee;
+  --ink-150: #d5dbe4;
+  --ink-200: #bcc5d2;
+  --ink-450: #5b6578;
+  --ink-550: #465063;
+  --ink-800: #1b2130;
+  --ink-900: #111622;
+  --ink-950: #0a0d14;
+
+  --night-950: #07090c;
+  --night-925: #0a0c10;
+  --night-900: #0f1218;
+  --night-875: #141821;
+  --night-850: #1a1f29;
+  --night-800: #222834;
+  --night-700: #3b4456;
+  --night-500: #7f889b;
+  --night-400: #a4acbc;
+  --night-100: #e9ebf1;
+
+  --blue-700: #2448c7;
+  --blue-600: #2f5be0;
   --blue-400: #74a0ff;
   --blue-300: #9dbcff;
+  --blue-50: #ebf0ff;
   --blue-950: #101a30;
+  --violet-700: #5b35d5;
+  --violet-600: #6d4aff;
+  --violet-300: #b6a3ff;
+  --cyan-600: #0e7f98;
+  --cyan-300: #67d8ee;
+  --green-700: #136d47;
   --green-400: #4cc493;
+  --green-50: #e5f5ec;
   --green-950: #0c2119;
+  --amber-800: #8f4f00;
   --amber-400: #f3ab3c;
+  --amber-50: #fff3df;
   --amber-950: #2a1d09;
+  --red-700: #b42a36;
   --red-400: #ff7178;
+  --red-50: #fdebec;
   --red-950: #2c1114;
+  --slate-500: #616a7b;
   --slate-450: #8d93a3;
+  --slate-150: #dfe3ea;
   --slate-850: #262b35;
 
-  /* — surfaces — */
-  --surface-base: var(--ink-925);
-  --surface-panel: var(--ink-900);
-  --surface-raised: var(--ink-875);
-  --surface-hover: var(--ink-850);
-  --surface-sunken: var(--ink-950);
-  --surface-inverse: var(--ink-100);
+  /* — LIGHT, the default — */
+  --surface-base: var(--ink-25);
+  --surface-panel: var(--ink-0);
+  --surface-raised: var(--ink-50);
+  --surface-hover: var(--ink-75);
+  --surface-sunken: var(--ink-50);
+  --surface-inverse: var(--ink-900);
 
-  /* — lines — */
-  --border-subtle: var(--ink-850);
-  --border-default: var(--ink-800);
-  --border-strong: var(--ink-700);
+  --border-subtle: var(--ink-75);
+  --border-default: var(--ink-100);
+  --border-strong: var(--ink-200);
 
-  /* — text — */
-  --text-primary: var(--ink-100);
-  --text-secondary: var(--ink-400);
-  --text-tertiary: var(--ink-500);
-  --text-inverse: var(--ink-925);
+  --text-primary: var(--ink-900);
+  --text-secondary: var(--ink-550);
+  --text-tertiary: var(--ink-450);
+  --text-inverse: var(--ink-0);
 
-  /* — the brand, and the one interactive colour — */
+  --accent: var(--blue-600);
+  --accent-strong: var(--blue-700);
+  --accent-subtle: var(--blue-50);
+  --focus-ring: var(--blue-600);
+
+  /* The brand family. Emphasis and motion only — never a provenance class. */
+  --brand-alt: var(--violet-600);
+  --brand-glow: var(--cyan-600);
+  --brand-solid: var(--blue-700);
+  --brand-alt-solid: var(--violet-700);
+  --on-brand: var(--ink-0);
+
+  --derived: var(--green-700);
+  --derived-surface: var(--green-50);
+  --uncertain: var(--amber-800);
+  --uncertain-surface: var(--amber-50);
+  --variance: var(--red-700);
+  --variance-surface: var(--red-50);
+  --deferred: var(--slate-500);
+  --deferred-hatch: var(--slate-150);
+
+  --shadow-color: 220 40% 20%;
+  --glow-strength: 0.22;
+
+  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'IBM Plex Sans Arabic', ui-monospace, 'Cascadia Mono', monospace;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --surface-base: var(--night-925);
+  --surface-panel: var(--night-900);
+  --surface-raised: var(--night-875);
+  --surface-hover: var(--night-850);
+  --surface-sunken: var(--night-950);
+  --surface-inverse: var(--night-100);
+
+  --border-subtle: var(--night-850);
+  --border-default: var(--night-800);
+  --border-strong: var(--night-700);
+
+  --text-primary: var(--night-100);
+  --text-secondary: var(--night-400);
+  --text-tertiary: var(--night-500);
+  --text-inverse: var(--night-925);
+
   --accent: var(--blue-400);
   --accent-strong: var(--blue-300);
   --accent-subtle: var(--blue-950);
   --focus-ring: var(--blue-300);
 
-  /* — provenance: each of these MEANS something, and is used for nothing else — */
+  --brand-alt: var(--violet-300);
+  --brand-glow: var(--cyan-300);
+
   --derived: var(--green-400);
   --derived-surface: var(--green-950);
   --uncertain: var(--amber-400);
@@ -86,14 +165,13 @@
   --deferred: var(--slate-450);
   --deferred-hatch: var(--slate-850);
 
-  /* — type — */
-  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
-  --font-mono: 'IBM Plex Mono', 'IBM Plex Sans Arabic', ui-monospace, 'Cascadia Mono', monospace;
+  --shadow-color: 0 0% 0%;
+  --glow-strength: 0.35;
 
   color-scheme: dark;
 }
 
-/* The roles, exposed to Tailwind as utilities: `bg-panel`, `text-secondary`, `border-default`. */
+/* The roles, exposed to Tailwind as utilities: `bg-panel`, `text-secondary`, `border-line`. */
 @theme inline {
   --color-base: var(--surface-base);
   --color-panel: var(--surface-panel);
@@ -115,6 +193,11 @@
   --color-accent-strong: var(--accent-strong);
   --color-accent-subtle: var(--accent-subtle);
   --color-focus: var(--focus-ring);
+  --color-brand-alt: var(--brand-alt);
+  --color-brand-glow: var(--brand-glow);
+  --color-brand-solid: var(--brand-solid);
+  --color-brand-alt-solid: var(--brand-alt-solid);
+  --color-on-brand: var(--on-brand);
 
   --color-derived: var(--derived);
   --color-derived-surface: var(--derived-surface);
@@ -133,6 +216,11 @@
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+
+  --animate-aurora: aurora 18s ease-in-out infinite alternate;
+  --animate-spin-slow: spin-angle 6s linear infinite;
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  --animate-shimmer: shimmer 2.8s linear infinite;
 }
 
 @layer base {
@@ -151,10 +239,11 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     font-feature-settings: 'tnum' 1;
+    transition: background-color 0.35s var(--ease-out), color 0.35s var(--ease-out);
   }
 
   ::selection {
-    background: var(--accent-subtle);
+    background: color-mix(in oklab, var(--accent) 25%, transparent);
     color: var(--text-primary);
   }
 
@@ -169,7 +258,6 @@
     font-style: normal;
   }
 
-  /* Scrollbars that belong to a dark tool, not to the operating system's light chrome. */
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;
@@ -186,8 +274,7 @@
 
   /*
     The faint engineering grid behind the canvas. A texture, so it is drawn in a
-    border token at low weight and never under prose — a hatch under text trades
-    1.4.3 for 1.4.11, which is a swap and not a fix.
+    border token at low weight and never under prose.
   */
   .canvas-grid {
     background-color: var(--surface-sunken);
@@ -203,11 +290,137 @@
     font-style: italic;
   }
 
-  /* The sheets are SVG strings from `sheetSvg`; let them fill their frame. */
   .sheet-frame > svg {
     width: 100%;
     height: auto;
     display: block;
+  }
+
+  /* — the brand, in motion — */
+
+  /*
+    Gradient text for ONE phrase per screen. Both stops are measured against the
+    page in both themes (test/tokens.test.ts), so the phrase reads at 4.5:1
+    wherever the gradient lands; `color` stays set beneath it for a renderer
+    that cannot clip a background to text.
+  */
+  .text-brand {
+    color: var(--accent);
+    background: linear-gradient(100deg, var(--accent) 10%, var(--brand-alt) 60%, var(--accent) 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: var(--animate-shimmer);
+  }
+
+  /* The light behind the hero. Transform only, blurred, and never under body copy. */
+  .aurora {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(70px);
+    opacity: var(--glow-strength);
+    animation: var(--animate-aurora);
+    will-change: transform;
+    pointer-events: none;
+  }
+
+  /*
+    A border that turns. The angle is a registered custom property so the conic
+    gradient can be animated; where @property is unsupported the border is simply
+    still, which is the whole of the fallback.
+  */
+  .ring-brand {
+    position: relative;
+    isolation: isolate;
+  }
+  .ring-brand::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(from var(--angle), var(--accent), var(--brand-alt), var(--brand-glow), var(--accent));
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: var(--animate-spin-slow);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* A light that follows the pointer across a card. A tint, low enough to leave text contrast intact. */
+  .spotlight {
+    position: relative;
+    isolation: isolate;
+  }
+  .spotlight::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(420px circle at var(--mx, -999px) var(--my, -999px), color-mix(in oklab, var(--accent) 9%, transparent), transparent 45%);
+    opacity: 0;
+    transition: opacity 0.3s var(--ease-out);
+    pointer-events: none;
+    z-index: -1;
+  }
+  .spotlight:hover::after {
+    opacity: 1;
+  }
+
+  .shadow-soft {
+    box-shadow:
+      0 1px 2px hsl(var(--shadow-color) / 0.06),
+      0 12px 32px -12px hsl(var(--shadow-color) / 0.18);
+  }
+  .shadow-lifted {
+    box-shadow:
+      0 2px 4px hsl(var(--shadow-color) / 0.08),
+      0 40px 100px -40px hsl(var(--shadow-color) / 0.45);
+  }
+}
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spin-angle {
+  to {
+    --angle: 360deg;
+  }
+}
+
+@keyframes aurora {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(6%, -8%, 0) scale(1.12);
+  }
+  100% {
+    transform: translate3d(-6%, 6%, 0) scale(0.95);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
   }
 }
 
@@ -216,6 +429,7 @@
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }

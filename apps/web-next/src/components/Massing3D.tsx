@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import { cn } from '../lib/cn.js';
+import { useTheme } from '../lib/theme.js';
 
 /*
   THE BUILDING, AS THE ENGINE BUILT IT.
@@ -63,6 +64,8 @@ export function Massing3D({
   const failed = useRef(onFailed);
   failed.current = onFailed;
   const [ready, setReady] = useState(false);
+  // The scene's inks are read off the theme's tokens, so a new theme is a new scene.
+  const { theme } = useTheme();
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -78,7 +81,7 @@ export function Massing3D({
     const built = buildBuildingScene(model, readPalette(stage));
     const scene = new THREE.Scene();
     scene.add(built.root);
-    scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x1a1f29, 1.25));
+    scene.add(new THREE.HemisphereLight(0xdfe6ff, theme === 'dark' ? 0x1a1f29 : 0x9aa3b5, theme === 'dark' ? 1.25 : 1.45));
     const sun = new THREE.DirectionalLight(0xffffff, 2.2);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -194,7 +197,7 @@ export function Massing3D({
       renderer.dispose();
       stage.removeChild(canvas);
     };
-  }, [model, autoRotate]);
+  }, [model, autoRotate, theme]);
 
   useEffect(() => {
     const s = sceneRef.current;

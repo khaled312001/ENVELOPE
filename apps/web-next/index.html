@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" dir="ltr" class="dark">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,9 +9,12 @@
       either be blocked or force a looser policy for both. The locale is applied
       by the first module instead; the cost is one frame of left-to-right on an
       Arabic reload, paid by the preview and not by the site people rely on.
+      The JSON-LD that scripts/prerender.mjs adds is a data block, never
+      executed, which a Content-Security-Policy does not govern. The title and
+      description below are replaced per page by that same script.
     -->
     <title>TOP.ai — studio</title>
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="light dark" />
     <meta
       name="description"
       content="TOP.ai reports what a plot's encoded rules imply, and the derivation of every figure that says so. Regulatory validity is never assessed and never claimed."

@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Box, Check, ClipboardCheck, FileDown, Layers, MapPinned, ScrollText } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useParams, useSearchParams } from 'react-router';
 
 import {
   type Actor,
@@ -20,6 +20,7 @@ import { TopBar } from '../components/Shell.js';
 import { InspectProvider } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
 import { useLocale } from '../lib/locale.js';
+import { useNav } from '../lib/nav.js';
 import { Notice, Spinner } from '../ui/primitives.js';
 import { CapacityCanvas, CapacityPanel } from '../studio/CapacityStep.js';
 import { ChecksCanvas, ChecksPanel } from '../studio/ChecksStep.js';
@@ -65,7 +66,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   const { t } = useLocale();
   const { runId } = useParams();
   const [params] = useSearchParams();
-  const navigate = useNavigate();
+  const navigate = useNav();
   const queries = useQueryClient();
   const reduce = useReducedMotion();
 
@@ -327,6 +328,13 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
 
           {/* ── Inspector ── */}
           <aside aria-label={t.studio.inspector} className="min-h-0 overflow-y-auto border-t border-line bg-panel lg:border-s lg:border-t-0">
+            <motion.div
+              // Each step's panel rises into place; it is never faded, so nothing in it is ever unread.
+              key={step}
+              initial={reduce ? false : { y: 12 }}
+              animate={{ y: 0 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            >
             {error ? (
               <div className="p-4 pb-0">
                 <Notice title={t.studio.refused}>{error}</Notice>
@@ -363,6 +371,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
             ) : step === 'export' && run ? (
               <ExportPanel actor={actor} run={run} onSigned={refresh} />
             ) : null}
+            </motion.div>
           </aside>
         </div>
       </div>

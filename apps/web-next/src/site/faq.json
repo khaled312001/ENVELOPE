@@ -1,0 +1,95 @@
+{
+  "_": "Read by the FAQ page AND by scripts/prerender.mjs, which writes the same questions into the page's FAQPage JSON-LD. One source, so the structured data can never answer a question differently from the page.",
+  "en": [
+    {
+      "q": "Is TOP.ai a compliance check?",
+      "a": "No, and it never claims to be. It reports what the rules recorded in the engine imply for a plot, and the derivation of every figure. Whether an authority would approve a scheme is not obtainable from any computation, so every screen, report and file carries “Regulatory validity: not assessed”."
+    },
+    {
+      "q": "Where does each number come from?",
+      "a": "Every figure is traced. Open it and you see the rule it was derived from, the value you entered, or the assumption that filled a gap — with the formula the engine used. There is no constructor in the engine for an untraced value."
+    },
+    {
+      "q": "What does an amber value mean?",
+      "a": "Amber is reserved for one thing: a value the engine assumed because no rule decides it. Each one carries a written basis and what it moves, you can edit it, and the export is blocked until somebody acknowledges all of them by name."
+    },
+    {
+      "q": "What happens when the affection plan leaves a limit out?",
+      "a": "The study stops and names the gap. A plan that prints a height and no FAR does not get a FAR borrowed from the neighbouring plot — that borrowing is the exact failure this product exists to prevent."
+    },
+    {
+      "q": "How is the parking laid out?",
+      "a": "As rectangles: bays, aisles and a ramp placed level by level inside the largest rectangle the podium holds, to the dimensions of Dubai Building Code Table B.11. A bay that cannot be reached from the way in is not counted, and what the layout loses is reported in bays and in square metres."
+    },
+    {
+      "q": "Does it choose the best position for the ramp or the core?",
+      "a": "No. Searching ramp and core positions for maximum yield is a trade-off between possible designs, and this phase refuses to emit one by construction. It sweeps one thing — whether the bays run along the level's width or its depth — and reports both counts."
+    },
+    {
+      "q": "Can I choose the vehicle entrance myself?",
+      "a": "Yes. The engine recommends a frontage under B.7.2.1 — away from junctions, on the more secondary road — and shows the frontages it rejected and why. You can place the entrance on another boundary, and the study is recomputed with your choice recorded under your name."
+    },
+    {
+      "q": "Which files can I download?",
+      "a": "A report, an A3 drawing set, DXF of the building or of any one sheet, the 3D model as .glb, a spreadsheet, and the JSON of the whole study. All of them are drawn from one building model, and all of them sit behind two signed gates."
+    },
+    {
+      "q": "Is there an accuracy figure?",
+      "a": "No accuracy figure is published, because the study that would measure one — comparing the engine with qualified architects working the same plots — has not been run. Until it is, no such number is quoted anywhere on this site."
+    },
+    {
+      "q": "Who can see my studies?",
+      "a": "A study is reachable by the person who made it and by the accounts it is shared with. Anyone else is told it does not exist. A guest's studies are kept in that one browser."
+    },
+    {
+      "q": "Is the interface available in Arabic?",
+      "a": "Yes, every page, written in Modern Standard Arabic with the trade's own terms. Text the engine itself wrote — a rule's basis, a formula — stays in its original English so it can be matched to the source."
+    }
+  ],
+  "ar": [
+    {
+      "q": "هل يحكم TOP.ai بأن الجهة المختصة ستعتمد المشروع؟",
+      "a": "لا، ولا يؤكد ذلك في أي موضع. فهو يعرض ما تقتضيه القواعد المسجلة في المحرك لقطعة الأرض، ومعه اشتقاق كل رقم. أما ما إذا كانت الجهة المختصة ستعتمد المشروع فلا يمكن الوصول إليه بأي حساب، ولذلك تحمل كل شاشة وكل تقرير وكل ملف عبارة «الصلاحية التنظيمية: لم يخضع للتقييم». فهو ليس فحص مطابقة."
+    },
+    {
+      "q": "من أين يأتي كل رقم؟",
+      "a": "كل رقم موثق المصدر. افتحه تجد القاعدة التي اشتق منها، أو القيمة التي أدخلتها، أو الافتراض الذي سد فجوة، ومعه المعادلة التي استخدمها المحرك. ولا يوجد في المحرك أي طريق لإنشاء قيمة بلا مصدر."
+    },
+    {
+      "q": "ماذا يعني الرقم الكهرماني؟",
+      "a": "اللون الكهرماني محجوز لشيء واحد: قيمة افترضها المحرك لأن أي قاعدة لا تحددها. كل قيمة منها تحمل أساسا مكتوبا وما تحركه في الإجابة، ولك أن تعدلها، والتصدير متوقف حتى يقر بها شخص باسمه."
+    },
+    {
+      "q": "ماذا يحدث حين يغفل مخطط أفكشن (Affection Plan) حدا من الحدود؟",
+      "a": "تتوقف الدراسة وتسمي الفجوة. المخطط الذي يطبع الارتفاع دون معامل البناء لا يستعار له معامل بناء من القطعة المجاورة، فهذه الاستعارة هي الخطأ نفسه الذي وجد هذا المنتج لمنعه."
+    },
+    {
+      "q": "كيف توزع المواقف؟",
+      "a": "مستطيلات: المواقف وممرات المناورة والمنحدر (الرامب) توضع دورا دورا داخل أكبر مستطيل يتسع له البوديوم، بأبعاد الجدول B.11 من كود دبي للمباني. والموقف الذي لا يمكن الوصول إليه من المدخل لا يحتسب، وما يخسره التوزيع يعرض بعدد المواقف وبالمتر المربع."
+    },
+    {
+      "q": "هل يختار أفضل موضع للمنحدر أو للنواة؟",
+      "a": "لا. البحث عن موضع المنحدر والنواة الذي يعطي أكبر عائد هو ناتج مفاضلة بين بدائل ممكنة، وهذه المرحلة ترفض إنتاجه من أساس تصميمها. الشيء الوحيد الذي يجربه المحرك هو اتجاه صفوف المواقف، بعرض الدور أو بعمقه، ويعرض العددين معا."
+    },
+    {
+      "q": "هل أستطيع أن أختار مدخل المركبات بنفسي؟",
+      "a": "نعم. يوصي المحرك بواجهة وفق البند B.7.2.1، بعيدا عن التقاطعات وعلى الطريق الأدنى في التصنيف، ويعرض الواجهات التي رفضها وسبب رفضها. ولك أن تضع المدخل على حد آخر، فتعاد الدراسة ويسجل اختيارك باسمك."
+    },
+    {
+      "q": "ما الملفات التي يمكنني تنزيلها؟",
+      "a": "تقرير، ومجموعة لوحات A3، وملف DXF للمبنى كله أو لأي لوحة منفردة، والنموذج ثلاثي الأبعاد بصيغة glb، وجدول بيانات، وملف JSON للدراسة كاملة. كلها ترسم من نموذج مبنى واحد، وكلها خلف بوابتين موقعتين."
+    },
+    {
+      "q": "هل يوجد رقم لدقته؟",
+      "a": "لا ينشر أي رقم للدقة، لأن الدراسة التي تقيسه، بمقارنة المحرك بمعماريين مؤهلين يعملون على القطع نفسها، لم تجر بعد. وإلى أن تجرى لا يذكر رقم كهذا في أي موضع من هذا الموقع."
+    },
+    {
+      "q": "من يستطيع رؤية دراساتي؟",
+      "a": "الدراسة متاحة لمن أنشأها وللحسابات التي شاركها معها. وأي شخص آخر يقال له إنها غير موجودة. أما دراسات الزائر فمحفوظة في ذلك المتصفح وحده."
+    },
+    {
+      "q": "هل الواجهة متاحة بالعربية؟",
+      "a": "نعم، كل صفحة، بالعربية الفصحى وبمصطلحات المهنة نفسها. أما النص الذي كتبه المحرك نفسه، كأساس قاعدة أو معادلة، فيبقى بالإنجليزية كما هو حتى يمكن الرجوع به إلى مصدره."
+    }
+  ]
+}

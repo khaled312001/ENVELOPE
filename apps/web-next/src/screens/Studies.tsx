@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { FolderOpen, Plus, Search } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
 
 import { api, type Actor, type RunSummary } from '@web/api/client.js';
 
@@ -10,7 +9,9 @@ import { OutlineThumb } from '../components/PlotSketch.js';
 import { TopBar } from '../components/Shell.js';
 import { grouped, trimmed } from '../lib/figures.js';
 import { useLocale } from '../lib/locale.js';
+import { Link } from '../lib/nav.js';
 import { Button } from '../ui/button.js';
+import { followPointer } from '../ui/motion.js';
 import { Badge, EmptyState, Input, Notice, Spinner } from '../ui/primitives.js';
 
 /*
@@ -111,7 +112,8 @@ function StudyCard({ run, date }: { readonly run: RunSummary; readonly date: str
   return (
     <Link
       to={`/studio/${run.runId}`}
-      className="group grid h-full grid-rows-[160px_auto] overflow-hidden rounded-lg border border-line bg-panel transition-colors duration-150 hover:border-strong hover:bg-raised"
+      onPointerMove={followPointer}
+      className="spotlight shadow-soft group grid h-full grid-rows-[160px_auto] overflow-hidden rounded-lg border border-line bg-panel transition-[border-color,transform] duration-200 ease-out hover:-translate-y-1 hover:border-strong motion-reduce:hover:translate-y-0"
     >
       <div className="canvas-grid relative border-b border-line p-5">
         {run.outline ? (

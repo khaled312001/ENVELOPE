@@ -26,7 +26,7 @@
  */
 
 import { execFileSync, execSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { dirname, join, relative } from 'node:path';
@@ -165,6 +165,8 @@ writeFileSync(join(APP, 'tmp', 'restart.txt'), release + '\n');
 
 cpSync(join(ROOT, 'apps', 'web', 'dist'), WEB, { recursive: true });
 cpSync(join(ROOT, 'apps', 'web-next', 'dist'), join(WEB, 'next'), { recursive: true });
+// The prerender writes robots.txt for the host, not for /next: a crawler only reads it at the root.
+renameSync(join(WEB, 'next', 'robots.txt'), join(WEB, 'robots.txt'));
 
 /*
   THE ENTRY CHUNK HAS A BUDGET, AND A BUILD OVER IT IS NOT PACKED.
@@ -309,8 +311,12 @@ ${redirectRules}
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
 
-  # The studio preview is its own application; every path under /next is its shell.
-  RewriteRule ^next(/.*)?$ next/index.html [L]
+  # The studio preview is its own application. A public page has its own
+  # prerendered index.html, head and all; every other path under /next is the
+  # working screens' shell, which is noindex.
+  RewriteCond %{REQUEST_FILENAME}/index.html -f
+  RewriteRule ^(next(?:/.+?)?)/?$ $1/index.html [L]
+  RewriteRule ^next(/.*)?$ next/app.html [L]
 
   # Every page the site has — from routes.json — is the application shell, 200.
   RewriteRule ^(${pages.join('|')})/?$ index.html [L]

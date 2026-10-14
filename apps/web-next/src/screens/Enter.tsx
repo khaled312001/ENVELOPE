@@ -1,10 +1,11 @@
 import { KeyRound, UserRound } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
 
 import { TopBar } from '../components/Shell.js';
 import { useIdentity } from '../lib/identity.js';
 import { useLocale } from '../lib/locale.js';
+import { Navigate, useNav } from '../lib/nav.js';
 import { Button } from '../ui/button.js';
 import { Field, Input, Notice, Spinner } from '../ui/primitives.js';
 
@@ -20,7 +21,7 @@ export function Enter(): JSX.Element {
   const { t } = useLocale();
   const { actor, signIn, continueAsGuest } = useIdentity();
   const [params] = useSearchParams();
-  const navigate = useNavigate();
+  const navigate = useNav();
   const next = safeNext(params.get('next'));
 
   const [email, setEmail] = useState('');

@@ -68,11 +68,24 @@ export const EN = {
     studies: 'Studies',
     newStudy: 'New study',
     classic: 'Current site',
+    toLight: 'Switch to light theme',
+    toDark: 'Switch to dark theme',
   },
 
   landing: {
     eyebrow: 'Development capacity · Dubai',
-    title: 'Every figure on a plot, with the rule that produced it.',
+    titleA: 'Every figure on a plot,',
+    titleB: 'with the rule that produced it.',
+    live: 'Engine output',
+    carsTitle: 'Cars in bays',
+    bandsEyebrow: 'Capacity',
+    flowEyebrow: 'The flow',
+    outEyebrow: 'Exports',
+    outTitle: 'One building, six files',
+    outLede: 'Every file is drawn from the same model the engine built, so the cars in the DXF are the cars on the screen.',
+    parity: (n: string): string => `${n} cars in the worked example — the same count in the sheets, the DXF and the 3D model.`,
+    claimsEyebrow: 'What it claims',
+    limitsEyebrow: 'Limits',
     lede:
       'Draw the plot, answer the questions no rule answers, and read the envelope, the parking ' +
       'level by level and the building in 3D. Every number opens to its derivation.',

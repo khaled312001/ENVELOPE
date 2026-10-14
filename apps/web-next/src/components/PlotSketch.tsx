@@ -1,4 +1,7 @@
+import { motion, useReducedMotion } from 'motion/react';
+
 import { cn } from '../lib/cn.js';
+import { EASE } from '../ui/motion.js';
 
 /*
   THE PLOT AS A PLAN, NORTH UP.
@@ -10,6 +13,11 @@ import { cn } from '../lib/cn.js';
 
   A boundary's class is carried by its dash and weight as well as its ink, and an
   unclassified boundary is drawn as a question: thin, dotted, with a `?`.
+
+  The motion is a pen tracing the ring over the drawing, then lifting away. It is
+  a separate line on top: animating `pathLength` on the boundaries themselves
+  would replace their dash, and the dash is how a boundary's class reads without
+  colour. Every boundary is at full ink from the first frame.
 */
 
 export interface SketchEdge {
@@ -46,6 +54,7 @@ export function PlotSketch({
   readonly label: string;
   readonly compact?: boolean;
 }): JSX.Element {
+  const reduce = useReducedMotion();
   const pts = vertices.map((v) => ({ x: Number(v.x), y: Number(v.y) })).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
   if (pts.length < 3) {
     return (
@@ -143,10 +152,38 @@ export function PlotSketch({
           </g>
         );
       })}
+      {!compact && !reduce ? (
+        <motion.polygon
+          // Replayed when a corner is added or removed — not on every keystroke inside one.
+          key={pts.length}
+          points={ring}
+          fill="none"
+          stroke="var(--accent)"
+          strokeWidth={2.5}
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+          aria-hidden="true"
+          initial={{ pathLength: 0, opacity: 1 }}
+          animate={{ pathLength: 1, opacity: 0 }}
+          transition={{ pathLength: { duration: 1.1, ease: EASE }, opacity: { delay: 1.1, duration: 0.6 } }}
+        />
+      ) : null}
       {!compact
         ? pts.map((p, i) => {
             const [x, y] = P(p);
-            return <circle key={`v${i}`} cx={x} cy={y} r={unit * 1.1} fill="var(--text-primary)" />;
+            return (
+              <motion.circle
+                key={`v${i}`}
+                cx={x}
+                cy={y}
+                r={unit * 1.1}
+                fill="var(--text-primary)"
+                style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
+                initial={reduce ? false : { scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.08 * i }}
+              />
+            );
           })
         : null}
       {!compact ? (

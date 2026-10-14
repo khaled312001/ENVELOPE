@@ -28,13 +28,9 @@ import { WorkspaceProvider } from './workspace.js';
  * its own class prefix and never a chassis rule.
  */
 import './styles/tokens.css';
-/* THE 2026 LANGUAGE, straight after the tokens and BEFORE the old chassis.
-   Before, not after, because it declares its own `m*` prefix and never competes
-   for a chassis selector — so the one thing its position decides is that the
-   custom properties it adds (the display scale, the gradients, the glass) are
-   defined by the time anything reads them. A property read before it is
-   declared is invalid at computed-value time, which is silent. */
-import './styles/modern.css';
+/* `modern.css` — the 5 Oct gradients, glass and display scale — is DELETED with
+   the October direction (docs/05-design/direction-2026-10.md). Its one consumer
+   was the landing page, which is `lp-*` in `landing.css` now. */
 import './styles/site.css';
 /* Straight after the chassis, because it ADDS to the chrome's own link rules
    rather than replacing them — the nav's underline and press are `site.css`'s
@@ -59,14 +55,12 @@ import './styles/not-found.css';
 import './styles/work.css';
 import './styles/antechamber.css';
 import './styles/workspace.css';
-/* The 2026 shell. After every page stylesheet because it RESTYLES `.nav` and
-   `.colophon` rather than defining a second shell, so its position is the whole
-   of how it wins — and before `rtl.css`, which must stay last. */
-import './styles/chrome.css';
-/* The console: sign-in, the sidebar and the signed-in plates. Same argument as
-   `chrome.css` and after it, because the auth card's submit is the nav's primary
-   button and the later sheet is the one that may finish the sentence. */
-import './styles/console.css';
+/* The shell: masthead, nav, colophon, sidebar, the sign-in door and the plates
+   (direction-2026-10.md). After every page stylesheet because it RESTYLES chassis
+   selectors `site.css` defines rather than declaring a second shell, so its
+   position is how it wins — and before `rtl.css`, which must stay last. It
+   replaces `chrome.css` and `console.css`, which did the same job twice. */
+import './styles/shell.css';
 /* The plot tracer's own surface. After `app.css`, because the map sits inside a
    `.panel` in step 1 and overrides that panel's padding for a full-bleed canvas;
    before `rtl.css`, like everything else. The canvas's own ink is NOT here — a

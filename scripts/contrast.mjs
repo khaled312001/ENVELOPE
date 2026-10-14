@@ -225,6 +225,12 @@ const GROUNDS = [
   '--variance-surface',
   '--derived-surface',
   '--deferred-surface',
+  /* The workspace's three regions (direction-2026-10.md §3). Each is a rung above
+     today, and each is measured in its own name anyway: the day somebody gives the
+     canvas a ground of its own, every ink in INKS is already being read on it. */
+  '--canvas',
+  '--toolbar',
+  '--inspector',
 ];
 
 /**

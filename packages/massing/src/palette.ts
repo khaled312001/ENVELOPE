@@ -20,7 +20,7 @@ const FILE_INKS = {
   assumed: 'var(--uncertain, #55555f)',
   userSet: 'var(--accent, #3355e0)',
   neutral: 'var(--text-secondary, #55555f)',
-  ground: 'var(--surface-sunken, #eef1f8)',
+  ground: 'var(--surface-sunken, #eeeef0)',
   car: 'var(--border-strong, #77797f)',
 } as const;
 

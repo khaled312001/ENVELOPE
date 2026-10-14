@@ -155,7 +155,7 @@ const GLYPH = ROUTE_GLYPH;
 
 /*
   THE MARK IN A TILE. The tile is what fills on the current page — see
-  `console.css` — and it is the whole of a row once the rail is collapsed and the
+  `shell.css` — and it is the whole of a row once the rail is collapsed and the
   labels are clipped. `aria-hidden` on both: the label beside them in the same
   link is the accessible name.
 */

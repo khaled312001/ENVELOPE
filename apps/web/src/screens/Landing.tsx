@@ -1,57 +1,38 @@
 /**
- * THE LANDING PAGE — rebuilt 5 Oct 2026.
+ * THE LANDING PAGE — rebuilt again, 14 Oct 2026, to the October direction
+ * (docs/05-design/direction-2026-10.md).
  *
- * The client's direction was three things in one sentence: delete the current
- * design, build a current one, and cut the explanation down to headings and
- * buttons. The old page was five numbered sections of argued prose; this one is
- * a hero, a figure row, a bento of what it does, two compact tables and a band.
+ * The 5 Oct page was a web product's: a gradient hero, a glowing pill button, a
+ * bento of icon cards that lifted on hover. The client's verdict on the result was
+ * that opening the site and finding the same design means the redesign failed — so
+ * this one is laid out the way the tool it sells is: the words on one side and the
+ * run standing in a viewport on the other, the figures in a schedule strip, the
+ * workflow as numbered steps, and nothing that floats.
  *
  * ---------------------------------------------------------------------------
  * WHAT DID NOT CHANGE, AND WHY A REDESIGN DOES NOT GET TO CHANGE IT.
  *
  * 1. NO FIGURE ON THIS PAGE IS TYPED BY A HUMAN. Every number comes out of
- *    `worked-example.json`, which `scripts/verify-worked-example.mjs` writes
- *    from a real run and `pnpm check` re-verifies. The page once quoted a
- *    governing capacity the engine had stopped returning, for months, on the
- *    page that sells traced numbers. Shortening the page is not a licence to
- *    start typing its figures.
+ *    `worked-example.json`, which `scripts/verify-worked-example.mjs` writes from a
+ *    real run and `pnpm check` re-verifies.
  *
- * 2. THE FIVE CLAIMS STAY, IN §16.5 ORDER, WITH THE REFUSAL LAST. "Cut the
- *    explanation" is a brief about prose, not about the claim statement — so
- *    the five became a TABLE of five rows instead of five essays. The
- *    information survives; the reading time does not.
+ * 2. THE FIVE CLAIMS STAY, IN §16.5 ORDER, WITH THE REFUSAL LAST.
  *
- * 3. "WHAT IT DOES NOT DO" STAYS, as cards rather than paragraphs. A marketing
- *    page is exactly where "never claim compliance" dies quietly, and
- *    `landing.test.tsx` enforces its presence as a PROHIBITION — a test that
- *    only checked the honest text was present would pass on a page that had
- *    added "99.4% accurate" underneath it.
+ * 3. "WHAT IT DOES NOT DO" STAYS, and `landing.test.tsx` enforces it as a
+ *    PROHIBITION rather than as a copy check.
  *
- * 4. THE REVEAL ANIMATES TRANSFORM ONLY. A scroll-driven animation holds its
- *    start state for anything that has never entered a viewport, so an opacity
- *    start of 0 left three whole sections blank in a full-page screenshot and
- *    would have been blank on paper.
+ * 4. THE REGULATORY STAMP IS IN THE FOLD (`data-claim="regulatory"`, measured by
+ *    `scripts/amber.mjs`), and the assumption the governing figure rests on is
+ *    printed open beside the figures (`data-state="assumed"`), never behind a
+ *    closed disclosure.
  *
- * WHAT DID CHANGE AND IS NOT COMING BACK: the amber. The client removed the
- * ASSUMED colour treatment on 5 Oct after being shown what it costs. The
- * assumption is still named in words beside the figure it moves, because he
- * struck a design and not a disclosure.
+ * 5. NOTHING ON THE PAGE IS HIDDEN BY DECORATION. There is no scroll reveal at
+ *    all now: the last one that started from `opacity: 0` printed three blank
+ *    sections, and the calmer page does not need one.
  */
 import type { JSX } from 'react';
 
-import {
-  ArrowRight,
-  Boxes,
-  CircleSlash,
-  FileDown,
-  Grid3x3,
-  Layers,
-  type LucideIcon,
-  Ruler,
-  ScanLine,
-  ShieldQuestion,
-  SquareStack,
-} from 'lucide-react';
+import { ArrowRight, CircleSlash, Ruler, SquareStack } from 'lucide-react';
 
 import { LIMITS_AR } from '../content/shared.ar.js';
 import { LIMITS } from '../content/shared.js';
@@ -61,15 +42,14 @@ import { useDict, useLocale, Verbatim } from '../i18n/locale.js';
 import { Link, type Href } from '../router.js';
 import { WorkedExampleModel } from '../components/WorkedExampleModel.js';
 import { group } from './Work.js';
-import SNAPSHOT from './readiness.json' with { type: 'json' };
 import example from './worked-example.json' with { type: 'json' };
 
 const V = example.verified;
 
 /**
- * The figures the hero publishes, read off the fixture and never computed here.
- * `unit` is separate from `value` so the mono figure and its unit can be set at
- * different sizes without a string split at render time.
+ * The figures the schedule strip publishes, read off the fixture and never
+ * computed here. `unit` is separate from `value` so the mono figure and its unit
+ * can be set at different sizes without a string split at render time.
  */
 const STATS: readonly { readonly value: string; readonly unit: string; readonly key: StatKey }[] = [
   { value: V.governingGfaM2, unit: 'm²', key: 'governing' },
@@ -87,50 +67,42 @@ const STAT_LABEL: Readonly<Record<StatKey, { readonly en: string; readonly ar: s
 };
 
 /**
- * WHAT IT DOES — the bento. Six tiles, which the research puts at the middle of
- * the six-to-nine band where the pattern reads as composed rather than as a
- * list. Each is an ACTION the reader performs, not a property the product has:
- * the brief was "focus on usage".
+ * WHAT YOU DO WITH IT — the workflow, in the order the engine runs it. Numbered,
+ * because it IS a sequence: the same ten-step bar the workspace opens on, said
+ * in six lines a reader can take in before they press the button.
  */
 const DOES: readonly {
-  readonly icon: LucideIcon;
   readonly en: readonly [string, string];
   readonly ar: readonly [string, string];
-  readonly wide?: true;
 }[] = [
   {
-    icon: ScanLine,
     en: ['Read the affection plan', 'Upload the issued sheet. Every figure keeps its page and line.'],
     ar: ['اقرأ مخطط الافكشن', 'ارفع الورقة الصادرة. كل رقم يحتفظ بصفحته وسطره.'],
-    wide: true,
   },
   {
-    icon: Ruler,
     en: ['Enter the plot', 'Edge by edge, curves included. Nothing is adjusted to close the shape.'],
     ar: ['أدخل القطعة', 'حدا حدا، والمنحني بانحنائه. ولا يعدل شيء ليقفل الشكل.'],
   },
   {
-    icon: Layers,
     en: ['Solve the envelope', 'Setbacks, plate cap and height ceiling, as a fixpoint.'],
     ar: ['حل الغلاف', 'الارتدادات وسقف المسطح وسقف الارتفاع، بحل تقاربي.'],
   },
   {
-    icon: Grid3x3,
     en: ['Lay out the parking', 'Bays, aisles and a ramp — placed, not divided out of an area.'],
     ar: ['ارصف المواقف', 'مواقف وممرات ومنحدر — ترصف فعلا، لا تقسم مساحة على معامل.'],
-    wide: true,
   },
   {
-    icon: Boxes,
     en: ['Inspect the massing', 'Every level at its floor, every car in its bay.'],
     ar: ['عاينه مجسما', 'كل دور عند منسوبه، وكل سيارة في موقفها.'],
   },
   {
-    icon: FileDown,
     en: ['Export the set', 'Report, drawings, DXF, glTF, JSON and XLSX — behind two gates.'],
     ar: ['صدر المجموعة', 'تقرير ورسومات وDXF وglTF وJSON وXLSX — خلف بوابتين.'],
   },
 ];
+
+/** A section's index, as a drawing schedule numbers its sheets. Two digits. */
+const index = (n: number): string => String(n).padStart(2, '0');
 
 export function Landing({
   navigate,
@@ -156,311 +128,255 @@ export function Landing({
   return (
     <div className="lp">
       {/* ================================================================
-       *  HERO
+       *  HERO — the words, and the run standing in a viewport beside them.
        * ============================================================= */}
-      <section className="mhero">
-        <div className="mx mhero__in">
-          <p className="meyebrow m-rise" style={{ '--m-order': 0 } as React.CSSProperties}>
-            {ar ? 'عرض توضيحي للمحرك' : 'Engine demonstration'}
-          </p>
+      <section className="lp-hero">
+        <div className="lp-wrap lp-hero__in">
+          <div className="lp-hero__copy">
+            <p className="lp-eyebrow">{ar ? 'عرض توضيحي للمحرك' : 'Engine demonstration'}</p>
 
-          <h1 className="mdisplay m-rise" style={{ '--m-order': 1 } as React.CSSProperties}>
-            {t.title}
-          </h1>
+            <h1 className="lp-title">{t.title}</h1>
 
-          <p className="mlede m-rise" style={{ '--m-order': 2 } as React.CSSProperties}>
-            {t.lede.before}
-            <em>{t.lede.emphasis}</em>
-            {t.lede.after}
-          </p>
-
-          <div
-            className="mhero__actions m-rise"
-            style={{ '--m-order': 3 } as React.CSSProperties}
-          >
-            {/*
-              `?demo=worked-example` IS THE BUTTON'S PROMISE, NOT A CONVENIENCE.
-
-              It reads "run this plot yourself", and the redesign of this page sent
-              it to a blank `/app`: the strongest button on the site named the plot
-              every figure above is read from and then handed over an empty form.
-              `demo.ts` fills the plot step from `worked-example.json` — the same
-              file the figures come from — so the visitor runs THIS plot and reaches
-              the number they have just read. Any other input and they would be
-              right to conclude the page was decorated.
-            */}
-            <Link
-              className="mbtn mbtn--primary mbtn--lg"
-              to="/app?demo=worked-example"
-              navigate={navigate}
-            >
-              {t.cta.run}
-              <ArrowRight aria-hidden="true" />
-            </Link>
-            <Link className="mbtn mbtn--ghost mbtn--lg" to="/refusals" navigate={navigate}>
-              <CircleSlash aria-hidden="true" />
-              {t.cta.refusals}
-            </Link>
-          </div>
-
-          {/* The validity stamp sits IN the fold, at the same weight as the
-              action beside it. Below it, it would be a footnote to a claim the
-              reader has already formed.
-
-              `data-claim="regulatory"` is not styling and nothing reads it as
-              styling. It is the hook `scripts/amber.mjs` measures the POSITION of,
-              and a semantic attribute rather than the `lp-validity` class because a
-              gate bound to a class name is a gate a rename silently deletes — the
-              same reason the colophon carries `data-group`. That sentence above
-              needed something to hold it to, because for as long as this page has
-              existed its placement has been enforced by nothing: the unit test can
-              see the stamp is PRESENT and only a browser knows it is above the fold,
-              and amber.mjs is the only gate in this repository that opens one here. */}
-          <p
-            className="lp-validity m-rise"
-            data-claim="regulatory"
-            style={{ '--m-order': 4 } as React.CSSProperties}
-          >
-            <strong>{t.validity.stamp}</strong>
-            {t.validity.body}
-          </p>
-
-        {/*
-          THE RUN, STOOD UP — and it is back because a gate kept asking for it.
-
-          The redesign of this page dropped the hero's 3D figure, and
-          `scripts/smoke.mjs` went on waiting twenty seconds for a frame from it
-          on every run: the check could no longer pass, so it was no longer
-          telling anyone anything. Two ways out, and only one of them is honest.
-          Deleting the check would have left the most persuasive artefact the
-          product has off the page it sells from, and this is the page where a
-          reader decides whether the numbers above came from anywhere.
-
-          It is the SAME model as every figure above — `worked-example.json` and
-          `worked-example.building.json` are written from one real run by
-          `scripts/verify-worked-example.mjs` — so the picture and the stats
-          cannot disagree. It is still until the reader turns it on, which is why
-          a wheel over it scrolls the page; the gate asserts both.
-        */}
-        <figure className="figure lp-hero__figure m-reveal">
-          <div className="figure__plate">
-            <WorkedExampleModel
-              label={t.figure.modelLabel(V.levels, V.maxLevelsByHeight)}
-              fallback={<p className="massing-viewer__failed">{t.figure.noWebgl}</p>}
-            />
-          </div>
-          <figcaption className="figure__caption">
-            <p className="figure__label">
-              <span className="figure__no">{t.figure.number}</span>
-              <span>{t.figure.landUse(example.input.plot.landUse)}</span>
+            <p className="lp-lede">
+              {t.lede.before}
+              <em>{t.lede.emphasis}</em>
+              {t.lede.after}
             </p>
-            {/* The one specification line the picture cannot carry: how much of
-                the permitted stack the answer actually places. A 3D view of a
-                full-height envelope beside a figure for a shorter building is
-                the drawing winning over the number. */}
-            <dl className="figure__spec">
-              <div>
-                <dt>{t.figure.spec.levels}</dt>
-                <dd>
-                  <span className="value">
-                    <Verbatim>{V.levels}</Verbatim>
-                  </span>
-                  {t.figure.spec.levelsOf}
-                  <span className="value">
-                    <Verbatim>{V.maxLevelsByHeight}</Verbatim>
-                  </span>
-                  {t.figure.spec.levelsAfter}
+
+            <div className="lp-actions">
+              {/*
+                `?demo=worked-example` IS THE BUTTON'S PROMISE, NOT A CONVENIENCE:
+                "run this plot yourself" fills the plot step from the same file
+                every figure on this page is read from, so the visitor runs THIS
+                plot and reaches the number they have just read.
+              */}
+              <Link
+                className="button button--primary lp-cta"
+                to="/app?demo=worked-example"
+                navigate={navigate}
+              >
+                {t.cta.run}
+                <ArrowRight aria-hidden="true" className="lp-cta__icon" />
+              </Link>
+              <Link className="button lp-cta" to="/refusals" navigate={navigate}>
+                <CircleSlash aria-hidden="true" className="lp-cta__icon" />
+                {t.cta.refusals}
+              </Link>
+            </div>
+
+            {/* The validity stamp sits IN the fold, at the weight of the actions
+                above it. `data-claim="regulatory"` is the hook `scripts/amber.mjs`
+                measures the position of — a semantic attribute rather than a class,
+                because a gate bound to a class name is a gate a rename deletes. */}
+            <p className="lp-validity" data-claim="regulatory">
+              <strong>{t.validity.stamp}</strong>
+              {t.validity.body}
+            </p>
+          </div>
+
+          {/*
+            THE RUN, STOOD UP, IN A VIEWPORT. The same model every figure on this
+            page comes from — `worked-example.json` and its building are written by
+            one real run — so the picture and the numbers cannot disagree. It is
+            still until the reader turns it on, which is why a wheel over it scrolls
+            the page; `pnpm smoke` asserts both.
+          */}
+          <figure className="figure lp-hero__figure lp-viewport">
+            <div className="lp-viewport__bar" aria-hidden="true">
+              <span>3D</span>
+              <span className="lp-viewport__bar-title">
+                {t.figure.landUse(example.input.plot.landUse)}
+              </span>
+              <span>{t.figure.number}</span>
+            </div>
+            <div className="figure__plate lp-viewport__plate">
+              <WorkedExampleModel
+                label={t.figure.modelLabel(V.levels, V.maxLevelsByHeight)}
+                fallback={<p className="massing-viewer__failed">{t.figure.noWebgl}</p>}
+              />
+            </div>
+            <figcaption className="figure__caption lp-viewport__caption">
+              {/* The one line the picture cannot carry: how much of the permitted
+                  stack the answer places. A 3D view of a full-height envelope
+                  beside a figure for a shorter building is the drawing winning
+                  over the number. */}
+              <dl className="figure__spec">
+                <div>
+                  <dt>{t.figure.spec.levels}</dt>
+                  <dd>
+                    <span className="value">
+                      <Verbatim>{V.levels}</Verbatim>
+                    </span>
+                    {t.figure.spec.levelsOf}
+                    <span className="value">
+                      <Verbatim>{V.maxLevelsByHeight}</Verbatim>
+                    </span>
+                    {t.figure.spec.levelsAfter}
+                  </dd>
+                </div>
+              </dl>
+              <p className="figure__source">{t.figure.source}</p>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      {/* ================================================================
+       *  THE SCHEDULE — one run, read off the fixture.
+       * ============================================================= */}
+      <section className="lp-section lp-section--figures">
+        <div className="lp-wrap">
+          <dl className="lp-spec">
+            {STATS.map((s) => (
+              <div key={s.key} className="lp-spec__cell" data-key={s.key}>
+                <dt className="lp-spec__label">
+                  {ar ? STAT_LABEL[s.key].ar : STAT_LABEL[s.key].en}
+                </dt>
+                <dd className="lp-spec__figure">
+                  <Verbatim>{group(s.value)}</Verbatim>
+                  {s.unit ? <span className="lp-spec__unit"> {s.unit}</span> : null}
                 </dd>
               </div>
-            </dl>
-            <p className="figure__source">{t.figure.source}</p>
-          </figcaption>
-        </figure>
-        </div>
-      </section>
-
-      {/* ================================================================
-       *  THE FIGURES — one run, read off the fixture.
-       * ============================================================= */}
-      <section className="msection lp-figures">
-        <div className="mx">
-          <div className="mstats m-reveal">
-            {STATS.map((s) => (
-              <div key={s.key} className="mstat">
-                <div className="mstat__figure">
-                  <Verbatim>{group(s.value)}</Verbatim>
-                  {s.unit ? <span className="mstat__unit"> {s.unit}</span> : null}
-                </div>
-                <div className="mstat__label">
-                  {ar ? STAT_LABEL[s.key].ar : STAT_LABEL[s.key].en}
-                </div>
-              </div>
             ))}
-          </div>
+          </dl>
 
-          {/* The band that binds, named in WORDS. Colour carries none of it. */}
-          <p className="lp-binds m-reveal">
-            <SquareStack aria-hidden="true" />
-            <Verbatim>{V.formulas.governingGfa}</Verbatim>
-          </p>
+          <div className="lp-notes">
+            {/* The band that binds, named in WORDS — the engine's own formula. */}
+            <p className="lp-binds">
+              <SquareStack aria-hidden="true" className="lp-binds__icon" />
+              <Verbatim>{V.formulas.governingGfa}</Verbatim>
+            </p>
 
-          {/* ----------------------------------------------------------------
-              THE ASSUMPTION THAT MOVES THE ANSWER, IN THE FOLD AND SHIPPED OPEN.
+            {/* THE ASSUMPTION THAT MOVES THE ANSWER, OPEN, beside the figure it
+                moves. `data-state="assumed"` is the state layer's hook; the client
+                removed the amber COLOUR on 5 Oct and kept the disclosure, so the
+                treatment is a tag, a rule and a word. */}
+            <p className="lp-assumed" data-state="assumed">
+              <span className="lp-assumed__tag">
+                <Verbatim>{V.bayAreaFactorClass}</Verbatim>
+              </span>
+              <span>
+                {t.assumed.before} <Verbatim>{V.bayAreaFactorM2}</Verbatim>
+                {' m²/bay'}
+                {t.assumed.after}
+                <Verbatim>{V.bayAreaFactorBasis}</Verbatim>
+              </span>
+            </p>
 
-              Not inside the disclosure below. The governing capacity rests on an
-              area divided by an assumed factor, and the assumption has to be in
-              the same eyeful as the number rather than one click away — behind a
-              closed disclosure it is present in the markup and absent from the
-              page, which is the shape of every disclosure defect this product
-              exists to prevent.
+            {/* The verdict, TEMPLATED from the fixture and never typed. */}
+            <p className="lp-verdict">
+              {t.capacities.verdict.before}
+              <Verbatim>{V.governingBand}</Verbatim>
+              {t.capacities.verdict.between}
+              <Verbatim>{V.nextBindingBand}</Verbatim>
+              {t.capacities.verdict.after}
+              <Verbatim>{group(V.headroomToNextM2)}</Verbatim>
+              {' m²'}
+              {t.capacities.verdict.end}
+            </p>
 
-              `data-state="assumed"` is the state layer's own hook and it stays.
-              The client removed the amber COLOUR on 5 Oct, and the attribute is
-              what the colour used to hang from — so the treatment is now a tag,
-              a rule and a word, with no hue in it. The distinction survives in
-              the markup, which is also what keeps it legible in greyscale print
-              and to a reader who cannot separate the hues.
-              -------------------------------------------------------------- */}
-          <p className="lp-assumed m-reveal" data-state="assumed">
-            <span className="lp-assumed__tag">
-              <Verbatim>{V.bayAreaFactorClass}</Verbatim>
-            </span>
-            <span>
-              {t.assumed.before} <Verbatim>{V.bayAreaFactorM2}</Verbatim>
-              {' m²/bay'}
-              {t.assumed.after}
-              <Verbatim>{V.bayAreaFactorBasis}</Verbatim>
-            </span>
-          </p>
+            {/* THE DERIVATION, BEHIND A DISCLOSURE: the engine's formula strings,
+                the levels placed against the levels permitted, and the recorded
+                input. No prose. */}
+            <details className="lp-derive">
+              <summary className="button lp-derive__summary">
+                <Ruler aria-hidden="true" className="lp-cta__icon" />
+                {ar ? 'من أين جاءت هذه الأرقام' : 'Where these numbers come from'}
+              </summary>
 
-          {/* The verdict, TEMPLATED from the fixture and never typed. A rule edit
-              that made a different band bind rewrites this sentence; a typed one
-              would stay false with every gate green. */}
-          <p className="lp-verdict m-reveal">
-            {t.capacities.verdict.before}
-            <Verbatim>{V.governingBand}</Verbatim>
-            {t.capacities.verdict.between}
-            <Verbatim>{V.nextBindingBand}</Verbatim>
-            {t.capacities.verdict.after}
-            <Verbatim>{group(V.headroomToNextM2)}</Verbatim>
-            {' m²'}
-            {t.capacities.verdict.end}
-          </p>
+              <div className="lp-derive__body">
+                <dl className="lp-derive__list">
+                  {(
+                    [
+                      ['bandA', V.bandAM2],
+                      ['bandB', V.bandBM2],
+                      ['bandC', V.bandCM2],
+                    ] as const
+                  ).map(([k, value]) => (
+                    <div key={k} className="lp-derive__row" data-state="derived">
+                      <dt>
+                        <span className="lp-derive__class">
+                          <Verbatim>DERIVED</Verbatim>
+                        </span>{' '}
+                        <Verbatim>{group(value)}</Verbatim> m²
+                      </dt>
+                      <dd>
+                        <Verbatim>{V.formulas[k]}</Verbatim>
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
 
-          {/* ------------------------------------------------------------
-              THE DERIVATION, BEHIND A DISCLOSURE.
+                <p className="lp-derive__levels">
+                  {t.figure.spec.levels} <Verbatim>{V.levels}</Verbatim>
+                  {t.figure.spec.levelsOf}
+                  <Verbatim>{V.maxLevelsByHeight}</Verbatim>
+                  {t.figure.spec.levelsAfter}
+                </p>
 
-              The brief was "headings and buttons, cut the explanation", and
-              the product's rule is that no figure is published without its
-              derivation. A disclosure satisfies both: the surface is a
-              button, and every number above remains one click from the
-              engine's own words. It is NOT the old page's five sections
-              moved behind a toggle — there is no prose in here at all, only
-              the engine's formula strings, the assumption that moves the
-              answer, and the recorded input the run was computed from.
-              ---------------------------------------------------------- */}
-          <details className="lp-derive m-reveal">
-            <summary className="mbtn mbtn--ghost">
-              <Ruler aria-hidden="true" />
-              {ar ? 'من أين جاءت هذه الأرقام' : 'Where these numbers come from'}
-            </summary>
-
-            <div className="lp-derive__body">
-              {/* Each published figure, with the engine's own formula. */}
-              <dl className="lp-derive__list">
-                {(
-                  [
-                    ['bandA', V.bandAM2],
-                    ['bandB', V.bandBM2],
-                    ['bandC', V.bandCM2],
-                  ] as const
-                ).map(([k, value]) => (
-                  <div key={k} className="lp-derive__row" data-state="derived">
-                    <dt>
-                      <span className="lp-derive__class">
-                        <Verbatim>DERIVED</Verbatim>
-                      </span>{' '}
-                      <Verbatim>{group(value)}</Verbatim> m²
-                    </dt>
-                    <dd>
-                      <Verbatim>{V.formulas[k]}</Verbatim>
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-
-              {/* The levels the ANSWER places, against the levels the height
-                  ceiling permits. Two different counts, and printing the
-                  ceiling's as if they were built is the overclaim this line
-                  exists to prevent. */}
-              <p className="lp-derive__levels">
-                {t.figure.spec.levels} <Verbatim>{V.levels}</Verbatim>
-                {t.figure.spec.levelsOf}
-                <Verbatim>{V.maxLevelsByHeight}</Verbatim>
-                {t.figure.spec.levelsAfter}
-              </p>
-
-              {/* The recorded input the run was computed from: the plot, and
-                  what each boundary faces. Named from the input's own tokens,
-                  never from a literal per edge. */}
-              <ul className="lp-derive__edges">
-                <li>
-                  <Verbatim>{t.figure.landUse(example.input.plot.landUse)}</Verbatim>
-                </li>
-                {example.input.plot.edges.map((e) => (
-                  <li key={e.seq}>
-                    <Verbatim>
-                      {t.figure.edge(
-                        e.classification,
-                        'roadHierarchy' in e ? e.roadHierarchy : undefined,
-                      )}
-                    </Verbatim>
+                <ul className="lp-derive__edges">
+                  <li>
+                    <Verbatim>{t.figure.landUse(example.input.plot.landUse)}</Verbatim>
                   </li>
-                ))}
-              </ul>
-            </div>
-          </details>
+                  {example.input.plot.edges.map((e) => (
+                    <li key={e.seq}>
+                      <Verbatim>
+                        {t.figure.edge(
+                          e.classification,
+                          'roadHierarchy' in e ? e.roadHierarchy : undefined,
+                        )}
+                      </Verbatim>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+          </div>
         </div>
       </section>
 
       {/* ================================================================
-       *  WHAT IT DOES — the bento
+       *  WHAT YOU DO WITH IT — the workflow, numbered.
        * ============================================================= */}
-      <section className="msection" id="does">
-        <div className="mx">
-          <h2 className="mdisplay mdisplay--sm m-reveal">
-            {ar ? 'ما تفعله به' : 'What you do with it'}
-          </h2>
+      <section className="lp-section" id="does">
+        <div className="lp-wrap">
+          <header className="lp-head">
+            <span className="lp-head__index">
+              <Verbatim>{index(1)}</Verbatim>
+            </span>
+            <h2 className="lp-head__title">{ar ? 'ما تفعله به' : 'What you do with it'}</h2>
+          </header>
 
-          <div className="mbento m-reveal">
-            {DOES.map((d) => {
+          <ol className="lp-steps">
+            {DOES.map((d, i) => {
               const [title, body] = ar ? d.ar : d.en;
-              const Mark = d.icon;
               return (
-                <article
-                  key={title}
-                  className={`mcard mcard--lift${d.wide ? ' mbento__wide' : ''}`}
-                >
-                  <span className="mcard__icon">
-                    <Mark aria-hidden="true" />
+                <li key={title} className="lp-step">
+                  <span className="lp-step__no" aria-hidden="true">
+                    {index(i + 1)}
                   </span>
-                  <h3 className="mcard__title">{title}</h3>
-                  <p className="mcard__body">{body}</p>
-                </article>
+                  <h3 className="lp-step__title">{title}</h3>
+                  <p className="lp-step__body">{body}</p>
+                </li>
               );
             })}
-          </div>
+          </ol>
         </div>
       </section>
 
       {/* ================================================================
-       *  THE FIVE CLAIMS — a table, not five essays.
+       *  THE FIVE CLAIMS — a schedule, not five essays.
        * ============================================================= */}
-      <section className="msection lp-claims-s" id="claims">
-        <div className="mx">
-          <h2 className="mdisplay mdisplay--sm m-reveal">{t.claims.title}</h2>
+      <section className="lp-section lp-section--zoned" id="claims">
+        <div className="lp-wrap">
+          <header className="lp-head">
+            <span className="lp-head__index">
+              <Verbatim>{index(2)}</Verbatim>
+            </span>
+            <h2 className="lp-head__title">{t.claims.title}</h2>
+          </header>
 
-          <ul className="lp-claims m-reveal">
+          <ul className="lp-claims">
             {claims.map((c) => (
               <li key={c.title} className="lp-claim">
                 <span className="lp-claim__title">{c.title}</span>
@@ -469,9 +385,9 @@ export function Landing({
             ))}
           </ul>
 
-          <Link className="mbtn mbtn--quiet" to="/refusals" navigate={navigate}>
+          <Link className="lp-more" to="/refusals" navigate={navigate}>
             {t.claims.link}
-            <ArrowRight aria-hidden="true" />
+            <ArrowRight aria-hidden="true" className="lp-cta__icon" />
           </Link>
         </div>
       </section>
@@ -479,24 +395,27 @@ export function Landing({
       {/* ================================================================
        *  WHAT IT DOES NOT DO
        * ============================================================= */}
-      <section className="msection" id="limits">
-        <div className="mx">
-          <h2 className="mdisplay mdisplay--sm m-reveal">{t.limits.title}</h2>
+      <section className="lp-section" id="limits">
+        <div className="lp-wrap">
+          <header className="lp-head">
+            <span className="lp-head__index">
+              <Verbatim>{index(3)}</Verbatim>
+            </span>
+            <h2 className="lp-head__title">{t.limits.title}</h2>
+          </header>
 
-          <div className="mbento m-reveal">
+          <ul className="lp-limits">
             {limits.map((l) => (
-              <article key={l.id} className="mcard lp-limit">
-                <span className="mcard__icon lp-limit__icon">
-                  <ShieldQuestion aria-hidden="true" />
-                </span>
-                <h3 className="mcard__title">{l.heading}</h3>
-              </article>
+              <li key={l.id} className="lp-limit">
+                <CircleSlash aria-hidden="true" className="lp-limit__icon" />
+                <span className="lp-limit__title">{l.heading}</span>
+              </li>
             ))}
-          </div>
+          </ul>
 
-          <Link className="mbtn mbtn--quiet" to="/refusals" navigate={navigate}>
+          <Link className="lp-more" to="/refusals" navigate={navigate}>
             {t.limits.link}
-            <ArrowRight aria-hidden="true" />
+            <ArrowRight aria-hidden="true" className="lp-cta__icon" />
           </Link>
         </div>
       </section>
@@ -505,15 +424,19 @@ export function Landing({
        *  READINESS — the inverted band, and it leads with what is not ready.
        * ============================================================= */}
       <section className="lp-readiness">
-        <div className="mx lp-readiness__in">
-          <h2 className="mdisplay mdisplay--sm">{t.readiness.title}</h2>
+        <div className="lp-wrap lp-readiness__in">
+          <h2 className="lp-readiness__title">{t.readiness.title}</h2>
           <p className="lp-readiness__body">{t.readiness.body}</p>
-          <div className="mhero__actions">
-            <Link className="mbtn mbtn--primary" to="/readiness" navigate={navigate}>
+          <div className="lp-actions">
+            <Link
+              className="button button--primary lp-cta"
+              to="/readiness"
+              navigate={navigate}
+            >
               {t.readiness.numbers}
-              <ArrowRight aria-hidden="true" />
+              <ArrowRight aria-hidden="true" className="lp-cta__icon" />
             </Link>
-            <Link className="mbtn mbtn--ghost" to="/app" navigate={navigate}>
+            <Link className="button lp-cta lp-readiness__ghost" to="/app" navigate={navigate}>
               {t.readiness.engine}
             </Link>
           </div>

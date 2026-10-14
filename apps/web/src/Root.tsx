@@ -362,8 +362,15 @@ export default function Root(): JSX.Element {
           Arabic sentence read aloud in an English voice — for as long as nobody
           looked, which is the same drift the record exists to end.
         */
+        /*
+          `data-engine-open` is what the workspace layout keys on to draw the
+          sidebar as a strip of marks while the engine is on screen — the canvas
+          needs the width, and the attribute is the one fact here that says the
+          engine is the page rather than a hidden latch behind it.
+        */
         <div
           hidden={!showEngine}
+          {...(showEngine ? { 'data-engine-open': '' } : {})}
           {...(engineIsEnglish ? { dir: 'ltr' as const, lang: 'en' } : {})}
         >
           {engineIsEnglish ? <UntranslatedNotice /> : null}

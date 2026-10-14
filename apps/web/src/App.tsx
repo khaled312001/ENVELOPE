@@ -44,6 +44,7 @@ import { PlotCanvas } from './components/PlotCanvas.js';
 import { PlotLimits } from './components/PlotLimits.js';
 import { ProvenanceTree, type ProvTree } from './components/ProvenanceTree.js';
 import { ProvenanceLegend, TracedValue } from './components/TracedValue.js';
+import { WorkspaceInspector } from './components/WorkspaceInspector.js';
 import { MassingPanel } from './components/MassingPanel.js';
 import { DrawingSet, useSheets } from './components/DrawingSet.js';
 import { downloadObject, openDocument, printDocument } from './documents.js';
@@ -439,25 +440,21 @@ export function EngineApp({
       ) : null}
 
       {/*
-        THE THREE COLUMNS §5.1 ASKS FOR: the steps as a rail, the canvas, and the
-        provenance inspector — the last of which `.layout--with-panel` already
-        owned, so this adds the first and nothing else moves.
+        THE WORKSPACE, OCTOBER 2026 (direction-2026-10.md §3): a step bar across
+        the top, the step's drawing and controls in the middle, and the answer in
+        a column beside them that stays put while the middle scrolls.
 
-        THE BANNERS ARE NOW ABOVE THE GRID RATHER THAN BETWEEN THE STEPPER AND THE
-        CANVAS, which is the ordering fix the restructure made obvious: the error
-        and the draft-rules warning are both `role="alert"`, and an alert placed
-        after the navigation is an alert a screen reader reaches second. They span
-        the full width, because a message about the run is not a property of the
-        column it happened to sit in.
+        The column used to exist only while a value was being inspected, so on
+        nine screens out of ten a reader working on the plot or the parking level
+        had nothing beside the work telling them what it was for. It is always
+        there now, and the derivation still opens in it.
 
-        THE RAIL IS A WIDE-WIDTH ARRANGEMENT ONLY. Below 64rem the stepper goes
-        back to the horizontal scroller it has always been — which is tuned, which
-        hides all but the current label on a phone, and which is the shape that
-        passes `no screen scrolls sideways`. A vertical rail on a phone would
-        spend a third of the viewport showing ten words.
+        THE BANNERS STAY ABOVE THE GRID: the error and the draft-rules warning are
+        both `role="alert"`, and an alert placed after the navigation is one a
+        screen reader reaches second.
       */}
-      <div className="flow">
-        <nav className="stepper" aria-label={t.steps.nav}>
+      <div className="ws">
+        <nav className="stepper ws__steps" aria-label={t.steps.nav}>
           <ol>
             {STEPS.map((s, i) => {
               const available = reachable.has(s.id);
@@ -486,8 +483,8 @@ export function EngineApp({
           </ol>
         </nav>
 
-        <div className={`layout${inspecting ? ' layout--with-panel' : ''}`}>
-          <div className="layout__main">
+        <div className="ws__body">
+          <div className="ws__canvas">
             {/*
               WHAT THE STEP IS, BEFORE THE STEP — on all ten, from one component
               and one dictionary entry each.
@@ -674,13 +671,21 @@ export function EngineApp({
             <StepFooter step={step} flow={flow} onGo={goto} />
           </div>
 
-          {inspecting ? (
-            <ProvenanceTree
-              tree={inspecting.tree}
-              loading={inspecting.tree === null}
-              onClose={() => setInspecting(null)}
-            />
-          ) : null}
+          <WorkspaceInspector
+            plot={plot}
+            run={run}
+            gates={gates}
+            onInspect={inspect}
+            onOpenAssumptions={() => goto('assumptions')}
+          >
+            {inspecting ? (
+              <ProvenanceTree
+                tree={inspecting.tree}
+                loading={inspecting.tree === null}
+                onClose={() => setInspecting(null)}
+              />
+            ) : null}
+          </WorkspaceInspector>
         </div>
       </div>
 

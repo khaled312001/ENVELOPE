@@ -191,11 +191,11 @@
   border-radius: var(--radius-pill);
 }
 .wk-meter__bar::-webkit-progress-value {
-  background-image: var(--gradient-brand);
+  background-color: var(--accent);
   border-radius: var(--radius-pill);
 }
 .wk-meter__bar::-moz-progress-bar {
-  background-image: var(--gradient-brand);
+  background-color: var(--accent);
   border-radius: var(--radius-pill);
 }
 
@@ -267,22 +267,14 @@
   position: absolute;
   inset-block-start: 0;
   inset-inline: 0;
-  block-size: 3px;
-  background-image: var(--gradient-brand);
+  block-size: var(--border-width-emphasis);
+  background-color: var(--border-strong);
 }
 
+/* A tile on the page answers the pointer with its edge; nothing in this
+   language rises off the page (direction-2026-10.md §4). */
 .tally__tile:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tally__tile {
-    transition: none;
-  }
-  .tally__tile:hover {
-    transform: none;
-  }
+  border-color: var(--border-strong);
 }
 
 .tally__n {
@@ -382,8 +374,8 @@
   position: absolute;
   inset-block-start: 0;
   inset-inline: 0;
-  block-size: 3px;
-  background-image: var(--gradient-brand);
+  block-size: var(--border-width-emphasis);
+  background-color: var(--border-strong);
 }
 
 .runcard:hover {
@@ -453,7 +445,7 @@
 .runcard__band {
   margin: 0;
   font-size: var(--text-xs);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--text-secondary);
 }

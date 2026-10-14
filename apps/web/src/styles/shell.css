@@ -1,0 +1,728 @@
+/*
+ * THE SHELL — October 2026 (docs/05-design/direction-2026-10.md).
+ *
+ * Replaces `chrome.css` and `console.css`, which restyled the same selectors
+ * twice over with gradients, glass, a coloured glow and pill-shaped everything.
+ * This is one file for the furniture every page shares: the masthead, the nav,
+ * the colophon, the sidebar, the sign-in door and the plates the signed-in pages
+ * are built from.
+ *
+ * Imported where `chrome.css` was — after every page sheet, before `map.css` and
+ * `rtl.css` — because it still restyles chassis selectors `site.css` defines and
+ * so still wins on order. NO MARKUP CHANGED with it: every disclosure, `aria-*`
+ * and route sentinel the old files styled is styled here.
+ *
+ * THE DIRECTION IN ONE LINE: a drawing tool's chrome. Opaque bars on the toolbar
+ * ground, one hairline where a region ends, 4px corners on what you operate and
+ * 8px on what holds things, no shadow on anything that is not floating, and the
+ * accent spent on the current place and the primary action — nothing decorative.
+ *
+ * No colour literals (`pnpm contrast` assertion 7), and decoration never spends a
+ * state colour: no `--derived`, `--variance`, `--deferred` or `--uncertain` here.
+ */
+
+/* ==========================================================================
+ * THE MASTHEAD — the never-claimed strip. Unchanged in content and in weight:
+ * it carries the claim, and a claim dressed as decoration is one a reader skims.
+ * ======================================================================= */
+
+.masthead {
+  background: var(--surface-contrast);
+  color: var(--text-on-contrast);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+}
+
+.masthead__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1) var(--space-5);
+  padding-block: var(--space-1);
+}
+
+.masthead__validity {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-on-contrast);
+}
+
+.masthead__item {
+  display: inline-flex;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-on-contrast-dim);
+}
+.masthead__item dt,
+.masthead__item dd { margin: 0; }
+
+/* ==========================================================================
+ * THE NAV — one opaque bar, exactly a header high.
+ *
+ * EXACTLY, and on purpose: the workspace's step bar sticks at `--header-h` below
+ * it (`app.css`), and the first version of that sticky bar slid under this one
+ * because nothing pinned this one's height. So on wide screens the bar is that
+ * token and not "at least" it.
+ * ======================================================================= */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: var(--toolbar);
+  border-block-end: var(--border-width) solid var(--border-default);
+}
+
+/* The scroll sentinel used to add a shadow here. A bar on the page is ON the
+   page; its hairline already says where it ends. */
+.nav[data-scrolled='true'] { box-shadow: none; }
+
+.nav__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-block-size: var(--header-h);
+}
+
+@media (min-width: 52.01rem) {
+  .nav__inner { block-size: var(--header-h); }
+}
+
+/* In the workspace the bar spans the window, as a tool's does: the brand sits
+   over the sidebar's own edge instead of floating in a page column the
+   workspace no longer has. */
+.site:has([data-engine-open]) .nav__inner,
+.site:has([data-engine-open]) .masthead__inner {
+  max-inline-size: none;
+  padding-inline: var(--space-5);
+}
+
+/* --- The brand --------------------------------------------------------- */
+
+.nav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  text-decoration: none;
+}
+
+/* The mark's three fills. They live with the nav because the mark is the nav's;
+   an unfilled `<rect>` inherits black, which is how the brand once shipped as a
+   solid square on every page with every gate green. The inner rect is the
+   accent and never a state colour. */
+.lp-mark__ground { fill: var(--surface-contrast); }
+.lp-mark__plot   { fill: var(--surface-base); }
+.lp-mark__inner  { fill: var(--accent); }
+
+.nav__wordmark {
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-tight);
+}
+
+/* --- The links --------------------------------------------------------- */
+
+.nav__links {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  gap: var(--space-1);
+  margin-inline-start: auto;
+}
+
+.nav__links a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+/* The current page is marked the way a tab is: a 2px rule on the bar's own
+   bottom edge. A position, not only a hue, so it survives greyscale (1.4.1). */
+.nav__links a::after {
+  content: '';
+  position: absolute;
+  inset-inline: var(--space-3);
+  inset-block-end: calc(var(--border-width) * -1);
+  block-size: var(--border-width-emphasis);
+  background-color: transparent;
+}
+
+.nav__links a:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-sunken);
+}
+
+.nav__links a[aria-current='page'] {
+  color: var(--text-primary);
+}
+.nav__links a[aria-current='page']::after { background-color: var(--accent); }
+
+.nav__glyph {
+  inline-size: 1rem;
+  block-size: 1rem;
+  flex: none;
+}
+
+/* --- The tools --------------------------------------------------------- */
+
+.nav__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: var(--space-2);
+}
+
+/* ==========================================================================
+ * THE DISCLOSURE — shown only where the links are not.
+ * ======================================================================= */
+
+.nav__disclosure { display: none; }
+
+@media (max-width: 52rem) {
+  .nav__disclosure {
+    display: inline-flex;
+    margin-inline-start: auto;
+  }
+
+  /* The panel drops out of the bar rather than pushing it open, so the bar keeps
+     one height. It FLOATS over the page, so it is the one place in the chrome
+     that takes the floating shadow. */
+  .nav__links {
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: var(--space-2);
+    background: var(--surface-raised);
+    border-block-end: var(--border-width) solid var(--border-default);
+    box-shadow: var(--shadow-float);
+  }
+
+  .nav__links[data-open='false'] { display: none; }
+
+  .nav__links a {
+    min-block-size: var(--tap-min);
+    border-radius: var(--radius-sm);
+  }
+  .nav__links a::after {
+    inset-block: var(--space-2);
+    inset-inline: 0 auto;
+    inline-size: var(--border-width-emphasis);
+    block-size: auto;
+  }
+
+  .nav__inner { position: relative; flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: no-preference) and (max-width: 52rem) {
+  .nav__links[data-open='true'] {
+    animation: shell-drop var(--duration-base) var(--ease-out) both;
+  }
+}
+
+@keyframes shell-drop {
+  from { transform: translateY(calc(var(--space-2) * -1)); }
+  to   { transform: none; }
+}
+
+/* ==========================================================================
+ * THE NAV'S ACCOUNT CONTROL.
+ *
+ * Signed out: one primary button, the door. Signed in: the name as a link to the
+ * work, and the way out beside it as a quiet control. The chip is a LINK and not a
+ * badge — `.badge-user` means "this value was set by this person" everywhere else.
+ * ======================================================================= */
+
+.nav__account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.nav__who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  min-block-size: var(--control-h-sm);
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+.nav__who:hover { border-color: var(--border-strong); }
+
+.nav__who-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-inline-size: 12ch;
+}
+
+.nav__signout { flex: none; }
+
+.nav__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ==========================================================================
+ * THE COLOPHON — the dark band at the foot, short.
+ *
+ * `--surface-contrast` is excluded from the grounds every ink is measured on, and
+ * that is safe only because nothing but the band's three measured inks is painted
+ * on it: `--text-on-contrast`, `--text-on-contrast-dim`, `--border-on-contrast`.
+ * `contrast.mjs` assertion (2) matches `colophon` and holds this file to it.
+ * ======================================================================= */
+
+.colophon {
+  background: var(--surface-contrast);
+  color: var(--text-on-contrast-dim);
+  border-block-start: 0;
+  padding-block: var(--space-6) var(--space-5);
+}
+
+/* The landing page ends on its own dark band, and the chassis' opening interval
+   above the footer left a strip of page ground between two dark bands. The two
+   meet instead. */
+.site:has(.lp) .colophon { margin-block-start: 0; }
+
+.colophon__grid,
+.colophon__columns,
+.colophon__map {
+  display: grid;
+  gap: var(--space-5) var(--space-6);
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+  margin-block-end: var(--space-5);
+}
+
+.colophon__group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Only the long group flows into two columns; `data-group` rather than
+   `:nth-child`, because the order is `GROUP_ORDER`'s to change. */
+@media (min-width: 48rem) {
+  .colophon__group[data-group='product'] ul {
+    columns: 2;
+    column-gap: var(--space-6);
+  }
+  .colophon__group[data-group='product'] li { break-inside: avoid; }
+}
+
+.colophon h2,
+.colophon__heading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-end: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-on-contrast);
+}
+
+.colophon a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-hair);
+  min-block-size: 1.75rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--text-on-contrast-dim);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.colophon a:hover {
+  color: var(--text-on-contrast);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.colophon__glyph,
+.colophon__mark {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  flex: none;
+}
+
+.colophon__build {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-on-contrast-dim);
+}
+
+/* ==========================================================================
+ * FOCUS — one ring, and on the band the band's own measured edge.
+ * ======================================================================= */
+
+.nav a:focus-visible,
+.nav button:focus-visible {
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.colophon a:focus-visible {
+  outline: var(--focus-width) solid var(--border-on-contrast);
+  outline-offset: var(--focus-offset);
+}
+
+/* ==========================================================================
+ * THE SIDEBAR — `site.css` owns its geometry; this gives it the toolbar ground,
+ * so the rail and the bar above it read as one piece of chrome around the work.
+ * ======================================================================= */
+
+.sidebar {
+  background: var(--toolbar);
+  border-inline-end: var(--border-width) solid var(--border-default);
+}
+
+.sidebar__group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sidebar__group-label {
+  margin: 0;
+  padding-inline-start: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* Clipped, never removed, when the rail collapses: the label is the list's
+   accessible name and a list that loses its width must not lose its name. */
+:root[data-sidebar-collapsed] .sidebar__group-label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.sidebar__tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.sidebar__item[aria-current='page'] .sidebar__tile {
+  background-color: var(--accent);
+  color: var(--text-inverse);
+}
+
+.sidebar__glyph {
+  inline-size: 1rem;
+  block-size: 1rem;
+  flex: none;
+}
+
+/* ==========================================================================
+ * THE DOOR — `/sign-in` and `/sign-up`, split.
+ *
+ * Source order is form-then-brand, for the keyboard; paint order is the reverse,
+ * for the eye. The brand column is ink on the action ground — the one surface on
+ * the site where that happens — flat, with no gradient and no bloom.
+ * ======================================================================= */
+
+.auth--gate { padding: 0; }
+
+.gate {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-block-size: 70vh;
+}
+
+@media (min-width: 60rem) {
+  .gate { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .gate__brand { order: -1; }
+}
+
+.gate__brand {
+  display: grid;
+  align-content: center;
+  gap: var(--space-5);
+  padding: var(--space-8) var(--space-6);
+  background-color: var(--action);
+  color: var(--text-on-action);
+}
+
+/* Every ink on the column is set THROUGH the column: the body also carries
+   `auth__aside-body`, which paints a page ink, and a single class loses that tie
+   on order. Dark on blue was the result, and only a browser could see it. */
+.gate__brand .gate__brand-body,
+.gate__brand .gate__brand-body p,
+.gate__brand .gate__headline,
+.gate__brand .gate__points,
+.gate__brand .gate__claim,
+.gate__brand .gate__mark {
+  color: var(--text-on-action);
+}
+
+.gate__brand-body {
+  display: grid;
+  gap: var(--space-4);
+  max-inline-size: var(--measure-prose);
+  margin-inline: auto;
+}
+
+.gate__mark {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.gate__headline {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-display);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  text-wrap: balance;
+}
+
+.gate__points {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.gate__points li {
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--border-width-emphasis) solid currentColor;
+}
+
+.gate__claim {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+.gate__brand .gate__claim { border-inline-start-color: currentColor; }
+
+.gate__panel {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-5);
+  padding: var(--space-8) var(--space-5);
+  background: var(--surface-base);
+}
+
+.gate__card,
+.gate__guest {
+  inline-size: 100%;
+  max-inline-size: 26rem;
+  display: grid;
+}
+
+.gate__card { gap: var(--space-5); }
+
+.gate__guest {
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+}
+
+.gate__brand.auth__aside {
+  border: 0;
+  border-radius: 0;
+  background: var(--action);
+}
+
+/* ==========================================================================
+ * SIGN IN / SIGN UP — the form.
+ * ======================================================================= */
+
+/* `clip`, not `hidden`: nothing here overflows any more, but a page that once
+   scrolled 192px sideways in Arabic from a decoration keeps the guard. */
+.auth__split { overflow: clip; }
+
+.auth__title { letter-spacing: var(--tracking-tight); }
+
+.auth__lede {
+  color: var(--text-secondary);
+  max-inline-size: var(--measure-lede);
+}
+
+.auth__form {
+  padding: var(--space-6);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.auth__form-col {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* A text input's intrinsic width is about twenty characters and an `auto` track
+   will not go below it: 305px of input in a 224px column at 320px, off the LEFT
+   edge in Arabic. The column may shrink and the input fills it. */
+.auth .field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.auth .input {
+  inline-size: 100%;
+  min-inline-size: 0;
+  border: var(--border-width) solid var(--border-control);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+/* A ring, never a glow that replaces the outline: the outline is what a Windows
+   high-contrast theme keeps. */
+.auth .input:focus-visible {
+  border-color: var(--accent);
+  outline: var(--focus-width) solid var(--accent-focus);
+  outline-offset: 0;
+}
+
+.auth .field__help,
+.auth .field__optional {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.auth__form .button--primary {
+  inline-size: 100%;
+  min-block-size: var(--control-h-lg);
+}
+
+.auth__switch {
+  margin-block-start: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.auth__switch a { color: var(--accent); }
+
+.auth__aside {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+}
+
+.auth__aside-body { color: var(--text-secondary); }
+
+/* What an account does NOT do keeps the strongest treatment: it is the honest
+   half of a sign-up page and the half a reader skips. */
+.auth__aside-not {
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--border-width-emphasis) solid var(--border-strong);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.auth__aside-guest {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.auth__error { border-radius: var(--radius-sm); }
+
+/* ==========================================================================
+ * THE ANTECHAMBER'S ACCOUNT PANEL.
+ * ======================================================================= */
+
+.ac-account {
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.ac-account__heading { letter-spacing: var(--tracking-tight); }
+
+.ac-account__form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.ac-account__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.ac-account__terms {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* ==========================================================================
+ * PLATES — the repeated card on /work, /settings and /workspace. A plate that
+ * is a link answers the pointer with its edge, not by rising off the page.
+ * ======================================================================= */
+
+.plate {
+  border-radius: var(--radius-lg);
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+a.plate:hover,
+.plate:focus-within { border-color: var(--border-strong); }
+
+/* ==========================================================================
+ * PRINT — the chrome is not part of the document.
+ * ======================================================================= */
+
+@media print {
+  .nav { position: static; }
+  .sidebar { display: none; }
+}

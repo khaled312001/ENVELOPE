@@ -1,57 +1,150 @@
 /*
- * THE LANDING PAGE, 2026.
+ * THE LANDING PAGE — October 2026 (docs/05-design/direction-2026-10.md).
  *
- * The old file was 1,932 lines for five sections of argued prose. This one
- * styles a hero, a figure row, a bento, two compact tables and a band — the
- * structure the client asked for when he said "headings and buttons".
+ * Laid out the way the tool it sells is laid out: the words beside a viewport, the
+ * figures in a schedule strip, the workflow as numbered steps, sections indexed
+ * the way a drawing set numbers its sheets. Every class is `lp-*` and lives here;
+ * `modern.css`, whose `m*` primitives the last version was built from, is deleted.
  *
- * Everything shared with the rest of the site lives in `modern.css` under the
- * `m*` prefix; this file holds only what is the landing page's own. A rule here
- * that another page would want is a rule in the wrong file.
- *
- * NO COLOUR LITERALS. `pnpm contrast` assertion (7) fails any component
- * stylesheet that writes a hex, and the redesign did not buy an exemption from
- * it — every value below resolves through the semantic layer.
+ * NO COLOUR LITERALS (`pnpm contrast` assertion 7), NO `--uncertain*` OUTSIDE THE
+ * WHITELIST (`landing.test.tsx`), and NO LITERAL RAIL WIDTH — both rail widths are
+ * tokens and the six-pixel one is ASSUMED's alone.
  */
 
-.lp {
-  display: block;
+.lp { display: block; }
+
+/* ONE column for every section, the page column every other route uses. */
+.lp-wrap {
+  inline-size: 100%;
+  max-inline-size: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+}
+
+/* --- Shared actions ----------------------------------------------------- */
+
+.lp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.lp-cta {
+  min-block-size: var(--control-h-lg);
+  padding-inline: var(--space-5);
+  font-weight: var(--weight-semibold);
+}
+
+.lp-cta__icon {
+  inline-size: 1.125em;
+  block-size: 1.125em;
+  flex: none;
+}
+
+/* A sentence-long link to the full page: a link, so it looks like one. */
+.lp-more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-min);
+  margin-block-start: var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--accent);
+  text-underline-offset: 0.2em;
 }
 
 /* ==========================================================================
  * HERO
+ *
+ * The copy stands on the page ground and the run stands in a viewport whose
+ * plate is the workspace's canvas, dot lattice and all: the first screen shows
+ * the surface the tool draws on, and no text is set over the lattice — it is in
+ * the decorative rung, which was never measured under prose.
+ *
+ * SOURCE ORDER IS WORDS FIRST at every width, so a phone opens on the headline
+ * and not on a disabled viewer above a table of dimensions — which is what it
+ * once opened on.
  * ======================================================================= */
 
-.mhero__in > * + * {
-  margin-block-start: var(--space-5);
+.lp-hero {
+  background-color: var(--surface-base);
+  border-block-end: var(--border-width) solid var(--border-default);
 }
 
-/*
-  THE 3D FIGURE IN THE FOLD.
-
-  Below the words, not beside them. It was beside them once and what a phone
-  opened on was a disabled viewer above a table of dimensions, with nothing on
-  the first screen saying what the product is — the note that moved the headline
-  out of the copy column records it. The order here is head → claim → artefact
-  at every width, so the reader knows what they are looking at before they look.
-
-  The plate's own height comes from `.massing-viewer` in `app.css`; this rule
-  only places the figure and caps how wide the caption's prose may run.
-*/
-.lp-hero__figure {
-  margin: var(--space-7) 0 0;
+.lp-hero__in {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-7);
+  padding-block: clamp(var(--space-7), 7vw, var(--space-9));
 }
 
-.lp-hero__figure .figure__caption {
-  max-inline-size: var(--measure-prose);
+@media (min-width: 64rem) {
+  .lp-hero__in {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    gap: var(--space-8);
+  }
+}
+
+.lp-hero__copy {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+}
+
+.lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* A square in the accent, the mark's own inner rect: where the page begins. */
+.lp-eyebrow::before {
+  content: '';
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  background-color: var(--accent);
+}
+
+.lp-title {
+  margin: 0;
+  max-inline-size: 20ch;
+  font-size: clamp(2rem, 3.6vw, 3.25rem);
+  font-weight: var(--weight-semibold);
+  line-height: 1.08;
+  letter-spacing: -0.022em;
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+
+.lp-lede {
+  margin: 0;
+  max-inline-size: 46ch;
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.lp-lede em {
+  font-style: normal;
+  color: var(--text-primary);
 }
 
 .lp-validity {
   display: block;
   max-inline-size: 60ch;
-  margin-block-start: var(--space-6);
-  padding-inline-start: var(--space-4);
-  border-inline-start: var(--border-width-emphasis) solid var(--border-strong);
+  margin: 0;
+  padding-block-start: var(--space-4);
+  border-block-start: var(--border-width) solid var(--border-subtle);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   color: var(--text-secondary);
@@ -59,131 +152,247 @@
 
 .lp-validity strong {
   display: block;
+  margin-block-end: var(--space-1);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-label);
   color: var(--text-primary);
-  margin-block-end: var(--space-1);
+}
+
+/* --- The viewport ------------------------------------------------------- */
+
+.lp-viewport {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+/* The bar a 3D window carries in a drawing tool: what view, of what, which
+   figure. Mono, uppercase, a hairline under it. */
+.lp-viewport__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-block-size: 2.25rem;
+  padding-inline: var(--space-4);
+  border-block-end: var(--border-width) solid var(--border-default);
+  background: var(--toolbar);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.lp-viewport__bar-title {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.lp-viewport__plate {
+  padding: var(--space-4);
+  background-color: var(--canvas);
+  background-image: radial-gradient(var(--border-subtle) 1px, transparent 1px);
+  background-size: 1.5rem 1.5rem;
+}
+
+.lp-viewport__caption { padding-block-start: var(--space-3); }
+
+/* ==========================================================================
+ * SECTIONS — one rhythm, indexed like sheets.
+ * ======================================================================= */
+
+.lp-section {
+  padding-block: var(--rhythm-minor);
+}
+
+.lp-section--zoned {
+  background: var(--surface-sunken);
+  border-block: var(--border-width) solid var(--border-subtle);
+}
+
+.lp-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin-block-end: var(--rhythm-block);
+  padding-block-end: var(--space-3);
+  border-block-end: var(--border-width-emphasis) solid var(--border-strong);
+}
+
+.lp-head__index {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+.lp-head__title {
+  margin: 0;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-head);
+  letter-spacing: -0.018em;
+  color: var(--text-primary);
 }
 
 /* ==========================================================================
- * THE FIGURE ROW
+ * THE SCHEDULE STRIP — four figures in one bordered row, divided by hairlines,
+ * the way a title block divides its fields.
  * ======================================================================= */
 
-.lp-figures {
-  border-block: var(--border-width) solid var(--border-subtle);
-  background: var(--surface-sunken);
+.lp-section--figures { padding-block-start: var(--rhythm-block); }
+
+/* The hairlines between cells are the GAP, showing the strip's own ground
+   through: one line between every pair, none doubled against the frame. */
+.lp-spec {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--border-width);
+  margin: 0;
+  background: var(--border-subtle);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
-.mstat {
+@media (min-width: 48rem) {
+  .lp-spec { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.lp-spec__cell {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding-inline-start: var(--space-4);
-  border-inline-start: var(--border-width-emphasis) solid var(--border-default);
+  padding: var(--space-5);
+  background: var(--surface-raised);
 }
 
-.mstat__unit {
+/* The governing capacity is the one figure the rest are context for: it takes
+   the accent rule along its top edge, a POSITION as well as a hue. */
+.lp-spec__cell[data-key='governing'] {
+  box-shadow: inset 0 var(--border-width-emphasis) 0 var(--accent);
+}
+
+.lp-spec__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.lp-spec__figure {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(1.5rem, 2.6vw, 2.25rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.05;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.lp-spec__unit {
   font-size: 0.5em;
   color: var(--text-tertiary);
+}
+
+.lp-notes {
+  display: grid;
+  gap: var(--space-4);
+  margin-block-start: var(--space-5);
 }
 
 .lp-binds {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-block-start: var(--space-6);
+  margin: 0;
   padding: var(--space-3) var(--space-4);
-  background: var(--surface-raised);
   border: var(--border-width) solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--text-secondary);
   overflow-wrap: anywhere;
 }
 
-.lp-binds .lucide {
+.lp-binds__icon {
   inline-size: 1rem;
   block-size: 1rem;
   flex: none;
   color: var(--accent);
 }
 
-/* ==========================================================================
- * THE ASSUMPTION, IN THE FOLD
- *
- * This is what the amber used to be. The client removed the distinction on
- * 5 Oct 2026 — "احذف التمييز نهائيًا" — so this block spends NEITHER the
- * uncertainty tokens NOR the 6px rail. Both are still reserved, and this page
- * is simply not one of the places that may draw on them: widening the whitelist
- * to let the landing page back in would have kept the mark under a new name.
- *
- * What survives is the WORD and the `data-state="assumed"` hook, which is what
- * a screen reader and a greyscale printout were always reading anyway.
- * ======================================================================= */
-
+/* THE ASSUMPTION, IN THE FOLD. The amber was removed by the client on 5 Oct, so
+   this spends neither the uncertainty tokens nor the 6px rail: a tag, a rule and
+   a word, on the neutral ladder. */
 .lp-assumed {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-2) var(--space-3);
-  margin-block-start: var(--space-5);
+  margin: 0;
   padding: var(--space-4);
   background: var(--surface-inset);
   border: var(--border-width) solid var(--border-default);
   border-inline-start-width: var(--border-width-emphasis);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   color: var(--text-secondary);
 }
 
 .lp-assumed__tag {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: var(--tracking-wide);
-  color: var(--text-primary);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-hair) var(--space-2);
   border: var(--border-width) solid var(--border-strong);
   border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
 .lp-verdict {
-  margin-block-start: var(--space-4);
+  margin: 0;
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
-/* ==========================================================================
- * THE DERIVATION DISCLOSURE
- * ======================================================================= */
-
-.lp-derive {
-  margin-block-start: var(--space-5);
-}
+/* --- The derivation disclosure ----------------------------------------- */
 
 .lp-derive > summary {
-  /* `list-style: none` plus the WebKit pseudo: without both, Safari keeps the
-     disclosure triangle and the button has a bullet inside it. */
+  /* `list-style: none` plus the WebKit pseudo, or Safari keeps the triangle and
+     the button has a bullet in it. */
   list-style: none;
   cursor: pointer;
+  inline-size: fit-content;
 }
 .lp-derive > summary::-webkit-details-marker { display: none; }
 
 .lp-derive__body {
+  display: grid;
+  gap: var(--space-4);
   margin-block-start: var(--space-4);
   padding: var(--space-5);
   background: var(--surface-raised);
-  border: var(--border-width) solid var(--border-subtle);
+  border: var(--border-width) solid var(--border-default);
   border-radius: var(--radius-lg);
-  display: grid;
-  gap: var(--space-4);
 }
 
-.lp-derive__list { margin: 0; display: grid; gap: var(--space-3); }
+.lp-derive__list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
 
 .lp-derive__row {
   display: grid;
@@ -191,13 +400,17 @@
   padding-block-end: var(--space-3);
   border-block-end: var(--border-width) solid var(--border-subtle);
 }
-.lp-derive__row:last-child { border-block-end: 0; padding-block-end: 0; }
+.lp-derive__row:last-child {
+  padding-block-end: 0;
+  border-block-end: 0;
+}
 
 .lp-derive__row dt {
   font-family: var(--font-mono);
   font-size: var(--text-base);
   color: var(--text-primary);
 }
+
 .lp-derive__row dd {
   margin: 0;
   font-family: var(--font-mono);
@@ -207,13 +420,13 @@
 }
 
 .lp-derive__class {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: var(--tracking-wide);
-  color: var(--derived);
+  padding: 0 var(--space-1);
   border: var(--border-width) solid var(--derived);
   border-radius: var(--radius-xs);
-  padding: 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  color: var(--derived);
 }
 
 .lp-derive__levels,
@@ -224,54 +437,78 @@
 }
 
 .lp-derive__edges {
-  list-style: none;
-  padding: 0;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+  padding: 0;
+  list-style: none;
 }
 
 .lp-derive__edges li {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
   padding: var(--space-1) var(--space-3);
   border: var(--border-width) solid var(--border-subtle);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
 }
 
 /* ==========================================================================
- * SECTION HEADINGS — one rhythm for all four sections.
+ * THE WORKFLOW — six numbered steps, ruled like a schedule.
  * ======================================================================= */
 
-.msection > .mx > .mdisplay--sm {
-  margin-block-end: var(--rhythm-block);
-}
-
-.msection > .mx > .mbtn--quiet {
-  margin-block-start: var(--space-5);
-}
-
-/* ==========================================================================
- * THE FIVE CLAIMS
- *
- * A definition list in a flex row rather than a <table>: there are two columns
- * and no row header, so a table would announce a grid a screen reader then has
- * to navigate for no gain.
- * ======================================================================= */
-
-.lp-claims-s {
-  background: var(--surface-sunken);
-  border-block: var(--border-width) solid var(--border-subtle);
-}
-
-.lp-claims {
-  list-style: none;
+.lp-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+  gap: var(--space-6) var(--space-5);
   margin: 0;
   padding: 0;
-  border: var(--border-width) solid var(--border-subtle);
+  list-style: none;
+}
+
+.lp-step {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  padding-block-start: var(--space-4);
+  border-block-start: var(--border-width) solid var(--border-default);
+}
+
+.lp-step__no {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.lp-step__title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+.lp-step__body {
+  margin: 0;
+  max-inline-size: 38ch;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+ * THE FIVE CLAIMS — two columns and no row header, so a list rather than a
+ * table a screen reader has to navigate as a grid for no gain.
+ * ======================================================================= */
+
+.lp-claims {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-default);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: var(--surface-raised);
 }
 
 .lp-claim {
@@ -283,109 +520,119 @@
   padding: var(--space-4) var(--space-5);
 }
 
-.lp-claim + .lp-claim {
-  border-block-start: var(--border-width) solid var(--border-subtle);
-}
+.lp-claim + .lp-claim { border-block-start: var(--border-width) solid var(--border-subtle); }
 
 .lp-claim__title {
   font-size: var(--text-base);
-  font-weight: 600;
-  letter-spacing: var(--tracking-tight);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
 }
 
 .lp-claim__status {
+  padding: var(--space-hair) var(--space-2);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-xs);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-label);
   color: var(--text-secondary);
-  padding: var(--space-1) var(--space-3);
-  border: var(--border-width) solid var(--border-default);
-  border-radius: var(--radius-pill);
   white-space: nowrap;
 }
 
-/* The refusal is the last row and it is the only one that is marked. It is
-   marked by WEIGHT and a rule, never by a hue: the one colour this page used to
-   spend on meaning was the amber, and it is gone. */
-.lp-claim:last-child {
-  background: var(--surface-inset);
-}
+/* The refusal is last and is the only row marked — by weight and a rule, never by
+   a hue. */
+.lp-claim:last-child { background: var(--surface-inset); }
 .lp-claim:last-child .lp-claim__status {
   border-color: var(--border-strong);
   color: var(--text-primary);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 /* ==========================================================================
- * WHAT IT DOES NOT DO
+ * WHAT IT DOES NOT DO — a ruled list, each line a refusal.
  * ======================================================================= */
 
-.lp-limit {
-  gap: var(--space-4);
-  padding: var(--space-5);
+.lp-limits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: var(--border-width) solid var(--border-default);
 }
 
-.lp-limit .mcard__title {
-  font-size: var(--text-base);
-  line-height: var(--leading-tight);
+.lp-limit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 3.5rem;
+  padding-block: var(--space-3);
+  border-block-end: var(--border-width) solid var(--border-subtle);
 }
 
 .lp-limit__icon {
-  background: var(--surface-inset);
-  color: var(--text-secondary);
-  inline-size: 2.25rem;
-  block-size: 2.25rem;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.lp-limit__title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
 }
 
 /* ==========================================================================
- * THE READINESS BAND
+ * THE READINESS BAND — inverted, and it leads with what is not ready.
  * ======================================================================= */
 
 .lp-readiness {
+  padding-block: var(--rhythm-minor);
   background: var(--surface-contrast);
   color: var(--text-on-contrast);
-  padding-block: var(--rhythm-major);
 }
 
 .lp-readiness__in {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: var(--space-5);
-  align-items: flex-start;
+  justify-items: start;
 }
 
-.lp-readiness .mdisplay {
+.lp-readiness__title {
+  margin: 0;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-head);
+  letter-spacing: -0.018em;
   color: var(--text-on-contrast);
 }
 
 .lp-readiness__body {
+  margin: 0;
   max-inline-size: 62ch;
   font-size: var(--text-base);
   line-height: var(--leading-normal);
   color: var(--text-on-contrast-dim);
-  margin: 0;
 }
 
-/* The ghost button on the inverted band cannot keep the page's raised surface:
-   it would be a white slab on near-black. */
-.lp-readiness .mbtn--ghost {
+/* The secondary button cannot keep the page's raised ground on the band: it
+   would be a white slab on near-black. It takes the band's three measured inks. */
+.lp-readiness .lp-readiness__ghost {
   background: transparent;
   color: var(--text-on-contrast);
   border-color: var(--border-on-contrast);
-  box-shadow: none;
 }
-.lp-readiness .mbtn--ghost:hover {
+.lp-readiness .lp-readiness__ghost:hover {
+  background: transparent;
+  color: var(--text-on-contrast);
   border-color: var(--text-on-contrast-dim);
-  background: color-mix(in srgb, var(--text-on-contrast) 8%, transparent);
 }
 
 /* ==========================================================================
- * PRINT — the page prints as a document, and nothing below the fold is blank.
+ * PRINT — the page prints as a document.
  * ======================================================================= */
 
 @media print {
-  .mhero::before { display: none; }
-  .mcard, .lp-claims { box-shadow: none; }
-  .m-rise, .m-reveal { animation: none; opacity: 1; transform: none; }
+  .lp-hero { background-image: none; }
 }

@@ -137,6 +137,10 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   border: 0;
 }
 
+/* A screen whose chunk is still in flight (`Root.tsx`, `Loading`). Holds the
+   footer down so it does not jump up and back while the page arrives. */
+.page-loading { min-block-size: 60vh; }
+
 /* Paper's stand-in for something only a screen can draw — a 3D model's plan. Out of
    the accessibility tree on screen (`display: none`), so it is never read twice. */
 .print-only { display: none; }

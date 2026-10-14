@@ -22,7 +22,7 @@
 
 import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { EngineApp } from '../src/App.js';
 import { AppSidebar } from '../src/components/AppSidebar.js';
@@ -34,7 +34,7 @@ import {
   LIMITS,
   OPTIMISER_REFUSAL,
 } from '../src/content/shared.js';
-import { NOT_FOUND_PAGE, PAGES } from '../src/pages.js';
+import { NOT_FOUND_PAGE, PAGES, preloadPages } from '../src/pages.js';
 import { PAGE_META } from '../src/page-meta.js';
 import { NOT_FOUND, ROUTES, type Location } from '../src/router.js';
 import {
@@ -48,6 +48,11 @@ import {
    here as well, and the two copies had to be edited in step every time
    `PageProps` gained a field. */
 const PROPS = pageProps();
+
+/* Every screen but two is loaded on first use (`lazy-page.tsx`). Loaded here
+   first, so each route below renders its page rather than an empty fallback —
+   which would pass every prohibition by containing nothing. */
+beforeAll(() => preloadPages());
 
 /** One route, rendered the way `Root` renders it: the page inside the chrome. */
 function page(route: Location): string {

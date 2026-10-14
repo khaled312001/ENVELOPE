@@ -54,7 +54,7 @@ import { AuthFailure } from '../api/auth.js';
 import { useDict, useLocale, useT, LanguageToggle } from '../i18n/locale.js';
 import { AR } from '../i18n/settings.ar.js';
 import { EN } from '../i18n/settings.en.js';
-import { DENSITIES, type Density } from '../App.js';
+import { DENSITIES, type Density } from '../preferences.js';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
 import { useSession } from '../session.js';

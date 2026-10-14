@@ -7,9 +7,11 @@
  * carries the name of whoever entered it and there is no anonymous mode.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 
-import { EngineApp, Header, useDensity, useSidebar, useTheme, type Density } from './App.js';
+import { Header } from './components/ActorHeader.js';
+import { lazyPage } from './lazy-page.js';
+import { useDensity, useSidebar, useTheme, type Density } from './preferences.js';
 import { LanguageToggle, useLocale, useT } from './i18n/locale.js';
 import { useSession } from './session.js';
 import { useWorkspace } from './workspace.js';
@@ -53,6 +55,27 @@ export interface PageProps {
 }
 
 export type PageComponent = (p: PageProps) => JSX.Element;
+
+/*
+  THE ENGINE IS ITS OWN CHUNK. It is the largest thing in the application — ten
+  steps, the plot map's controls, the drawing set — and a visitor reading the
+  front page needs none of it. It is fetched the first time `/app` is opened and
+  then latched, exactly as before.
+*/
+const EngineApp = lazyPage<Parameters<typeof import('./App.js').EngineApp>[0]>(() =>
+  import('./App.js').then((m) => m.EngineApp),
+);
+
+/**
+ * What stands in a screen's place for the moment its chunk is in flight.
+ *
+ * Empty on purpose, and with a height so the footer does not jump up and back.
+ * A spinner here would be on screen for a fraction of a second on most
+ * connections — long enough to be noticed, too short to be read.
+ */
+function Loading(): JSX.Element {
+  return <div className="shell section page-loading" aria-busy="true" />;
+}
 
 export default function Root(): JSX.Element {
   const { route, search, navigate } = useRouter();
@@ -344,10 +367,16 @@ export default function Root(): JSX.Element {
           {...(engineIsEnglish ? { dir: 'ltr' as const, lang: 'en' } : {})}
         >
           {engineIsEnglish ? <UntranslatedNotice /> : null}
-          <EngineApp navigate={navigate} actor={actor} setActor={setActor} search={search} />
+          <Suspense fallback={showEngine ? <Loading /> : null}>
+            <EngineApp navigate={navigate} actor={actor} setActor={setActor} search={search} />
+          </Suspense>
         </div>
       ) : null}
-      {showEngine ? null : <spec.component {...pageProps} />}
+      {showEngine ? null : (
+        <Suspense fallback={<Loading />}>
+          <spec.component {...pageProps} />
+        </Suspense>
+      )}
     </SiteChrome>
   );
 

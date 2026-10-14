@@ -66,11 +66,11 @@ import {
   ErrorBanner,
   ExportDone,
   ExportPanel,
-  Header,
   ParkingPanel,
   ParkingStep,
   StepHintBanner,
 } from '../src/App.js';
+import { Header } from '../src/components/ActorHeader.js';
 import { PlotCanvas, type PlotEdgeView } from '../src/components/PlotCanvas.js';
 import { StaticLocale, type Locale } from '../src/i18n/locale.js';
 import {

@@ -162,7 +162,33 @@ writeFileSync(join(APP, 'tmp', 'restart.txt'), release + '\n');
 
 cpSync(join(ROOT, 'apps', 'web', 'dist'), WEB, { recursive: true });
 
-const routes = JSON.parse(readFileSync(join(ROOT, 'apps', 'web', 'src', 'routes.json'), 'utf8'));
+/*
+  THE ENTRY CHUNK HAS A BUDGET, AND A BUILD OVER IT IS NOT PACKED.
+
+  It was 1,049 KB: every screen and both languages of all of them, downloaded to
+  read the front page. `lazy-page.tsx` split it to 345 KB. A split erodes one
+  innocent import at a time — the next screen that reaches into `App.tsx` for a
+  hook pulls the whole engine back in — so the number is checked here, where a
+  regression stops a release instead of being found in a waterfall chart.
+*/
+const ENTRY_BUDGET = 400 * 1024;
+{
+  const entry = /<script[^>]*type="module"[^>]*src="\/?(assets\/index-[^"]+\.js)"/.exec(
+    readFileSync(join(WEB, 'index.html'), 'utf8'),
+  );
+  if (!entry) throw new Error('index.html names no entry chunk; the budget cannot be measured');
+  const bytes = statSync(join(WEB, entry[1])).size;
+  console.log(`entry chunk ${entry[1]}: ${(bytes / 1024).toFixed(0)} KB (budget ${ENTRY_BUDGET / 1024} KB)`);
+  if (bytes > ENTRY_BUDGET) {
+    console.error(
+      `The entry chunk is ${(bytes / 1024).toFixed(0)} KB, over its ${ENTRY_BUDGET / 1024} KB budget. ` +
+        'Something the front page loads now imports a screen; find it before shipping.',
+    );
+    process.exit(1);
+  }
+}
+
+const routes =JSON.parse(readFileSync(join(ROOT, 'apps', 'web', 'src', 'routes.json'), 'utf8'));
 
 /*
   MOVED PATHS, AS REAL 301s.

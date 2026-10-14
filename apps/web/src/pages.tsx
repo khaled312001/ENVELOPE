@@ -21,27 +21,72 @@
  * file's docblock for what the cycle actually did.
  */
 
-import type { DashboardView } from './api/client.js';
+import type { Actor, DashboardView } from './api/client.js';
 /* `i18n/locale.js` reaches `chrome.en.js`, which reaches `content/shared.js`,
    `routes.json` and a TYPE-ONLY `router.js`. Nothing on that path imports a screen,
    so this adds no edge back into the cycle `page-meta.ts` exists to have broken. */
 import { useT } from './i18n/locale.js';
+import { lazyPage, type LazyPage } from './lazy-page.js';
 import { NOT_FOUND_META, PAGE_META, type PageMeta } from './page-meta.js';
 import type { PageProps } from './Root.js';
-import type { Route } from './router.js';
-import Antechamber from './screens/Antechamber.js';
-import { Readiness, ReadinessPanels } from './screens/Readiness.js';
-import Exports from './screens/Exports.js';
+import type { Href, Route } from './router.js';
 import { Landing } from './screens/Landing.js';
 import NotFound from './screens/NotFound.js';
-import Parking from './screens/Parking.js';
 import SNAPSHOT from './screens/readiness.json' with { type: 'json' };
-import Refusals from './screens/Refusals.js';
-import { SignIn, SignUp } from './screens/Auth.js';
-import Settings from './screens/Settings.js';
-import Work from './screens/Work.js';
-import Workspace from './screens/Workspace.js';
-import AcceptInvite from './screens/AcceptInvite.js';
+
+/*
+  EVERY SCREEN BUT THE FRONT PAGE AND THE 404 IS LOADED WHEN IT IS OPENED.
+
+  The front page is where most visitors arrive and the 404 is where a mistyped
+  address arrives; both must paint without a second request. Everything else —
+  the engine's own antechamber, the account pages, the long public pages — is a
+  chunk of its own. See `lazy-page.tsx` for why this is not `React.lazy`.
+*/
+const Antechamber = lazyPage<PageProps>(() => import('./screens/Antechamber.js').then((m) => m.default));
+const Exports = lazyPage<PageProps>(() => import('./screens/Exports.js').then((m) => m.default));
+const Parking = lazyPage<PageProps>(() => import('./screens/Parking.js').then((m) => m.default));
+const Refusals = lazyPage<PageProps>(() => import('./screens/Refusals.js').then((m) => m.default));
+const SignIn = lazyPage<PageProps>(() => import('./screens/Auth.js').then((m) => m.SignIn));
+const SignUp = lazyPage<PageProps>(() => import('./screens/Auth.js').then((m) => m.SignUp));
+const Settings = lazyPage<PageProps>(() => import('./screens/Settings.js').then((m) => m.default));
+const Work = lazyPage<PageProps>(() => import('./screens/Work.js').then((m) => m.default));
+const Workspace = lazyPage<PageProps>(() => import('./screens/Workspace.js').then((m) => m.default));
+const AcceptInvite = lazyPage<PageProps>(() => import('./screens/AcceptInvite.js').then((m) => m.default));
+const Readiness = lazyPage<{ readonly actor: Actor; readonly navigate: (to: Href) => void }>(() =>
+  import('./screens/Readiness.js').then((m) => m.Readiness),
+);
+/* The panels are lazy; the snapshot they draw is not, because the front page
+   quotes figures out of the same file and it is in the entry chunk either way. */
+const ReadinessSnapshot = lazyPage<{ readonly navigate: (to: Href) => void }>(() =>
+  import('./screens/Readiness.js').then(
+    (m) => (p: { readonly navigate: (to: Href) => void }) => (
+      <m.ReadinessPanels data={SNAPSHOT as DashboardView} navigate={p.navigate} />
+    ),
+  ),
+);
+
+const LAZY: readonly LazyPage<never>[] = [
+  Antechamber,
+  Exports,
+  Parking,
+  Refusals,
+  SignIn,
+  SignUp,
+  Settings,
+  Work,
+  Workspace,
+  AcceptInvite,
+  Readiness,
+  ReadinessSnapshot,
+] as readonly LazyPage<never>[];
+
+/**
+ * Load every lazy screen now. For tests, which render through `PAGES`
+ * synchronously; the browser never calls it.
+ */
+export function preloadPages(): Promise<void> {
+  return Promise.all(LAZY.map((page) => page.preload())).then(() => undefined);
+}
 
 export interface PageSpec extends PageMeta {
   readonly component: (p: PageProps) => JSX.Element;
@@ -102,7 +147,7 @@ function ReadinessRoute(p: PageProps): JSX.Element {
       {p.actor ? (
         <Readiness actor={p.actor} navigate={p.navigate} />
       ) : (
-        <ReadinessPanels data={SNAPSHOT as DashboardView} navigate={p.navigate} />
+        <ReadinessSnapshot navigate={p.navigate} />
       )}
     </div>
   );

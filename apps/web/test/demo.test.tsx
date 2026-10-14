@@ -73,6 +73,9 @@ describe('the worked-example demo', () => {
     expect(run.parkingInFar).toBe(INPUT.run.parkingInFar);
     expect(run.parkingLevelsAvailable).toBe(INPUT.run.parkingLevelsAvailable);
     expect(run.saleableEfficiency).toBe(INPUT.run.saleableEfficiency.value);
+    // The schedule too: every count on the rules step opens at zero, so a demo
+    // without it describes a different building and quotes a different figure.
+    expect(run.levels).toEqual(INPUT.run.levels);
   });
 
   it('carries the recorded unit mix, which the generic default would have replaced', () => {

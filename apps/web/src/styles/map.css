@@ -249,9 +249,15 @@
   min-block-size: var(--tap-min);
 }
 
+/*
+ * `min-inline-size: 0` because a fieldset's UA default is `min-content`: it
+ * refused to shrink below its two inputs and the button side by side, and at
+ * 320px pushed the page 15px sideways (WCAG 1.4.10, caught by `pnpm smoke`).
+ */
 .pm-coords {
   display: grid;
   gap: var(--space-2);
+  min-inline-size: 0;
 }
 /*
  * A coordinate box is five or six digits wide and no wider. Given the row's
@@ -260,6 +266,10 @@
  */
 .pm-coords__row .field {
   flex: 1 1 9rem;
+  min-inline-size: 0;
+}
+.pm-coords__row .input {
+  inline-size: 100%;
   min-inline-size: 0;
 }
 

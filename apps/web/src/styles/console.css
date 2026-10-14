@@ -302,9 +302,18 @@
 
 /* --- Fields ------------------------------------------------------------ */
 
-.auth .field { display: grid; gap: var(--space-2); }
+/*
+  A text input's intrinsic width is about twenty characters, and an `auto` grid
+  track will not go below it. At 320px that was 305px of input in a 224px column,
+  and on the Arabic page the excess ran off the LEFT edge — 75px of sideways
+  scroll that no element box reported, because the input sat inside its own
+  rectangle. The column is told it may shrink, and the input fills the column.
+*/
+.auth .field { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
 
 .auth .input {
+  inline-size: 100%;
+  min-inline-size: 0;
   border-radius: var(--radius-sm);
   border: var(--border-width) solid var(--border-control);
   background: var(--surface-base);

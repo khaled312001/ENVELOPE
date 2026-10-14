@@ -472,17 +472,53 @@ await step('reading a real affection plan reports its printed values', async () 
   if (!/NOT ASSESSED/i.test(t)) throw new Error('the intake dropped the disclaimer');
 });
 
+/**
+ * The Warsan plot as four boundaries: 50.85 m of frontage and the 26.85 m depth
+ * its printed area implies, walked clockwise from the south-west corner. Its
+ * area is 1,365.32 m², inside 2% of the 1,365.23 the sheet prints — which is
+ * what the area step below checks.
+ */
+const RECTANGLE = [
+  { length: '50.85', bearing: '90' },
+  { length: '26.85', bearing: '0' },
+  { length: '50.85', bearing: '270' },
+  { length: '26.85', bearing: '180' },
+];
+
+/** Type a traverse into the boundary table, adding rows the table lacks. */
+async function fillTraverse(legs) {
+  for (let i = 0; i < legs.length; i += 1) {
+    if ((await page.locator(`#edge-${i}-length`).count()) === 0) {
+      await page.getByRole('button', { name: /add a boundary/i }).click();
+    }
+    await page.locator(`#edge-${i}-length`).fill(legs[i].length);
+    await page.locator(`#edge-${i}-bearing`).fill(legs[i].bearing);
+  }
+}
+
 await step('the sheet carries into the plot form without inventing a shape', async () => {
   await page.getByRole('button', { name: /use these values/i }).click();
   await page.getByRole('heading', { name: /^the plot$/i }).waitFor({ timeout: wait(5000) });
   const t = await page.textContent('body');
   if (!/Carried over from the sheet/i.test(t)) throw new Error('no prefill notice');
-  // The area came across; the dimensions did not. A rectangle inferred from an
-  // area would pass the 2% check against the very number it was computed from.
-  const width = await page.getByLabel('Width (m)').inputValue();
+  /*
+    The area came across; no shape was inferred from it. This used to read a
+    `Width (m)` box, which went with the rectangle mode on 6 Oct (3a31f0f) and
+    left every step from here to the end of the walk failing on a label that no
+    longer exists. What it guards is unchanged: a shape inferred from an area
+    would pass the 2% check against the very number it was computed from. So no
+    boundary may arrive with a length before the reader has drawn or typed one.
+  */
   const stated = await page.getByLabel(/Area on the affection plan/i).inputValue();
   if (stated !== '1365.23') throw new Error(`stated area did not carry: ${stated}`);
-  if (width === '1365.23') throw new Error('a dimension was inferred from the area');
+  await page.getByLabel(/Boundary by boundary/i).check();
+  await page.locator('#edge-0-length').waitFor({ timeout: wait(5000) });
+  const lengths = await page.locator('[id^="edge-"][id$="-length"]').evaluateAll((els) =>
+    els.map((e) => /** @type {HTMLInputElement} */ (e).value),
+  );
+  if (lengths.some((v) => v !== '')) {
+    throw new Error(`a boundary arrived with a length nobody entered: ${lengths.join(', ')}`);
+  }
 });
 
 await step('the form refuses to continue with unclassified edges', async () => {
@@ -503,15 +539,9 @@ await step('a plot can be entered boundary by boundary, and the misclose is stat
     on the page a reader is looking at.
   */
   // The frontage read off the sheet, and the depth its area implies at that
-  // frontage. Entered here because the traverse is seeded from them.
-  await page.getByLabel('Width (m)').fill('50.85');
-  await page.getByLabel('Depth (m)').fill('26.85');
-  await page.getByLabel(/Boundary by boundary/i).check();
-  await page.locator('#edge-0-length').waitFor({ timeout: wait(5000) });
-
-  // The rectangle that was there arrives as four boundaries, already filled.
-  const first = await page.locator('#edge-0-length').inputValue();
-  if (first !== '50.85') throw new Error(`the rectangle did not carry over: ${first}`);
+  // frontage, walked as four boundaries — which is how an architect types a
+  // rectangular plot now that the rectangle mode is gone.
+  await fillTraverse(RECTANGLE);
 
   await page.getByRole('button', { name: /add a boundary/i }).click();
   await page.locator('#edge-4-length').fill('9');
@@ -565,18 +595,14 @@ await step('a plot can be entered boundary by boundary, and the misclose is stat
     throw new Error('Continue was enabled with a boundary that has no length');
   }
 
-  // Back to the rectangle, which is what the rest of this walk runs on.
+  // Back to the four boundaries, which is what the rest of this walk runs on.
   await page.getByRole('button', { name: /remove boundary 5/i }).click();
-  await page.getByLabel(/A rectangle/i).check();
-  await page.getByLabel('Width (m)').waitFor({ timeout: wait(5000) });
+  await fillTraverse(RECTANGLE);
 });
 
 await step('classifying every edge and submitting the plot', async () => {
-  // The frontage read off the sheet, and the depth its area implies at that
-  // frontage — which is what an architect would type, and which the 2% check
-  // then confirms against the printed area rather than against itself.
-  await page.getByLabel('Width (m)').fill('50.85');
-  await page.getByLabel('Depth (m)').fill('26.85');
+  // The four boundaries typed above — what an architect would type, and which
+  // the 2% check then confirms against the printed area rather than itself.
   await page.getByLabel('Edge 1 faces').selectOption('ROAD');
   await page.getByLabel('Road type').first().selectOption('LOCAL');
   await page.getByLabel('Edge 2 faces').selectOption('ADJACENT_PLOT');
@@ -658,9 +684,15 @@ await step('the plot’s own sheet binds the run, and names what it does not bin
   if (!t.includes('3.5')) throw new Error('the sheet’s own FAR is not shown as applied');
   if (!t.includes('far.max')) throw new Error('the bound parameter is not named');
 
-  // Stated on this sheet and applied by nothing: a level allowance, a stated
-  // GFA, and the tower’s own setback schedule.
-  for (const field of ['height', 'gfaSqm', 'setbacks.tower']) {
+  // The sheet's G+2P+8 binds as a level COUNT. It used to sit in the list below,
+  // and that is how a plan printing G+4 reported 13 levels.
+  if (!t.includes('levels.max_above_ground')) {
+    throw new Error('the stated level count is not shown as applied');
+  }
+
+  // Stated on this sheet and applied by nothing: a stated GFA and the tower’s
+  // own setback schedule.
+  for (const field of ['gfaSqm', 'setbacks.tower']) {
     if (!t.includes(field)) throw new Error(`${field} is stated on the sheet and not reported`);
   }
 
@@ -699,6 +731,9 @@ await step('the sheet\'s podium count waits on the rules step to be confirmed', 
 await step('the level schedule reads back the way an affection plan prints one', async () => {
   const panel = page.locator('section[aria-labelledby="levels-heading"]');
   await panel.waitFor({ timeout: wait(8000) });
+  // Basements default to none (3a31f0f): a sheet never states them, so the
+  // reader types one — and the code below must follow what was typed.
+  await page.locator('#basements').fill('1');
   const t = (await panel.textContent()).replace(/\s+/g, ' ');
   // One basement, the ground floor given to parking, and the sheet's two podium
   // levels: G with a basement in front of it, and the tower left off because no
@@ -736,33 +771,21 @@ await step('the parking question has no pre-selected answer', async () => {
   All four parts of the panel are asserted, because the panel is the entire
   difference between this and the hidden default the requirement forbids.
 */
-await step('the answer on file is offered with its source, and taking it is one click', async () => {
-  /*
-    WAIT FOR IT, because the panel arrives from `/api/statements` in an effect.
+/*
+  THE SHORTCUT IS GONE, ON THE CLIENT'S INSTRUCTION OF 6 OCT 2026.
 
-    Reading the body straight away passed on localhost every time and failed
-    against the deployed site: over HTTPS the fetch had not come back yet, so
-    the assertion said the statement was not marked as something other than a
-    regulation when what had actually happened is that it was not there yet. The
-    developer-standard step beside this one already carries the same wait, and
-    for the same reason.
-  */
-  await page.getByRole('button', { name: /use this answer/i }).waitFor({ timeout: wait(8000) });
-  const t = await page.textContent('body');
-  if (!/This is not a regulation/.test(t)) {
-    throw new Error('the statement is not marked as something other than a regulation');
+  `RulesStep.tsx` records why: the statement panel was removed and nothing on
+  this screen reaches `/api/statements` any more. So the step asserts the
+  absence — a button that came back would put a named person's answer one click
+  from a run again — and then answers the question the only way left, by hand.
+*/
+await step('the parking question is answered by hand, with no shortcut on the screen', async () => {
+  if (await page.getByRole('button', { name: /use this answer/i }).count()) {
+    throw new Error('the practitioner’s statement is offered again; it was removed on 6 Oct');
   }
-  if (!/Eng\. Mohamed/.test(t)) throw new Error('the statement does not say whose it is');
-  // His own words, which are the evidence for the sentence above them.
-  if (!/الباركنج/.test(t)) throw new Error('the statement is not quoted verbatim');
-  // Where the claim stops — the field this kind of record exists to carry.
-  if (!/15–35%/.test(t)) throw new Error('the statement does not say where it stops');
-
-  await page.getByRole('button', { name: /use this answer/i }).click();
+  await page.locator('input[name="parking-far"][value="EXCLUDED_FROM_FAR"]').check();
   const checked = await page.locator('input[name="parking-far"]:checked').count();
-  if (checked !== 1) throw new Error('taking the answer did not answer the question');
-  const value = await page.locator('input[name="parking-far"]:checked').getAttribute('value');
-  if (value !== 'EXCLUDED_FROM_FAR') throw new Error(`took "${value}", not the recorded answer`);
+  if (checked !== 1) throw new Error('choosing an answer did not answer the question');
 });
 
 /**
@@ -926,7 +949,7 @@ await step('the massing view stands the building up, and says what it assumed', 
   }
 });
 
-await step('the 3D view holds the engine’s bays, and paints its assumptions amber', async () => {
+await step('the 3D view holds the engine’s bays, and paints nothing amber', async () => {
   const section = page.locator('section[aria-labelledby="massing-heading"]');
   const viewer = page.locator('.massing-viewer');
   // Cars on the GPU, counted off the scene, against the engine's own figure in the
@@ -984,11 +1007,24 @@ await step('the 3D view holds the engine’s bays, and paints its assumptions am
   }, png.toString('base64'));
   const pct = `${(share * 100).toFixed(2)}%`;
   console.log(`         amber inside the canvas: ${pct} of its pixels; ${outlines} assumed outline(s), ${ramps} assumed ramp(s)`);
-  // Both ways. Amber where the model is assumed, in proportion to what is; and none
-  // where nothing is — amber that turns up on a cited slab is the same defect.
-  if (outlines > 0 && share < 0.01) throw new Error(`${outlines} assumed outline(s), and only ${pct} of the view is amber`);
-  if (outlines === 0 && ramps > 0 && share < 0.0005) throw new Error(`an assumed ramp, and only ${pct} of the view is amber`);
-  if (outlines === 0 && ramps === 0 && share >= 0.0005) throw new Error(`nothing painted is assumed, and ${pct} of the view is amber`);
+  /*
+    RE-POINTED, 2026-10-05, THE SAME WAY `contrast.mjs` WAS.
+
+    This used to fail both ways: too little amber where an outline or ramp was
+    assumed, any at all where nothing was. The client removed the amber ASSUMED
+    treatment on 5 Oct and `--uncertain` (and the .glb's `assumed:` ink) now sit
+    on the neutral ladder, so the first half would demand a colour that no longer
+    exists. The assertion is kept and turned around rather than deleted: NO amber
+    in the canvas, assumed or not. An amber that comes back through WebGL — where
+    no stylesheet gate can see it — fails here. The assumed elements are still
+    named in words, in the labels hidden above and in the table below.
+  */
+  if (share >= 0.0005) {
+    throw new Error(
+      `${pct} of the 3D view is amber (${outlines} assumed outline(s), ${ramps} assumed ramp(s)); ` +
+        'the amber treatment was removed on the client’s direction and must not return unmeasured',
+    );
+  }
 });
 
 await step('the parking levels are drawn bay by bay, one sheet a level', async () => {
@@ -1236,7 +1272,19 @@ await step('no screen scrolls sideways on a phone', async () => {
   ]) {
     await page.setViewportSize({ width, height });
 
+    let previous = 'the start of this step';
     for (const nav of [/^Sheet$/, /^Plot$/, /^Parameters$/, /^Rules$/, /^Assumptions$/, /^Capacity$/, /^Parking$/, /^Checks$/, /^Evidence$/, /^Export$/]) {
+      // A locked step is named "Parameters (not yet available)", which /^…$/ never
+      // matches — so a lost run used to surface as a 30 s click timeout that said
+      // nothing. Say what happened instead.
+      if ((await page.getByRole('button', { name: nav }).count()) === 0) {
+        const steps = await page.locator('.stepper button').allTextContents();
+        throw new Error(
+          `${String(nav)} is not reachable at ${width}px after ${previous} — the run was lost. ` +
+            `${page.url()} · ${steps.join(' | ')}`,
+        );
+      }
+      previous = String(nav);
       await page.getByRole('button', { name: nav }).first().click();
       await page.waitForTimeout(200);
       await noSidewaysScroll(`${String(nav)} at ${width}px`);
@@ -1274,13 +1322,16 @@ await step('no screen scrolls sideways on a phone', async () => {
     await nothingIsInvisible(`readiness at ${width}px`);
 
     /*
-      Back into the engine by its own address. The nav's button is the sign-in
-      door now, and `/readiness` offers a way into the engine only when it has no
-      runs to list — so a click here would pass on an empty deployment and fail
-      on a used one, which is the worst kind of step to leave in a gate.
+      Back into the engine by the browser's Back. Not a click: the nav's button
+      is the sign-in door now, and `/readiness` offers a way into the engine only
+      when it has no runs to list — a click would pass on an empty deployment and
+      fail on a used one. And NOT `goto('/app')`, which it was: that is a reload,
+      it dropped the in-memory run the paragraph above warns about, and the second
+      width then met a locked stepper. Back is history, and history keeps the run
+      — the step "back returns to the engine" proves exactly that.
     */
-    await page.goto(new URL('/app', BASE).href, { waitUntil: 'domcontentloaded' });
-    await page.waitForURL('**/app', { timeout: wait(8000) });
+    await page.goBack();
+    await page.waitForURL((u) => new URL(u).pathname === '/app', { timeout: wait(8000) });
     await page.waitForTimeout(300);
   }
 });
@@ -1655,17 +1706,25 @@ await step('the front page’s worked example opens as a run the visitor can mak
     const { input, verified } = JSON.parse(
       readFileSync(new URL('../apps/web/src/screens/worked-example.json', import.meta.url), 'utf8'),
     );
-    const xs = input.plot.vertices.map((v) => Number(v.x));
-    const ys = input.plot.vertices.map((v) => Number(v.y));
     const expected = {
       'Plot number': input.plot.plotNumber,
       Community: input.plot.community,
-      Width: String(Math.max(...xs) - Math.min(...xs)),
-      Depth: String(Math.max(...ys) - Math.min(...ys)),
     };
     for (const [label, want] of Object.entries(expected)) {
       const got = await visitor.getByLabel(new RegExp(`^${label}`, 'i')).first().inputValue();
       if (got !== want) throw new Error(`${label} arrived as "${got}", not "${want}"`);
+    }
+    // The shape arrives as boundaries — there is no Width/Depth form any more —
+    // so each leg's length is held to the side between the run's own vertices.
+    const vs = input.plot.vertices.map((v) => [Number(v.x), Number(v.y)]);
+    for (let i = 0; i < vs.length; i += 1) {
+      const [ax, ay] = vs[i];
+      const [bx, by] = vs[(i + 1) % vs.length];
+      const want = Math.hypot(bx - ax, by - ay);
+      const got = Number(await visitor.locator(`#edge-${i}-length`).inputValue());
+      if (Math.abs(got - want) > 0.005) {
+        throw new Error(`boundary ${i + 1} arrived as ${got} m, not the run's ${want} m`);
+      }
     }
 
     // Four edges classified, which is what makes the access recommendation say

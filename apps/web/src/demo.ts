@@ -61,6 +61,19 @@ export interface DemoPlot {
 export interface DemoRun {
   readonly parkingInFar: string;
   readonly parkingLevelsAvailable: number;
+  /**
+   * The level schedule the run posted. Carried since every count on the rules
+   * step started opening at zero (6 Oct): without it the demo described a
+   * building with no basement and no podium, and the visitor got 3,290.3 m²
+   * against the page's 6,774.194 — the exact disagreement this module exists
+   * to prevent, caught by `pnpm smoke`.
+   */
+  readonly levels: {
+    readonly basements: number;
+    readonly groundIsParking: boolean;
+    readonly podiumAboveGround: number;
+    readonly podiumParkingLevels: number;
+  };
   readonly saleableEfficiency: string;
   readonly unitMix: {
     readonly entries: readonly {
@@ -140,6 +153,12 @@ export const WORKED_EXAMPLE: Demo = {
   run: {
     parkingInFar: INPUT.run.parkingInFar,
     parkingLevelsAvailable: INPUT.run.parkingLevelsAvailable,
+    levels: {
+      basements: INPUT.run.levels.basements,
+      groundIsParking: INPUT.run.levels.groundIsParking,
+      podiumAboveGround: INPUT.run.levels.podiumAboveGround,
+      podiumParkingLevels: INPUT.run.levels.podiumParkingLevels,
+    },
     saleableEfficiency: INPUT.run.saleableEfficiency.value,
     unitMix: {
       entries: INPUT.run.unitMix.entries.map((e) => ({

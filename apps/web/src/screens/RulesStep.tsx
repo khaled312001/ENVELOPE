@@ -133,6 +133,7 @@ export function RulesStep({
   readonly demo: {
     readonly parkingInFar: string;
     readonly parkingLevelsAvailable: number;
+    readonly levels: LevelSchedule;
     readonly saleableEfficiency: string;
     readonly unitMix: {
       readonly entries: readonly {
@@ -178,13 +179,21 @@ export function RulesStep({
    * The order on screen is the building from the ground up — the ground floor,
    * then the podium, then what is under it — which is the order he reads the
    * height code in and the order he asked for.
+   *
+   * THE DEMO IS THE ONE EXCEPTION, and it is not a default: it is the schedule
+   * the worked-example run posted, answered the way that run answered it, so the
+   * figure the visitor gets is the figure the landing page prints.
    */
-  const [basements, setBasements] = useState('0');
-  const [groundIsParking, setGroundIsParking] = useState(true);
+  const [basements, setBasements] = useState(String(demo?.levels.basements ?? 0));
+  const [groundIsParking, setGroundIsParking] = useState(demo?.levels.groundIsParking ?? true);
   const [podiumAbove, setPodiumAbove] = useState<string>(
-    sheetPodiumLevels ? String(sheetPodiumLevels.value) : '0',
+    demo
+      ? String(demo.levels.podiumAboveGround)
+      : sheetPodiumLevels
+        ? String(sheetPodiumLevels.value)
+        : '0',
   );
-  const [podiumParking, setPodiumParking] = useState('0');
+  const [podiumParking, setPodiumParking] = useState(String(demo?.levels.podiumParkingLevels ?? 0));
   /**
    * The schedule as a value, and what is wrong with it if anything.
    *

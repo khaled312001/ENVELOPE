@@ -55,6 +55,7 @@ import { computeBands, type BandSource } from './bands.js';
 import { buildBuildingModel } from './building.js';
 import { buildGfaStatement, type GfaStatement } from './gfa-statement.js';
 import { layoutCore } from './core-layout.js';
+import { AccessChoiceRefusedError } from './access.js';
 import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './core.js';
 import { solveEnvelope, type EnvelopeSolution } from './envelope.js';
 import { planParkingLevel, type LevelPlan } from './level-plan.js';
@@ -203,6 +204,13 @@ export interface RunInput {
     readonly structuralGridM?: Decimal;
     /** The affection plan's stated access side, when the sheet names one. */
     readonly accessEdgeSeq?: number;
+    /**
+     * The edge the run's actor chose for the vehicle entrance — `USER_SET` by
+     * them, drawn on every sheet, with the recommendation reported beside it. A
+     * frontage the code refuses blocks the run in a sentence; see
+     * `AccessChoiceRefusedError`.
+     */
+    readonly chosenAccessEdgeSeq?: number;
     /**
      * Lay the parking out around the core's shafts — stairs, lifts and the lift
      * lobby — rather than drawing them over bays that stay in the count.
@@ -842,8 +850,19 @@ export function runPipeline(input: RunInput): RunOutput {
       ...(input.levelPlan?.accessEdgeSeq === undefined
         ? {}
         : { affectionPlanAccessEdgeSeq: input.levelPlan.accessEdgeSeq }),
+      ...(input.levelPlan?.chosenAccessEdgeSeq === undefined
+        ? {}
+        : { chosenAccess: { edgeSeq: input.levelPlan.chosenAccessEdgeSeq, actor: input.actor } }),
     });
   } catch (error) {
+    /*
+      A refused CHOICE is not a finding about the plot, it is a request the
+      engine will not carry out — so it blocks the run, as a refused core does,
+      rather than costing it the layout and leaving the reader to wonder why.
+    */
+    if (error instanceof AccessChoiceRefusedError) {
+      throw new RunBlockedError(error.message, 'G2:access');
+    }
     levelPlanRefusal = error instanceof Error ? error.message : String(error);
   }
 

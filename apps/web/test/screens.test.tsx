@@ -630,6 +630,35 @@ describe('VehicleAccessPanel', () => {
     const out = html(<VehicleAccessPanel levelPlan={run.levelPlan!} onInspect={() => {}} />);
     expect(out).toContain('Alternatives');
   });
+
+  /* Meeting 3, 38:32 — he wants to place it, not only be told. */
+  it('offers to put the entrance on each alternative, where the run can be re-run', () => {
+    const lp = run.levelPlan!;
+    const alternative = lp.access.candidates[1];
+    if (!alternative) throw new Error('the fixture plot has one legal frontage; this test needs two');
+    const out = html(<VehicleAccessPanel levelPlan={lp} onInspect={() => {}} onChoose={() => {}} />);
+    expect(out).toContain(`Put the entrance on frontage ${alternative.edgeSeq + 1}`);
+  });
+
+  /* A stored run opened by its link cannot be re-run, so it gets no control at
+     all — a disabled button would promise something the page cannot do. */
+  it('draws no choosing control where the run cannot be re-run', () => {
+    const out = html(<VehicleAccessPanel levelPlan={run.levelPlan!} onInspect={() => {}} />);
+    expect(out).not.toContain('Put the entrance on frontage');
+  });
+
+  it('shows a choice as the reader’s, with the recommendation still beside it', () => {
+    const lp = run.levelPlan!;
+    const alternative = lp.access.candidates[1]!;
+    const chosen = { ...lp, access: { ...lp.access, chosen: { ...alternative, node: 'n-chosen' } } };
+    const out = html(<VehicleAccessPanel levelPlan={chosen} onInspect={() => {}} onChoose={() => {}} />);
+    expect(out).toContain('Your choice');
+    expect(out).toContain('What B.7.2.1 recommends');
+    expect(out).toContain('Use the recommendation instead');
+    // Neutral, not the green of a cited rule: a person put it there, not B.7.2.1.
+    expect(out).toMatch(/class="callout" data-state="neutral"/);
+    expect(out).not.toContain(`Put the entrance on frontage ${alternative.edgeSeq + 1}`);
+  });
 });
 
 describe('MassingPanel', () => {

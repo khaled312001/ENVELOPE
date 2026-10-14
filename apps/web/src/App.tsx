@@ -547,7 +547,35 @@ export function EngineApp({
             ) : null}
 
             {step === 'parking' && run ? (
-              <ParkingStep run={run} plot={plot} onInspect={inspect} />
+              <ParkingStep
+                run={run}
+                plot={plot}
+                onInspect={inspect}
+                busy={busy}
+                onChooseAccess={async (edgeSeq) => {
+                  if (!request) return;
+                  /*
+                    A NEW RUN, as an assumption edit makes one (§13.4): the run
+                    somebody may already have exported keeps the entrance it was
+                    drawn with. `null` takes the choice off rather than writing the
+                    recommendation in as a choice nobody made.
+                  */
+                  const { chosenAccessEdgeSeq: _previous, ...rest } = request;
+                  const next = edgeSeq === null ? rest : { ...rest, chosenAccessEdgeSeq: edgeSeq };
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    const result = await api.createRun(actor, next);
+                    setRun(result);
+                    setRequest(next);
+                    setGates((g) => ({ ...g, G3_ASSUMPTIONS_ACKNOWLEDGED: false }));
+                  } catch (e) {
+                    if (e instanceof ApiError) setError(e);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              />
             ) : null}
 
             {step === 'checks' && run ? <ChecksStep run={run} /> : null}

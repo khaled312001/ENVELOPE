@@ -228,6 +228,13 @@ export const runRequest = z.object({
    * saw it.
    */
   coreAreaM2: decimalString.optional(),
+  /**
+   * The plot edge the actor chose for the vehicle entrance, counted from 0 as
+   * `edgeSeq` is. Optional, and absence is the engine's B.7.2.1 recommendation,
+   * not a default: the recommendation is reported either way. A frontage the
+   * code refuses comes back 422 with the reason, never redrawn elsewhere.
+   */
+  chosenAccessEdgeSeq: z.number().int().min(0).max(999).optional(),
   parkingUsableFraction: z.object({
     value: decimalString,
     source: z.enum(['DERIVED', 'ASSUMED']),

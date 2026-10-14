@@ -564,7 +564,9 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   }
 
   // --- access and the boundary -------------------------------------------------------
-  const recommended = levelPlan?.access.recommended;
+  // The chosen entrance when someone chose one, else the recommendation —
+  // `entry` holds that order so no renderer decides it again.
+  const recommended = levelPlan?.access.entry;
   const setbackBySeq = new Map(envelope.appliedSetbacks.map((s) => [s.seq, s.valueM]));
 
   return {

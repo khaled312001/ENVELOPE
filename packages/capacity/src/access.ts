@@ -40,6 +40,7 @@ import {
   EdgeClassification,
   mmToM,
   RoadHierarchy,
+  type Actor,
   type Citation,
   type Mm,
   type Plot,
@@ -106,7 +107,19 @@ const HIERARCHY_PREFERENCE: Readonly<Record<RoadHierarchy, number>> = {
 };
 
 export class AccessPlacementError extends Error {
-  override readonly name = 'AccessPlacementError';
+  override readonly name: string = 'AccessPlacementError';
+}
+
+/**
+ * A chosen frontage that cannot take a vehicle entrance.
+ *
+ * Its own class because the pipeline turns it into a blocked run rather than a
+ * missing layout: the choice was the reader's, the reason is a sentence about
+ * their plot, and quietly drawing the recommendation instead would put an
+ * entrance where they had said it does not go.
+ */
+export class AccessChoiceRefusedError extends AccessPlacementError {
+  override readonly name = 'AccessChoiceRefusedError';
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +150,17 @@ export interface RejectedEdge {
 export interface AccessResult {
   /** The recommendation. Absent when no edge can legally take one. */
   readonly recommended: Traced<AccessCandidate> | undefined;
+  /**
+   * The frontage a named person chose, `USER_SET` by them. Absent when nobody
+   * chose. The recommendation stays beside it, unchanged: a reader overruling
+   * the ranking is told what they overruled.
+   */
+  readonly chosen: Traced<AccessCandidate> | undefined;
+  /**
+   * The entrance every drawing shows — the choice when there is one, otherwise
+   * the recommendation. One field, so no renderer decides that order itself.
+   */
+  readonly entry: Traced<AccessCandidate> | undefined;
   /** Every viable option, best first — the user may overrule the ranking. */
   readonly candidates: readonly AccessCandidate[];
   readonly rejected: readonly RejectedEdge[];
@@ -170,6 +194,13 @@ export interface PlaceAccessInput {
    * preference. The Trakhees sheets carry an "Access Side" box for exactly this.
    */
   readonly affectionPlanAccessEdgeSeq?: number;
+  /**
+   * The frontage a person chose for the entrance (meeting 3, 38:32: he wants to
+   * pick it, not only be told). It must be one of the candidates — a frontage
+   * the code refuses is refused here too, in a sentence, never redrawn as the
+   * recommendation behind the reader's back.
+   */
+  readonly chosen?: { readonly edgeSeq: number; readonly actor: Actor };
 }
 
 /**
@@ -265,8 +296,30 @@ export function placeVehicleAccess(input: PlaceAccessInput): AccessResult {
   ];
 
   const best = candidates[0];
+  const pick = input.chosen;
+  const picked = pick === undefined ? undefined : candidates.find((c) => c.edgeSeq === pick.edgeSeq);
+  if (pick !== undefined && picked === undefined) {
+    const refusal = rejected.find((r) => r.edgeSeq === pick.edgeSeq);
+    // Numbered from 1, as the plot step and its figure number them.
+    const n = pick.edgeSeq + 1;
+    throw new AccessChoiceRefusedError(
+      refusal
+        ? `Edge ${n} was chosen for the vehicle entrance and cannot take one. Edge ${n}: ` +
+            `${refusal.reason.replace(/\.$/, '')}.`
+        : `Edge ${n} was chosen for the vehicle entrance, and this plot has no edge ${n}.`,
+    );
+  }
+  const chosen =
+    pick && picked
+      ? tracer.userSet('access.vehicle_entry_chosen', picked, {
+          actor: pick.actor,
+          label: 'Vehicle entrance, as chosen',
+          unit: 'm',
+        })
+      : undefined;
+
   if (!best) {
-    return { recommended: undefined, candidates, rejected, notAssessed };
+    return { recommended: undefined, chosen, entry: chosen, candidates, rejected, notAssessed };
   }
 
   const recommended = tracer.derived('access.vehicle_entry', best, {
@@ -287,5 +340,5 @@ export function placeVehicleAccess(input: PlaceAccessInput): AccessResult {
     },
   });
 
-  return { recommended, candidates, rejected, notAssessed };
+  return { recommended, chosen, entry: chosen ?? recommended, candidates, rejected, notAssessed };
 }

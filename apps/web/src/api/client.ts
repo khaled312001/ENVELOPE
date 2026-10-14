@@ -371,6 +371,8 @@ export interface LevelPlanView {
   }[];
   readonly access: {
     readonly recommended: (AccessCandidateView & { readonly node: string }) | null;
+    /** Optional: absent on runs stored before a choice could be made. */
+    readonly chosen?: (AccessCandidateView & { readonly node: string }) | null;
     readonly candidates: readonly AccessCandidateView[];
     readonly rejected: readonly {
       readonly edgeSeq: number;
@@ -887,6 +889,12 @@ export interface RunRequestBody {
    * reconciles it against both, and never charges for it twice.
    */
   readonly coreAreaM2?: string;
+  /**
+   * The edge the reader chose for the vehicle entrance, from 0. Omitted, the
+   * drawings show the B.7.2.1 recommendation; sent, they show this, `USER_SET`,
+   * with the recommendation reported beside it.
+   */
+  readonly chosenAccessEdgeSeq?: number;
   readonly parkingUsableFraction: {
     readonly value: string;
     readonly source: 'DERIVED' | 'ASSUMED';

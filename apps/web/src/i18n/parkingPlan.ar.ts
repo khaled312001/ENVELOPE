@@ -85,6 +85,14 @@ export const AR: ParkingPlanDictionary = {
     noneTitle: 'لا تتسع أي واجهة في قطعة الأرض هذه لمدخل مركبات.',
     noneBody:
       ' رفض كل حد للسبب المذكور أدناه. وهذه نتيجة عن قطعة الأرض، لا إخفاق في الدراسة.',
+    chosenLabel: 'اختيارك',
+    chosenNote:
+      'سجل باسمك، وتظهر كل الرسومات والملفات المصدرة المدخل هنا. أما التوصية أدناه فلم تتغير، ' +
+      'لترى ما الذي عدلت عنه.',
+    recommendedLabel: 'ما يوصي به البند B.7.2.1',
+    useRecommendation: 'استخدم التوصية بدلا من ذلك',
+    useThis: (n: string): string => `اجعل المدخل على الواجهة ${n}`,
+    isChosen: '— اختيارك.',
     alternatives: 'البدائل',
     alternativeWindow: (window: string): string => `. نافذة خالية بطول ${window} m.`,
     refused: 'مرفوضة، ولماذا',

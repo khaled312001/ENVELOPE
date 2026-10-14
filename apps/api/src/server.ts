@@ -1833,6 +1833,9 @@ function runInputFrom(
       placement an assumption.
     */
     ...(body.levels ? { levelSchedule: body.levels } : {}),
+    ...(body.chosenAccessEdgeSeq === undefined
+      ? {}
+      : { levelPlan: { chosenAccessEdgeSeq: body.chosenAccessEdgeSeq } }),
   };
 }
 

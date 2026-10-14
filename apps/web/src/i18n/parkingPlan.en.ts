@@ -84,6 +84,16 @@ export const EN = {
     noneBody:
       ' Every boundary was refused for the reason listed below. This is a finding about the ' +
       'plot, not a failure of the run.',
+    /* The choice and its edge. "Recorded as yours" is the USER_SET class said in
+       words; the reader never has to know the token to know whose call it was. */
+    chosenLabel: 'Your choice',
+    chosenNote:
+      'Recorded as yours, and every drawing and export shows the entrance here. The ' +
+      'recommendation below is unchanged, so you can see what you overruled.',
+    recommendedLabel: 'What B.7.2.1 recommends',
+    useRecommendation: 'Use the recommendation instead',
+    useThis: (n: string): string => `Put the entrance on frontage ${n}`,
+    isChosen: '— your choice.',
     alternatives: 'Alternatives',
     alternativeWindow: (window: string): string => `. ${window} m clear window.`,
     refused: 'Refused, and why',

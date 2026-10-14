@@ -187,7 +187,9 @@ export function ParkingPlan({
       .join(' ');
 
   const sorted = [...levelPlan.rects].sort((a, b) => ORDER[a.kind] - ORDER[b.kind]);
-  const access = levelPlan.access.recommended;
+  // The entrance as drawn: the reader's choice when they made one. Same order as
+  // the engine's `entry`, which the sheets and the DXF draw from.
+  const access = levelPlan.access.chosen ?? levelPlan.access.recommended;
   const stroke = Math.max(w, h) / 400;
   // The plot step numbers its edges from 1 and so does its figure; `edgeSeq` counts
   // from 0. Printed raw, "frontage 1" here was edge 2 on the screen before it.
@@ -356,12 +358,22 @@ export function ParkingPlan({
 export function VehicleAccessPanel({
   levelPlan,
   onInspect,
+  onChoose,
+  busy = false,
 }: {
   readonly levelPlan: LevelPlanView;
   readonly onInspect: (nodeId: string) => void;
+  /**
+   * Re-run with this frontage as the entrance, or with none chosen (`null`).
+   * Absent where the run cannot be re-run — a stored run opened by its link —
+   * and then no choosing control is drawn at all, rather than a disabled one.
+   */
+  readonly onChoose?: (edgeSeq: number | null) => void;
+  readonly busy?: boolean;
 }): JSX.Element {
   const t = useDict(EN, AR).access;
   const { recommended, candidates, rejected } = levelPlan.access;
+  const chosen = levelPlan.access.chosen ?? null;
 
   return (
     <section className="panel" aria-labelledby="access-heading">
@@ -380,8 +392,41 @@ export function VehicleAccessPanel({
         </div>
       </header>
 
+      {/*
+        THE CHOICE FIRST, AND THE RECOMMENDATION KEPT BELOW IT. Neutral, not the
+        green of a cited rule: B.7.2.1 did not put the entrance here, a person
+        did, and the ink must not borrow the clause's authority for their call.
+      */}
+      {chosen ? (
+        <div className="callout" data-state="neutral">
+          <p className="fine-print">{t.chosenLabel}</p>
+          <p>
+            <strong>
+              {t.frontage}
+              {chosen.edgeSeq + 1}
+              {chosen.hierarchy ? t.road(chosen.hierarchy) : ''}
+            </strong>
+            {t.recommended(chosen.widthM, chosen.centreOffsetM)}
+          </p>
+          <p className="fine-print">{t.chosenNote}</p>
+          {onChoose ? (
+            <p>
+              <button
+                type="button"
+                className="button"
+                disabled={busy}
+                onClick={() => onChoose(null)}
+              >
+                {t.useRecommendation}
+              </button>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {recommended ? (
         <div className="callout callout--ok">
+          {chosen ? <p className="fine-print">{t.recommendedLabel}</p> : null}
           <p>
             <strong>
               {t.frontage}
@@ -417,6 +462,21 @@ export function VehicleAccessPanel({
                 {' — '}
                 <EngineText>{c.rationale}</EngineText>
                 {t.alternativeWindow(c.usableWindowM)}
+                {onChoose && c.edgeSeq !== chosen?.edgeSeq ? (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      className="link-button"
+                      disabled={busy}
+                      onClick={() => onChoose(c.edgeSeq)}
+                    >
+                      {t.useThis(String(c.edgeSeq + 1))}
+                    </button>
+                  </>
+                ) : c.edgeSeq === chosen?.edgeSeq ? (
+                  <> {t.isChosen}</>
+                ) : null}
               </li>
             ))}
           </ul>

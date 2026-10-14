@@ -1798,6 +1798,7 @@
           "node": "n168",
           "provenanceClass": "DERIVED"
         },
+        "chosen": null,
         "candidates": [
           {
             "edgeSeq": 0,
@@ -1886,6 +1887,7 @@
         "node": "n168",
         "provenanceClass": "DERIVED"
       },
+      "chosen": null,
       "candidates": [
         {
           "edgeSeq": 0,

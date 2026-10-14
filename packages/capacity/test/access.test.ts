@@ -28,6 +28,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
+  AccessChoiceRefusedError,
   AccessPlacementError,
   JUNCTION_CLEARANCE_M,
   placeVehicleAccess,
@@ -180,6 +181,60 @@ describe('placeVehicleAccess', () => {
 
   it('refuses a plot with no edges rather than inventing a frontage', () => {
     expect(() => place([])).toThrow(AccessPlacementError);
+  });
+});
+
+/*
+  Meeting 3, 38:32: he wants to put the entrance where he wants it, not only be
+  told where it is better. The choice is his and is recorded as his; the
+  recommendation stays beside it so he can see what he overruled.
+*/
+describe('a chosen entrance', () => {
+  const actor = { id: 'u-1', name: 'Eng. Mohamed' };
+
+  it('is USER_SET by the person who chose it, and is what the drawings show', () => {
+    // Edge 2 (LOCAL) is recommended; choose edge 0 (ARTERIAL) instead.
+    const r = place(twoRoads(), { chosen: { edgeSeq: 0, actor } });
+    expect(r.chosen?.provenanceClass).toBe('USER_SET');
+    expect(r.chosen?.value.edgeSeq).toBe(0);
+    expect(r.entry).toBe(r.chosen);
+  });
+
+  it('leaves the recommendation in place beside the choice', () => {
+    const r = place(twoRoads(), { chosen: { edgeSeq: 0, actor } });
+    expect(r.recommended?.value.edgeSeq).toBe(2);
+    expect(r.recommended?.provenanceClass).toBe('DERIVED');
+  });
+
+  it('shows the recommendation when nobody chose', () => {
+    const r = place(twoRoads());
+    expect(r.chosen).toBeUndefined();
+    expect(r.entry).toBe(r.recommended);
+  });
+
+  /* Drawing the recommendation instead would put the entrance where the reader
+     said it does not go, in a file that looks right. */
+  it('refuses a frontage the code refuses, in a sentence naming the edge and why', () => {
+    expect(() => place(twoRoads(), { chosen: { edgeSeq: 1, actor } })).toThrow(
+      AccessChoiceRefusedError,
+    );
+    expect(() => place(twoRoads(), { chosen: { edgeSeq: 1, actor } })).toThrow(
+      /Edge 2 was chosen .* Edge 2: shares a boundary with a neighbouring plot/,
+    );
+  });
+
+  it('refuses a frontage too short to keep 15 m off both corners', () => {
+    const short = [
+      edge(0, [0, 0], [30, 0], EdgeClassification.ROAD, RoadHierarchy.LOCAL),
+      edge(1, [30, 0], [30, 30], EdgeClassification.ROAD, RoadHierarchy.LOCAL),
+      edge(2, [30, 30], [0, 30], EdgeClassification.ROAD, RoadHierarchy.LOCAL),
+      edge(3, [0, 30], [0, 0], EdgeClassification.ROAD, RoadHierarchy.LOCAL),
+    ];
+    expect(() => place(short, { chosen: { edgeSeq: 0, actor } })).toThrow(/junction clearance/);
+  });
+
+  it('refuses an edge the plot does not have', () => {
+    expect(() => place(twoRoads(), { chosen: { edgeSeq: 9, actor } })).toThrow(/has no edge 10/);
   });
 });
 

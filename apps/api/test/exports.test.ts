@@ -143,6 +143,53 @@ describe('the run carries a parking level', () => {
     const access = (run.levelPlan as { access: { recommended: { edgeSeq: number } } }).access;
     expect(access.recommended.edgeSeq).toBe(0);
   });
+
+  it('reports no choice when nobody chose', () => {
+    expect((run.levelPlan as { access: { chosen: unknown } }).access.chosen).toBeNull();
+  });
+});
+
+/*
+  Meeting 3, 38:32: the entrance is his to place. The arterial edge is legal but
+  not preferred, so choosing it is an overruling the run must carry — as his,
+  with the recommendation still beside it, and on the drawing.
+*/
+describe('a chosen vehicle entrance', () => {
+  const post = async (chosenAccessEdgeSeq: number) => {
+    const plot = (
+      await app.inject({ method: 'POST', url: '/api/plots', headers: ACTOR, payload: PLOT })
+    ).json();
+    return app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: plot.plotId, chosenAccessEdgeSeq },
+    });
+  };
+
+  it('is USER_SET, drawn, and reported beside the recommendation', async () => {
+    const res = await post(2);
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as {
+      levelPlan: {
+        access: {
+          recommended: { edgeSeq: number; provenanceClass: string };
+          chosen: { edgeSeq: number; provenanceClass: string };
+        };
+      };
+      building: { access: { edgeSeq: number; source: { provenanceClass: string } } };
+    };
+    expect(body.levelPlan.access.chosen.edgeSeq).toBe(2);
+    expect(body.levelPlan.access.chosen.provenanceClass).toBe('USER_SET');
+    expect(body.levelPlan.access.recommended.edgeSeq).toBe(0);
+    expect(body.building.access.edgeSeq).toBe(2);
+  });
+
+  it('refuses a boundary shared with a neighbour, in a sentence', async () => {
+    const res = await post(1);
+    expect(res.statusCode).toBe(422);
+    expect(JSON.stringify(res.json())).toMatch(/Edge 2 was chosen for the vehicle entrance/);
+  });
 });
 
 describe('DXF export', () => {

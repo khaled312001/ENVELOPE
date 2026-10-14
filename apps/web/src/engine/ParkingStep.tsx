@@ -25,10 +25,15 @@ export function ParkingStep({
   run,
   plot,
   onInspect,
+  onChooseAccess,
+  busy = false,
 }: {
   readonly run: RunView;
   readonly plot: PlotView | null;
   readonly onInspect: (n: string) => void;
+  /** Re-run with this entrance; absent on a stored run, which cannot be re-run. */
+  readonly onChooseAccess?: (edgeSeq: number | null) => void;
+  readonly busy?: boolean;
 }): JSX.Element {
   const t = useDict(EN, AR).parkingStep;
   const ltr = useVerbatim();
@@ -60,7 +65,12 @@ export function ParkingStep({
               figure={!run.building}
             />
           </section>
-          <VehicleAccessPanel levelPlan={run.levelPlan} onInspect={onInspect} />
+          <VehicleAccessPanel
+            levelPlan={run.levelPlan}
+            onInspect={onInspect}
+            {...(onChooseAccess ? { onChoose: onChooseAccess } : {})}
+            busy={busy}
+          />
         </>
       ) : (
         <div className="banner banner--assumed" role="note">

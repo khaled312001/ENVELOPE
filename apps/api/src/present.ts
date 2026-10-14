@@ -234,6 +234,18 @@ export function presentRun(
                   provenanceClass: levelPlan.access.recommended.provenanceClass,
                 }
               : null,
+            /*
+              The choice, beside the recommendation and never in its place: a
+              reader who overruled the ranking is shown what they overruled.
+              Null on every run where nobody chose, and on every stored run.
+            */
+            chosen: levelPlan.access.chosen
+              ? {
+                  ...candidate(levelPlan.access.chosen.value),
+                  node: levelPlan.access.chosen.node,
+                  provenanceClass: levelPlan.access.chosen.provenanceClass,
+                }
+              : null,
             candidates: levelPlan.access.candidates.map(candidate),
             rejected: levelPlan.access.rejected.map((r) => ({
               edgeSeq: r.edgeSeq,

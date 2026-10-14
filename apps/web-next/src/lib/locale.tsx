@@ -10,7 +10,7 @@ export type Locale = 'en' | 'ar';
 /*
   THE LANGUAGE IS IN THE ADDRESS.
 
-  `/next/product` is English and `/next/ar/product` is the same page in Arabic.
+  `/product` is English and `/ar/product` is the same page in Arabic.
   A language held only in localStorage is invisible to a search engine, to a
   link somebody pastes into a message, and to the `hreflang` pair each page
   declares — so the path decides, and storage only remembers the last choice

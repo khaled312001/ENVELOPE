@@ -1,5 +1,5 @@
 import type { BuildingModel } from '@envelope/core';
-import { Box, DoorOpen, FileStack, Layers, MapPinned, ScrollText, Shapes, SquareStack } from 'lucide-react';
+import { Box, DoorOpen, FileStack, Fingerprint, Layers, MapPinned, ScrollText, Shapes, Sparkle, SquareStack, Workflow } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { lazy, Suspense, useState } from 'react';
 
@@ -11,6 +11,7 @@ import { useLocale } from '../../lib/locale.js';
 import { Art } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
 import { EASE, Item, Spotlight, Stagger } from '../../ui/motion.js';
+import { IconTile, toneAt } from '../../ui/tile.js';
 import { FlowLine } from '../Landing.js';
 
 const Massing3D = lazy(() => import('../../components/Massing3D.js').then((m) => ({ default: m.Massing3D })));
@@ -69,15 +70,13 @@ export function Product(): JSX.Element {
         }
       />
 
-      <Band>
-        <SectionHead eyebrow={s.product.featuresEyebrow} title={s.product.featuresTitle} />
+      <Band glow="violet">
+        <SectionHead icon={Sparkle} tone="blue" eyebrow={s.product.featuresEyebrow} title={s.product.featuresTitle} />
         <Stagger className="grid grid-cols-[repeat(auto-fit,minmax(min(260px,100%),1fr))] gap-4" gap={0.05}>
-          {FEATURES.map(([key, Icon]) => (
+          {FEATURES.map(([key, Icon], i) => (
             <Item key={key} className="h-full">
-              <Spotlight className="group grid h-full content-start gap-3 rounded-xl border border-line bg-panel p-6 shadow-soft transition-colors hover:border-strong">
-                <span className="grid size-10 place-items-center rounded-lg bg-accent-subtle text-accent transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
-                  <Icon className="size-5" aria-hidden="true" />
-                </span>
+              <Spotlight className="group grid h-full content-start gap-3 rounded-xl border border-line bg-panel p-6 shadow-soft transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-strong motion-reduce:hover:translate-y-0">
+                <IconTile icon={Icon} tone={toneAt(i)} />
                 <h3 className="text-[15.5px] font-medium text-fg">{s.product.features[key].title}</h3>
                 <p className="text-[13.5px] leading-relaxed text-secondary">{s.product.features[key].body}</p>
               </Spotlight>
@@ -87,7 +86,7 @@ export function Product(): JSX.Element {
       </Band>
 
       <Band tinted>
-        <SectionHead eyebrow={s.product.classesEyebrow} title={s.product.classesTitle} lede={s.product.classesLede} />
+        <SectionHead icon={Fingerprint} tone="violet" eyebrow={s.product.classesEyebrow} title={s.product.classesTitle} lede={s.product.classesLede} />
         <Stagger as="dl" className="grid gap-4 md:grid-cols-3" gap={0.08}>
           {(['DERIVED', 'USER_SET', 'ASSUMED'] as const).map((c) => (
             <Item key={c} className="grid content-start gap-3 rounded-xl border border-line bg-base p-6 shadow-soft">
@@ -100,8 +99,8 @@ export function Product(): JSX.Element {
         </Stagger>
       </Band>
 
-      <Band>
-        <SectionHead eyebrow={s.product.stepsEyebrow} title={s.product.stepsTitle} lede={t.landing.flowLede} />
+      <Band glow="cyan">
+        <SectionHead icon={Workflow} tone="cyan" eyebrow={s.product.stepsEyebrow} title={s.product.stepsTitle} lede={t.landing.flowLede} />
         {/* Read from the start of the line in either language, so it is mirrored in Arabic. */}
         <Art name="product-flow" alt={s.art.productFlow} className="mx-auto mb-12 w-full max-w-5xl rtl:-scale-x-100" />
         <FlowLine />

@@ -34,8 +34,17 @@ export const SITE_AR: SiteDict = {
     start: 'ابدأ دراسة',
     studies: 'دراساتك',
     enter: 'تسجيل الدخول',
-    classic: 'الموقع الحالي',
-    rights: (year: string): string => `© ${year} TOP.ai. معاينة الاستوديو، والموقع الحالي هو المرجع.`,
+    classic: 'الاستوديو الكلاسيكي',
+    rights: (year: string): string => `© ${year} Plotlogic.dev`,
+    contact: 'تواصل معنا',
+    whatsapp: 'واتساب',
+    email: 'البريد الإلكتروني',
+  },
+
+  whatsapp: {
+    label: 'راسلنا على واتساب',
+    tip: 'لديك سؤال؟ واتساب',
+    greeting: 'مرحبا، لدي سؤال عن Plotlogic.',
   },
 
   crumbs: { label: 'مسار التنقل', home: 'الرئيسية' },

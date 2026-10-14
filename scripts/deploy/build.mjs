@@ -26,7 +26,7 @@
  */
 
 import { execFileSync, execSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { dirname, join, relative } from 'node:path';
@@ -163,10 +163,35 @@ writeFileSync(join(APP, 'tmp', 'restart.txt'), release + '\n');
 
 /* ── 5. The site, and the web server's rules for it ──────────────────── */
 
+/*
+  TWO FRONT ENDS, ONE ROOT.
+
+  Since 14 Oct 2026 the site IS the new front end (apps/web-next): the home
+  page, the public pages, /ar, and the studio. The previous front end still
+  serves the paths only it has — /app, /work, sign-in and sign-up, settings,
+  the workspace, invitations, readiness — from its shell, renamed
+  `classic.html` so the new home page can be `index.html`.
+
+  Both write hashed files into `assets/`. A name both builds wrote would be one
+  application silently loading the other's file, so a collision stops the
+  build — except `og-cover.png`, where the new site's card is meant to win.
+*/
 cpSync(join(ROOT, 'apps', 'web', 'dist'), WEB, { recursive: true });
-cpSync(join(ROOT, 'apps', 'web-next', 'dist'), join(WEB, 'next'), { recursive: true });
-// The prerender writes robots.txt for the host, not for /next: a crawler only reads it at the root.
-renameSync(join(WEB, 'next', 'robots.txt'), join(WEB, 'robots.txt'));
+renameSync(join(WEB, 'index.html'), join(WEB, 'classic.html'));
+{
+  const NEXT = join(ROOT, 'apps', 'web-next', 'dist');
+  const MAY_REPLACE = new Set(['og-cover.png']);
+  const walk = (dir, rel = '') =>
+    readdirSync(join(dir, rel), { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? walk(dir, join(rel, e.name)) : [join(rel, e.name)],
+    );
+  const clashes = walk(NEXT).filter((f) => existsSync(join(WEB, f)) && !MAY_REPLACE.has(f));
+  if (clashes.length) throw new Error(`both front ends wrote: ${clashes.join(', ')}`);
+  cpSync(NEXT, WEB, { recursive: true });
+}
+
+/* The paths the new site owns. The classic shell answers every other route in routes.json. */
+const NEW_OWNS = new Set(['/', '/parking', '/exports', '/refusals']);
 
 /*
   THE ENTRY CHUNK HAS A BUDGET, AND A BUILD OVER IT IS NOT PACKED.
@@ -178,13 +203,13 @@ renameSync(join(WEB, 'next', 'robots.txt'), join(WEB, 'robots.txt'));
   regression stops a release instead of being found in a waterfall chart.
 */
 const ENTRY_BUDGET = 400 * 1024;
-{
+for (const shell of ['index.html', 'classic.html']) {
   const entry = /<script[^>]*type="module"[^>]*src="\/?(assets\/index-[^"]+\.js)"/.exec(
-    readFileSync(join(WEB, 'index.html'), 'utf8'),
+    readFileSync(join(WEB, shell), 'utf8'),
   );
-  if (!entry) throw new Error('index.html names no entry chunk; the budget cannot be measured');
+  if (!entry) throw new Error(`${shell} names no entry chunk; the budget cannot be measured`);
   const bytes = statSync(join(WEB, entry[1])).size;
-  console.log(`entry chunk ${entry[1]}: ${(bytes / 1024).toFixed(0)} KB (budget ${ENTRY_BUDGET / 1024} KB)`);
+  console.log(`${shell} entry chunk ${entry[1]}: ${(bytes / 1024).toFixed(0)} KB (budget ${ENTRY_BUDGET / 1024} KB)`);
   if (bytes > ENTRY_BUDGET) {
     console.error(
       `The entry chunk is ${(bytes / 1024).toFixed(0)} KB, over its ${ENTRY_BUDGET / 1024} KB budget. ` +
@@ -211,12 +236,14 @@ const routes =JSON.parse(readFileSync(join(ROOT, 'apps', 'web', 'src', 'routes.j
 const redirects = JSON.parse(
   readFileSync(join(ROOT, 'apps', 'web', 'src', 'redirects.json'), 'utf8'),
 );
+// The classic site's "what it refuses" is this site's "what it does not do".
+redirects['/refusals'] = '/limits';
 const redirectRules = Object.entries(redirects)
   .map(([from, to]) => `  RewriteRule ^${from.replace(/^\//, '')}/?$ ${to} [R=301,L]`)
   .join('\n');
 const pages = routes
   .map((r) => r.path)
-  .filter((p) => p !== '/')
+  .filter((p) => !NEW_OWNS.has(p))
   .map((p) => p.replace(/^\//, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
 /*
@@ -249,7 +276,8 @@ const pages = routes
   be watched before it is trusted.
 */
 const cspReportOnly = process.env.CSP_MODE === 'report-only';
-const builtIndex = readFileSync(join(WEB, 'index.html'), 'utf8');
+// Both shells: the classic one carries the theme script; the new one carries none, and a hash list built from it stays empty.
+const builtIndex = ['classic.html', 'index.html'].map((f) => readFileSync(join(WEB, f), 'utf8')).join('\n');
 const inlineHashes = [...builtIndex.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
   .map((m) => m[1])
   .filter((body) => body.trim().length > 0)
@@ -311,20 +339,24 @@ ${redirectRules}
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
 
-  # The studio preview is its own application. A public page has its own
-  # prerendered index.html, head and all; every other path under /next is the
-  # working screens' shell, which is noindex.
-  RewriteCond %{REQUEST_FILENAME}/index.html -f
-  RewriteRule ^(next(?:/.+?)?)/?$ $1/index.html [L]
-  RewriteRule ^next(/.*)?$ next/app.html [L]
+  # The site was previewed at /next. Every address from then lands on its page now.
+  RewriteRule ^next/?$ / [R=301,L]
+  RewriteRule ^next/(.*)$ /$1 [R=301,L]
 
-  # Every page the site has — from routes.json — is the application shell, 200.
-  RewriteRule ^(${pages.join('|')})/?$ index.html [L]
+  # A public page has its own prerendered index.html, head and all.
+  RewriteCond %{REQUEST_FILENAME}/index.html -f
+  RewriteRule ^(.+?)/?$ $1/index.html [L]
+
+  # The working screens — the studio, the studies, sign-in — share one noindex shell.
+  RewriteRule ^(ar/)?(studio|studies|enter)(/.*)?$ app.html [L]
+
+  # The paths only the classic front end has — from its routes.json — are its shell, 200.
+  RewriteRule ^(${pages.join('|')})/?$ classic.html [L]
 </IfModule>
 
 # Anything else is not a page. The shell renders "not here", and the status says so
 # too — a 200 on a page that does not exist is the defect the 404 page describes.
-ErrorDocument 404 /index.html
+ErrorDocument 404 /app.html
 
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"

@@ -2,7 +2,7 @@
   "_": "Read by the FAQ page AND by scripts/prerender.mjs, which writes the same questions into the page's FAQPage JSON-LD. One source, so the structured data can never answer a question differently from the page.",
   "en": [
     {
-      "q": "Is TOP.ai a compliance check?",
+      "q": "Is Plotlogic a compliance check?",
       "a": "No, and it never claims to be. It reports what the rules recorded in the engine imply for a plot, and the derivation of every figure. Whether an authority would approve a scheme is not obtainable from any computation, so every screen, report and file carries “Regulatory validity: not assessed”."
     },
     {
@@ -48,7 +48,7 @@
   ],
   "ar": [
     {
-      "q": "هل يحكم TOP.ai بأن الجهة المختصة ستعتمد المشروع؟",
+      "q": "هل يحكم Plotlogic بأن الجهة المختصة ستعتمد المشروع؟",
       "a": "لا، ولا يؤكد ذلك في أي موضع. فهو يعرض ما تقتضيه القواعد المسجلة في المحرك لقطعة الأرض، ومعه اشتقاق كل رقم. أما ما إذا كانت الجهة المختصة ستعتمد المشروع فلا يمكن الوصول إليه بأي حساب، ولذلك تحمل كل شاشة وكل تقرير وكل ملف عبارة «الصلاحية التنظيمية: لم يخضع للتقييم». فهو ليس فحص مطابقة."
     },
     {

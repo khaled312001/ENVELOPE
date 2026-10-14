@@ -1,4 +1,4 @@
-import { Ban, Calculator, GitBranch, ListChecks, Lock, Wand2 } from 'lucide-react';
+import { Ban, Calculator, GitBranch, Link2, ListChecks, Lock, Scale, Split, Wand2 } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 
 import { AR as LANDING_AR } from '@web/i18n/landing.ar.js';
@@ -11,6 +11,7 @@ import { useLocale } from '../../lib/locale.js';
 import { Art } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
 import { EASE, Item, Spotlight, Stagger } from '../../ui/motion.js';
+import { IconTile, toneAt } from '../../ui/tile.js';
 import { ClaimsList } from '../Landing.js';
 
 /*
@@ -44,7 +45,7 @@ export function Method(): JSX.Element {
       />
 
       <Band>
-        <SectionHead eyebrow={s.method.chainEyebrow} title={L.guarantees.title} lede={L.guarantees.lede} />
+        <SectionHead icon={Link2} tone="blue" eyebrow={s.method.chainEyebrow} title={L.guarantees.title} lede={L.guarantees.lede} />
         <ol className="relative grid gap-6 lg:grid-cols-4">
           {/* The chain's spine, drawn as it comes into view. */}
           <motion.span
@@ -64,8 +65,8 @@ export function Method(): JSX.Element {
               viewport={{ once: true }}
               transition={{ duration: 0.6, ease: EASE, delay: i * 0.12 }}
             >
-              <span className="absolute start-0 top-0 grid size-10 place-items-center rounded-xl bg-linear-to-br from-brand-solid to-brand-alt-solid text-on-brand shadow-soft lg:static">
-                <Icon className="size-5" aria-hidden="true" />
+              <span className="group absolute start-0 top-0 lg:static">
+                <IconTile icon={Icon} tone={toneAt(i)} />
               </span>
               <span className="figure text-[11px] text-tertiary">0{i + 1}</span>
               <h3 className="text-[16px] font-medium text-fg">{L.guarantees.chain[key].title}</h3>
@@ -86,7 +87,7 @@ export function Method(): JSX.Element {
       </Band>
 
       <Band tinted>
-        <SectionHead eyebrow={s.method.refusalsEyebrow} title={s.method.refusalsTitle} lede={s.method.refusalsLede} />
+        <SectionHead icon={Ban} tone="violet" eyebrow={s.method.refusalsEyebrow} title={s.method.refusalsTitle} lede={s.method.refusalsLede} />
         <Stagger className="grid gap-4 md:grid-cols-2" gap={0.06}>
           {(
             [
@@ -112,7 +113,7 @@ export function Method(): JSX.Element {
       <Band>
         <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-16">
           <div>
-            <SectionHead eyebrow={s.method.boundaryEyebrow} title={s.method.boundaryTitle} className="mb-6" />
+            <SectionHead icon={Split} tone="cyan" eyebrow={s.method.boundaryEyebrow} title={s.method.boundaryTitle} className="mb-6" />
             <p className="text-[15px] leading-relaxed text-secondary">{s.method.boundaryBody}</p>
           </div>
           <Stagger as="ul" className="grid gap-3" gap={0.08}>
@@ -127,7 +128,7 @@ export function Method(): JSX.Element {
       </Band>
 
       <Band tinted>
-        <SectionHead eyebrow={t.landing.claimsEyebrow} title={L.claims.title} lede={L.claims.lede} />
+        <SectionHead icon={Scale} tone="blue" eyebrow={t.landing.claimsEyebrow} title={L.claims.title} lede={L.claims.lede} />
         <ClaimsList />
       </Band>
     </SitePage>

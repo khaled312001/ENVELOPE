@@ -21,7 +21,7 @@ export function Faq(): JSX.Element {
   return (
     <SitePage path="/faq">
       <PageHero crumb={s.nav.faq} eyebrow={s.faq.eyebrow} title={s.faq.title} lede={s.faq.lede} />
-      <Band>
+      <Band glow="violet">
         <Stagger className="mx-auto grid max-w-3xl gap-3" gap={0.04}>
           {items.map((q, i) => (
             <Item key={q.q}>

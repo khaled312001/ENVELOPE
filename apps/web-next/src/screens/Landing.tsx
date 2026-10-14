@@ -8,7 +8,11 @@ import {
   FileSpreadsheet,
   FileStack,
   FileText,
+  Gauge,
   Layers,
+  LayoutGrid,
+  Scale,
+  Workflow,
   ScrollText,
   ShieldOff,
   Sparkles,
@@ -33,6 +37,7 @@ import { Art } from '../site/art.js';
 import { Backdrop, SectionHead, SitePage, useSite } from '../site/Site.js';
 import { Button } from '../ui/button.js';
 import { arrive, EASE, followPointer, Item, Spotlight, Stagger } from '../ui/motion.js';
+import { IconTile, toneAt } from '../ui/tile.js';
 
 // three.js is most of the page's weight; the words and figures paint before it arrives.
 const Massing3D = lazy(() => import('../components/Massing3D.js').then((m) => ({ default: m.Massing3D })));
@@ -199,7 +204,7 @@ export function Landing(): JSX.Element {
 
       {/* ── Three bands ──────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-        <SectionHead eyebrow={t.landing.bandsEyebrow} title={t.landing.bandsTitle} lede={t.landing.bandsLede} />
+        <SectionHead icon={Gauge} tone="blue" eyebrow={t.landing.bandsEyebrow} title={t.landing.bandsTitle} lede={t.landing.bandsLede} />
         <Stagger className="grid gap-4 md:grid-cols-3" gap={0.08}>
           {(Object.keys(BAND) as (keyof typeof BAND)[]).map((b) => {
             const band = BAND[b];
@@ -259,14 +264,14 @@ export function Landing(): JSX.Element {
           <div className="aurora -start-40 top-10 size-[420px] bg-brand-alt opacity-[calc(var(--glow-strength)*0.6)]" />
         </div>
         <div className="relative mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-          <SectionHead eyebrow={t.landing.flowEyebrow} title={t.landing.flowTitle} lede={t.landing.flowLede} />
+          <SectionHead icon={Workflow} tone="violet" eyebrow={t.landing.flowEyebrow} title={t.landing.flowTitle} lede={t.landing.flowLede} />
           <FlowLine />
         </div>
       </section>
 
       {/* ── What it writes ───────────────────────────────────────────────── */}
       <section className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-        <SectionHead eyebrow={t.landing.outEyebrow} title={t.landing.outTitle} lede={t.landing.outLede} />
+        <SectionHead icon={FileStack} tone="cyan" eyebrow={t.landing.outEyebrow} title={t.landing.outTitle} lede={t.landing.outLede} />
         <FileGrid />
         <p className="mt-5 text-[12.5px] text-secondary">{t.landing.parity(String(v.exports.cars.engine))}</p>
       </section>
@@ -274,7 +279,7 @@ export function Landing(): JSX.Element {
       {/* ── The rest of the site, one layer down each ────────────────────── */}
       <section className="border-t border-line bg-panel">
         <div className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-          <SectionHead eyebrow={s.home.pagesEyebrow} title={s.home.pagesTitle} lede={s.home.pagesLede} />
+          <SectionHead icon={LayoutGrid} tone="blue" eyebrow={s.home.pagesEyebrow} title={s.home.pagesTitle} lede={s.home.pagesLede} />
           <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" gap={0.06}>
             {(['product', 'parking', 'method', 'exports', 'limits', 'faq'] as const).map((key) => (
               <Item key={key} className="h-full">
@@ -306,14 +311,14 @@ export function Landing(): JSX.Element {
 
       {/* ── The five-way claim statement, §16.5's order ──────────────────── */}
       <section className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-        <SectionHead eyebrow={t.landing.claimsEyebrow} title={L.claims.title} lede={L.claims.lede} />
+        <SectionHead icon={Scale} tone="violet" eyebrow={t.landing.claimsEyebrow} title={L.claims.title} lede={L.claims.lede} />
         <ClaimsList />
       </section>
 
       {/* ── What it does not do ──────────────────────────────────────────── */}
       <section className="border-y border-line bg-panel">
         <div className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-          <SectionHead eyebrow={t.landing.limitsEyebrow} title={L.limits.title} lede={L.limits.lede} />
+          <SectionHead icon={CircleSlash} tone="cyan" eyebrow={t.landing.limitsEyebrow} title={L.limits.title} lede={L.limits.lede} />
           <LimitsList />
         </div>
       </section>
@@ -407,12 +412,10 @@ export function FileGrid(): JSX.Element {
           ['xlsx', FileSpreadsheet],
           ['json', FileJson],
         ] as const
-      ).map(([f, Icon]) => (
+      ).map(([f, Icon], i) => (
         <Item key={f}>
-          <Spotlight className="group grid h-full gap-2 rounded-xl border border-line bg-panel p-5 shadow-soft transition-colors hover:border-strong">
-            <span className="grid size-9 place-items-center rounded-lg bg-accent-subtle text-accent transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
-              <Icon className="size-4.5" aria-hidden="true" />
-            </span>
+          <Spotlight className="group grid h-full gap-2 rounded-xl border border-line bg-panel p-5 shadow-soft transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-strong motion-reduce:hover:translate-y-0">
+            <IconTile icon={Icon} tone={toneAt(i)} size="sm" />
             <h3 className="text-[14px] font-medium text-fg">{t.exports.file[f].name}</h3>
             <p className="text-[12.5px] leading-relaxed text-secondary">{t.exports.file[f].body}</p>
           </Spotlight>
@@ -462,9 +465,9 @@ export function FlowLine(): JSX.Element {
       <Stagger as="ol" gap={0.12} className="relative grid gap-6 sm:grid-cols-2 lg:grid-cols-6 lg:gap-4">
         {flow.map((step, i) => (
           <Item key={step.title} as="li" className="grid content-start gap-3">
-            <span className="relative grid size-11 place-items-center rounded-xl border border-line bg-base shadow-soft">
-              <step.icon className="size-5 text-accent" aria-hidden="true" />
-              <span className="figure absolute -end-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-linear-to-br from-brand-solid to-brand-alt-solid text-[10px] text-on-brand">
+            <span className="group relative justify-self-start">
+              <IconTile icon={step.icon} tone={toneAt(i)} />
+              <span className="figure absolute -end-1.5 -top-1.5 grid size-5 place-items-center rounded-full border-2 border-base bg-inverse text-[10px] text-on-inverse">
                 {i + 1}
               </span>
             </span>

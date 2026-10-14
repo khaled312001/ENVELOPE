@@ -1,18 +1,18 @@
 /**
- * Screenshots of the new front end at /next — one PNG per screen, the way
- * `pnpm shots` does for the current site, because a screen is reviewed by
- * looking at it.
+ * Screenshots of the site (apps/web-next, served at the root since 14 Oct
+ * 2026) — one PNG per screen, the way `pnpm shots` does for the classic front
+ * end, because a screen is reviewed by looking at it.
  *
  * It drives the worked example through every step as a reader would: enters
  * with a name, files the plot, answers the rules, computes, and visits each step.
  * Nothing is stubbed — the API on :4000 computes every figure in the pictures.
  *
- *   node scripts/shoot-next.mjs [base]      base defaults to http://localhost:5174/next
+ *   node scripts/shoot-next.mjs [base]      base defaults to http://localhost:5174
  */
 import { mkdirSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 
-const BASE = (process.argv[2] ?? 'http://localhost:5174/next').replace(/\/$/, '');
+const BASE = (process.argv[2] ?? 'http://localhost:5174').replace(/\/$/, '');
 const OUT = new URL('../out/shots-next/', import.meta.url);
 mkdirSync(OUT, { recursive: true });
 const path = (name) => new URL(`${name}.png`, OUT).pathname.replace(/^\/([A-Za-z]:)/, '$1');

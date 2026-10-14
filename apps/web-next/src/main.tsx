@@ -29,7 +29,8 @@ const Exports = lazy(() => import('./screens/site/Exports.js').then((m) => ({ de
 const Limits = lazy(() => import('./screens/site/Limits.js').then((m) => ({ default: m.Limits })));
 const Faq = lazy(() => import('./screens/site/Faq.js').then((m) => ({ default: m.Faq })));
 
-const BASE = '/next';
+// The site is served at the root. Kept as a constant so the arithmetic below reads the same if it ever moves again.
+const BASE = '';
 
 /*
   Before React renders anything: the page's direction and its theme, so the

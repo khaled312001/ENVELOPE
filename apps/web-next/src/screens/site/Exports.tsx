@@ -1,4 +1,4 @@
-import { Check, FileWarning, Lock, LockOpen } from 'lucide-react';
+import { Check, Equal, FileWarning, Layers, Lock, LockOpen } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 
 import worked from '@web/screens/worked-example.json';
@@ -44,7 +44,7 @@ export function Exports(): JSX.Element {
       <Band tinted>
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
-            <SectionHead eyebrow={s.exportsPage.parityEyebrow} title={s.exportsPage.parityTitle} lede={s.exportsPage.parityLede} className="mb-6" />
+            <SectionHead icon={Equal} tone="blue" eyebrow={s.exportsPage.parityEyebrow} title={s.exportsPage.parityTitle} lede={s.exportsPage.parityLede} className="mb-6" />
             <Stagger as="dl" className="overflow-hidden rounded-xl border border-line bg-base shadow-soft">
               {parity.map(({ k, n }) => (
                 <Item key={k} className="flex items-center justify-between gap-4 border-b border-line px-5 py-4 last:border-b-0">
@@ -58,7 +58,7 @@ export function Exports(): JSX.Element {
             </Stagger>
           </div>
           <div>
-            <SectionHead eyebrow={s.exportsPage.gatesEyebrow} title={s.exportsPage.gatesTitle} lede={s.exportsPage.gatesLede} className="mb-6" />
+            <SectionHead icon={Lock} tone="violet" eyebrow={s.exportsPage.gatesEyebrow} title={s.exportsPage.gatesTitle} lede={s.exportsPage.gatesLede} className="mb-6" />
             <ol className="relative grid gap-3">
               {x.gateSequence.map((g, i) => {
                 const ok = g.status === 200;
@@ -91,8 +91,8 @@ export function Exports(): JSX.Element {
         </div>
       </Band>
 
-      <Band>
-        <SectionHead eyebrow={s.exportsPage.sheetsEyebrow} title={s.exportsPage.sheetsTitle} />
+      <Band glow="cyan">
+        <SectionHead icon={Layers} tone="cyan" eyebrow={s.exportsPage.sheetsEyebrow} title={s.exportsPage.sheetsTitle} />
         <div className="grid gap-6 lg:grid-cols-3">
           <Stagger as="ol" className="grid content-start gap-2 lg:col-span-2 sm:grid-cols-2" gap={0.05}>
             {x.drawingSheets.map((sh) => (

@@ -1,5 +1,5 @@
 /**
- * TOP.ai Studio — every word on the new front end, in English.
+ * Plotlogic — every word on the front end, in English.
  *
  * `Dict` is this object's type and no `as const`, so `ar.ts` is held to the
  * same shape: a key missing in Arabic is a compile error, not a blank.
@@ -62,12 +62,11 @@ export const EN = {
     signedIn: 'Signed in',
     named: 'Named in this browser',
     signOut: 'Sign out',
-    home: 'TOP.ai home',
-    preview: 'Studio preview',
+    home: 'Plotlogic home',
     nav: 'Main',
     studies: 'Studies',
     newStudy: 'New study',
-    classic: 'Current site',
+    classic: 'Classic studio',
     toLight: 'Switch to light theme',
     toDark: 'Switch to dark theme',
   },
@@ -121,7 +120,6 @@ export const EN = {
       export: { title: 'Sign and export', body: 'Report, A3 drawing set, DXF, 3D model and spreadsheet — behind two signed gates.' },
       refuse: { title: 'Refuse what it cannot know', body: 'A gap on the affection plan is reported, never filled from a neighbouring plot.' },
     },
-    footer: 'TOP.ai — studio preview. The current site remains the reference.',
   },
 
   bands: {
@@ -140,7 +138,7 @@ export const EN = {
     signIn: 'Sign in',
     failed: 'Sign-in failed. Check the email and password and try again.',
     noAccount: 'No account yet?',
-    createOnClassic: 'Create one on the current site',
+    createOnClassic: 'Create one',
     guestTitle: 'With a name only',
     guestBody: 'Your studies stay in this browser. Clearing it loses them.',
     name: 'Your name',
@@ -408,7 +406,7 @@ export const EN = {
     g3Action: 'Acknowledge the assumptions',
     g4: 'Name a reviewer',
     g4Body: 'You put your name and licence number to this study as its reviewer. This records a named reviewer — it is not a compliance check.',
-    g4NoLicence: 'Signing G4 needs a licence number on your account. Add one on the current site’s settings page.',
+    g4NoLicence: 'Signing G4 needs a licence number on your account. Add one on the classic studio’s settings page.',
     g4Action: 'Sign as reviewer',
     signedBy: (name: string): string => `Signed by ${name}`,
     files: 'Files',

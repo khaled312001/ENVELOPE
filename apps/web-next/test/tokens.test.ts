@@ -89,6 +89,8 @@ eachTheme('text contrast, WCAG 2.2 1.4.3 (4.5:1), on every surface it is set on'
   it('white on both stops of the brand gradient (the brand button, the call band)', () => {
     expect(ratio('--on-brand', '--brand-solid')).toBeGreaterThanOrEqual(4.5);
     expect(ratio('--on-brand', '--brand-alt-solid')).toBeGreaterThanOrEqual(4.5);
+    // The icon tiles' third tone, and the floating WhatsApp button's glyph.
+    expect(ratio('--on-brand', '--brand-glow-solid')).toBeGreaterThanOrEqual(4.5);
   });
   it('both stops of the gradient phrase on the page and on a panel', () => {
     for (const bg of ['--surface-base', '--surface-panel']) {
@@ -127,7 +129,7 @@ eachTheme('amber is uncertainty and nothing else (§13.1)', () => {
   });
   it('no brand colour is a provenance colour', () => {
     const provenance = new Set(['--uncertain', '--derived', '--variance'].map((k) => resolve(k)));
-    for (const k of ['--accent', '--accent-strong', '--brand-alt', '--brand-glow', '--brand-solid', '--brand-alt-solid']) {
+    for (const k of ['--accent', '--accent-strong', '--brand-alt', '--brand-glow', '--brand-solid', '--brand-alt-solid', '--brand-glow-solid']) {
       expect(provenance.has(resolve(k)) ? k : null).toBeNull();
     }
   });

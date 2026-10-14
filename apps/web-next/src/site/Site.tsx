@@ -1,4 +1,4 @@
-import { ArrowRight, ChevronRight, Menu } from 'lucide-react';
+import { ArrowRight, ChevronRight, type LucideIcon, Mail, Menu } from 'lucide-react';
 import { useReducedMotion, motion } from 'motion/react';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useLocation } from 'react-router';
@@ -11,7 +11,9 @@ import { SITE_EN, type SiteDict } from '../i18n/site.en.js';
 import { Button } from '../ui/button.js';
 import { arrive, Item, ScrollProgress, Stagger } from '../ui/motion.js';
 import { Drawer } from '../ui/radix.js';
+import { IconTile, type Tone } from '../ui/tile.js';
 import { Art } from './art.js';
+import { CONTACT, WhatsAppButton, WhatsAppGlyph, whatsappHref } from './contact.js';
 import { type PagePath, usePageMeta } from './meta.js';
 
 /*
@@ -128,7 +130,7 @@ function SiteFooter(): JSX.Element {
   ];
   return (
     <footer className="border-t border-line bg-panel">
-      <div className="mx-auto grid max-w-[1320px] gap-10 px-4 py-14 sm:px-6 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
+      <div className="mx-auto grid max-w-[1320px] gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))]">
         <div className="grid content-start gap-4">
           <Logo />
           <p className="max-w-sm text-[13.5px] leading-relaxed text-secondary">{s.footer.blurb}</p>
@@ -148,12 +150,49 @@ function SiteFooter(): JSX.Element {
             </ul>
           </nav>
         ))}
+        <div className="grid content-start gap-3">
+          <h2 className="text-[12px] font-semibold tracking-[0.08em] text-fg uppercase">{s.footer.contact}</h2>
+          <ul className="grid gap-2.5">
+            <li>
+              <a
+                href={whatsappHref()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-2.5 text-[13.5px] text-secondary transition-colors hover:text-fg"
+              >
+                <span className="tile tile-violet grid size-7 rounded-md">
+                  <WhatsAppGlyph className="size-3.5" />
+                </span>
+                <span className="grid">
+                  <span className="text-[11px] text-tertiary">{s.footer.whatsapp}</span>
+                  {/* A phone number reads left to right in either language. */}
+                  <span dir="ltr" className="figure text-start">
+                    {CONTACT.phone}
+                  </span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href={`mailto:${CONTACT.email}`} className="group inline-flex items-center gap-2.5 text-[13.5px] text-secondary transition-colors hover:text-fg">
+                <span className="tile tile-blue grid size-7 rounded-md">
+                  <Mail className="size-3.5" aria-hidden="true" />
+                </span>
+                <span className="grid">
+                  <span className="text-[11px] text-tertiary">{s.footer.email}</span>
+                  <span dir="ltr" className="text-start">
+                    {CONTACT.email}
+                  </span>
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
       </div>
       <div className="border-t border-line">
         <div className="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-3 px-4 py-5 text-[12px] text-secondary sm:px-6">
           <span>{s.footer.rights(String(new Date().getFullYear()))}</span>
           <span className="flex flex-wrap items-center gap-4">
-            <a href="/" className="hover:text-fg">
+            <a href="/app" className="hover:text-fg">
               {s.footer.classic}
             </a>
             <EngineText className="not-assessed">REGULATORY VALIDITY: NOT ASSESSED</EngineText>
@@ -189,6 +228,7 @@ export function SitePage({ path, children, cta = true }: { readonly path: PagePa
         {cta ? <CtaBand /> : null}
       </main>
       <SiteFooter />
+      <WhatsAppButton />
     </div>
   );
 }
@@ -267,16 +307,34 @@ export function SectionHead({
   title,
   lede,
   className,
+  icon,
+  tone = 'blue',
 }: {
   readonly eyebrow: string;
   readonly title: string;
   readonly lede?: string;
   readonly className?: string;
+  /** A glyph for the section, on a tile in one of the brand's tones. */
+  readonly icon?: LucideIcon;
+  readonly tone?: Tone;
 }): JSX.Element {
+  const reduce = useReducedMotion();
   return (
     <Stagger className={`mb-10 grid max-w-2xl gap-3 ${className ?? ''}`}>
-      <Item>
-        <p className="figure text-[11.5px] tracking-[0.14em] text-accent uppercase">{eyebrow}</p>
+      <Item className="flex items-center gap-3">
+        {icon ? <IconTile icon={icon} tone={tone} size="sm" float /> : null}
+        <span className="grid gap-1.5">
+          <p className="figure text-[11.5px] tracking-[0.14em] text-accent uppercase">{eyebrow}</p>
+          {/* A short rule that draws itself in under the eyebrow. */}
+          <motion.span
+            aria-hidden="true"
+            className="block h-0.5 w-12 origin-left rounded-full bg-linear-to-r from-accent via-brand-alt to-brand-glow rtl:origin-right"
+            initial={reduce ? false : { scaleX: 0 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+          />
+        </span>
       </Item>
       <Item>
         <h2 className="text-[28px] leading-tight font-light tracking-[-0.02em] text-fg sm:text-[36px]">{title}</h2>
@@ -291,10 +349,27 @@ export function SectionHead({
 }
 
 /** A band of the page; `tinted` alternates the surface so long pages keep their rhythm. */
-export function Band({ children, tinted = false, className }: { readonly children: ReactNode; readonly tinted?: boolean; readonly className?: string }): JSX.Element {
+export function Band({
+  children,
+  tinted = false,
+  glow,
+  className,
+}: {
+  readonly children: ReactNode;
+  readonly tinted?: boolean;
+  /** A slow light of one brand tone behind the band, on the side away from where the text starts. */
+  readonly glow?: Tone;
+  readonly className?: string;
+}): JSX.Element {
+  const light = glow === 'violet' ? 'bg-brand-alt' : glow === 'cyan' ? 'bg-brand-glow' : 'bg-accent';
   return (
-    <section className={`${tinted ? 'border-y border-line bg-panel' : ''} ${className ?? ''}`}>
-      <div className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">{children}</div>
+    <section className={`relative overflow-hidden ${tinted ? 'border-y border-line bg-panel' : ''} ${className ?? ''}`}>
+      {glow ? (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <div className={`aurora -end-32 top-1/4 size-[420px] opacity-[calc(var(--glow-strength)*0.55)] ${light}`} />
+        </div>
+      ) : null}
+      <div className="relative mx-auto max-w-[1320px] px-4 py-20 sm:px-6">{children}</div>
     </section>
   );
 }

@@ -36,8 +36,18 @@ export const SITE_EN = {
     start: 'Start a study',
     studies: 'Your studies',
     enter: 'Sign in',
-    classic: 'The current site',
-    rights: (year: string): string => `© ${year} TOP.ai. A studio preview; the current site remains the reference.`,
+    classic: 'Classic studio',
+    rights: (year: string): string => `© ${year} Plotlogic.dev`,
+    contact: 'Contact',
+    whatsapp: 'WhatsApp',
+    email: 'Email',
+  },
+
+  /* The floating button. Its label says where it goes, because an icon alone does not. */
+  whatsapp: {
+    label: 'Message us on WhatsApp',
+    tip: 'Questions? WhatsApp',
+    greeting: 'Hello, I have a question about Plotlogic.',
   },
 
   crumbs: { label: 'Breadcrumb', home: 'Home' },

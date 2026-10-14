@@ -3,6 +3,8 @@ import { Languages, LogOut, Moon, ShieldOff, Sun, UserRound } from 'lucide-react
 import { AnimatePresence, motion } from 'motion/react';
 import type { ReactNode } from 'react';
 
+import logoDark from '../assets/img/logo-dark.webp';
+import logoLight from '../assets/img/logo-light.webp';
 import { cn } from '../lib/cn.js';
 import { useIdentity } from '../lib/identity.js';
 import { useLocale } from '../lib/locale.js';
@@ -12,28 +14,17 @@ import { Button } from '../ui/button.js';
 import { Tip } from '../ui/radix.js';
 
 /**
- * The mark: three plots stacked like levels, the top one with a step in its
- * edge as a real plot has. Drawn from the delivered logo rather than embedded
- * as a picture, so it stays sharp at 28px and takes each theme's inks. The top
- * plate is the brand gradient — never amber.
+ * The delivered logo, as delivered: the wordmark's letterforms are the brand's
+ * and a font of ours would only approximate them. Lifted off its white ground
+ * into two files, because the grey ink that reads on the light page vanishes
+ * on the dark one; the blue-violet plate is the same in both — never amber.
+ * The theme is an attribute, not a media query, so the swap is a class.
  */
 export function Logo({ className }: { readonly className?: string }): JSX.Element {
   return (
-    <span className={cn('inline-flex items-center gap-2', className)}>
-      <svg viewBox="0 0 32 32" className="size-7" aria-hidden="true" fill="none" strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round">
-        <defs>
-          <linearGradient id="logo-plate" x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0" stopColor="var(--accent)" />
-            <stop offset="1" stopColor="var(--brand-alt)" />
-          </linearGradient>
-        </defs>
-        <polyline points="6.1,17.6 2.2,19 18.2,26.8 29.7,21.1 26.6,19.7" stroke="var(--text-secondary)" />
-        <polyline points="6.5,14 2.4,15.3 18.4,22.7 29.8,17 26.6,15.4" stroke="var(--text-tertiary)" />
-        <polygon points="2.8,11.8 17.3,5.2 23.7,8.4 22.5,9.2 30,13.1 18.4,18.9" stroke="url(#logo-plate)" />
-      </svg>
-      <span className="text-[15px] font-semibold tracking-[-0.01em] text-fg">
-        TOP<span className="text-accent">.ai</span>
-      </span>
+    <span className={cn('inline-flex items-center', className)}>
+      <img src={logoLight} width={545} height={96} alt="Plotlogic.dev" className="h-7 w-auto dark:hidden" />
+      <img src={logoDark} width={545} height={96} alt="Plotlogic.dev" className="hidden h-7 w-auto dark:block" />
     </span>
   );
 }
@@ -161,9 +152,6 @@ export function TopBar({ children }: { readonly children?: ReactNode }): JSX.Ele
       <Link to="/" className="me-2 rounded-md p-1" aria-label={t.shell.home}>
         <Logo />
       </Link>
-      <span className="hidden rounded-sm border border-accent/40 bg-accent-subtle px-1.5 py-px text-[10.5px] font-semibold tracking-[0.06em] text-accent-strong uppercase md:inline">
-        {t.shell.preview}
-      </span>
       {actor ? (
         <nav aria-label={t.shell.nav} className="ms-2 hidden items-center gap-0.5 sm:flex">
           <NavLink to="/studies" className={nav}>
@@ -177,7 +165,8 @@ export function TopBar({ children }: { readonly children?: ReactNode }): JSX.Ele
       {children}
       <div className="ms-auto flex items-center gap-1.5">
         <RegulatoryStamp className="hidden lg:inline-flex" />
-        <a href="/" className="hidden rounded-md px-2 py-1.5 text-[12.5px] text-secondary hover:bg-hover hover:text-fg md:inline">
+        {/* The previous studio, still served whole at /app for whatever this one does not do yet. */}
+        <a href="/app" className="hidden rounded-md px-2 py-1.5 text-[12.5px] text-secondary hover:bg-hover hover:text-fg md:inline">
           {t.shell.classic}
         </a>
         <LocaleSwitch />

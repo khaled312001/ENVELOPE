@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 /*
-  THE NEW FRONT END, SERVED BESIDE THE CURRENT ONE AT /next/.
+  THE SITE, AT THE ROOT.
 
-  Same origin, same API, same engine packages: the session cookie and the
-  remembered identity are shared, so a reader moves between the two without
+  It was built at /next/ beside the previous front end and became the site on
+  14 Oct 2026. The previous one still serves the paths only it has (/app,
+  /work, sign-up, settings…) from the same origin: same API, same session
+  cookie and remembered identity, so a reader moves between the two without
   signing in twice, and nothing here can compute a number the engine did not.
 
   `@web/*` reaches into the current app for ONE thing — its typed API client —
@@ -15,7 +17,7 @@ import { defineConfig } from 'vite';
   for a field to be renamed and a figure to go missing without a type error.
 */
 export default defineConfig({
-  base: '/next/',
+  base: '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

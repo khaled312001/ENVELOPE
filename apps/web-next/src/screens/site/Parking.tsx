@@ -1,4 +1,4 @@
-import { ArrowDownUp, CircleSlash, Route, Ruler, SquareParking } from 'lucide-react';
+import { ArrowDownUp, ChartPie, CircleSlash, DoorOpen, RotateCw, Route, Ruler, SquareParking } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 
 import worked from '@web/screens/worked-example.json';
@@ -9,6 +9,7 @@ import { EngineText, useLocale } from '../../lib/locale.js';
 import { Art, Illustration } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
 import { EASE, Item, Spotlight, Stagger } from '../../ui/motion.js';
+import { IconTile } from '../../ui/tile.js';
 
 /*
   PARKING, THE PART THE CLIENT IS BUYING.
@@ -169,23 +170,24 @@ export function Parking(): JSX.Element {
       </Band>
 
       <Band tinted>
-        <SectionHead eyebrow={s.parking.tableEyebrow} title={s.parking.tableTitle} lede={s.parking.tableLede} />
+        <SectionHead icon={Ruler} tone="blue" eyebrow={s.parking.tableEyebrow} title={s.parking.tableTitle} lede={s.parking.tableLede} />
         <Stagger className="grid gap-4 sm:grid-cols-3" gap={0.08}>
           {[
-            { icon: SquareParking, title: s.parking.table.bay, rows: [[s.parking.table.width, `${lp.standard.bayWidthM} ${m}`], [s.parking.table.length, `${lp.standard.bayLengthM} ${m}`]] },
+            { icon: SquareParking, tone: 'blue' as const, title: s.parking.table.bay, rows: [[s.parking.table.width, `${lp.standard.bayWidthM} ${m}`], [s.parking.table.length, `${lp.standard.bayLengthM} ${m}`]] },
             {
               icon: Route,
+              tone: 'violet' as const,
               title: s.parking.table.driveway,
               rows: [
                 [s.parking.table.width, `${lp.standard.drivewayWidthM} ${m}`],
                 ['', lp.standard.driveway === 'TWO_WAY' ? s.parking.table.twoWay : lp.standard.driveway],
               ],
             },
-            { icon: Ruler, title: s.parking.table.angle, rows: [['', lp.standard.angle === 'DEG_90' ? s.parking.table.deg90 : lp.standard.angle]] },
+            { icon: Ruler, tone: 'cyan' as const, title: s.parking.table.angle, rows: [['', lp.standard.angle === 'DEG_90' ? s.parking.table.deg90 : lp.standard.angle]] },
           ].map((card) => (
-            <Item key={card.title} className="grid content-start gap-4 rounded-xl border border-line bg-base p-6 shadow-soft">
-              <span className="flex items-center gap-2.5 text-[15px] font-medium text-fg">
-                <card.icon className="size-5 text-accent" aria-hidden="true" />
+            <Item key={card.title} className="group grid content-start gap-4 rounded-xl border border-line bg-base p-6 shadow-soft transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-strong motion-reduce:hover:translate-y-0">
+              <span className="flex items-center gap-3 text-[15px] font-medium text-fg">
+                <IconTile icon={card.icon} tone={card.tone} size="sm" />
                 {card.title}
               </span>
               <dl className="grid gap-2">
@@ -204,13 +206,13 @@ export function Parking(): JSX.Element {
       <Band>
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
-            <SectionHead eyebrow={s.parking.reachEyebrow} title={s.parking.reachTitle} className="mb-6" />
+            <SectionHead icon={Route} tone="violet" eyebrow={s.parking.reachEyebrow} title={s.parking.reachTitle} className="mb-6" />
             <p className="text-[15px] leading-relaxed text-secondary">{s.parking.reachBody}</p>
             <p className="mt-4 rounded-lg border border-line bg-panel p-4 text-[13.5px] leading-relaxed text-secondary shadow-soft">{s.parking.reachTest}</p>
             <Art name="parking-reach" alt={s.art.parkingReach} className="mx-auto mt-8 w-full max-w-sm" />
           </div>
           <div>
-            <SectionHead eyebrow={s.parking.orientationEyebrow} title={s.parking.orientationTitle} className="mb-6" />
+            <SectionHead icon={RotateCw} tone="cyan" eyebrow={s.parking.orientationEyebrow} title={s.parking.orientationTitle} className="mb-6" />
             <p className="text-[15px] leading-relaxed text-secondary">{s.parking.orientationBody}</p>
             {orientationNote ? (
               <blockquote className="mt-4 border-s-2 border-accent ps-4 text-[13.5px] leading-relaxed text-fg">
@@ -223,7 +225,7 @@ export function Parking(): JSX.Element {
       </Band>
 
       <Band tinted>
-        <SectionHead eyebrow={s.parking.lossesEyebrow} title={s.parking.lossesTitle} lede={s.parking.lossesLede} />
+        <SectionHead icon={ChartPie} tone="violet" eyebrow={s.parking.lossesEyebrow} title={s.parking.lossesTitle} lede={s.parking.lossesLede} />
         <Stagger className="grid gap-4 md:grid-cols-3" gap={0.08}>
           {losses.map((l) => (
             <Item key={l.key} className="h-full">
@@ -250,7 +252,7 @@ export function Parking(): JSX.Element {
       </Band>
 
       <Band>
-        <SectionHead eyebrow={s.parking.accessEyebrow} title={s.parking.accessTitle} lede={s.parking.accessBody} />
+        <SectionHead icon={DoorOpen} tone="blue" eyebrow={s.parking.accessEyebrow} title={s.parking.accessTitle} lede={s.parking.accessBody} />
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="ring-brand shadow-soft grid content-start gap-4 rounded-xl bg-panel p-6">
             <p className="flex items-center gap-2 text-[14px] font-medium text-fg">
@@ -292,7 +294,7 @@ export function Parking(): JSX.Element {
       </Band>
 
       <Band tinted>
-        <SectionHead eyebrow={s.parking.notEyebrow} title={s.parking.notTitle} lede={s.parking.notLede} />
+        <SectionHead icon={CircleSlash} tone="cyan" eyebrow={s.parking.notEyebrow} title={s.parking.notTitle} lede={s.parking.notLede} />
         <Stagger as="ul" className="grid gap-3" gap={0.05}>
           {notes.map((n) => (
             <Item key={n} as="li" className="flex items-start gap-3 rounded-lg border border-line bg-base p-4 text-[13px] leading-relaxed text-secondary">

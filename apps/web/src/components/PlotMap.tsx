@@ -479,9 +479,7 @@ export interface FootprintResult {
   readonly kind: string | null;
 }
 
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
-/** How far from the click to look. One villa plot, not one neighbourhood. */
-const FOOTPRINT_RADIUS_M = 40;
+const FOOTPRINT_URL = '/api/geo/footprint';
 /** A corner is a turn of at least this much. Below it the point is on a wall. */
 const COLLINEAR_TOLERANCE_DEG = 4;
 
@@ -536,17 +534,17 @@ function ringContains(ring: readonly LngLat[], p: LngLat): boolean {
  */
 export async function fetchFootprint(
   at: LngLat,
-  radiusM: number = FOOTPRINT_RADIUS_M,
   fetchImpl: typeof fetch = fetch,
 ): Promise<FootprintResult> {
-  const query =
-    `[out:json][timeout:20];(` +
-    `way(around:${radiusM},${at.lat},${at.lng})["building"];` +
-    `way(around:${radiusM},${at.lat},${at.lng})["landuse"];` +
-    `);out geom;`;
+  /* Through the API, never to Overpass directly: the public server answers a
+     browser 406 and the same query from a server 200, and a page cannot set the
+     User-Agent that decides it. See `apps/api/src/geo-route.ts`, which looks
+     within the forty metres — one villa plot — this function always has. */
   let ways: readonly OverpassWay[];
   try {
-    const res = await fetchImpl(OVERPASS_URL, { method: 'POST', body: query });
+    const res = await fetchImpl(`${FOOTPRINT_URL}?lat=${at.lat.toFixed(6)}&lng=${at.lng.toFixed(6)}`, {
+      headers: { accept: 'application/json' },
+    });
     if (!res.ok) return { ring: null, refusal: 'offline', name: null, kind: null };
     const body = (await res.json()) as { readonly elements?: readonly OverpassWay[] };
     ways = body.elements ?? [];

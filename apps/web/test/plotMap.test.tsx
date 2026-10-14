@@ -943,13 +943,26 @@ describe('an outline picked off OpenStreetMap', () => {
     const dead = (async () => {
       throw new Error('offline');
     }) as unknown as typeof fetch;
-    const out = await fetchFootprint(at, 40, dead);
+    const out = await fetchFootprint(at, dead);
     expect(out.ring).toBeNull();
     expect(out.refusal).toBe('offline');
   });
 
+  /* The public Overpass server answers a browser 406 (14 Oct 2026), and a page
+     cannot change the header that decides it. Asking it directly again would
+     bring back a picker that fails on every click. */
+  it('asks the API, never OpenStreetMap from the browser', async () => {
+    const urls: string[] = [];
+    const spy = (async (url: string) => {
+      urls.push(url);
+      return { ok: true, json: async () => ({ elements: [] }) };
+    }) as unknown as typeof fetch;
+    await fetchFootprint(at, spy);
+    expect(urls).toEqual(['/api/geo/footprint?lat=25.204800&lng=55.270800']);
+  });
+
   it('refuses rather than guessing when there is nothing there', async () => {
-    const out = await fetchFootprint(at, 40, reply({ elements: [] }));
+    const out = await fetchFootprint(at, reply({ elements: [] }));
     expect(out.ring).toBeNull();
     expect(out.refusal).toBe('none-here');
   });
@@ -957,7 +970,6 @@ describe('an outline picked off OpenStreetMap', () => {
   it('refuses a way that is not a closed outline', async () => {
     const out = await fetchFootprint(
       at,
-      40,
       reply({ elements: [{ geometry: [{ lat: 25, lon: 55 }, { lat: 25.001, lon: 55 }] }] }),
     );
     expect(out.refusal).toBe('not-a-ring');
@@ -978,7 +990,6 @@ describe('an outline picked off OpenStreetMap', () => {
     ];
     const out = await fetchFootprint(
       { lng: 55.20025, lat: 25.20025 },
-      40,
       reply({ elements: [{ geometry: square, tags: { building: 'yes', name: 'Villa 12' } }] }),
     );
     expect(out.ring).toHaveLength(4);
@@ -997,7 +1008,6 @@ describe('an outline picked off OpenStreetMap', () => {
     ];
     const out = await fetchFootprint(
       { lng: 55.2, lat: 25.2 },
-      40,
       reply({
         elements: [
           { geometry: box(0.0008, 0.0008), tags: { building: 'yes', name: 'the wall' } },

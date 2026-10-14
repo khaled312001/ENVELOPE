@@ -90,6 +90,7 @@ import { ENGINE_VERSION, presentRun } from './present.js';
 import { buildRunReport } from './report.js';
 import { type Actor } from './identity.js';
 import { gateAck, plotInput, runRequest, shareRequest, type RunRequest } from './schemas.js';
+import { registerGeoRoutes } from './geo-route.js';
 import { registerIntakeRoutes } from './intake-route.js';
 import {
   AttachmentError,
@@ -375,6 +376,7 @@ export async function build(
   }));
 
   registerIntakeRoutes(app, costly);
+  registerGeoRoutes(app, costly);
   if (accounts) registerAuthRoutes(app, accounts);
   if (accounts) registerOrgRoutes(app, accounts);
 

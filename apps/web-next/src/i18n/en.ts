@@ -335,9 +335,9 @@ export const EN = {
     precision: 'Traced off imagery. Check each length against the sheet.',
     unavailable: 'The map needs WebGL, which this browser has turned off. Type the corners instead.',
     tilesFailed: 'The imagery did not load. Check the connection.',
-    footprintBusy: 'Looking for a building here…',
+    footprintBusy: 'Looking for a building here… OpenStreetMap can take up to half a minute.',
     footprint: {
-      offline: 'The building data could not be reached.',
+      offline: 'OpenStreetMap did not answer. Try again in a minute, or draw the plot.',
       'none-here': 'No building outline here.',
       'not-a-ring': 'That outline is not a simple shape.',
     },

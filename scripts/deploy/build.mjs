@@ -317,7 +317,8 @@ const csp = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
   `img-src 'self' data: blob: ${TILE_ORIGINS.join(' ')}`,
-  `connect-src 'self' ${TILE_ORIGINS.join(' ')} https://nominatim.openstreetmap.org https://overpass-api.de`,
+  // Overpass is asked by the API now (`apps/api/src/geo-route.ts`), so the page needs no line to it.
+  `connect-src 'self' ${TILE_ORIGINS.join(' ')} https://nominatim.openstreetmap.org`,
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
   "frame-src 'self' blob:",

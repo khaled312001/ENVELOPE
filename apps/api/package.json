@@ -21,9 +21,11 @@
     "@envelope/sheets": "workspace:*",
     "@envelope/validation": "workspace:*",
     "@fastify/cors": "^10.0.1",
+    "@mapbox/vector-tile": "3.0.0",
     "decimal.js": "^10.6.0",
     "fastify": "^5.2.0",
     "mysql2": "^3.24.2",
+    "pbf": "5.1.2",
     "zod": "^4.6.7"
   }
 }

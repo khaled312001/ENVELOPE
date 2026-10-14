@@ -40,7 +40,7 @@ import {
   type RulesForm,
   rulesFrom,
 } from '../studio/model.js';
-import { ringToDraft } from '../studio/geometry.js';
+import { pointsToDraft, pointsToRing, ringToDraft } from '../studio/geometry.js';
 import { ParkingCanvas, ParkingPanel } from '../studio/ParkingStep.js';
 import { PlotCanvas, PlotPanel, type PlotViewMode } from '../studio/PlotStep.js';
 import { RulesPanel } from '../studio/RulesStep.js';
@@ -260,11 +260,27 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
     if (!sheet) return;
     const f = sheet.read.facts;
     // What the sheet prints, filled in where it prints it; a field it does not print keeps what the reader typed.
-    editPlot({
+    const named: DraftPlot = {
       ...draft,
       plotNumber: f.parcelId?.value ?? draft.plotNumber,
       community: f.community?.value ?? draft.community,
-    });
+    };
+    /*
+      The corners too, when the sheet gives them exactly: a coordinate table, or
+      the Municipality's drawing on its own grid — both DERIVED, both already
+      checked against the printed area before the server sent them. "Use this
+      sheet" is the reader's act of taking it, and the facts it takes are on the
+      screen beside the button. A shape fitted to a picture (ASSUMED) is still
+      offered on the plot step on a button of its own.
+    */
+    const ring = f.survey ?? f.drawn;
+    editPlot((ring ? pointsToDraft(ring.points.value, named) : null) ?? named);
+    // And where it is: placed on the map from the sheet's grid, so the reader sees the plot on the ground.
+    const placed = ring ? pointsToRing(ring.points.value, ring.system.value) : null;
+    if (placed) {
+      setTrace({ ring: placed, closed: true, fromSheet: true });
+      setPlotView('map');
+    }
     if (f.totalAreaSqm) setStatedArea(f.totalAreaSqm.value);
     // The podium count G+2P+8 prints, offered in the rules form where it can be read and changed.
     if (f.height && rules.podiumAboveGround === '') setRules({ ...rules, podiumAboveGround: String(f.height.value.podiumLevels) });
@@ -274,6 +290,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   const clearSheet = (): void => {
     setSheet(null);
     setSheetError(null);
+    if (trace.fromSheet) setTrace({ ring: [], closed: false });
     if (sheetUsed) {
       setSheetUsed(false);
       unfile();

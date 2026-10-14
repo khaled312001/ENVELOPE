@@ -69,6 +69,7 @@ emits its fields as `DERIVED` against a citation rather than as user input.
 | File | What it is |
 |---|---|
 | `samples/affection-plan/IC1-CTYL-16_011-warsan1-621.pdf` | Trakhees / Nakheel, Warsan 1. 1,365.23 m², FAR 3.50, G+2P+8. The sheet walked on screen. |
+| `samples/affection-plan/DM-1341556-al-mamzar.pdf` | Dubai Municipality Unified Site Plan, Al Mamzar, request SAPS-08082026-195370. 7,389.43 m², FAR 5.0, G+1P+16, limits in Arabic, vector site plan on a printed DLTM grid with no coordinate table. Read by `packages/intake/src/dm.ts`. |
 | `samples/rfp/D1005 RFP Residential Building Al Mamzar…pdf` | 235 pp. Full consultancy RFP incl. contract clauses. |
 | `samples/rfp/Annexure A- Project Brief - CPT2-6468096-Z6-04.pdf` | Azizi Milan. **The target output spec** — see below. |
 

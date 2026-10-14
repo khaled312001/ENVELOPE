@@ -621,6 +621,23 @@ export interface AffectionPlanRead {
       } | null;
       readonly notModelled: readonly string[];
     };
+    /**
+     * The plot off a vector drawing with a printed grid — the Municipality's
+     * sheet, which prints no coordinate table. The same shape as `survey`, sent
+     * on the same condition (its ring reproduces the printed area), except that
+     * `system` is ASSUMED: the sheet does not name its grid. `edgeHints` is one
+     * entry per boundary in ring order, null where nothing is labelled outside
+     * it — a suggestion for the edge class, never an answer.
+     */
+    readonly drawn?: NonNullable<AffectionPlanRead['facts']['survey']> & {
+      readonly edgeHints: readonly ({
+        readonly classification: 'ROAD' | 'ADJACENT_PLOT';
+        readonly verbatim: string;
+        readonly distanceM: string;
+      } | null)[];
+    };
+    /** The sheet's own parking row, verbatim (the Municipality's sheet has one). */
+    readonly parkingRequirement?: TracedWire | null;
     readonly missing: readonly {
       readonly field: string;
       readonly label: string;

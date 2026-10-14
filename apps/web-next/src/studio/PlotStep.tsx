@@ -1,4 +1,4 @@
-import { FileCheck2, Map as MapIcon, PenSquare, Plus, Trash2 } from 'lucide-react';
+import { CircleCheck, FileCheck2, Map as MapIcon, PenSquare, Plus, Trash2 } from 'lucide-react';
 import { lazy, Suspense, useMemo } from 'react';
 
 import type { PlotCreated, PlotView } from '@web/api/client.js';
@@ -11,7 +11,7 @@ import { EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, Field, Input, Notice, PanelHeader, Select, Spinner } from '../ui/primitives.js';
 import { Segmented } from '../ui/radix.js';
-import { legsToDraft } from './geometry.js';
+import { legsToDraft, pointsToDraft } from './geometry.js';
 import type { DraftPlot, EdgeClass, Hierarchy } from './model.js';
 import { Footer, Heading, NextStep, Row } from './parts.js';
 import type { SheetState } from './SheetStep.js';
@@ -118,7 +118,12 @@ function KeyItem({ dash, width, stroke, label }: { dash: string | undefined; wid
   );
 }
 
-const CLASSES: readonly Exclude<EdgeClass, ''>[] = ['ROAD', 'ADJACENT_PLOT', 'OPEN_SPACE', 'OTHER'];
+/** True when the table already holds exactly these corners — the offer has been taken. */
+function sameCorners(a: DraftPlot, b: DraftPlot): boolean {
+  return a.vertices.length === b.vertices.length && a.vertices.every((v, i) => v.x === b.vertices[i]!.x && v.y === b.vertices[i]!.y);
+}
+
+const CLASSES: readonly Exclude<EdgeClass, ''>[] =['ROAD', 'ADJACENT_PLOT', 'OPEN_SPACE', 'OTHER'];
 const HIERARCHIES: readonly Exclude<Hierarchy, ''>[] = ['ARTERIAL', 'COLLECTOR', 'LOCAL', 'ACCESS'];
 
 export function PlotPanel({
@@ -161,13 +166,25 @@ export function PlotPanel({
   const remove = (i: number): void =>
     onChange({ ...draft, vertices: draft.vertices.filter((_, j) => j !== i), edges: draft.edges.filter((_, j) => j !== i) });
 
-  // What the sheet offers for the corners, walked now so a button is never offered that would do nothing.
+  // What the sheet offers for the corners, built now so a button is never offered that would do nothing.
   const offer = useMemo(() => {
     const facts = sheet?.read.facts;
     if (!facts) return null;
-    if (facts.survey) {
-      const next = legsToDraft(facts.survey.legs.value, draft);
-      if (next) return { kind: 'survey' as const, next, count: facts.survey.points.value.length, system: facts.survey.system.value };
+    // Printed eastings (DDA) or the drawing's own vertices on its grid (Municipality): both DERIVED, both exact.
+    const ring = facts.survey ?? facts.drawn;
+    if (ring) {
+      const next = pointsToDraft(ring.points.value, draft);
+      if (next) {
+        return {
+          kind: 'survey' as const,
+          next,
+          count: ring.points.value.length,
+          system: ring.system.value,
+          drawn: facts.survey === undefined,
+          applied: sameCorners(next, draft),
+          hints: facts.survey === undefined ? (facts.drawn?.edgeHints ?? []) : [],
+        };
+      }
     }
     const legs = facts.sitePlan?.outline?.legs.value;
     if (legs && legs.length >= 3 && legs.every((l) => l.lengthM !== undefined)) {
@@ -175,10 +192,28 @@ export function PlotPanel({
         legs.map((l) => ({ lengthM: l.lengthM!, bearingDeg: l.bearingDeg })),
         draft,
       );
-      if (next) return { kind: 'outline' as const, next };
+      if (next) return { kind: 'outline' as const, next, applied: sameCorners(next, draft) };
     }
     return null;
   }, [sheet, draft]);
+
+  /*
+    What the sheet prints outside each boundary, as a SUGGESTION for its class.
+    Only while the corners are the sheet's own — once a corner moves, boundary 2
+    may not be the boundary the label sat beside. A hint fills an unanswered
+    boundary on a press and never replaces an answer; the hierarchy is never
+    suggested, because a sheet names a road and does not rank it.
+  */
+  const hints = offer?.kind === 'survey' && offer.applied && offer.hints.length === n ? offer.hints : [];
+  const suggestible = hints.filter((h, i) => h !== null && draft.edges[i]?.classification === '').length;
+  const applyHints = (): void =>
+    onChange({
+      ...draft,
+      edges: draft.edges.map((e, i) => {
+        const h = hints[i];
+        return h && e.classification === '' ? { classification: h.classification, roadHierarchy: '' } : e;
+      }),
+    });
 
   return (
     <div>
@@ -224,14 +259,28 @@ export function PlotPanel({
               <div className="grid gap-2 rounded-md border border-line bg-raised p-3">
                 <p className="flex flex-wrap items-center gap-2 text-[12.5px] text-fg">
                   <Badge tone="derived">{t.classLabel.DERIVED}</Badge>
-                  {t.plot.surveyOffer(String(offer.count), offer.system)}
+                  {offer.drawn ? t.plot.drawnOffer(String(offer.count)) : t.plot.surveyOffer(String(offer.count), offer.system)}
                 </p>
-                <Button variant="secondary" size="sm" className="justify-self-start" onClick={() => onChange(offer.next)}>
-                  {t.plot.surveyUse}
-                </Button>
-                <p className="text-[11.5px] text-tertiary">{t.plot.replaces}</p>
+                {offer.applied ? (
+                  <p className="flex items-center gap-1.5 text-[12px] text-secondary" role="status">
+                    <CircleCheck className="size-3.5 shrink-0 text-derived" aria-hidden="true" />
+                    {t.plot.cornersApplied}
+                  </p>
+                ) : (
+                  <>
+                    <Button variant="secondary" size="sm" className="justify-self-start" onClick={() => onChange(offer.next)}>
+                      {t.plot.surveyUse}
+                    </Button>
+                    <p className="text-[11.5px] text-tertiary">{t.plot.replaces}</p>
+                  </>
+                )}
+                {suggestible > 0 ? (
+                  <Button variant="secondary" size="sm" className="justify-self-start" onClick={applyHints}>
+                    {t.plot.useHints(suggestible)}
+                  </Button>
+                ) : null}
               </div>
-            ) : (
+            ) : offer.applied ? null : (
               <Notice tone="assumed">
                 <span className="grid gap-2">
                   <span className="flex flex-wrap items-center gap-2">
@@ -297,7 +346,14 @@ export function PlotPanel({
                     </Button>
                   </div>
                   <div className="grid gap-1">
-                    <span className="text-[11.5px] text-secondary">{t.plot.boundary(i, j)}</span>
+                    <span className="flex flex-wrap items-baseline justify-between gap-x-3 text-[11.5px] text-secondary">
+                      {t.plot.boundary(i, j)}
+                      {hints[i] ? (
+                        <span className="text-tertiary">
+                          {t.plot.sheetSays}: <bdi className="figure" dir="ltr">{hints[i]!.verbatim}</bdi>
+                        </span>
+                      ) : null}
+                    </span>
                     <div className="grid grid-cols-2 gap-2">
                       <Select
                         aria-label={t.plot.edgeOf(i, j)}

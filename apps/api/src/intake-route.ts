@@ -85,6 +85,7 @@ function present(facts: AffectionPlanFacts): unknown {
     issueDate: fieldOf(facts.issueDate),
     drawingRef: fieldOf(facts.drawingRef),
     parkingDeferredTo: fieldOf(facts.parkingDeferredTo),
+    parkingRequirement: fieldOf(facts.parkingRequirement),
 
     totalAreaSqm: fieldOf(facts.totalAreaSqm),
     far: fieldOf(facts.far),
@@ -146,6 +147,25 @@ function present(facts: AffectionPlanFacts): unknown {
             legs: traced(facts.survey.legs),
             areaM2: fieldOf(facts.survey.areaM2),
             notModelled: facts.survey.notModelled,
+          },
+        }
+      : {}),
+
+    /*
+      THE DRAWN RING — the Municipality's sheet prints no coordinate table, so
+      its corners are the drawing's own vertices placed by its grid crosses.
+      Presented like `survey`, plus one suggestion per boundary from the labels
+      printed outside it; `edgeHints` holds no Decimal and passes through.
+    */
+    ...(facts.drawn
+      ? {
+          drawn: {
+            system: traced(facts.drawn.system),
+            points: traced(facts.drawn.points),
+            legs: traced(facts.drawn.legs),
+            areaM2: fieldOf(facts.drawn.areaM2),
+            edgeHints: facts.drawn.edgeHints,
+            notModelled: facts.drawn.notModelled,
           },
         }
       : {}),

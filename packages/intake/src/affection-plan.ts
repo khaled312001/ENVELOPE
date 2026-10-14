@@ -57,6 +57,17 @@ import {
   type SurveyLeg,
   type SurveyPoint,
 } from './dda.js';
+import {
+  isDmSheet,
+  pagePaths,
+  parseArabicFar,
+  parseArabicHeight,
+  readDmDrawing,
+  readDmPlot,
+  readDmRequest,
+  readDmRows,
+  type EdgeHint,
+} from './dm.js';
 import { readBoundaries, type EdgeReadings } from './edges.js';
 import { readSitePlan, type SitePlanReading } from './site-plan.js';
 import {
@@ -139,6 +150,27 @@ export interface SurveyReading {
   readonly notModelled: readonly string[];
 }
 
+/**
+ * THE PLOT AS A VECTOR DRAWING PLACES IT — the Municipality's sheet, see `dm.ts`.
+ *
+ * A third shape, and kept apart from both of the others on purpose. It is not
+ * a coordinate table (`survey`): no corner's easting is printed. It is not a
+ * raster fit (`sitePlan.outline`): its corners are the drawing's own vertices,
+ * exact in page points, and the drawing's own grid crosses put them in metres.
+ * Published only once its ring reproduces the printed plot area; its legs are
+ * then DERIVED. The grid's NAME is the one inference, and `system` says so.
+ */
+export interface DrawnPlotReading {
+  /** `DLTM`, identified from the eastings rather than printed — ASSUMED. */
+  readonly system: Traced<string>;
+  readonly points: Traced<readonly SurveyPoint[]>;
+  readonly legs: Traced<readonly SurveyLeg[]>;
+  readonly areaM2: TracedDecimal;
+  /** One per boundary, in ring order; null where the drawing labels nothing outside it. Suggestions, never answers. */
+  readonly edgeHints: readonly (EdgeHint | null)[];
+  readonly notModelled: readonly string[];
+}
+
 export interface AffectionPlanFacts {
   readonly parcelId?: Traced<string>;
   readonly community?: Traced<string>;
@@ -165,6 +197,17 @@ export interface AffectionPlanFacts {
    * weaker's caveats — or, worse, lend the weaker the stronger's standing.
    */
   readonly survey?: SurveyReading;
+  /** The plot off a vector drawing with a printed grid. See {@link DrawnPlotReading}. */
+  readonly drawn?: DrawnPlotReading;
+  /**
+   * What the sheet itself requires for parking, verbatim, where it states it.
+   *
+   * The Municipality's sheet has a Parking row of its own — bays per apartment by
+   * size, per office area — which is the affection plan governing parking, the
+   * precedence Dubai Building Code B.7.2.6.1 gives it over Table B.13. Kept as
+   * the sheet's words: turning them into a rule is the rule store's work.
+   */
+  readonly parkingRequirement?: Traced<string>;
   /** Fields the sheet does not print. The caller must resolve these. */
   readonly missing: readonly MissingField[];
   /** Arithmetic the sheet asserts about itself, re-checked. */
@@ -504,6 +547,8 @@ export async function parseAffectionPlan(
   if (!page) throw new Error('affection plan has no first page');
   const facts = readFacts(page, opts);
 
+  if (isDmSheet(page)) return readDmFacts(bytes, page, facts, opts);
+
   /*
     THE DRAWING IS READ AFTER THE TEXT, AND NEEDS WHAT THE TEXT FOUND.
 
@@ -528,6 +573,94 @@ export async function parseAffectionPlan(
   return { ...facts, sitePlan };
 }
 
+/** How close the drawn ring must come to the printed plot area to be published: half a percent. */
+const DRAWN_AREA_TOLERANCE = '0.005';
+
+/**
+ * The Municipality's sheet: its site plan is vector, so the plot is read from
+ * its paths rather than from a raster. See `dm.ts`.
+ *
+ * The raster reader is not run. On this sheet the largest image is a location
+ * map, and a picture of the wrong drawing captioned as the site plan would be
+ * worse than none; `sitePlan` says so in its one refusal.
+ */
+async function readDmFacts(
+  bytes: Uint8Array,
+  page: PdfPageText,
+  facts: AffectionPlanFacts,
+  opts: ParseAffectionPlanOptions,
+): Promise<AffectionPlanFacts> {
+  const { tracer, documentUri } = opts;
+  const issueDate = facts.issueDate?.value ?? 'UNDATED';
+  const sitePlan: SitePlanReading = {
+    refusals: ['The site plan on this sheet is drawn in vector, not placed as a picture; the plot is read from the drawing itself.'],
+  };
+  const { paths, OPS } = await readDmDrawing(bytes);
+  const plot = readDmPlot(page, paths, OPS, facts.parcelId?.value);
+  if (typeof plot === 'string') {
+    return { ...facts, sitePlan: { refusals: [...sitePlan.refusals, plot] } };
+  }
+
+  const crossChecks: CrossCheck[] = [...facts.crossChecks];
+  const area = new Decimal(plot.areaM2.toFixed(2));
+  const stated = facts.totalAreaSqm?.value;
+  const agrees = stated !== undefined && area.minus(stated).abs().lte(stated.mul(DRAWN_AREA_TOLERANCE));
+  crossChecks.push({
+    name: 'plot_area = area of the drawn ring',
+    passed: agrees,
+    detail:
+      `The ${plot.points.length} corners of the drawn plot, placed by the drawing's grid crosses ` +
+      `(${plot.grid.sx.toFixed(5)} m per point east, ${plot.grid.sy.toFixed(5)} north), close a ring of ` +
+      `${qArea(area).toString()} m²` +
+      (stated ? ` against a printed plot area of ${stated.toString()} m².` : ', and the sheet prints no plot area to check it against.'),
+  });
+  plot.dimensions.forEach((d, i) => {
+    if (!d) return;
+    const gap = Math.abs(Number(d.measured) - Number(d.printed));
+    crossChecks.push({
+      name: `boundary ${i + 1} = the dimension printed beside it`,
+      // Two decimals printed, and a corner drawn to a hundredth of a point at 1:1400: 0.25 m covers both.
+      passed: gap <= 0.25,
+      detail: `The drawing measures ${d.measured} m between corners ${i + 1} and ${((i + 1) % plot.points.length) + 1}; the sheet prints ${d.printed} m beside it.`,
+    });
+  });
+  if (!agrees) return { ...facts, crossChecks, sitePlan };
+
+  const derived = <T>(field: string, value: T, item: TextItem, formula: string, unit?: string): Traced<T> =>
+    tracer.derived(`affection_plan.${field}`, value, {
+      rule: { ruleId: `AFFECTION_PLAN.${field}`, citation: cite(documentUri, issueDate, field, item) },
+      formula,
+      ...(unit !== undefined ? { unit } : {}),
+      detail: { verbatim: item.text },
+    });
+  const legs = surveyLegs(plot.points);
+  const drawn: DrawnPlotReading = {
+    system: tracer.assumed('affection_plan.drawn_grid_system', 'DLTM', {
+      basis:
+        `The sheet prints grid coordinates (${plot.grid.box.text}) without naming the grid. Eastings on the ` +
+        '500,000 m false easting are Dubai Local Transverse Mercator (EPSG:3997), the grid Dubai Municipality ' +
+        'issues in; the same numbers on UTM 40N would fall in Oman. It places the plot on a map and changes no figure.',
+      label: 'Grid of the drawing',
+      detail: { documentUri },
+    }),
+    points: derived(
+      'drawn_points',
+      plot.points,
+      plot.box,
+      `the drawing's own vertices, each mapped to the grid by the crosses labelled ${plot.grid.box.text}`,
+    ),
+    legs: derived('drawn_legs', legs, plot.box, 'plane trigonometry between consecutive drawn corners on the grid'),
+    areaM2: derived('drawn_area_sqm', qArea(area), plot.box, 'shoelace area of the drawn corners', 'm²'),
+    edgeHints: plot.hints,
+    notModelled: [
+      'Each corner is the drawing’s own vertex, not a surveyed coordinate: the sheet prints no coordinate table. It is checked against the printed area and the printed dimensions above.',
+      'Bearings are clockwise from grid north; the convergence between grid north and true north is not applied.',
+      'What lies beyond each boundary is suggested from the labels printed outside it, and must be confirmed.',
+    ],
+  };
+  return { ...facts, crossChecks, sitePlan, drawn };
+}
+
 /** The pure half, so tests can drive it from fixture text without a PDF. */
 export function readFacts(
   page: PdfPageText,
@@ -548,7 +681,14 @@ export function readFacts(
     revisions of one plot's affection plan become indistinguishable in the
     evidence pack.
   */
-  const issueDate = /(\d{1,2}[-/]\d{1,2}[-/]\d{4})/.exec(text)?.[1] ?? 'UNDATED';
+  /* The Municipality's sheet prints no issue date; its request reference carries
+     the day it was generated (`SAPS-08082026-…`), and a generated sheet is
+     issued the day it is generated. Its free text does hold a date-shaped run —
+     "22/2001", a law number — which the pattern below would misread. */
+  const dm = isDmSheet(page);
+  const dmRequest = dm ? readDmRequest(page) : undefined;
+  const issueDate = dmRequest?.date ?? (dm ? undefined : /(\d{1,2}[-/]\d{1,2}[-/]\d{4})/.exec(text)?.[1]) ?? 'UNDATED';
+  const dmRows = dm ? readDmRows(page) : {};
 
   /*
     WHICH SHEET THIS IS. See `dda.ts` for what differs and what it cost.
@@ -663,7 +803,9 @@ export function readFacts(
       : absent(
           'gfa_permitted_sqm',
           'GFA',
-          'Permitted GFA is not printed on this sheet. It must be obtained from the DCR or set by a named user; it must not be inferred from a neighbouring plot.',
+          dm && dmRows.Height?.lines.some((l) => parseArabicFar(l) !== undefined)
+            ? 'This sheet states its limit as a floor ratio and prints no GFA. The engine derives GFA as that ratio × the plot area; nothing else is needed from the sheet for it.'
+            : 'Permitted GFA is not printed on this sheet. It must be obtained from the DCR or set by a named user; it must not be inferred from a neighbouring plot.',
         );
 
   /*
@@ -681,8 +823,13 @@ export function readFacts(
     printed. A cross-check is a statement about the document; a value is a
     statement about the plot.
   */
+  /* «ونسبة طابقية = 5.0», on the Municipality's Height row — "floor ratio". */
+  const dmHeightRow = dmRows.Height;
+  const dmFar = dmHeightRow?.lines.map(parseArabicFar).find((v) => v !== undefined);
   const far =
-    gfaFar?.[2] !== undefined
+    dmFar !== undefined && dmHeightRow
+      ? fromCell('far', qRatio(toDecimal(dmFar)), dmHeightRow.box, 'ratio')
+      : gfaFar?.[2] !== undefined
       ? // 'ratio', the unit the engine gives every FAR. Emitted with none, the screen
         // formatted it as a count and printed the sheet's 3.5 as "4".
         fromSheet('far', qRatio(toDecimal(gfaFar[2])), gfaFar[0], 'ratio')
@@ -695,10 +842,28 @@ export function readFacts(
         );
 
   // --- height -------------------------------------------------------------
+  /* The Municipality writes the storeys out: «أرضي + أول للقاعدة البرج + (16)
+     طابق». Read into the `G+1P+16` the other two generators print, and cited to
+     the Arabic row it came from, so the derivation shows the sheet's own words. */
+  const dmStoreys = dmHeightRow?.lines.map(parseArabicHeight).find((v) => v !== undefined);
   const heightRaw = /\bG\s*\+\s*\d+(?:\s*P\s*\+\s*\d+)?\b/i.exec(text)?.[0];
   const parsedHeight = heightRaw === undefined ? undefined : parseHeight(heightRaw);
   const height =
-    parsedHeight !== undefined && heightRaw !== undefined
+    dmStoreys !== undefined && dmHeightRow
+      ? fromCell(
+          'height_allowance',
+          {
+            podiumLevels: dmStoreys.podiumLevels,
+            typicalFloors: dmStoreys.typicalFloors,
+            totalLevels: 1 + dmStoreys.podiumLevels + dmStoreys.typicalFloors,
+            raw:
+              dmStoreys.podiumLevels > 0
+                ? `G+${dmStoreys.podiumLevels}P+${dmStoreys.typicalFloors}`
+                : `G+${dmStoreys.typicalFloors}`,
+          },
+          dmHeightRow.box,
+        )
+      : parsedHeight !== undefined && heightRaw !== undefined
       ? fromSheet('height_allowance', parsedHeight, heightRaw)
       : absent(
           'height_allowance',
@@ -726,7 +891,9 @@ export function readFacts(
             module had computed a setback from a height, which is the engine's
             work and would arrive with no fixpoint and no citation.
           */
-          dda
+          dm && dmRows.Setback
+            ? `This sheet states its setback as a rule, not a distance: «${dmRows.Setback.lines.join(' ')}» — a quarter of the building height from the neighbours and from the middle of the sikkas, at most 7.5 m and at least 3 m, as the DDA note says it. Its input is the storey count, so no distance is read from the sheet. It must be authored as a rule or set under a named user.`
+            : dda
             ? 'This sheet prints "SEE NOTES" against every face instead of a distance, and defers to a general note setting the setback at a quarter of the building height, capped at 7.5 m and floored at 3 m. That is a rule with the storey count as its input, not a schedule of distances, so no setback is read from the sheet. It must be authored as a rule or set under a named user.'
             : 'No setback schedule on the sheet. Trakhees regulations and the master developer DCR govern instead and must be supplied.',
         );
@@ -781,8 +948,13 @@ export function readFacts(
   const landUseRaw = /Mixed Use \([^)]*\)|(?:^|\n)(Residential|Commercial|Industrial)(?:\n|$)/i.exec(
     text,
   )?.[0];
+  /* The Municipality's Land use row: the uses in Arabic, then the zoning code
+     printed beside them, which is the key the DCR is looked up by. */
+  const dmUse = dmRows.Landuse;
   const landUse =
-    ddaLandUse !== undefined && ddaLandUse.text.trim() !== ''
+    dmUse && dmUse.lines.length > 0
+      ? fromCell('land_use', `${dmUse.lines.join(' ')}${dmUse.code ? ` (${dmUse.code})` : ''}`, dmUse.box)
+      : ddaLandUse !== undefined && ddaLandUse.text.trim() !== ''
       ? fromCell('land_use', ddaLandUse.text.replace(/\s+/g, ' ').trim(), ddaLandUse)
       : landUseRaw !== undefined
       ? fromSheet('land_use', landUseRaw.trim(), landUseRaw.trim())
@@ -791,7 +963,10 @@ export function readFacts(
   const parkingNote = /\(Refer to [^)]*\)/i.exec(text)?.[0];
   const parkingDeferredTo =
     parkingNote === undefined ? undefined : fromSheet('parking_authority', parkingNote, parkingNote);
-  if (parkingDeferredTo === undefined) {
+  const dmParking = dmRows.Parking;
+  const parkingRequirement =
+    dmParking && dmParking.lines.length > 0 ? fromCell('parking_requirement', dmParking.lines.join(' '), dmParking.box) : undefined;
+  if (parkingDeferredTo === undefined && parkingRequirement === undefined) {
     missing.push({
       field: 'parking_authority',
       label: 'Parking',
@@ -919,6 +1094,7 @@ export function readFacts(
   if (coverage) facts.coverage = coverage;
   if (landUse) facts.landUse = landUse;
   if (parkingDeferredTo) facts.parkingDeferredTo = parkingDeferredTo;
+  if (parkingRequirement) facts.parkingRequirement = parkingRequirement;
 
   /*
     THREE FIELDS, TWO LAYOUTS, AND THE HAND CHANGES WITH THE SHEET.
@@ -952,7 +1128,10 @@ export function readFacts(
   const drawingRef = drgRef === undefined ? undefined : fromSheet('drawing_ref', drgRef, drgRef);
   if (drawingRef) facts.drawingRef = drawingRef;
   if (survey) facts.survey = survey;
-  if (issueDate !== 'UNDATED') {
+  if (dmRequest) {
+    facts.issueDate = fromCell('issue_date', dmRequest.date, dmRequest.item);
+    facts.drawingRef = fromCell('drawing_ref', dmRequest.ref, dmRequest.item);
+  } else if (issueDate !== 'UNDATED') {
     const issued = fromSheet('issue_date', issueDate, issueDate);
     if (issued) facts.issueDate = issued;
   }
@@ -963,6 +1142,15 @@ export function readFacts(
 /** Everything the caller must resolve before the engine may run. */
 export function blockingGaps(facts: AffectionPlanFacts): readonly MissingField[] {
   const blocking = new Set(['total_area_sqm', 'far', 'gfa_permitted_sqm', 'height_allowance']);
+  /*
+    A missing GFA blocks only beside a missing FAR. The engine derives GFA from
+    FAR × plot area and has no `gfa.max` for a printed GFA to bind (see
+    `instruments/sheet.ts`), so a sheet that prints FAR 5 and no GFA — the
+    Municipality's, every time — lacks nothing the run needs. Telling a reader
+    the study is stopped when it is not costs the gaps that do stop it their
+    standing. The gap is still listed in `missing`; it just does not block.
+  */
+  if (facts.far !== undefined) blocking.delete('gfa_permitted_sqm');
   return facts.missing.filter((m) => blocking.has(m.field));
 }
 

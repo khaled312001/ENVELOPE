@@ -1,16 +1,20 @@
 import { CircleAlert, CircleCheck, FileText, FileUp, RefreshCw } from 'lucide-react';
-import { type DragEvent, useId, useState } from 'react';
+import { type DragEvent, lazy, Suspense, useId, useState } from 'react';
 
 import type { AffectionPlanRead } from '@web/api/client.js';
 import type { TracedWire } from '@web/components/TracedValue.js';
 
 import { Traced } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
+import { grouped } from '../lib/figures.js';
 import { EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, EmptyState, Notice, PanelHeader, Spinner } from '../ui/primitives.js';
 import { IconTile } from '../ui/tile.js';
 import { Footer, Heading, More, NextStep } from './parts.js';
+
+// pdf.js comes down only once a sheet has been read.
+const PdfPage = lazy(() => import('../components/PdfPage.js').then((m) => ({ default: m.PdfPage })));
 
 /*
   STEP 0: THE AFFECTION PLAN.
@@ -20,8 +24,11 @@ import { Footer, Heading, More, NextStep } from './parts.js';
   listed, never hidden — DJAZ1MED12RES011 prints G+11 and no FAR, and the gap is
   the finding. "Use this sheet" fills the plot number, the community and the
   stated area, and attaches the PDF so the SERVER reads its limits again when the
-  plot is filed; the corners are offered on the plot step, on a button, because
-  a coordinate table read off a page is a value somebody should look at first.
+  plot is filed. Where the sheet gives the corners exactly — a coordinate table,
+  or the Municipality's drawing on its printed grid, each closed to the printed
+  area before it is sent — they are taken too, and the plot is placed on the
+  map; the panel lists them beside the button, so pressing it is looking first.
+  A shape fitted to a picture is ASSUMED and still waits for its own button.
 */
 
 export interface SheetState {
@@ -31,7 +38,6 @@ export interface SheetState {
 
 export function SheetCanvas({ sheet }: { readonly sheet: SheetState | null }): JSX.Element {
   const { t } = useLocale();
-  const image = sheet?.read.facts.sitePlan?.image;
   if (!sheet) {
     return (
       <div className="grid h-full place-items-center">
@@ -39,23 +45,12 @@ export function SheetCanvas({ sheet }: { readonly sheet: SheetState | null }): J
       </div>
     );
   }
-  if (!image) {
-    return (
-      <div className="grid h-full place-items-center">
-        <EmptyState title={sheet.read.filename} body={t.sheet.noImage} icon={<FileText className="size-5" aria-hidden="true" />} />
-      </div>
-    );
-  }
+  // The whole page, not only its site plan: the limits the panel reads are printed beside the drawing, not in it.
   return (
-    <div className="grid h-full place-items-center p-6 sm:p-10">
-      {/* The sheet's own drawing, on white as it was printed: the page is the document, not the theme. */}
-      <img
-        src={`data:image/png;base64,${image.pngBase64}`}
-        width={image.widthPx}
-        height={image.heightPx}
-        alt={t.sheet.imageAlt(sheet.read.filename)}
-        className="max-h-full w-auto max-w-full rounded-md border border-line bg-white object-contain shadow-lifted"
-      />
+    <div className="relative grid h-full min-h-0 place-items-center p-6 sm:p-10">
+      <Suspense fallback={<Spinner />}>
+        <PdfPage base64={sheet.attachment.content} label={sheet.read.filename} />
+      </Suspense>
     </div>
   );
 }
@@ -86,6 +81,7 @@ export function SheetPanel({
   const { t } = useLocale();
   const read = sheet?.read ?? null;
   const facts = read?.facts;
+  const corners = facts?.survey ?? facts?.drawn;
 
   return (
     <div>
@@ -136,7 +132,12 @@ export function SheetPanel({
                   <Fact label={t.sheet.fields.height} text={facts.height?.value.raw} />
                   <Fact label={t.sheet.fields.setbacks} text={facts.setbacks?.value.raw} />
                   <Fact label={t.sheet.fields.coverage} text={facts.coverage?.value.raw} />
+                  {facts.parkingRequirement || facts.parkingDeferredTo ? (
+                    <Fact label={t.sheet.fields.parking} text={(facts.parkingRequirement ?? facts.parkingDeferredTo)?.value} />
+                  ) : null}
+                  <Fact label={t.sheet.fields.corners} text={corners ? t.sheet.cornersRead(String(corners.points.value.length), corners.areaM2 ? grouped(corners.areaM2.value) : '') : undefined} />
                   <Fact label={t.sheet.fields.issued} text={facts.issueDate?.value} mono />
+                  {facts.drawingRef ? <Fact label={t.sheet.fields.reference} text={facts.drawingRef.value} mono /> : null}
                 </dl>
               </section>
             ) : null}
@@ -226,12 +227,31 @@ function Fact({
         {value ? (
           <Traced value={value} size="sm" />
         ) : text ? (
-          <EngineText {...(mono ? { className: 'figure' } : {})}>{text}</EngineText>
+          <SheetText text={text} mono={mono} />
         ) : (
           <span className="text-tertiary">{t.sheet.notPrinted}</span>
         )}
       </dd>
     </div>
+  );
+}
+
+const ARABIC = /[؀-ۿ]/;
+
+/**
+ * A value in the sheet's own words, in the direction it was written.
+ *
+ * The Municipality prints its land use and parking in Arabic; set as English
+ * text, «تجاري، مكاتب، سكني (RC2/18)» comes out with its parenthesis on the
+ * wrong end. Latin values stay the engine's text, as everywhere else.
+ */
+function SheetText({ text, mono = false }: { readonly text: string; readonly mono?: boolean }): JSX.Element {
+  return ARABIC.test(text) ? (
+    <span dir="rtl" lang="ar" className="block">
+      {text}
+    </span>
+  ) : (
+    <EngineText {...(mono ? { className: 'figure' } : {})}>{text}</EngineText>
   );
 }
 

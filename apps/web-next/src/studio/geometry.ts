@@ -1,4 +1,4 @@
-import { type LngLat, toUtm40 } from '@web/geo.js';
+import { fromDltm, type LngLat, toUtm40 } from '@web/geo.js';
 import { walkTraverse } from '@web/traverse.js';
 
 import type { DraftPlot } from './model.js';
@@ -61,4 +61,40 @@ export function legsToDraft(
   const walked = walkTraverse(legs.map((l) => ({ lengthM: l.lengthM, bearingDeg: l.bearingDeg })));
   if (!walked.usable) return null;
   return withVertices(prev, walked.corners);
+}
+
+/** A corner as a sheet prints it — easting and northing, as written. */
+export interface GridPoint {
+  readonly east: string;
+  readonly north: string;
+}
+
+/**
+ * The sheet's own corners, as metres from its first corner.
+ *
+ * Subtracted on the sheet's grid, not walked from rounded legs and not sent
+ * through a projection: the differences of printed eastings ARE the plot, and
+ * a traverse of three-decimal legs drifts a few millimetres by the last corner.
+ */
+export function pointsToDraft(points: readonly GridPoint[], prev: DraftPlot): DraftPlot | null {
+  const grid = points.map((p) => ({ e: Number(p.east), n: Number(p.north) }));
+  if (grid.length < 3 || grid.some((g) => !Number.isFinite(g.e) || !Number.isFinite(g.n))) return null;
+  const origin = grid[0]!;
+  return withVertices(
+    prev,
+    grid.map((g) => ({ x: metres(g.e - origin.e), y: metres(g.n - origin.n) })),
+  );
+}
+
+/**
+ * The same corners on the map, for PLACING the plot — never for measuring it.
+ *
+ * Only on a grid this module can name: DLTM is the one the sheets that print
+ * coordinates have used. Anything else returns null, and the map is left where
+ * the reader puts it rather than in the wrong emirate.
+ */
+export function pointsToRing(points: readonly GridPoint[], system: string): readonly LngLat[] | null {
+  if (system !== 'DLTM' || points.length < 3) return null;
+  const ring = points.map((p) => fromDltm({ e: Number(p.east), n: Number(p.north) }));
+  return ring.every((p) => Number.isFinite(p.lng) && Number.isFinite(p.lat)) ? ring : null;
 }

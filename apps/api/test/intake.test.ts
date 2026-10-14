@@ -101,6 +101,30 @@ describe('a sheet that omits its own limits', () => {
   });
 });
 
+/*
+  The Municipality's sheet, end to end: the corners read off its drawing must
+  reach the screen, or "Use this sheet" has nothing to place on the map. A
+  presenter that forgot the field would pass every intake test and send none of it.
+*/
+describe("the Municipality's sheet over HTTP", () => {
+  it('sends the drawn plot, its boundary hints and the parking row', async () => {
+    const res = await upload('docs/00-source/samples/affection-plan/DM-1341556-al-mamzar.pdf', 'DM-1341556.pdf');
+    expect(res.statusCode).toBe(200);
+    const { facts } = res.json();
+    expect(facts.drawn.points.value).toHaveLength(4);
+    expect(facts.drawn.system).toMatchObject({ value: 'DLTM', provenanceClass: 'ASSUMED' });
+    expect(facts.drawn.areaM2).toMatchObject({ value: '7389.43', provenanceClass: 'DERIVED' });
+    expect(facts.drawn.edgeHints.map((h: { classification: string } | null) => h?.classification ?? null)).toEqual([
+      'ROAD',
+      'ADJACENT_PLOT',
+      'ROAD',
+      null,
+    ]);
+    expect(facts.parkingRequirement.value).toContain('موقف');
+    expect(facts.blocking).toEqual([]);
+  });
+});
+
 describe('rejections', () => {
   it('refuses a file that is not a PDF, with a reason a user can act on', async () => {
     const app = await build();

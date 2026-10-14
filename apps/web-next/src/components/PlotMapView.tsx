@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Hand, Layers, Loader2, MousePointerClick, PenLine, Ruler, Search, Trash2, Undo2 } from 'lucide-react';
+import { Eye, EyeOff, Hand, Info, Layers, Loader2, MapPinned, MousePointerClick, PenLine, Ruler, Search, Trash2, Undo2 } from 'lucide-react';
 import type { GeoJSONSource, ImageSource, Map as MapLibreMap, MapLayerMouseEvent, MapLayerTouchEvent } from 'maplibre-gl';
 import MAPLIBRE_WORKER_URL from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -52,6 +52,13 @@ import { Input } from '../ui/primitives.js';
 export interface MapTrace {
   readonly ring: readonly LngLat[];
   readonly closed: boolean;
+  /**
+   * Placed from the affection plan's own grid rather than drawn. The corner
+   * table already holds the sheet's corners, exactly; copying this ring back
+   * would replace them with the same plot measured through a projection, so
+   * the map offers no "use" for it. Any edit makes a fresh trace without it.
+   */
+  readonly fromSheet?: true;
 }
 
 export const EMPTY_TRACE: MapTrace = { ring: [], closed: false };
@@ -182,13 +189,27 @@ export function PlotMapView({
         // The bundled worker's real url; maplibre's own guess at a sibling file 404s once Vite hashes it.
         mod.setWorkerUrl(MAPLIBRE_WORKER_URL);
         const first = trace.ring[0];
+        // A whole plot already on the map opens framed, so the reader sees all of it and where it is.
+        const frame =
+          trace.ring.length >= 3
+            ? {
+                bounds: [
+                  [Math.min(...trace.ring.map((p) => p.lng)), Math.min(...trace.ring.map((p) => p.lat))],
+                  [Math.max(...trace.ring.map((p) => p.lng)), Math.max(...trace.ring.map((p) => p.lat))],
+                ] as [[number, number], [number, number]],
+                // Clear of the search and tools above and the readout below, which sit over the map.
+                fitBoundsOptions: { padding: { top: 84, bottom: 180, left: 56, right: 56 }, maxZoom: PLOT_ZOOM + 1 },
+              }
+            : {
+                center: first ? ([first.lng, first.lat] as [number, number]) : OPENING_VIEW,
+                zoom: first ? PLOT_ZOOM : OPENING_ZOOM,
+              };
         map = new mod.Map({
           container: host,
           attributionControl: false,
           maplibreLogo: false,
           locale: { 'Map.Title': t.map.label },
-          center: first ? [first.lng, first.lat] : OPENING_VIEW,
-          zoom: first ? PLOT_ZOOM : OPENING_ZOOM,
+          ...frame,
           // North-up and flat: a bearing cannot be read off a rotated or tilted view.
           pitchWithRotate: false,
           dragRotate: false,
@@ -716,8 +737,13 @@ export function PlotMapView({
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="rounded-sm bg-panel/85 px-2 py-0.5 text-[10.5px] text-secondary backdrop-blur">{t.map.credit}</p>
-          {trace.closed && trace.ring.length >= 3 ? (
+          <Credit />
+          {trace.fromSheet ? (
+            <p className="flex items-center gap-1.5 rounded-md bg-panel/90 px-2.5 py-1.5 text-[12px] text-fg backdrop-blur">
+              <MapPinned className="size-3.5 shrink-0 text-accent" aria-hidden="true" />
+              {t.map.fromSheet}
+            </p>
+          ) : trace.closed && trace.ring.length >= 3 ? (
             <div className="flex items-center gap-2">
               <p className="hidden rounded-sm bg-panel/85 px-2 py-0.5 text-[11px] text-secondary backdrop-blur md:block">{t.map.precision}</p>
               <Button variant="brand" size="lg" onClick={() => onUse(trace.ring)}>
@@ -727,6 +753,31 @@ export function PlotMapView({
           ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+/*
+  THE IMAGERY'S CREDIT, FOLDED TO ONE MARK. Esri's and OpenStreetMap's terms
+  require the attribution to be reachable on the map, so it is not removed —
+  it sits behind an ⓘ, the way MapLibre's own compact control carries it, and
+  opens on a press or on focus.
+*/
+function Credit(): JSX.Element {
+  const { t } = useLocale();
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={t.map.creditLabel}
+        onClick={() => setOpen((o) => !o)}
+        className="grid size-7 place-items-center rounded-full bg-panel/85 text-secondary backdrop-blur hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        <Info className="size-3.5" aria-hidden="true" />
+      </button>
+      {open ? <p className="rounded-sm bg-panel/85 px-2 py-0.5 text-[10.5px] text-secondary backdrop-blur">{t.map.credit}</p> : null}
     </div>
   );
 }

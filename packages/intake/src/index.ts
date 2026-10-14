@@ -3,3 +3,4 @@ export * from './affection-plan.js';
 export * from './edges.js';
 export * from './site-plan.js';
 export * from './dda.js';
+export * from './dm.js';

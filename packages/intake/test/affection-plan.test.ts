@@ -49,6 +49,8 @@ const SHEETS = {
   tre10: 'docs/00-source/developer-standards/azizi/Plot DJAZ1TRE10RES022-196.pdf',
   /** The second dialect — see `dda.ts`. Issued by the DDA, 18/11/2025. */
   dda: 'docs/00-source/samples/affection-plan/DDA-5134565-saih-shuaib-1.pdf',
+  /** The third dialect — see `dm.ts`. Dubai Municipality, request SAPS-08082026-195370. */
+  dm: 'docs/00-source/samples/affection-plan/DM-1341556-al-mamzar.pdf',
 } as const;
 
 async function parse(key: keyof typeof SHEETS): Promise<AffectionPlanFacts> {
@@ -426,5 +428,89 @@ describe('the DDA dialect — plot 5134565, Saih Shuaib 1', () => {
     expect(notes.length).toBeGreaterThanOrEqual(3);
     expect(notes.join(' ')).toContain('curve');
     expect(notes.join(' ')).toContain('convergence');
+  });
+});
+
+/*
+  THE THIRD DIALECT — the Municipality's Unified Site Plan, plot 1341556.
+
+  Its limits are written in Arabic, one glyph per text item in visual order,
+  and its site plan is vector with a printed grid rather than a coordinate
+  table. Every figure asserted here is one a reader can see on the sheet: the
+  area, the four dimensions drawn beside the boundaries, the height row and the
+  request number in the footer.
+*/
+describe('the Municipality dialect — plot 1341556, Al Mamzar', () => {
+  let facts: AffectionPlanFacts;
+  beforeAll(async () => {
+    facts = await parse('dm');
+  }, HOOK_TIMEOUT_MS);
+
+  it('reads the identity of the plot', () => {
+    expect(facts.parcelId?.value).toBe('1341556');
+    expect(facts.community?.value).toBe('AL MAMZAR');
+    expect(facts.landUse?.value).toBe('تجاري، مكاتب، سكني (RC2/18)');
+    expect(facts.totalAreaSqm?.value.toString()).toBe('7389.43');
+  });
+
+  /* «أرضي + أول للقاعدة + (16) طابق ونسبة طابقية = 5.0» — the lam-lam
+     ligature in «للقاعدة» once cost the podium level. */
+  it('reads the Arabic height row as G+1P+16 and its floor ratio as the FAR', () => {
+    expect(facts.height?.value).toMatchObject({ podiumLevels: 1, typicalFloors: 16, totalLevels: 18, raw: 'G+1P+16' });
+    expect(facts.far?.value.toString()).toBe('5');
+  });
+
+  it('dates the instrument from its request number', () => {
+    expect(facts.drawingRef?.value).toBe('SAPS-08082026-195370');
+    expect(facts.issueDate?.value).toBe('08-08-2026');
+  });
+
+  it('keeps the parking row in the sheet’s own words', () => {
+    expect(facts.parkingRequirement?.value).toContain('موقف لكل شقة');
+    expect(facts.parkingRequirement?.provenanceClass).toBe(ProvenanceClass.DERIVED);
+  });
+
+  /* FAR is printed, so a missing GFA is a gap and not a stop: the engine
+     derives GFA from the ratio. The setback is a rule with the height as its
+     input, and is not reduced to a number. */
+  it('lists what the sheet omits, and blocks on none of it', () => {
+    expect(facts.missing.map((m) => m.field)).toEqual(['gfa_permitted_sqm', 'setbacks', 'plot_coverage']);
+    expect(blockingGaps(facts)).toEqual([]);
+    expect(facts.setbacks).toBeUndefined();
+  });
+
+  it('reads the plot off the drawing and closes it to the printed area', () => {
+    expect(facts.drawn?.points.value).toHaveLength(4);
+    expect(facts.drawn?.points.value[0]).toEqual({ id: '1', east: '501938.189', north: '2798367.201' });
+    expect(facts.drawn?.areaM2.value.toString()).toBe('7389.43');
+    expect(facts.drawn?.areaM2.provenanceClass).toBe(ProvenanceClass.DERIVED);
+  });
+
+  it('reproduces the four dimensions printed beside the boundaries', () => {
+    expect(facts.drawn?.legs.value.map((l) => l.lengthM)).toEqual(['98.510', '174.183', '122.652', '17.220']);
+    const dims = facts.crossChecks.filter((c) => c.name.startsWith('boundary '));
+    expect(dims).toHaveLength(4);
+    expect(crossChecksPassed(facts)).toBe(true);
+  });
+
+  /* The grid is not named on the sheet; the eastings say which it is. That is
+     an inference, so it is ASSUMED, and it moves the plot on a map and no figure. */
+  it('names the grid as an assumption, not a reading', () => {
+    expect(facts.drawn?.system.value).toBe('DLTM');
+    expect(facts.drawn?.system.provenanceClass).toBe(ProvenanceClass.ASSUMED);
+  });
+
+  it('suggests what lies beyond each boundary from the labels outside it, and nothing where none is printed', () => {
+    expect(facts.drawn?.edgeHints.map((h) => h && [h.classification, h.verbatim])).toEqual([
+      ['ROAD', 'ROAD 79.25'],
+      ['ADJACENT_PLOT', '1341194'],
+      ['ROAD', 'ROAD 30.48'],
+      null,
+    ]);
+  });
+
+  it('does not caption a location map as the site plan', () => {
+    expect(facts.sitePlan?.image).toBeUndefined();
+    expect(facts.sitePlan?.refusals.join(' ')).toContain('vector');
   });
 });

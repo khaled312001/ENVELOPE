@@ -20,7 +20,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { fromUtm40, inZone40, ringAreaM2, ringToLegs, toUtm40 } from '../src/geo.js';
+import { fromDltm, fromUtm40, inZone40, ringAreaM2, ringToLegs, toUtm40 } from '../src/geo.js';
 
 /**
  * THE INDEPENDENT REFERENCE, and why it is computed here rather than typed.
@@ -160,6 +160,30 @@ describe('the inverse', () => {
       expect(Math.abs(back.lng - p.lng), `lng ${p.lng}`).toBeLessThan(1e-8);
       expect(Math.abs(back.lat - p.lat), `lat ${p.lat}`).toBeLessThan(1e-8);
     }
+  });
+});
+
+/*
+  DLTM, THE GRID THE MUNICIPALITY'S AND THE DDA'S SHEETS PRINT. Held to values
+  computed by PROJ (pyproj, EPSG:3997 → EPSG:4326), a different implementation
+  of the same definition — the round-trip above cannot speak for a second
+  central meridian and a second scale factor.
+*/
+describe('the DLTM inverse', () => {
+  it('places the corners of two real sheets where PROJ does', () => {
+    for (const [e, n, lng, lat] of [
+      [501938.189, 2798367.201, 55.35257849627843, 25.2916982543484], // DM 1341556, Al Mamzar
+      [464118.299, 2755567.369, 54.978167672748675, 24.904907229389796], // DDA 5134565, Saih Shuaib 1
+    ] as const) {
+      const p = fromDltm({ e, n });
+      expect(Math.abs(p.lng - lng), `lng ${e}`).toBeLessThan(1e-8);
+      expect(Math.abs(p.lat - lat), `lat ${n}`).toBeLessThan(1e-8);
+    }
+  });
+
+  it('is not UTM 40N, though both write a 500 000 m false easting', () => {
+    const asUtm = fromUtm40({ e: 501938.189, n: 2798367.201 });
+    expect(asUtm.lng).toBeGreaterThan(57); // Oman, which is the point
   });
 });
 

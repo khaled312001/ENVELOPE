@@ -139,8 +139,34 @@ export function toUtm40({ lng, lat }: LngLat): Utm {
  * defect `pnpm parity` exists to catch between the screen, the paper and the DXF.
  */
 export function fromUtm40({ e, n }: Utm): LngLat {
+  return inverseTm(e, n, LON0, K0);
+}
+
+/*
+  DUBAI LOCAL TRANSVERSE MERCATOR (EPSG:3997): WGS84, central meridian 55°20′E,
+  scale 1 on it, false easting 500 000, false northing 0. The grid the
+  Municipality's and the DDA's sheets print, and NOT UTM 40N, though both use a
+  500 000 m false easting — the same numbers read as UTM would land in Oman.
+*/
+const DLTM_LON0 = 55 + 20 / 60;
+const DLTM_K0 = 1;
+
+/**
+ * A corner printed on a DLTM sheet, placed on the map.
+ *
+ * For PLACING only — the corner table is built from the printed eastings
+ * themselves, never from these degrees projected back to UTM. Its accuracy is the
+ * same series' accuracy; which grid the sheet uses is the caller's assumption,
+ * and the intake publishes it as one.
+ */
+export function fromDltm({ e, n }: Utm): LngLat {
+  return inverseTm(e, n, DLTM_LON0, DLTM_K0);
+}
+
+/** The inverse transverse Mercator series on WGS84, about any central meridian, false easting 500 000. */
+function inverseTm(e: number, n: number, lon0: number, k0: number): LngLat {
   const x = e - E0;
-  const y = n / K0;
+  const y = n / k0;
 
   const e1 = (1 - Math.sqrt(1 - E2)) / (1 + Math.sqrt(1 - E2));
   const mu = y / (A * (1 - E2 / 4 - (3 * E2 * E2) / 64 - (5 * E2 * E2 * E2) / 256));
@@ -160,7 +186,7 @@ export function fromUtm40({ e, n }: Utm): LngLat {
   const T1 = tanPhi1 * tanPhi1;
   const N1 = A / Math.sqrt(1 - E2 * sinPhi1 * sinPhi1);
   const R1 = (A * (1 - E2)) / (1 - E2 * sinPhi1 * sinPhi1) ** 1.5;
-  const D = x / (N1 * K0);
+  const D = x / (N1 * k0);
 
   const phi =
     phi1 -
@@ -170,7 +196,7 @@ export function fromUtm40({ e, n }: Utm): LngLat {
         ((61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * EP2 - 3 * C1 * C1) * D ** 6) / 720);
 
   const lam =
-    rad(LON0) +
+    rad(lon0) +
     (D -
       ((1 + 2 * T1 + C1) * D ** 3) / 6 +
       ((5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * EP2 + 24 * T1 * T1) * D ** 5) / 120) /

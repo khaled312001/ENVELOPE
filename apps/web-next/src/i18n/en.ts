@@ -335,7 +335,7 @@ export const EN = {
     precision: 'Traced off imagery. Check each length against the sheet.',
     unavailable: 'The map needs WebGL, which this browser has turned off. Type the corners instead.',
     tilesFailed: 'The imagery did not load. Check the connection.',
-    footprintBusy: 'Looking for a building here… OpenStreetMap can take up to half a minute.',
+    footprintBusy: 'Looking for a building here… The answer takes up to half a minute.',
     footprint: {
       offline: 'OpenStreetMap did not answer. Try again in a minute, or draw the plot.',
       'none-here': 'No building outline here.',
@@ -367,7 +367,7 @@ export const EN = {
       'outside-zone-40': 'A point is outside UTM zone 40N and cannot be used.',
     },
     outsideZone: 'Outside UTM zone 40N. This point cannot be used.',
-    credit: 'Imagery © Esri · Map data © OpenStreetMap contributors',
+    credit: 'Imagery © Esri · Map data © OpenStreetMap contributors · Building outlines via OpenFreeMap',
     creditLabel: 'Map credits',
     fromSheet: 'Placed from the affection plan’s grid',
   },

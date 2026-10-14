@@ -334,7 +334,7 @@ export const AR: Dict = {
     precision: 'مرسوم على صورة جوية. راجع كل طول مع المخطط.',
     unavailable: 'تحتاج الخريطة إلى WebGL، وهو معطل في هذا المتصفح. اكتب الرؤوس بدلا من ذلك.',
     tilesFailed: 'لم تحمل الصور الجوية. تحقق من الاتصال.',
-    footprintBusy: 'جار البحث عن مبنى هنا… قد يستغرق OpenStreetMap نصف دقيقة.',
+    footprintBusy: 'جار البحث عن مبنى هنا… الرد يستغرق حتى نصف دقيقة.',
     footprint: {
       offline: 'لم يرد OpenStreetMap. حاول بعد دقيقة، أو ارسم القطعة.',
       'none-here': 'لا توجد حدود مبنى هنا.',
@@ -366,7 +366,7 @@ export const AR: Dict = {
       'outside-zone-40': 'إحدى النقاط خارج النطاق 40 شمال في نظام UTM، ولا يمكن استخدامها.',
     },
     outsideZone: 'خارج النطاق 40 شمال في نظام UTM. لا يمكن استخدام هذه النقطة.',
-    credit: 'الصور © Esri · بيانات الخريطة © المساهمون في OpenStreetMap',
+    credit: 'الصور © Esri · بيانات الخريطة © المساهمون في OpenStreetMap · حدود المباني عبر OpenFreeMap',
     creditLabel: 'مصادر الخريطة',
     fromSheet: 'موضوعة من شبكة مخطط الأفكشن',
   },

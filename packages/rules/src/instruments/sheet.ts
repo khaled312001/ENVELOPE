@@ -51,11 +51,10 @@
  * - **A `CONDITIONAL` setback stays unbound.** "0 m to solid wall and 4.0 m to
  *   window wall" is a design decision, not a datum; picking one would choose the
  *   applicant's façade for them.
- * - **A height in levels is not a height in metres.** `height.max` is metres;
- *   `G+11` is a count. Converting needs a floor-to-floor, which is itself a
- *   resolved parameter, and doing that arithmetic here would manufacture a ceiling
- *   nobody stated. The level allowance already travels to the engine as the podium
- *   and typical level counts.
+ * - **A height in levels is not a height in metres** — so it binds
+ *   `levels.max_above_ground`, a count, and is never converted into `height.max`.
+ *   It used to bind nothing at all, which is how `G+4` reported thirteen levels;
+ *   see the height block below.
  * - **A stated GFA binds nothing, because there is no `gfa.max` parameter.** GFA is
  *   derived from FAR and plot area; a sheet's GFA is a cross-check against that
  *   derivation, which `intake` already performs, and inventing a parameter here to
@@ -403,17 +402,49 @@ export function rulesFromInstrument(
   }
 
   // --- Height --------------------------------------------------------------
+  /*
+    THE LEVEL COUNT BINDS AS A LEVEL COUNT. This block used to send `G+N` to
+    `notBound`, on the true argument that `height.max` is metres and converting a
+    count to metres needs a floor-to-floor nobody stated. The conclusion did not
+    follow from it. With the sheet's count unbound, the solver's only ceiling was
+    the generic placeholder `R-HEIGHT-MAX-RES` (45 m ÷ 3.2 m = 14), and a plot whose
+    plan prints `G+4` reported thirteen levels — on the screen the product is sold
+    on, wrong by a factor of three (meeting 03, 41:11).
+
+    So the count binds a parameter that IS a count, `levels.max_above_ground`, and
+    nothing is converted: no metres are manufactured, and the envelope takes the
+    lower of the two ceilings and says which one governed. `totalLevels` is
+    `1 + podium + typical` — the ground floor is a level above grade, and
+    `podiumFootprintLevels` in `@envelope/core` counts it the same way.
+  */
   if (limits.height) {
     const h = limits.height.value;
-    notBound.push({
-      field: 'height',
-      stated: h.raw,
-      reason:
-        'height.max is a ceiling in metres and the sheet states a level count. Converting ' +
-        'one to the other needs a floor-to-floor, which is itself a resolved parameter, so ' +
-        'doing it here would manufacture a ceiling nobody stated. The level allowance ' +
-        'reaches the engine as the podium and typical level counts instead.',
-    });
+    rules.push(
+      record({
+        ruleId: `INSTRUMENT.${binding.instrumentId}.levels.max_above_ground`,
+        parameterId: 'levels.max_above_ground',
+        operator: Operator.MAX,
+        evaluator: EvaluatorName.SCALAR_MAX,
+        evaluatorArgs: { value: String(h.totalLevels) },
+        unit: 'levels',
+        applicability: { all: [thisPlot] },
+        citation: limits.height.citation,
+        tests: [
+          {
+            kind: 'POSITIVE',
+            context: { plot: { plot_number: binding.plotNumber } },
+            expected: h.totalLevels,
+          },
+          {
+            kind: 'BOUNDARY',
+            context: { plot: { plot_number: binding.plotNumber }, levels: { above_ground: 1 } },
+            expected: h.totalLevels,
+            note: `${h.raw} is one allowance, not a tier by level count.`,
+          },
+          { kind: 'NEGATIVE', context: otherPlot, expected: 'NOT_APPLICABLE' },
+        ],
+      }),
+    );
   }
 
   return { rules, notBound };

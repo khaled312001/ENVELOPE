@@ -153,12 +153,14 @@ describe('the sheet travels with the plot', () => {
       const sheet = res.json().sheet as SheetReport;
       const fields = sheet.notBound.map((n) => n.field);
 
-      // This sheet states a GFA, a tower coverage, a tower setback schedule and a
-      // height in levels. None of the four binds a parameter, and all four are said.
+      // This sheet states a GFA, a tower coverage and a tower setback schedule;
+      // none binds a parameter, and all three are said. Its height in levels
+      // DOES bind now — as a count, `levels.max_above_ground` — so it is no
+      // longer here. It used to be, and that is how `G+4` reported 13 levels.
       expect(fields).toContain('gfaSqm');
       expect(fields).toContain('coverage.tower');
       expect(fields).toContain('setbacks.tower');
-      expect(fields).toContain('height');
+      expect(fields).not.toContain('height');
       for (const n of sheet.notBound) expect(n.reason.length).toBeGreaterThan(30);
     } finally {
       await app.close();

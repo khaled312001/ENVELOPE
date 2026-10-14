@@ -63,6 +63,12 @@ export const ENVELOPE_PARAMETERS = [
   'coverage.max',
   'tower_plate.max',
   'height.max',
+  /*
+    A ceiling stated as a COUNT — an affection plan's `G+4`. Optional: no seed rule
+    states one, so on a plot without a sheet it resolves to nothing and the metres
+    ceiling governs alone. Never converted to metres; see `instruments/sheet.ts`.
+  */
+  'levels.max_above_ground',
   'floor_to_floor',
 ] as const;
 
@@ -262,7 +268,16 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     );
   }
 
-  const maxLevelsByHeight = heightCeiling.div(floorToFloor).floor().toNumber();
+  /*
+    TWO CEILINGS, AND THE LOWER ONE GOVERNS. The metres ceiling divided by the
+    floor-to-floor, and — where the plot's own plan states one — its level count.
+    Before the count was bound, a plan printing `G+4` was governed by the generic
+    45 m placeholder alone and reported thirteen levels.
+  */
+  const levelsByMetres = heightCeiling.div(floorToFloor).floor().toNumber();
+  const statedLevels = num(seedResolutions.get('levels.max_above_ground'));
+  const levelCountGoverns = statedLevels !== undefined && statedLevels.lt(levelsByMetres);
+  const maxLevelsByHeight = levelCountGoverns ? statedLevels.toNumber() : levelsByMetres;
   const permittedGfaM2 = farMax.times(plotAreaM2);
 
   // --- §11.7 step 2–4: ITERATE, TEST, BOUND --------------------------------
@@ -582,22 +597,63 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     formula: 'floor-to-floor from the governing rule',
     unit: 'm',
   });
+  /*
+    The stated count is DERIVED from the plot's own plan, and it reaches the graph
+    whether or not it governs: a reader asking "where did 5 come from" and one
+    asking "why not the 14 the height allows" are both owed the same two nodes.
+  */
+  const levelsRes = resolutions.get('levels.max_above_ground');
+  const statedLevelsT =
+    statedLevels !== undefined && levelsRes?.governing
+      ? tracer.derived('envelope.stated_level_count', statedLevels.toNumber(), {
+          rule: {
+            ruleId: levelsRes.governing.rule.ruleId,
+            citation: levelsRes.governing.rule.citation,
+          },
+          formula: 'level count stated on the affection plan (ground + podium + typical)',
+          unit: 'levels',
+        })
+      : undefined;
+  const byMetres = `floor(height ceiling ${heightCeiling.toString()} m ÷ floor-to-floor ${floorToFloor.toString()} m) = ${levelsByMetres}`;
   const maxLevels: Traced<number> = tracer.computed(
     'envelope.max_levels_by_height',
     maxLevelsByHeight,
     {
-      formula: `floor(height ceiling ${heightCeiling.toString()} m ÷ floor-to-floor ${floorToFloor.toString()} m)`,
-      uses: { height: heightCeilingT, f2f: floorToFloorT },
+      formula: statedLevelsT
+        ? `min(${byMetres}, stated level count ${statedLevelsT.value})`
+        : byMetres,
+      uses: statedLevelsT
+        ? { height: heightCeilingT, f2f: floorToFloorT, stated: statedLevelsT }
+        : { height: heightCeilingT, f2f: floorToFloorT },
       unit: 'levels',
     },
   );
 
-  bindings.push({
-    dimension: 'levels',
-    ruleId: heightRes.governing!.rule.ruleId,
-    label: 'height ceiling',
-    valueM: heightCeiling,
-  });
+  bindings.push(
+    levelCountGoverns && levelsRes?.governing
+      ? {
+          /* The value is the COUNT, not a height: multiplying it by the
+             floor-to-floor would print a metres ceiling the plan never stated.
+             The metres ceiling is the runner-up, in the same unit, so the reader
+             sees both — five by the plan, fourteen by the height rule. */
+          dimension: 'levels',
+          ruleId: levelsRes.governing.rule.ruleId,
+          label: 'level count stated on the affection plan',
+          valueM: new Decimal(maxLevelsByHeight),
+          runnerUp: {
+            ruleId: heightRes.governing!.rule.ruleId,
+            label: 'levels the height ceiling allows',
+            valueM: new Decimal(levelsByMetres),
+            withinOnePercent: false,
+          },
+        }
+      : {
+          dimension: 'levels',
+          ruleId: heightRes.governing!.rule.ruleId,
+          label: 'height ceiling',
+          valueM: heightCeiling,
+        },
+  );
 
   return {
     setbackPermittedFootprint,

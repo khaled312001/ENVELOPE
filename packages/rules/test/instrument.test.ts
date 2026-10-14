@@ -184,10 +184,19 @@ describe('what it refuses to bind', () => {
     expect(rules.some((r) => r.parameterId.startsWith('gfa'))).toBe(false);
   });
 
-  it('reports the height, because levels are not metres', () => {
-    expect(reasonFor('height')).toMatch(/floor-to-floor/);
-    const { rules } = rulesFromInstrument(WARSAN, BINDING);
+  /*
+    THE LEVEL COUNT BINDS, AS A COUNT. This test used to assert the opposite —
+    that `G+2P+8` bound nothing because levels are not metres — and that is how a
+    plan printing `G+4` came to report thirteen levels (meeting 03, 41:11). The
+    half of the old assertion that was right is kept: no metres are manufactured.
+  */
+  it('binds the stated level count as a count, and never as metres', () => {
+    const { rules, notBound } = rulesFromInstrument(WARSAN, BINDING);
+    const levels = rules.find((r) => r.parameterId === 'levels.max_above_ground');
+    expect(levels?.evaluatorArgs).toEqual({ value: '11' });
+    expect(levels?.unit).toBe('levels');
     expect(rules.some((r) => r.parameterId === 'height.max')).toBe(false);
+    expect(notBound.some((n) => n.field === 'height')).toBe(false);
   });
 
   it('leaves a conditional setback a decision', () => {
@@ -253,7 +262,8 @@ describe('what it refuses to bind', () => {
     };
 
     const { rules, notBound } = rulesFromInstrument(silent, BINDING);
-    expect(rules).toEqual([]);
-    expect(notBound.map((n) => n.field)).toEqual(['height']);
+    // The one thing it prints binds; nothing it omits is invented.
+    expect(rules.map((r) => r.parameterId)).toEqual(['levels.max_above_ground']);
+    expect(notBound).toEqual([]);
   });
 });

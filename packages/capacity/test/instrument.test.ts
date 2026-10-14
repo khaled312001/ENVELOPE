@@ -201,3 +201,56 @@ describe('the affection plan reaches the answer', () => {
     expect(out.capacity.regulationLimitedGfa.value.toString()).toBe('16000');
   });
 });
+
+/**
+ * `G+4` IS FIVE LEVELS, AND THE PLAN SAYS SO — meeting 03, 41:11.
+ *
+ * The client read `G+4` off a plan and the screen reported thirteen. The sheet's
+ * count bound nothing, so the only ceiling was the generic 45 m placeholder over
+ * a 3.2 m floor-to-floor. These hold the fix from three sides: the count governs,
+ * the metres ceiling is still reported as the runner-up, and a plan that states
+ * MORE levels than the height allows does not lift the ceiling.
+ */
+describe('the plan’s stated level count', () => {
+  const withHeight = (raw: string, total: number, podium = 0): RunInput => {
+    const limits: StatedLimits = {
+      ...sheet('5.0'),
+      height: {
+        value: { typicalFloors: total - 1 - podium, podiumLevels: podium, totalLevels: total, raw },
+        citation: citation('height', raw),
+      },
+    };
+    return input([...seedRules(), ...rulesFromInstrument(limits, BINDING).rules]);
+  };
+
+  it('caps the building at G+4 = 5 levels, where the height rule alone allowed 14', () => {
+    const without = runPipeline(withSheet('5.0'));
+    expect(without.envelope.maxLevelsByHeight.value).toBe(14);
+
+    const out = runPipeline(withHeight('G+4', 5));
+    expect(out.envelope.maxLevelsByHeight.value).toBe(5);
+  });
+
+  it('names the plan as the binding constraint, with the height ceiling as runner-up', () => {
+    const out = runPipeline(withHeight('G+4', 5));
+    const levels = out.envelope.bindingConstraints.find((b) => b.dimension === 'levels');
+    expect(levels?.ruleId).toBe('INSTRUMENT.TEST-345-1234.levels.max_above_ground');
+    expect(levels?.valueM.toNumber()).toBe(5);
+    expect(levels?.runnerUp?.valueM.toNumber()).toBe(14);
+  });
+
+  it('carries the stated count into the graph, DERIVED, citing the plan’s own words', () => {
+    const out = runPipeline(withHeight('G+4', 5));
+    const value = out.graph.nodes.find((n) => n.parameterId === 'envelope.stated_level_count');
+    expect(value?.provenanceClass).toBe('DERIVED');
+    expect(value?.value).toBe('5');
+    // The rule it reaches carries the sheet's verbatim text, not a placeholder.
+    const cited = out.graph.nodes.filter((n) => n.citation?.sourceTextVerbatim === 'G+4');
+    expect(cited.length).toBeGreaterThan(0);
+  });
+
+  it('does not lift the ceiling when the plan states more than the height allows', () => {
+    const out = runPipeline(withHeight('G+2P+20', 23, 2));
+    expect(out.envelope.maxLevelsByHeight.value).toBe(14);
+  });
+});

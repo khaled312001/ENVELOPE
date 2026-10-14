@@ -93,11 +93,9 @@ export const plotInput = z
     plotNumber: z.string().min(1),
     community: z.string().min(1),
     landUse: z.literal('RESIDENTIAL_MULTI', {
-      errorMap: () => ({
-        message:
-          'Phase 0 covers residential towers in one community. Another land use is ' +
-          'refused rather than approximated (PRD §3.2).',
-      }),
+      error:
+        'Phase 0 covers residential towers in one community. Another land use is ' +
+        'refused rather than approximated (PRD §3.2).',
     }),
     /** Vertices in metres, local metric CRS. Closed ring, first not repeated. */
     vertices: z
@@ -261,7 +259,7 @@ export const runRequest = z.object({
       const area = v.saleableAreaM2 !== undefined;
       if (ratio === area) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           message: ratio
             ? 'send the saleable figure once: either `value`, a ratio of GFA, or ' +
               '`saleableAreaM2`, an area in square metres. Both were sent, and they ' +

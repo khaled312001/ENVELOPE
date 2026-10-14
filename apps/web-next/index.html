@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
+      No inline script, unlike the current app. The production CSP hashes the
+      inline scripts of ONE index.html, and a second page carrying its own would
+      either be blocked or force a looser policy for both. The locale is applied
+      by the first module instead; the cost is one frame of left-to-right on an
+      Arabic reload, paid by the preview and not by the site people rely on.
+    -->
+    <title>TOP.ai — studio</title>
+    <meta name="color-scheme" content="dark" />
+    <meta
+      name="description"
+      content="TOP.ai reports what a plot's encoded rules imply, and the derivation of every figure that says so. Regulatory validity is never assessed and never claimed."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&display=swap"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0d12'/%3E%3Crect x='7' y='7' width='18' height='18' fill='none' stroke='%23e6e8ee' stroke-width='1.5'/%3E%3Crect x='11' y='11' width='10' height='10' fill='%234f8cff'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

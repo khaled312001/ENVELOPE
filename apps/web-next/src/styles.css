@@ -1,0 +1,222 @@
+@import 'tailwindcss';
+
+/*
+  TOP.ai STUDIO — THE TOKENS.
+
+  Two layers, as in the current app: primitives, which only this file reads,
+  and semantic roles, which everything else reads. A component that writes
+  `bg-[#151922]` or reaches for `--ink-900` is a defect `test/tokens.test.ts`
+  fails on.
+
+  DARK, AND ONLY DARK. This front end is a tool for the hours spent laying out
+  a plot, the way a CAD canvas is dark: the drawing is the brightest thing on
+  the screen and the chrome steps back from it. The printed report is still
+  written by the API on white paper — that document is not this one.
+
+  THE SEMANTIC NAMES ARE THE ONES THE ENGINE'S DRAWINGS ALREADY READ.
+  `@envelope/sheets` inks every line with `var(--text-primary, #hex)` and the
+  massing scene reads `--derived`, `--uncertain`, `--accent`. Defining the same
+  names here is what makes a parking sheet and the 3D model take this theme
+  without a second stylesheet for them — and without a renderer that knows
+  which front end it is in.
+
+  AMBER IS `--uncertain` AND NOTHING ELSE. It marks a value the engine was told
+  to assume. No accent, no hover, no logo, no chart series may use it; the brand
+  colour is blue for that reason.
+*/
+
+:root {
+  /* — primitives — */
+  --ink-950: #07090c;
+  --ink-925: #0a0c10;
+  --ink-900: #0f1218;
+  --ink-875: #141821;
+  --ink-850: #1a1f29;
+  --ink-800: #222834;
+  --ink-750: #2c3341;
+  --ink-700: #3b4456;
+  --ink-500: #7f889b;
+  --ink-400: #a4acbc;
+  --ink-200: #d6dae3;
+  --ink-100: #e9ebf1;
+  --blue-400: #74a0ff;
+  --blue-300: #9dbcff;
+  --blue-950: #101a30;
+  --green-400: #4cc493;
+  --green-950: #0c2119;
+  --amber-400: #f3ab3c;
+  --amber-950: #2a1d09;
+  --red-400: #ff7178;
+  --red-950: #2c1114;
+  --slate-450: #8d93a3;
+  --slate-850: #262b35;
+
+  /* — surfaces — */
+  --surface-base: var(--ink-925);
+  --surface-panel: var(--ink-900);
+  --surface-raised: var(--ink-875);
+  --surface-hover: var(--ink-850);
+  --surface-sunken: var(--ink-950);
+  --surface-inverse: var(--ink-100);
+
+  /* — lines — */
+  --border-subtle: var(--ink-850);
+  --border-default: var(--ink-800);
+  --border-strong: var(--ink-700);
+
+  /* — text — */
+  --text-primary: var(--ink-100);
+  --text-secondary: var(--ink-400);
+  --text-tertiary: var(--ink-500);
+  --text-inverse: var(--ink-925);
+
+  /* — the brand, and the one interactive colour — */
+  --accent: var(--blue-400);
+  --accent-strong: var(--blue-300);
+  --accent-subtle: var(--blue-950);
+  --focus-ring: var(--blue-300);
+
+  /* — provenance: each of these MEANS something, and is used for nothing else — */
+  --derived: var(--green-400);
+  --derived-surface: var(--green-950);
+  --uncertain: var(--amber-400);
+  --uncertain-surface: var(--amber-950);
+  --variance: var(--red-400);
+  --variance-surface: var(--red-950);
+  --deferred: var(--slate-450);
+  --deferred-hatch: var(--slate-850);
+
+  /* — type — */
+  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'IBM Plex Sans Arabic', ui-monospace, 'Cascadia Mono', monospace;
+
+  color-scheme: dark;
+}
+
+/* The roles, exposed to Tailwind as utilities: `bg-panel`, `text-secondary`, `border-default`. */
+@theme inline {
+  --color-base: var(--surface-base);
+  --color-panel: var(--surface-panel);
+  --color-raised: var(--surface-raised);
+  --color-hover: var(--surface-hover);
+  --color-sunken: var(--surface-sunken);
+  --color-inverse: var(--surface-inverse);
+
+  --color-subtle: var(--border-subtle);
+  --color-line: var(--border-default);
+  --color-strong: var(--border-strong);
+
+  --color-fg: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-tertiary: var(--text-tertiary);
+  --color-on-inverse: var(--text-inverse);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-focus: var(--focus-ring);
+
+  --color-derived: var(--derived);
+  --color-derived-surface: var(--derived-surface);
+  --color-assumed: var(--uncertain);
+  --color-assumed-surface: var(--uncertain-surface);
+  --color-variance: var(--variance);
+  --color-variance-surface: var(--variance-surface);
+  --color-deferred: var(--deferred);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background: var(--surface-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  ::selection {
+    background: var(--accent-subtle);
+    color: var(--text-primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Arabic has no italic, and a synthesised oblique on an Arabic face is damage. */
+  :lang(ar) em,
+  :lang(ar) i {
+    font-style: normal;
+  }
+
+  /* Scrollbars that belong to a dark tool, not to the operating system's light chrome. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
+
+@layer components {
+  /* A figure: mono, tabular, never broken across a line. */
+  .figure {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /*
+    The faint engineering grid behind the canvas. A texture, so it is drawn in a
+    border token at low weight and never under prose — a hatch under text trades
+    1.4.3 for 1.4.11, which is a swap and not a fix.
+  */
+  .canvas-grid {
+    background-color: var(--surface-sunken);
+    background-image:
+      linear-gradient(var(--border-subtle) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: -1px -1px;
+  }
+
+  /* The not-assessed stamp: a provenance treatment, so it keeps a non-colour cue — italic. */
+  .not-assessed {
+    font-style: italic;
+  }
+
+  /* The sheets are SVG strings from `sheetSvg`; let them fill their frame. */
+  .sheet-frame > svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

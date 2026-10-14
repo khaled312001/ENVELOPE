@@ -56,6 +56,9 @@ run('pnpm build');
    habit of whoever ran the deploy. */
 run('pnpm example');
 run('pnpm --filter @envelope/web build');
+/* The studio preview — a second front end on the same API, served at /next. It
+   has no inline script, so the policy below needs no hash for it. */
+run('pnpm --filter @envelope/web-next build');
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(join(APP, 'api'), { recursive: true });
@@ -161,6 +164,7 @@ writeFileSync(join(APP, 'tmp', 'restart.txt'), release + '\n');
 /* ── 5. The site, and the web server's rules for it ──────────────────── */
 
 cpSync(join(ROOT, 'apps', 'web', 'dist'), WEB, { recursive: true });
+cpSync(join(ROOT, 'apps', 'web-next', 'dist'), join(WEB, 'next'), { recursive: true });
 
 /*
   THE ENTRY CHUNK HAS A BUDGET, AND A BUILD OVER IT IS NOT PACKED.
@@ -304,6 +308,9 @@ ${redirectRules}
   # A file that exists is served as it is.
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
+
+  # The studio preview is its own application; every path under /next is its shell.
+  RewriteRule ^next(/.*)?$ next/index.html [L]
 
   # Every page the site has — from routes.json — is the application shell, 200.
   RewriteRule ^(${pages.join('|')})/?$ index.html [L]

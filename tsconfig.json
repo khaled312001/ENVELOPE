@@ -21,6 +21,7 @@
     { "path": "packages/report" },
     { "path": "packages/exports" },
     { "path": "apps/api" },
-    { "path": "apps/web" }
+    { "path": "apps/web" },
+    { "path": "apps/web-next" }
   ]
 }

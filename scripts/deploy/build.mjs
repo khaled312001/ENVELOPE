@@ -340,6 +340,10 @@ writeFileSync(
 Options -Indexes
 DirectoryIndex index.html
 
+# pdf.js's worker is an .mjs file, and this host serves .mjs as text/plain — which,
+# beside nosniff, a browser refuses to run as a module. The sheet step then draws nothing.
+AddType text/javascript .mjs
+
 <IfModule mod_rewrite.c>
   # Turning the engine on here is also what stops the parent site's rules — which
   # send every other host name to khaledahmed.net — from applying to this one.

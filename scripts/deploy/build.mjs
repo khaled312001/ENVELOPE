@@ -231,12 +231,18 @@ const pages = routes
   `style={}` and maplibre both write style attributes, and no hash covers those.
   Style injection without script cannot run code.
 
-  REPORT-ONLY UNTIL IT HAS BEEN WATCHED ON THE LIVE SITE. That is how a policy is
-  introduced: it reports what it would block and blocks nothing. A policy
-  enforced before anyone read its violations is a site that can stop drawing its
-  map for one reader and work for the person who shipped it. `CSP_MODE=enforce`
-  turns it on, once a walk of every route shows a clean console.
+  ENFORCED, AFTER IT WAS WATCHED. It went live report-only first, which is how a
+  policy is introduced: it reports what it would block and blocks nothing. On
+  14 Oct 2026 a walk of the live site — every public route, the 404, sign-in and
+  sign-up, and the engine from the plot's map through the 3D view, the drawing
+  set and the export step, then /work — logged no CSP message of any level, with
+  the report-only header confirmed on the responses. So it is enforced by
+  default now, because a default of report-only is a build that quietly stops
+  protecting anyone the day somebody forgets the variable. `CSP_MODE=report-only`
+  takes it back to reporting, for the next time a new origin is added and has to
+  be watched before it is trusted.
 */
+const cspReportOnly = process.env.CSP_MODE === 'report-only';
 const builtIndex = readFileSync(join(WEB, 'index.html'), 'utf8');
 const inlineHashes = [...builtIndex.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
   .map((m) => m[1])
@@ -266,12 +272,9 @@ const csp = [
      one live walk, burying the one real finding under them. The host already
      sends it enforced, as a `Content-Security-Policy` header of its own (seen
      on the live responses, 14 Oct 2026), so nothing is lost meanwhile. */
-  ...(forceHttps && process.env.CSP_MODE === 'enforce' ? ['upgrade-insecure-requests'] : []),
+  ...(forceHttps && !cspReportOnly ? ['upgrade-insecure-requests'] : []),
 ].join('; ');
-const cspHeader =
-  process.env.CSP_MODE === 'enforce'
-    ? 'Content-Security-Policy'
-    : 'Content-Security-Policy-Report-Only';
+const cspHeader = cspReportOnly ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy';
 
 writeFileSync(
   join(WEB, '.htaccess'),

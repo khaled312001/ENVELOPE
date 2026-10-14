@@ -911,6 +911,54 @@ describe('cross-origin requests', () => {
     expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5174');
   });
 
+  /*
+    CSRF. CORS only withholds the response; the request has already run. These
+    hold the server to refusing a state change a foreign page started — and to
+    letting through the three callers that must keep working: the site's own
+    pages, a sibling-free same-origin post, and a non-browser client.
+  */
+  describe('a state change started by another site is refused', () => {
+    const post = (headers: Record<string, string>) =>
+      app.inject({
+        method: 'POST',
+        url: '/api/plots',
+        headers: { ...ACTOR, host: 'tob.example.net', ...headers },
+        payload: {},
+      });
+
+    it('refuses a cross-site or sibling-subdomain post, whatever its body', async () => {
+      for (const headers of [
+        { 'sec-fetch-site': 'cross-site', origin: 'https://evil.example' },
+        { 'sec-fetch-site': 'same-site', origin: 'https://blog.example.net' },
+        // An older browser that sends Origin and no Fetch Metadata.
+        { origin: 'https://evil.example' },
+      ]) {
+        const res = await post(headers);
+        expect(res.statusCode).toBe(403);
+        expect(res.json().error).toBe('CrossSiteRequest');
+      }
+    });
+
+    it('lets the site’s own pages and a non-browser caller through to validation', async () => {
+      for (const headers of [
+        { 'sec-fetch-site': 'same-origin', origin: 'https://tob.example.net' },
+        { origin: 'https://tob.example.net' },
+        {},
+      ]) {
+        // 400, not 403: the request reached the schema, which refuses `{}`.
+        expect((await post(headers)).statusCode).toBe(400);
+      }
+    });
+
+    it('never stands in the way of a read', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/health',
+        headers: { 'sec-fetch-site': 'cross-site', origin: 'https://evil.example' },
+      });
+      expect(res.statusCode).toBe(200);
+    });
+  });
 });
 
 describe('export — the §3.4 artifact', () => {

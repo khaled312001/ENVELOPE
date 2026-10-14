@@ -275,6 +275,51 @@ export async function build(
     exposedHeaders: ['X-Run-Id'],
   });
 
+  /**
+   * CSRF — a state-changing request must come from this site's own pages.
+   *
+   * CORS does not do this. It decides who may READ a response; a cross-origin
+   * form post, or a body-less `POST /export`, is still executed by the server
+   * before the browser throws the answer away. The session cookie's
+   * `SameSite=Lax` stops a foreign SITE sending it — but every
+   * `*.khaledahmed.net` is the same site as `tob.khaledahmed.net`, so a sibling
+   * subdomain is inside that fence.
+   *
+   * So the browser's own statement of where a request came from is checked
+   * (OWASP's "verifying origin with standard headers"): `Sec-Fetch-Site` when
+   * the browser sends it, `Origin` when it does not. A request carrying neither
+   * is not a browser acting on someone's behalf — curl, `pnpm dxf`, the tests —
+   * and is let through, exactly as the CORS hook above lets it through. Nothing
+   * in the web client changes, because its requests are all same-origin.
+   */
+  const UNSAFE = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+  const originAdmitted = (origin: string, host: string | undefined): boolean => {
+    if (allowed.length > 0 && allowed.includes(origin)) return true;
+    if (allowed.length === 0 && isLoopback(origin)) return true;
+    try {
+      return host !== undefined && new URL(origin).host === host;
+    } catch {
+      return false;
+    }
+  };
+  app.addHook('onRequest', async (request, reply) => {
+    if (!UNSAFE.has(request.method)) return;
+    const site = request.headers['sec-fetch-site'];
+    const origin = request.headers.origin;
+    const fromElsewhere =
+      site === 'cross-site' || site === 'same-site'
+        ? origin === undefined || !originAdmitted(origin, request.headers.host)
+        : site === undefined && origin !== undefined && !originAdmitted(origin, request.headers.host);
+    if (fromElsewhere) {
+      return reply.status(403).send({
+        error: 'CrossSiteRequest',
+        message:
+          'this request came from another site, and only this site’s own pages may ' +
+          'change anything here. If you opened a link that did this, nothing was changed.',
+      });
+    }
+  });
+
   // Every error carries a message a person can act on. The engine's errors are
   // already written that way — they name the rule, the gate or the missing
   // declaration — so they are passed through rather than flattened into a 500.

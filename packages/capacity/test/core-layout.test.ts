@@ -7,7 +7,7 @@
  */
 
 import { asMm, ProvenanceClass, ProvenanceGraph, Tracer } from '@envelope/core';
-import { initGeometry } from '@envelope/geometry';
+import { containsPoint, initGeometry } from '@envelope/geometry';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { RECT_120x80, runInput } from '../../../test-support/pipeline.js';
@@ -98,14 +98,56 @@ describe('a core too small for the program', () => {
 });
 
 describe('a core that is not a rectangle', () => {
-  it('draws nothing inside it', () => {
-    const skew = [
+  const skew = [
+    { x: asMm(0), y: asMm(0) },
+    { x: asMm(20_000), y: asMm(0) },
+    { x: asMm(24_000), y: asMm(8_000) },
+    { x: asMm(0), y: asMm(8_000) },
+  ];
+
+  it('lays the stairs and lifts in the largest rectangle inside it, and never outside it', () => {
+    const layout = layoutCore({ tracer: tracer(), ring: skew });
+    expect(layout.kind).toBe('LAID_OUT');
+    if (layout.kind !== 'LAID_OUT') return;
+    for (const room of layout.rooms) {
+      for (const p of room.outline) {
+        expect(containsPoint(skew, { x: asMm(p.x), y: asMm(p.y) })).toBe(true);
+      }
+    }
+  });
+
+  it('draws nothing inside one that holds no rectangle the program fits', () => {
+    const sliver = [
       { x: asMm(0), y: asMm(0) },
       { x: asMm(20_000), y: asMm(0) },
-      { x: asMm(24_000), y: asMm(8_000) },
-      { x: asMm(0), y: asMm(8_000) },
+      { x: asMm(0), y: asMm(4_000) },
     ];
-    expect(layoutCore({ tracer: tracer(), ring: skew }).kind).toBe('NOT_LAID_OUT');
+    expect(layoutCore({ tracer: tracer(), ring: sliver }).kind).toBe('NOT_LAID_OUT');
+  });
+});
+
+describe('a core beside the parking island', () => {
+  it('puts the shafts where the core overlaps the island, when they fit there', () => {
+    // A 24 × 12 m core whose lower 6 m overlaps an island 40 × 6 m deep.
+    const core = [
+      { x: asMm(0), y: asMm(0) },
+      { x: asMm(24_000), y: asMm(0) },
+      { x: asMm(24_000), y: asMm(12_000) },
+      { x: asMm(0), y: asMm(12_000) },
+    ];
+    const island = [
+      { x: asMm(-8_000), y: asMm(-3_000) },
+      { x: asMm(32_000), y: asMm(-3_000) },
+      { x: asMm(32_000), y: asMm(6_000) },
+      { x: asMm(-8_000), y: asMm(6_000) },
+    ];
+    const layout = layoutCore({ tracer: tracer(), ring: core, island, maxShaftDepthMm: 9_000 });
+    expect(layout.kind).toBe('LAID_OUT');
+    if (layout.kind !== 'LAID_OUT') return;
+    for (const p of layout.shaft.outline) {
+      expect(p.y).toBeGreaterThanOrEqual(0);
+      expect(p.y).toBeLessThanOrEqual(6_000);
+    }
   });
 });
 

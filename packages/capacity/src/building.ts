@@ -49,6 +49,7 @@ import {
   type Tracer,
 } from '@envelope/core';
 import {
+  area as ringArea,
   distanceAlong,
   lengthSquared,
   lineSpans,
@@ -258,7 +259,11 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   }
 
   // --- the parking content, identical on every parking level -------------------
-  const parkingContent: ModelLevel['parking'] = levelPlan ? parkingOf(levelPlan) : null;
+  // Which way a sloped ring climbs from grade: one answer for the whole stack, or
+  // none where parking stands both above and below it.
+  const climbs: 'UP' | 'DOWN' | null =
+    parkingBelow > 0 && parkingInPodium <= 1 ? 'DOWN' : parkingBelow === 0 && parkingInPodium > 1 ? 'UP' : null;
+  const parkingContent: ModelLevel['parking'] = levelPlan ? parkingOf(levelPlan, climbs) : null;
   if (parkingCount > 0 && !levelPlan) {
     notModelled.push(
       `Parking bays. The level could not be laid out: ${input.levelPlanRefusal ?? 'no reason was recorded'}`,
@@ -365,23 +370,20 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   const ramps: ModelRamp[] = [];
   const strip = levelPlan?.rampStrip;
   if (strip && parkingStack.length >= 2) {
-    const gradient = tracer.computed(
-      'building.ramp_gradient_pct',
-      f2f.value.div(strip.runM.value).times(100).toDecimalPlaces(2),
-      {
-        formula:
-          `${f2f.value.toString()} m rise ÷ ${strip.runM.value.toString()} m run × 100`,
-        uses: { rise: f2f, run: strip.runM },
-        unit: '%',
-        detail: {
-          note:
-            'The gradient a ramp in the reserved strip needs to climb one level. ' +
-            'Whether it is permitted is NOT ASSESSED — DBC B.7.2.2 is not encoded.',
-        },
-      },
-    );
-    const label =
-      `SLOPED RAMP ${gradient.value.toFixed(2)}% - GRADIENT NOT ASSESSED (DBC B.7.2.2)`;
+    /*
+      THE SLOPE THE RAMP WAS SIZED FOR, not a storey divided by whatever run was
+      left. That division is how 49.23% reached a sheet. The run is now the one
+      Tables B.9 and B.10 require for this storey, so the main slope is 12% and
+      each end eases in at 6%; the average over the whole run is lower.
+    */
+    const gradient = tracer.computed('building.ramp_gradient_pct', strip.slopePct.value, {
+      formula:
+        `${strip.slopePct.value.toString()}% over the main run; ${f2f.value.toString()} m over ` +
+        `${strip.runM.value.toFixed(2)} m with the transitions`,
+      uses: { slope: strip.slopePct, rise: f2f, run: strip.runM },
+      unit: '%',
+    });
+    const label = `RAMP ${gradient.value.toFixed(0)}% - 6% TRANSITIONS (DBC TABLES B.9, B.10)`;
     for (let i = 0; i + 1 < parkingStack.length; i += 1) {
       const low = parkingStack[i]!;
       const high = parkingStack[i + 1]!;
@@ -399,13 +401,24 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       });
     }
     notModelled.push(
-      'Ramp transitions, headroom and the approach from the street — NOT ASSESSED ' +
-        '(DBC B.7.2.2). Only the gradient over the reserved run is computed.',
+      'Ramp headroom (2.4 m, DBC Table B.9) and the approach from the street — NOT ' +
+        'ASSESSED. The 3D view and the sections draw each ramp as one plane from foot to ' +
+        'head; its 6% transitions are in the run, not drawn.',
     );
   } else if (strip && parkingStack.length === 1) {
     notModelled.push(
       'A ramp. The strip is reserved on the one parking level, but there is no second ' +
         'parking level for a ramp to reach, so no gradient is computed.',
+    );
+  }
+  if (levelPlan?.slopedFloor) {
+    notModelled.push(
+      // No gradient figure here: it is on every parking sheet, traced, and this list
+      // is quoted verbatim on pages that print no percentage at all.
+      `The sloped ring is drawn level in 3D and in section. On plan the ring aisle and the ` +
+        `bays on it climb one storey over each ${levelPlan.slopedFloor.lapM.toFixed(2)} m lap; ` +
+        'the 3D view and the sections stand every parking level flat at its floor height, and ' +
+        'where the core door meets the ring at each level is not drawn.',
     );
   }
   if (parkingBelow > 0 && parkingInPodium === 0) {
@@ -749,7 +762,7 @@ function cut(
 }
 
 /** One parking level's content, from the level plan. Numbered as a reader scans. */
-function parkingOf(plan: LevelPlan): NonNullable<ModelLevel['parking']> {
+function parkingOf(plan: LevelPlan, climbs: 'UP' | 'DOWN' | null): NonNullable<ModelLevel['parking']> {
   const byScan = (a: WorldRect, b: WorldRect): number =>
     a.yM.comparedTo(b.yM) || a.xM.comparedTo(b.xM);
 
@@ -795,16 +808,36 @@ function parkingOf(plan: LevelPlan): NonNullable<ModelLevel['parking']> {
     bays,
     aisles,
     reserved: plan.reservedZone
-      ? {
-          outline: plan.reservedZone.map(pt),
-          areaM2: toWire(plan.reservedAreaM2),
-          label:
-            plan.reservedAreaM2 === plan.deductionsM2
-              ? `CORES, PLANT & CIRCULATION - ${plan.deductionsM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`
-              : `PLANT & CIRCULATION - ${plan.reservedAreaM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`,
-        }
+      ? (() => {
+          /*
+            Where the ring's island has room for only part of the strip, only
+            that part is drawn; the label says how much of the whole it is,
+            rather than printing the whole figure across a smaller rectangle.
+          */
+          const drawn = new Decimal(Math.abs(ringArea(plan.reservedZone))).div(1_000_000);
+          const whole = plan.reservedAreaM2.value;
+          const part = drawn.lt(whole.minus(1)) ? `${drawn.toFixed(0)} OF ` : '';
+          return {
+            outline: plan.reservedZone.map(pt),
+            areaM2: toWire(plan.reservedAreaM2),
+            label:
+              plan.reservedAreaM2 === plan.deductionsM2
+                ? `CORES, PLANT & CIRCULATION - ${part}${plan.deductionsM2.value.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`
+                : `PLANT & CIRCULATION - ${part}${whole.toFixed(0)} SQ.M RESERVED, NOT LAID OUT`,
+          };
+        })()
       : null,
     rampStrip: plan.rampStrip ? plan.rampStrip.world.map(pt) : null,
+    ...(plan.slopedFloor
+      ? {
+          rampedFloor: {
+            gradientPct: toWire(plan.slopedFloor.gradientPct),
+            lapM: plan.slopedFloor.lapM.toFixed(2),
+            centreLine: plan.slopedFloor.centreLine.map(pt),
+            climbs,
+          },
+        }
+      : {}),
     module: {
       bayWidthM: standard.bayWidthM,
       bayLengthM: standard.bayLengthM,

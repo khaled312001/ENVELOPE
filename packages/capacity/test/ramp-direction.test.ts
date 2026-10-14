@@ -71,7 +71,12 @@ function layout(
 ): ParkingLayoutResult {
   return layoutParkingLevel({
     tracer: new Tracer(new ProvenanceGraph()),
-    footprint: { widthM: d('40'), depthM: d('51') },
+    /*
+      Small enough round that the ring aisle cannot climb a storey within 4% —
+      a 76 m lap is 4.21% — so the ramp is a strip and its direction is what is
+      measured. A larger level slopes its ring instead; see the end of this file.
+    */
+    footprint: { widthM: d('32'), depthM: d('40') },
     deductions: {
       areaM2: d(0),
       source: 'ASSUMED',
@@ -368,7 +373,8 @@ describe('ramp types', () => {
       RampType.SPLIT,
       RampType.TURNING,
     ]);
-    expect(rampTypeSpec(RampType.STRAIGHT).totalWidthM).toBe('6');
+    // Two 3.00 m lanes and the 300 mm curb between them — Table B.9, B.7.2.2 (c, d).
+    expect(rampTypeSpec(RampType.STRAIGHT).totalWidthM).toBe('6.3');
     // "هنا مدخل وهنا مخرج، فبيكون 3 متر و 3" — 25:57–27:23.
     expect(rampTypeSpec(RampType.SPLIT).laneCount).toBe(2);
     expect(rampTypeSpec(RampType.SPLIT).laneWidthM).toBe('3');
@@ -377,8 +383,8 @@ describe('ramp types', () => {
   it('occupies the same width split as straight, so it places the same bays', () => {
     // §3.2 of the meeting note claims the split "frees a bay run the first
     // blocks". Nothing cited supports that and the two arrangements are the same
-    // 6.00 m of width, so the engine reports the same count and says the
-    // difference is turning and headroom — B.7.2.2, NOT ASSESSED.
+    // 6.30 m of width, so the engine reports the same count and says headroom —
+    // B.7.2.2 — is NOT ASSESSED.
     expect(rampTypeSpec(RampType.SPLIT).totalWidthM).toBe(
       rampTypeSpec(RampType.STRAIGHT).totalWidthM,
     );
@@ -386,7 +392,7 @@ describe('ramp types', () => {
     const straight = layout({ rampPlan: { ...plan, type: RampType.STRAIGHT } });
     const split = layout({ rampPlan: { ...plan, type: RampType.SPLIT } });
     expect(split.bayCount.value).toBe(straight.bayCount.value);
-    expect(split.notes.join(' ')).toMatch(/NOT ASSESSED/);
+    expect(split.notes.join(' ')).toMatch(/headroom \(2\.4 m\) is NOT ASSESSED/);
   });
 
   it('refuses the turning ramp by name rather than approximating it', () => {
@@ -428,5 +434,58 @@ describe('ramp types', () => {
 
   it('refuses a type it does not enumerate', () => {
     expect(() => rampTypeSpec('HELICAL_DOUBLE' as RampType)).toThrow(ParkingLayoutError);
+  });
+});
+
+describe('the ramp is sized to DBC Tables B.9 and B.10, not drawn to fit', () => {
+  it('needs 30.27 m of run for a 3.2 m storey: 12% with a 3.6 m transition at 6% at each end', () => {
+    // 2 × 3.6 + (3.2 − 2 × 3.6 × 0.06) / 0.12 = 7.2 + 23.07 = 30.27
+    const r = layout({ rampPlan: { schedule: schedule({ basements: 1 }), actor: ACTOR } });
+    expect(r.ramp!.runM.value.toString()).toBe('30.27');
+    expect(r.ramp!.widthM.value.toString()).toBe('6.3');
+    expect(r.ramp!.slopePct.value.toString()).toBe('12');
+    // The slope is the code's; the run is only as strong as the storey it climbs,
+    // and no storey reached this layout, so the run is an assumption — said so.
+    expect(r.ramp!.slopePct.provenanceClass).toBe('DERIVED');
+    expect(r.ramp!.runM.provenanceClass).toBe('ASSUMED');
+  });
+
+  it('refuses a ramp the level has no room for rather than drawing a steeper one', () => {
+    // 30 × 28 m: no side holds a 30.27 m run, and a ring that small climbs at
+    // more than 4%. The old engine clipped the run to fit and drew 49% ramps.
+    expect(() =>
+      layoutParkingLevel({
+        tracer: new Tracer(new ProvenanceGraph()),
+        footprint: { widthM: d('28'), depthM: d('28') },
+        deductions: { areaM2: d(0), source: 'ASSUMED', basis: 'test fixture' },
+        includeRamp: true,
+      }),
+    ).toThrow(/30\.27|4%/);
+  });
+});
+
+describe('the ring aisle sloped as the ramp — the client\'s own podium', () => {
+  const big = (extra: Partial<Parameters<typeof layoutParkingLevel>[0]> = {}): ParkingLayoutResult =>
+    layout({ footprint: { widthM: d('40'), depthM: d('51') }, ...extra });
+
+  it('wins where one lap climbs a storey within the 4% of B.7.2.3.1, and needs no ramp strip', () => {
+    const r = big();
+    expect(r.slopedFloor).toBeDefined();
+    expect(r.ramp).toBeUndefined();
+    // Lap 2 × ((40 − 17) + (51 − 17)) = 114 m; 3.2 / 114 = 2.807…% → 2.81, rounded up.
+    expect(r.slopedFloor!.lapM.toString()).toBe('114');
+    expect(r.slopedFloor!.gradientPct.value.toString()).toBe('2.81');
+    expect(r.slopedFloor!.gradientPct.value.lte(4)).toBe(true);
+  });
+
+  it('carries the direction from the schedule, as a strip ramp does', () => {
+    const r = big({ rampPlan: { schedule: schedule({ basements: 1, groundIsParking: true }), actor: ACTOR } });
+    expect(r.slopedFloor!.runs?.map((x) => x.storeyDelta)).toEqual([-1]);
+  });
+
+  it('is not offered where somebody stated a strip ramp', () => {
+    const r = big({ rampPlan: { schedule: schedule({ basements: 1 }), actor: ACTOR, type: RampType.STRAIGHT } });
+    expect(r.slopedFloor).toBeUndefined();
+    expect(r.ramp!.type.value).toBe(RampType.STRAIGHT);
   });
 });

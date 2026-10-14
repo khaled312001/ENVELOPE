@@ -89,10 +89,20 @@ describe('the core subtracts from nothing', () => {
   strip instead, so it is not deducted twice.
 */
 describe('the core on the parking level', () => {
-  it('is drawn over the parking as before unless the run asks for the shafts to be avoided', () => {
+  /*
+    ON BY DEFAULT SINCE 15 OCT 2026. "مينفعش يكون في باركنج تحت الكور" — a bay
+    under the stairs and lifts is not a bay, and a default that drew one was the
+    defect. Off is still possible, and is a request somebody has to make.
+  */
+  it('keeps every bay out of the shafts by default, and draws over them only when asked', () => {
     const out = runPipeline(input());
-    expect(out.building.core!.shaft).toBeUndefined();
-    expect(out.levelPlan!.layout.baysUnderCore).toBe(0);
+    const shaft = out.building.core!.shaft!.outline;
+    const bays = out.levelPlan!.rects.filter((r) => r.kind === 'BAY' || r.kind === 'ACCESSIBLE_BAY');
+    expect(bays.length).toBeGreaterThan(0);
+    for (const bay of bays) expect(overlaps(bay.world, shaft)).toBe(false);
+
+    const off = runPipeline(input({ levelPlan: { avoidCore: false } }));
+    expect(off.building.core!.shaft).toBeUndefined();
   });
 
   const overlaps = (

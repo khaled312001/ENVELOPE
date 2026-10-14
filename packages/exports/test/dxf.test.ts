@@ -133,7 +133,8 @@ describe('the building, in three dimensions', () => {
   });
 
   it('stands the massing up as faces, and the ramp as a slope between two levels', () => {
-    const out = runPipeline(runInput(RECT_80x40, { podiumLevels: 2 }));
+    // A strip ramp by name: on 80 × 40 m the ring itself is the ramp otherwise.
+    const out = runPipeline(runInput(RECT_80x40, { podiumLevels: 2, levelPlan: { rampType: 'STRAIGHT' } }));
     const dxf = parse(buildingDxf(out.building, composeSheets(out.building, META), META));
     const faces = dxf.entities.filter((e) => e.type === '3DFACE') as unknown as { layer: string; vertices: { z: number }[] }[];
     // Mass up to the answer's top level, and none above it: a level the answer does

@@ -31,6 +31,7 @@
  */
 
 import { asMm, Decimal, type Tracer, type Traced, type TracedDecimal } from '@envelope/core';
+import { area, fromLocal, intersect, largestInscribedRectangle, type Ring } from '@envelope/geometry';
 
 /** Plot-space millimetres, as the core ring is held. */
 interface Pt {
@@ -121,14 +122,162 @@ export function frameOf(ring: readonly Pt[]):
     : { origin: p0, along: unit(e1), across: unit(e0), lengthMm: len(e1), depthMm: len(e0) };
 }
 
-export function layoutCore(input: { readonly tracer: Tracer; readonly ring: readonly Pt[] }): CoreLayout {
-  const frame = frameOf(input.ring);
+/**
+ * A core that is not a rectangle — the plate scaled about its centre, on a plot
+ * that is not one — still has stairs and lifts. They go in the largest rectangle
+ * inside it, which is inside the core by construction, so the shafts never stand
+ * outside the outline every drawing shows. Without this a triangular core was
+ * one 230 m² obstruction on every parking level of Al Mamzar (DM 1341556), and
+ * the bays it cost were bays standing where no stair or lift is.
+ */
+function inscribedFrame(ring: readonly Pt[]): ReturnType<typeof frameOf> {
+  try {
+    const r = largestInscribedRectangle(toRing(ring));
+    const w = Number(r.widthMm);
+    const d = Number(r.depthMm);
+    return frameOf([fromLocal(r, 0, 0), fromLocal(r, w, 0), fromLocal(r, w, d), fromLocal(r, 0, d)]);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The linear program: stair | lift | lobby | lift | stair in one row, each lift
+ * opening sideways onto the lobby between them. 2.8 m deep instead of 5.2 m.
+ *
+ * The client's own ground floor of the 50.85 × 26.65 m plot draws exactly this —
+ * "LIFT LOBBY with two lifts and two staircases, drawn as a linear bar through the
+ * middle" — because a ring of bays and a two-way aisle round all four walls of a
+ * level that deep leaves an island under 4 m, and the compact program is 5.2 m.
+ * Chosen by a fixed rule, never by yield: the compact program wherever the island
+ * holds it, the linear one only where it does not.
+ */
+const LINEAR_LOBBY_MM = 3000;
+
+function layoutLinear(
+  input: { readonly tracer: Tracer },
+  frame: NonNullable<ReturnType<typeof frameOf>>,
+  maxDepthMm: number,
+): CoreLayout {
+  const row = 2 * STAIR_ALONG_MM + 2 * LIFT_MM + LINEAR_LOBBY_MM;
+  if (frame.lengthMm < row) {
+    return {
+      kind: 'NOT_LAID_OUT',
+      reason:
+        `The parking island is ${(maxDepthMm / 1000).toFixed(2)} m deep, too shallow for the ` +
+        `5.2 m compact core, and the core is ${(frame.lengthMm / 1000).toFixed(1)} m long, too ` +
+        `short for the ${(row / 1000).toFixed(1)} m linear one. Nothing is drawn inside it.`,
+    };
+  }
+  const program = input.tracer.assumed(
+    'building.core_layout',
+    'linear: stair 5.6 × 2.8 m, lift 2.4 m, lobby 3.0 m, lift 2.4 m, stair 5.6 × 2.8 m',
+    {
+      basis:
+        `${CORE_LAYOUT_BASIS} Laid out in one row — stair, lift, lobby, lift, stair — because the ` +
+        `island the parking ring encloses is ${(maxDepthMm / 1000).toFixed(2)} m deep and the ` +
+        'compact program with the lobby in front needs 5.2 m. The client draws the lift lobby ' +
+        'of his 50.85 × 26.65 m plot the same way.',
+      label: 'indicative core layout',
+    },
+  );
+  const at = (a: number, b: number) => ({
+    x: asMm(Math.round(frame.origin.x + a * frame.along.x + b * frame.across.x)),
+    y: asMm(Math.round(frame.origin.y + a * frame.along.y + b * frame.across.y)),
+  });
+  const rect = (kind: CoreRoomKind, a0: number, b0: number, da: number, db: number): CoreRoom => ({
+    kind,
+    outline: [at(a0, b0), at(a0 + da, b0), at(a0 + da, b0 + db), at(a0, b0 + db)],
+  });
+  const depth = STAIR_ACROSS_MM;
+  const start = (frame.lengthMm - row) / 2;
+  const b0 = (frame.depthMm - depth) / 2;
+  let a = start;
+  const rooms: CoreRoom[] = [];
+  const put = (kind: CoreRoomKind, along: number, across: number): void => {
+    rooms.push(rect(kind, a, b0 + (depth - across) / 2, along, across));
+    a += along;
+  };
+  put(CoreRoomKind.STAIR, STAIR_ALONG_MM, STAIR_ACROSS_MM);
+  put(CoreRoomKind.LIFT, LIFT_MM, LIFT_MM);
+  const lobbyStart = a;
+  put(CoreRoomKind.LOBBY, LINEAR_LOBBY_MM, depth);
+  put(CoreRoomKind.LIFT, LIFT_MM, LIFT_MM);
+  put(CoreRoomKind.STAIR, STAIR_ALONG_MM, STAIR_ACROSS_MM);
+  const shaftArea = new Decimal(row).times(depth).div(1_000_000);
+  const shaft = {
+    outline: rect(CoreRoomKind.LOBBY, start, b0, row, depth).outline,
+    areaM2: input.tracer.computed('building.core_shaft_area_m2', shaftArea, {
+      formula:
+        `${(row / 1000).toFixed(1)} m of stairs, lifts and lobby in one row × ` +
+        `${(depth / 1000).toFixed(1)} m — what of the core passes through a parking level`,
+      uses: { program },
+      unit: 'm²',
+    }),
+  };
+  // The door is in the lobby's long face, centred on it.
+  const doorAt = lobbyStart + (LINEAR_LOBBY_MM - CORE_DOOR_MM) / 2;
+  const entrance = [at(doorAt, b0 + depth), at(doorAt + CORE_DOOR_MM, b0 + depth)] as const;
+  return { kind: 'LAID_OUT', rooms, program, shaft, entrance };
+}
+
+export function layoutCore(input: {
+  readonly tracer: Tracer;
+  readonly ring: readonly Pt[];
+  /**
+   * The deepest shaft a parking level can take without its ring aisle being cut —
+   * the island the ring encloses. Absent: no limit, the compact program.
+   */
+  readonly maxShaftDepthMm?: number;
+  /**
+   * That island itself, in plot millimetres. Where the core overlaps it and the
+   * stairs and lifts fit in the overlap, they go there.
+   */
+  readonly island?: readonly Pt[];
+}): CoreLayout {
+  /*
+    THE SHAFTS LAND IN THE ISLAND WHEN THEY CAN. Stairs and lifts come down
+    through every parking level, and the one place on a level of bays round the
+    walls they cost nothing is the island the ring aisle encloses — where the
+    client's own drawings put his lift-lobby bar. So the program is laid out in
+    the part of the core that overlaps the island, if it fits there, and in the
+    core as a whole only if it does not. Still inside the core outline either
+    way, still one fixed rule: the overlap first, the core second. Not a search
+    over positions — the core itself stays where the plate puts it.
+  */
+  if (input.island) {
+    const zones = intersect(toRing(input.ring), toRing(input.island));
+    const zone = zones.slice().sort((a, b) => Math.abs(area(b)) - Math.abs(area(a)))[0];
+    const frame = zone ? (frameOf(zone) ?? inscribedFrame(zone)) : null;
+    if (frame) {
+      const linear = frame.depthMm < STAIR_ACROSS_MM + LOBBY_DEPTH_MM && frame.depthMm >= STAIR_ACROSS_MM;
+      const laid = linear ? layoutLinear(input, frame, frame.depthMm) : layoutInFrame(input, frame);
+      if (laid.kind === 'LAID_OUT') return laid;
+    }
+  }
+  return layoutInFrame(input, frameOf(input.ring) ?? inscribedFrame(input.ring));
+}
+
+const toRing = (ring: readonly Pt[]): Ring => ring.map((p) => ({ x: asMm(p.x), y: asMm(p.y) }));
+
+function layoutInFrame(
+  input: { readonly tracer: Tracer; readonly maxShaftDepthMm?: number },
+  frame: ReturnType<typeof frameOf>,
+): CoreLayout {
+  if (
+    frame &&
+    input.maxShaftDepthMm !== undefined &&
+    input.maxShaftDepthMm < STAIR_ACROSS_MM + LOBBY_DEPTH_MM &&
+    input.maxShaftDepthMm >= STAIR_ACROSS_MM
+  ) {
+    return layoutLinear(input, frame, input.maxShaftDepthMm);
+  }
   if (!frame) {
     return {
       kind: 'NOT_LAID_OUT',
       reason:
-        'The core is not a rectangle on this plot, so no stair or lift is drawn inside ' +
-        'it; the outline and its area stand alone.',
+        'The core is not a rectangle on this plot and no rectangle fits inside it, so no ' +
+        'stair or lift is drawn inside it; the outline and its area stand alone.',
     };
   }
 

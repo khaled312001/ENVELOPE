@@ -210,7 +210,8 @@ describe('a laid-out level', () => {
   });
 
   it('reaches every aisle from the ramp when there is one', () => {
-    const level = run('40', '51', { includeRamp: true });
+    // 32 × 40 m: too small round for the ring to be the ramp, so a strip is placed.
+    const level = run('32', '40', { includeRamp: true });
     const drivable = drivableOf(level);
     const rampIdx = drivable.findIndex((x) => x.kind === RectKind.RAMP);
     expect(rampIdx).toBeGreaterThanOrEqual(0);

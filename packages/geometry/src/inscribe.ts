@@ -174,10 +174,43 @@ export function largestInscribedRectangle(ring: Ring, resolution = 96): Inscribe
     };
   }
 
-  // Sweep in the MBR frame: it is the orientation a designer would choose, and
-  // it bounds the search to one rotation instead of all of them.
+  /*
+    Sweep in the MBR frame: it is the orientation a designer would choose, and
+    it bounds the search to one rotation instead of all of them. A frame per
+    side of the plot was tried on 15 Oct 2026 for Al Mamzar's near-triangle
+    (DM 1341556) and found nothing the MBR frame had not — 48.3% of a triangle
+    is within two points of the 50% any rectangle can take — while costing a
+    five-sided plot more than its test's whole budget. So: one frame.
+  */
+  const key = `${resolution}|${ccw.map((p) => `${p.x},${p.y}`).join(';')}`;
+  const hit = MEMO.get(key);
+  if (hit) return hit;
+
   const mbr = minimumBoundingRectangle(ccw);
-  const theta = mbr.angleDeg.div(DEG);
+  const best = sweepFrame(ccw, ringArea, mbr.angleDeg, resolution);
+  if (!best) {
+    throw new DegenerateGeometryError(
+      'no rectangle of one grid cell fits inside this ring; the plot is too narrow ' +
+        'or too irregular to lay a parking level out on',
+      { areaMm2: ringArea },
+    );
+  }
+  if (MEMO.size >= 64) MEMO.delete(MEMO.keys().next().value!);
+  MEMO.set(key, best);
+  return best;
+}
+
+/**
+ * The same ring asked again — the pipeline asks for the podium's rectangle in
+ * more than one place, and runs itself more than once for sensitivity — gets the
+ * same answer without the sweep. The function is pure, so this changes nothing
+ * but the time.
+ */
+const MEMO = new Map<string, InscribedRect>();
+
+/** The largest rectangle the grid sweep finds in one frame, or none. */
+function sweepFrame(ccw: Ring, ringArea: number, angleDeg: Decimal, resolution: number): InscribedRect | undefined {
+  const theta = angleDeg.div(DEG);
   const cos = Decimal.cos(theta);
   const sin = Decimal.sin(theta);
 
@@ -234,13 +267,7 @@ export function largestInscribedRectangle(ring: Ring, resolution = 96): Inscribe
   }
 
   const best = maximalRectangle(inside);
-  if (!best) {
-    throw new DegenerateGeometryError(
-      'no rectangle of one grid cell fits inside this ring; the plot is too narrow ' +
-        'or too irregular to lay a parking level out on',
-      { areaMm2: ringArea },
-    );
-  }
+  if (!best) return undefined;
 
   const u0 = minU.plus(cellW.times(best.c0));
   const v0 = minV.plus(cellH.times(best.r0));
@@ -258,7 +285,7 @@ export function largestInscribedRectangle(ring: Ring, resolution = 96): Inscribe
   return {
     widthMm: asMm(w),
     depthMm: asMm(h),
-    angleDeg: mbr.angleDeg,
+    angleDeg,
     originMm: { x: asMm(Math.round(ox.toNumber())), y: asMm(Math.round(oy.toNumber())) },
     areaMm2: (w * h) as Mm2,
     coverage: new Decimal(w).times(h).div(ringArea).toDecimalPlaces(6),

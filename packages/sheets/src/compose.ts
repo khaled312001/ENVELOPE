@@ -872,6 +872,35 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     items.push(label(Role.AISLE, midpointOf(a, b), aisle.label, 2, along));
   }
 
+  /*
+    THE RING THAT IS THE RAMP. Where the ring aisle itself climbs — the client's
+    sloped podium — there is no ramp strip to draw an arrow on, and an aisle
+    marked only "2 WAY DRIVEWAY" reads as level. So each corner of the lap gets
+    an arrow pointing the way the floor rises and the gradient beside it. The
+    corners because they are the one place on the ring no aisle label or aisle
+    arrow sits; the gradient because it is the figure DBC B.7.2.3.1 caps at 4%.
+  */
+  const rampedFloor = parking.rampedFloor;
+  if (rampedFloor) {
+    const lap = rampedFloor.centreLine;
+    const words = `${rampedFloor.gradientPct.value}%`;
+    for (let i = 0; i < lap.length; i++) {
+      const at = lap[i]!;
+      const next = lap[(i + 1) % lap.length]!;
+      const along = angleOf(at, next);
+      items.push({
+        kind: 'symbol',
+        role: Role.RAMP_ARROW,
+        symbol: SymbolName.ARROW,
+        at,
+        rotationDeg: round2(along),
+        scale: 4000,
+      });
+      const across = { x: -Math.sin((along * Math.PI) / 180), y: Math.cos((along * Math.PI) / 180) };
+      items.push(label(Role.RAMP, offsetPoint(at, across, 1.4 * s), words, 1.6, along, 'middle', sourceOf(rampedFloor.gradientPct)));
+    }
+  }
+
   // --- bays: outline, car, number -----------------------------------------------------------
   for (const { bay, at: c, rotationDeg: axis, tail } of placeCars(parking)) {
     items.push(
@@ -901,8 +930,17 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     fact('Floor level', level.elevationM, `${signedLevel(level.elevationM.value)} M`),
     fact('Bays on this level', parking.bayCount),
     fact('Bays, every parking level', model.drawnBays),
-    ...(ramp
-      ? [fact('Ramp gradient (not assessed)', ramp.gradientPct, `${ramp.gradientPct.value}%`)]
+    ...(ramp && parking.rampStrip
+      ? [fact('Ramp gradient; Table B.9 allows 12%', ramp.gradientPct, `${ramp.gradientPct.value}%`)]
+      : []),
+    ...(rampedFloor
+      ? [
+          fact(
+            'Ramped floor; B.7.2.3.1 allows 4%',
+            rampedFloor.gradientPct,
+            `${rampedFloor.gradientPct.value}% OVER ${rampedFloor.lapM} M`,
+          ),
+        ]
       : []),
     ...(parking.reserved
       ? [fact('Reserved, not laid out', parking.reserved.areaM2, `${parking.reserved.areaM2.value} SQ.M`)]
@@ -920,7 +958,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     { role: Role.BAY, label: 'Parking bay, Table B.11' },
     ...(parking.bays.some((b) => b.accessible) ? [{ role: Role.BAY_ACCESSIBLE, label: 'Accessible bay' }] : []),
     { role: Role.AISLE, label: 'Drive aisle' },
-    ...(parking.rampStrip ? [{ role: Role.RAMP, label: 'Ramp - gradient NOT ASSESSED' }] : []),
+    ...(parking.rampStrip ? [{ role: Role.RAMP, label: 'Ramp; headroom NOT ASSESSED' }] : []),
     ...(parking.reserved
       ? [
           {
@@ -964,6 +1002,9 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       : []),
     ...(parking.rampStrip
       ? [{ role: Role.RAMP_ARROW, symbol: SymbolName.ARROW, label: 'Ramp, direction of travel' }]
+      : []),
+    ...(rampedFloor
+      ? [{ role: Role.RAMP_ARROW, symbol: SymbolName.ARROW, label: 'Ramped floor rises this way, one level a lap' }]
       : []),
   ];
   /*

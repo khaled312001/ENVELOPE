@@ -56,6 +56,7 @@
  */
 
 import {
+  asMm,
   Decimal,
   metric,
   qArea,
@@ -64,7 +65,7 @@ import {
   type TracedDecimal,
   type Tracer,
 } from '@envelope/core';
-import { scaleToArea, type Ring } from '@envelope/geometry';
+import { area, intersect, scaleToArea, type Ring } from '@envelope/geometry';
 
 /**
  * A core the run cannot draw, with the sentence a person needs.
@@ -144,6 +145,31 @@ const PLACEMENT_BASIS =
   'engine does not make. Searching for the position that yields the most units ' +
   'is the optimiser this phase refuses by construction.';
 
+const ISLAND_PLACEMENT_BASIS =
+  'Here the plate is not centred over the island that the ring of parking bays ' +
+  'encloses, so the same footprint is moved, whole, toward that island — all the ' +
+  'way, or three quarters, half or a quarter of it, the first the tower plate still ' +
+  'wholly holds — so the stairs and lifts come down where the client\'s own drawings ' +
+  'put them, between the aisles rather than across one.';
+
+/** How far toward the island the core is tried, in order. Fixed; never searched. */
+const TOWARD_ISLAND = [1, 0.75, 0.5, 0.25] as const;
+
+/** The ring moved, whole, a fraction `f` of the way from its own centre to `at`. */
+function centredOn(ring: Ring, f: number, at: { readonly x: number; readonly y: number }): Ring {
+  const cx = ring.reduce((s, p) => s + p.x, 0) / ring.length;
+  const cy = ring.reduce((s, p) => s + p.y, 0) / ring.length;
+  const dx = Math.round((at.x - cx) * f);
+  const dy = Math.round((at.y - cy) * f);
+  return ring.map((p) => ({ x: asMm(p.x + dx), y: asMm(p.y + dy) }));
+}
+
+/** Every corner inside `outer` and no edge leaving it: all the area of `inner` is shared. */
+function withinRing(inner: Ring, outer: Ring): boolean {
+  const shared = intersect(inner, outer).reduce((s, r) => s + Math.abs(area(r)), 0);
+  return shared >= Math.abs(area(inner)) * 0.9999;
+}
+
 /** Said wherever the core is drawn. It is a footprint, not a laid-out core. */
 export const CORE_NOT_MODELLED =
   'The core, as a design. Its outline is the tower plate scaled to the core ' +
@@ -173,6 +199,8 @@ export interface CoreInput {
     readonly areaM2: Decimal;
     readonly actor: { readonly id: string; readonly name: string };
   };
+  /** The centre of the parking island, in plot millimetres, where there is one. */
+  readonly anchor?: { readonly x: number; readonly y: number };
 }
 
 export interface CoreResult {
@@ -228,10 +256,30 @@ export function solveCore(input: CoreInput): CoreResult {
     );
   }
 
-  const ring = scaleToArea(
+  const scaled = scaleToArea(
     input.plateRing,
     coreArea.times(1_000_000).toDecimalPlaces(0).toNumber(),
   );
+  /*
+    OVER THE PARKING ISLAND, WHERE IT FITS THERE. The stairs and lifts come down
+    through every parking level, and on a plate that is not a rectangle its
+    centre is not over the island the ring of bays encloses: on Al Mamzar
+    (DM 1341556) the core landed across the ring aisle and the client's own
+    arrangement — bays round the walls, the ring sloped as the ramp — was
+    refused for it. So the same footprint is moved, whole, toward the island's
+    centre: all the way, or three quarters, half or a quarter of the way — the
+    first of the four the tower plate still wholly holds. If none, it stays
+    where the plate's centre puts it. Four fixed positions, tested in order,
+    for containment and nothing else — never for yield.
+  */
+  const anchor = input.anchor;
+  const moved = anchor
+    ? TOWARD_ISLAND.map((f) => centredOn(scaled, f, anchor)).find(
+        (r) => r.some((p, i) => p.x !== scaled[i]!.x || p.y !== scaled[i]!.y) && withinRing(r, input.plateRing),
+      )
+    : undefined;
+  const inside = moved !== undefined;
+  const ring = moved ?? scaled;
 
   const plateShare = tracer.computed('building.core_plate_share', qRatio(coreArea.div(plate)), {
     formula: `${coreArea.toFixed(2)} m² core ÷ ${plate.toFixed(2)} m² tower plate`,
@@ -241,8 +289,13 @@ export function solveCore(input: CoreInput): CoreResult {
 
   const placement = tracer.assumed(
     'building.core_placement',
-    "centred on the tower plate, in the plate's own proportions",
-    { basis: PLACEMENT_BASIS, label: 'where the core stands' },
+    inside
+      ? "centred over the parking island, in the plate's own proportions"
+      : "centred on the tower plate, in the plate's own proportions",
+    {
+      basis: inside ? `${PLACEMENT_BASIS} ${ISLAND_PLACEMENT_BASIS}` : PLACEMENT_BASIS,
+      label: 'where the core stands',
+    },
   );
 
   return { areaM2: areaTraced, plateShare, ring, placement };

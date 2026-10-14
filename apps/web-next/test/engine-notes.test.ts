@@ -27,8 +27,13 @@ describe('the engine sentences on the parking page', () => {
   it('keep every figure the engine wrote', () => {
     for (const s of sentences) {
       const ar = engineNote(s, 'ar') ?? '';
-      // A meeting timestamp (34:37) is a citation, not a figure.
-      const figures = s.replace(/\d+:\d+/g, '').match(/\d+(?:\.\d+)?(?: × \d+(?:\.\d+)?)?/g) ?? [];
+      // A meeting timestamp (34:37) is a citation, not a figure. And the sweep's
+      // losers carry their refusals in brackets: the short form says each loser's
+      // count and drops the reason, which stays in the report and the derivation.
+      const said = s.startsWith('Laid out as ')
+        ? s.replace(/\((?:[^()]|\([^()]*\))*\)/g, '')
+        : s;
+      const figures = said.replace(/\d+:\d+/g, '').match(/\d+(?:\.\d+)?(?: × \d+(?:\.\d+)?)?/g) ?? [];
       // Rule numbers (B.7.2.1) are kept; a figure the short form drops on purpose is not a loss.
       for (const f of figures.filter((x) => !/^7\.2|^0$/.test(x))) {
         if (s.includes(`B.${f}`)) continue;

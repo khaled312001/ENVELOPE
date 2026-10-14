@@ -26,6 +26,7 @@ import {
   Decimal,
   metric,
   type Actor,
+  type LevelSchedule,
   type Mm,
   type Plot,
   type PlotEdge,
@@ -44,9 +45,11 @@ import {
 import { placeVehicleAccess, type AccessResult } from './access.js';
 import {
   layoutParkingLevel,
+  RING_AISLE_ROW,
   type ParkingAngle,
   type ParkingLayoutResult,
   type PlacedRect,
+  type RampType,
   type RectKind,
 } from './layout.js';
 
@@ -102,7 +105,19 @@ export interface LevelPlan {
     readonly head: readonly [Pt, Pt];
     readonly widthM: TracedDecimal;
     readonly runM: TracedDecimal;
+    /** The main run's slope, Table B.9's 12%. */
+    readonly slopePct: TracedDecimal;
   } | undefined;
+  /**
+   * The ring aisle sloped as the ramp — the client's own podium — when that
+   * arrangement won. `centreLine` is the lap the gradient is measured along, in
+   * plot millimetres, counter-clockwise from the corner nearest the origin.
+   */
+  readonly slopedFloor?: {
+    readonly lapM: Decimal;
+    readonly gradientPct: TracedDecimal;
+    readonly centreLine: readonly Pt[];
+  };
   readonly bayCount: Traced<number>;
   readonly areaPerBayM2: TracedDecimal;
   /**
@@ -206,6 +221,14 @@ export interface LevelPlanInput {
    * across it. See `ParkingLayoutInput.core`.
    */
   readonly core?: { readonly ring: Ring; readonly areaM2: TracedDecimal };
+  /** One storey — the envelope's floor-to-floor. What a ramp climbs. */
+  readonly storeyHeightM?: TracedDecimal;
+  /** The level schedule the ramps' directions are read off, and who stated it. */
+  readonly rampPlan?: { readonly schedule: LevelSchedule; readonly actor?: Actor };
+  /** A ramp arrangement somebody stated; see `ParkingLayoutInput.rampType`. */
+  readonly rampType?: { readonly type: RampType; readonly actor?: Actor };
+  /** See `ParkingLayoutInput.slopedRing`. */
+  readonly slopedRing?: boolean;
 }
 
 /**
@@ -322,6 +345,15 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     footprint: { widthM, depthM },
     deductionsTraced,
     includeRamp: input.includeRamp,
+    ...(input.storeyHeightM ? { storeyHeightM: input.storeyHeightM } : {}),
+    ...(input.rampPlan ? { rampPlan: input.rampPlan } : {}),
+    ...(input.slopedRing === undefined ? {} : { slopedRing: input.slopedRing }),
+    ...(input.rampType
+      ? {
+          rampType: input.rampType.type,
+          ...(input.rampType.actor ? { rampTypeActor: input.rampType.actor } : {}),
+        }
+      : {}),
     ...(input.core && coreRect ? { core: { rect: coreRect, areaM2: input.core.areaM2 } } : {}),
     ...(input.angle === undefined ? {} : { angle: input.angle }),
     ...(input.structuralGridM === undefined ? {} : { structuralGridM: input.structuralGridM }),
@@ -392,7 +424,41 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
               ]) as readonly [Pt, Pt],
           widthM: layout.ramp.widthM,
           runM: layout.ramp.runM,
+          slopePct: layout.ramp.slopePct,
         }
+      : undefined;
+
+  /*
+    THE LAP, as the drawings walk it: the centre line of the ring aisle, half an
+    aisle in from the bay runs on every side. Read off the ring's own rectangles
+    rather than recomputed from the module, so the line is where the aisle is.
+  */
+  const ringRects = layout.rects.filter((r) => r.row === RING_AISLE_ROW);
+  const slopedFloor =
+    layout.slopedFloor && ringRects.length > 0
+      ? (() => {
+          /*
+            The two longest pieces are the long runs; the rest are the short
+            connectors between them. Sorted by length rather than by which way a
+            piece is wider: on a shallow level a connector is squarer than an
+            aisle is wide. And the lap turns at the connectors, not at the walls —
+            the long runs carry on past them to serve the end bays.
+          */
+          const long = (r: PlacedRect): Decimal => Decimal.max(r.width, r.height);
+          const sorted = [...ringRects].sort((a, b) => long(b).comparedTo(long(a)));
+          const runs = sorted.slice(0, 2);
+          const links = sorted.length > 2 ? sorted.slice(2) : runs;
+          const alongX = runs[0]!.width.gte(runs[0]!.height);
+          const cx = (r: PlacedRect): Decimal => r.x.plus(r.width.div(2));
+          const cy = (r: PlacedRect): Decimal => r.y.plus(r.height.div(2));
+          const [xs, ys] = alongX ? [links.map(cx), runs.map(cy)] : [runs.map(cx), links.map(cy)];
+          const [x0, x1, y0, y1] = [Decimal.min(...xs), Decimal.max(...xs), Decimal.min(...ys), Decimal.max(...ys)];
+          return {
+            lapM: layout.slopedFloor!.lapM,
+            gradientPct: layout.slopedFloor!.gradientPct,
+            centreLine: [local(x0, y0), local(x1, y0), local(x1, y1), local(x0, y1)],
+          };
+        })()
       : undefined;
 
   const notAssessed = [...layout.notes, ...access.notAssessed];
@@ -439,6 +505,7 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     podiumRing: input.podiumRing,
     reservedZone,
     rampStrip,
+    ...(slopedFloor ? { slopedFloor } : {}),
     bayCount: layout.bayCount,
     areaPerBayM2: layout.areaPerBayM2,
     losses: {

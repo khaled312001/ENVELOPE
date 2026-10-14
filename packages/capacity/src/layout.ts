@@ -62,6 +62,7 @@ import {
 } from '@envelope/core';
 
 import { bayIsServed, traceCirculation, type CircRect } from './circulation.js';
+import { MAX_PARKED_SLOPE, slopedFloorGradient, straightRampRequirement } from './ramp-rules.js';
 
 // ---------------------------------------------------------------------------
 // Rule data — Dubai Building Code Table B.11
@@ -261,6 +262,18 @@ export interface ParkingLayoutInput {
     readonly type?: RampType;
   };
   /**
+   * A ramp arrangement stated where no schedule reached the layout. The
+   * schedule's own `type` wins where both are given.
+   */
+  readonly rampType?: RampType;
+  /** Who stated `rampType`, so it is `USER_SET` under a name and not an assumption. */
+  readonly rampTypeActor?: Actor;
+  /**
+   * Whether the ring may be the ramp. False where there is one parking level: a
+   * floor that climbs a storey a lap has to have a storey to climb to.
+   */
+  readonly slopedRing?: boolean;
+  /**
    * The core, where it stands on this level, in the footprint's local metres —
    * x along the width, y along the depth.
    *
@@ -273,6 +286,11 @@ export interface ParkingLayoutInput {
    * deduct the core a second time.
    */
   readonly core?: { readonly rect: Rect; readonly areaM2: TracedDecimal };
+  /**
+   * One storey, metres — what a ramp climbs. The pipeline passes the envelope's
+   * floor-to-floor, derived from the governing rule. Absent: an assumption.
+   */
+  readonly storeyHeightM?: TracedDecimal;
 }
 
 export interface ParkingLayoutResult {
@@ -306,6 +324,8 @@ export interface ParkingLayoutResult {
     | {
         readonly widthM: TracedDecimal;
         readonly runM: TracedDecimal;
+        /** The main run's slope — Table B.9's 12%, by construction. */
+        readonly slopePct: TracedDecimal;
         /** Straight, split or turning. `USER_SET` where chosen, else `ASSUMED`. */
         readonly type: Traced<RampType>;
         /**
@@ -328,6 +348,16 @@ export interface ParkingLayoutResult {
       }
     | undefined;
   /**
+   * Where the ring aisle itself is the ramp — the client's sloped floor — its lap
+   * and gradient, checked against B.7.2.3.1's 4%. `ramp` is then undefined: there
+   * is no strip, and the runs are `rampRuns`.
+   */
+  readonly slopedFloor?: {
+    readonly lapM: Decimal;
+    readonly gradientPct: TracedDecimal;
+    readonly runs: readonly RampRun[] | undefined;
+  };
+  /**
    * The strip the deduction was taken from, in the same local metres as `rects`:
    * the full width, at the far end of the depth. Undefined when nothing was
    * deducted. It is where the cores and plant are *allowed* to be on this
@@ -346,25 +376,19 @@ export interface ParkingLayoutResult {
 }
 
 /**
- * Ramp geometry.
+ * Ramp geometry is `ramp-rules.ts`: DBC B.7.2.2 Tables B.9 and B.10, encoded on
+ * 15 Oct 2026. It used to be a 6 × 30 m assumption here, clipped to whatever
+ * room was left — which is how 49% and 23% ramps reached the drawings.
  *
- * B.7.2.2 governs vehicular ramps in detail (gradient, transitions, headroom);
- * this places a footprint of the right size and says plainly that gradient
- * compliance is not assessed. Drawing a ramp that reads as checked when only its
- * plan dimension was considered would be worse than drawing none.
+ * Where nothing hands the layout a storey height (a direct caller; the pipeline
+ * always does), the ramp is sized for the draft residential floor-to-floor and
+ * that is declared as an assumption.
  */
-const RAMP_WIDTH_M = '6';
-const RAMP_RUN_M = '30';
-
-const RAMP_WIDTH_BASIS =
-  'A 6 m strip: the two-way driveway width of Table B.11, so two cars pass on the ' +
-  'ramp as they do in the aisle. B.7.2.2 sets its own ramp widths and they are not ' +
-  'encoded here, so this width is not checked against them.';
-const RAMP_RUN_BASIS =
-  'A 30 m run reserved for the ramp in plan, or the whole packable depth when that ' +
-  'is shorter. It sets the gradient the ramp needs to climb one level, which is ' +
-  'reported but not assessed: B.7.2.2 is not encoded. A longer run costs bays; a ' +
-  'shorter one steepens the ramp.';
+const ASSUMED_STOREY_M = '3.2';
+const ASSUMED_STOREY_BASIS =
+  'No storey height reached the parking layout, so the ramp is sized to climb 3.20 m — ' +
+  'the residential floor-to-floor of the draft rule set (R-FLOOR-TO-FLOOR-RES). A run ' +
+  'passes its own figure, derived from the governing rule, and this is never used there.';
 
 // ---------------------------------------------------------------------------
 // Which way the ramp runs — the sign, and where the sign comes from
@@ -746,41 +770,38 @@ export interface RampTypeSpec {
 export const RAMP_TYPES: readonly RampTypeSpec[] = [
   {
     type: RampType.STRAIGHT,
-    label: 'Straight, one 6.00 m two-way run',
-    laneCount: 1,
-    laneWidthM: '6',
-    totalWidthM: '6',
+    label: 'Straight, two-way: two 3.00 m lanes and a 300 mm curb',
+    laneCount: 2,
+    laneWidthM: '3',
+    totalWidthM: '6.3',
     placed: true,
     note:
-      'Two cars pass on the ramp as they do in the aisle. B.7.2.2 sets its own ramp ' +
-      'widths and they are not encoded, so this width is NOT ASSESSED against them.',
+      'Table B.9: 12% at most, lanes of at least 3 m, separated by a curb of at least ' +
+      '300 mm (B.7.2.2 c, d); Table B.10: a 3.6 m transition at 6% at each end.',
   },
   {
     type: RampType.SPLIT,
     label: 'Split, 3.00 m in and 3.00 m out side by side',
     laneCount: 2,
     laneWidthM: '3',
-    totalWidthM: '6',
+    totalWidthM: '6.3',
     placed: true,
     note:
-      'The same 6.00 m of width as the straight run and the same run, so it places ' +
-      'the same bays — the difference is turning and headroom, which is B.7.2.2 and ' +
-      'NOT ASSESSED. The two lanes are not drawn apart: the strip is one rectangle ' +
-      'and a centre line through it would imply a lane division nothing checked.',
+      'The same two lanes and curb as the straight ramp over the same run, so it places ' +
+      'the same bays; what differs is where each lane meets the floor.',
   },
   {
     type: RampType.TURNING,
-    label: 'Turning or helical run — NOT PLACED',
+    label: 'Curved or helical ramp — NOT PLACED',
     laneCount: 1,
-    laneWidthM: '6',
-    totalWidthM: '6',
+    laneWidthM: '5',
+    totalWidthM: '5',
     placed: false,
     note:
-      'The client\'s own podium drawing is a sloped parking floor at 4% drawn as a ' +
-      'closed oval, with bays on the slope itself. This engine packs a flat ' +
-      'rectangle and stands a rectangular ramp on it, so it cannot draw that by ' +
-      'changing a parameter — the floor would have to be the ramp. Enumerated here ' +
-      'with the reason, never selected, and scoped as its own piece of work.',
+      'Table B.9 allows them (curved 12%, lane 3.5 m, inner radius 4 m; helical 8%, ' +
+      'lane 5 m, radius 6 m) and B.7.2.2 (a) says they are not preferred. Not placed: ' +
+      'this engine lays out rectangles. The client\'s own sloped podium floor is laid out ' +
+      'instead as an arrangement of its own — the ring aisle sloped at 4% or less.',
   },
 ];
 
@@ -793,12 +814,10 @@ export function rampTypeSpec(type: RampType): RampTypeSpec {
 }
 
 const RAMP_TYPE_BASIS =
-  'A straight 6.00 m two-way run — the arrangement this engine has always drawn, ' +
-  'and the one the client\'s ground-floor drawing uses. Nobody chose a type for this ' +
-  'run. The alternatives are enumerated and reported beside it; the engine does not ' +
-  'rank them, because what separates them is turning radius and headroom under ' +
-  'B.7.2.2, which is not encoded, and a ranking invented here would be a preference ' +
-  'presented as a finding.';
+  'A straight two-way ramp, the one the client\'s ground-floor drawing uses. Nobody ' +
+  'chose a type for this run. The alternatives are enumerated and reported beside it; ' +
+  'straight and split take the same plan area, so no bay count separates them, and a ' +
+  'ranking invented here would be a preference presented as a finding.';
 
 // ---------------------------------------------------------------------------
 // The packer
@@ -814,6 +833,19 @@ interface PackOptions {
   readonly moduleDepth: Decimal;
   readonly effectiveBayWidth: Decimal;
   readonly includeRamp: boolean;
+  /**
+   * The straight ramp's plan size for one storey, from Tables B.9 and B.10 — the
+   * run it NEEDS, not the room it was given. A packing without that room refuses.
+   */
+  readonly rampWidthM: Decimal;
+  readonly rampRunM: Decimal;
+  /** One storey, metres: what a sloped ring has to climb in one lap. */
+  readonly storeyHeightM: Decimal;
+  /**
+   * The ring's ramp: a straight ramp on the island, or the ring aisle itself
+   * sloped at no more than 4% (B.7.2.3.1). Read by the perimeter packer only.
+   */
+  readonly ringRamp?: 'STRAIGHT' | 'SLOPED';
   /** Where the core stands, in this packing's own frame. */
   readonly obstructions: readonly Rect[];
   /**
@@ -842,6 +874,8 @@ interface Packing {
   readonly bayCount: number;
   readonly reserved: Rect | undefined;
   readonly ramp: { readonly widthM: Decimal; readonly runM: Decimal } | undefined;
+  /** The ring aisle's lap, where the ring itself is the ramp. */
+  readonly slopedLapM?: Decimal;
   readonly crossAisleAreaM2: Decimal;
   readonly baysLostToCrossAisle: number;
   readonly strandedBays: number;
@@ -925,8 +959,20 @@ function packLevel(o: PackOptions): Packing {
   let rampX = ZERO;
   let ramp: Packing['ramp'];
   if (o.includeRamp) {
-    const rampWidth = Decimal.min(new Decimal(RAMP_WIDTH_M), o.widthM);
-    const rampRun = Decimal.min(new Decimal(RAMP_RUN_M), availableDepth0);
+    /*
+      THE RUN THE STOREY NEEDS, OR NO RAMP HERE. This used to be min(30 m, the
+      depth left), which turned a shallow level into a 23% ramp on the client's
+      own plot. A level that cannot hold a ramp at 12% does not get a steeper one.
+    */
+    const rampWidth = o.rampWidthM;
+    const rampRun = o.rampRunM;
+    if (rampWidth.gt(o.widthM) || rampRun.gt(availableDepth0)) {
+      return refused(
+        `a straight ramp climbing a ${o.storeyHeightM.toString()} m storey needs ` +
+          `${rampWidth.toFixed(2)} × ${rampRun.toFixed(2)} m (DBC Tables B.9 and B.10) and this ` +
+          `packing has ${o.widthM.toFixed(2)} × ${availableDepth0.toFixed(2)} m`,
+      );
+    }
     rampX = rampWidth;
     ramp = { widthM: rampWidth, runM: rampRun };
     rects.push({
@@ -938,10 +984,10 @@ function packLevel(o: PackOptions): Packing {
       height: rampRun,
     });
     notes.push(
-      `A ${rampWidth.toString()} m × ${rampRun.toFixed(2)} m ramp strip is reserved down one ` +
-        'edge, and the bay runs are packed into the remaining width. Gradient, ' +
-        'transitions and headroom under B.7.2.2 are NOT ASSESSED — only the plan ' +
-        'area is reserved.',
+      `A ${rampWidth.toFixed(2)} × ${rampRun.toFixed(2)} m straight ramp runs down one edge: ` +
+        '12% with a 3.6 m transition at 6% at each end (DBC Tables B.9 and B.10), two 3 m ' +
+        'lanes and a 300 mm curb. The bay runs are packed into the remaining width. ' +
+        'Headroom (2.4 m) is NOT ASSESSED.',
     );
   }
 
@@ -1370,31 +1416,156 @@ function packPerimeter(o: PackOptions): Packing {
     height: o.bayLength,
   });
 
-  // --- the ramp, on the island ---------------------------------------------
+  /*
+    THE ISLAND IS WORKED ALONG ITS LONG AXIS. The first version stood the ramp
+    across it — 6.5 m of run on the worked example, printed as a 49.23% ramp —
+    because it always ran the ramp down the level's depth. What the island holds
+    is a row: the core's shafts where the core already stands, the ramp at one
+    end where a straight one is used, the reserved strip, and bays in what is left.
+  */
+  const longX = islandW.gte(islandD);
+  const longLen = Decimal.max(ZERO, longX ? islandW : islandD);
+  const shortLen = Decimal.max(ZERO, longX ? islandD : islandW);
+  const onIsland = (a0: Decimal, len: Decimal, b0: Decimal, dep: Decimal): Rect =>
+    longX
+      ? { x: island.x0.plus(a0), y: island.y0.plus(b0), width: len, height: dep }
+      : { x: island.x0.plus(b0), y: island.y0.plus(a0), width: dep, height: len };
+  /*
+    What stands on the island, as rectangles, and the stretches of the long axis
+    still clear across a given band of its depth. Worked per band so that a core
+    5.2 m deep on an 11.5 m island leaves the other side for a row of bays — the
+    client's own podium has bays "packed into the island around" the core.
+  */
+  type Span = [Decimal, Decimal];
+  const standingOnIsland: Rect[] = [...o.obstructions];
+  const alongOf = (r: Rect): Span =>
+    longX ? [r.x.minus(island.x0), r.x.plus(r.width).minus(island.x0)] : [r.y.minus(island.y0), r.y.plus(r.height).minus(island.y0)];
+  const acrossOf = (r: Rect): Span =>
+    longX ? [r.y.minus(island.y0), r.y.plus(r.height).minus(island.y0)] : [r.x.minus(island.x0), r.x.plus(r.width).minus(island.x0)];
+  const clear = (band: Span): Span[] => {
+    const taken = standingOnIsland
+      .filter((r) => {
+        const [lo, hi] = acrossOf(r);
+        return hi.gt(band[0]) && lo.lt(band[1]);
+      })
+      .map((r): Span => {
+        const [lo, hi] = alongOf(r);
+        return [Decimal.max(ZERO, lo), Decimal.min(longLen, hi)];
+      })
+      .filter(([lo, hi]) => hi.gt(lo))
+      .sort((p, q) => p[0].comparedTo(q[0]));
+    const out: Span[] = [];
+    let at = ZERO;
+    for (const [lo, hi] of taken) {
+      if (lo.gt(at)) out.push([at, lo]);
+      at = Decimal.max(at, hi);
+    }
+    if (longLen.gt(at)) out.push([at, longLen]);
+    return out;
+  };
+
+  // --- the ramp: on the island, or the ring itself ----------------------------
   let ramp: Packing['ramp'];
-  if (o.includeRamp) {
-    const rampWidth = Decimal.min(new Decimal(RAMP_WIDTH_M), islandW);
-    const rampRun = Decimal.min(new Decimal(RAMP_RUN_M), islandD);
-    if (rampWidth.lt(o.aisleWidth) || rampRun.lte(ZERO)) {
+  let slopedLapM: Decimal | undefined;
+  if (o.includeRamp && o.ringRamp === 'SLOPED') {
+    /*
+      THE CLIENT'S OWN ARRANGEMENT. His podium drawing of 5 Oct is a closed loop
+      marked "sloped parking ramp 4%" with bays on it: the floor is the ramp.
+      B.7.2.3.1 lets a parked floor fall at up to 4%, so the ring qualifies when
+      one lap along its centre line climbs a storey at no more than that.
+    */
+    const lap = W.minus(o.bayLength.times(2)).minus(o.aisleWidth)
+      .plus(D.minus(o.bayLength.times(2)).minus(o.aisleWidth))
+      .times(2);
+    const gradient = o.storeyHeightM.div(lap);
+    if (gradient.gt(MAX_PARKED_SLOPE)) {
       return refused(
-        `the ${Decimal.max(ZERO, islandW).toFixed(2)} × ${Decimal.max(ZERO, islandD).toFixed(2)} m ` +
-          'island does not hold a ramp, and a ramp outside it would cut the ring',
+        `a ring aisle ${lap.toFixed(2)} m round climbs a ${o.storeyHeightM.toString()} m storey at ` +
+          `${gradient.times(100).toDecimalPlaces(2, Decimal.ROUND_UP).toFixed(2)}% per lap, steeper than the 4% a floor with parked ` +
+          'cars on it may fall (DBC B.7.2.3.1)',
       );
     }
-    ramp = { widthM: rampWidth, runM: rampRun };
-    rects.push({
-      kind: RectKind.RAMP,
-      row: RAMP_ROW,
-      x: island.x0,
-      y: island.y0,
-      width: rampWidth,
-      height: rampRun,
-    });
+    slopedLapM = lap;
     notes.push(
-      `The ramp runs down the island the ring encloses, ${rampWidth.toFixed(2)} × ` +
-        `${rampRun.toFixed(2)} m. Gradient, transitions and headroom under B.7.2.2 are ` +
-        'NOT ASSESSED — only the plan area is reserved.',
+      `The ring aisle is the ramp: it climbs one ${o.storeyHeightM.toString()} m storey over one ` +
+        // Rounded up, as the traced gradient is, so the note and the sheet print one figure.
+        `${lap.toFixed(2)} m lap, ${gradient.times(100).toDecimalPlaces(2, Decimal.ROUND_UP).toFixed(2)}%, within the 4% a floor with ` +
+        'parked cars on it may fall (DBC B.7.2.3.1, Figure B.55). No ramp strip is needed.',
     );
+  } else if (o.includeRamp) {
+    const run = o.rampRunM;
+    const slot = clear([ZERO, Decimal.min(o.rampWidthM, shortLen)])
+      .map(([lo, hi]) => (lo.isZero() && hi.minus(lo).gte(run) ? lo : hi.eq(longLen) && hi.minus(lo).gte(run) ? hi.minus(run) : null))
+      .find((a): a is Decimal => a !== null);
+    if (shortLen.lt(o.rampWidthM) || slot === undefined) {
+      return refused(
+        `a straight ramp climbing a ${o.storeyHeightM.toString()} m storey needs ` +
+          `${o.rampWidthM.toFixed(2)} × ${run.toFixed(2)} m (DBC Tables B.9 and B.10), reached from ` +
+          `the ring at one end of the island, and the ${longLen.toFixed(2)} × ${shortLen.toFixed(2)} m ` +
+          'island does not have it clear of the core',
+      );
+    }
+    ramp = { widthM: o.rampWidthM, runM: run };
+    const rampRect = onIsland(slot, run, ZERO, o.rampWidthM);
+    rects.push({ kind: RectKind.RAMP, row: RAMP_ROW, ...rampRect });
+    standingOnIsland.push(rampRect);
+    notes.push(
+      `A ${o.rampWidthM.toFixed(2)} × ${run.toFixed(2)} m straight ramp runs along the island the ` +
+        'ring encloses: 12% with a 3.6 m transition at 6% at each end (DBC Tables B.9 and B.10). ' +
+        'Headroom (2.4 m) is NOT ASSESSED.',
+    );
+  }
+
+  /*
+    THE RESERVED STRIP, THEN BAYS. What the deduction keeps for plant and
+    circulation stands on the island — anywhere else it cuts the ring — in the
+    longest clear stretch first. Only what is still clear after it holds bays,
+    one row facing each long aisle where the island is deep enough for two.
+  */
+  const islandRows = shortLen.gte(o.bayLength.times(2)) ? 2 : shortLen.gte(o.bayLength) ? 1 : 0;
+  // One band against each long aisle where two rows fit; one band otherwise.
+  const bands: Span[] =
+    islandRows === 2 ? [[ZERO, o.bayLength], [shortLen.minus(o.bayLength), shortLen]] : [[ZERO, shortLen]];
+  const stripArea = o.deductedDepthM.times(W);
+  let reserved: Rect | undefined;
+  let stripLeft = stripArea;
+  for (const band of bands) {
+    const depth = band[1].minus(band[0]);
+    if (depth.lte(0)) continue;
+    for (const [lo, hi] of clear(band).sort((p, q) => q[1].minus(q[0]).comparedTo(p[1].minus(p[0])))) {
+      if (stripLeft.lte(0)) break;
+      const len = Decimal.min(hi.minus(lo), stripLeft.div(depth));
+      const piece = onIsland(lo, len, band[0], depth);
+      if (!reserved || len.times(depth).gt(reserved.width.times(reserved.height))) reserved = piece;
+      standingOnIsland.push(piece);
+      stripLeft = stripLeft.minus(len.times(depth));
+    }
+  }
+  // Only the largest piece is drawn as the reserved zone; the rest is said.
+  const drawnStrip = reserved ? reserved.width.times(reserved.height) : ZERO;
+  if (stripArea.minus(drawnStrip).gt('0.5')) {
+    notes.push(
+      `Of the ${stripArea.toFixed(0)} m² reserved for plant and circulation, ${drawnStrip.toFixed(0)} m² ` +
+        `is drawn on the island and ${stripArea.minus(drawnStrip).toFixed(0)} m² is not` +
+        (stripLeft.gt('0.5') ? ` (${stripLeft.toFixed(0)} m² of it has no room on the island at all)` : '') +
+        '. The deduction is still charged in full against the bay count.',
+    );
+  }
+  let islandBays = 0;
+  if (islandRows > 0) {
+    bands.forEach((band, i) => {
+      // The mouth of each bay is on the band's aisle side: the near band's at 0,
+      // the far band's at the island's far edge.
+      const b0 = islandRows === 2 && i === 1 ? shortLen.minus(o.bayLength) : ZERO;
+      for (const [lo, hi] of clear([b0, b0.plus(o.bayLength)])) {
+        const n = hi.minus(lo).div(o.effectiveBayWidth).floor().toNumber();
+        for (let k = 0; k < n; k += 1) {
+          const b = onIsland(lo.plus(o.effectiveBayWidth.times(k)), o.bayWidth, b0, o.bayLength);
+          bayAt(b.x, b.y, b.width, b.height, 4 + i);
+          islandBays += 1;
+        }
+      }
+    });
   }
 
   // --- the core, where it stands -------------------------------------------
@@ -1417,7 +1588,10 @@ function packPerimeter(o: PackOptions): Packing {
   const entries: number[] = [];
   for (let n = 0; n < drivable.length; n += 1) {
     const r = standing[drivableIdx[n]!]!;
-    if (ramp ? r.kind === RectKind.RAMP : r.row === ENTRY_DRIVE_ROW) entries.push(n);
+    // A sloped ring is reached from the level below along the ring itself.
+    if (ramp ? r.kind === RectKind.RAMP : slopedLapM ? r.row === RING_AISLE_ROW : r.row === ENTRY_DRIVE_ROW) {
+      entries.push(n);
+    }
   }
   const { reachable } = traceCirculation({ drivable, entries, minOpeningM: o.aisleWidth });
 
@@ -1446,7 +1620,8 @@ function packPerimeter(o: PackOptions): Packing {
     `Bays stand against all four walls and one ${o.aisleWidth.toString()} m ring aisle serves ` +
       `them: ${acrossCount} to each long wall and ${downCount} to each short one, less the ` +
       `${strandedBays + baysUnderCore} the way in and the core take. The island the ring ` +
-      `encloses is ${Decimal.max(ZERO, islandW).toFixed(2)} × ${Decimal.max(ZERO, islandD).toFixed(2)} m.`,
+      `encloses is ${Decimal.max(ZERO, islandW).toFixed(2)} × ${Decimal.max(ZERO, islandD).toFixed(2)} m` +
+      (islandBays > 0 ? `, and ${islandBays} more bays stand on it facing the ring.` : '.'),
   );
   if (strandedBays > 0) {
     notes.push(
@@ -1455,29 +1630,12 @@ function packPerimeter(o: PackOptions): Packing {
     );
   }
 
-  /*
-    THE DEDUCTION STANDS ON THE ISLAND TOO, for the same reason the core does:
-    anywhere else it cuts the ring. What the island has left after the core and
-    the ramp is what the strip gets, and a strip that does not fit is said rather
-    than packed over a bay run.
-  */
-  const stripArea = o.deductedDepthM.times(W);
-  const reserved: Rect | undefined = stripArea.gt(0)
-    ? { x: island.x0, y: island.y0, width: islandW, height: Decimal.min(islandD, stripArea.div(islandW)) }
-    : undefined;
-  if (reserved && stripArea.gt(islandW.times(islandD))) {
-    notes.push(
-      `The ${stripArea.toFixed(0)} m² reserved for plant and circulation is larger than the ` +
-        `${islandW.times(islandD).toFixed(0)} m² island, so it is drawn at the island's size. ` +
-        'The deduction is still charged in full against the bay count.',
-    );
-  }
-
   return {
     rects: kept,
     bayCount,
     reserved,
     ramp,
+    ...(slopedLapM ? { slopedLapM } : {}),
     crossAisleAreaM2: Decimal.max(ZERO, ringArea),
     baysLostToCrossAisle: 0,
     strandedBays,
@@ -1634,13 +1792,40 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     );
   }
 
+  // --- what a ramp needs, before anything is packed -------------------------
+  const includeRamp = input.includeRamp ?? false;
+  // A stated arrangement this engine cannot lay out is refused before anything is
+  // packed, whichever candidate would have won: it is somebody's request.
+  const statedType = input.rampPlan?.type ?? input.rampType;
+  if (includeRamp && statedType !== undefined && !rampTypeSpec(statedType).placed) {
+    const spec = rampTypeSpec(statedType);
+    throw new ParkingLayoutError(
+      `a ${spec.label} cannot be laid out by this engine: ${spec.note} It is ` +
+        'enumerated in RAMP_TYPES so that it is a named candidate with a reason ' +
+        'rather than an omission, and refused rather than approximated.',
+    );
+  }
+  const storey =
+    input.storeyHeightM ??
+    (includeRamp
+      ? tracer.assumed('parking.storey_height_m', new Decimal(ASSUMED_STOREY_M), {
+          basis: ASSUMED_STOREY_BASIS,
+          label: 'storey a ramp climbs',
+          unit: 'm',
+        })
+      : undefined);
+  const requirement = includeRamp && storey ? straightRampRequirement(tracer, storey) : undefined;
+
   const common = {
     bayWidth,
     bayLength,
     aisleWidth,
     moduleDepth: moduleDepthValue,
     effectiveBayWidth,
-    includeRamp: input.includeRamp ?? false,
+    includeRamp,
+    rampWidthM: requirement ? requirement.widthM.value : ZERO,
+    rampRunM: requirement ? requirement.runM.value : ZERO,
+    storeyHeightM: storey ? storey.value : ZERO,
   };
   /*
     WITH A CORE ON THE LEVEL, TWO ARRANGEMENTS EACH WAY ROUND: one cross aisle,
@@ -1709,7 +1894,7 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     stand on the level at all. Packed every time and reported whether or not it
     wins, exactly as the two orientations are. See `packPerimeter`.
   */
-  const perimeter = packPerimeter({
+  const ringOpts = {
     ...common,
     widthM: footprint.widthM,
     grossDepthM: footprint.depthM,
@@ -1718,17 +1903,31 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     nearCrossAisle: true,
     farCrossAisle: false,
     offsetM: ZERO,
-  });
+  };
+  const perimeter = packPerimeter({ ...ringOpts, ringRamp: 'STRAIGHT' });
+  /*
+    THE FOURTH CANDIDATE, ONLY WHERE A RAMP IS NEEDED: the same ring with the
+    ring aisle sloped instead of a ramp on the island — the client's own podium.
+    Enumerated, packed every time and reported, like the other three.
+  */
+  // A ramp arrangement somebody stated is a ramp strip: the sloped ring is then
+  // not a candidate, because it is not the ramp they asked for.
+  const sloped =
+    includeRamp && statedType === undefined && input.slopedRing !== false
+      ? packPerimeter({ ...ringOpts, ringRamp: 'SLOPED' })
+      : undefined;
 
   const ORIENTATION = {
     WIDTH: 'modules along the width',
     DEPTH: 'modules along the depth',
     PERIMETER: 'bays to the walls, one ring aisle',
+    SLOPED: 'bays to the walls, the ring aisle sloped as the ramp',
   } as const;
   const candidates = [
     { packing: alongWidth, name: ORIENTATION.WIDTH },
     { packing: alongDepth, name: ORIENTATION.DEPTH },
     { packing: perimeter, name: ORIENTATION.PERIMETER },
+    ...(sloped ? [{ packing: sloped, name: ORIENTATION.SLOPED }] : []),
   ] as const;
 
   if (candidates.every((c) => c.packing.bayCount === 0)) {
@@ -1737,7 +1936,8 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
         `${footprint.depthM.toFixed(2)} m. Modules along the width: ` +
         `${alongWidth.refusal ?? 'no bays placed'}. Modules along the depth: ` +
         `${alongDepth.refusal ?? 'no bays placed'}. Bays to the walls: ` +
-        `${perimeter.refusal ?? 'no bays placed'}.`,
+        `${perimeter.refusal ?? 'no bays placed'}.` +
+        (sloped ? ` The ring sloped as the ramp: ${sloped.refusal ?? 'no bays placed'}.` : ''),
     );
   }
   // Ties go to the earlier candidate, so the answer does not depend on the order
@@ -1751,9 +1951,9 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     uses: { moduleDepth },
     detail: {
       note:
-        'Three arrangements are packed and the best is taken. This searches an ' +
+        'Every enumerated arrangement is packed and the best is taken. This searches an ' +
         'arrangement, not a design: the candidate list is the same on every run, ' +
-        'all three are reported, the core stands where the run already put it, and ' +
+        'all of them are reported, the core stands where the run already put it, and ' +
         'the answer is reproducible. It is not the ramp-and-core optimiser, which ' +
         'is a TRADEOFF value Phase 0 refuses to emit.',
     },
@@ -1765,8 +1965,8 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
       `Laid out as ${chosen}: ${packing.bayCount} bays, against ` +
         losers
           .map((c) => `${c.packing.bayCount} ${c.name}${c.packing.refusal ? ` (${c.packing.refusal})` : ''}`)
-          .join(' and ') +
-        ', in the same rectangle. All three were packed.',
+          .join('; ') +
+        `, in the same rectangle. All ${candidates.length} were packed.`,
     );
   }
 
@@ -1839,22 +2039,22 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
   });
 
   let ramp: ParkingLayoutResult['ramp'];
-  if (packing.ramp) {
-    const widthAssumed = tracer.assumed('parking.ramp_width_m', new Decimal(RAMP_WIDTH_M), {
-      basis: RAMP_WIDTH_BASIS,
-      label: 'ramp width',
-      unit: 'm',
-    });
-    const runAssumed = tracer.assumed('parking.ramp_run_m', new Decimal(RAMP_RUN_M), {
-      basis: RAMP_RUN_BASIS,
-      label: 'ramp run',
-      unit: 'm',
-    });
-    const drawnWidth = packing.ramp.widthM;
-    const drawnRun = packing.ramp.runM;
+  let slopedFloor: ParkingLayoutResult['slopedFloor'];
+  if (packing.slopedLapM && storey) {
+    const { gradientPct } = slopedFloorGradient(tracer, storey, packing.slopedLapM);
+    const runs = input.rampPlan
+      ? resolveRampRuns({
+          tracer,
+          schedule: input.rampPlan.schedule,
+          ...(input.rampPlan.actor ? { actor: input.rampPlan.actor } : {}),
+        })
+      : undefined;
+    slopedFloor = { lapM: packing.slopedLapM, gradientPct, runs };
+  }
+  if (packing.ramp && requirement) {
 
     // --- what kind of ramp ------------------------------------------------
-    const chosenType = input.rampPlan?.type ?? RampType.STRAIGHT;
+    const chosenType = statedType ?? RampType.STRAIGHT;
     const spec = rampTypeSpec(chosenType);
     if (!spec.placed) {
       throw new ParkingLayoutError(
@@ -1863,8 +2063,8 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
           'rather than an omission, and refused rather than approximated.',
       );
     }
-    const stated = input.rampPlan?.type !== undefined;
-    const statedBy = input.rampPlan?.actor;
+    const stated = statedType !== undefined;
+    const statedBy = input.rampPlan?.type !== undefined ? input.rampPlan.actor : input.rampTypeActor;
     const rampType = ((): Traced<RampType> => {
       if (stated && statedBy) {
         return tracer.userSet('parking.ramp_type', chosenType, {
@@ -1930,8 +2130,8 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
       notes.push(
         `${runs.length} ramp(s), each serving one parking level: ` +
           `${down} descending to a level below grade and ${up} climbing to a level ` +
-          'above it. Grade is the datum and a car enters at grade. Gradient, ' +
-          'transitions and headroom under B.7.2.2 remain NOT ASSESSED.',
+          'above it. Grade is the datum and a car enters at grade. Each is sized to ' +
+          'Tables B.9 and B.10; headroom (2.4 m) is NOT ASSESSED.',
       );
       /*
         A MEASURED ZERO, NOT AN UNMEASURED NULL. "We reversed it and the answer did
@@ -1954,21 +2154,12 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
       }
     }
 
+    // Drawn at exactly the size the code requires: a packing without that room
+    // refused, so there is no clipped run to trace any more.
     ramp = {
-      widthM: drawnWidth.eq(widthAssumed.value)
-        ? widthAssumed
-        : tracer.computed('parking.ramp_width_drawn_m', drawnWidth, {
-            formula: `min(${RAMP_WIDTH_M} m ramp width, ${footprint.widthM.toFixed(2)} m level width)`,
-            uses: { width: widthAssumed },
-            unit: 'm',
-          }),
-      runM: drawnRun.eq(runAssumed.value)
-        ? runAssumed
-        : tracer.computed('parking.ramp_run_drawn_m', drawnRun, {
-            formula: `min(${RAMP_RUN_M} m ramp run, ${drawnRun.toFixed(2)} m packable depth)`,
-            uses: { run: runAssumed, usable: usableArea },
-            unit: 'm',
-          }),
+      widthM: requirement.widthM,
+      runM: requirement.runM,
+      slopePct: requirement.slopePct,
       type: rampType,
       candidates: RAMP_TYPES,
       runs,
@@ -1978,6 +2169,7 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
   return {
     rects: packing.rects,
     ramp,
+    ...(slopedFloor ? { slopedFloor } : {}),
     reserved: packing.reserved,
     reservedAreaM2,
     baysUnderCore: packing.baysUnderCore,

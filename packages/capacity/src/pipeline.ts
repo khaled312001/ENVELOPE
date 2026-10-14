@@ -50,11 +50,13 @@ import {
   materialize,
   type RuleRecord,
 } from '@envelope/rules';
+import { fromLocal, largestInscribedRectangle } from '@envelope/geometry';
 
 import { computeBands, type BandSource } from './bands.js';
 import { buildBuildingModel } from './building.js';
 import { buildGfaStatement, type GfaStatement } from './gfa-statement.js';
 import { layoutCore } from './core-layout.js';
+import { DrivewayType, ParkingAngle, standardFor, type RampType } from './layout.js';
 import { AccessChoiceRefusedError } from './access.js';
 import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './core.js';
 import { solveEnvelope, type EnvelopeSolution } from './envelope.js';
@@ -215,16 +217,24 @@ export interface RunInput {
      * Lay the parking out around the core's shafts — stairs, lifts and the lift
      * lobby — rather than drawing them over bays that stay in the count.
      *
-     * OFF UNTIL WHERE THE CORE STANDS IS DECIDED. With the core centred on the
-     * plate, a level deep enough for only one module has its one aisle cut by the
-     * shafts and loses most of its bays: on a 50.85 × 26.85 m plot, 11 bays
-     * become 4. The client's own drawing of that plot stands the core beside the
-     * aisle, not in the middle of it — a placement decision this engine does not
-     * make (the core position search is the TRADEOFF optimiser Phase 0 refuses).
-     * On deeper levels it costs only the bays the shafts truly cover: 192 to 185
-     * on a 120 × 80 m plot. Tested on, shipped off, and said so.
+     * ON BY DEFAULT SINCE 15 OCT 2026; `false` switches it off. It shipped off
+     * because a centred core cut the one aisle a shallow level has: 11 bays down
+     * to 4 on the client's 50.85 × 26.85 m plot. Two things since make it safe to
+     * turn on: the ring of bays round all four walls puts the shafts on the
+     * island, and on a level whose island is too shallow for the compact core the
+     * stairs and lifts are laid in one row (`layoutCore`), as the client draws
+     * them. Off, bays were drawn under the lift lobby and counted — the defect
+     * the client reported. The core stands where a fixed rule puts it — moved
+     * toward the parking island by one of four set fractions where the plate
+     * holds it there (`solveCore`); nothing searches for a better place.
      */
     readonly avoidCore?: boolean;
+    /**
+     * A ramp arrangement somebody stated, `USER_SET` under the run's actor.
+     * Absent, every arrangement is packed — the ring sloped as the ramp among
+     * them — and the most bays wins. Stated, the ramp is that strip.
+     */
+    readonly rampType?: RampType;
   };
   /**
    * Levels standing on the podium footprint, **the ground floor included**.
@@ -791,6 +801,34 @@ export function runPipeline(input: RunInput): RunOutput {
     cannot be a core of this plate is refused in the caller's own words rather
     than clamped.
   */
+  /*
+    THE ISLAND A RING OF BAYS LEAVES, measured before the core is placed: the
+    core centres over it where it can, and on a level that shallow the stairs
+    and lifts go in one row, as the client draws them, or they would stand
+    across the ring. A fixed rule, not a search.
+  */
+  const island = (() => {
+    try {
+      const r = largestInscribedRectangle(envelope.podiumRing);
+      const s = standardFor(ParkingAngle.DEG_90, DrivewayType.TWO_WAY);
+      const band = (Number(s.bayLengthM) + Number(s.drivewayWidthM)) * 1000;
+      const w = Number(r.widthMm) - 2 * band;
+      const d = Number(r.depthMm) - 2 * band;
+      if (w <= 0 || d <= 0) return undefined;
+      return {
+        depthMm: Math.min(w, d),
+        ring: [
+          fromLocal(r, band, band),
+          fromLocal(r, band + w, band),
+          fromLocal(r, band + w, band + d),
+          fromLocal(r, band, band + d),
+        ],
+      };
+    } catch {
+      return undefined;
+    }
+  })();
+
   let core: CoreResult;
   try {
     core = solveCore({
@@ -800,6 +838,14 @@ export function runPipeline(input: RunInput): RunOutput {
       ...(input.coreAreaM2 === undefined
         ? {}
         : { stated: { areaM2: input.coreAreaM2, actor: input.actor } }),
+      ...(island
+        ? {
+            anchor: {
+              x: island.ring.reduce((s, p) => s + p.x, 0) / 4,
+              y: island.ring.reduce((s, p) => s + p.y, 0) / 4,
+            },
+          }
+        : {}),
     });
   } catch (error) {
     if (error instanceof CoreRefusedError) throw new RunBlockedError(error.message, 'G2:core');
@@ -813,7 +859,11 @@ export function runPipeline(input: RunInput): RunOutput {
     the whole residential core. Where no layout fits, the whole core is the
     obstruction — the safe side.
   */
-  const coreLayout = layoutCore({ tracer, ring: core.ring });
+  const coreLayout = layoutCore({
+    tracer,
+    ring: core.ring,
+    ...(island ? { maxShaftDepthMm: island.depthMm, island: island.ring } : {}),
+  });
   const parkingObstruction =
     coreLayout.kind === 'LAID_OUT'
       ? { ring: coreLayout.shaft.outline, areaM2: coreLayout.shaft.areaM2 }
@@ -843,7 +893,14 @@ export function runPipeline(input: RunInput): RunOutput {
       podiumRing: envelope.podiumRing,
       usableFraction: parking.usableFraction,
       includeRamp: input.levelPlan?.includeRamp ?? true,
-      ...(input.levelPlan?.avoidCore ? { core: parkingObstruction } : {}),
+      storeyHeightM: envelope.floorToFloorM,
+      ...(schedule ? { rampPlan: { schedule, actor: input.actor } } : {}),
+      slopedRing: parkingLevelsAvailable >= 2,
+      ...(input.levelPlan?.rampType === undefined
+        ? {}
+        : { rampType: { type: input.levelPlan.rampType, actor: input.actor } }),
+      // On unless switched off: a bay under the stairs and lifts is not a bay.
+      ...(input.levelPlan?.avoidCore === false ? {} : { core: parkingObstruction }),
       ...(input.levelPlan?.structuralGridM === undefined
         ? {}
         : { structuralGridM: input.levelPlan.structuralGridM }),
@@ -886,7 +943,7 @@ export function runPipeline(input: RunInput): RunOutput {
       result: core,
       reconciliation: coreReconciliation,
       layout: coreLayout,
-      shaftOnParking: input.levelPlan?.avoidCore === true,
+      shaftOnParking: input.levelPlan?.avoidCore !== false,
     },
     parkingLevels: parking.levelsAvailable,
     levelPlan,

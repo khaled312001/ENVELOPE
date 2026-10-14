@@ -245,7 +245,10 @@ describe('/parking', () => {
     // amber stops meaning anything.
     expect(html).toContain('parking-legend__swatch--ramp');
     expect(html).not.toMatch(/parking-legend__swatch--ramp[^"]*traced--assumed/);
-    expect(stripTags(html)).toMatch(/gradient, transitions and headroom/i);
+    // Since 15 Oct 2026 the ramp is sized to DBC Tables B.9 and B.10, or — as on
+    // the worked example — the ring aisle is the ramp, held to B.7.2.3.1's 4%.
+    // Either way the page says which, in the engine's words.
+    expect(stripTags(html)).toMatch(/ring aisle is the ramp|Tables B\.9 and B\.10/i);
     expect(stripTags(html)).toMatch(/not assessed/i);
   });
 

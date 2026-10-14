@@ -32,13 +32,23 @@ function write(name: string, sheets: readonly Sheet[]): void {
 
 const count = (svg: string, needle: RegExp): number => (svg.match(needle) ?? []).length;
 
+/** A strip ramp, asked for by name: on 80 × 40 m the ring itself is the ramp otherwise. */
+const STRIP = { levelPlan: { rampType: 'STRAIGHT' } } as const;
+
 describe('the set', () => {
   it('has a site plan, a sheet per parking level, a typical floor and a section, in binding order', () => {
-    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2 }));
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2, ...STRIP }));
     const sheets = composeSheets(out.building, META);
     write('80x40', sheets);
     expect(sheets.map((s) => s.number)).toEqual(['A-001', 'A-101', 'A-102', 'A-201', 'A-301', 'A-302']);
     expect(sheets.filter((s) => s.kind === 'PARKING').map((s) => s.levelId)).toEqual(['G', 'P1']);
+  });
+
+  it('cuts one section where the ring is the ramp, since no ramp needs a section of its own', () => {
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2 }));
+    const sheets = composeSheets(out.building, META);
+    write('80x40-sloped', sheets);
+    expect(sheets.map((s) => s.number)).toEqual(['A-001', 'A-101', 'A-102', 'A-201', 'A-301']);
   });
 
   it('carries the two sentences on every sheet', () => {
@@ -84,20 +94,31 @@ describe('a parking level sheet', () => {
     expect(count(svg, /data-symbol="ARROW2"/g)).toBeGreaterThanOrEqual(2);
   });
 
-  it('says which way the ramp goes from this level, and that its gradient is not assessed', () => {
-    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2 }));
+  it('says which way the ramp goes from this level, and the tables it was sized to', () => {
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, ...STRIP }));
     const [low, high] = composeSheets(out.building, META).filter((s) => s.kind === 'PARKING');
     expect(sheetSvg(low!)).toContain('UP TO P1');
     expect(sheetSvg(high!)).toContain('DOWN TO G');
-    expect(sheetSvg(low!)).toMatch(/GRADIENT NOT ASSESSED/);
+    expect(sheetSvg(low!)).toMatch(/RAMP 12% - 6% TRANSITIONS \(DBC TABLES B\.9, B\.10\)/);
+  });
+
+  it('marks the ring that is the ramp with the way it rises and its gradient', () => {
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2 }));
+    const sheet = composeSheets(out.building, META).find((s) => s.kind === 'PARKING')!;
+    const floor = out.building.levels.find((l) => l.id === sheet.levelId)!.parking!.rampedFloor!;
+    const arrows = sheet.items.filter((i) => i.kind === 'symbol' && i.role === 'ramp-arrow');
+    // One at each corner of the lap, each keyed.
+    expect(arrows).toHaveLength(4);
+    expect(sheet.legend.some((e) => e.role === 'ramp-arrow' && /one level a lap/.test(e.label))).toBe(true);
+    expect(sheetSvg(sheet)).toContain(`${floor.gradientPct.value}% OVER ${floor.lapM} M`);
   });
 
   it('inks an assumed figure amber and says ASSUMED beside it', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 2 }));
     const sheet = composeSheets(out.building, META).find((s) => s.kind === 'PARKING')!;
     const svg = sheetSvg(sheet);
-    // The ramp gradient rests on the assumed run.
-    expect(svg).toMatch(/class="shp shp-text shp-value sh-c-assumed"[^>]*>[^<]*% · ASSUMED/);
+    // The reserved zone and the core shafts rest on assumptions.
+    expect(svg).toMatch(/class="shp shp-text shp-value sh-c-assumed"[^>]*>[^<]* · ASSUMED/);
   });
 
   it('keeps every word within what an R12 file can carry: ASCII, and ± as its %%p code', () => {

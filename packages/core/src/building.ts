@@ -230,6 +230,19 @@ export interface ModelLevel {
     /** The ramp strip reserved on this level, whether or not a ramp uses it. */
     readonly rampStrip: ModelRing | null;
     /**
+     * Where the ring aisle itself is the ramp — the client's sloped podium floor —
+     * its gradient (checked against DBC B.7.2.3.1's 4%), the lap it is measured
+     * along, and that lap's centre line so a sheet can draw which way it climbs.
+     * Absent on runs stored before 15 Oct 2026 and wherever a ramp strip is used.
+     */
+    readonly rampedFloor?: {
+      readonly gradientPct: TracedWire;
+      readonly lapM: string;
+      readonly centreLine: ModelRing;
+      /** `UP` toward a podium level, `DOWN` toward a basement, null when no schedule says. */
+      readonly climbs: 'UP' | 'DOWN' | null;
+    };
+    /**
      * The module the level was laid out to, as Table B.11 states it.
      *
      * Three strings, so the sheet can dimension one module across — bay, aisle,

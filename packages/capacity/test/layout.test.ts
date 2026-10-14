@@ -116,13 +116,17 @@ describe('layoutParkingLevel', () => {
     expect(r.notes.join(' ')).not.toMatch(/left unused/);
   });
 
+  /*
+    80 m wide, so stacked modules win: at 40 m the ring of bays with bays on its
+    island now places more, and the module packer's leftover is never reported.
+  */
   it('reports leftover depth rather than quietly filling it', () => {
-    const r = run('40', '55'); // 3 modules = 51 m, 4 m spare: too shallow for anything
+    const r = run('80', '55'); // 3 modules = 51 m, 4 m spare: too shallow for anything
     expect(r.notes.join(' ')).toMatch(/4\.00 m of depth is left unused/);
   });
 
   it('takes a single-loaded row when the remainder can hold one', () => {
-    const r = run('40', '63'); // 3 modules = 51, remainder 12 m >= 5.5 + 6
+    const r = run('80', '63'); // 3 modules = 51, remainder 12 m >= 5.5 + 6
     expect(r.notes.join(' ')).toMatch(/single-loaded/);
   });
 
@@ -141,17 +145,22 @@ describe('layoutParkingLevel', () => {
     expect(r.areaPerBayM2.value.toNumber()).toBeLessThan(45);
   });
 
-  it('reserves a ramp footprint and refuses to imply its gradient was checked', () => {
-    const r = run('40', '51', { includeRamp: true });
+  /*
+    32 × 40 m: a ring that small would climb a storey at 4.21%, over the 4% of
+    B.7.2.3.1, so the ramp is a strip. At 40 × 51 the ring itself is the ramp.
+  */
+  it('reserves a ramp footprint sized to the code, and says what it did not check', () => {
+    const r = run('32', '40', { includeRamp: true });
     expect(r.rects.some((x) => x.kind === RectKind.RAMP)).toBe(true);
-    expect(r.notes.join(' ')).toMatch(/NOT ASSESSED/);
+    expect(r.notes.join(' ')).toMatch(/Tables B\.9 and B\.10/);
+    expect(r.notes.join(' ')).toMatch(/headroom \(2\.4 m\) is NOT ASSESSED|not established/i);
   });
 
   it('does not park a car underneath the ramp', () => {
     // The ramp used to be placed as a rectangle over the packing area, so it sat
     // on top of bays that were still counted: a drawing showing a ramp across
     // eight cars, and a bay count eight too high.
-    const r = run('40', '51', { includeRamp: true });
+    const r = run('32', '40', { includeRamp: true });
     const ramp = r.rects.find((x) => x.kind === RectKind.RAMP);
     expect(ramp).toBeDefined();
     for (const bay of r.rects.filter((x) => x.kind !== RectKind.RAMP)) {
@@ -230,9 +239,10 @@ describe('bays to the walls, one ring aisle', () => {
   }
 
   it('wins on the client’s own plot, and by more than a rounding', () => {
+    // With a ramp to place, the ring wins sloped — his own podium, the floor the ramp.
     const { result: out, sweep } = sweepOf(...CLIENT, { includeRamp: true });
-    expect(out.orientation.value).toBe('bays to the walls, one ring aisle');
-    const [, ring] = /(\d+) bays to the walls/.exec(sweep) ?? [];
+    expect(out.orientation.value).toBe('bays to the walls, the ring aisle sloped as the ramp');
+    const [, ring] = /(\d+) bays to the walls, the ring aisle sloped/.exec(sweep) ?? [];
     const [, width] = /(\d+) modules along the width/.exec(sweep) ?? [];
     expect(Number(ring)).toBeGreaterThan(Number(width));
   });

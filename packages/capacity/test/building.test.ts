@@ -352,38 +352,59 @@ describe('the parking the sheets will draw', () => {
     for (const a of aisles) expect(a.label).toBe('6.00M WIDE 2 WAY DRIVEWAY');
   });
 
-  it('reserves the deducted area as a zone of that size, not as a drawn core', () => {
+  it('reserves the deducted area as a zone, and says how much of it the drawing holds', () => {
     const out = runPipeline(input(RECT_80x40));
     const reserved = out.building.levels.find((l) => l.parking)!.parking!.reserved!;
     const drawnM2 = new Decimal(area(reserved.outline)).div(1_000_000);
-    expect(drawnM2.minus(new Decimal(reserved.areaM2.value)).abs().lt(1)).toBe(true);
+    // Never drawn larger than it is; where the island holds only part of it,
+    // the label says "<drawn> OF <whole>" rather than printing the whole figure.
+    expect(drawnM2.lte(new Decimal(reserved.areaM2.value).plus(1))).toBe(true);
     expect(reserved.label).toMatch(/RESERVED, NOT LAID OUT/);
+    if (drawnM2.lt(new Decimal(reserved.areaM2.value).minus(1))) {
+      expect(reserved.label).toContain(`${drawnM2.toFixed(0)} OF `);
+    }
   });
 });
 
+/** A strip ramp, asked for by name: on 80 × 40 m the ring itself is the ramp otherwise. */
+const STRIP = { levelPlan: { rampType: 'STRAIGHT' } } as const satisfies Partial<RunInput>;
+
 describe('the ramp', () => {
-  it('joins each pair of parking levels, climbing one floor over the reserved run', () => {
-    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2 }));
+  it('joins each pair of parking levels, climbing one floor over the run the code requires', () => {
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2, ...STRIP }));
     expect(out.building.ramps).toHaveLength(1);
     const ramp = out.building.ramps[0]!;
     expect([ramp.fromLevelId, ramp.toLevelId]).toEqual(['G', 'P1']);
     const rise = out.envelope.floorToFloorM.value;
     const run = out.levelPlan!.rampStrip!.runM.value;
-    expect(ramp.gradientPct.value).toBe(rise.div(run).times(100).toDecimalPlaces(2).toString());
+    // Tables B.9 and B.10: 12% between two 3.6 m transitions at 6%.
+    const required = rise.minus(new Decimal('0.432')).div('0.12').toDecimalPlaces(2, Decimal.ROUND_UP).plus('7.2');
+    expect(run.toString()).toBe(required.toString());
+    expect(ramp.gradientPct.value).toBe('12');
     expect(ramp.toElevationMm - ramp.fromElevationMm).toBe(rise.times(1000).toNumber());
   });
 
-  it('is amber: its run is an assumption, and its gradient is not assessed', () => {
-    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2 }));
+  it('cites the tables it was sized to, and leaves headroom NOT ASSESSED', () => {
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, ...STRIP }));
     const ramp = out.building.ramps[0]!;
-    expect(ramp.gradientPct.provenanceClass).toBe('ASSUMED');
-    expect(ramp.label).toMatch(/NOT ASSESSED/);
+    expect(ramp.label).toMatch(/DBC TABLES B\.9, B\.10/);
+    expect(out.building.notModelled.join(' ')).toMatch(/headroom \(2\.4 m, DBC Table B\.9\)[^.]*NOT\s+ASSESSED/);
   });
 
   it('is not invented where there is only one parking level to reach', () => {
     const out = runPipeline(input(RECT_80x40, { parkingLevelsAvailable: 1 }));
     expect(out.building.ramps).toHaveLength(0);
-    expect(out.building.notModelled.join(' ')).toMatch(/no second parking level/);
+    // Nor is a ring sloped toward a level that does not exist.
+    expect(out.levelPlan!.slopedFloor).toBeUndefined();
+  });
+
+  it('is the ring itself where a lap climbs a storey within 4%, and says so', () => {
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2 }));
+    const floor = out.building.levels.find((l) => l.parking)!.parking!.rampedFloor!;
+    expect(Number(floor.gradientPct.value)).toBeLessThanOrEqual(4);
+    expect(floor.centreLine).toHaveLength(4);
+    expect(out.building.ramps).toHaveLength(0);
+    expect(out.building.notModelled.join(' ')).toMatch(/sloped ring is drawn level/);
   });
 });
 
@@ -423,7 +444,7 @@ describe('the podium is the footprint the figure describes', () => {
 
 describe('the sections', () => {
   it('runs along the ramp, and draws each ramp climbing one floor over its run', () => {
-    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2 }));
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2, ...STRIP }));
     const section = out.building.sections[0]!;
     expect(section.taken).toMatch(/ramp/);
     expect(section.ramps).toHaveLength(1);
@@ -435,7 +456,7 @@ describe('the sections', () => {
   });
 
   it('opens the slab a ramp passes through, and only that slab', () => {
-    const out = runPipeline(input(RECT_80x40, { podiumLevels: 3, parkingLevelsAvailable: 2 }));
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 3, parkingLevelsAvailable: 2, ...STRIP }));
     // Three podium levels, so the stack reads G, P1, P2: the ramp runs G → P1.
     const byId = new Map(out.building.sections[0]!.levels.map((l) => [l.levelId, l]));
     expect(byId.get('P1')!.openings.length).toBeGreaterThan(0);
@@ -463,7 +484,7 @@ describe('the sections', () => {
   });
 
   it('with a ramp, adds the long section, which cuts the tower the ramp section misses', () => {
-    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2 }));
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, ...STRIP }));
     expect(out.building.sections.map((x) => x.id)).toEqual(['A', 'B']);
     const long = out.building.sections[1]!;
     expect(long.taken).toMatch(/longest side/);

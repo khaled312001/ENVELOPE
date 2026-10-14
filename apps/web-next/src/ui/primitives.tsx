@@ -165,15 +165,18 @@ export function EmptyState({
   body,
   action,
   icon,
+  art,
 }: {
   readonly title: ReactNode;
   readonly body: ReactNode;
   readonly action?: ReactNode;
   readonly icon?: ReactNode;
+  /** An illustration in place of the icon; the title beside it carries the meaning. */
+  readonly art?: ReactNode;
 }): JSX.Element {
   return (
     <div className="mx-auto grid max-w-md justify-items-center gap-3 px-6 py-12 text-center">
-      {icon ? <div className="grid size-10 place-items-center rounded-lg border border-line bg-raised text-secondary">{icon}</div> : null}
+      {art ?? (icon ? <div className="grid size-10 place-items-center rounded-lg border border-line bg-raised text-secondary">{icon}</div> : null)}
       <h2 className="text-[15px] font-semibold text-fg">{title}</h2>
       <p className="text-[13px] leading-relaxed text-secondary">{body}</p>
       {action}

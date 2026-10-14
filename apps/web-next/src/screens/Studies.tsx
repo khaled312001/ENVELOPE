@@ -10,6 +10,7 @@ import { TopBar } from '../components/Shell.js';
 import { grouped, trimmed } from '../lib/figures.js';
 import { useLocale } from '../lib/locale.js';
 import { Link } from '../lib/nav.js';
+import { Art } from '../site/art.js';
 import { Button } from '../ui/button.js';
 import { followPointer } from '../ui/motion.js';
 import { Badge, EmptyState, Input, Notice, Spinner } from '../ui/primitives.js';
@@ -70,6 +71,8 @@ export function Studies({ actor }: { readonly actor: Actor }): JSX.Element {
           <div className="rounded-lg border border-dashed border-line bg-panel">
             <EmptyState
               icon={<FolderOpen className="size-5" aria-hidden="true" />}
+              // An empty sheet, ready to be drawn on — for a reader with no studies yet, not one whose search found none.
+              art={q ? undefined : <Art name="studies-empty" alt="" eager className="w-64 max-w-full" />}
               title={q ? t.studies.noMatch : t.studies.emptyTitle}
               body={q ? t.studies.noMatchBody : t.studies.emptyBody}
               action={

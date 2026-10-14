@@ -6,6 +6,7 @@ import worked from '@web/screens/worked-example.json';
 import { cn } from '../../lib/cn.js';
 import { grouped } from '../../lib/figures.js';
 import { EngineText, useLocale } from '../../lib/locale.js';
+import { Art, Illustration } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
 import { EASE, Item, Spotlight, Stagger } from '../../ui/motion.js';
 
@@ -206,6 +207,7 @@ export function Parking(): JSX.Element {
             <SectionHead eyebrow={s.parking.reachEyebrow} title={s.parking.reachTitle} className="mb-6" />
             <p className="text-[15px] leading-relaxed text-secondary">{s.parking.reachBody}</p>
             <p className="mt-4 rounded-lg border border-line bg-panel p-4 text-[13.5px] leading-relaxed text-secondary shadow-soft">{s.parking.reachTest}</p>
+            <Art name="parking-reach" alt={s.art.parkingReach} className="mx-auto mt-8 w-full max-w-sm" />
           </div>
           <div>
             <SectionHead eyebrow={s.parking.orientationEyebrow} title={s.parking.orientationTitle} className="mb-6" />
@@ -215,6 +217,7 @@ export function Parking(): JSX.Element {
                 <EngineText>{orientationNote}</EngineText>
               </blockquote>
             ) : null}
+            <Illustration name="parking-section-model" alt={s.art.sectionModel} className="mt-8" />
           </div>
         </div>
       </Band>

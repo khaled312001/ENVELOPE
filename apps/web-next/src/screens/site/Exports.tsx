@@ -5,6 +5,7 @@ import worked from '@web/screens/worked-example.json';
 
 import { cn } from '../../lib/cn.js';
 import { EngineText } from '../../lib/locale.js';
+import { Illustration } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
 import { EASE, Item, Stagger } from '../../ui/motion.js';
 import { FileGrid } from '../Landing.js';
@@ -27,7 +28,13 @@ export function Exports(): JSX.Element {
 
   return (
     <SitePage path="/exports">
-      <PageHero crumb={s.nav.exports} eyebrow={s.exportsPage.eyebrow} title={s.exportsPage.title} lede={s.exportsPage.lede} />
+      <PageHero
+        crumb={s.nav.exports}
+        eyebrow={s.exportsPage.eyebrow}
+        title={s.exportsPage.title}
+        lede={s.exportsPage.lede}
+        aside={<Illustration name="exports-model" alt={s.art.exportsModel} eager />}
+      />
 
       <Band>
         <p className="figure mb-6 text-[11.5px] tracking-[0.14em] text-accent uppercase">{s.exportsPage.filesEyebrow}</p>

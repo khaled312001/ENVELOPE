@@ -11,6 +11,7 @@ import { SITE_EN, type SiteDict } from '../i18n/site.en.js';
 import { Button } from '../ui/button.js';
 import { arrive, Item, ScrollProgress, Stagger } from '../ui/motion.js';
 import { Drawer } from '../ui/radix.js';
+import { Art } from './art.js';
 import { type PagePath, usePageMeta } from './meta.js';
 
 /*
@@ -210,7 +211,7 @@ export function PageHero({
   const s = useSite();
   return (
     <section className="relative overflow-hidden border-b border-line">
-      <div className="canvas-grid absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_30%_0%,black,transparent_70%)]" aria-hidden="true" />
+      <Backdrop />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         <div className="aurora -top-40 end-[10%] size-[460px] bg-accent" />
         <div className="aurora -top-20 end-[-6%] size-[340px] bg-brand-alt [animation-delay:-8s]" />
@@ -249,6 +250,15 @@ export function PageHero({
         {aside ? <div className="relative">{aside}</div> : null}
       </div>
     </section>
+  );
+}
+
+/** Survey sheets laid on one table, faded out toward the text. Decoration: it says nothing. */
+export function Backdrop({ className }: { readonly className?: string }): JSX.Element {
+  return (
+    <div aria-hidden="true" className={`pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_70%_20%,black,transparent_75%)] ${className ?? ''}`}>
+      <Art name="home-backdrop" alt="" eager className="size-full max-w-none object-cover opacity-80 rtl:-scale-x-100" />
+    </div>
   );
 }
 
@@ -301,8 +311,8 @@ function CtaBand(): JSX.Element {
         viewport={{ once: true }}
         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div aria-hidden="true" className="pointer-events-none absolute -end-24 -top-24 size-80 rounded-full border border-on-brand/20" />
-        <div aria-hidden="true" className="pointer-events-none absolute -end-8 -top-8 size-44 rounded-full border border-on-brand/20" />
+        {/* White linework, empty on the text's side; mirrored in Arabic so the text keeps its clean half. */}
+        <Art name="cta-pattern" alt="" className="pointer-events-none absolute inset-0 size-full max-w-none object-cover rtl:-scale-x-100" />
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 start-1/3 size-72 rounded-full bg-on-brand/10 blur-3xl" />
         <div className="relative grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
           <div className="grid max-w-2xl gap-3">

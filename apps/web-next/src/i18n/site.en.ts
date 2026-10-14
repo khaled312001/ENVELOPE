@@ -197,6 +197,18 @@ export const SITE_EN = {
     lede: 'Short answers, and the same ones the product gives when it is asked in the studio.',
     more: 'Still unsure? The method page explains how each figure is made, and the limits page lists what the product will not do.',
   },
+
+  /* Alternative text for the illustrations that carry meaning. The rest are decoration and say nothing. */
+  art: {
+    productFlow: 'From the affection plan to the drawing set, in six stages.',
+    parkingReach: 'An aisle network joining every bay to one entrance.',
+    methodChain: 'Four stages in a row; the last is a gate that holds the output back.',
+    sectionModel: 'A section through a white study model: two parking levels and the ramp between them.',
+    exportsModel: 'A white study model of a building, with blank sheets laid around it.',
+    enterPanel: 'A white study model of a building on its plot, the plot boundary traced in blue.',
+    // An illustration of a building sits on pages about buildings the engine computed; it must say it is not one.
+    illustration: 'Illustration. Not drawn by the engine.',
+  },
 };
 
 export type SiteDict = typeof SITE_EN;

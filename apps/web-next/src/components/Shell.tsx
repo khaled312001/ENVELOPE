@@ -11,20 +11,25 @@ import { useTheme } from '../lib/theme.js';
 import { Button } from '../ui/button.js';
 import { Tip } from '../ui/radix.js';
 
-/** The mark: a plot with its setback taken off. The inner square is the brand blue — never amber. */
+/**
+ * The mark: three plots stacked like levels, the top one with a step in its
+ * edge as a real plot has. Drawn from the delivered logo rather than embedded
+ * as a picture, so it stays sharp at 28px and takes each theme's inks. The top
+ * plate is the brand gradient — never amber.
+ */
 export function Logo({ className }: { readonly className?: string }): JSX.Element {
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
-      <svg viewBox="0 0 32 32" className="size-7" aria-hidden="true">
+      <svg viewBox="0 0 32 32" className="size-7" aria-hidden="true" fill="none" strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round">
         <defs>
-          <linearGradient id="logo-fill" x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id="logo-plate" x1="0" y1="1" x2="1" y2="0">
             <stop offset="0" stopColor="var(--accent)" />
             <stop offset="1" stopColor="var(--brand-alt)" />
           </linearGradient>
         </defs>
-        <rect width="32" height="32" rx="8" fill="url(#logo-fill)" />
-        <rect x="7" y="7" width="18" height="18" rx="1.5" fill="none" stroke="var(--on-brand)" strokeOpacity="0.9" strokeWidth="1.5" />
-        <rect x="11.5" y="11.5" width="9" height="9" rx="1" fill="var(--on-brand)" />
+        <polyline points="6.1,17.6 2.2,19 18.2,26.8 29.7,21.1 26.6,19.7" stroke="var(--text-secondary)" />
+        <polyline points="6.5,14 2.4,15.3 18.4,22.7 29.8,17 26.6,15.4" stroke="var(--text-tertiary)" />
+        <polygon points="2.8,11.8 17.3,5.2 23.7,8.4 22.5,9.2 30,13.1 18.4,18.9" stroke="url(#logo-plate)" />
       </svg>
       <span className="text-[15px] font-semibold tracking-[-0.01em] text-fg">
         TOP<span className="text-accent">.ai</span>

@@ -9,7 +9,6 @@ import {
   FileStack,
   FileText,
   Layers,
-  MessageCircleQuestion,
   ScrollText,
   ShieldOff,
   Sparkles,
@@ -30,7 +29,8 @@ import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
 import { useLocale } from '../lib/locale.js';
 import { Link } from '../lib/nav.js';
-import { SectionHead, SitePage, useSite } from '../site/Site.js';
+import { Art } from '../site/art.js';
+import { Backdrop, SectionHead, SitePage, useSite } from '../site/Site.js';
 import { Button } from '../ui/button.js';
 import { arrive, EASE, followPointer, Item, Spotlight, Stagger } from '../ui/motion.js';
 
@@ -91,7 +91,7 @@ export function Landing(): JSX.Element {
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden border-b border-line">
-        <div className="canvas-grid absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_70%_40%,black,transparent_75%)]" aria-hidden="true" />
+        <Backdrop />
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
           <div className="aurora -top-24 end-[-8%] size-[520px] bg-accent" />
           <div className="aurora top-40 end-[22%] size-[380px] bg-brand-alt [animation-delay:-6s]" />
@@ -276,28 +276,24 @@ export function Landing(): JSX.Element {
         <div className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
           <SectionHead eyebrow={s.home.pagesEyebrow} title={s.home.pagesTitle} lede={s.home.pagesLede} />
           <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" gap={0.06}>
-            {(
-              [
-                ['/product', 'product', Box],
-                ['/parking', 'parking', Layers],
-                ['/method', 'method', Waypoints],
-                ['/exports', 'exports', FileStack],
-                ['/limits', 'limits', CircleSlash],
-                ['/faq', 'faq', MessageCircleQuestion],
-              ] as const
-            ).map(([to, key, Icon]) => (
-              <Item key={to} className="h-full">
+            {(['product', 'parking', 'method', 'exports', 'limits', 'faq'] as const).map((key) => (
+              <Item key={key} className="h-full">
                 <Link
-                  to={to}
+                  to={`/${key}`}
                   onPointerMove={followPointer}
-                  className="spotlight shadow-soft group grid h-full content-start gap-3 rounded-xl border border-line bg-base p-6 transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-strong motion-reduce:hover:translate-y-0"
+                  className="spotlight shadow-soft group grid h-full content-start gap-3 overflow-hidden rounded-xl border border-line bg-base transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-strong motion-reduce:hover:translate-y-0"
                 >
-                  <span className="grid size-10 place-items-center rounded-lg bg-linear-to-br from-brand-solid to-brand-alt-solid text-on-brand transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
-                    <Icon className="size-5" aria-hidden="true" />
-                  </span>
-                  <h3 className="text-[16px] font-medium text-fg">{s.home.cards[key].title}</h3>
-                  <p className="text-[13.5px] leading-relaxed text-secondary">{s.home.cards[key].body}</p>
-                  <span className="mt-1 inline-flex items-center gap-1 text-[13px] font-medium text-accent">
+                  {/* Decoration inside a link whose heading already names it: an alt would read the card twice. */}
+                  <div className="canvas-grid border-b border-subtle">
+                    <Art
+                      name={`card-${key}`}
+                      alt=""
+                      className="w-full transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:group-hover:scale-100"
+                    />
+                  </div>
+                  <h3 className="px-6 pt-2 text-[16px] font-medium text-fg">{s.home.cards[key].title}</h3>
+                  <p className="px-6 text-[13.5px] leading-relaxed text-secondary">{s.home.cards[key].body}</p>
+                  <span className="mt-1 inline-flex items-center gap-1 px-6 pb-6 text-[13px] font-medium text-accent">
                     {s.home.explore}
                     <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1" aria-hidden="true" />
                   </span>

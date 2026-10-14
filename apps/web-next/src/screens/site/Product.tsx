@@ -8,6 +8,7 @@ import worked from '@web/screens/worked-example.json';
 
 import { ClassMark } from '../../components/Traced.js';
 import { useLocale } from '../../lib/locale.js';
+import { Art } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
 import { EASE, Item, Spotlight, Stagger } from '../../ui/motion.js';
 import { FlowLine } from '../Landing.js';
@@ -101,6 +102,8 @@ export function Product(): JSX.Element {
 
       <Band>
         <SectionHead eyebrow={s.product.stepsEyebrow} title={s.product.stepsTitle} lede={t.landing.flowLede} />
+        {/* Read from the start of the line in either language, so it is mirrored in Arabic. */}
+        <Art name="product-flow" alt={s.art.productFlow} className="mx-auto mb-12 w-full max-w-5xl rtl:-scale-x-100" />
         <FlowLine />
       </Band>
     </SitePage>

@@ -8,6 +8,7 @@ import worked from '@web/screens/worked-example.json';
 import { ClassMark } from '../../components/Traced.js';
 import { grouped } from '../../lib/figures.js';
 import { useLocale } from '../../lib/locale.js';
+import { Art } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
 import { EASE, Item, Spotlight, Stagger } from '../../ui/motion.js';
 import { ClaimsList } from '../Landing.js';
@@ -34,7 +35,13 @@ export function Method(): JSX.Element {
 
   return (
     <SitePage path="/method">
-      <PageHero crumb={s.nav.method} eyebrow={s.method.eyebrow} title={s.method.title} lede={s.method.lede} />
+      <PageHero
+        crumb={s.nav.method}
+        eyebrow={s.method.eyebrow}
+        title={s.method.title}
+        lede={s.method.lede}
+        aside={<Art name="method-chain" alt={s.art.methodChain} eager className="mx-auto w-full max-w-xl rtl:-scale-x-100" />}
+      />
 
       <Band>
         <SectionHead eyebrow={s.method.chainEyebrow} title={L.guarantees.title} lede={L.guarantees.lede} />

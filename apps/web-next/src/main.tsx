@@ -13,6 +13,7 @@ import { Link, Navigate } from './lib/nav.js';
 import { applyTheme, ThemeProvider } from './lib/theme.js';
 import { Enter } from './screens/Enter.js';
 import { Landing } from './screens/Landing.js';
+import { Art } from './site/art.js';
 import { usePageMeta } from './site/meta.js';
 import { Button } from './ui/button.js';
 import { EmptyState, Spinner } from './ui/primitives.js';
@@ -79,6 +80,7 @@ function NotFound(): JSX.Element {
       <TopBar />
       <main className="canvas-grid grid flex-1 place-items-center">
         <EmptyState
+          art={<Art name="not-found" alt="" eager className="w-72 max-w-full" />}
           title={t.notFound.title}
           body={t.notFound.body}
           action={

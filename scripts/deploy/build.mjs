@@ -63,11 +63,10 @@ mkdirSync(join(APP, 'tmp'), { recursive: true });
 
 /* ── 2. The API, as one module ───────────────────────────────────────── */
 
-// esbuild is Vite's own; resolving it through Vite means no second copy to keep
-// in step with the one the web build already uses.
-const requireFromWeb = createRequire(join(ROOT, 'apps', 'web', 'package.json'));
-const requireFromVite = createRequire(requireFromWeb.resolve('vite'));
-const esbuild = requireFromVite('esbuild');
+// esbuild is the workspace's own devDependency. It used to be borrowed from
+// Vite, which bundled one; Vite 8 builds with Rolldown and carries esbuild only
+// as an optional peer, so borrowing it would now find nothing.
+const esbuild = createRequire(join(ROOT, 'package.json'))('esbuild');
 
 const EXTERNAL = ['js-angusj-clipper', 'pdfjs-dist', '@napi-rs/canvas'];
 

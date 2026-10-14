@@ -263,15 +263,25 @@ const inEnglish = (node: JSX.Element): string =>
 const inArabic = (node: JSX.Element): string =>
   renderToStaticMarkup(<StaticLocale locale="ar">{node}</StaticLocale>);
 
-/** Both renders of every variant, taken once. */
-function renders(): { readonly key: string; readonly en: string; readonly ar: string; readonly bare: string }[] {
-  return Object.entries(variants()).map(([key, node]) => ({
+type Rendered = { readonly key: string; readonly en: string; readonly ar: string; readonly bare: string };
+
+/*
+  Both renders of every variant, TAKEN ONCE — which this comment said for months
+  while every test below called the function again and re-rendered the whole
+  surface three times over. Alone that is two seconds a test; under the full
+  suite on Vitest 5 it passed the five-second limit. It is taken in `beforeAll`
+  now, where the suite's setup allowance applies, and read from there.
+*/
+let RENDERED: readonly Rendered[] = [];
+beforeAll(() => {
+  RENDERED = Object.entries(variants()).map(([key, node]) => ({
     key,
     en: inEnglish(node),
     ar: inArabic(node),
     bare: renderToStaticMarkup(node),
   }));
-}
+});
+const renders = (): readonly Rendered[] => RENDERED;
 
 /** How React writes a string into markup, so an engine string can be found in it. */
 const escaped = (text: string): string =>

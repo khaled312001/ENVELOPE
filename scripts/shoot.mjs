@@ -106,8 +106,22 @@ await page.screenshot({ path: `${OUT}/10-export.png`, fullPage: true });
   The engine route is shot as the antechamber here: a fresh page has no actor, which
   is exactly what a visitor arriving from a public call to action sees.
 */
-const shootRoutes = async (label, opts) => {
+const shootRoutes = async (label, opts, theme) => {
   const p = await browser.newPage(opts);
+  /*
+    THE THEME IS CHOSEN THE WAY A READER CHOOSES IT. `index.html` deliberately
+    ignores `prefers-color-scheme`, so `colorScheme: 'dark'` alone produced a set
+    of "dark" shots that were all light, and nobody reviewing them could tell.
+  */
+  if (theme) {
+    await p.addInitScript((t) => {
+      try {
+        localStorage.setItem('envelope.theme', t);
+      } catch {
+        /* a page that blocks storage is shot in its default theme */
+      }
+    }, theme);
+  }
   for (const r of ROUTE_DATA) {
     await p.goto(`${BASE}${r.path}`, { waitUntil: 'networkidle' });
     await p.waitForTimeout(300);
@@ -122,7 +136,7 @@ const shootRoutes = async (label, opts) => {
 };
 
 await shootRoutes('20-light', { viewport: { width: 1440, height: 1000 } });
-await shootRoutes('21-dark', { viewport: { width: 1440, height: 1000 }, colorScheme: 'dark' });
+await shootRoutes('21-dark', { viewport: { width: 1440, height: 1000 }, colorScheme: 'dark' }, 'dark');
 await shootRoutes('22-mobile', { viewport: { width: 390, height: 844 } });
 
 /*

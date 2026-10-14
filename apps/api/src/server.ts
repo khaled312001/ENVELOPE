@@ -219,11 +219,11 @@ export async function build(
    * CORS — an allowlist, not a mirror.
    *
    * `origin: true` reflects whatever `Origin` the request carried, which is the
-   * setting to reach for when a service authenticates its callers. This one does
-   * not: `identity.ts` takes the actor from a header and verifies nothing (read
-   * its module comment — the omission is the PRD's, and it is deliberate and
-   * disclosed). Reflecting every origin on top of that means any page the user
-   * visits can read every run on a deployment it can route to.
+   * setting to reach for when a service authenticates every caller. This one
+   * authenticates accounts by session cookie but still admits GUESTS by header
+   * (`resolveActor` in `auth-routes.ts`), and a guest's header verifies nothing.
+   * Reflecting every origin on top of that would let any page the user visits
+   * read a guest's runs, and send credentialed requests on an account's behalf.
    *
    * `CORS_ORIGIN` takes a comma-separated list. The default is the dev server
    * and nothing else, so a deployment that forgets to set it fails closed rather

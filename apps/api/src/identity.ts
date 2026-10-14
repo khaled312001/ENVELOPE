@@ -23,11 +23,14 @@
  * every `USER_SET` value and every gate acknowledgement is attributed to them.
  * That is enough to make the provenance graph honest and the gates meaningful.
  *
- * It is **not authentication**. There is no password, no session, no token
- * verification, and the actor is taken from a request header. In this form it is
- * suitable for a single-tenant design-partner deployment behind a network
- * boundary, and for nothing else. Wiring a real identity provider is a
- * scoped-but-real piece of work that must be quoted, not absorbed.
+ * It is **not, by itself, authentication** — and this paragraph used to say there
+ * was none anywhere, which stopped being true when accounts landed. There are
+ * now passwords (scrypt, `accounts.ts`) and sessions (a hashed token in an
+ * HttpOnly cookie, `auth-routes.ts`), and a signed-in request's actor comes from
+ * the session. What is still true is the GUEST path: an actor with no account
+ * is read from the `X-Actor-*` headers, its runs are reachable by whoever holds
+ * its random id, and clearing the browser loses them. That path is a design
+ * partner's convenience, disclosed on `/refusals`, not an identity.
  *
  * It is written this way rather than stubbed with a hard-coded `"system"` user
  * because a hard-coded user would make every `USER_SET` badge in the product a

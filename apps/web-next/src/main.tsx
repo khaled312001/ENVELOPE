@@ -11,7 +11,6 @@ import { IdentityProvider, useIdentity } from './lib/identity.js';
 import { applyLocale, bareLocation, localeOf, localised, LocaleProvider, remembered, useLocale } from './lib/locale.js';
 import { Link, Navigate } from './lib/nav.js';
 import { applyTheme, ThemeProvider } from './lib/theme.js';
-import { Enter } from './screens/Enter.js';
 import { Landing } from './screens/Landing.js';
 import { Art } from './site/art.js';
 import { usePageMeta } from './site/meta.js';
@@ -28,6 +27,8 @@ const Method = lazy(() => import('./screens/site/Method.js').then((m) => ({ defa
 const Exports = lazy(() => import('./screens/site/Exports.js').then((m) => ({ default: m.Exports })));
 const Limits = lazy(() => import('./screens/site/Limits.js').then((m) => ({ default: m.Limits })));
 const Faq = lazy(() => import('./screens/site/Faq.js').then((m) => ({ default: m.Faq })));
+// The home page is the one screen in the entry chunk; sign-in waits until somebody signs in.
+const Enter = lazy(() => import('./screens/Enter.js').then((m) => ({ default: m.Enter })));
 
 // The site is served at the root. Kept as a constant so the arithmetic below reads the same if it ever moves again.
 const BASE = '';

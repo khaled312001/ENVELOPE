@@ -127,8 +127,15 @@
   --shadow-color: 220 40% 20%;
   --glow-strength: 0.22;
 
-  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
-  --font-mono: 'IBM Plex Mono', 'IBM Plex Sans Arabic', ui-monospace, 'Cascadia Mono', monospace;
+  /*
+    Inter for Latin, Cairo for Arabic — the owner's call of 14 Oct 2026, for a
+    face that reads as a product rather than a document. Inter carries no Arabic
+    glyphs, so an Arabic run falls through to Cairo on its own and a Latin code
+    inside an Arabic sentence stays in Inter. Figures stay in Plex Mono: a traced
+    value is a figure quoted inside a sentence, and mono keeps its columns.
+  */
+  --font-sans: 'Inter', 'Cairo', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Cairo', ui-monospace, 'Cascadia Mono', monospace;
 
   color-scheme: light;
 }
@@ -226,6 +233,7 @@
   --animate-shimmer: shimmer 2.8s linear infinite;
   --animate-float: float 6s ease-in-out infinite;
   --animate-wiggle: wiggle 4.8s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 3.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
 @layer base {
@@ -243,7 +251,8 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    font-feature-settings: 'tnum' 1;
+    /* Inter's tabular figures, and its straight-sided 1 and open 4/6/9, which read better in a column. */
+    font-feature-settings: 'tnum' 1, 'cv01' 1, 'cv05' 1, 'ss03' 1;
     transition: background-color 0.35s var(--ease-out), color 0.35s var(--ease-out);
   }
 
@@ -411,6 +420,106 @@
     --tile-a: var(--brand-glow-solid);
     --tile-b: var(--brand-alt-solid);
   }
+
+  /*
+    HEADINGS THAT NEVER TOUCH. The display sizes were set at a line height of
+    1.04–1.08, which Latin survives and Arabic does not: Arabic letters climb
+    and descend further, and the second line of a 50px Arabic title ran into
+    the first. Latin keeps a tight but clear 1.12; Arabic gets 1.4 and a
+    weight it can hold at size, since a light Arabic face at 50px reads frail.
+  */
+  .heading-display {
+    line-height: 1.12;
+    text-wrap: balance;
+  }
+  .heading-section {
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  /* A slow brand gradient along the edge of a bar. */
+  .brand-edge {
+    background: linear-gradient(90deg, transparent, var(--accent), var(--brand-alt), var(--brand-glow), transparent);
+    background-size: 200% 100%;
+    animation: edge-drift 8s linear infinite;
+  }
+
+  /* A field of dots in a band's corner, fading out. Drawn in a border token, never under prose. */
+  .dot-field {
+    background-image: radial-gradient(var(--border-strong) 1.2px, transparent 1.4px);
+    background-size: 18px 18px;
+    mask-image: radial-gradient(circle at 70% 30%, black, transparent 70%);
+    opacity: 0.7;
+  }
+
+  /* The tinted band: the panel surface with a breath of the brand toward its far edge. */
+  .band-tint {
+    background:
+      radial-gradient(ellipse at 100% 0%, color-mix(in oklab, var(--accent) 6%, transparent), transparent 55%),
+      radial-gradient(ellipse at 0% 100%, color-mix(in oklab, var(--brand-alt) 5%, transparent), transparent 55%),
+      var(--surface-panel);
+  }
+
+  /* A light sweeping across the call to action every few seconds. Transform only. */
+  .cta-shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 35%, color-mix(in oklab, var(--on-brand) 16%, transparent) 50%, transparent 65%);
+    transform: translateX(-100%);
+    animation: sweep 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* A dash travelling round a drawn outline. */
+  .dash-flow {
+    animation: dash-flow 7s linear infinite;
+  }
+
+  /* A brand border that lights up when a card is hovered — a card the pointer is on reads as live. */
+  /* Not on a card that already turns a brand ring: that one owns its ::before. */
+  .spotlight:not(.ring-brand)::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--accent), var(--brand-alt), var(--brand-glow));
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s var(--ease-out);
+    pointer-events: none;
+  }
+  .spotlight:not(.ring-brand):hover::before {
+    opacity: 1;
+  }
+}
+
+/*
+  UNLAYERED, so it wins over the utilities on the element: an Arabic heading's
+  line height and weight are a property of the script, not of one component.
+*/
+:lang(ar) :is(h1, h2, h3, .heading-display, .heading-section) {
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+:lang(ar) :is(h1, h2, .heading-display, .heading-section) {
+  font-weight: 600;
+}
+/* Tracking pulls joined Arabic letters apart; the Latin eyebrows' letter-spacing stops at the script. */
+:lang(ar) :is([class*='tracking-'], .figure) {
+  letter-spacing: 0;
+}
+/* A phrase inside the title takes the title's Arabic weight, not the Latin one set on it. */
+:lang(ar) :is(h1, .heading-display) * {
+  font-weight: inherit;
+}
+:lang(ar) body {
+  line-height: 1.7;
 }
 
 @property --angle {
@@ -480,6 +589,40 @@
   }
   92% {
     transform: rotate(-6deg);
+  }
+}
+
+@keyframes pulse-soft {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  70%,
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes edge-drift {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes sweep {
+  0%,
+  55% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -928;
   }
 }
 

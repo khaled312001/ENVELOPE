@@ -5,6 +5,7 @@ import type { RunView } from '@web/api/client.js';
 import { cn } from '../lib/cn.js';
 import { EngineText, useLocale } from '../lib/locale.js';
 import { Badge, PanelHeader } from '../ui/primitives.js';
+import { Footer, Heading, More, NextStep } from './parts.js';
 
 /*
   THE CHECKS, WITH THE DENOMINATOR THAT MEANS SOMETHING.
@@ -67,38 +68,82 @@ export function ChecksCanvas({ run }: { readonly run: RunView }): JSX.Element {
 
 const CLAIMS = ['selfConsistency', 'ruleCoverage', 'geometricValidity', 'professionalAgreement', 'regulatoryValidity'] as const;
 
-export function ChecksPanel({ run }: { readonly run: RunView }): JSX.Element {
+export function ChecksPanel({
+  run,
+  onNext,
+}: {
+  readonly run: RunView;
+  /** Optional so a caller that does not wire it keeps working; when given, it is the panel's one primary action. */
+  readonly onNext?: () => void;
+}): JSX.Element {
   const { t } = useLocale();
+  const inv = run.checks.invariants;
   const v = run.checks.validation;
   return (
     <div>
-      <PanelHeader title={t.checks.claimsTitle} hint={t.checks.claimsHint} />
-      <div className="grid grid-cols-1 gap-4 p-4">
-        <dl className="grid gap-2">
-          {CLAIMS.map((k) => (
-            <div key={k} className={cn('grid gap-1 rounded-md border p-3', k === 'regulatoryValidity' ? 'border-strong bg-raised' : 'border-line bg-base')}>
-              <dt className="flex items-center justify-between gap-2 text-[12.5px] font-medium text-fg">
-                {t.checks.claim[k]}
-                <EngineText className={cn('figure text-[11px]', k === 'regulatoryValidity' ? 'not-assessed text-fg' : 'text-secondary')}>{v.claims[k].status}</EngineText>
-              </dt>
-              <dd className="text-[12px] leading-relaxed text-secondary">
-                <EngineText>{v.claims[k].detail}</EngineText>
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <section className="grid gap-1.5 text-[12px]">
-          <h3 className="font-medium text-fg">{t.checks.validation}</h3>
-          <dl className="grid grid-cols-2 gap-2">
+      <PanelHeader title={t.checks.title} />
+      <div className="grid grid-cols-1 gap-6 p-4">
+        {/* The answer: did anything fail, and how many checks actually ran. A check that did not run is not a pass. */}
+        <section className="grid gap-3" aria-label={t.checks.title}>
+          <p className="flex items-center gap-2 text-[18px] font-medium text-fg">
+            {inv.passed ? (
+              <CircleCheck className="size-5 shrink-0 text-secondary" aria-hidden="true" />
+            ) : (
+              <CircleX className="size-5 shrink-0 text-variance" aria-hidden="true" />
+            )}
+            <span className={inv.passed ? undefined : 'text-variance'}>{inv.passed ? t.checks.noneFailed : t.checks.failed}</span>
+          </p>
+          <p className="text-[12.5px] text-secondary">{t.checks.ran(inv.ran, inv.total, inv.dormant.length)}</p>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
             <Fact label={t.checks.hardChecked} value={v.summary.hardChecked} />
             <Fact label={t.checks.hardViolated} value={v.summary.hardViolated} tone={v.summary.hardViolated > 0 ? 'variance' : undefined} />
+          </dl>
+        </section>
+
+        {/* The five-way claim statement, in the engine's words, regulatory validity last and set apart. */}
+        <section className="grid gap-2" aria-labelledby="claims">
+          <Heading id="claims">{t.checks.claimsTitle}</Heading>
+          <dl className="grid divide-y divide-subtle border-y border-subtle">
+            {CLAIMS.map((k) =>
+              k === 'regulatoryValidity' ? null : (
+                <div key={k} className="grid gap-1 py-2">
+                  <dt className="flex items-baseline justify-between gap-2 text-[12.5px] font-medium text-fg">
+                    {t.checks.claim[k]}
+                    <EngineText className="figure text-[11px] text-secondary">{v.claims[k].status}</EngineText>
+                  </dt>
+                  <dd className="text-[12px] leading-relaxed text-secondary">
+                    <EngineText>{v.claims[k].detail}</EngineText>
+                  </dd>
+                </div>
+              ),
+            )}
+          </dl>
+          <dl className="grid gap-1 rounded-md border border-strong bg-raised p-3">
+            <dt className="flex items-baseline justify-between gap-2 text-[13px] font-semibold text-fg">
+              {t.checks.claim.regulatoryValidity}
+              <EngineText className="figure not-assessed text-[11.5px] text-fg">{v.claims.regulatoryValidity.status}</EngineText>
+            </dt>
+            <dd className="text-[12px] leading-relaxed text-secondary">
+              <EngineText>{v.claims.regulatoryValidity.detail}</EngineText>
+            </dd>
+          </dl>
+        </section>
+
+        <More summary={t.checks.validation}>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
             <Fact label={t.checks.notEvaluable} value={v.summary.hardNotEvaluable} />
             <Fact label={t.checks.deferred} value={v.summary.deferredDeclared} />
             <Fact label={t.checks.lifeSafety} value={v.summary.lifeSafetyDeferred} />
           </dl>
-        </section>
-        <EngineText className="block rounded-md border border-line bg-base p-3 text-[12px] leading-relaxed text-secondary">{v.selfConsistencyNotice}</EngineText>
-        <EngineText className="block text-[11.5px] leading-relaxed text-tertiary">{v.independenceLimit}</EngineText>
+          <EngineText className="block text-[12px] leading-relaxed text-secondary">{v.selfConsistencyNotice}</EngineText>
+          <EngineText className="block text-[11.5px] leading-relaxed text-tertiary">{v.independenceLimit}</EngineText>
+        </More>
+
+        {onNext ? (
+          <Footer>
+            <NextStep label={t.studio.step.export} onClick={onNext} />
+          </Footer>
+        ) : null}
       </div>
     </div>
   );
@@ -106,9 +151,9 @@ export function ChecksPanel({ run }: { readonly run: RunView }): JSX.Element {
 
 function Fact({ label, value, tone }: { readonly label: string; readonly value: number; readonly tone?: 'variance' | undefined }): JSX.Element {
   return (
-    <div className="rounded-md border border-line bg-base px-2.5 py-2">
-      <dt className="text-[11px] text-secondary">{label}</dt>
-      <dd className={cn('figure text-[15px]', tone === 'variance' ? 'text-variance' : 'text-fg')}>{value}</dd>
+    <div className="grid content-start gap-0.5">
+      <dt className="text-[11.5px] text-secondary">{label}</dt>
+      <dd className={cn('figure text-[18px] font-medium', tone === 'variance' ? 'text-variance' : 'text-fg')}>{value}</dd>
     </div>
   );
 }

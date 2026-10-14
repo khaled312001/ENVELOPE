@@ -29,6 +29,8 @@ export function Exports(): JSX.Element {
   return (
     <SitePage path="/exports">
       <PageHero
+        icon={Layers}
+        tone="cyan"
         crumb={s.nav.exports}
         eyebrow={s.exportsPage.eyebrow}
         title={s.exportsPage.title}

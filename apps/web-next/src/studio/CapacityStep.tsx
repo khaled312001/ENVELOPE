@@ -1,7 +1,8 @@
-import { Eye, EyeOff } from 'lucide-react';
+import { ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 
 import type { RunView } from '@web/api/client.js';
+import type { TracedWire } from '@web/components/TracedValue.js';
 
 import { Massing3D, type MassingControls } from '../components/Massing3D.js';
 import { ClassMark, Legend, Traced, useInspect } from '../components/Traced.js';
@@ -10,6 +11,7 @@ import { grouped, percent } from '../lib/figures.js';
 import { EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Notice, PanelHeader, Select } from '../ui/primitives.js';
+import { assumedFirst, Footer, Heading, More, NextStep, Row } from './parts.js';
 
 export function CapacityCanvas({ run }: { readonly run: RunView }): JSX.Element {
   const { t } = useLocale();
@@ -101,131 +103,169 @@ const BANDS = [
   { key: 'bandC', band: 'PARKING', letter: 'C' },
 ] as const;
 
-export function CapacityPanel({ run }: { readonly run: RunView }): JSX.Element {
+interface Figure {
+  readonly key: string;
+  readonly label: string;
+  readonly value: TracedWire;
+  readonly places: number;
+}
+
+export function CapacityPanel({
+  run,
+  onNext,
+}: {
+  readonly run: RunView;
+  /** Optional so a caller that does not wire it keeps working; when given, it is the panel's one primary action. */
+  readonly onNext?: () => void;
+}): JSX.Element {
   const { t } = useLocale();
   const c = run.capacity;
   // A bar's width is the one place a figure becomes a JS number, and only for drawing the bar.
   const max = Math.max(...BANDS.map((b) => Number(c[b.key].value)), 1);
+  const governing = BANDS.find((b) => b.band === c.governingBand);
+  // The figures a reader needs first; the envelope's own limits fold away — unless one of them was assumed.
+  const { shown, folded } = assumedFirst<Figure>(
+    [
+      { key: 'levels', label: t.capacity.levels, value: c.levels, places: 2 },
+      { key: 'saleable', label: t.capacity.saleable, value: c.saleableAreaM2, places: 0 },
+      { key: 'share', label: t.capacity.saleableShare, value: c.saleableEfficiency, places: 4 },
+      { key: 'far', label: t.capacity.farTreatment, value: c.parkingInFarTreatment, places: 2 },
+    ],
+    [
+      { key: 'height', label: t.capacity.height, value: run.envelope.heightCeilingM, places: 2 },
+      { key: 'plate', label: t.capacity.plate, value: run.envelope.towerPlateCap, places: 0 },
+      ...(run.core ? [{ key: 'core', label: t.capacity.core, value: run.core.areaM2, places: 1 }] : []),
+      { key: 'bays', label: t.capacity.totalBays, value: run.parking.totalBays, places: 2 },
+    ],
+  );
   return (
     <div>
       <PanelHeader title={t.capacity.title} hint={t.capacity.hint2} />
-      <div className="grid grid-cols-1 gap-5 p-4">
+      <div className="grid grid-cols-1 gap-6 p-4">
         {run.warning ? <Notice tone="neutral">{run.warning}</Notice> : null}
 
-        <section className="grid gap-2">
-          <h3 className="text-[12px] font-medium text-secondary">{t.capacity.governing}</h3>
+        {/* The answer: one figure, and the band and constraint that set it. */}
+        <section className="grid gap-2" aria-labelledby="governing">
+          <Heading id="governing">{t.capacity.governing}</Heading>
           <Traced value={c.governingGfa} size="xl" places={2} />
-          <p className="text-[12.5px] text-secondary">
-            {t.capacity.governedBy(BANDS.find((b) => b.band === c.governingBand)?.letter ?? '?', t.bands[BANDS.find((b) => b.band === c.governingBand)?.key ?? 'bandA'].name)}
-          </p>
-          <p className="text-[12.5px] text-secondary">
+          <p className="text-[13px] font-medium text-fg">{t.capacity.governedBy(governing?.letter ?? '?', t.bands[governing?.key ?? 'bandA'].name)}</p>
+          <p className="text-[12px] text-secondary">
             {t.capacity.binding} <EngineText className="text-fg">{c.governingConstraint.label}</EngineText>{' '}
             <span className="figure text-tertiary">{c.governingConstraint.ruleId}</span>
           </p>
         </section>
 
-        <section className="grid gap-2.5" aria-labelledby="bands">
-          <h3 id="bands" className="text-[12px] font-medium text-secondary">
-            {t.capacity.bands}
-          </h3>
-          {BANDS.map((b) => {
-            const gov = b.band === c.governingBand;
-            const w = Math.max(2, (Number(c[b.key].value) / max) * 100);
-            return (
-              <div key={b.key} className={cn('grid gap-1.5 rounded-md border p-2.5', gov ? 'border-accent/50 bg-accent-subtle/40' : 'border-line bg-base')}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 text-[12.5px] text-fg">
-                    <span className="figure grid size-5 place-items-center rounded border border-strong text-[10.5px]">{b.letter}</span>
-                    {t.bands[b.key].name}
-                  </span>
-                  <Traced value={c[b.key]} size="sm" places={0} />
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-sunken" aria-hidden="true">
-                  <div className={cn('h-full rounded-full', gov ? 'bg-accent' : 'bg-strong')} style={{ width: `${w}%` }} />
-                </div>
-              </div>
-            );
-          })}
-          <p className="text-[12px] text-secondary">
-            {t.capacity.headroom(grouped(c.headroomToNextM2))}
-          </p>
+        <section className="grid gap-3" aria-labelledby="bands">
+          <Heading id="bands">{t.capacity.bands}</Heading>
+          <ul className="grid gap-3">
+            {BANDS.map((b) => {
+              const gov = b.band === c.governingBand;
+              const w = Math.max(2, (Number(c[b.key].value) / max) * 100);
+              return (
+                <li key={b.key} className="grid gap-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={cn('flex items-center gap-2 text-[12.5px]', gov ? 'font-medium text-fg' : 'text-secondary')}>
+                      <span
+                        className={cn(
+                          'figure grid size-5 place-items-center rounded border text-[10.5px]',
+                          gov ? 'border-accent text-accent-strong' : 'border-line text-secondary',
+                        )}
+                      >
+                        {b.letter}
+                      </span>
+                      {t.bands[b.key].name}
+                    </span>
+                    <Traced value={c[b.key]} size="sm" places={0} />
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-sunken" aria-hidden="true">
+                    <div className={cn('h-full rounded-full', gov ? 'bg-accent' : 'bg-strong')} style={{ width: `${w}%` }} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-[12px] text-secondary">{t.capacity.headroom(grouped(c.headroomToNextM2))}</p>
         </section>
 
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-subtle pt-4">
-          <Row label={t.capacity.levels}>
-            <Traced value={c.levels} />
-          </Row>
-          <Row label={t.capacity.saleable}>
-            <Traced value={c.saleableAreaM2} places={0} />
-          </Row>
-          <Row label={t.capacity.saleableShare}>
-            <Traced value={c.saleableEfficiency} places={4} />
-          </Row>
-          <Row label={t.capacity.farTreatment}>
-            <Traced value={c.parkingInFarTreatment} />
-          </Row>
-          <Row label={t.capacity.height}>
-            <Traced value={run.envelope.heightCeilingM} />
-          </Row>
-          <Row label={t.capacity.plate}>
-            <Traced value={run.envelope.towerPlateCap} places={0} />
-          </Row>
-          {run.core ? (
-            <Row label={t.capacity.core}>
-              <Traced value={run.core.areaM2} places={1} />
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+          {shown.map((f) => (
+            <Row key={f.key} label={f.label}>
+              <Traced value={f.value} places={f.places} />
             </Row>
-          ) : null}
-          <Row label={t.capacity.totalBays}>
-            <Traced value={run.parking.totalBays} />
-          </Row>
+          ))}
         </dl>
 
-        {run.core && run.core.reconciliation.length > 0 ? (
-          <section className="grid gap-1.5 rounded-md border border-line bg-base p-3 text-[12px] text-secondary">
-            <h3 className="font-medium text-fg">{t.capacity.coreRec}</h3>
-            {run.core.reconciliation.map((r, i) => (
-              <EngineText key={i} className="block leading-relaxed">
-                {r}
-              </EngineText>
-            ))}
+        {/* Assumptions stay in view, amber, with their values; the basis and the measured sensitivity open beneath each. */}
+        {run.assumptions.length > 0 ? (
+          <section className="grid gap-2" aria-labelledby="assumed">
+            <Heading id="assumed">{t.capacity.assumptions(run.assumptions.length)}</Heading>
+            <ul className="grid gap-2">
+              {run.assumptions.map((a) => (
+                <li key={a.nodeId} className="rounded-md border border-dashed border-assumed/60 bg-base">
+                  <details className="group">
+                    <summary
+                      className={cn(
+                        'flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md px-2.5 py-2',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40 [&::-webkit-details-marker]:hidden',
+                      )}
+                    >
+                      <span className="grid min-w-0 flex-1 gap-0.5">
+                        <EngineText className="text-[12.5px] font-medium text-fg">{a.label}</EngineText>
+                        <span className="figure text-[13px] text-assumed">
+                          {grouped(a.value)}
+                          {a.unit ? <span className="ms-1 text-secondary">{a.unit}</span> : null}
+                        </span>
+                      </span>
+                      <ClassMark cls="ASSUMED" />
+                      <ChevronDown
+                        className="size-4 shrink-0 text-secondary transition-transform duration-150 group-open:rotate-180 motion-reduce:transition-none"
+                        aria-hidden="true"
+                      />
+                    </summary>
+                    <div className="grid gap-1.5 px-2.5 pb-2.5">
+                      <EngineText className="text-[12px] leading-relaxed text-secondary">{a.basis}</EngineText>
+                      {a.sensitivity ? (
+                        <p className="text-[11.5px] text-tertiary">
+                          {t.capacity.sensitivity(a.sensitivity.perturbation, grouped(a.sensitivity.lowGoverningGfaM2), grouped(a.sensitivity.highGoverningGfaM2), percent(a.sensitivity.relativeEffect))}
+                        </p>
+                      ) : null}
+                    </div>
+                  </details>
+                </li>
+              ))}
+            </ul>
           </section>
         ) : null}
 
-        <section className="grid gap-2" aria-labelledby="assumed">
-          <h3 id="assumed" className="flex items-center gap-2 text-[12px] font-medium text-secondary">
-            {t.capacity.assumptions(run.assumptions.length)}
-          </h3>
-          <ul className="grid gap-2">
-            {run.assumptions.map((a) => (
-              <li key={a.nodeId} className="grid gap-1.5 rounded-md border border-dashed border-assumed/60 bg-base p-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <EngineText className="text-[12.5px] font-medium text-fg">{a.label}</EngineText>
-                  <ClassMark cls="ASSUMED" />
-                </div>
-                <p className="figure text-[13px] text-assumed">
-                  {grouped(a.value)}
-                  {a.unit ? <span className="ms-1 text-secondary">{a.unit}</span> : null}
-                </p>
-                <EngineText className="text-[12px] leading-relaxed text-secondary">{a.basis}</EngineText>
-                {a.sensitivity ? (
-                  <p className="text-[11.5px] text-tertiary">
-                    {t.capacity.sensitivity(a.sensitivity.perturbation, grouped(a.sensitivity.lowGoverningGfaM2), grouped(a.sensitivity.highGoverningGfaM2), percent(a.sensitivity.relativeEffect))}
-                  </p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-    </div>
-  );
-}
+        <div>
+          {folded.length > 0 ? (
+            <More summary={folded.map((f) => f.label).join(' · ')}>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                {folded.map((f) => (
+                  <Row key={f.key} label={f.label}>
+                    <Traced value={f.value} places={f.places} />
+                  </Row>
+                ))}
+              </dl>
+            </More>
+          ) : null}
+          {run.core && run.core.reconciliation.length > 0 ? (
+            <More summary={t.capacity.coreRec}>
+              {run.core.reconciliation.map((r, i) => (
+                <EngineText key={i} className="block text-[12px] leading-relaxed text-secondary">
+                  {r}
+                </EngineText>
+              ))}
+            </More>
+          ) : null}
+        </div>
 
-function Row({ label, children }: { readonly label: string; readonly children: React.ReactNode }): JSX.Element {
-  return (
-    <div className="grid gap-0.5">
-      <dt className="text-[11.5px] text-secondary">{label}</dt>
-      <dd>{children}</dd>
+        {onNext ? (
+          <Footer>
+            <NextStep label={t.studio.step.parking} onClick={onNext} />
+          </Footer>
+        ) : null}
+      </div>
     </div>
   );
 }

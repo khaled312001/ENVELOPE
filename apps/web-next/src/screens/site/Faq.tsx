@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { MessageCircleQuestion, Plus } from 'lucide-react';
 
 import { useLocale } from '../../lib/locale.js';
 import { Link } from '../../lib/nav.js';
@@ -20,7 +20,7 @@ export function Faq(): JSX.Element {
   const items = FAQ[locale];
   return (
     <SitePage path="/faq">
-      <PageHero crumb={s.nav.faq} eyebrow={s.faq.eyebrow} title={s.faq.title} lede={s.faq.lede} />
+      <PageHero icon={MessageCircleQuestion} tone="violet" crumb={s.nav.faq} eyebrow={s.faq.eyebrow} title={s.faq.title} lede={s.faq.lede} />
       <Band glow="violet">
         <Stagger className="mx-auto grid max-w-3xl gap-3" gap={0.04}>
           {items.map((q, i) => (

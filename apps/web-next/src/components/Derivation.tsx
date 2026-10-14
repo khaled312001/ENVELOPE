@@ -9,7 +9,7 @@ import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
 import { EngineText, useLocale } from '../lib/locale.js';
 import { Notice, Spinner } from '../ui/primitives.js';
-import { Drawer } from '../ui/radix.js';
+import { Drawer } from '../ui/drawer.js';
 import { ClassMark } from './Traced.js';
 
 /*

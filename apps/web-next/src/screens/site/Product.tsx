@@ -44,6 +44,8 @@ export function Product(): JSX.Element {
   return (
     <SitePage path="/product">
       <PageHero
+        icon={Box}
+        tone="blue"
         crumb={s.nav.product}
         eyebrow={s.product.eyebrow}
         title={s.product.title}
@@ -64,9 +66,7 @@ export function Product(): JSX.Element {
                   <span className="figure text-fg">{worked.input.plot.plotNumber}</span> · {worked.input.plot.community}
                 </span>
               </div>
-            </div>
-            <figcaption className="mt-3 text-[12.5px] text-secondary">{s.product.modelCaption}</figcaption>
-          </motion.figure>
+            </div>          </motion.figure>
         }
       />
 

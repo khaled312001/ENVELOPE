@@ -1,7 +1,4 @@
-import { SITE_AR } from '../i18n/site.ar.js';
-import { SITE_EN } from '../i18n/site.en.js';
 import { cn } from '../lib/cn.js';
-import { useLocale } from '../lib/locale.js';
 
 import cardExports from '../assets/img/card-exports.webp';
 import cardFaq from '../assets/img/card-faq.webp';
@@ -88,8 +85,10 @@ export function Art({
 }
 
 /**
- * A white study model in a frame, with the sentence that says it is a picture.
- * The studio sweep is part of the image, so it reads as a photograph on either theme.
+ * A white study model in a frame. The caption that said it was a picture was
+ * taken off on 14 Oct 2026 with the rest of the explanatory captions; the alt
+ * text still names it as an illustration. The studio sweep is part of the
+ * image, so it reads as a photograph on either theme.
  */
 export function Illustration({
   name,
@@ -102,14 +101,9 @@ export function Illustration({
   readonly className?: string;
   readonly eager?: boolean;
 }): JSX.Element {
-  const { locale } = useLocale();
-  const s = locale === 'ar' ? SITE_AR : SITE_EN;
   return (
-    <figure className={cn('grid gap-2', className)}>
-      <div className="overflow-hidden rounded-xl border border-line shadow-soft">
-        <Art name={name} alt={alt} eager={eager} className="w-full" />
-      </div>
-      <figcaption className="text-[12px] text-secondary">{s.art.illustration}</figcaption>
+    <figure className={cn('group overflow-hidden rounded-xl border border-line shadow-soft', className)}>
+      <Art name={name} alt={alt} eager={eager} className="w-full transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:group-hover:scale-100" />
     </figure>
   );
 }

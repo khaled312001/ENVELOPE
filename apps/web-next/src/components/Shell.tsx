@@ -1,5 +1,5 @@
 import { DropdownMenu } from 'radix-ui';
-import { Languages, LogOut, Moon, ShieldOff, Sun, UserRound } from 'lucide-react';
+import { FolderOpen, Languages, LogOut, Moon, Plus, Sun, UserRound } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { ReactNode } from 'react';
 
@@ -30,29 +30,16 @@ export function Logo({ className }: { readonly className?: string }): JSX.Elemen
 }
 
 /*
-  THE STAMP, ON EVERY SCREEN, IN THE CHROME.
-
-  "Regulatory validity: not assessed" is permanent and appears in every output,
-  so it is part of the frame rather than of any one page — a reader can never be
-  on a screen of figures without it in view. Italic, and an icon, so it is not
-  carried by colour.
+  NO STAMP IN THE CHROME — the owner's call of 14 Oct 2026. The chip that sat in
+  every header, hero and footer is gone from the frame. What it said is still
+  said where a figure is handed over: the five-way claim statement on the home
+  page and in the study's checks, and every exported file, which the engine
+  stamps and these screens do not touch.
 */
-export function RegulatoryStamp({ className }: { readonly className?: string }): JSX.Element {
-  const { t } = useLocale();
-  return (
-    <Tip content={t.stamp.long}>
-      <p
-        tabIndex={0}
-        className={cn(
-          'not-assessed inline-flex items-center gap-1.5 rounded-sm border border-line bg-raised px-2 py-1 text-[11.5px] whitespace-nowrap text-secondary',
-          className,
-        )}
-      >
-        <ShieldOff className="size-3.5 shrink-0" aria-hidden="true" />
-        <span>{t.stamp.short}</span>
-      </p>
-    </Tip>
-  );
+
+/** A thin brand gradient along the bottom edge of a bar, drifting slowly. Decoration. */
+export function BrandEdge({ className }: { readonly className?: string }): JSX.Element {
+  return <span aria-hidden="true" className={cn('brand-edge pointer-events-none absolute inset-x-0 bottom-0 h-px', className)} />;
 }
 
 export function ThemeToggle(): JSX.Element {
@@ -111,7 +98,7 @@ export function Account(): JSX.Element {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <Button variant="ghost" size="sm" aria-label={t.shell.accountMenu(actor.name)}>
-          <span className="grid size-6 place-items-center rounded-full border border-strong bg-raised text-[11px] font-semibold text-fg">
+          <span className="tile tile-violet size-6 rounded-full text-[11px] font-semibold">
             {actor.name.trim().slice(0, 1).toUpperCase() || <UserRound aria-hidden="true" />}
           </span>
           <span className="hidden max-w-[10rem] truncate sm:inline">{actor.name}</span>
@@ -146,25 +133,30 @@ export function Account(): JSX.Element {
 export function TopBar({ children }: { readonly children?: ReactNode }): JSX.Element {
   const { t } = useLocale();
   const { actor } = useIdentity();
-  const nav = 'rounded-md px-2.5 py-1.5 text-[13px] font-medium text-secondary transition-colors hover:bg-hover hover:text-fg aria-[current=page]:bg-raised aria-[current=page]:text-fg';
+  const nav =
+    'group/nav relative inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium text-secondary transition-colors hover:bg-hover hover:text-fg aria-[current=page]:text-fg';
   return (
     <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b border-line bg-base/90 px-3 backdrop-blur sm:px-4">
-      <Link to="/" className="me-2 rounded-md p-1" aria-label={t.shell.home}>
+      <BrandEdge />
+      <Link to="/" className="me-2 rounded-md p-1 transition-transform duration-300 hover:-translate-y-px" aria-label={t.shell.home}>
         <Logo />
       </Link>
       {actor ? (
         <nav aria-label={t.shell.nav} className="ms-2 hidden items-center gap-0.5 sm:flex">
           <NavLink to="/studies" className={nav}>
+            <FolderOpen className="size-3.5 text-accent" aria-hidden="true" />
             {t.shell.studies}
+            <NavMarker />
           </NavLink>
           <NavLink to="/studio" end className={nav}>
+            <Plus className="size-3.5 text-brand-alt" aria-hidden="true" />
             {t.shell.newStudy}
+            <NavMarker />
           </NavLink>
         </nav>
       ) : null}
       {children}
       <div className="ms-auto flex items-center gap-1.5">
-        <RegulatoryStamp className="hidden lg:inline-flex" />
         {/* The previous studio, still served whole at /app for whatever this one does not do yet. */}
         <a href="/app" className="hidden rounded-md px-2 py-1.5 text-[12.5px] text-secondary hover:bg-hover hover:text-fg md:inline">
           {t.shell.classic}
@@ -174,5 +166,18 @@ export function TopBar({ children }: { readonly children?: ReactNode }): JSX.Ele
         <Account />
       </div>
     </header>
+  );
+}
+
+/**
+ * The underline under the current page's link, in the brand gradient. Drawn by
+ * CSS from `aria-current` on the parent link, so it needs no state of its own.
+ */
+export function NavMarker(): JSX.Element {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-2.5 -bottom-px h-0.5 origin-center scale-x-0 rounded-full bg-linear-to-r from-accent via-brand-alt to-brand-glow transition-transform duration-300 ease-out group-hover/nav:scale-x-50 group-aria-[current=page]/nav:scale-x-100"
+    />
   );
 }

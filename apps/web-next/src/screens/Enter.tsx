@@ -148,7 +148,6 @@ export function Enter(): JSX.Element {
         {/* The second half of the page on wide screens only: on a phone the forms are the page. */}
         <figure className="relative hidden overflow-hidden border-s border-line xl:block">
           <Art name="enter-panel" alt={s.art.enterPanel} eager className="absolute inset-0 size-full max-w-none object-cover" />
-          <figcaption className="absolute inset-x-0 bottom-0 bg-panel/85 px-5 py-3 text-[12px] text-secondary backdrop-blur">{s.art.illustration}</figcaption>
         </figure>
       </main>
     </div>

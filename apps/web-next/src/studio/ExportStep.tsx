@@ -82,63 +82,103 @@ export function ExportPanel({ actor, run, onSigned }: { readonly actor: Actor; r
     { f: 'json', icon: FileJson },
   ];
 
+  // The one primary action: the first gate still unsigned, or — once both are — the report.
+  const nextGate = !g3 ? 'G3_ASSUMPTIONS_ACKNOWLEDGED' : !g4 ? 'G4_REVIEWER_NAMED' : null;
+  const [lead, ...rest] = files;
+
+  const gatesBlock = (
+    <section className="grid gap-2">
+      <ol aria-label={`G3 · G4`} className="grid divide-y divide-subtle border-y border-subtle">
+        <Gate
+          n="G3"
+          title={t.exports.g3}
+          body={t.exports.g3Body(run.assumptions.length)}
+          signed={g3 ? t.exports.signedBy(g3.actorName) : null}
+          action={t.exports.g3Action}
+          primary={nextGate === 'G3_ASSUMPTIONS_ACKNOWLEDGED'}
+          busy={busy === 'G3_ASSUMPTIONS_ACKNOWLEDGED'}
+          onSign={() => void sign('G3_ASSUMPTIONS_ACKNOWLEDGED')}
+        />
+        <Gate
+          n="G4"
+          title={t.exports.g4}
+          body={actor.licence ? t.exports.g4Body : t.exports.g4NoLicence}
+          signed={g4 ? t.exports.signedBy(g4.actorName) : null}
+          action={t.exports.g4Action}
+          primary={nextGate === 'G4_REVIEWER_NAMED'}
+          busy={busy === 'G4_REVIEWER_NAMED'}
+          onSign={() => void sign('G4_REVIEWER_NAMED')}
+        />
+      </ol>
+    </section>
+  );
+
+  const filesBlock = (
+    <section className="grid gap-2" aria-labelledby="files">
+      {lead ? (
+        <Button
+          variant={open ? 'primary' : 'secondary'}
+          size="lg"
+          className="w-full"
+          disabled={!open || busy !== null}
+          aria-busy={busy === lead.f || undefined}
+          onClick={() => void download(lead.f)}
+        >
+          {busy === lead.f ? <Spinner /> : <lead.icon aria-hidden="true" />}
+          {t.exports.file[lead.f].name}
+        </Button>
+      ) : null}
+      {lead ? <p className="text-[11.5px] text-secondary">{t.exports.file[lead.f].body}</p> : null}
+      <ul className="grid grid-cols-2 gap-2">
+        {rest.map(({ f, icon: Icon, needsModel }) => {
+          const unavailable = needsModel && !run.building;
+          return (
+            <li key={f}>
+              <button
+                type="button"
+                disabled={!open || unavailable || busy !== null}
+                aria-busy={busy === f || undefined}
+                onClick={() => void download(f)}
+                className={cn(
+                  'grid min-h-11 w-full gap-0.5 rounded-md border border-line bg-base px-3 py-2 text-start transition-colors duration-150',
+                  'hover:border-strong hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40',
+                  'disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-line disabled:hover:bg-base',
+                )}
+              >
+                <span className="flex items-center gap-2 text-[13px] font-medium text-fg">
+                  {busy === f ? <Spinner /> : <Icon className="size-4 text-accent" aria-hidden="true" />}
+                  {t.exports.file[f].name}
+                </span>
+                <span className="text-[11.5px] leading-snug text-secondary">{t.exports.file[f].body}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+
   return (
     <div>
       <PanelHeader title={t.exports.title} hint={t.exports.hint} />
-      <div className="grid grid-cols-1 gap-4 p-4">
-        <ol className="grid gap-2">
-          <Gate
-            n="G3"
-            title={t.exports.g3}
-            body={t.exports.g3Body(run.assumptions.length)}
-            signed={g3 ? t.exports.signedBy(g3.actorName) : null}
-            action={t.exports.g3Action}
-            busy={busy === 'G3_ASSUMPTIONS_ACKNOWLEDGED'}
-            onSign={() => void sign('G3_ASSUMPTIONS_ACKNOWLEDGED')}
-          />
-          <Gate
-            n="G4"
-            title={t.exports.g4}
-            body={actor.licence ? t.exports.g4Body : t.exports.g4NoLicence}
-            signed={g4 ? t.exports.signedBy(g4.actorName) : null}
-            action={t.exports.g4Action}
-            busy={busy === 'G4_REVIEWER_NAMED'}
-            onSign={() => void sign('G4_REVIEWER_NAMED')}
-          />
-        </ol>
+      <div className="grid grid-cols-1 gap-5 p-4">
+        {/* The answer: can the files be had now, and if not, what stands in the way. */}
+        <p id="files" className="flex items-center gap-2 text-[15px] font-medium text-fg">
+          {open ? <Check className="size-4 text-accent-strong" aria-hidden="true" /> : <Lock className="size-4 text-secondary" aria-hidden="true" />}
+          {open ? t.exports.files : t.exports.locked}
+        </p>
         {error ? <Notice>{error}</Notice> : null}
-        <section className="grid gap-2" aria-labelledby="files">
-          <h3 id="files" className="flex items-center gap-2 text-[12px] font-medium text-secondary">
-            {!open ? <Lock className="size-3.5" aria-hidden="true" /> : null}
-            {open ? t.exports.files : t.exports.locked}
-          </h3>
-          <ul className="grid grid-cols-2 gap-2">
-            {files.map(({ f, icon: Icon, needsModel }) => {
-              const unavailable = needsModel && !run.building;
-              return (
-                <li key={f}>
-                  <button
-                    type="button"
-                    disabled={!open || unavailable || busy !== null}
-                    aria-busy={busy === f || undefined}
-                    onClick={() => void download(f)}
-                    className={cn(
-                      'grid w-full gap-1 rounded-md border border-line bg-base p-3 text-start transition-colors duration-150',
-                      'hover:border-strong hover:bg-raised disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-line disabled:hover:bg-base',
-                    )}
-                  >
-                    <span className="flex items-center gap-2 text-[13px] font-medium text-fg">
-                      {busy === f ? <Spinner /> : <Icon className="size-4 text-accent" aria-hidden="true" />}
-                      {t.exports.file[f].name}
-                    </span>
-                    <span className="text-[11.5px] leading-snug text-secondary">{t.exports.file[f].body}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="text-[11.5px] text-tertiary">{t.exports.stamped}</p>
-        </section>
+        {open ? (
+          <>
+            {filesBlock}
+            {gatesBlock}
+          </>
+        ) : (
+          <>
+            {gatesBlock}
+            {filesBlock}
+          </>
+        )}
       </div>
     </div>
   );
@@ -150,6 +190,7 @@ function Gate({
   body,
   signed,
   action,
+  primary,
   busy,
   onSign,
 }: {
@@ -158,27 +199,45 @@ function Gate({
   readonly body: string;
   readonly signed: string | null;
   readonly action: string;
+  /** The gate to sign next carries the panel's primary button; the other waits its turn in a quieter one. */
+  readonly primary: boolean;
   readonly busy: boolean;
   readonly onSign: () => void;
 }): JSX.Element {
-  return (
-    <li className={cn('grid gap-2 rounded-md border p-3', signed ? 'border-line bg-raised' : 'border-strong bg-base')}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 text-[13px] font-medium text-fg">
-          <span className="figure rounded border border-strong px-1 text-[10.5px]">{n}</span>
-          {title}
+  const label = (
+    <span className="flex items-center gap-2 text-[13px] font-medium text-fg">
+      <span className="figure rounded border border-strong px-1 text-[10.5px]">{n}</span>
+      {title}
+    </span>
+  );
+  // A signed gate is one line: what it was, and who signed it.
+  if (signed) {
+    return (
+      <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2.5">
+        {label}
+        <span className="flex items-center gap-1.5 text-[12px] text-secondary">
+          <Check className="size-4 text-accent-strong" aria-hidden="true" />
+          {signed}
         </span>
-        {signed ? <Check className="size-4 text-accent-strong" aria-hidden="true" /> : null}
-      </div>
+      </li>
+    );
+  }
+  // Unsigned, it states what the signature means before the button that gives it.
+  return (
+    <li className="grid gap-2 py-3">
+      {label}
       <p className="text-[12px] leading-relaxed text-secondary">{body}</p>
-      {signed ? (
-        <p className="text-[12px] text-fg">{signed}</p>
-      ) : (
-        <Button size="sm" variant="accent" className="justify-self-start" disabled={busy} aria-busy={busy || undefined} onClick={onSign}>
-          {busy ? <Spinner /> : null}
-          {action}
-        </Button>
-      )}
+      <Button
+        size={primary ? 'lg' : 'md'}
+        variant={primary ? 'primary' : 'secondary'}
+        className={primary ? 'w-full' : 'justify-self-start'}
+        disabled={busy}
+        aria-busy={busy || undefined}
+        onClick={onSign}
+      >
+        {busy ? <Spinner /> : null}
+        {action}
+      </Button>
     </li>
   );
 }

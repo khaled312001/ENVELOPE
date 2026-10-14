@@ -1,4 +1,4 @@
-import { ArrowRight, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 import type { PlotCreated, PlotView } from '@web/api/client.js';
 
@@ -8,6 +8,7 @@ import { EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, Field, Input, Notice, PanelHeader, Select, Spinner } from '../ui/primitives.js';
 import type { DraftPlot, EdgeClass, Hierarchy } from './model.js';
+import { Footer, NextStep, Row } from './parts.js';
 
 export function PlotCanvas({ draft, plot }: { readonly draft: DraftPlot; readonly plot: PlotView | null }): JSX.Element {
   const { t } = useLocale();
@@ -82,7 +83,32 @@ export function PlotPanel({
   return (
     <div>
       <PanelHeader title={t.plot.title} hint={t.plot.hint} />
-      <div className="grid grid-cols-1 gap-4 p-4">
+      <div className="grid grid-cols-1 gap-5 p-4">
+        {/* The answer first: once the engine has the plot, its measured area leads the panel. */}
+        {plot ? (
+          <section className="grid gap-2" aria-label={t.plot.filed}>
+            <p className="flex items-center gap-2">
+              <Badge tone="accent">{t.plot.filed}</Badge>
+              <span className="figure text-[11.5px] text-tertiary">{plot.plotId.slice(0, 8)}</span>
+            </p>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <Row label={t.plot.area}>
+                <span className="figure text-[28px] leading-none font-light tracking-[-0.02em] text-fg">
+                  {grouped(plot.computedAreaM2)} <span className="font-sans text-[12px] text-secondary">m²</span>
+                </span>
+              </Row>
+              <Row label={t.plot.shape}>
+                <EngineText className="text-[13.5px] text-fg">{plot.shapeClass}</EngineText>
+              </Row>
+            </dl>
+            {created?.areaMismatchMessage ? (
+              <Notice tone="neutral">
+                <EngineText>{created.areaMismatchMessage}</EngineText>
+              </Notice>
+            ) : null}
+          </section>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-3">
           <Field label={t.plot.number}>
             {({ id }) => <Input id={id} value={draft.plotNumber} onChange={(e) => onChange({ ...draft, plotNumber: e.target.value })} className="figure" />}
@@ -94,7 +120,6 @@ export function PlotPanel({
 
         <fieldset className="grid gap-2">
           <legend className="mb-1 text-[12.5px] font-medium text-fg">{t.plot.corners}</legend>
-          <p className="text-[12px] text-secondary">{t.plot.cornersHint}</p>
           <div className="overflow-hidden rounded-md border border-line">
             <table className="w-full text-[12.5px]">
               <thead className="bg-raised text-secondary">
@@ -171,48 +196,21 @@ export function PlotPanel({
           </Button>
         </fieldset>
 
-        {!ready ? (
-          <p className="text-[12px] text-secondary" role="status">
-            {blankCorner ? t.plot.needCorners : unclassified > 0 ? t.plot.needClass(unclassified) : missingHierarchy > 0 ? t.plot.needHierarchy(missingHierarchy) : t.plot.needNames}
-          </p>
-        ) : null}
-
-        {plot ? (
-          <div className="grid gap-3 rounded-md border border-line bg-raised p-3">
-            <p className="flex items-center gap-2 text-[13px] font-medium text-fg">
-              <Badge tone="accent">{t.plot.filed}</Badge>
-              <span className="figure text-secondary">{plot.plotId.slice(0, 8)}</span>
+        <Footer>
+          {!ready ? (
+            <p className="text-[12px] text-secondary" role="status">
+              {blankCorner ? t.plot.needCorners : unclassified > 0 ? t.plot.needClass(unclassified) : missingHierarchy > 0 ? t.plot.needHierarchy(missingHierarchy) : t.plot.needNames}
             </p>
-            <dl className="grid grid-cols-2 gap-3 text-[12.5px]">
-              <div>
-                <dt className="text-secondary">{t.plot.area}</dt>
-                <dd className="figure text-[15px] text-fg">
-                  {grouped(plot.computedAreaM2)} <span className="font-sans text-[11px] text-secondary">m²</span>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-secondary">{t.plot.shape}</dt>
-                <dd className="text-fg">
-                  <EngineText>{plot.shapeClass}</EngineText>
-                </dd>
-              </div>
-            </dl>
-            {created?.areaMismatchMessage ? (
-              <Notice tone="neutral">
-                <EngineText>{created.areaMismatchMessage}</EngineText>
-              </Notice>
-            ) : null}
-            <Button variant="primary" onClick={onNext}>
-              {t.plot.toRules}
-              <ArrowRight className="rtl:-scale-x-100" aria-hidden="true" />
+          ) : null}
+          {plot ? (
+            <NextStep label={t.plot.toRules} onClick={onNext} />
+          ) : (
+            <Button variant="primary" size="lg" className="w-full" disabled={!ready || busy} aria-busy={busy || undefined} onClick={onFile}>
+              {busy ? <Spinner /> : null}
+              {t.plot.file}
             </Button>
-          </div>
-        ) : (
-          <Button variant="primary" size="lg" disabled={!ready || busy} aria-busy={busy || undefined} onClick={onFile}>
-            {busy ? <Spinner /> : null}
-            {t.plot.file}
-          </Button>
-        )}
+          )}
+        </Footer>
       </div>
     </div>
   );

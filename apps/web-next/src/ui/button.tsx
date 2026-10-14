@@ -30,9 +30,10 @@ const button = cva(
           stops are solid brand tones measured at 4.5:1 under white in both themes; the
           glow on hover is a shadow, so it costs the label nothing.
         */
+        // The gradient is twice the button's width and slides on hover, so the colour moves under the pointer.
         brand:
-          'bg-linear-to-r from-brand-solid to-brand-alt-solid text-on-brand shadow-[0_8px_24px_-8px_var(--brand-alt-solid)] ' +
-          'hover:shadow-[0_12px_32px_-8px_var(--brand-alt-solid)] hover:brightness-110',
+          'bg-linear-to-r from-brand-solid via-brand-alt-solid to-brand-solid bg-[length:200%_100%] bg-left text-on-brand shadow-[0_8px_24px_-8px_var(--brand-alt-solid)] ' +
+          'transition-[background-position,box-shadow,transform] duration-500 hover:bg-right hover:shadow-[0_12px_32px_-8px_var(--brand-alt-solid)] hover:-translate-y-px',
         secondary: 'border border-line bg-raised text-fg hover:border-strong hover:bg-hover',
         ghost: 'text-secondary hover:bg-hover hover:text-fg',
         accent: 'border border-accent/40 bg-accent-subtle text-accent-strong hover:border-accent hover:text-fg',

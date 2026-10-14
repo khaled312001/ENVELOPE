@@ -1,3 +1,5 @@
+import { CircleSlash } from 'lucide-react';
+
 import { AR as LANDING_AR } from '@web/i18n/landing.ar.js';
 import { EN as LANDING_EN } from '@web/i18n/landing.en.js';
 
@@ -15,7 +17,7 @@ export function Limits(): JSX.Element {
   const L = locale === 'ar' ? LANDING_AR : LANDING_EN;
   return (
     <SitePage path="/limits">
-      <PageHero crumb={s.footer.limits} eyebrow={s.limitsPage.eyebrow} title={L.limits.title} lede={L.limits.lede} />
+      <PageHero icon={CircleSlash} tone="cyan" crumb={s.footer.limits} eyebrow={s.limitsPage.eyebrow} title={L.limits.title} lede={L.limits.lede} />
       <Band tinted>
         <LimitsList />
       </Band>

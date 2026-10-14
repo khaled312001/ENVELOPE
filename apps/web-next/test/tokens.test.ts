@@ -213,10 +213,16 @@ describe('the claim the product never makes', () => {
       expect(p.en.description.length).toBeLessThanOrEqual(240);
     }
   });
-  it('the regulatory stamp is part of the frame every screen uses', () => {
-    const shell = readFileSync(join(ROOT, 'src', 'components', 'Shell.tsx'), 'utf8');
-    expect(shell).toMatch(/<RegulatoryStamp/);
-    expect(en).toMatch(/Regulatory validity: not assessed/);
+  /*
+    The owner took the stamp out of the chrome on 14 Oct 2026. What may not go
+    with it is the claim statement: regulatory validity still closes the
+    five-way statement on the home page and in the study's checks.
+  */
+  it('regulatory validity still closes the claim statement, on the home page and in the checks', () => {
+    const landing = readFileSync(join(ROOT, 'src', 'screens', 'Landing.tsx'), 'utf8');
+    const checks = readFileSync(join(ROOT, 'src', 'studio', 'ChecksStep.tsx'), 'utf8');
+    expect(landing).toMatch(/L\.claims\.regulatory/);
+    expect(checks).toMatch(/'regulatoryValidity'\] as const/);
   });
   it('parking-in-FAR opens with nothing selected', () => {
     const model = readFileSync(join(ROOT, 'src', 'studio', 'model.ts'), 'utf8');

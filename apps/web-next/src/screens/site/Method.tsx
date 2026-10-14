@@ -37,6 +37,8 @@ export function Method(): JSX.Element {
   return (
     <SitePage path="/method">
       <PageHero
+        icon={GitBranch}
+        tone="violet"
         crumb={s.nav.method}
         eyebrow={s.method.eyebrow}
         title={s.method.title}

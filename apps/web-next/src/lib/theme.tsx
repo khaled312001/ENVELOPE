@@ -5,9 +5,10 @@ export type Theme = 'light' | 'dark';
 /*
   THE SAME KEY AS THE CURRENT SITE — `envelope.theme`, holding 'light' or 'dark'.
 
-  A reader who chose dark on `/app` opens this one dark. With nothing stored,
-  the operating system's preference decides and goes on deciding: a reader who
-  never touched the toggle follows their machine from morning into evening.
+  A reader who chose dark on `/app` opens this one dark. With nothing stored the
+  site opens LIGHT, whatever the operating system prefers — the owner's call of
+  14 Oct 2026, and the classic studio's rule already: a document put in front
+  of a committee is read on white. Dark is one click away and remembered.
 */
 const KEY = 'envelope.theme';
 
@@ -20,12 +21,8 @@ function stored(): Theme | null {
   }
 }
 
-function system(): Theme {
-  return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
 /** Called once by `main.tsx` before React renders, so the first frame is already the right theme. */
-export function applyTheme(theme: Theme = stored() ?? system()): void {
+export function applyTheme(theme: Theme = stored() ?? 'light'): void {
   document.documentElement.dataset['theme'] = theme;
 }
 
@@ -38,15 +35,7 @@ const ThemeContext = createContext<ThemeValue>({ theme: 'light', toggle: () => {
 
 export function ThemeProvider({ children }: { readonly children: ReactNode }): JSX.Element {
   const [chosen, setChosen] = useState<Theme | null>(stored);
-  const [os, setOs] = useState<Theme>(system);
-  const theme = chosen ?? os;
-
-  useEffect(() => {
-    const media = matchMedia('(prefers-color-scheme: dark)');
-    const follow = (): void => setOs(media.matches ? 'dark' : 'light');
-    media.addEventListener('change', follow);
-    return () => media.removeEventListener('change', follow);
-  }, []);
+  const theme = chosen ?? 'light';
 
   useEffect(() => applyTheme(theme), [theme]);
 

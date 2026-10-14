@@ -128,6 +128,8 @@ export function Parking(): JSX.Element {
   return (
     <SitePage path="/parking">
       <PageHero
+        icon={SquareParking}
+        tone="blue"
         crumb={s.nav.parking}
         eyebrow={s.parking.eyebrow}
         title={s.parking.title}
@@ -164,7 +166,6 @@ export function Parking(): JSX.Element {
                 {s.parking.accessEyebrow}
               </li>
             </ul>
-            <p>{s.parking.planCaption}</p>
           </figcaption>
         </figure>
       </Band>

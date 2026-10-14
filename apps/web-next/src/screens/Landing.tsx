@@ -1,4 +1,3 @@
-import type { BuildingModel } from '@envelope/core';
 import {
   ArrowRight,
   Box,
@@ -11,6 +10,7 @@ import {
   Gauge,
   Layers,
   LayoutGrid,
+  Plus,
   Scale,
   Workflow,
   ScrollText,
@@ -25,10 +25,8 @@ import { LIMITS } from '@web/content/shared.js';
 import { LIMITS_AR } from '@web/content/shared.ar.js';
 import { AR as LANDING_AR } from '@web/i18n/landing.ar.js';
 import { EN as LANDING_EN } from '@web/i18n/landing.en.js';
-import building from '@web/screens/worked-example.building.json';
 import worked from '@web/screens/worked-example.json';
 
-import { RegulatoryStamp } from '../components/Shell.js';
 import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
 import { useLocale } from '../lib/locale.js';
@@ -39,8 +37,8 @@ import { Button } from '../ui/button.js';
 import { arrive, EASE, followPointer, Item, Spotlight, Stagger } from '../ui/motion.js';
 import { IconTile, toneAt } from '../ui/tile.js';
 
-// three.js is most of the page's weight; the words and figures paint before it arrives.
-const Massing3D = lazy(() => import('../components/Massing3D.js').then((m) => ({ default: m.Massing3D })));
+// three.js and the model are most of the page's weight; the words and figures paint before they arrive.
+const WorkedModel = lazy(() => import('../components/WorkedModel.js').then((m) => ({ default: m.WorkedModel })));
 
 /*
   THE LANDING PAGE IS UNDER THE SAME DISCIPLINE AS A REPORT.
@@ -58,7 +56,6 @@ const Massing3D = lazy(() => import('../components/Massing3D.js').then((m) => ({
 */
 
 const v = worked.verified;
-const model = building as unknown as BuildingModel;
 const GRID_MM = '1';
 
 const BAND = {
@@ -114,7 +111,7 @@ export function Landing(): JSX.Element {
               </span>
             </Item>
             <Item variants={arrive}>
-              <h1 className="text-[42px] leading-[1.04] font-light tracking-[-0.035em] text-fg sm:text-[58px]">
+              <h1 className="heading-display text-[42px] font-light tracking-[-0.035em] text-fg sm:text-[58px]">
                 {t.landing.titleA} <span className="text-brand font-normal">{t.landing.titleB}</span>
               </h1>
             </Item>
@@ -132,9 +129,6 @@ export function Landing(): JSX.Element {
                 <Link to="/studio">{t.landing.ctaStudio}</Link>
               </Button>
             </Item>
-            <Item variants={arrive}>
-              <RegulatoryStamp className="justify-self-start" />
-            </Item>
           </Stagger>
 
           <motion.figure
@@ -148,7 +142,7 @@ export function Landing(): JSX.Element {
                 <div className="canvas-grid absolute inset-0 opacity-70" aria-hidden="true" />
                 {webgl ? (
                   <Suspense fallback={null}>
-                    <Massing3D model={model} autoRotate onFailed={() => setWebgl(false)} />
+                    <WorkedModel onFailed={() => setWebgl(false)} />
                   </Suspense>
                 ) : (
                   <p className="relative grid h-full place-items-center p-6 text-center text-secondary">{t.landing.noWebgl}</p>
@@ -177,7 +171,6 @@ export function Landing(): JSX.Element {
               <p className="text-[11px] text-secondary">{t.landing.carsTitle}</p>
               <p className="figure text-[17px] text-fg">{String(v.exports.cars.engine)}</p>
             </FloatChip>
-            <figcaption className="mt-4 text-[12.5px] text-secondary">{t.landing.heroCaption}</figcaption>
           </motion.figure>
         </div>
 
@@ -185,13 +178,16 @@ export function Landing(): JSX.Element {
         <div className="relative border-t border-line bg-panel/70 backdrop-blur">
           <Stagger as="dl" className="mx-auto grid max-w-[1320px] grid-cols-2 divide-line sm:grid-cols-4 sm:divide-x rtl:sm:divide-x-reverse">
             {[
-              { k: t.landing.figGoverning, val: grouped(v.governingGfaM2), unit: 'm²' },
-              { k: t.landing.figBand, val: BAND[governing].letter, unit: t.bands[BAND[governing].key].name },
-              { k: t.landing.figLevels, val: v.levels, unit: '' },
-              { k: t.landing.figPlot, val: grouped(v.plotAreaM2), unit: 'm²' },
-            ].map((f) => (
-              <Item key={f.k} className="grid gap-1 px-4 py-5 sm:px-6">
-                <dt className="text-[12px] text-secondary">{f.k}</dt>
+              { k: t.landing.figGoverning, val: grouped(v.governingGfaM2), unit: 'm²', icon: Gauge },
+              { k: t.landing.figBand, val: BAND[governing].letter, unit: t.bands[BAND[governing].key].name, icon: Scale },
+              { k: t.landing.figLevels, val: v.levels, unit: '', icon: Layers },
+              { k: t.landing.figPlot, val: grouped(v.plotAreaM2), unit: 'm²', icon: Waypoints },
+            ].map((f, i) => (
+              <Item key={f.k} className="group grid gap-1 px-4 py-5 transition-colors hover:bg-raised/60 sm:px-6">
+                <dt className="flex items-center gap-2 text-[12px] text-secondary">
+                  <IconTile icon={f.icon} tone={toneAt(i)} size="xs" />
+                  {f.k}
+                </dt>
                 <dd className="figure text-[24px] font-light tracking-[-0.01em] text-fg">
                   {f.val}
                   {f.unit ? <span className="ms-1.5 font-sans text-[12px] text-secondary">{f.unit}</span> : null}
@@ -273,7 +269,6 @@ export function Landing(): JSX.Element {
       <section className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
         <SectionHead icon={FileStack} tone="cyan" eyebrow={t.landing.outEyebrow} title={t.landing.outTitle} lede={t.landing.outLede} />
         <FileGrid />
-        <p className="mt-5 text-[12.5px] text-secondary">{t.landing.parity(String(v.exports.cars.engine))}</p>
       </section>
 
       {/* ── The rest of the site, one layer down each ────────────────────── */}
@@ -383,12 +378,16 @@ export function LimitsList(): JSX.Element {
       <Stagger as="ul" className="grid gap-3 md:grid-cols-2" gap={0.05}>
         {limits.map((l) => (
           <Item key={l.id} as="li">
-            <Spotlight className="grid h-full gap-2 rounded-xl border border-line bg-base p-5 shadow-soft">
-              <p className="flex items-start gap-2.5 text-[14.5px] font-medium text-fg">
-                <CircleSlash className="mt-0.5 size-4 shrink-0 text-secondary" aria-hidden="true" />
-                {l.heading}
-              </p>
-              <div className="ps-6.5 text-[13px] leading-relaxed text-secondary">{l.body}</div>
+            {/* The heading says it; the reason is one click away rather than a paragraph every reader must wade through. */}
+            <Spotlight className="h-full rounded-xl border border-line bg-base shadow-soft">
+              <details className="group">
+                <summary className="flex cursor-pointer list-none items-start gap-2.5 p-5 text-[14.5px] font-medium text-fg [&::-webkit-details-marker]:hidden">
+                  <CircleSlash className="mt-0.5 size-4 shrink-0 text-secondary" aria-hidden="true" />
+                  <span className="flex-1">{l.heading}</span>
+                  <Plus className="mt-0.5 size-4 shrink-0 text-tertiary transition-transform duration-300 group-open:rotate-45" aria-hidden="true" />
+                </summary>
+                <div className="px-5 ps-11.5 pb-5 text-[13px] leading-relaxed text-secondary">{l.body}</div>
+              </details>
             </Spotlight>
           </Item>
         ))}
@@ -482,16 +481,15 @@ export function FlowLine(): JSX.Element {
 
 /** The readiness statement: a status, so it is drawn as one — not on the brand, and not in amber. */
 export function Readiness(): JSX.Element {
-  const { locale } = useLocale();
-  const L = locale === 'ar' ? LANDING_AR : LANDING_EN;
+  const s = useSite();
   return (
     <div className="grid gap-3 rounded-xl border border-strong bg-panel p-6 shadow-soft sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-5 sm:p-8">
       <span className="grid size-10 place-items-center rounded-lg border border-strong bg-raised text-secondary">
         <ShieldOff className="size-5" aria-hidden="true" />
       </span>
       <div className="grid gap-2">
-        <h2 className="text-[18px] font-medium text-fg">{L.readiness.title}</h2>
-        <p className="not-assessed max-w-3xl text-[14px] leading-relaxed text-secondary">{L.readiness.body}</p>
+        <h2 className="text-[18px] font-medium text-fg">{s.limitsPage.readinessTitle}</h2>
+        <p className="not-assessed max-w-3xl text-[14px] leading-relaxed text-secondary">{s.limitsPage.readinessBody}</p>
       </div>
     </div>
   );

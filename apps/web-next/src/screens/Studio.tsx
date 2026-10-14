@@ -22,6 +22,7 @@ import { cn } from '../lib/cn.js';
 import { useLocale } from '../lib/locale.js';
 import { useNav } from '../lib/nav.js';
 import { Notice, Spinner } from '../ui/primitives.js';
+import { toneAt } from '../ui/tile.js';
 import { CapacityCanvas, CapacityPanel } from '../studio/CapacityStep.js';
 import { ChecksCanvas, ChecksPanel } from '../studio/ChecksStep.js';
 import { ExportPanel } from '../studio/ExportStep.js';
@@ -262,44 +263,57 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
 
         <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[208px_minmax(0,1fr)_400px] xl:grid-cols-[220px_minmax(0,1fr)_440px]">
           {/* ── Steps ── */}
-          <nav aria-label={t.studio.steps} className="border-b border-line bg-panel lg:border-e lg:border-b-0">
-            <ol className="flex gap-1 overflow-x-auto p-2 lg:grid lg:gap-0.5 lg:overflow-visible lg:p-3">
+          <nav aria-label={t.studio.steps} className="relative border-b border-line bg-panel lg:flex lg:flex-col lg:border-e lg:border-b-0">
+            <ol className="relative flex gap-1 overflow-x-auto p-2 lg:grid lg:gap-1 lg:overflow-visible lg:p-3">
+              {/* The rail joining the steps, filled in the brand gradient as far as the work has got. */}
+              <span aria-hidden="true" className="pointer-events-none absolute start-[36px] top-[34px] bottom-[34px] hidden w-px bg-line lg:block">
+                <motion.span
+                  className="absolute inset-x-0 top-0 h-full origin-top bg-linear-to-b from-accent via-brand-alt to-brand-glow"
+                  initial={false}
+                  animate={{ scaleY: STEPS.length > 1 ? Math.max(0, STEPS.findIndex((x) => x.id === step)) / (STEPS.length - 1) : 0 }}
+                  transition={{ duration: reduce ? 0 : 0.6, ease: [0.22, 1, 0.36, 1] }}
+                />
+              </span>
               {STEPS.map((s, i) => {
                 const active = step === s.id;
                 const can = reachable[s.id];
                 return (
-                  <li key={s.id} className="shrink-0">
+                  <li key={s.id} className="relative shrink-0">
                     <button
                       type="button"
                       disabled={!can}
                       onClick={() => setStep(s.id)}
                       aria-current={active ? 'step' : undefined}
                       className={cn(
-                        'relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-start text-[13px] transition-colors duration-150',
-                        active ? 'bg-raised text-fg' : 'text-secondary hover:bg-hover hover:text-fg',
+                        'group relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-[13px] transition-[background-color,color,transform] duration-200',
+                        active ? 'text-fg' : 'text-secondary hover:bg-hover hover:text-fg enabled:hover:translate-x-0.5 rtl:enabled:hover:-translate-x-0.5',
                         'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
                       )}
                     >
                       {active ? (
                         <motion.span
                           layoutId="step-marker"
-                          className="absolute inset-y-1.5 start-0 w-0.5 rounded-full bg-accent"
-                          transition={{ duration: reduce ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
+                          className="absolute inset-0 rounded-lg border border-accent/30 bg-linear-to-r from-accent-subtle to-transparent rtl:bg-linear-to-l"
+                          transition={{ duration: reduce ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }}
                           aria-hidden="true"
                         />
                       ) : null}
                       <span
                         className={cn(
-                          'grid size-6 shrink-0 place-items-center rounded-md border text-[11px]',
-                          // Accent, not green: green says DERIVED, and a finished step is not a provenance class.
-                          done[s.id] ? 'border-accent/50 bg-accent-subtle text-accent-strong' : active ? 'border-accent/60 text-accent-strong' : 'border-line',
+                          'relative grid size-7 shrink-0 place-items-center rounded-lg border text-[11px] transition-transform duration-200 group-hover:scale-105',
+                          // Brand, not green: green says DERIVED, and a finished step is not a provenance class.
+                          active
+                            ? cn('tile border-transparent', `tile-${toneAt(i)}`)
+                            : done[s.id]
+                              ? 'border-accent/50 bg-accent-subtle text-accent-strong'
+                              : 'border-line bg-panel',
                         )}
                       >
-                        {done[s.id] ? <Check className="size-3.5" aria-hidden="true" /> : <s.icon className="size-3.5" aria-hidden="true" />}
+                        {done[s.id] && !active ? <Check className="size-3.5" aria-hidden="true" /> : <s.icon className="size-3.5" aria-hidden="true" />}
                       </span>
-                      <span className="min-w-0">
+                      <span className="relative min-w-0">
                         <span className="figure me-1.5 text-[10.5px] text-tertiary">{i + 1}</span>
-                        {t.studio.step[s.id]}
+                        <span className={active ? 'font-medium' : undefined}>{t.studio.step[s.id]}</span>
                         {done[s.id] ? <span className="sr-only"> ({t.studio.stepDone})</span> : null}
                       </span>
                     </button>
@@ -307,7 +321,20 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 );
               })}
             </ol>
-            <p className="not-assessed hidden px-5 pt-3 text-[11.5px] leading-relaxed text-tertiary lg:block">{t.stamp.long}</p>
+            {/* How far the study has got, as a bar and in words. */}
+            <div className="mx-3 mt-auto mb-3 hidden gap-2 rounded-lg border border-line bg-base p-3 lg:grid">
+              <p className="text-[12px] text-secondary">
+                {t.studio.progress(String(STEPS.filter((x) => done[x.id]).length), String(STEPS.length))}
+              </p>
+              <span className="h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden="true">
+                <motion.span
+                  className="block h-full origin-left rounded-full bg-linear-to-r from-accent via-brand-alt to-brand-glow rtl:origin-right"
+                  initial={false}
+                  animate={{ scaleX: STEPS.filter((x) => done[x.id]).length / STEPS.length }}
+                  transition={{ duration: reduce ? 0 : 0.7, ease: [0.22, 1, 0.36, 1] }}
+                />
+              </span>
+            </div>
           </nav>
 
           {/* ── Canvas ── */}
@@ -353,7 +380,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 hasRun={run !== null}
               />
             ) : step === 'capacity' && run ? (
-              <CapacityPanel run={run} />
+              <CapacityPanel run={run} onNext={() => setStep('parking')} />
             ) : step === 'parking' && run ? (
               <ParkingPanel
                 run={run}
@@ -365,9 +392,10 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                   const { chosenAccessEdgeSeq: _previous, ...rest } = request;
                   void compute(seq === null ? rest : { ...rest, chosenAccessEdgeSeq: seq });
                 }}
+                onNext={() => setStep('checks')}
               />
             ) : step === 'checks' && run ? (
-              <ChecksPanel run={run} />
+              <ChecksPanel run={run} onNext={() => setStep('export')} />
             ) : step === 'export' && run ? (
               <ExportPanel actor={actor} run={run} onSigned={refresh} />
             ) : null}

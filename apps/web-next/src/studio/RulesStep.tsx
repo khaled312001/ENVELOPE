@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { CircleCheck, Plus, Trash2 } from 'lucide-react';
 import { RadioGroup } from 'radix-ui';
 import type { ReactNode } from 'react';
 
@@ -11,6 +11,7 @@ import { Button } from '../ui/button.js';
 import { Badge, Field, Input, PanelHeader, Spinner } from '../ui/primitives.js';
 import { Segmented } from '../ui/radix.js';
 import { DEFAULT_MIX_BASIS, type RulesForm, rulesProblems } from './model.js';
+import { Footer } from './parts.js';
 
 /*
   THE QUESTIONS THE ENGINE WILL NOT ANSWER FOR THE READER.
@@ -47,7 +48,7 @@ export function RulesPanel({
   return (
     <div>
       <PanelHeader title={t.rules.title} hint={t.rules.hint} />
-      <div className="grid grid-cols-1 gap-3 p-4">
+      <div className="grid grid-cols-1 gap-5 p-4">
         <Card n={1} title={t.rules.farTitle} done={!problems.parkingInFar} note={t.rules.farNote}>
           <RadioGroup.Root
             aria-label={t.rules.farTitle}
@@ -208,7 +209,7 @@ export function RulesPanel({
           {problems.mix ? <p className="text-[12px] text-variance">{t.rules.mixIncomplete}</p> : null}
         </Card>
 
-        <div className="sticky bottom-0 -mx-4 grid gap-2 border-t border-line bg-panel/95 px-4 py-3 backdrop-blur">
+        <Footer>
           <p className="text-[12px] text-secondary" role="status">
             {t.rules.answered(answered)}
           </p>
@@ -231,17 +232,17 @@ export function RulesPanel({
             </dl>
           ) : null}
           {form.parkingInFar === 'OPEN_REGULATORY_QUESTION' ? (
-            <Button variant="primary" size="lg" disabled={answered < 4 || Boolean(problems.coreArea) || busy} aria-busy={busy || undefined} onClick={onCompare}>
+            <Button variant="primary" size="lg" className="w-full" disabled={answered < 4 || Boolean(problems.coreArea) || busy} aria-busy={busy || undefined} onClick={onCompare}>
               {busy ? <Spinner /> : null}
               {t.rules.price}
             </Button>
           ) : (
-            <Button variant="primary" size="lg" disabled={answered < 4 || Boolean(problems.coreArea) || busy} aria-busy={busy || undefined} onClick={onCompute}>
+            <Button variant="primary" size="lg" className="w-full" disabled={answered < 4 || Boolean(problems.coreArea) || busy} aria-busy={busy || undefined} onClick={onCompute}>
               {busy ? <Spinner /> : null}
               {hasRun ? t.rules.recompute : t.rules.compute}
             </Button>
           )}
-        </div>
+        </Footer>
       </div>
     </div>
   );
@@ -262,15 +263,22 @@ function Card({
 }): JSX.Element {
   const { t } = useLocale();
   return (
-    <section className={cn('grid gap-3 rounded-lg border p-3.5', done ? 'border-line bg-base' : 'border-strong bg-base')} aria-labelledby={`q${n}`}>
-      <header className="flex items-start justify-between gap-2">
-        <h3 id={`q${n}`} className="flex items-center gap-2 text-[13.5px] font-semibold text-fg">
-          <span className="figure grid size-5 place-items-center rounded border border-line text-[10.5px] text-secondary">{n}</span>
+    // Divided rather than boxed: four questions read as one form, and the tick says which are done.
+    <section className="grid gap-3 border-t border-subtle pt-5 first:border-t-0 first:pt-0" aria-labelledby={`q${n}`}>
+      <header className="grid gap-1">
+        <h3 id={`q${n}`} className="flex items-center gap-2 text-[14px] font-semibold text-fg">
+          {done ? (
+            <CircleCheck className="size-5 shrink-0 text-accent-strong" aria-hidden="true" />
+          ) : (
+            <span className="figure grid size-5 shrink-0 place-items-center rounded-full border border-strong text-[10.5px] text-secondary" aria-hidden="true">
+              {n}
+            </span>
+          )}
           {title}
+          <span className="sr-only"> ({done ? t.rules.answeredOne : t.rules.unanswered})</span>
         </h3>
-        <span className={cn('text-[11px] font-medium', done ? 'text-accent-strong' : 'text-secondary')}>{done ? t.rules.answeredOne : t.rules.unanswered}</span>
+        {note ? <p className="ps-7 text-[12px] leading-snug text-secondary">{note}</p> : null}
       </header>
-      {note ? <p className="-mt-1 text-[12px] leading-relaxed text-secondary">{note}</p> : null}
       {children}
     </section>
   );

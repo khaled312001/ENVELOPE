@@ -71,10 +71,12 @@ export function PlotSketch({
   const maxY = Math.max(...ys);
   const span = Math.max(maxX - minX, maxY - minY, 1);
   const pad = span * (compact ? 0.08 : 0.24);
-  const w = maxX - minX + pad * 2;
+  // Wider at the sides: a length beside a side that runs up the page reads outward, and needs the room.
+  const padX = span * (compact ? 0.08 : 0.34);
+  const w = maxX - minX + padX * 2;
   const h = maxY - minY + pad * 2;
   // North up: plot +y is drawn upward, so y is flipped once here.
-  const P = (p: { x: number; y: number }): [number, number] => [p.x - minX + pad, maxY - p.y + pad];
+  const P = (p: { x: number; y: number }): [number, number] => [p.x - minX + padX, maxY - p.y + pad];
   const unit = span / 100;
   const ring = pts.map((p) => P(p).join(',')).join(' ');
   const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
@@ -135,10 +137,17 @@ export function PlotSketch({
                 </text>
                 {e?.lengthM ? (
                   <text
-                    // Further out along the same normal, so the figure never sits on the boundary.
-                    x={lx + nx * unit * 7.5}
-                    y={ly + ny * unit * 7.5}
-                    textAnchor="middle"
+                    /*
+                      Further out along the same normal, so the figure never sits on
+                      the boundary. Beside a side that runs up the page the figure is
+                      wider than the gap, and centred it ran into the edge's number:
+                      there it starts just past the circle and reads away from it.
+                      Always left to right — a figure — whatever the page's direction.
+                    */
+                    direction="ltr"
+                    x={Math.abs(nx) > Math.abs(ny) ? lx + nx * unit * 4.6 : lx + nx * unit * 7.5}
+                    y={Math.abs(nx) > Math.abs(ny) ? ly : ly + ny * unit * 7.5}
+                    textAnchor={Math.abs(nx) > Math.abs(ny) ? (nx > 0 ? 'start' : 'end') : 'middle'}
                     dominantBaseline="central"
                     fontSize={unit * 2.7}
                     fontFamily="var(--font-mono)"

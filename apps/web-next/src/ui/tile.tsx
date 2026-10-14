@@ -12,6 +12,7 @@ export function toneAt(i: number): Tone {
 }
 
 const SIZE = {
+  xs: { box: 'size-6 rounded-md', icon: 'size-3.5' },
   sm: { box: 'size-9 rounded-lg', icon: 'size-4.5' },
   md: { box: 'size-11 rounded-xl', icon: 'size-5' },
   lg: { box: 'size-14 rounded-2xl', icon: 'size-6' },

@@ -10,6 +10,7 @@ import { grouped } from '../lib/figures.js';
 import { EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, Notice, PanelHeader, Spinner } from '../ui/primitives.js';
+import { assumedFirst, Footer, Heading, More, NextStep, Row } from './parts.js';
 
 /*
   THE SCREEN THE 30 AUG MEETING WAS ABOUT.
@@ -38,11 +39,14 @@ export function ParkingPanel({
   busy,
   canChoose,
   onChoose,
+  onNext,
 }: {
   readonly run: RunView;
   readonly busy: boolean;
   readonly canChoose: boolean;
   readonly onChoose: (edgeSeq: number | null) => void;
+  /** Optional so a caller that does not wire it keeps working; when given, it is the panel's one primary action. */
+  readonly onNext?: () => void;
 }): JSX.Element {
   const { t } = useLocale();
   const lp = run.levelPlan;
@@ -61,66 +65,39 @@ export function ParkingPanel({
   const chosen = lp.access.chosen ?? null;
   const recommended = lp.access.recommended;
   const inUse = chosen ?? recommended;
+  // Supply against demand first; how the level was packed folds away — unless any of it was assumed.
+  const { shown, folded } = assumedFirst(
+    [
+      { key: 'required', label: t.parking.required, value: run.parking.totalBays },
+      { key: 'perLevel', label: t.parking.baysPerLevel, value: lp.bayCount },
+      { key: 'levels', label: t.parking.levelsRequired, value: run.parking.levelsRequired },
+      { key: 'perBay', label: t.parking.areaPerBay, value: lp.areaPerBayM2 },
+    ],
+    [
+      { key: 'orientation', label: t.parking.orientation, value: lp.orientation },
+      { key: 'module', label: t.parking.module, value: lp.moduleDepthM },
+    ],
+  );
   return (
     <div>
       <PanelHeader title={t.parking.title} hint={t.parking.hint} />
-      <div className="grid grid-cols-1 gap-5 p-4">
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-          <Row label={t.parking.baysPerLevel}>
-            <Traced value={lp.bayCount} size="lg" />
-          </Row>
-          <Row label={t.parking.areaPerBay}>
-            <Traced value={lp.areaPerBayM2} size="lg" />
-          </Row>
-          <Row label={t.parking.required}>
-            <Traced value={run.parking.totalBays} />
-          </Row>
-          <Row label={t.parking.levelsRequired}>
-            <Traced value={run.parking.levelsRequired} />
-          </Row>
-          <Row label={t.parking.orientation}>
-            <Traced value={lp.orientation} />
-          </Row>
-          <Row label={t.parking.module}>
-            <Traced value={lp.moduleDepthM} />
-          </Row>
+      <div className="grid grid-cols-1 gap-6 p-4">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-4">
+          {shown.map((f) => (
+            <Row key={f.key} label={f.label}>
+              <Traced value={f.value} size="lg" />
+            </Row>
+          ))}
         </dl>
 
-        <section className="grid gap-2" aria-labelledby="losses">
-          <h3 id="losses" className="text-[12px] font-medium text-secondary">
-            {t.parking.losses}
-          </h3>
-          <ul className="grid gap-px overflow-hidden rounded-md border border-line bg-line">
-            {(
-              [
-                ['reserved', lp.losses.reserved],
-                ['circulation', lp.losses.circulation],
-                ['footprint', lp.losses.footprint],
-              ] as const
-            ).map(([k, loss]) => (
-              <li key={k} className="flex items-baseline justify-between gap-2 bg-base px-3 py-2 text-[12.5px]">
-                <span className="text-fg">{t.parking.loss[k]}</span>
-                <span className="figure text-secondary">
-                  {t.parking.lossValue(String(loss.bays), grouped(loss.areaM2))}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-[11.5px] text-tertiary">
-            {t.parking.standard(lp.standard.bayWidthM, lp.standard.bayLengthM, lp.standard.drivewayWidthM)}
-          </p>
-        </section>
-
-        <section className="grid gap-2" aria-labelledby="access">
-          <h3 id="access" className="text-[12px] font-medium text-secondary">
-            {t.parking.access}
-          </h3>
+        <section className="grid min-w-0 gap-2.5" aria-labelledby="access">
+          <Heading id="access">{t.parking.access}</Heading>
           {inUse ? (
-            <div className="grid gap-1.5 rounded-md border border-line bg-base p-3">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="grid gap-1">
+              <p className="flex flex-wrap items-center gap-2">
                 <Badge tone={chosen ? 'accent' : 'neutral'}>{chosen ? t.parking.chosen : t.parking.recommended}</Badge>
-                <span className="text-[13px] text-fg">{t.parking.onBoundary(inUse.edgeSeq)}</span>
-              </div>
+                <span className="text-[14px] font-medium text-fg">{t.parking.onBoundary(inUse.edgeSeq)}</span>
+              </p>
               <EngineText className="text-[12px] leading-relaxed text-secondary">{inUse.rationale}</EngineText>
               {chosen && recommended && recommended.edgeSeq !== chosen.edgeSeq ? (
                 <p className="text-[12px] text-secondary">{t.parking.recommendedWas(recommended.edgeSeq)}</p>
@@ -130,17 +107,25 @@ export function ParkingPanel({
             <Notice tone="neutral">{t.parking.noAccess}</Notice>
           )}
           {!canChoose ? <p className="text-[12px] text-secondary">{t.parking.cannotChoose}</p> : null}
-          <ul className="grid gap-1.5">
+          <ul className="grid min-w-0 divide-y divide-subtle border-y border-subtle">
             {lp.access.candidates.map((cand: AccessCandidateView) => {
               const isOn = inUse?.edgeSeq === cand.edgeSeq;
               return (
-                <li key={cand.edgeSeq} className={cn('flex items-center gap-3 rounded-md border px-3 py-2', isOn ? 'border-accent/50' : 'border-line')}>
-                  <span className="figure grid size-6 place-items-center rounded border border-strong text-[11px] text-fg">{cand.edgeSeq}</span>
+                <li key={cand.edgeSeq} className="flex items-center gap-3 py-2">
+                  <span
+                    className={cn(
+                      'figure grid size-6 shrink-0 place-items-center rounded border text-[11px]',
+                      isOn ? 'border-accent text-accent-strong' : 'border-strong text-fg',
+                    )}
+                  >
+                    {cand.edgeSeq}
+                  </span>
                   <div className="min-w-0 flex-1 text-[12px]">
                     <p className="text-fg">
                       {t.parking.rank(cand.rank)} · {cand.hierarchy ? t.plot.road[cand.hierarchy as 'LOCAL'] ?? cand.hierarchy : t.parking.noHierarchy}
                     </p>
-                    <p className="figure text-tertiary">{t.parking.window(cand.usableWindowM, cand.widthM)}</p>
+                    {/* Allowed to wrap: a figure's no-wrap here widened the whole panel past its edge. */}
+                    <p className="figure !whitespace-normal text-tertiary">{t.parking.window(cand.usableWindowM, cand.widthM)}</p>
                   </div>
                   {isOn ? (
                     <span className="flex items-center gap-1 text-[12px] text-accent-strong">
@@ -162,23 +147,11 @@ export function ParkingPanel({
               {t.parking.useRecommendation}
             </Button>
           ) : null}
-          {lp.access.rejected.length > 0 ? (
-            <details className="text-[12px] text-secondary">
-              <summary className="cursor-pointer py-1 text-fg">{t.parking.rejected(lp.access.rejected.length)}</summary>
-              <ul className="grid gap-1 pt-1">
-                {lp.access.rejected.map((r) => (
-                  <li key={r.edgeSeq}>
-                    <span className="figure me-1.5 text-tertiary">{r.edgeSeq}</span>
-                    <EngineText>{r.reason}</EngineText>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          ) : null}
         </section>
 
+        {/* What was not assessed stays in view: a gap is never one click away. */}
         {lp.notAssessed.length > 0 ? (
-          <section className="grid gap-1.5 rounded-md border border-line bg-base p-3" aria-labelledby="na">
+          <section className="grid gap-1.5" aria-labelledby="na">
             <h3 id="na" className="not-assessed text-[12px] font-medium text-fg">
               {t.parking.notAssessed}
             </h3>
@@ -191,16 +164,57 @@ export function ParkingPanel({
             </ul>
           </section>
         ) : null}
-      </div>
-    </div>
-  );
-}
 
-function Row({ label, children }: { readonly label: string; readonly children: React.ReactNode }): JSX.Element {
-  return (
-    <div className="grid gap-0.5">
-      <dt className="text-[11.5px] text-secondary">{label}</dt>
-      <dd>{children}</dd>
+        <div>
+          {/* Three losses, never one percentage — folded, not merged. */}
+          <More summary={t.parking.losses}>
+            <ul className="grid divide-y divide-subtle">
+              {(
+                [
+                  ['reserved', lp.losses.reserved],
+                  ['circulation', lp.losses.circulation],
+                  ['footprint', lp.losses.footprint],
+                ] as const
+              ).map(([k, loss]) => (
+                <li key={k} className="flex items-baseline justify-between gap-2 py-1.5 text-[12.5px]">
+                  <span className="text-fg">{t.parking.loss[k]}</span>
+                  <span className="figure text-secondary">{t.parking.lossValue(String(loss.bays), grouped(loss.areaM2))}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11.5px] text-tertiary">{t.parking.standard(lp.standard.bayWidthM, lp.standard.bayLengthM, lp.standard.drivewayWidthM)}</p>
+          </More>
+          {folded.length > 0 ? (
+            <More summary={folded.map((f) => f.label).join(' · ')}>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                {folded.map((f) => (
+                  <Row key={f.key} label={f.label}>
+                    <Traced value={f.value} />
+                  </Row>
+                ))}
+              </dl>
+            </More>
+          ) : null}
+          {lp.access.rejected.length > 0 ? (
+            <More summary={t.parking.rejected(lp.access.rejected.length)}>
+              <ul className="grid gap-1 text-[12px] text-secondary">
+                {lp.access.rejected.map((r) => (
+                  <li key={r.edgeSeq}>
+                    <span className="figure me-1.5 text-tertiary">{r.edgeSeq}</span>
+                    <EngineText>{r.reason}</EngineText>
+                  </li>
+                ))}
+              </ul>
+            </More>
+          ) : null}
+        </div>
+
+        {onNext ? (
+          <Footer>
+            <NextStep label={t.studio.step.checks} onClick={onNext} />
+          </Footer>
+        ) : null}
+      </div>
     </div>
   );
 }

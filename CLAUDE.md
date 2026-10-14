@@ -435,7 +435,15 @@ is a defect even when it makes something easier.
   stack. The two share metrics and a skeleton, which is what lets a mono figure sit
   inside a sans sentence without looking pasted in — and a traced value *is* a figure
   quoted inside a sentence. `display=swap` with the full system fallback behind it:
-  the site is opened on a plot with no wifi.
+  the site is opened on a plot with no wifi. **The public site (`apps/web-next`) is
+  the exception, by the owner's call of 14 Oct 2026:** Inter for Latin and Cairo for
+  Arabic, Plex Mono kept for figures; Arabic headings get line height 1.45 and no
+  letter-spacing, because at Latin leading two lines of a large Arabic title collide.
+  The same day he took the "Regulatory validity: not assessed" chip out of that
+  site's header, hero, footer and studio sidebar, made it open light whatever the OS
+  prefers, and cut the explanatory captions. The stamp stays in every exported
+  file, in the five-way claim statement and in the study's checks — do not put it
+  back in the chrome without asking him.
 - Integer millimetres inside the kernel; `Decimal` for every non-geometric number. Never `number`
   for a quantity a user will see.
 - Public APIs carry explicit return types. `tsc --noEmit` clean before moving on.

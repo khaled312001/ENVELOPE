@@ -9,7 +9,9 @@
  * passed, because every test runs on localhost. `getRandomValues` is defined in
  * every context and is the same generator underneath.
  */
-export function guestKey(random: (bytes: Uint8Array) => Uint8Array = (b) => crypto.getRandomValues(b)): string {
+export function guestKey(
+  random: (bytes: Uint8Array<ArrayBuffer>) => Uint8Array = (b) => crypto.getRandomValues(b),
+): string {
   const b = random(new Uint8Array(16));
   b[6] = (b[6]! & 0x0f) | 0x40; // version 4
   b[8] = (b[8]! & 0x3f) | 0x80; // RFC 4122 variant

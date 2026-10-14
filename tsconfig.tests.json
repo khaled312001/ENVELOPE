@@ -43,9 +43,8 @@
       height code on screen is the engine's own string rather than a second
       rendering of it, and the package moved into `apps/web`'s dependencies.
     */
-    "baseUrl": ".",
     "paths": {
-      "@envelope/*": ["packages/*/dist/index.d.ts"]
+      "@envelope/*": ["./packages/*/dist/index.d.ts"]
     }
   },
   /*

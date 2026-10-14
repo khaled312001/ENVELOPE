@@ -19,7 +19,9 @@ describe('guestKey', () => {
 
   it('works where randomUUID does not exist — a page served over plain HTTP', () => {
     const real = globalThis.crypto;
-    vi.stubGlobal('crypto', { getRandomValues: <T extends Uint8Array>(b: T): T => real.getRandomValues(b) });
+    vi.stubGlobal('crypto', {
+      getRandomValues: (b: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> => real.getRandomValues(b),
+    });
     expect('randomUUID' in globalThis.crypto).toBe(false);
     expect(guestKey()).toMatch(GUEST_KEY);
   });

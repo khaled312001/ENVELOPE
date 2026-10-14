@@ -29,6 +29,13 @@ declare module '*?worker&url' {
   export default url;
 }
 
+/**
+ * A stylesheet imported for its side effect, as `main.tsx` imports every one.
+ * TypeScript 7 checks side-effect imports, and a `.css` file has no
+ * declaration of its own; it exports nothing, so nothing is declared here.
+ */
+declare module '*.css';
+
 interface ImportMeta {
   /**
    * Vite's build-time directory read. Eager with `query: '?url'` and

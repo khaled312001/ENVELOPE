@@ -39,7 +39,9 @@ import {
   ROLE_STYLE,
   SHEET_CSS,
   type Sheet,
-  type SheetView,
+  // Renamed on import: this file defines a COMPONENT called `SheetView`, and the
+  // two shared one name until TypeScript 7 refused to guess which was meant.
+  type SheetView as SheetViewport,
   type StripFact,
   symbolPathData,
   textPlacement,
@@ -334,7 +336,7 @@ function ModelElement({
   hatchId,
 }: {
   readonly item: ModelItem;
-  readonly view: SheetView;
+  readonly view: SheetViewport;
   readonly hatchId: string;
 }): JSX.Element {
   const cls = itemClass(item);

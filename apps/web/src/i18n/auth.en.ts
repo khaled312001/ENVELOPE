@@ -102,6 +102,18 @@ export const EN = {
       'Lays the parking out as bays, aisles and a ramp — never an area divided by a factor.',
       'Marks every assumption, and blocks rather than quietly filling a gap.',
     ],
+    /**
+     * The drawing in the column: a real level of the worked example, not an
+     * illustration. The caption says so, because a picture on a sign-in page is
+     * assumed to be marketing until something says otherwise.
+     */
+    figure: {
+      bar: 'Worked example — ground-floor parking',
+      caption:
+        'Every bay in this view was placed by the engine for the worked example. None was drawn by hand.',
+      noWebgl:
+        'This browser cannot draw the 3D view. The same level is drawn on the parking page.',
+    },
   },
 
   aside: {

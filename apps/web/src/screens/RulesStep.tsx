@@ -461,6 +461,13 @@ export function RulesStep({
 
   return (
     <>
+      <RulesProgress
+        parking={parkingInFar ? 'answered' : 'needsAnswer'}
+        levels={scheduleOk ? 'ready' : 'needsCorrecting'}
+        efficiency={efficiencyValid ? 'answered' : efficiency.trim() === '' ? 'needsAnswer' : 'needsCorrecting'}
+        core={coreArea.trim() === '' ? 'assumedIfEmpty' : coreValid ? 'answered' : 'needsCorrecting'}
+      />
+
       {/* --- The blocking question ------------------------------------- */}
       <section className="panel panel--emphasis" aria-labelledby="parking-far-heading">
         <header className="panel__header">
@@ -650,6 +657,74 @@ export function RulesStep({
         {!scheduleOk ? <p className="fine-print">{t.run.needsLevels}</p> : null}
       </div>
     </>
+  );
+}
+
+type ProgressState = 'answered' | 'ready' | 'needsAnswer' | 'needsCorrecting' | 'assumedIfEmpty';
+
+/**
+ * What Compute is waiting for, above the questions (October 2026).
+ *
+ * The step is six panels long and the reasons Compute is disabled were printed
+ * under the button at the bottom — the one place a reader has not reached while
+ * they are still answering. This states the same four facts at the top, from the
+ * same four booleans the button reads, so the list and the button cannot
+ * disagree. Each row jumps to its panel.
+ *
+ * THREE ARE COUNTED, NOT FOUR. An empty core is not a missing answer: the engine
+ * answers it with a stated assumption, and a list that counted it would tell the
+ * reader to fill in a box the product deliberately lets them leave.
+ *
+ * NOTHING HERE IS PRE-ANSWERED. The parking row reads "Needs an answer" until a
+ * radio is chosen, which is `FR-DEF-002` stated on the screen rather than
+ * enforced only in the button.
+ */
+function RulesProgress({
+  parking,
+  levels,
+  efficiency,
+  core,
+}: {
+  readonly parking: ProgressState;
+  readonly levels: ProgressState;
+  readonly efficiency: ProgressState;
+  readonly core: ProgressState;
+}): JSX.Element {
+  const t = useDict(EN, AR).progress;
+  const rows = [
+    { key: 'parking', label: t.parking, state: parking, target: 'parking-far-heading', counted: true },
+    { key: 'levels', label: t.levels, state: levels, target: 'levels-heading', counted: true },
+    { key: 'efficiency', label: t.efficiency, state: efficiency, target: 'efficiency-heading', counted: true },
+    { key: 'core', label: t.core, state: core, target: 'core-heading', counted: false },
+  ] as const;
+  const counted = rows.filter((r) => r.counted);
+  const done = counted.filter((r) => r.state === 'answered' || r.state === 'ready').length;
+
+  return (
+    <nav className="rules-progress" aria-label={t.label}>
+      <p className="rules-progress__count">{t.count(String(done), String(counted.length))}</p>
+      <ol className="rules-progress__list">
+        {rows.map((r) => {
+          const ok = r.state === 'answered' || r.state === 'ready';
+          return (
+            <li key={r.key} className="rules-progress__item" data-state={r.state}>
+              <button
+                type="button"
+                className="rules-progress__go"
+                onClick={() =>
+                  document.getElementById(r.target)?.scrollIntoView({ block: 'start' })
+                }
+              >
+                <span className="rules-progress__mark" data-ok={ok} aria-hidden="true" />
+                <span className="sr-only">{t.goTo}</span>
+                <span className="rules-progress__name">{r.label}</span>
+                <span className="rules-progress__state">{t[r.state]}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }
 

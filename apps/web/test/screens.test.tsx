@@ -46,7 +46,9 @@ import { AssumptionRegister } from '../src/components/AssumptionRegister.js';
 import { formatTraced, TracedValue } from '../src/components/TracedValue.js';
 import { MassingPanel } from '../src/components/MassingPanel.js';
 import { ParkingPlan, VehicleAccessPanel } from '../src/components/ParkingPlan.js';
-import { StepFooter, type FlowState } from '../src/App.js';
+import { StepFooter } from '../src/engine/StepChrome.js';
+import { StepFacts } from '../src/engine/StepFacts.js';
+import type { FlowState } from '../src/engine/steps.js';
 import { Reading } from '../src/screens/AffectionPlanIntake.js';
 import { readAffectionPlan } from '../../api/src/intake-route.js';
 import { ChecksStep } from '../src/screens/ChecksStep.js';
@@ -793,6 +795,43 @@ describe('a traced figure on screen', () => {
  * none**, and **a closed way on says what would open it**. Neither is visible in a
  * screenshot of a clean run, which is exactly why they need a test.
  */
+describe('StepFacts', () => {
+  it('lists the three bands beside the building, and says which one governs in words', () => {
+    const out = html(<StepFacts step="capacity" run={run} onInspect={() => {}} />);
+    for (const letter of ['>A<', '>B<', '>C<']) expect(out).toContain(letter);
+    // Exactly one band governs, and the mark is a word as well as a rule.
+    expect(out.match(/data-governing="true"/g)).toHaveLength(1);
+    expect(out.match(/>governs</g)).toHaveLength(1);
+  });
+
+  /* The level plan lays out ONE level and the demand is the building's. A label
+     pair that read "laid out / required" printed a shortfall nobody computed. */
+  it('names the per-level count and the building demand as different quantities', () => {
+    const out = html(<StepFacts step="parking" run={run} onInspect={() => {}} />);
+    if (run.levelPlan) {
+      expect(out).toContain('Bays on one level');
+      expect(out).toContain('Bays the building needs');
+      expect(out).toContain('The cross aisle');
+      expect(out).toContain(`${run.levelPlan.losses.circulation.areaM2} m²`);
+    } else {
+      expect(out).toContain('No level was laid out');
+    }
+  });
+
+  it('restates the check counts the checks step prints', () => {
+    const out = html(<StepFacts step="checks" run={run} onInspect={() => {}} />);
+    const passed = run.checks.invariants.results.filter((r) => r.status === 'PASS').length;
+    expect(out).toContain(`${passed} passed`);
+    expect(out).toContain(`${run.checks.validation.summary.hardSatisfied} satisfied`);
+  });
+
+  it('adds nothing on a step whose drawing the plot and the answer already describe', () => {
+    for (const step of ['intake', 'plot', 'parameters', 'rules', 'assumptions', 'evidence', 'export'] as const) {
+      expect(html(<StepFacts step={step} run={run} onInspect={() => {}} />)).toBe('');
+    }
+  });
+});
+
 describe('StepFooter', () => {
   const state = (over: Partial<FlowState> = {}): FlowState => ({
     plot: null,

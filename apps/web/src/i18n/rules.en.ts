@@ -316,6 +316,30 @@ export const EN = {
     areaInvalid: 'An area above zero, in square metres.',
   },
 
+  /**
+   * The checklist above the questions: what Compute is waiting for, in the order
+   * the panels come. Short names, because the panels' own titles are questions
+   * and a list of questions reads as a quiz.
+   */
+  progress: {
+    label: 'What computing needs',
+    /** The count of the three required answers; the figures are the screen's. */
+    count: (done: string, total: string): string => `${done} of ${total} required answers given`,
+    parking: 'Parking in FAR',
+    levels: 'Parking levels',
+    efficiency: 'Saleable area',
+    core: 'Core area',
+    /** States, said in words so the square beside them is never the only signal. */
+    answered: 'Answered',
+    ready: 'Ready',
+    needsAnswer: 'Needs an answer',
+    needsCorrecting: 'Needs correcting',
+    /** An empty core box is not a gap: the engine answers it with a stated assumption. */
+    assumedIfEmpty: 'Optional — assumed if empty',
+    /** Before the panel name, for the button's accessible name. */
+    goTo: 'Go to ',
+  },
+
   run: {
     busy: 'Computing…',
     idle: 'Compute capacity',

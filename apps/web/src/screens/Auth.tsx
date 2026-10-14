@@ -48,7 +48,14 @@ import { AuthFailure } from '../api/auth.js';
 import { AR } from '../i18n/auth.ar.js';
 import { EN } from '../i18n/auth.en.js';
 import { useDict, useLocale } from '../i18n/locale.js';
-import { Figure } from '../img.js';
+import { WorkedExampleModel } from '../components/WorkedExampleModel.js';
+
+/**
+ * The level the column shows. The same level `/parking` draws (`MODEL_LEVEL` in
+ * Parking.tsx), restated rather than imported: importing it would pull the whole
+ * parking page into the sign-in chunk.
+ */
+const WORKED_EXAMPLE_LEVEL = 'G';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
 import { useSession } from '../session.js';
@@ -378,16 +385,21 @@ export function AuthScreen({ mode, page }: { readonly mode: Mode; readonly page:
         </div>
 
         {/*
-          THE BRAND COLUMN IS THE OFFER AND ITS LIMIT, and the image is behind it.
+          THE BRAND COLUMN IS THE OFFER, ITS LIMIT, AND A DRAWING THE ENGINE MADE.
 
-          `Figure` renders NOTHING while the file is absent — no element and
-          no request — so this column is the sentences today and the sentences
-          over a drawing when #18 arrives. The layout does not change shape
-          either way, which is why the panel is a background layer rather than a
-          sibling column that would collapse.
+          The column waited for a generated picture (#18 in the image prompts).
+          It does not need one: "realistic" on this product means the product's
+          own output, and the worked example's parking level is already a
+          drawing nobody fabricated — the same model and the same viewer as the
+          landing hero, every bay placed by the engine. A generated image of a
+          car park would be the one picture on the site that the engine did not
+          draw, on the page least likely to be checked.
+
+          It arrives after the form has painted, in its own chunk, and the
+          plate keeps its size while it loads so nothing moves under a reader
+          who has started typing.
         */}
         <aside className="gate__brand auth__aside" aria-label={t.aside.what}>
-          <Figure name="auth-panel" className="auth__panel-img" />
           <div className="gate__brand-body auth__aside-body">
             <p className="gate__mark">{t.gate.mark}</p>
             <h2 className="gate__headline">{t.gate.headline}</h2>
@@ -398,6 +410,18 @@ export function AuthScreen({ mode, page }: { readonly mode: Mode; readonly page:
               ))}
             </ul>
             <p className="auth__aside-not gate__claim">{t.aside.not}</p>
+
+            <figure className="gate__viewport">
+              <p className="gate__viewport-bar">{t.gate.figure.bar}</p>
+              <div className="figure__plate gate__viewport-plate">
+                <WorkedExampleModel
+                  focusLevelId={WORKED_EXAMPLE_LEVEL}
+                  label={t.gate.figure.caption}
+                  fallback={<p className="massing-viewer__failed">{t.gate.figure.noWebgl}</p>}
+                />
+              </div>
+              <figcaption className="gate__viewport-caption">{t.gate.figure.caption}</figcaption>
+            </figure>
           </div>
         </aside>
       </div>

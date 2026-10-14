@@ -41,6 +41,7 @@ export function WorkspaceInspector({
   gates,
   onInspect,
   onOpenAssumptions,
+  stepFacts,
   children,
 }: {
   readonly plot: PlotView | null;
@@ -48,6 +49,8 @@ export function WorkspaceInspector({
   readonly gates: Readonly<Record<string, boolean>>;
   readonly onInspect: (nodeId: string) => void;
   readonly onOpenAssumptions: () => void;
+  /** What the open step's drawing answers — `engine/StepFacts.tsx`. */
+  readonly stepFacts?: ReactNode;
   /** The derivation, when a value is being inspected. */
   readonly children?: ReactNode;
 }): JSX.Element {
@@ -129,6 +132,8 @@ export function WorkspaceInspector({
           <p className="inspector__empty">{t.answer.none}</p>
         )}
       </section>
+
+      {stepFacts}
 
       <section className="inspector__section" aria-labelledby="inspector-gates">
         <h2 className="inspector__heading" id="inspector-gates">

@@ -40,6 +40,25 @@ found. Pills survive only where a shape *is* a pill, such as a meter's track.
   inspected, so on nine screens out of ten the work had nothing beside it. It
   restates the engine's `TracedWire` values through `TracedValue`. It computes
   nothing, and the derivation still opens inside it.
+- **The inspector has a section that changes with the step** (`engine/StepFacts.tsx`).
+  - **Capacity:** the three bands sit beside the building. The governing band says
+    "governs" in words and is ruled with the accent, so it is never marked by
+    colour alone.
+  - **Parking:** the bays on one level, the bays the whole building needs, and the
+    three losses kept separate. The two counts are labelled as different
+    quantities, because read side by side they look like a shortfall that nobody
+    computed.
+  - **Checks:** the two counts.
+
+  Because those figures sit beside the work, the middle of the step can open on
+  the drawing itself: the 3D view leads the capacity step, and the drawing set
+  leads the parking step.
+- **The rules step opens on what Compute needs.** It shows four rows, each with
+  a short name, a state in words and a jump to its panel. The rows are driven by
+  the same booleans the button reads. Three answers are counted. An empty core
+  is not counted, because the engine answers it with a stated assumption.
+- **A state is a word, so it is set in the sans.** Plex Mono is for figures and
+  identifiers. An Arabic word set in mono keeps Plex Mono's wide word spaces.
 - **The sidebar is a strip of marks** while the engine is open (`data-engine-open`),
   because the canvas needs the width. Its labels are clipped rather than removed,
   so every list keeps its accessible name.

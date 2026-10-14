@@ -29,6 +29,28 @@ export const AR: InspectorDictionary = {
     assumptionsOpen: 'افتح سجل الافتراضات',
   },
 
+  /* «يحكم» for governs, from «السعة الحاكمة» — never «يلزم», which is the binding
+     constraint's verb (bands.ar.ts keeps the two ideas apart). */
+  step: {
+    capacity: {
+      heading: 'النطاقات الثلاثة',
+      governs: 'يحكم',
+    },
+    parking: {
+      heading: 'المواقف',
+      laidOut: 'المواقف في الدور الواحد',
+      required: 'المواقف التي يحتاجها المبنى',
+      lossesHeading: 'ما فقد في ذلك الدور، بحسب السبب',
+      bays: ' موقف',
+      none: 'لم يوزع دور في هذه الدراسة. خطوة المواقف تذكر السبب.',
+    },
+    checks: {
+      heading: 'الفحوصات',
+      invariants: 'فحوصات الحفظ الحسابي',
+      outcomes: 'إعادة الفحص أمام القواعد',
+    },
+  },
+
   gates: {
     heading: 'البوابات',
     G1_PLOT_CONFIRMED: 'تأكيد القطعة',

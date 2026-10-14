@@ -23,15 +23,20 @@
  * seen before the next is meaningful. Steps 5–9 are free because by then they
  * have seen it. Enforcing that ordering in the client is a convenience; the
  * server enforces it for real, because a gate a client can skip is not a gate.
+ *
+ * THIS FILE IS THE FLOW'S STATE AND NOTHING ELSE (October 2026). It was 1,534
+ * lines; the step table, the footer and banners, the envelope, parking and export
+ * panels and the assumption edit now live in `engine/`, one concern a file. What
+ * stays here is what only the flow knows: which step is open, the plot, the run,
+ * the gates, and the address that names them.
  */
 
-import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   api,
   ApiError,
   type Actor,
-  type ExportResult,
   type PlotView,
   type RunRequestBody,
   type RunView,
@@ -40,131 +45,33 @@ import {
 import { AssumptionRegister } from './components/AssumptionRegister.js';
 import { CapacityBands } from './components/CapacityBands.js';
 import { GfaStatement } from './components/GfaStatement.js';
-import { PlotCanvas } from './components/PlotCanvas.js';
+import { MassingPanel } from './components/MassingPanel.js';
 import { PlotLimits } from './components/PlotLimits.js';
 import { ProvenanceTree, type ProvTree } from './components/ProvenanceTree.js';
-import { ProvenanceLegend, TracedValue } from './components/TracedValue.js';
+import { ProvenanceLegend } from './components/TracedValue.js';
 import { WorkspaceInspector } from './components/WorkspaceInspector.js';
-import { MassingPanel } from './components/MassingPanel.js';
-import { DrawingSet, useSheets } from './components/DrawingSet.js';
-import { downloadObject, openDocument, printDocument } from './documents.js';
-import { ParkingPlan, VehicleAccessPanel } from './components/ParkingPlan.js';
+import { demoFrom, type Demo } from './demo.js';
+import { applyAssumptionEdit } from './engine/assumptionEdit.js';
+import { EnvelopePanel } from './engine/EnvelopePanel.js';
+import { ExportPanel } from './engine/ExportPanel.js';
+import { ParkingStep } from './engine/ParkingStep.js';
+import { ErrorBanner, StepFooter, StepHintBanner } from './engine/StepChrome.js';
+import { StepFacts } from './engine/StepFacts.js';
+import { missingFor, STEPS, type FlowState, type StepHint, type StepId } from './engine/steps.js';
+import { useVerbatim } from './engine/verbatim.js';
+import { hashOf } from './gateHash.js';
+import { AR } from './i18n/app.ar.js';
+import { EN } from './i18n/app.en.js';
+import { useDict } from './i18n/locale.js';
+import type { Navigate } from './router.js';
 import { AffectionPlanIntake, type Prefill } from './screens/AffectionPlanIntake.js';
 import { ChecksStep } from './screens/ChecksStep.js';
 import { EvidenceStep } from './screens/EvidenceStep.js';
 import { ParametersStep } from './screens/ParametersStep.js';
 import { PlotForm } from './screens/PlotForm.js';
-import { Link, type Href, type Navigate } from './router.js';
 import { RulesStep } from './screens/RulesStep.js';
-import { AR } from './i18n/app.ar.js';
-import { EN } from './i18n/app.en.js';
-import { useDict, useLocale, Verbatim } from './i18n/locale.js';
-import { hashOf } from './gateHash.js';
-import { demoFrom, type Demo } from './demo.js';
 
-/*
-  `gated` is DELETED. It was metadata nobody read: the flag said `plot` was gated
-  and the `reachable` computation below puts `plot` in the done set unconditionally,
-  so the two had drifted and only one of them was doing anything. A second,
-  plausible-looking source of truth for what blocks a step is worse than none —
-  someone reads the table, believes it, and writes a guard against a fact the
-  application does not hold.
-
-  THE LABELS MOVED TO `i18n/app.en.ts` AND THE IDS STAYED. An id is the engine's
-  name for a step — what `?step=` answers to and what the antechamber lists — and a
-  translated id would name a step nothing here answers to. The label is copy.
-*/
-const STEPS = [
-  { id: 'intake' },
-  { id: 'plot' },
-  { id: 'parameters' },
-  { id: 'rules' },
-  { id: 'assumptions' },
-  { id: 'capacity' },
-  { id: 'parking' },
-  { id: 'checks' },
-  { id: 'evidence' },
-  { id: 'export' },
-] as const;
-
-type StepId = (typeof STEPS)[number]['id'];
-
-/**
- * What a step is still waiting for, or `null` when it is open.
- *
- * ONE function, and both the strip's `reachable` set and the footer's sentence are
- * built from it. They are the same fact asked two ways — *may I go there* and *why
- * not yet* — and a footer that worked out its own answer would be a second opinion
- * about what blocks a step. The two would drift the first time a gate moved, and
- * the drift would be invisible: the strip would unlock a step the footer still
- * refused, or worse, the other way round.
- */
-type Missing = 'plot' | 'confirm' | 'run';
-
-export interface FlowState {
-  readonly plot: PlotView | null;
-  readonly confirmed: boolean;
-  readonly run: RunView | null;
-}
-
-function missingFor(id: StepId, state: FlowState): Missing | null {
-  switch (id) {
-    /* Step 0 is not gated — a plot whose sheet is not to hand is still a plot —
-       and step 1 is where the flow begins, so neither ever waits for anything. */
-    case 'intake':
-    case 'plot':
-      return null;
-    case 'parameters':
-      return state.plot ? null : 'plot';
-    case 'rules':
-      if (!state.plot) return 'plot';
-      return state.confirmed ? null : 'confirm';
-    /* Steps 5–9 are freely navigable ONCE THERE IS A RUN, and not before: each of
-       them renders the run's own figures and has nothing to show without it. */
-    default:
-      return state.run ? null : 'run';
-  }
-}
-
-/**
- * What the `?step=` banner has to say, kept as DATA and not as a sentence.
- *
- * It used to be stored as an English string, set once in an effect. A sentence in
- * state is a sentence in the language that was active when the effect ran — switch
- * to Arabic and the banner stays English until the address changes. The facts are
- * stored instead and the sentence is written at render, in whichever language is
- * current.
- */
-export type StepHint =
-  | { readonly kind: 'unknown'; readonly wanted: string }
-  | { readonly kind: 'locked'; readonly step: StepId };
-
-/**
- * An engine string, isolated on the Arabic page and untouched on the English one.
- *
- * A Latin run inside an Arabic sentence is reordered at its boundaries by the
- * bidirectional algorithm, so a trailing full stop or a bracketed citation lands at
- * the wrong end. `Verbatim` sets `dir="ltr" lang="en"`. On the English page the
- * document already is both, so the span would carry nothing — and this screen's
- * English rendering is held byte-identical to what it was before its copy moved.
- */
-function useVerbatim(): (value: ReactNode) => ReactNode {
-  const { locale } = useLocale();
-  return (value) => (locale === 'ar' ? <Verbatim>{value}</Verbatim> : value);
-}
-
-/**
- * The figures inside sentences on this screen, each named once.
- *
- * They are not in the dictionary because no digit is. "within 1%" is the engine's
- * `withinOnePercent` flag, labelled; A3 is the paper the drawing set is composed
- * for; the model file is glTF 2.0 because that is what `@envelope/massing` writes.
- */
-const WITHIN_THRESHOLD = '1%';
-const DRAWING_SET_PAPER = 'A3';
-const THREE_D = '3D';
-const MODEL_FORMAT = 'glTF 2.0';
-const LAYER_EXAMPLES = ['ENV-B1-BAY', 'ENV-B1-CAR'] as const;
+export type { FlowState, StepHint } from './engine/steps.js';
 
 export function EngineApp({
   navigate,
@@ -449,6 +356,10 @@ export function EngineApp({
         had nothing beside the work telling them what it was for. It is always
         there now, and the derivation still opens in it.
 
+        What the column says changes with the step — `StepFacts` puts the three
+        bands beside the building, and the bays and the three losses beside the
+        parking level — so the middle can open on the drawing itself.
+
         THE BANNERS STAY ABOVE THE GRID: the error and the draft-rules warning are
         both `role="alert"`, and an alert placed after the navigation is one a
         screen reader reaches second.
@@ -486,34 +397,13 @@ export function EngineApp({
         <div className="ws__body">
           <div className="ws__canvas">
             {/*
-              WHAT THE STEP IS, BEFORE THE STEP — on all ten, from one component
-              and one dictionary entry each.
-
-              Rendered HERE rather than inside each screen for two reasons. Four
-              of the ten steps are panels in this file rather than screens of
-              their own, so "the top of the screen" is not a place that exists for
-              them. And ten paragraphs written in ten files drift into ten shapes:
-              one grows a list, one loses its disclosure, one is never translated
-              — and the shape is the whole of the fix. See `StepPrimer.tsx` for the
-              three layers and the client's reply they answer.
-            */}
-            {/*
-              AND NOW IT IS NOT RENDERED AT ALL — 6 Oct 2026, in his words:
-              «وشيل كل الشرح فى كل الخطوات عاوز الاستخدام فقط».
-
-              What was left here was one sentence a step, already cut back twice.
-              It named the screen the reader was on, which the stepper above and
-              the panel heading below both already do, so a third naming is the
-              prose he is asking to stop reading.
-
-              THE SAME TEST THE LAST CUT HAD TO PASS, and it passes again: not one
-              of these ten lines carried a claim, a refusal, a provenance class or
-              a limit. The claim statement is on `/`, the refusals are on
-              `/refusals`, every ASSUMED value still says ASSUMED on the value, and
-              REGULATORY VALIDITY: NOT ASSESSED is in the masthead above every one
-              of these screens. The component and both dictionaries are kept, whole
-              and tested, because he has changed his mind about this before and the
-              file should let him change it back.
+              No step primer. 6 Oct 2026, in his words: «وشيل كل الشرح فى كل
+              الخطوات عاوز الاستخدام فقط». Not one of the ten lines it rendered
+              carried a claim, a refusal, a provenance class or a limit — the claim
+              statement is on `/`, the refusals on `/refusals`, every ASSUMED value
+              still says ASSUMED on the value, and REGULATORY VALIDITY: NOT
+              ASSESSED is in the masthead. `StepPrimer.tsx` and both dictionaries
+              are kept, whole and tested, so the decision can be reversed.
             */}
 
             {step === 'intake' ? (
@@ -616,6 +506,17 @@ export function EngineApp({
               <>
                 <ProvenanceLegend />
                 {/*
+                  THE BUILDING FIRST (October 2026). The three bands are in the
+                  inspector beside it now, so the middle opens on what was
+                  computed rather than on a table of what bounds it. The bands'
+                  own panel stays below — it carries the binding constraint, the
+                  explanation and the governing assumption, which the inspector's
+                  three lines do not.
+                */}
+                {plot ? (
+                  <MassingPanel run={run} onInspect={inspect} />
+                ) : null}
+                {/*
                   The assumption under the governing figure, picked out of the run's
                   own register rather than rebuilt. `parking.bay_area_factor` is the
                   divisor in `floor(available area ÷ factor)`, and that quotient is
@@ -636,9 +537,6 @@ export function EngineApp({
                 />
                 {run.gfaStatement ? (
                   <GfaStatement statement={run.gfaStatement} onInspect={inspect} />
-                ) : null}
-                {plot ? (
-                  <MassingPanel run={run} onInspect={inspect} />
                 ) : null}
                 <EnvelopePanel run={run} onInspect={inspect} />
               </>
@@ -677,6 +575,7 @@ export function EngineApp({
             gates={gates}
             onInspect={inspect}
             onOpenAssumptions={() => goto('assumptions')}
+            stepFacts={<StepFacts step={step} run={run} onInspect={inspect} />}
           >
             {inspecting ? (
               <ProvenanceTree
@@ -702,833 +601,4 @@ export function EngineApp({
       </p>
     </div>
   );
-}
-
-/**
- * The footer that carries the flow — §20.1's ordering, made operable.
- *
- * ---------------------------------------------------------------------------
- * WHY IT EXISTS, AND IT IS A REPORTED DEFECT RATHER THAN A POLISH ITEM.
- *
- * `ParametersStep` renders its footer conditionally: once `G1` is signed it shows a
- * tick and NO BUTTON AT ALL. Confirming the plot advanced the step the first time
- * through, so the defect was invisible on a clean run — but come back to that step
- * from the strip, from a bookmark or from `?step=parameters`, and there was nothing
- * to press. The client's words: «بعد confirm the plot في زرار المفروض ندوس عليه انو
- * يدخلنا الصفحه الي بعدها مش موجود».
- *
- * And it was worse than the report. NO step had a back control. Ten small targets in
- * a horizontal strip were the whole of the navigation for a nine-step flow, on a
- * screen where each step is a decision someone may want to revisit.
- *
- * ---------------------------------------------------------------------------
- * THE DISABLED BUTTON SAYS WHY, IN THE SENTENCE BESIDE IT.
- *
- * A `next` that is merely dim is a dead end, which is the one shape of refusal this
- * product may not make — `/refusals` is a nav slot precisely because every refusal
- * here is supposed to be legible. `missingFor` supplies the reason and the sentence
- * names what would open the step.
- *
- * The button is genuinely `disabled` rather than `aria-disabled`, and the reason is
- * a sibling paragraph rather than a description on the control. That is this
- * screen's existing pattern — `RulesStep` disables its submit and prints
- * `compareNeeds` next to it — and `app.css`'s `.button:disabled` was written for
- * exactly this case: it drops the accent entirely rather than dimming it, because
- * "the Continue button does nothing" was the most common report of this screen.
- * Two patterns for one state would be worse than either.
- *
- * ---------------------------------------------------------------------------
- * NO DIRECTIONAL WORD IN THE COPY.
- *
- * "Back" and "Continue" name a direction in the flow, not a direction on the screen.
- * The chevrons are `aria-hidden` decoration and `app.css` flips them under `rtl`;
- * copy reading "the button on the right" would be wrong in Arabic and meaningless
- * to a screen reader in both languages. Each button also names the step it reaches,
- * so the accessible name is "Continue to Rules" rather than "Continue" repeated ten
- * times down a tab order.
- */
-export function StepFooter({
-  step,
-  flow,
-  onGo,
-}: {
-  readonly step: StepId;
-  readonly flow: FlowState;
-  readonly onGo: (id: StepId) => void;
-}): JSX.Element {
-  const t = useDict(EN, AR);
-  const needsId = useId();
-  const f = t.steps.footer;
-
-  const index = STEPS.findIndex((s) => s.id === step);
-  const previous = index > 0 ? STEPS[index - 1] : undefined;
-  const next = index < STEPS.length - 1 ? STEPS[index + 1] : undefined;
-  const missing = next ? missingFor(next.id, flow) : null;
-
-  return (
-    <nav className="step-footer" aria-label={f.nav}>
-      {/* An empty cell rather than no cell: the grid places `next` at the inline end
-          whether or not there is a `back`, and a missing first child would slide it. */}
-      {previous ? (
-        <button
-          type="button"
-          className="button step-footer__back"
-          onClick={() => onGo(previous.id)}
-        >
-          <Chevron back />
-          {f.backBefore}
-          {t.steps.labels[previous.id]}
-        </button>
-      ) : (
-        <span />
-      )}
-
-      {next ? (
-        <div className="step-footer__forward">
-          {missing ? (
-            <p className="step-footer__needs" id={needsId}>
-              {f.needs[missing]}
-            </p>
-          ) : null}
-          <button
-            type="button"
-            className="button button--primary step-footer__next"
-            onClick={() => onGo(next.id)}
-            disabled={missing !== null}
-          >
-            {f.nextBefore}
-            {t.steps.labels[next.id]}
-            <Chevron />
-          </button>
-        </div>
-      ) : (
-        <p className="step-footer__end">{f.end}</p>
-      )}
-    </nav>
-  );
-}
-
-/**
- * The footer's chevron — decoration, and the only glyph on this screen that is not
- * in `SiteChrome`'s `MarkName` set.
- *
- * It is deliberately not added there: that set is the PROVENANCE LEGEND — assumed,
- * derived, deferred, user-set, never-claimed — and every mark in it carries a
- * meaning the report and the drawings share. A navigation arrow has no provenance
- * class, and putting it in the legend would be the first mark in that set that means
- * nothing.
- */
-function Chevron({ back = false }: { readonly back?: boolean }): JSX.Element {
-  return (
-    <svg
-      className={`step-footer__chev${back ? ' step-footer__chev--back' : ''}`}
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M6 3 L11 8 L6 13" />
-    </svg>
-  );
-}
-
-/**
- * The `?step=` banner, written at render from the facts `EngineApp` stored.
- *
- * The id the visitor typed and the engine's list of ids are not copy in either
- * language, so the sentence is written around them and, on the Arabic page, they
- * are isolated — without which the closing quotation mark and the full stop migrate
- * to the wrong end of the line.
- */
-export function StepHintBanner({ hint }: { readonly hint: StepHint }): JSX.Element {
-  const t = useDict(EN, AR);
-  const ltr = useVerbatim();
-  return (
-    <p className="banner" role="status">
-      {hint.kind === 'unknown' ? (
-        <>
-          {t.hint.unknownLead}
-          {ltr(hint.wanted)}
-          {t.hint.unknownBetween}
-          {ltr(STEPS.map((st) => st.id).join(', '))}
-          {t.hint.unknownTail}
-        </>
-      ) : (
-        <>
-          {t.hint.lockedLead}
-          {t.steps.labels[hint.step]}
-          {t.hint.lockedTail}
-        </>
-      )}
-    </p>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-/*
-  `Theme`, `DENSITIES`, `Density`, `useSidebar`, `useDensity` and `useTheme`
-  MOVED to `preferences.ts`, and `Header` to `components/ActorHeader.tsx`. `Root`
-  uses all of them on every page, and while they lived here importing them
-  dragged the whole engine into the landing page's bundle.
-*/
-
-/*
-  `ActorPrompt` MOVED to `screens/Antechamber.tsx` and is respecified as a public
-  page. It is the first screen behind every public CTA, so it is site copy: it
-  keeps the shared header, nav and colophon, it goes through the site's
-  prohibitions test, and it says three things before it asks for anything — why
-  the name is wanted, what the licence field does and does not do, and that this
-  is not authentication. It was none of those as a bare form on a blank page.
-*/
-
-export function ErrorBanner({
-  error,
-  onDismiss,
-}: {
-  readonly error: ApiError;
-  readonly onDismiss: () => void;
-}): JSX.Element {
-  // The engine's refusals are the product working. They are presented as
-  // information the user needs, not as a system failure to apologise for.
-  const t = useDict(EN, AR).error;
-  const ltr = useVerbatim();
-  const blocked = error.status === 422 || error.status === 409;
-  return (
-    <div className={`banner ${blocked ? 'banner--blocked' : 'banner--danger'}`} role="alert">
-      <div>
-        <strong>{blocked ? t.blocked : t.failed}</strong>
-        {/* The API's sentence, as the API wrote it — the only party that knows why. */}
-        <p>{ltr(error.message)}</p>
-        {error.gate ? (
-          <p className="fine-print">
-            {t.blockedAt}
-            {ltr(error.gate)}
-          </p>
-        ) : null}
-      </div>
-      <button type="button" className="button button--ghost button--icon" onClick={onDismiss} aria-label={t.dismiss}>
-        ✕
-      </button>
-    </div>
-  );
-}
-
-export function EnvelopePanel({
-  run,
-  onInspect,
-}: {
-  readonly run: RunView;
-  readonly onInspect: (n: string) => void;
-}): JSX.Element {
-  const t = useDict(EN, AR).envelope;
-  const ltr = useVerbatim();
-  const e = run.envelope;
-  return (
-    <section className="panel" aria-labelledby="envelope-heading">
-      <header className="panel__header">
-        <div>
-          <h2 id="envelope-heading" className="panel__title">
-            {t.title}
-          </h2>
-          <p className="panel__subtitle">{t.subtitle}</p>
-        </div>
-      </header>
-
-      <dl className="kv kv--grid">
-        <div>
-          <dt>{t.fields.setbackPermittedFootprint}</dt>
-          <dd><TracedValue traced={e.setbackPermittedFootprint} onInspect={onInspect} /></dd>
-        </div>
-        <div>
-          <dt>{t.fields.coverageCap}</dt>
-          <dd><TracedValue traced={e.coverageCap} onInspect={onInspect} /></dd>
-        </div>
-        <div>
-          <dt>{t.fields.podiumFootprint}</dt>
-          <dd><TracedValue traced={e.podiumFootprint} onInspect={onInspect} /></dd>
-        </div>
-        <div>
-          <dt>{t.fields.towerPlate}</dt>
-          <dd><TracedValue traced={e.towerPlateCap} onInspect={onInspect} /></dd>
-        </div>
-        <div>
-          <dt>{t.fields.heightCeiling}</dt>
-          <dd><TracedValue traced={e.heightCeilingM} onInspect={onInspect} /></dd>
-        </div>
-        <div>
-          <dt>{t.fields.levelsByHeight}</dt>
-          <dd><TracedValue traced={e.maxLevelsByHeight} onInspect={onInspect} /></dd>
-        </div>
-      </dl>
-
-      <h3 className="panel__section">{t.bindsTitle}</h3>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th scope="col">{t.columns.dimension}</th>
-            <th scope="col">{t.columns.binding}</th>
-            <th scope="col" className="data-table__num">{t.columns.value}</th>
-            <th scope="col">{t.columns.nextClosest}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {e.bindingConstraints.map((b) => (
-            <tr key={b.dimension}>
-              <th scope="row">
-                {t.dimensions?.[b.dimension] ?? ltr(b.dimension.replace(/_/g, ' '))}
-              </th>
-              {/* The constraint's label, its rule and the runner-up's label are the
-                  engine's, and are rendered as it wrote them. */}
-              <td>
-                {ltr(b.label)} <span className="muted">· {ltr(b.ruleId)}</span>
-              </td>
-              <td className="data-table__num value">{b.value}</td>
-              <td>
-                {b.runnerUp ? (
-                  <>
-                    {ltr(b.runnerUp.label)}
-                    {t.runnerUpAt}
-                    <span className="value">{b.runnerUp.value}</span>
-                    {b.runnerUp.withinOnePercent ? (
-                      <span className="chip chip--warn">{t.within(WITHIN_THRESHOLD)}</span>
-                    ) : null}
-                  </>
-                ) : (
-                  <span className="muted">—</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/*
-        §11.7 step 6 requires the report to state how many iterations the
-        applicability fixpoint took. On this product it is also the evidence that
-        the setback circularity was solved rather than assumed away, so it is
-        shown rather than logged.
-      */}
-      <details className="disclosure">
-        <summary>{t.iterations(e.fixpoint.iterations, e.fixpoint.converged)}</summary>
-        <p className="fine-print">{t.fixpointNote}</p>
-        {/* Each note is the solver's own record of one pass. */}
-        <ol className="iteration-log">
-          {e.fixpoint.history.map((h) => (
-            <li key={h.index}>{ltr(h.note)}</li>
-          ))}
-        </ol>
-      </details>
-    </section>
-  );
-}
-
-/**
- * Step 6 — the demand panel, then the drawings or the engine's reason for having
- * none.
- *
- * Its own component, and exported, for one reason: the stepper opens on step 0
- * and a static render never reaches step 6, so the copy here was rendered by
- * nothing but a browser. Lifting it out changes no markup — a component boundary
- * is not an element — and lets `app-arabic.test.tsx` read both languages of it.
- */
-export function ParkingStep({
-  run,
-  plot,
-  onInspect,
-}: {
-  readonly run: RunView;
-  readonly plot: PlotView | null;
-  readonly onInspect: (n: string) => void;
-}): JSX.Element {
-  const t = useDict(EN, AR).parkingStep;
-  const ltr = useVerbatim();
-  return (
-    <>
-      <ParkingPanel run={run} onInspect={onInspect} />
-      {run.levelPlan ? (
-        <>
-          <section className="panel" aria-labelledby="level-heading">
-            <header className="panel__header">
-              <div>
-                <h2 id="level-heading" className="panel__title">
-                  {t.drawingsTitle}
-                </h2>
-                <p className="panel__subtitle">{t.drawingsSubtitle}</p>
-              </div>
-            </header>
-            {/* A run stored before the building model existed has no sheets;
-                it keeps the level drawing it was computed with, below. */}
-            {run.building ? (
-              <>
-                <DrawingSet run={run} onInspect={onInspect} />
-                <h3 className="panel__subheading">{t.levelAsPacked}</h3>
-              </>
-            ) : null}
-            <ParkingPlan
-              levelPlan={run.levelPlan}
-              plotVertices={plot?.vertices}
-              onInspect={onInspect}
-              figure={!run.building}
-            />
-          </section>
-          <VehicleAccessPanel levelPlan={run.levelPlan} onInspect={onInspect} />
-        </>
-      ) : (
-        <div className="banner banner--assumed" role="note">
-          <div>
-            <strong>{t.noLevelTitle}</strong>
-            <p>
-              {run.levelPlanRefusal !== null && run.levelPlanRefusal !== undefined
-                ? ltr(run.levelPlanRefusal)
-                : t.noReason}{' '}
-              {t.noLevelTail}
-            </p>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-export function ParkingPanel({
-  run,
-  onInspect,
-}: {
-  readonly run: RunView;
-  readonly onInspect: (n: string) => void;
-}): JSX.Element {
-  const t = useDict(EN, AR).parking;
-  const ltr = useVerbatim();
-  const p = run.parking;
-  const fits = Number(p.headroomBays) >= 0;
-  return (
-    <section className="panel" aria-labelledby="parking-heading">
-      <header className="panel__header">
-        <div>
-          <h2 id="parking-heading" className="panel__title">
-            {t.title}
-          </h2>
-          <p className="panel__subtitle">{t.subtitle}</p>
-        </div>
-      </header>
-
-      <dl className="kv kv--grid">
-        <div><dt>{t.fields.residentBays}</dt><dd><TracedValue traced={p.residentBays} onInspect={onInspect} /></dd></div>
-        <div><dt>{t.fields.visitorBays}</dt><dd><TracedValue traced={p.visitorBays} onInspect={onInspect} /></dd></div>
-        <div><dt>{t.fields.totalBays}</dt><dd><TracedValue traced={p.totalBays} onInspect={onInspect} /></dd></div>
-        <div><dt>{t.fields.areaPerBay}</dt><dd><TracedValue traced={p.bayAreaFactorM2} onInspect={onInspect} /></dd></div>
-        <div><dt>{t.fields.areaRequired}</dt><dd><TracedValue traced={p.requiredAreaM2} onInspect={onInspect} /></dd></div>
-        <div><dt>{t.fields.levelsRequired}</dt><dd><TracedValue traced={p.levelsRequired} onInspect={onInspect} /></dd></div>
-        <div><dt>{t.fields.levelsAvailable}</dt><dd><TracedValue traced={p.levelsAvailable} onInspect={onInspect} /></dd></div>
-        <div>
-          <dt>{t.fields.unitsCarried}</dt>
-          <dd><TracedValue traced={p.supportableUnitCeiling} onInspect={onInspect} /></dd>
-        </div>
-      </dl>
-
-      {/* The engine's sentence about what the supply means for the podium. */}
-      <p className={`callout ${fits ? 'callout--ok' : 'callout--warn'}`}>
-        {ltr(p.podiumImplication)}
-      </p>
-    </section>
-  );
-}
-
-/** What the export step holds once the report has been prepared. */
-export interface ExportDoneState {
-  readonly result: ExportResult;
-  readonly html: string;
-  readonly sheets: string | null;
-}
-
-export function ExportPanel({
-  actor,
-  run,
-  gates,
-  onAcknowledge,
-  onGoToAssumptions,
-  onError,
-}: {
-  readonly actor: Actor;
-  readonly run: RunView;
-  readonly gates: Record<string, boolean>;
-  readonly onAcknowledge: (gate: string, hash: string) => void;
-  readonly onGoToAssumptions: () => void;
-  readonly onError: (e: ApiError) => void;
-}): JSX.Element {
-  const t = useDict(EN, AR).export;
-  const [done, setDone] = useState<ExportDoneState | null>(null);
-  const [busy, setBusy] = useState(false);
-  /*
-    EVERY IDENTIFIED ACTOR MAY SIGN. This was `Boolean(actor.licence)`, and the
-    licence is a number nothing verifies — see the note in `identity.ts`. What
-    the panel owes the reader now is the STATE of that field, not a refusal:
-    whose name goes on the export, and whether a licence went with it.
-  */
-  const hasLicence = Boolean(actor.licence);
-  const ready =
-    Boolean(gates['G3_ASSUMPTIONS_ACKNOWLEDGED']) && Boolean(gates['G4_REVIEWER_NAMED']);
-
-  return (
-    <section className="panel" aria-labelledby="export-heading">
-      <header className="panel__header">
-        <div>
-          <h2 id="export-heading" className="panel__title">
-            {t.title}
-          </h2>
-          <p className="panel__subtitle">{t.subtitle}</p>
-        </div>
-      </header>
-
-      <ol className="gate-list">
-        <li className={gates['G3_ASSUMPTIONS_ACKNOWLEDGED'] ? 'is-done' : undefined}>
-          <span className="gate-list__glyph" aria-hidden="true">
-            {gates['G3_ASSUMPTIONS_ACKNOWLEDGED'] ? '✓' : '○'}
-          </span>
-          <div>
-            <strong>{t.assumptionsRead}</strong>
-            <p>{t.assumptionCount(run.assumptions.length)}</p>
-            {/*
-              Acknowledged on the register, not here. §20.2 makes the register
-              "the moment the user understands this is not magic", and a tick box on
-              the export screen would let someone accept a list they never opened.
-              What this screen owes them is the way back — an unactionable circle on
-              a checklist is a dead end, and that is what it was.
-            */}
-            {!gates['G3_ASSUMPTIONS_ACKNOWLEDGED'] ? (
-              <button type="button" className="link-button" onClick={onGoToAssumptions}>
-                {t.readThem}
-              </button>
-            ) : null}
-          </div>
-        </li>
-        <li className={gates['G4_REVIEWER_NAMED'] ? 'is-done' : undefined}>
-          <span className="gate-list__glyph" aria-hidden="true">
-            {gates['G4_REVIEWER_NAMED'] ? '✓' : '○'}
-          </span>
-          <div>
-            <strong>{t.signedBy}</strong>
-            <p>
-              {t.reviewerBefore}
-              <PersonName name={actor.name} />
-              {t.reviewerAfter}
-            </p>
-            <p className="note">{hasLicence ? t.withLicence : t.noLicence}</p>
-            {!gates['G4_REVIEWER_NAMED'] ? (
-              <button
-                type="button"
-                className="button"
-                onClick={() => onAcknowledge('G4_REVIEWER_NAMED', hashOf(run.capacity))}
-              >
-                {t.sign}
-              </button>
-            ) : null}
-          </div>
-        </li>
-      </ol>
-
-      <div className="actions">
-        <button
-          type="button"
-          className="button button--primary"
-          disabled={!ready || busy}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              // The drawing set only when the run has a model to draw; a run stored
-              // before it existed would be refused, and that refusal is not a
-              // reason to withhold the report.
-              const [result, html, sheets] = await Promise.all([
-                api.exportRun(actor, run.runId),
-                api.exportRunHtml(actor, run.runId),
-                run.building ? api.exportRunHtml(actor, run.runId, 'sheets') : Promise.resolve(null),
-              ]);
-              setDone({ result, html, sheets });
-            } catch (e) {
-              if (e instanceof ApiError) onError(e);
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          {busy ? t.preparing : t.exportReport}
-        </button>
-        {!ready ? <p className="fine-print">{t.notReady}</p> : null}
-      </div>
-
-      {done ? <ExportDone actor={actor} run={run} done={done} onError={onError} /> : null}
-    </section>
-  );
-}
-
-/**
- * The name a person typed, isolated on the Arabic page.
- *
- * Not `Verbatim`: a name is not an engine string and need not be English, so it
- * gets no `lang`. It gets `<bdi>` — its direction is its own, and a Latin name at
- * the edge of an Arabic sentence would otherwise carry the full stop with it.
- */
-function PersonName({ name }: { readonly name: string }): JSX.Element {
-  const { locale } = useLocale();
-  return locale === 'ar' ? <bdi>{name}</bdi> : <>{name}</>;
-}
-
-/**
- * The export step after the report has been prepared: the fixed run, its two
- * fingerprints and every file behind the same two gates.
- *
- * Its own component, and exported, because it renders only after a click — so the
- * copy in it was rendered by nothing but a browser. Lifting it out changes no
- * markup, and `useSheets` moves with it: the sheet list is read only where it is
- * shown.
- */
-export function ExportDone({
-  actor,
-  run,
-  done,
-  onError,
-}: {
-  readonly actor: Actor;
-  readonly run: RunView;
-  readonly done: ExportDoneState;
-  readonly onError: (e: ApiError) => void;
-}): JSX.Element {
-  const t = useDict(EN, AR).export;
-  const ltr = useVerbatim();
-  const sheets = useSheets(run);
-
-  return (
-    <>
-      <div className="callout callout--ok">
-        <p>
-          {t.fixedBefore}
-          <code>{run.runId.slice(0, 8)}</code>
-          {t.fixedAfter}
-        </p>
-      </div>
-
-      {/*
-        Two artifacts, and two fingerprints beside them.
-
-        §3.4 item 9 promises a report and a JSON export; a screen that said
-        "export prepared" and handed over neither had promised and not
-        delivered. The fingerprints are printed rather than hidden because
-        §13.4's guarantee is only worth something if a reader can check it —
-        one covers the question that was asked, the other the answer that came
-        back.
-      */}
-      <dl className="kv">
-        <div>
-          <dt>{t.runFingerprint}</dt>
-          <dd>
-            <code>{done.result.fingerprint}</code>
-            <span className="muted">{t.runFingerprintNote}</span>
-          </dd>
-        </div>
-        <div>
-          <dt>{t.reportFingerprint}</dt>
-          <dd>
-            <code>{done.result.reportFingerprint.digest.slice(0, 16)}…</code>
-            <span className="muted">
-              {' '}
-              {t.reportFingerprintBefore}
-              {ltr(done.result.reportFingerprint.algorithm)}
-              {t.reportFingerprintAfter}
-            </span>
-          </dd>
-        </div>
-      </dl>
-
-      {done.result.annexNotice ? (
-        <div className="banner banner--danger" role="alert">
-          <div>
-            <strong>{t.annexTitle}</strong>
-            <p>{ltr(done.result.annexNotice)}</p>
-          </div>
-        </div>
-      ) : null}
-
-      {/*
-        THE PDF. The report is print-first HTML, so the browser is this
-        product's PDF writer — `documents.ts` argues why that is a decision and
-        not a shortfall. The note under the buttons says so on the page, because
-        a reader who expects a file and gets a dialog concludes it is broken.
-      */}
-      <div className="actions actions--row">
-        <button
-          type="button"
-          className="button"
-          onClick={() => openDocument(done.html, 'text/html')}
-        >
-          {t.openReport}
-        </button>
-        <button
-          type="button"
-          className="button"
-          onClick={() => printDocument(done.html, 'text/html')}
-        >
-          {t.printReport}
-        </button>
-        {done.sheets ? (
-          <button
-            type="button"
-            className="button"
-            onClick={() => openDocument(done.sheets!, 'text/html')}
-          >
-            {t.openDrawingSet(DRAWING_SET_PAPER)}
-          </button>
-        ) : null}
-        {done.sheets ? (
-          <button
-            type="button"
-            className="button"
-            onClick={() => printDocument(done.sheets!, 'text/html')}
-          >
-            {t.printDrawingSet(DRAWING_SET_PAPER)}
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className="button"
-          onClick={() =>
-            openDocument(JSON.stringify(done.result.document, null, 2), 'application/json')
-          }
-        >
-          {t.openJson}
-        </button>
-        {/*
-          CAD and Excel, behind the same two gates as the report.
-
-          The client asked for both by name. The temptation is to treat a
-          drawing as a lesser artifact that can skip the acknowledgement; it
-          is the opposite — a DXF is the output most likely to be x-reffed
-          into a submission set and read by someone who never saw the
-          assumption register, so it is gated identically and it carries the
-          disclaimer inside the file.
-
-          Downloaded rather than opened in a tab: neither format renders in a
-          browser, and a tab of binary is a broken feature.
-        */}
-        <button
-          type="button"
-          className="button"
-          onClick={() => void download(actor, run.runId, 'dxf', onError)}
-        >
-          {t.downloadDxf}
-        </button>
-        {run.building ? (
-          <button
-            type="button"
-            className="button"
-            onClick={() => void download(actor, run.runId, 'glb', onError)}
-          >
-            {t.downloadModel(THREE_D)}
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className="button"
-          onClick={() => void download(actor, run.runId, 'xlsx', onError)}
-        >
-          {t.downloadXlsx}
-        </button>
-      </div>
-
-      <p className="fine-print">{t.pdfNote}</p>
-
-      <p className="fine-print">
-        {t.cad.lead(THREE_D)}
-        <code>{LAYER_EXAMPLES[0]}</code>
-        {t.cad.between}
-        <code>{LAYER_EXAMPLES[1]}</code>
-        {t.cad.afterLayers}
-        <strong>{t.cad.not}</strong>
-        {t.cad.tail}
-      </p>
-      {run.building ? (
-        <p className="fine-print">
-          {t.glb.lead(THREE_D)}
-          <code>.glb</code>
-          {t.glb.tail(THREE_D, MODEL_FORMAT)}
-        </p>
-      ) : null}
-
-      {/*
-        One sheet at a time, behind the same two gates as the whole building.
-        A consultant who needs level B2 should not have to take the building
-        apart to get it, and a sheet downloaded alone is exactly the sheet on
-        screen — flat, framed and titled, at true size in metres.
-      */}
-      {sheets.length > 0 ? (
-        <>
-          <h3 className="panel__subheading">{t.oneSheet}</h3>
-          <ul className="sheet-downloads">
-            {sheets.map((s) => (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  className="link-button"
-                  onClick={() => void download(actor, run.runId, 'dxf', onError, s)}
-                >
-                  {t.sheetBefore}
-                  {ltr(s.number)}
-                  {t.sheetBetween}
-                  {ltr(s.title)}
-                  {t.sheetAfter}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : null}
-    </>
-  );
-}
-
-/**
- * Save a binary export.
- *
- * A real download, unlike `openDocument`: a DXF opened in a tab is a wall of
- * group codes and an XLSX is a zip, and both read as a broken feature. The
- * filename comes from the run id so two runs of one plot do not overwrite each
- * other in the Downloads folder — which they did, and the second one silently
- * won.
- */
-async function download(
-  actor: Actor,
-  runId: string,
-  format: 'dxf' | 'xlsx' | 'glb',
-  onError: (e: ApiError) => void,
-  sheet?: { readonly id: string; readonly number: string },
-): Promise<void> {
-  try {
-    const blob = await api.exportRunFile(actor, runId, format, sheet?.id);
-    downloadObject(
-      URL.createObjectURL(blob),
-      `envelope-${runId.slice(0, 8)}${sheet ? `-${sheet.number}` : ''}.${format}`,
-    );
-  } catch (e) {
-    if (e instanceof ApiError) onError(e);
-  }
-}
-
-// ---------------------------------------------------------------------------
-
-
-function applyAssumptionEdit(
-  body: RunRequestBody,
-  parameterId: string,
-  value: string,
-): RunRequestBody {
-  switch (parameterId) {
-    case 'parking.usable_fraction':
-      return { ...body, parkingUsableFraction: { ...body.parkingUsableFraction, value } };
-    case 'capacity.user_realism_discount':
-      return { ...body, realismDiscount: value };
-    default:
-      // An assumption the client does not know how to feed back is left alone
-      // rather than silently ignored — the register will still show it, and the
-      // gap is visible instead of looking like an edit that did nothing.
-      return body;
-  }
 }

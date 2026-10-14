@@ -234,6 +234,26 @@ export const AR: RulesDictionary = {
     areaInvalid: 'مساحة أكبر من صفر، بالمتر المربع.',
   },
 
+  /* «مفترضة» for ASSUMED, never «افتراضية», which is "default" (arabic-glossary.md
+     §2) — and an empty core box is precisely not a default. */
+  progress: {
+    label: 'ما يحتاجه الحساب',
+    /* Label first and figures after: Arabic number agreement changes the noun
+       between 2, 3 and 11, and «الإجابات المطلوبة:» needs none of that. */
+    count: (done: string, total: string): string =>
+      `الإجابات المطلوبة: ${done} من ${total}`,
+    parking: 'المواقف ومعامل البناء',
+    levels: 'أدوار المواقف',
+    efficiency: 'المساحة القابلة للبيع',
+    core: 'مساحة النواة',
+    answered: 'أجيب عنه',
+    ready: 'جاهز',
+    needsAnswer: 'يحتاج إلى إجابة',
+    needsCorrecting: 'يحتاج إلى تصحيح',
+    assumedIfEmpty: 'اختياري — تكون مفترضة إذا ترك فارغا',
+    goTo: 'انتقل إلى ',
+  },
+
   run: {
     busy: 'جاري الحساب…',
     idle: 'احسب السعة',

@@ -60,16 +60,11 @@ import {
   type RunView,
   type StandardsView,
 } from '../src/api/client.js';
-import {
-  EngineApp,
-  EnvelopePanel,
-  ErrorBanner,
-  ExportDone,
-  ExportPanel,
-  ParkingPanel,
-  ParkingStep,
-  StepHintBanner,
-} from '../src/App.js';
+import { EngineApp } from '../src/App.js';
+import { EnvelopePanel } from '../src/engine/EnvelopePanel.js';
+import { ExportDone, ExportPanel } from '../src/engine/ExportPanel.js';
+import { ParkingPanel, ParkingStep } from '../src/engine/ParkingStep.js';
+import { ErrorBanner, StepHintBanner } from '../src/engine/StepChrome.js';
 import { Header } from '../src/components/ActorHeader.js';
 import { PlotCanvas, type PlotEdgeView } from '../src/components/PlotCanvas.js';
 import { StaticLocale, type Locale } from '../src/i18n/locale.js';

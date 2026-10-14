@@ -35,7 +35,8 @@ import { type FormEvent, type ReactNode, useEffect, useId, useState } from 'reac
 
 import { AuthFailure, accountRuns, type RunAccess, type RunFileFormat } from '../api/auth.js';
 import type { RunView } from '../api/client.js';
-import { EnvelopePanel, ParkingStep } from '../App.js';
+import { EnvelopePanel } from '../engine/EnvelopePanel.js';
+import { ParkingStep } from '../engine/ParkingStep.js';
 import { AssumptionRegister } from '../components/AssumptionRegister.js';
 import { CapacityBands } from '../components/CapacityBands.js';
 import { DrawingSet } from '../components/DrawingSet.js';

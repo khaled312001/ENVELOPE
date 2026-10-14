@@ -248,6 +248,11 @@ describe('where the commissioned images are wired', () => {
       'a plot lattice, both from semantic tokens, so it follows the theme and costs ' +
       'no bytes. The commissioned plate is kept rather than deleted because the ' +
       'decision to re-introduce imagery is the client’s and not a cleanup’s',
+    'auth-panel':
+      'the October 2026 door shows the worked example’s ground-floor parking in the ' +
+      '3D viewer instead — a drawing the engine made, where a generated picture of a ' +
+      'car park would be the one image on the site the engine did not draw. Kept in the ' +
+      'catalogue so the client can choose the picture back',
   };
 
   it('is a call site, or a named reason', () => {

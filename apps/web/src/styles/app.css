@@ -675,10 +675,170 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 .inspector__gate[data-done='true'] .inspector__gate-name { color: var(--text-primary); }
 
+/* A word, not a figure: sans, for the reason `.rules-progress__state` gives. */
 .inspector__gate-state {
-  font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--text-tertiary);
+}
+
+/* --- The rules step's checklist (`RulesProgress` in RulesStep.tsx). ------ */
+
+.rules-progress {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.rules-progress__count {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.rules-progress__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rules-progress__go {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-2);
+  inline-size: 100%;
+  min-block-size: var(--tap-min);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  font: inherit;
+  text-align: start;
+  color: inherit;
+  cursor: pointer;
+}
+.rules-progress__go:hover { border-color: var(--border-strong); }
+
+/* Filled when the answer is in, outlined when it is not: a shape difference, as
+   the inspector's gate marks are, so the state never rests on the accent alone. */
+.rules-progress__mark {
+  grid-row: span 2;
+  /* On the name's line, not the middle of a state that may wrap to two. */
+  align-self: start;
+  margin-block-start: 0.45em;
+  inline-size: 0.625rem;
+  block-size: 0.625rem;
+  border: var(--border-width) solid var(--border-control);
+  border-radius: var(--radius-xs);
+}
+.rules-progress__mark[data-ok='true'] {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.rules-progress__name {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+/* A state is a word, not a figure, so it is set in the sans: Plex Mono is for
+   figures and identifiers (rtl.css), and an Arabic word in the mono stack keeps
+   Plex Mono's wide word spaces. */
+.rules-progress__state {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* A jump to a panel lands below the two sticky bars rather than under them. */
+.ws__canvas .panel__title {
+  scroll-margin-block-start: calc(var(--header-h) * 2 + var(--space-5));
+}
+
+/* --- What the open step answers (`engine/StepFacts.tsx`). ---------------- */
+
+.inspector__subheading {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+}
+
+/* The band letter, boxed the way a drawing set boxes a sheet number. */
+.inspector__letter {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  margin-inline-end: var(--space-2);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* The governing band is said in a word AND ruled at its edge, so the mark is
+   never the accent alone (1.4.1). The rule is the emphasis border, not the 6px
+   rail: that width is ASSUMED's and nothing else's. */
+.inspector__facts > div[data-governing='true'] {
+  margin-inline-start: calc(-1 * var(--space-3));
+  padding-inline-start: calc(var(--space-3) - var(--border-width-emphasis));
+  border-inline-start: var(--border-width-emphasis) solid var(--accent);
+}
+.inspector__facts > div[data-governing='true'] dt { color: var(--text-primary); }
+.inspector__facts > div[data-governing='true'] .inspector__letter {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.inspector__governs {
+  margin-inline-start: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* A loss name is a phrase, not a label, so it wraps beside its figure. */
+.inspector__facts--losses dt { min-inline-size: 0; }
+.inspector__facts--losses dd { white-space: nowrap; }
+
+/* The unit after a loss's count, set as `TracedValue` sets its unit. */
+.inspector__unit {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: pre;
+}
+
+.inspector__aside {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* The check counts sit under their name rather than beside it: three chips do
+   not fit beside a label in a 320px column. */
+.inspector__facts--stacked > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.inspector__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  text-align: start;
 }
 
 /* The derivation opens INSIDE the column now, so its own frame goes: a second

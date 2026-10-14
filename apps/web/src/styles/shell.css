@@ -575,6 +575,50 @@
   background: var(--action);
 }
 
+/* The worked example's level, standing in a viewport on the column: a bar that
+   names the view, then the model on the canvas ground — the landing hero's
+   shape, so the two read as the same instrument. The plate is opaque, so no ink
+   of the column ever sits on it. */
+.gate__viewport {
+  display: grid;
+  margin: var(--space-2) 0 0;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--canvas);
+}
+
+/* Three classes deep on purpose: `.gate__brand .gate__brand-body p` paints every
+   paragraph in the column with the on-action ink, and this bar and the viewer's
+   fallback sentence stand on the toolbar and canvas grounds instead. */
+.gate__brand .gate__viewport .gate__viewport-bar,
+.gate__brand .gate__brand-body .gate__viewport p {
+  color: var(--text-secondary);
+}
+
+.gate__brand .gate__viewport-bar {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-block-end: var(--border-width) solid var(--border-default);
+  background: var(--toolbar);
+  /* Sans, not the landing bar's mono: this bar is words in both languages. */
+  font-size: var(--text-xs);
+}
+
+.gate__viewport-plate {
+  min-inline-size: 0;
+  background-color: var(--canvas);
+}
+
+.gate__brand .gate__viewport-caption {
+  padding: var(--space-2) var(--space-3);
+  border-block-start: var(--border-width) solid var(--border-subtle);
+  background: var(--toolbar);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
 /* ==========================================================================
  * SIGN IN / SIGN UP — the form.
  * ======================================================================= */

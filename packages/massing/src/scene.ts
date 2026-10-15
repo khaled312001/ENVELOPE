@@ -406,11 +406,16 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
 
     if (parking.reserved) {
       const cls = parking.reserved.areaM2.provenanceClass;
-      const mesh = new THREE.Mesh(track(fill([parking.reserved.outline], at, 0).geometry), surface(colourOf(cls, palette), 0.6, false));
-      mesh.name = `${level.id} reserved zone`;
-      pickable(mesh, { node: parking.reserved.areaM2.node, rank: 3, name: parking.reserved.label });
-      group.add(mesh);
-      group.add(named(new THREE.LineLoop(track(ringLine(parking.reserved.outline, at, 0.01)), ink(colourOf(cls, palette))), `${level.id} reserved outline`));
+      // Every piece of the reserved area, the largest first; one click target each.
+      const outlines = [parking.reserved.outline, ...(parking.reserved.pieces ?? [])];
+      outlines.forEach((outline, i) => {
+        const suffix = i === 0 ? '' : ` ${i + 1}`;
+        const mesh = new THREE.Mesh(track(fill([outline], at, 0).geometry), surface(colourOf(cls, palette), 0.6, false));
+        mesh.name = `${level.id} reserved zone${suffix}`;
+        pickable(mesh, { node: parking.reserved!.areaM2.node, rank: 3, name: parking.reserved!.label });
+        group.add(mesh);
+        group.add(named(new THREE.LineLoop(track(ringLine(outline, at, 0.01)), ink(colourOf(cls, palette))), `${level.id} reserved outline${suffix}`));
+      });
     }
 
     if (parking.rampStrip) {

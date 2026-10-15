@@ -25,10 +25,18 @@
  * storey over one lap at no more than 4% IS the ramp, and needs no strip of its
  * own. Its gradient is the storey over the lap, checked against the 4%.
  *
- * What is still NOT ASSESSED, and said so wherever a ramp is drawn: headroom
- * (2.4 m, Table B.9) is a section property this engine does not draw slab
- * thicknesses for; surface finish, drainage, mirrors and guards (items 1–6 under
- * Table B.9) are specification, not geometry.
+ * HEADROOM is assessed as a BUDGET, not a claim. Every parking level carries the
+ * same layout, so the ramps stand in one strip, stacked: over any point of one
+ * ramp is the next, one storey higher, and the clear height there is the storey
+ * less the depth of that ramp's slab and whatever hangs below it. Table B.9's
+ * 2.4 m therefore fixes the deepest that structure may be — derived, with no
+ * slab thickness assumed. The engine draws no structure, so whether a design
+ * fits the budget is the structural engineer's; the budget is ours. The sloped
+ * ring is the same section, one lap per storey. Not modelled: the street ramp to
+ * the first basement, whose ceiling is the ground floor slab.
+ *
+ * Still NOT ASSESSED: surface finish, drainage, mirrors and guards (items 1–6
+ * under Table B.9), which are specification, not geometry.
  */
 
 import { Decimal, type Citation, type TracedDecimal, type Tracer } from '@envelope/core';
@@ -155,6 +163,43 @@ export function straightRampRequirement(tracer: Tracer, storeyHeightM: TracedDec
     unit: '%',
   });
   return { widthM, runM, slopePct };
+}
+
+export interface RampHeadroom {
+  /** Table B.9's minimum vertical clear height above any point of a ramp. */
+  readonly clearHeightM: TracedDecimal;
+  /** The deepest the slab and anything below it over a ramp may be: storey − 2.4 m. */
+  readonly structuralBudgetM: TracedDecimal;
+  /** False where the storey itself is no taller than the clear height. */
+  readonly feasible: boolean;
+}
+
+/**
+ * The structural depth a stacked ramp leaves room for — Table B.9's 2.4 m clear
+ * height, under the same ramp one storey up. Derived; nothing is assumed about
+ * the slab, and the caller says in words that the structure is not drawn.
+ */
+export function rampHeadroom(tracer: Tracer, storeyHeightM: TracedDecimal): RampHeadroom {
+  const clearHeightM = tracer.derived('parking.ramp_clear_height_m', new Decimal(STRAIGHT_RAMP.clearHeightM), {
+    rule: { ruleId: 'DBC.B.7.2.2.TABLE_B9', citation: TABLE_B9 },
+    formula: 'minimum vertical clear height above any point of a vehicular ramp, 2.4 m',
+    unit: 'm',
+  });
+  const budget = storeyHeightM.value.minus(clearHeightM.value);
+  const structuralBudgetM = tracer.computed('parking.ramp_structural_budget_m', budget, {
+    formula:
+      `${storeyHeightM.value.toString()} m storey − ${clearHeightM.value.toString()} m clear ` +
+      'height (Table B.9), under the same ramp one storey up',
+    uses: { storey: storeyHeightM, clear: clearHeightM },
+    unit: 'm',
+    detail: {
+      note:
+        'The deepest the slab, its beams and anything hung below them may be over a ' +
+        'ramp. The engine draws no structure: this is the budget a design must fit in, ' +
+        'not a statement that one does.',
+    },
+  });
+  return { clearHeightM, structuralBudgetM, feasible: budget.gt(0) };
 }
 
 /**

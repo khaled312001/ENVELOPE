@@ -35,6 +35,7 @@ import {
   type Tracer,
 } from '@envelope/core';
 import {
+  area as ringArea,
   fromLocal,
   largestInscribedRectangle,
   type InscribedRect,
@@ -43,6 +44,7 @@ import {
 } from '@envelope/geometry';
 
 import { placeVehicleAccess, type AccessResult } from './access.js';
+import type { RampHeadroom } from './ramp-rules.js';
 import {
   layoutParkingLevel,
   RING_AISLE_ROW,
@@ -92,6 +94,8 @@ export interface LevelPlan {
    * this drawing. Undefined when the run deducted nothing.
    */
   readonly reservedZone: readonly Pt[] | undefined;
+  /** Every piece the reserved area is drawn in, `reservedZone` among them. */
+  readonly reservedZones: readonly (readonly Pt[])[];
   /**
    * The ramp strip, in plot coordinates, with its low and high edges.
    *
@@ -118,6 +122,8 @@ export interface LevelPlan {
     readonly gradientPct: TracedDecimal;
     readonly centreLine: readonly Pt[];
   };
+  /** Table B.9's clear height over the stacked ramps, as a structural budget. */
+  readonly headroom?: RampHeadroom;
   readonly bayCount: Traced<number>;
   readonly areaPerBayM2: TracedDecimal;
   /**
@@ -271,6 +277,37 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
   // fraction and the deduction is amber; cite it and the deduction is cited.
   const grossAreaM2 = widthM.times(depthM);
   const unusable = new Decimal(1).minus(input.usableFraction.value);
+
+  /*
+    THE WHOLE FOOTPRINT, WHERE THE RECTANGLE IS NOT ALL OF IT. Its outline in
+    the rectangle's own frame and its area, so the layout can lay rows across all
+    of it, and the deduction over that area — the same usable fraction, applied
+    to the level the rows actually cover.
+  */
+  const podiumAreaM2 = new Decimal(Math.abs(ringArea(input.podiumRing))).div(1_000_000);
+  const field = rect.exact
+    ? undefined
+    : {
+        polygonMm: input.podiumRing.map((p) => toLocal(rect, p)),
+        grossAreaM2: podiumAreaM2,
+        deductionsTraced: input.tracer.computed(
+          'parking.layout_deductions_m2',
+          podiumAreaM2.times(unusable).toDecimalPlaces(2),
+          {
+            formula:
+              `${podiumAreaM2.toFixed(2)} m² footprint × ` +
+              `(1 − ${input.usableFraction.value.toString()} usable)`,
+            uses: { usable: input.usableFraction },
+            unit: 'm²',
+            detail: {
+              note:
+                'Cores, plant, the ramp landing and any circulation that is not drive ' +
+                'aisle, over the whole setback-permitted footprint: what the rows laid ' +
+                'across all of it are charged.',
+            },
+          },
+        ),
+      };
   const deductionM2 = grossAreaM2.times(unusable).toDecimalPlaces(2);
   const deductionsTraced = input.tracer.computed(
     'parking.layout_deductions_m2',
@@ -286,35 +323,6 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
           'Cores, plant, the ramp landing and any circulation that is not drive ' +
           'aisle. Taken off the level before a bay is placed, so the drawing and ' +
           'the level count are deducting the same thing.',
-      },
-    },
-  );
-
-  /*
-    THE SAME AREA, RESTATED AS WHAT IT IS RATHER THAN AS WHAT IT COST.
-
-    Derived from the deduction rather than recomputed from the fraction, so the
-    two are one number by construction: perturb the usable fraction and both
-    move, and neither can be edited into disagreeing with the other.
-  */
-  const nonParkingFloorAreaM2 = input.tracer.computed(
-    'parking.non_parking_floor_area_m2',
-    deductionM2,
-    {
-      formula:
-        `${deductionM2.toString()} m² of this level is neither bay nor drive aisle ` +
-        '— core, plant, ramp landing and circulation',
-      uses: { deductions: deductionsTraced },
-      unit: 'm²',
-      detail: {
-        note:
-          'Floor area on a parking level that the annex does not count as parking ' +
-          'area: PARKING_AREA excludes residential lobbies within a parking level ' +
-          'and plant serving the tower above, and GFA includes lobbies, cores and ' +
-          'enclosed plant rooms. An UPPER BOUND on what a parking level contributes ' +
-          'to GFA, never that contribution itself — it also covers the ramp landing, ' +
-          'which the same annex calls parking circulation, and nothing on file ' +
-          'splits the strip between the three. How much of it is GFA is NOT ASSESSED.',
       },
     },
   );
@@ -357,7 +365,40 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     ...(input.core && coreRect ? { core: { rect: coreRect, areaM2: input.core.areaM2 } } : {}),
     ...(input.angle === undefined ? {} : { angle: input.angle }),
     ...(input.structuralGridM === undefined ? {} : { structuralGridM: input.structuralGridM }),
+    ...(field ? { field } : {}),
   });
+
+  /*
+    THE SAME AREA, RESTATED AS WHAT IT IS RATHER THAN AS WHAT IT COST.
+
+    Derived from the deduction rather than recomputed from the fraction, so the
+    two are one number by construction: perturb the usable fraction and both
+    move, and neither can be edited into disagreeing with the other. It is the
+    deduction the winning arrangement was charged — the rectangle's, or the
+    whole footprint's.
+  */
+  const charged = layout.deductionsM2;
+  const nonParkingFloorAreaM2 = input.tracer.computed(
+    'parking.non_parking_floor_area_m2',
+    charged.value,
+    {
+      formula:
+        `${charged.value.toString()} m² of this level is neither bay nor drive aisle ` +
+        '— core, plant, ramp landing and circulation',
+      uses: { deductions: charged },
+      unit: 'm²',
+      detail: {
+        note:
+          'Floor area on a parking level that the annex does not count as parking ' +
+          'area: PARKING_AREA excludes residential lobbies within a parking level ' +
+          'and plant serving the tower above, and GFA includes lobbies, cores and ' +
+          'enclosed plant rooms. An UPPER BOUND on what a parking level contributes ' +
+          'to GFA, never that contribution itself — it also covers the ramp landing, ' +
+          'which the same annex calls parking circulation, and nothing on file ' +
+          'splits the strip between the three. How much of it is GFA is NOT ASSESSED.',
+      },
+    },
+  );
 
   const access = placeVehicleAccess({
     tracer: input.tracer,
@@ -394,9 +435,24 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
 
   const local = (x: Decimal, y: Decimal): Pt =>
     fromLocal(rect, x.times(1000).toNumber(), y.times(1000).toNumber());
-  const reservedZone = layout.reserved
-    ? toWorld({ ...layout.reserved, kind: 'OBSTRUCTION', row: -1 })
-    : undefined;
+  const reservedZones = layout.reservedPieces.map((r) => toWorld({ ...r, kind: 'OBSTRUCTION', row: -1 }));
+  // The largest piece is one of the pieces, and is the same outline object, so a
+  // consumer can tell it from the others by identity.
+  const largestAt = layout.reserved
+    ? layout.reservedPieces.findIndex(
+        (r) =>
+          r.x.eq(layout.reserved!.x) &&
+          r.y.eq(layout.reserved!.y) &&
+          r.width.eq(layout.reserved!.width) &&
+          r.height.eq(layout.reserved!.height),
+      )
+    : -1;
+  const reservedZone =
+    largestAt >= 0
+      ? reservedZones[largestAt]
+      : layout.reserved
+        ? toWorld({ ...layout.reserved, kind: 'OBSTRUCTION', row: -1 })
+        : undefined;
   const rampRect = layout.rects.find((r) => r.kind === 'RAMP');
   /*
     The ramp climbs along its LONG axis, and since the orientation sweep landed
@@ -464,13 +520,30 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
   const notAssessed = [...layout.notes, ...access.notAssessed];
   const marginal = layout.losses.marginalAreaPerBayM2;
   let footprintLostM2 = new Decimal(0);
-  if (!rect.exact) {
+  if (!rect.exact && layout.wholeFootprint) {
+    /*
+      THE ROWS RAN ACROSS ALL OF IT, so what is lost is only what no whole bay or
+      aisle fits in: the wedges along the edges that are not square to the rows.
+      Measured, not inferred — the footprint less everything drawn on it.
+    */
+    const drawn = [...layout.rects, ...layout.reservedPieces].reduce(
+      (s, r) => s.plus(r.width.times(r.height)),
+      input.core ? input.core.areaM2.value : new Decimal(0),
+    );
+    footprintLostM2 = Decimal.max(new Decimal(0), podiumAreaM2.minus(drawn));
+    const lostBays = marginal.isZero() ? 0 : footprintLostM2.div(marginal).floor().toNumber();
+    notAssessed.push(
+      `The setback-permitted footprint is not a rectangle, so the rows were laid across the ` +
+        `whole of it rather than inside the largest rectangle in it (${widthM.toFixed(2)} × ` +
+        `${depthM.toFixed(2)} m, ${rect.coverage.times(100).toFixed(1)}% of the footprint). ` +
+        `${footprintLostM2.toFixed(0)} m² along its edges holds no whole bay or aisle, about ` +
+        `${lostBays} bays. The bay count is therefore a floor: a bespoke layout on the true ` +
+        'boundary could use some of it, and this engine does not attempt one.',
+    );
+  } else if (!rect.exact) {
     // Stated as a shortfall in square metres, not only as a ratio: "94% of the
     // podium" reads as a good score, "48 m² of the podium could not be laid out
     // rectangularly" reads as what it is.
-    const podiumAreaM2 = rect.coverage.isZero()
-      ? new Decimal(0)
-      : widthM.times(depthM).div(rect.coverage);
     footprintLostM2 = podiumAreaM2.minus(widthM.times(depthM));
     const lostBays = marginal.isZero()
       ? 0
@@ -504,8 +577,10 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     },
     podiumRing: input.podiumRing,
     reservedZone,
+    reservedZones,
     rampStrip,
     ...(slopedFloor ? { slopedFloor } : {}),
+    ...(layout.headroom ? { headroom: layout.headroom } : {}),
     bayCount: layout.bayCount,
     areaPerBayM2: layout.areaPerBayM2,
     losses: {
@@ -516,7 +591,7 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
         bays: marginal.isZero() ? 0 : footprintLostM2.div(marginal).floor().toNumber(),
       },
     },
-    deductionsM2: deductionsTraced,
+    deductionsM2: charged,
     nonParkingFloorAreaM2,
     reservedAreaM2: layout.reservedAreaM2,
     notAssessed,

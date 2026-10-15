@@ -43,6 +43,7 @@ import {
 import {
   applicableRuleSetKey,
   isNotApplicable,
+  isPlotSpecific,
   Operator,
   resolveParameter,
   ResolutionStatus,
@@ -276,7 +277,28 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
   */
   const levelsByMetres = heightCeiling.div(floorToFloor).floor().toNumber();
   const statedLevels = num(seedResolutions.get('levels.max_above_ground'));
-  const levelCountGoverns = statedLevels !== undefined && statedLevels.lt(levelsByMetres);
+  /*
+    AND WHEN THE PLAN IS THE SPECIFIC INSTRUMENT, IT GOVERNS EITHER WAY. The
+    two ceilings are two parameters, so `resolveParameter` never sets them side
+    by side — but they answer one question, how tall, and §11.5 step 1 gives
+    that question to the instrument that applies the framework to THIS plot.
+    Taking the lower of the two let a generic placeholder (45 m, "DCR, plot
+    schedule" — the very schedule the plan is) cut a plan printing G+1P+16 to
+    fourteen levels. A metres rule that is itself plot-specific, or that
+    carries life safety, still binds as the lower ceiling: the plan may not
+    relax either.
+  */
+  const levelsGoverning = seedResolutions.get('levels.max_above_ground')?.governing;
+  const heightGoverning = seedResolutions.get('height.max')?.governing;
+  const planSupersedesMetres =
+    statedLevels !== undefined &&
+    levelsGoverning !== undefined &&
+    isPlotSpecific(levelsGoverning.rule) &&
+    heightGoverning !== undefined &&
+    !isPlotSpecific(heightGoverning.rule) &&
+    !heightGoverning.rule.isLifeSafety;
+  const levelCountGoverns =
+    statedLevels !== undefined && (planSupersedesMetres || statedLevels.lt(levelsByMetres));
   const maxLevelsByHeight = levelCountGoverns ? statedLevels.toNumber() : levelsByMetres;
   const permittedGfaM2 = farMax.times(plotAreaM2);
 
@@ -620,7 +642,10 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     maxLevelsByHeight,
     {
       formula: statedLevelsT
-        ? `min(${byMetres}, stated level count ${statedLevelsT.value})`
+        ? planSupersedesMetres
+          ? `stated level count ${statedLevelsT.value}, the plot's own plan, which governs ` +
+            `under §11.5 step 1 over the generic ${byMetres}`
+          : `min(${byMetres}, stated level count ${statedLevelsT.value})`
         : byMetres,
       uses: statedLevelsT
         ? { height: heightCeilingT, f2f: floorToFloorT, stated: statedLevelsT }
@@ -642,7 +667,9 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
           valueM: new Decimal(maxLevelsByHeight),
           runnerUp: {
             ruleId: heightRes.governing!.rule.ruleId,
-            label: 'levels the height ceiling allows',
+            label: planSupersedesMetres
+              ? 'levels the generic height rule would allow (superseded by the plan, §11.5 step 1)'
+              : 'levels the height ceiling allows',
             valueM: new Decimal(levelsByMetres),
             withinOnePercent: false,
           },

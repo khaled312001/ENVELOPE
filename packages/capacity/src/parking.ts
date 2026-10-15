@@ -32,6 +32,7 @@ import {
   metric,
   type ParkingResult,
   type Traced,
+  type TracedDecimal,
   type Tracer,
   type UnitTypeMix,
 } from '@envelope/core';
@@ -62,11 +63,43 @@ export interface ParkingInput {
   /** Levels of parking the scheme can physically provide (basement + podium). */
   readonly levelsAvailable: number;
   /** Fraction of a parking level that is actually usable for bays and aisles. */
-  readonly usableFraction: {
-    readonly value: Decimal;
-    readonly source: 'DERIVED' | 'ASSUMED';
-    readonly basis?: string;
-  };
+  readonly usableFraction: UsableFractionInput;
+  /**
+   * The same fraction, already traced by the caller. The level plan reads the
+   * fraction before the supply is counted, and one fraction must be one node:
+   * two declarations of it is how a drawing and a table come to disagree.
+   */
+  readonly usableTraced?: TracedDecimal;
+  /**
+   * Bays the layout actually drew on one parking level. When present, supply is
+   * COUNTED — drawn bays × parking levels — rather than divided out of an area
+   * by an assumed factor. A bay count that cannot be laid out is not a bay count.
+   */
+  readonly laidOut?: { readonly baysPerLevel: Traced<number> };
+}
+
+export interface UsableFractionInput {
+  readonly value: Decimal;
+  readonly source: 'DERIVED' | 'ASSUMED';
+  readonly basis?: string;
+}
+
+/** The usable fraction of a parking level, traced once for every consumer. */
+export function traceUsableFraction(tracer: Tracer, usable: UsableFractionInput): TracedDecimal {
+  return usable.source === 'DERIVED'
+    ? tracer.computed('parking.usable_fraction', usable.value, {
+        formula: 'usable fraction of a parking level',
+        uses: {},
+        unit: 'ratio',
+        provenanceClass: 'DERIVED',
+      })
+    : tracer.assumed('parking.usable_fraction', usable.value, {
+        basis:
+          usable.basis ??
+          'the fraction of a parking level available for bays and aisles after ' +
+            'cores, ramps and plant. Not governed by a cited rule.',
+        unit: 'ratio',
+      });
 }
 
 export class ParkingHaltedError extends Error {
@@ -218,6 +251,29 @@ export function solveParking(input: ParkingInput): ParkingResult {
     unit: 'bays',
   });
 
+  // --- Supply per level ----------------------------------------------------
+  const usable = input.usableFraction;
+  const usableTraced = input.usableTraced ?? traceUsableFraction(tracer, usable);
+
+  const availablePerLevelValue = input.areaPerLevelM2.times(usableTraced.value);
+  const availableAreaPerLevel = tracer.computed(
+    'parking.available_area_per_level_m2',
+    availablePerLevelValue,
+    {
+      formula: `${input.areaPerLevelM2.toFixed(2)} m² × ${usableTraced.value.toString()} usable`,
+      uses: { usable: usableTraced },
+      unit: 'm²',
+    },
+  );
+
+  /*
+    THE LAID-OUT LEVEL, when there is one. Its bays were placed one by one to
+    Table B.11 and every one is reachable, so it is the supply; the area factor
+    is what it measures, not what it is told.
+  */
+  const laid = input.laidOut;
+  const measured = laid !== undefined && laid.baysPerLevel.value > 0 ? laid : undefined;
+
   // --- Bay area factor -----------------------------------------------------
   const factorRes = resolveParameter('parking.bay_area_factor', rules, demandCtx);
   const factorValue = num(factorRes);
@@ -231,7 +287,27 @@ export function solveParking(input: ParkingInput): ParkingResult {
         unit: 'm²/bay',
         detail: { metric: metric('BAY_AREA_FACTOR').metricId },
       })
-    : tracer.assumed('parking.bay_area_factor', new Decimal('32'), {
+    : measured
+      ? tracer.computed(
+          'parking.bay_area_factor',
+          // Rounded DOWN, so drawn bays × factor never exceeds the area they stand in.
+          availablePerLevelValue.div(measured.baysPerLevel.value).toDecimalPlaces(4, Decimal.ROUND_DOWN),
+          {
+            formula:
+              `${availablePerLevelValue.toFixed(2)} m² usable per level ÷ ` +
+              `${measured.baysPerLevel.value} bays laid out on it`,
+            uses: { perLevel: availableAreaPerLevel, bays: measured.baysPerLevel },
+            unit: 'm²/bay',
+            detail: {
+              metric: metric('BAY_AREA_FACTOR').metricId,
+              note:
+                'Measured on the drawn level, not assumed. No cited rule fixes the area a ' +
+                'bay consumes, and the 28–35 m²/bay rule of thumb this replaced disagreed ' +
+                'with the layout the same run draws.',
+            },
+          },
+        )
+      : tracer.assumed('parking.bay_area_factor', new Decimal('32'), {
         basis:
           'no cited rule fixes the gross area consumed per bay. 32 m²/bay is the ' +
           'mid-point of the 28–35 m²/bay range typical of a structured basement, ' +
@@ -250,43 +326,23 @@ export function solveParking(input: ParkingInput): ParkingResult {
     detail: { metric: metric('PARKING_AREA').metricId },
   });
 
-  // --- Supply --------------------------------------------------------------
-  const usable = input.usableFraction;
-  const usableTraced =
-    usable.source === 'DERIVED'
-      ? tracer.computed('parking.usable_fraction', usable.value, {
-          formula: 'usable fraction of a parking level',
-          uses: {},
-          unit: 'ratio',
-          provenanceClass: 'DERIVED',
-        })
-      : tracer.assumed('parking.usable_fraction', usable.value, {
-          basis:
-            usable.basis ??
-            'the fraction of a parking level available for bays and aisles after ' +
-              'cores, ramps and plant. Not governed by a cited rule.',
-          unit: 'ratio',
-        });
-
-  const availablePerLevelValue = input.areaPerLevelM2.times(usable.value);
-  const availableAreaPerLevel = tracer.computed(
-    'parking.available_area_per_level_m2',
-    availablePerLevelValue,
-    {
-      formula: `${input.areaPerLevelM2.toFixed(2)} m² × ${usable.value.toString()} usable`,
-      uses: { usable: usableTraced },
-      unit: 'm²',
-    },
-  );
-
-  const levelsRequiredValue = availablePerLevelValue.isZero()
-    ? 0
-    : requiredAreaValue.div(availablePerLevelValue).ceil().toNumber();
-  const levelsRequired = tracer.computed('parking.levels_required', levelsRequiredValue, {
-    formula: `ceil(${requiredAreaValue.toFixed(2)} m² ÷ ${availablePerLevelValue.toFixed(2)} m² per level)`,
-    uses: { required: requiredArea, perLevel: availableAreaPerLevel },
-    unit: 'levels',
-  });
+  // --- Levels required -----------------------------------------------------
+  const levelsRequiredValue = measured
+    ? Math.ceil(totalBaysValue / measured.baysPerLevel.value)
+    : availablePerLevelValue.isZero()
+      ? 0
+      : requiredAreaValue.div(availablePerLevelValue).ceil().toNumber();
+  const levelsRequired = measured
+    ? tracer.computed('parking.levels_required', levelsRequiredValue, {
+        formula: `ceil(${totalBaysValue} bays required ÷ ${measured.baysPerLevel.value} bays laid out per level)`,
+        uses: { required: totalBays, perLevel: measured.baysPerLevel },
+        unit: 'levels',
+      })
+    : tracer.computed('parking.levels_required', levelsRequiredValue, {
+        formula: `ceil(${requiredAreaValue.toFixed(2)} m² ÷ ${availablePerLevelValue.toFixed(2)} m² per level)`,
+        uses: { required: requiredArea, perLevel: availableAreaPerLevel },
+        unit: 'levels',
+      });
 
   const levelsAvailable = tracer.userSet('parking.levels_available', input.levelsAvailable, {
     actor: mix.actor ?? { id: 'unknown', name: 'unnamed user' },
@@ -303,18 +359,33 @@ export function solveParking(input: ParkingInput): ParkingResult {
     detail: { metric: metric('PARKING_AREA').metricId },
   });
 
-  const suppliedBays = availableAreaValue.div(factor).floor();
-  const providedBays = tracer.computed('parking.provided_bays', suppliedBays.toNumber(), {
-    formula: `floor(${availableAreaValue.toFixed(2)} m² available ÷ ${factor.toString()} m²/bay)`,
-    uses: { area: availableArea, factor: bayAreaFactor },
-    unit: 'bays',
-    detail: {
-      note:
-        'Bays the declared levels can actually hold — supply, not demand. When this ' +
-        'is below the required count the scheme does not park itself, and Band C is ' +
-        'what that costs.',
-    },
-  });
+  const suppliedBays = laid
+    ? new Decimal(laid.baysPerLevel.value).times(input.levelsAvailable)
+    : availableAreaValue.div(factor).floor();
+  const providedBays = laid
+    ? tracer.computed('parking.provided_bays', suppliedBays.toNumber(), {
+        formula: `${laid.baysPerLevel.value} bays laid out per level × ${input.levelsAvailable} parking level(s)`,
+        uses: { perLevel: laid.baysPerLevel, levels: levelsAvailable },
+        unit: 'bays',
+        detail: {
+          note:
+            'Counted on the drawn level, not divided out of an area: every bay is placed ' +
+            'to Table B.11 and reachable from the way in. The same layout on every ' +
+            'parking level. When this is below the required count the scheme does not ' +
+            'park itself, and Band C is what that costs.',
+        },
+      })
+    : tracer.computed('parking.provided_bays', suppliedBays.toNumber(), {
+        formula: `floor(${availableAreaValue.toFixed(2)} m² available ÷ ${factor.toString()} m²/bay)`,
+        uses: { area: availableArea, factor: bayAreaFactor },
+        unit: 'bays',
+        detail: {
+          note:
+            'No level could be laid out, so this is an ESTIMATE: area divided by a ' +
+            'factor, not bays placed. Supply, not demand. When this is below the ' +
+            'required count the scheme does not park itself, and Band C is what that costs.',
+        },
+      });
 
   const headroomBays = suppliedBays.minus(totalBaysValue);
 

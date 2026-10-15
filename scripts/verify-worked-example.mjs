@@ -154,8 +154,15 @@ const actual = {
     the public site word for word, so the fix for one that names a party or a
     commercial figure is always at source, never a truncation on the page. An
     assumption without a basis is not an assumption.
+
+    Once the level is laid out the factor is no longer assumed: it is measured,
+    usable area per level ÷ bays drawn on it, and is amber only because the
+    usable fraction under it is. So the basis shown beside it is that fraction's
+    — the assumption the figure actually rests on, not a second one invented
+    for the page.
   */
-  bayAreaFactorBasis: basisFor(run, 'parking.bay_area_factor'),
+  bayAreaFactorBasis:
+    basisFor(run, 'parking.bay_area_factor') ?? basisFor(run, 'parking.usable_fraction'),
 };
 
 /** The written basis for one assumed parameter, off the run's assumption register. */

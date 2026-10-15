@@ -61,8 +61,27 @@ import {
   type Tracer,
 } from '@envelope/core';
 
-import { bayIsServed, traceCirculation, type CircRect } from './circulation.js';
-import { MAX_PARKED_SLOPE, slopedFloorGradient, straightRampRequirement } from './ramp-rules.js';
+import {
+  bayIsServed,
+  openingM,
+  servingNode,
+  traceCirculation,
+  type CircRect,
+} from './circulation.js';
+import {
+  MAX_PARKED_SLOPE,
+  rampHeadroom,
+  slopedFloorGradient,
+  straightRampRequirement,
+  type RampHeadroom,
+} from './ramp-rules.js';
+import {
+  bandIntervals,
+  intersectIntervals,
+  subtractIntervals,
+  type Interval,
+  type XY,
+} from './scanline.js';
 
 // ---------------------------------------------------------------------------
 // Rule data — Dubai Building Code Table B.11
@@ -291,6 +310,18 @@ export interface ParkingLayoutInput {
    * floor-to-floor, derived from the governing rule. Absent: an assumption.
    */
   readonly storeyHeightM?: TracedDecimal;
+  /**
+   * The whole setback-permitted footprint, when `footprint` is only the largest
+   * rectangle inside it: its outline in the same local frame, millimetres; its
+   * area; and the deduction taken over that area rather than the rectangle's.
+   * Supplied, it adds the arrangement that lays rows across all of it
+   * (`packField`). Absent on a rectangular plot, where the two are one.
+   */
+  readonly field?: {
+    readonly polygonMm: readonly XY[];
+    readonly grossAreaM2: Decimal;
+    readonly deductionsTraced: TracedDecimal;
+  };
 }
 
 export interface ParkingLayoutResult {
@@ -352,6 +383,11 @@ export interface ParkingLayoutResult {
    * and gradient, checked against B.7.2.3.1's 4%. `ramp` is then undefined: there
    * is no strip, and the runs are `rampRuns`.
    */
+  /**
+   * Table B.9's clear height over a ramp, as the structural depth it leaves:
+   * the ramps are stacked one storey apart. Absent where no ramp is drawn.
+   */
+  readonly headroom?: RampHeadroom;
   readonly slopedFloor?: {
     readonly lapM: Decimal;
     readonly gradientPct: TracedDecimal;
@@ -364,11 +400,20 @@ export interface ParkingLayoutResult {
    * drawing, not where anyone put them.
    */
   readonly reserved: Rect | undefined;
+  /** Every piece the reserved area is drawn in, `reserved` among them. */
+  readonly reservedPieces: readonly Rect[];
   /**
    * The area of that strip, traced: the deduction, less the core when the core
    * stands where it is drawn. The deduction itself when no core was given.
    */
   readonly reservedAreaM2: TracedDecimal;
+  /**
+   * The deduction the winning arrangement was charged: the rectangle's, or the
+   * whole footprint's where the rows run across all of it.
+   */
+  readonly deductionsM2: TracedDecimal;
+  /** Whether the winning arrangement covers the whole footprint (`packField`). */
+  readonly wholeFootprint: boolean;
   /** Bays the core covers, which were not placed. Zero when no core was given. */
   readonly baysUnderCore: number;
   /** Rows that came out partial, and why. Reported, not hidden. */
@@ -873,6 +918,18 @@ interface Packing {
   readonly rects: readonly PlacedRect[];
   readonly bayCount: number;
   readonly reserved: Rect | undefined;
+  /**
+   * Every piece the reserved area was laid in, `reserved` among them. A ring's
+   * island or a field of rows rarely has one rectangle the size of the whole
+   * strip, and drawing only the largest piece left the rest of it unsaid.
+   */
+  readonly reservedPieces?: readonly Rect[];
+  /** Whether this packing covers the whole footprint rather than one rectangle in it. */
+  readonly wholeFootprint?: boolean;
+  /** Of the reserved area, what stands where no bay could be served, m². */
+  readonly reservedInCornersM2?: Decimal;
+  /** Bays the reserved area actually took, where it was laid in bays. */
+  readonly baysTakenByReserved?: number;
   readonly ramp: { readonly widthM: Decimal; readonly runM: Decimal } | undefined;
   /** The ring aisle's lap, where the ring itself is the ramp. */
   readonly slopedLapM?: Decimal;
@@ -1528,6 +1585,7 @@ function packPerimeter(o: PackOptions): Packing {
     islandRows === 2 ? [[ZERO, o.bayLength], [shortLen.minus(o.bayLength), shortLen]] : [[ZERO, shortLen]];
   const stripArea = o.deductedDepthM.times(W);
   let reserved: Rect | undefined;
+  const reservedPieces: Rect[] = [];
   let stripLeft = stripArea;
   for (const band of bands) {
     const depth = band[1].minus(band[0]);
@@ -1537,18 +1595,23 @@ function packPerimeter(o: PackOptions): Packing {
       const len = Decimal.min(hi.minus(lo), stripLeft.div(depth));
       const piece = onIsland(lo, len, band[0], depth);
       if (!reserved || len.times(depth).gt(reserved.width.times(reserved.height))) reserved = piece;
+      reservedPieces.push(piece);
       standingOnIsland.push(piece);
       stripLeft = stripLeft.minus(len.times(depth));
     }
   }
-  // Only the largest piece is drawn as the reserved zone; the rest is said.
-  const drawnStrip = reserved ? reserved.width.times(reserved.height) : ZERO;
-  if (stripArea.minus(drawnStrip).gt('0.5')) {
+  /*
+    EVERY PIECE IS DRAWN. Only the largest used to be, and the rest of the strip
+    was a sentence — on Al Mamzar 119 m² of 268 drawn, so the ground floor's
+    rooms had a third of the room the deduction pays for. What the island has no
+    room for at all is still said, because that part is charged and not drawn.
+  */
+  if (stripLeft.gt('0.5')) {
     notes.push(
-      `Of the ${stripArea.toFixed(0)} m² reserved for plant and circulation, ${drawnStrip.toFixed(0)} m² ` +
-        `is drawn on the island and ${stripArea.minus(drawnStrip).toFixed(0)} m² is not` +
-        (stripLeft.gt('0.5') ? ` (${stripLeft.toFixed(0)} m² of it has no room on the island at all)` : '') +
-        '. The deduction is still charged in full against the bay count.',
+      `Of the ${stripArea.toFixed(0)} m² reserved for plant and circulation, ` +
+        `${stripArea.minus(stripLeft).toFixed(0)} m² is drawn on the island in ` +
+        `${reservedPieces.length} piece(s) and ${stripLeft.toFixed(0)} m² has no room on it at all. ` +
+        'The deduction is still charged in full against the bay count.',
     );
   }
   let islandBays = 0;
@@ -1634,10 +1697,420 @@ function packPerimeter(o: PackOptions): Packing {
     rects: kept,
     bayCount,
     reserved,
+    reservedPieces,
     ramp,
     ...(slopedLapM ? { slopedLapM } : {}),
     crossAisleAreaM2: Decimal.max(ZERO, ringArea),
     baysLostToCrossAisle: 0,
+    strandedBays,
+    baysUnderCore,
+    notes,
+    refusal: undefined,
+  };
+}
+
+interface FieldOptions extends PackOptions {
+  /** The setback-permitted footprint in this packing's own frame, millimetres. */
+  readonly polygon: readonly XY[];
+  /** What the field's deduction leaves once the core is taken where it stands. */
+  readonly reservedM2: Decimal;
+  /** A connector at both ends of every pair of rows, not only at the first. */
+  readonly loop: boolean;
+}
+
+/**
+ * Double-loaded modules laid across the WHOLE footprint, not across the largest
+ * rectangle inside it.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY A FIFTH CANDIDATE.
+ *
+ * Every other arrangement packs one rectangle — the largest that fits inside the
+ * setback-permitted ring — and reports what it leaves as a loss. On a rectangular
+ * plot that loss is zero. On Al Mamzar (DM 1341556) the ring is a triangle with
+ * a 134 m base and the rectangle is 65.7 × 32.6 m, 48.3% of it: 2,292 m², about
+ * 107 bays a level, were reported unpacked, and the plot was short of parking by
+ * exactly the parking it was not given. A count that is "a floor" by half is not
+ * an accurate count.
+ *
+ * So the rows run across the whole ring. Each module — bays, a 6 m aisle, bays —
+ * stands at its own depth; its aisle is as long as the ring allows at that depth,
+ * and a bay is placed only where its whole rectangle is inside the ring and its
+ * whole mouth is on the aisle (`scanline.ts`, exactly, not by sampling).
+ *
+ * ---------------------------------------------------------------------------
+ * HOW THE ROWS ARE JOINED, AND WHAT IS FIXED.
+ *
+ * Two stacked modules do not touch — eleven metres of parked cars stand between
+ * their aisles — so each pair is joined by a connector, a 6 m drive through both
+ * bay rows, at the first place along the pair where both aisles run and the
+ * connector is inside the ring. With a core on the level, a second connector at
+ * the other end is also tried, because the core can cut an aisle and strand what
+ * lies past the cut. The straight ramp, where the level needs one, continues the
+ * longest aisle from its end: a car comes off the ramp straight into it. It is
+ * 6.3 m wide against a 6 m aisle, so the bays beside it are not placed.
+ *
+ * Every one of those is a fixed rule. Nothing here searches for where the ramp
+ * or the core should go to raise the yield: that is the optimiser of 34:37, a
+ * TRADEOFF value Phase 0 refuses to emit. The arrangement is the same on every
+ * run, and the reflected one (rows the other way) is packed beside it.
+ *
+ * The reserved area — plant and circulation, the deduction less the core —
+ * takes the bays of the rows farthest from the base first, which are also the
+ * shortest. It is drawn where it is taken, piece by piece.
+ */
+function packField(o: FieldOptions): Packing {
+  const notes: string[] = [];
+  const mm = (d: Decimal): number => d.times(1000).round().toNumber();
+  const M = (n: number): Decimal => new Decimal(n).div(1000);
+  const bay = mm(o.bayLength);
+  const aisle = mm(o.aisleWidth);
+  const bayW = mm(o.bayWidth);
+  const pitch = mm(o.effectiveBayWidth);
+  const ys = o.polygon.map((p) => p.y);
+  const yMin = Math.ceil(Math.min(...ys));
+  const yMax = Math.floor(Math.max(...ys));
+  // Whole millimetres, rounded inward: a span never reaches past the ring.
+  const allowed = (y0: number, y1: number): Interval[] =>
+    bandIntervals(o.polygon, y0, y1)
+      .map(([a, b]): Interval => [Math.ceil(a - 1e-6), Math.floor(b + 1e-6)])
+      .filter(([a, b]) => b > a);
+  const box = (kind: RectKind, row: number, x0: number, y0: number, x1: number, y1: number): PlacedRect => ({
+    kind,
+    row,
+    x: M(x0),
+    y: M(y0),
+    width: M(x1 - x0),
+    height: M(y1 - y0),
+  });
+
+  // --- the rows ------------------------------------------------------------
+  interface Row {
+    readonly index: number;
+    readonly base: number;
+    readonly aisleY: number;
+    aisles: Interval[];
+  }
+  const rows: Row[] = [];
+  for (let base = yMin, index = 0; base + bay + aisle <= yMax; base += 2 * bay + aisle, index += 1) {
+    const aisleY = base + bay;
+    rows.push({
+      index,
+      base,
+      aisleY,
+      aisles: allowed(aisleY, aisleY + aisle).filter(([a, b]) => b - a >= pitch),
+    });
+  }
+  if (rows.every((r) => r.aisles.length === 0)) {
+    return refused('no drive aisle with a bay beside it fits across the footprint at any depth');
+  }
+
+  // --- the ramp, continuing the longest aisle -------------------------------
+  const rects: PlacedRect[] = [];
+  let ramp: Packing['ramp'];
+  if (o.includeRamp) {
+    const rampW = mm(o.rampWidthM);
+    const run = mm(o.rampRunM);
+    const spill = Math.ceil((rampW - aisle) / 2);
+    const hosts = rows
+      .flatMap((r) => r.aisles.map((iv) => ({ r, iv })))
+      .sort((p, q) => q.iv[1] - q.iv[0] - (p.iv[1] - p.iv[0]) || p.r.index - q.r.index || p.iv[0] - q.iv[0]);
+    let placed:
+      | { readonly r: Row; readonly iv: Interval; readonly x0: number; readonly atStart: boolean; readonly rect: PlacedRect }
+      | undefined;
+    for (const h of hosts) {
+      const y0 = h.r.aisleY - spill;
+      const spans = intersectIntervals(allowed(y0, y0 + rampW), [h.iv]).filter(([a, b]) => b - a >= run);
+      for (const [a, b] of spans) {
+        for (const [x0, atStart] of [[a, true], [b - run, false]] as const) {
+          const rect = box(RectKind.RAMP, RAMP_ROW, x0, y0, x0 + run, y0 + rampW);
+          if (o.obstructions.some((ob) => collides(rect, ob))) continue;
+          placed = { r: h.r, iv: h.iv, x0, atStart, rect };
+          break;
+        }
+        if (placed) break;
+      }
+      if (placed) break;
+    }
+    if (!placed) {
+      return refused(
+        `a straight ramp climbing a ${o.storeyHeightM.toString()} m storey needs ` +
+          `${o.rampWidthM.toFixed(2)} × ${o.rampRunM.toFixed(2)} m (DBC Tables B.9 and B.10) in line ` +
+          'with a drive aisle, and no aisle across this footprint has that run clear of the core',
+      );
+    }
+    const { r, iv, x0, atStart, rect } = placed;
+    /*
+      The aisle carries on from the ramp's end, away from it. Whatever stub of
+      it lies on the other side is not an aisle: it meets the ramp's foot, and a
+      car does not turn off a ramp into a dead end.
+    */
+    r.aisles = r.aisles
+      .flatMap((s): Interval[] => (s === iv ? [atStart ? [x0 + run, iv[1]] : [iv[0], x0]] : [s]))
+      .filter(([a, b]) => b - a >= pitch);
+    rects.push(rect);
+    ramp = { widthM: o.rampWidthM, runM: o.rampRunM };
+    notes.push(
+      `A ${o.rampWidthM.toFixed(2)} × ${o.rampRunM.toFixed(2)} m straight ramp continues the longest ` +
+        'drive aisle from its end: 12% with a 3.6 m transition at 6% at each end (DBC Tables B.9 and ' +
+        'B.10). It is wider than the aisle, so the bays beside it are not placed.',
+    );
+  }
+
+  // --- aisles and bays --------------------------------------------------------
+  for (const r of rows) {
+    for (const iv of r.aisles) {
+      rects.push(box(RectKind.AISLE, r.index, iv[0], r.aisleY, iv[1], r.aisleY + aisle));
+      const sides: readonly Interval[] = [
+        [r.base, r.aisleY],
+        [r.aisleY + aisle, r.aisleY + aisle + bay],
+      ];
+      for (const [b0, b1] of sides) {
+        for (const [x0, x1] of intersectIntervals(allowed(b0, b1), [iv])) {
+          const n = Math.floor((x1 - x0) / pitch);
+          for (let k = 0; k < n; k += 1) {
+            rects.push(box(RectKind.BAY, r.index, x0 + k * pitch, b0, x0 + k * pitch + bayW, b1));
+          }
+        }
+      }
+    }
+  }
+
+  // --- the connectors ---------------------------------------------------------
+  const connectors: PlacedRect[] = [];
+  for (let k = 0; k + 1 < rows.length; k += 1) {
+    const lo = rows[k]!;
+    const hi = rows[k + 1]!;
+    const y0 = lo.aisleY + aisle;
+    const y1 = hi.aisleY;
+    const band = allowed(y0, y1);
+    for (const J of hi.aisles) {
+      for (const I of lo.aisles) {
+        const spans = intersectIntervals(band, intersectIntervals([I], [J])).filter(([a, b]) => b - a >= aisle);
+        if (spans.length === 0) continue;
+        const left = spans[0]![0];
+        connectors.push(box(RectKind.AISLE, CROSS_AISLE_ROW, left, y0, left + aisle, y1));
+        const right = spans[spans.length - 1]![1] - aisle;
+        if (o.loop && right >= left + aisle + pitch) {
+          connectors.push(box(RectKind.AISLE, CROSS_AISLE_ROW, right, y0, right + aisle, y1));
+        }
+        break;
+      }
+    }
+  }
+  let baysLostToConnectors = 0;
+  let standing: PlacedRect[] = [];
+  const rampRects = rects.filter((x) => x.kind === RectKind.RAMP);
+  for (const r of rects) {
+    if (r.kind === RectKind.BAY) {
+      if (connectors.some((c) => collides(r, c))) {
+        baysLostToConnectors += 1;
+        continue;
+      }
+      if (rampRects.some((c) => collides(r, c))) continue;
+    }
+    standing.push(r);
+  }
+  standing.push(...connectors);
+  const crossAisleAreaM2 = connectors.reduce((s, c) => s.plus(c.width.times(c.height)), ZERO);
+
+  // --- the core, where it stands -----------------------------------------------
+  let baysUnderCore = 0;
+  if (o.obstructions.length > 0) {
+    const cut: PlacedRect[] = [];
+    for (const r of standing) {
+      const hits = o.obstructions.filter((b) => collides(r, b));
+      if (hits.length === 0) cut.push(r);
+      else if (r.kind === RectKind.BAY || r.kind === RectKind.ACCESSIBLE_BAY) baysUnderCore += 1;
+      else cut.push(...piecesOutside(r, hits));
+    }
+    standing = cut;
+    if (baysUnderCore > 0) {
+      notes.push(
+        `${baysUnderCore} bay(s) would stand where the core does and are not placed; any ` +
+          'aisle the core crosses is cut there. The core is a shaft through every parking ' +
+          'level, and a bay inside it is not a bay.',
+      );
+    }
+  }
+
+  /*
+    --- the reserved area: first where no bay can be served, then the far rows ---
+
+    A bay band is often longer than the aisle it faces — on a triangle the band
+    nearer the base is wider than the aisle above it — and the stretch past the
+    aisle's end is inside the footprint and holds no bay a car can reach. That is
+    where a designer puts the plant rooms, and where the reserved area goes first,
+    largest stretch first. Only what those corners cannot hold is taken out of
+    bays, from the rows farthest from the base. A stretch shorter than 3 m holds
+    no room and is not used.
+  */
+  const reservedPieces: Rect[] = [];
+  let left = o.reservedM2.times(1_000_000).toNumber();
+  let inCorners = 0;
+  if (left > 0) {
+    const blocks: Rect[] = [...rampRects, ...o.obstructions];
+    const corners: Rect[] = [];
+    for (const r of rows) {
+      const served = [...r.aisles].sort((p, q) => p[0] - q[0]);
+      for (const [b0, b1] of [
+        [r.base, r.aisleY],
+        [r.aisleY + aisle, r.aisleY + aisle + bay],
+      ] as const) {
+        for (const [x0, x1] of subtractIntervals(allowed(b0, b1), served)) {
+          if (x1 - x0 < 3000) continue;
+          const piece: Rect = { x: M(x0), y: M(b0), width: M(x1 - x0), height: M(b1 - b0) };
+          if (!blocks.some((b) => collides(piece, b))) corners.push(piece);
+        }
+      }
+    }
+    corners.sort((p, q) => q.width.times(q.height).comparedTo(p.width.times(p.height)));
+    for (const c of corners) {
+      if (left <= 0) break;
+      const depth = mm(c.height);
+      const len = Math.min(mm(c.width), Math.ceil(left / depth));
+      reservedPieces.push({ ...c, width: M(len) });
+      left -= len * depth;
+      inCorners += len * depth;
+    }
+  }
+  let baysTakenByReserved = 0;
+  if (left > 0) {
+    const bays = standing
+      .filter((r) => r.kind === RectKind.BAY)
+      .sort((a, b) => b.y.comparedTo(a.y) || a.x.comparedTo(b.x));
+    // Runs of bays standing side by side in one band.
+    const runs: PlacedRect[][] = [];
+    for (const b of bays) {
+      const last = runs[runs.length - 1];
+      const prev = last?.[last.length - 1];
+      if (prev && prev.y.eq(b.y) && b.x.minus(prev.x).eq(o.effectiveBayWidth)) last!.push(b);
+      else runs.push([b]);
+    }
+    const taken = new Set<PlacedRect>();
+    for (const run of runs) {
+      if (left <= 0) break;
+      const x0 = mm(run[0]!.x);
+      const x1 = mm(run[run.length - 1]!.x) + bayW;
+      const len = Math.min(x1 - x0, Math.ceil(left / bay));
+      const piece: Rect = { x: M(x0), y: run[0]!.y, width: M(len), height: o.bayLength };
+      reservedPieces.push(piece);
+      for (const b of run) if (collides(b, piece)) taken.add(b);
+      left -= len * bay;
+    }
+    standing = standing.filter((r) => !taken.has(r));
+    baysTakenByReserved = taken.size;
+    if (left > 500_000) {
+      notes.push(
+        `${(left / 1_000_000).toFixed(0)} m² of the area reserved for plant and circulation has no ` +
+          'bay left to stand in. The deduction is still charged in full against the bay count.',
+      );
+    }
+  }
+
+  // --- does a car reach every bay? ---------------------------------------------
+  const drivableIdx: number[] = [];
+  for (let i = 0; i < standing.length; i += 1) {
+    const k = standing[i]!.kind;
+    if (k === RectKind.AISLE || k === RectKind.RAMP) drivableIdx.push(i);
+  }
+  const drivable: CircRect[] = drivableIdx.map((i) => standing[i]!);
+  /*
+    ONE WAY ON: the ramp where the level has one, otherwise the longest aisle —
+    the one along the base, which is where the driveway reaches the level.
+  */
+  let entry = -1;
+  for (let n = 0; n < drivable.length; n += 1) {
+    const r = standing[drivableIdx[n]!]!;
+    if (ramp) {
+      if (r.kind === RectKind.RAMP) entry = n;
+    } else if (r.row >= 0 && (entry < 0 || r.width.gt(drivable[entry]!.width))) {
+      entry = n;
+    }
+  }
+  if (entry < 0) return refused('no drive aisle on the footprint is reached from the way onto the level');
+  const { reachable } = traceCirculation({ drivable, entries: [entry], minOpeningM: o.aisleWidth });
+  const reachableRect = new Set(drivableIdx.filter((_, n) => reachable.has(n)));
+  const kept: PlacedRect[] = [];
+  let bayCount = 0;
+  let strandedBays = 0;
+  for (let i = 0; i < standing.length; i += 1) {
+    const r = standing[i]!;
+    if ((r.kind === RectKind.AISLE || r.kind === RectKind.RAMP) && !reachableRect.has(i)) continue;
+    if (r.kind !== RectKind.BAY && r.kind !== RectKind.ACCESSIBLE_BAY) {
+      kept.push(r);
+      continue;
+    }
+    if (bayIsServed(r, drivable, reachable)) {
+      kept.push(r);
+      bayCount += 1;
+    } else {
+      strandedBays += 1;
+    }
+  }
+  if (bayCount === 0) {
+    return refused('bays were placed across the footprint and none of them can be reached');
+  }
+
+  /*
+    A DRIVE THAT SERVES NOTHING IS NOT DRAWN. Near the apex an aisle can end up
+    with no bay beside it — the polygon too narrow, or its bays taken for the
+    reserved area — and a driveway on the plan leading to nothing is a question
+    a reviewer has to ask. An aisle or connector stays while it serves a bay or a
+    reserved piece, or joins two drives that are staying; the rest go, until none
+    does. Removing them changes no bay: they serve none.
+  */
+  const servedBays = kept.filter((r) => r.kind === RectKind.BAY || r.kind === RectKind.ACCESSIBLE_BAY);
+  const touches = (a: Rect, b: Rect): boolean => openingM(a, b).gt(0);
+  let drives = kept.filter((r) => r.kind === RectKind.AISLE || r.kind === RectKind.RAMP);
+  for (let changed = true; changed; ) {
+    changed = false;
+    drives = drives.filter((d) => {
+      if (d.kind === RectKind.RAMP) return true;
+      const serves =
+        servedBays.some((b) => servingNode(b, [d]) !== null) || reservedPieces.some((p) => touches(p, d));
+      const joins = drives.filter((other) => other !== d && openingM(d, other).gte(o.aisleWidth)).length;
+      if (serves || joins >= 2) return true;
+      changed = true;
+      return false;
+    });
+  }
+  const pruned = kept.filter(
+    (r) => (r.kind !== RectKind.AISLE && r.kind !== RectKind.RAMP) || drives.includes(r),
+  );
+  kept.length = 0;
+  kept.push(...pruned);
+
+  const rowCount = rows.filter((r) => r.aisles.length > 0).length;
+  notes.push(
+    `Bays are laid in rows across the whole footprint, not inside the largest rectangle in it: ` +
+      `${rowCount} row(s) of ${o.bayLength.toString()} m bays either side of a ${o.aisleWidth.toString()} m ` +
+      `aisle, each aisle as long as the footprint allows at its depth, joined by ` +
+      `${connectors.length} connector(s) through the bay rows. A bay is placed only where the ` +
+      'whole of it is inside the setback-permitted footprint.',
+  );
+  if (strandedBays > 0) {
+    notes.push(
+      `${strandedBays} bay(s) were placed and then dropped: no aisle a car can reach runs ` +
+        'past their open end. They are not counted and not drawn.',
+    );
+  }
+
+  const largest = reservedPieces.reduce<Rect | undefined>(
+    (a, b) => (!a || b.width.times(b.height).gt(a.width.times(a.height)) ? b : a),
+    undefined,
+  );
+  return {
+    rects: kept,
+    bayCount,
+    reserved: largest,
+    reservedPieces,
+    wholeFootprint: true,
+    reservedInCornersM2: new Decimal(inCorners).div(1_000_000),
+    baysTakenByReserved,
+    ramp,
+    crossAisleAreaM2,
+    baysLostToCrossAisle: baysLostToConnectors,
     strandedBays,
     baysUnderCore,
     notes,
@@ -1660,6 +2133,7 @@ function transpose(p: Packing): Packing {
     ...p,
     rects: p.rects.map((r) => ({ kind: r.kind, row: r.row, ...flip(r) })),
     reserved: p.reserved ? flip(p.reserved) : undefined,
+    ...(p.reservedPieces ? { reservedPieces: p.reservedPieces.map(flip) } : {}),
   };
 }
 
@@ -1917,17 +2391,48 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
       ? packPerimeter({ ...ringOpts, ringRamp: 'SLOPED' })
       : undefined;
 
+  /*
+    THE FIFTH AND SIXTH, ONLY WHERE THE FOOTPRINT IS NOT THE RECTANGLE: rows laid
+    across the whole of it, one way round and the other. See `packField`.
+  */
+  const field = input.field;
+  const fieldStripM2 = field ? Decimal.max(ZERO, field.deductionsTraced.value.minus(coreAreaM2)) : ZERO;
+  const fieldOf = (polygon: readonly XY[], obstructions: readonly Rect[]): Packing => {
+    const opts = {
+      ...ringOpts,
+      deductedDepthM: ZERO,
+      obstructions,
+      polygon,
+      reservedM2: fieldStripM2,
+    };
+    const one = packField({ ...opts, loop: false });
+    return obstructions.length === 0 ? one : best(one, packField({ ...opts, loop: true }));
+  };
+  const fieldWidth = field ? fieldOf(field.polygonMm, input.core ? [input.core.rect] : []) : undefined;
+  const fieldDepth = field
+    ? transpose(
+        fieldOf(
+          field.polygonMm.map((p) => ({ x: p.y, y: p.x })),
+          input.core ? [flip(input.core.rect)] : [],
+        ),
+      )
+    : undefined;
+
   const ORIENTATION = {
     WIDTH: 'modules along the width',
     DEPTH: 'modules along the depth',
     PERIMETER: 'bays to the walls, one ring aisle',
     SLOPED: 'bays to the walls, the ring aisle sloped as the ramp',
+    FIELD_WIDTH: 'rows across the whole footprint, along the width',
+    FIELD_DEPTH: 'rows across the whole footprint, along the depth',
   } as const;
   const candidates = [
     { packing: alongWidth, name: ORIENTATION.WIDTH },
     { packing: alongDepth, name: ORIENTATION.DEPTH },
     { packing: perimeter, name: ORIENTATION.PERIMETER },
     ...(sloped ? [{ packing: sloped, name: ORIENTATION.SLOPED }] : []),
+    ...(fieldWidth ? [{ packing: fieldWidth, name: ORIENTATION.FIELD_WIDTH }] : []),
+    ...(fieldDepth ? [{ packing: fieldDepth, name: ORIENTATION.FIELD_DEPTH }] : []),
   ] as const;
 
   if (candidates.every((c) => c.packing.bayCount === 0)) {
@@ -1937,7 +2442,8 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
         `${alongWidth.refusal ?? 'no bays placed'}. Modules along the depth: ` +
         `${alongDepth.refusal ?? 'no bays placed'}. Bays to the walls: ` +
         `${perimeter.refusal ?? 'no bays placed'}.` +
-        (sloped ? ` The ring sloped as the ramp: ${sloped.refusal ?? 'no bays placed'}.` : ''),
+        (sloped ? ` The ring sloped as the ramp: ${sloped.refusal ?? 'no bays placed'}.` : '') +
+        (fieldWidth ? ` Rows across the whole footprint: ${fieldWidth.refusal ?? 'no bays placed'}.` : ''),
     );
   }
   // Ties go to the earlier candidate, so the answer does not depend on the order
@@ -1966,17 +2472,50 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
         losers
           .map((c) => `${c.packing.bayCount} ${c.name}${c.packing.refusal ? ` (${c.packing.refusal})` : ''}`)
           .join('; ') +
-        `, in the same rectangle. All ${candidates.length} were packed.`,
+        `, on the same level. All ${candidates.length} were packed.`,
     );
   }
+
+  /*
+    WHAT THE WINNER WAS CHARGED. Rows across the whole footprint pay the
+    deduction on the whole footprint's area and are measured against it; every
+    other arrangement, against the rectangle it packed.
+  */
+  const whole = packing.wholeFootprint === true && field !== undefined;
+  const chargedDeduction = whole ? field.deductionsTraced : deductionTraced;
+  const chargedM2 = chargedDeduction.value;
+  const chargedGross = whole ? field.grossAreaM2 : grossArea;
+  const chargedUsable = whole
+    ? tracer.computed('parking.layout_usable_area_m2', qArea(chargedGross.minus(chargedM2)), {
+        formula: `${qArea(chargedGross).toString()} m² footprint − ${chargedM2.toString()} m² deducted`,
+        uses: { deductions: chargedDeduction },
+        unit: 'm²',
+      })
+    : usableArea;
+  const chargedStripM2 = whole ? fieldStripM2 : stripM2;
+  const chargedReserved = !whole
+    ? reservedAreaM2
+    : input.core
+      ? tracer.computed('parking.reserved_strip_m2', qArea(fieldStripM2), {
+          formula:
+            `max(0, ${chargedM2.toString()} m² deducted − ${coreAreaM2.toFixed(2)} m² core, ` +
+            'which stands where it is drawn)',
+          uses: { deductions: chargedDeduction, core: input.core.areaM2 },
+          unit: 'm²',
+        })
+      : chargedDeduction;
 
   // --- the three losses ---------------------------------------------------
   const marginalAreaPerBay = moduleDepthValue.times(effectiveBayWidth).div(2);
   const losses: ParkingLosses = {
     marginalAreaPerBayM2: marginalAreaPerBay,
     reserved: {
-      areaM2: deductedM2,
-      bays: deductedM2.div(marginalAreaPerBay).floor().toNumber(),
+      areaM2: chargedM2,
+      // Where the rows cover the whole footprint the cost is counted, not
+      // estimated: the bays the core and the reserved pieces actually displaced.
+      bays: whole
+        ? (packing.baysTakenByReserved ?? 0) + packing.baysUnderCore
+        : chargedM2.div(marginalAreaPerBay).floor().toNumber(),
     },
     circulation: {
       areaM2: packing.crossAisleAreaM2,
@@ -1984,21 +2523,36 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
       strandedBays: packing.strandedBays,
     },
   };
-  if (losses.reserved.bays > 0) {
+  if (whole) {
+    const corners = packing.reservedInCornersM2 ?? ZERO;
     notes.push(
-      `The ${deductedM2.toFixed(0)} m² deducted for cores, plant and the ramp landing ` +
+      `Of the ${chargedM2.toFixed(0)} m² deducted for cores, plant and the ramp landing, ` +
+        (input.core
+          ? `${coreAreaM2.toFixed(0)} m² is the core, standing where it is drawn ` +
+            `(${packing.baysUnderCore} bay(s) were not placed there); `
+          : '') +
+        `${corners.toFixed(0)} m² stands in the stretches of the bay rows that no aisle serves, ` +
+        `where it costs no bay; and ${chargedStripM2.minus(corners).toFixed(0)} m² takes ` +
+        `${packing.baysTakenByReserved ?? 0} bay(s) in the rows farthest from the base. ` +
+        'Counted, not estimated.',
+    );
+  } else if (losses.reserved.bays > 0) {
+    notes.push(
+      `The ${chargedM2.toFixed(0)} m² deducted for cores, plant and the ramp landing ` +
         `costs about ${losses.reserved.bays} bays at ${marginalAreaPerBay.toFixed(2)} m² ` +
         'each — the area one more bay takes inside a module, not the gross area per bay.' +
         (input.core
           ? ` Of it, ${coreAreaM2.toFixed(0)} m² is the core, standing where it is drawn ` +
             `(${packing.baysUnderCore} bay(s) were not placed there), and ` +
-            `${stripM2.toFixed(0)} m² is the strip reserved at the edge.`
+            `${chargedStripM2.toFixed(0)} m² is the strip reserved at the edge.`
           : ''),
     );
   }
   if (losses.circulation.bays > 0) {
+    // Rows across the footprint have no cross aisle; what joins them is the
+    // connectors through the bay rows, and the note names what was drawn.
     notes.push(
-      `The cross aisle costs ${losses.circulation.bays} bays across ` +
+      `The ${whole ? 'connectors between the rows cost' : 'cross aisle costs'} ${losses.circulation.bays} bays across ` +
         `${packing.crossAisleAreaM2.toFixed(0)} m². That is the price of every bay on ` +
         'the level being reachable, and it is stated rather than folded into a ratio.',
     );
@@ -2009,7 +2563,7 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     formula:
       `${packing.rects.filter((r) => r.kind === RectKind.BAY).length} bays placed ` +
       `with the runs ${chosen}, each served by an aisle that reaches the way in`,
-    uses: { moduleDepth, usableArea, orientation },
+    uses: { moduleDepth, usableArea: chargedUsable, orientation },
     unit: 'bays',
     detail: {
       note:
@@ -2019,9 +2573,9 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     },
   });
 
-  const areaPerBayValue = grossArea.div(packing.bayCount);
+  const areaPerBayValue = chargedGross.div(packing.bayCount);
   const areaPerBay = tracer.computed('parking.area_per_bay_m2', qArea(areaPerBayValue), {
-    formula: `${qArea(grossArea).toString()} m² level ÷ ${packing.bayCount} bays`,
+    formula: `${qArea(chargedGross).toString()} m² level ÷ ${packing.bayCount} bays`,
     uses: { bays: bayCountTraced },
     unit: 'm²/bay',
     detail: {
@@ -2050,6 +2604,26 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
         })
       : undefined;
     slopedFloor = { lapM: packing.slopedLapM, gradientPct, runs };
+  }
+
+  // --- headroom over the ramp, as the budget the structure must fit in ----
+  const headroom = storey && (packing.slopedLapM || (packing.ramp && requirement))
+    ? rampHeadroom(tracer, storey)
+    : undefined;
+  if (headroom) {
+    const s = storey!.value.toFixed(2);
+    const budget = headroom.structuralBudgetM.value.toFixed(2);
+    notes.push(
+      headroom.feasible
+        ? `Headroom (Table B.9, 2.4 m clear above any point of a ramp): the ramps stand in ` +
+            `one strip on every level, so over each is the next, one ${s} m storey up. The ` +
+            `slab, its beams and anything hung below them over the ramp may be at most ` +
+            `${budget} m deep. No structure is drawn: this is the budget a design must fit ` +
+            'in, not a statement that one does.'
+        : `Headroom (Table B.9, 2.4 m clear above any point of a ramp) cannot be met: the ` +
+            `storey is ${s} m, so a ramp under the same ramp one storey up has no room for ` +
+            'any slab at all. The storey height has to change before this ramp can be built.',
+    );
   }
   if (packing.ramp && requirement) {
 
@@ -2131,7 +2705,7 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
         `${runs.length} ramp(s), each serving one parking level: ` +
           `${down} descending to a level below grade and ${up} climbing to a level ` +
           'above it. Grade is the datum and a car enters at grade. Each is sized to ' +
-          'Tables B.9 and B.10; headroom (2.4 m) is NOT ASSESSED.',
+          'Tables B.9 and B.10; its headroom is the structural budget stated beside it.',
       );
       /*
         A MEASURED ZERO, NOT AN UNMEASURED NULL. "We reversed it and the answer did
@@ -2170,13 +2744,17 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     rects: packing.rects,
     ramp,
     ...(slopedFloor ? { slopedFloor } : {}),
+    ...(headroom ? { headroom } : {}),
     reserved: packing.reserved,
-    reservedAreaM2,
+    reservedPieces: packing.reservedPieces ?? (packing.reserved ? [packing.reserved] : []),
+    reservedAreaM2: chargedReserved,
+    deductionsM2: chargedDeduction,
+    wholeFootprint: whole,
     baysUnderCore: packing.baysUnderCore,
     bayCount: bayCountTraced,
     areaPerBayM2: areaPerBay,
     moduleDepthM: moduleDepth,
-    usableAreaM2: usableArea,
+    usableAreaM2: chargedUsable,
     standard,
     orientation,
     losses,

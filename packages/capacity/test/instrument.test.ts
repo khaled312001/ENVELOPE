@@ -249,8 +249,35 @@ describe('the plan’s stated level count', () => {
     expect(cited.length).toBeGreaterThan(0);
   });
 
-  it('does not lift the ceiling when the plan states more than the height allows', () => {
+  /*
+    REVERSED ON 15 OCT 2026. This used to assert 14: the lower of the two
+    ceilings, always. But the 45 m rule is a generic DRAFT placeholder citing
+    "DCR, plot schedule" — and the affection plan IS this plot's schedule. On
+    Al Mamzar it cut a plan printing G+1P+16 to fourteen levels. §11.5 step 1
+    gives the question to the plot-specific instrument, so the plan governs,
+    and the generic figure is reported beside it as superseded.
+  */
+  it('governs over a generic height rule even when it states more', () => {
     const out = runPipeline(withHeight('G+2P+20', 23, 2));
+    expect(out.envelope.maxLevelsByHeight.value).toBe(23);
+    const levels = out.envelope.bindingConstraints.find((b) => b.dimension === 'levels');
+    expect(levels?.ruleId).toBe('INSTRUMENT.TEST-345-1234.levels.max_above_ground');
+    expect(levels?.runnerUp?.valueM.toNumber()).toBe(14);
+    expect(levels?.runnerUp?.label).toMatch(/superseded/);
+  });
+
+  it('still yields to a height rule that carries life safety', () => {
+    const lifeSafe = seedRules().map((r) =>
+      r.parameterId === 'height.max' ? { ...r, isLifeSafety: true } : r,
+    );
+    const limits: StatedLimits = {
+      ...sheet('5.0'),
+      height: {
+        value: { typicalFloors: 20, podiumLevels: 2, totalLevels: 23, raw: 'G+2P+20' },
+        citation: citation('height', 'G+2P+20'),
+      },
+    };
+    const out = runPipeline(input([...lifeSafe, ...rulesFromInstrument(limits, BINDING).rules]));
     expect(out.envelope.maxLevelsByHeight.value).toBe(14);
   });
 });

@@ -33,6 +33,14 @@ const ORIENTATION: Readonly<Record<string, Said>> = {
     en: 'bays to the walls, the ring sloped as the ramp',
     ar: 'مواقف على الجدران والممر الدائري مائل هو الرامب',
   },
+  'rows across the whole footprint, along the width': {
+    en: 'rows across the whole footprint, along the width',
+    ar: 'صفوف على كامل المسقط بموازاة العرض',
+  },
+  'rows across the whole footprint, along the depth': {
+    en: 'rows across the whole footprint, along the depth',
+    ar: 'صفوف على كامل المسقط بموازاة العمق',
+  },
 };
 
 /** Longest name first, so "bays to the walls, one ring aisle" never swallows the sloped one. */
@@ -59,12 +67,32 @@ function rampLabel(label: string): Said | null {
 
 const READERS: readonly Reader[] = [
   (t) => {
-    const m = /^A ([\d.]+) × ([\d.]+) m straight ramp runs (down one edge|along the island the ring encloses): 12% with a 3\.6 m transition at 6% at each end/.exec(t);
+    const m = /^A ([\d.]+) × ([\d.]+) m straight ramp (runs down one edge|runs along the island the ring encloses|continues the longest drive aisle from its end): 12% with a 3\.6 m transition at 6% at each end/.exec(t);
     if (!m) return null;
-    const where = m[3] === 'down one edge' ? { en: 'along one edge', ar: 'بطول أحد الأطراف' } : { en: 'on the island', ar: 'على الجزيرة' };
+    const where =
+      m[3] === 'runs down one edge'
+        ? { en: 'along one edge', ar: 'بطول أحد الأطراف' }
+        : m[3] === 'runs along the island the ring encloses'
+          ? { en: 'on the island', ar: 'على الجزيرة' }
+          : { en: 'continuing the longest aisle', ar: 'امتدادا لأطول ممر' };
     return {
-      en: `Straight ramp ${m[1]} × ${m[2]} m ${where.en}: 12%, with a 3.6 m transition at 6% at each end (DBC Tables B.9, B.10). Headroom (2.4 m) not assessed.`,
-      ar: `رامب مستقيم ${m[1]} × ${m[2]} م ${where.ar}: ميل 12% مع انتقال 3.6 م بميل 6% عند كل طرف (جدولا B.9 وB.10 من كود دبي). الارتفاع الحر (2.4 م) لم يقيم.`,
+      en: `Straight ramp ${m[1]} × ${m[2]} m ${where.en}: 12%, with a 3.6 m transition at 6% at each end (DBC Tables B.9, B.10).`,
+      ar: `رامب مستقيم ${m[1]} × ${m[2]} م ${where.ar}: ميل 12% مع انتقال 3.6 م بميل 6% عند كل طرف (جدولا B.9 وB.10 من كود دبي).`,
+    };
+  },
+  (t) => {
+    const ok = /^Headroom \(Table B\.9, 2\.4 m clear above any point of a ramp\): .*one ([\d.]+) m storey up\. .*at most ([\d.]+) m deep/.exec(t);
+    if (ok) {
+      return {
+        en: `Headroom: 2.4 m clear over every ramp (Table B.9). With ${ok[1]} m storeys, the slab and beams over a ramp may be at most ${ok[2]} m deep. No structure is drawn: this is the limit a design must meet.`,
+        ar: `الارتفاع الحر: 2.4 م فوق كل رامب (جدول B.9). مع دور ارتفاعه ${ok[1]} م، لا يزيد عمق البلاطة والكمرات فوق الرامب عن ${ok[2]} م. لا يرسم الإنشاء: هذا هو الحد الذي يجب أن يلتزم به التصميم.`,
+      };
+    }
+    const no = /^Headroom \(Table B\.9, 2\.4 m clear above any point of a ramp\) cannot be met: the storey is ([\d.]+) m/.exec(t);
+    if (!no) return null;
+    return {
+      en: `Headroom cannot be met: a ${no[1]} m storey leaves no room for a slab over the ramp under Table B.9's 2.4 m. The storey height must change.`,
+      ar: `الارتفاع الحر غير ممكن: دور ارتفاعه ${no[1]} م لا يترك مكانا لبلاطة فوق الرامب مع 2.4 م المطلوبة في جدول B.9. يجب تغيير ارتفاع الدور.`,
     };
   },
   (t) => {
@@ -92,16 +120,52 @@ const READERS: readonly Reader[] = [
     };
   },
   (t) => {
-    const m = /^Of the ([\d,.]+) m² reserved for plant and circulation, ([\d,.]+) m² is drawn on the island and ([\d,.]+) m² is not/.exec(t);
+    const m = /^Of the ([\d,.]+) m² reserved for plant and circulation, ([\d,.]+) m² is drawn on the island in (\d+) piece\(s\) and ([\d,.]+) m² has no room on it at all/.exec(t);
     if (!m) return null;
-    const none = /\(([\d,.]+) m² of it has no room on the island at all\)/.exec(t)?.[1];
     return {
-      en:
-        `Of the ${m[1]} m² reserved for plant and circulation, ${m[2]} m² is drawn on the island and ${m[3]} m² is not` +
-        `${none ? ` (${none} m² has no room there at all)` : ''}. All of it is still deducted.`,
-      ar:
-        `من ${m[1]} م² محجوزة للمعدات والحركة، رسم ${m[2]} م² على الجزيرة ولم يرسم ${m[3]} م²` +
-        `${none ? ` (منها ${none} م² لا مكان لها على الجزيرة أصلا)` : ''}. وتخصم كلها من عدد المواقف.`,
+      en: `Of the ${m[1]} m² reserved for plant and circulation, ${m[2]} m² is drawn on the island in ${m[3]} piece(s); ${m[4]} m² has no room there. All of it is still deducted.`,
+      ar: `من ${m[1]} م² محجوزة للمعدات والحركة، رسم ${m[2]} م² على الجزيرة في ${m[3]} جزء، و${m[4]} م² لا مكان لها. وتخصم كلها من عدد المواقف.`,
+    };
+  },
+  (t) => {
+    const m = /^Bays are laid in rows across the whole footprint, not inside the largest rectangle in it: (\d+) row\(s\) of ([\d.]+) m bays either side of a ([\d.]+) m aisle, .*joined by (\d+) connector\(s\)/.exec(t);
+    if (!m) return null;
+    return {
+      en: `Rows across the whole footprint, not only the largest rectangle in it: ${m[1]} row(s) of ${m[2]} m bays either side of a ${m[3]} m aisle, joined by ${m[4]} connector(s). Every bay lies wholly inside the setback line.`,
+      ar: `صفوف على كامل المسقط لا داخل أكبر مستطيل فيه فقط: ${m[1]} صف من مواقف بطول ${m[2]} م على جانبي ممر بعرض ${m[3]} م، تربطها ${m[4]} وصلة. كل موقف يقع بكامله داخل خط الارتداد.`,
+    };
+  },
+  (t) => {
+    const m = /^Of the ([\d,.]+) m² deducted for cores, plant and the ramp landing, (?:([\d,.]+) m² is the core, standing where it is drawn \((\d+) bay\(s\) were not placed there\); )?([\d,.]+) m² stands in the stretches of the bay rows that no aisle serves, where it costs no bay; and ([\d,.]+) m² takes (\d+) bay\(s\)/.exec(t);
+    if (!m) return null;
+    const core = m[2] ? { en: ` ${m[2]} m² is the core (${m[3]} bays not placed under it).`, ar: ` منها ${m[2]} م² للنواة (${m[3]} مواقف لم توضع تحتها).` } : null;
+    return {
+      en: `Of the ${m[1]} m² deducted for cores, plant and the ramp landing:${core?.en ?? ''} ${m[4]} m² sits in row ends no aisle serves, at no cost; ${m[5]} m² takes ${m[6]} bays. Counted, not estimated.`,
+      ar: `من ${m[1]} م² مخصومة للنوى والمعدات وبسطة الرامب:${core?.ar ?? ''} ${m[4]} م² في أطراف صفوف لا يخدمها ممر، بلا تكلفة؛ و${m[5]} م² تأخذ ${m[6]} موقفا. محسوبة عدا لا تقديرا.`,
+    };
+  },
+  (t) => {
+    const m = /^The setback-permitted footprint is not a rectangle, so the rows were laid across the whole of it rather than inside the largest rectangle in it \(([\d.]+ × [\d.]+) m, ([\d.]+)% of the footprint\)\. ([\d,.]+) m² along its edges holds no whole bay or aisle, about (\d+) bays/.exec(t);
+    if (!m) return null;
+    return {
+      en: `The footprint is not a rectangle, so the rows cover all of it, not only the largest rectangle inside (${m[1]} m, ${m[2]}%). ${m[3]} m² along the edges holds no whole bay — about ${m[4]} bays — so the count is a floor.`,
+      ar: `المسقط ليس مستطيلا، فوزعت الصفوف على كامله لا على أكبر مستطيل بداخله فقط (${m[1]} م، ${m[2]}%). على الحواف ${m[3]} م² لا تتسع لموقف كامل — نحو ${m[4]} موقفا — فالعدد حد أدنى.`,
+    };
+  },
+  (t) => {
+    const m = /^The connectors between the rows cost (\d+) bays across ([\d,.]+) m²/.exec(t);
+    if (!m) return null;
+    return {
+      en: `The connectors between the rows cost ${m[1]} bays (${m[2]} m²): the price of reaching every bay.`,
+      ar: `الوصلات بين الصفوف تكلف ${m[1]} موقفا (${m[2]} م²): ثمن الوصول إلى كل موقف.`,
+    };
+  },
+  (t) => {
+    const m = /^The cross aisle costs (\d+) bays across ([\d,.]+) m²/.exec(t);
+    if (!m) return null;
+    return {
+      en: `The cross aisle costs ${m[1]} bays (${m[2]} m²): the price of reaching every bay.`,
+      ar: `الممر العرضي يكلف ${m[1]} موقفا (${m[2]} م²): ثمن الوصول إلى كل موقف.`,
     };
   },
   (t) => {
@@ -195,8 +259,8 @@ const READERS: readonly Reader[] = [
     const m = /^(\d+) ramp\(s\), each serving one parking level: (\d+) descending to a level below grade and (\d+) climbing/.exec(t);
     if (!m) return null;
     return {
-      en: `${m[1]} ramp(s), one per parking level: ${m[2]} down to a basement, ${m[3]} up to the podium. Headroom (2.4 m) not assessed.`,
-      ar: `${m[1]} رامب، واحد لكل دور مواقف: ${m[2]} نزولا إلى البدروم و${m[3]} صعودا إلى البوديوم. الارتفاع الحر (2.4 م) لم يقيم.`,
+      en: `${m[1]} ramp(s), one per parking level: ${m[2]} down to a basement, ${m[3]} up to the podium.`,
+      ar: `${m[1]} رامب، واحد لكل دور مواقف: ${m[2]} نزولا إلى البدروم و${m[3]} صعودا إلى البوديوم.`,
     };
   },
   (t) =>

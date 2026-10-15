@@ -399,6 +399,12 @@ export type GroundProgram =
 export interface GroundProgramInput {
   readonly tracer: Tracer;
   readonly zone: readonly Pt[];
+  /**
+   * The other pieces of the reserved area on this level, largest first. A
+   * typical room the main strip has no length for is laid in the first of them
+   * that holds it, rather than named as not drawn beside empty reserved floor.
+   */
+  readonly overflow?: readonly (readonly Pt[])[];
   /** Where the core stands, so the entrance is laid at the strip's nearer end. */
   readonly towards?: Pt;
   /**
@@ -770,6 +776,38 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
 
   // --- the typical rooms, from the other end ----------------------------------------
   for (const room of TYPICAL_ROOMS) place(room.name, typicalEnd, room.widthMm);
+
+  /*
+    WHAT THE STRIP HAD NO LENGTH FOR, IN THE OTHER RESERVED PIECES. The layout
+    often reserves its area in more than one piece — a ring's island cut by the
+    core, or the corners of rows laid across a triangle — and the rooms used to
+    go only in the largest, with the rest named as not drawn while reserved floor
+    stood empty. Only the typical rooms move: the substation and the LV room are
+    placed by clauses about the road and about each other, and a second piece
+    satisfies neither.
+  */
+  for (const zone of input.overflow ?? []) {
+    const waiting = refused.filter((r) => TYPICAL_ROOMS.some((t) => t.name === r.name));
+    if (waiting.length === 0) break;
+    const f = frameOf(zone);
+    if (!f || f.depthMm < MIN_DEPTH_MM) continue;
+    const d = Math.floor(Math.min(f.depthMm, MAX_DEPTH_MM));
+    const atZ = (a: number, b: number): { readonly x: Mm; readonly y: Mm } => ({
+      x: asMm(Math.round(f.origin.x + a * f.along.x + b * f.across.x)),
+      y: asMm(Math.round(f.origin.y + a * f.along.y + b * f.across.y)),
+    });
+    let cursor = 0;
+    for (const w of waiting) {
+      const room = TYPICAL_ROOMS.find((t) => t.name === w.name)!;
+      if (cursor + room.widthMm > f.lengthMm) continue;
+      rooms.push({
+        name: room.name,
+        outline: [atZ(cursor, 0), atZ(cursor + room.widthMm, 0), atZ(cursor + room.widthMm, d), atZ(cursor, d)],
+      });
+      cursor += room.widthMm;
+      refused.splice(refused.indexOf(w), 1);
+    }
+  }
 
   if (rooms.length === 0) {
     return {

@@ -62,7 +62,7 @@ import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './c
 import { solveEnvelope, type EnvelopeSolution } from './envelope.js';
 import { planParkingLevel, type LevelPlan } from './level-plan.js';
 import { buildMassing, type MassingResult } from './massing.js';
-import { solveParking } from './parking.js';
+import { solveParking, traceUsableFraction } from './parking.js';
 
 export interface Actor {
   readonly id: string;
@@ -652,22 +652,6 @@ export function runPipeline(input: RunInput): RunOutput {
     ? 0
     : plateM2.times(levels).div(gfaPerUnit).floor().toNumber();
 
-  const parking = solveParking({
-    rules: input.rules,
-    tracer,
-    context,
-    mix: {
-      source: input.unitMix.source,
-      entries: input.unitMix.entries,
-      ...(input.unitMix.basis !== undefined ? { basis: input.unitMix.basis } : {}),
-      actor: input.actor,
-    },
-    targetUnits,
-    areaPerLevelM2: envelope.podiumFootprint.value,
-    levelsAvailable: parkingLevelsAvailable,
-    usableFraction: input.parkingUsableFraction,
-  });
-
   // Each band must reach a cited rule (§13.3). The envelope solver already
   // resolved these, so the citation is carried through rather than re-derived —
   // a second lookup could disagree with the first, and a band citing a clause
@@ -695,90 +679,6 @@ export function runPipeline(input: RunInput): RunOutput {
     }
     return { ruleId: r.ruleId, citation: r.citation };
   })();
-
-  // --- The parking-in-FAR treatment, applied ------------------------------
-  //
-  // This is where the 15–35% lives. When parking counts toward FAR, the parking
-  // area consumes part of the same GFA allowance the residential floors draw on,
-  // so the area actually available to sell is the permitted GFA *less* the
-  // parking area. When it is excluded, the full allowance is available.
-  //
-  // `INV-18` exists to check exactly this: "GFA composition matches the declared
-  // parking-in-FAR treatment". A pipeline that computed the same number either
-  // way would satisfy INV-18 trivially and would make `FR-DEF-002 AC4`'s
-  // one-click comparison show a spread of zero — which would quietly turn the
-  // product's most important open question into a question that does not matter.
-  const grossPermittedGfa = farMaxOf(envelope).times(plotAreaOf(input.plot));
-  const parkingAreaM2 = parking.requiredAreaM2.value;
-  const availableGfaM2 =
-    input.parkingInFar === 'COUNTS_TOWARD_FAR'
-      ? Decimal.max(new Decimal(0), grossPermittedGfa.minus(parkingAreaM2))
-      : grossPermittedGfa;
-
-  const capacity = computeBands({
-    tracer,
-    permittedGfaM2: availableGfaM2,
-    grossPermittedGfaM2: grossPermittedGfa,
-    parkingInFar: input.parkingInFar,
-    parkingInFarTraced: treatmentTraced,
-    parkingAreaM2,
-    farMax: farMaxOf(envelope),
-    plotAreaM2: plotAreaOf(input.plot),
-    farRule: bandSource('far.max'),
-    towerPlateM2: plateM2,
-    maxLevels: levels,
-    heightRule: bandSource('height.max'),
-    podiumFootprint: envelope.podiumFootprint,
-    floorToFloorM: envelope.floorToFloorM,
-    ...(envelope.resolutions.get('coverage.max')?.governing
-      ? { coverageRule: bandSource('coverage.max') }
-      : {}),
-    parkingSupportableUnits: parking.supportableUnitCeiling.value,
-    gfaPerUnitM2: gfaPerUnit,
-    parkingRule,
-    realismDiscount: { value: input.realismDiscount, actor: input.actor },
-  });
-
-  // --- Closing the loop: what the emitted answer actually demands -----------
-  //
-  // `parking.totalBays` is demand at `targetUnits` — the FAR-and-geometry probe
-  // used to *find* the parking ceiling, not the answer. On a parking-governed
-  // plot those are different schemes: the probe wants 186 units and 281 bays,
-  // the answer settles on 66 units, and comparing one scheme's supply against
-  // the other's demand reports a correct answer as a shortfall. INV-13 did
-  // exactly that until this block existed.
-  //
-  // So the demand of the *emitted* answer is computed and emitted too. It is
-  // also the number a reader needs to close the loop themselves: "at the
-  // capacity this run reports, you need N bays and you have M."
-  const governingUnitsValue = gfaPerUnit.isZero()
-    ? 0
-    : capacity.governingGfa.value.div(gfaPerUnit).floor().toNumber();
-  const governingUnitCount = tracer.computed('capacity.governing_unit_count', governingUnitsValue, {
-    formula: `floor(governing GFA ${capacity.governingGfa.value.toFixed(2)} m² ÷ ${gfaPerUnit.toFixed(2)} m² of GFA per unit)`,
-    uses: { governing: capacity.governingGfa, perUnit: gfaPerUnitTraced },
-    unit: 'units',
-    provenanceClass: 'DERIVED',
-  });
-
-  const baysPerUnit = parking.baysPerUnit.value;
-  const demandAtGoverningValue = baysPerUnit.times(governingUnitsValue).ceil().toNumber();
-  const demandAtGoverningBays = tracer.computed(
-    'parking.demand_at_governing_capacity',
-    demandAtGoverningValue,
-    {
-      formula: `ceil(${governingUnitsValue} unit(s) × ${baysPerUnit.toFixed(4)} bays per unit)`,
-      uses: { units: governingUnitCount, perUnit: parking.baysPerUnit, provided: parking.providedBays },
-      unit: 'bays',
-      provenanceClass: 'DERIVED',
-      detail: {
-        note:
-          'Parking the reported capacity actually needs, as against ' +
-          `parking.total_bays (${parking.totalBays.value}), which is the demand of the ` +
-          'larger scheme used to probe for the parking ceiling.',
-      },
-    },
-  );
 
   // Materialised once, at the converged context, over every parameter any rule
   // in the loaded set speaks to — not just the ones the envelope needed. A
@@ -868,21 +768,16 @@ export function runPipeline(input: RunInput): RunOutput {
     coreLayout.kind === 'LAID_OUT'
       ? { ring: coreLayout.shaft.outline, areaM2: coreLayout.shaft.areaM2 }
       : { ring: core.ring, areaM2: core.areaM2 };
-  const coreReconciliation = reconcileCore({
-    plateShare: core.plateShare.value,
-    coreAreaM2: core.areaM2.value,
-    saleableEfficiency: efficiencyTraced.value,
-    parkingUsableFraction: parking.usableFraction.value,
-    parkingLevelAreaM2: envelope.podiumFootprint.value,
-  });
 
   // --- The level, laid out -------------------------------------------------
   //
-  // Last, because it consumes the envelope's ring and the parking solver's
-  // usable fraction, and because a failure here must not cost the run. A plot
-  // too narrow to hold a single bay run is a finding about the plot; reporting
-  // "no layout, and here is why" is the answer, and throwing would replace a
-  // finding with an outage.
+  // Before the parking supply, because the supply IS this level: its bays,
+  // counted, on every parking level. A failure here must not cost the run. A
+  // plot too narrow to hold a single bay run is a finding about the plot;
+  // reporting "no layout, and here is why" is the answer, and throwing would
+  // replace a finding with an outage — the supply then falls back to an area
+  // estimate, and says so.
+  const usableTraced = traceUsableFraction(tracer, input.parkingUsableFraction);
   let levelPlan: LevelPlan | undefined;
   let levelPlanRefusal: string | undefined;
   try {
@@ -891,7 +786,7 @@ export function runPipeline(input: RunInput): RunOutput {
       plot: input.plot,
       edges: input.plot.edges,
       podiumRing: envelope.podiumRing,
-      usableFraction: parking.usableFraction,
+      usableFraction: usableTraced,
       includeRamp: input.levelPlan?.includeRamp ?? true,
       storeyHeightM: envelope.floorToFloorM,
       ...(schedule ? { rampPlan: { schedule, actor: input.actor } } : {}),
@@ -922,6 +817,115 @@ export function runPipeline(input: RunInput): RunOutput {
     }
     levelPlanRefusal = error instanceof Error ? error.message : String(error);
   }
+
+  const parking = solveParking({
+    rules: input.rules,
+    tracer,
+    context,
+    mix: {
+      source: input.unitMix.source,
+      entries: input.unitMix.entries,
+      ...(input.unitMix.basis !== undefined ? { basis: input.unitMix.basis } : {}),
+      actor: input.actor,
+    },
+    targetUnits,
+    areaPerLevelM2: envelope.podiumFootprint.value,
+    levelsAvailable: parkingLevelsAvailable,
+    usableFraction: input.parkingUsableFraction,
+    usableTraced,
+    ...(levelPlan ? { laidOut: { baysPerLevel: levelPlan.bayCount } } : {}),
+  });
+  const coreReconciliation = reconcileCore({
+    plateShare: core.plateShare.value,
+    coreAreaM2: core.areaM2.value,
+    saleableEfficiency: efficiencyTraced.value,
+    parkingUsableFraction: parking.usableFraction.value,
+    parkingLevelAreaM2: envelope.podiumFootprint.value,
+  });
+
+  // --- The parking-in-FAR treatment, applied ------------------------------
+  //
+  // This is where the 15–35% lives. When parking counts toward FAR, the parking
+  // area consumes part of the same GFA allowance the residential floors draw on,
+  // so the area actually available to sell is the permitted GFA *less* the
+  // parking area. When it is excluded, the full allowance is available.
+  //
+  // `INV-18` exists to check exactly this: "GFA composition matches the declared
+  // parking-in-FAR treatment". A pipeline that computed the same number either
+  // way would satisfy INV-18 trivially and would make `FR-DEF-002 AC4`'s
+  // one-click comparison show a spread of zero — which would quietly turn the
+  // product's most important open question into a question that does not matter.
+  const grossPermittedGfa = farMaxOf(envelope).times(plotAreaOf(input.plot));
+  const parkingAreaM2 = parking.requiredAreaM2.value;
+  const availableGfaM2 =
+    input.parkingInFar === 'COUNTS_TOWARD_FAR'
+      ? Decimal.max(new Decimal(0), grossPermittedGfa.minus(parkingAreaM2))
+      : grossPermittedGfa;
+
+  const capacity = computeBands({
+    tracer,
+    permittedGfaM2: availableGfaM2,
+    grossPermittedGfaM2: grossPermittedGfa,
+    parkingInFar: input.parkingInFar,
+    parkingInFarTraced: treatmentTraced,
+    parkingAreaM2,
+    farMax: farMaxOf(envelope),
+    plotAreaM2: plotAreaOf(input.plot),
+    farRule: bandSource('far.max'),
+    towerPlateM2: plateM2,
+    maxLevels: levels,
+    heightRule: bandSource('height.max'),
+    podiumFootprint: envelope.podiumFootprint,
+    floorToFloorM: envelope.floorToFloorM,
+    ...(envelope.resolutions.get('coverage.max')?.governing
+      ? { coverageRule: bandSource('coverage.max') }
+      : {}),
+    parkingSupportableUnits: parking.supportableUnitCeiling.value,
+    gfaPerUnitM2: gfaPerUnit,
+    parkingRule,
+    realismDiscount: { value: input.realismDiscount, actor: input.actor },
+  });
+
+  // --- Closing the loop: what the emitted answer actually demands -----------
+  //
+  // `parking.totalBays` is demand at `targetUnits` — the FAR-and-geometry probe
+  // used to *find* the parking ceiling, not the answer. On a parking-governed
+  // plot those are different schemes: the probe wants 186 units and 281 bays,
+  // the answer settles on 66 units, and comparing one scheme's supply against
+  // the other's demand reports a correct answer as a shortfall. INV-13 did
+  // exactly that until this block existed.
+  //
+  // So the demand of the *emitted* answer is computed and emitted too. It is
+  // also the number a reader needs to close the loop themselves: "at the
+  // capacity this run reports, you need N bays and you have M."
+  const governingUnitsValue = gfaPerUnit.isZero()
+    ? 0
+    : capacity.governingGfa.value.div(gfaPerUnit).floor().toNumber();
+  const governingUnitCount = tracer.computed('capacity.governing_unit_count', governingUnitsValue, {
+    formula: `floor(governing GFA ${capacity.governingGfa.value.toFixed(2)} m² ÷ ${gfaPerUnit.toFixed(2)} m² of GFA per unit)`,
+    uses: { governing: capacity.governingGfa, perUnit: gfaPerUnitTraced },
+    unit: 'units',
+    provenanceClass: 'DERIVED',
+  });
+
+  const baysPerUnit = parking.baysPerUnit.value;
+  const demandAtGoverningValue = baysPerUnit.times(governingUnitsValue).ceil().toNumber();
+  const demandAtGoverningBays = tracer.computed(
+    'parking.demand_at_governing_capacity',
+    demandAtGoverningValue,
+    {
+      formula: `ceil(${governingUnitsValue} unit(s) × ${baysPerUnit.toFixed(4)} bays per unit)`,
+      uses: { units: governingUnitCount, perUnit: parking.baysPerUnit, provided: parking.providedBays },
+      unit: 'bays',
+      provenanceClass: 'DERIVED',
+      detail: {
+        note:
+          'Parking the reported capacity actually needs, as against ' +
+          `parking.total_bays (${parking.totalBays.value}), which is the demand of the ` +
+          'larger scheme used to probe for the parking ceiling.',
+      },
+    },
+  );
 
   const massing = buildMassing({
     tracer,

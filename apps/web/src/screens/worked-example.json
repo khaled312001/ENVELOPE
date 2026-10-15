@@ -157,27 +157,27 @@
       }
     ],
     "totalBays": "265",
-    "bayAreaFactorM2": "32",
+    "bayAreaFactorM2": "29.1049",
     "bayAreaFactorClass": "ASSUMED",
     "bandAM2": "16000",
     "bandBM2": "17920",
-    "bandCM2": "6774.194",
+    "bandCM2": "7548.3876",
     "governingBand": "PARKING",
-    "governingGfaM2": "6774.194",
-    "headroomToNextM2": "9225.81",
+    "governingGfaM2": "7548.3876",
+    "headroomToNextM2": "8451.61",
     "nextBindingBand": "REGULATORY",
     "levels": "5",
     "formulas": {
       "bandA": "FAR 5 × plot area 3200.00 m² (parking excluded from FAR)",
       "bandB": "tower plate 1280.00 m² × 14 level(s)",
-      "bandC": "70 unit(s) supportable by parking × 96.77 m² GFA per unit",
+      "bandC": "78 unit(s) supportable by parking × 96.77 m² GFA per unit",
       "governingGfa": "min(band A, band B, band C)",
       "levels": "floor(min(14, governing GFA ÷ tower plate))"
     },
     "levelPlan": {
       "bayCount": {
         "value": "56",
-        "node": "n171",
+        "node": "n101",
         "parameterId": "parking.laid_out_bays",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -185,7 +185,7 @@
       },
       "areaPerBayM2": {
         "value": "34.24",
-        "node": "n173",
+        "node": "n103",
         "parameterId": "parking.area_per_bay_m2",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -193,7 +193,7 @@
       },
       "deductionsM2": {
         "value": "287.62",
-        "node": "n135",
+        "node": "n67",
         "parameterId": "parking.layout_deductions_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -201,7 +201,7 @@
       },
       "moduleDepthM": {
         "value": "17",
-        "node": "n141",
+        "node": "n71",
         "parameterId": "parking.module_depth_m",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -209,7 +209,7 @@
       },
       "usableAreaM2": {
         "value": "1629.88",
-        "node": "n143",
+        "node": "n73",
         "parameterId": "parking.layout_usable_area_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -217,7 +217,7 @@
       },
       "orientation": {
         "value": "bays to the walls, the ring aisle sloped as the ramp",
-        "node": "n167",
+        "node": "n97",
         "parameterId": "parking.module_orientation",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION"
@@ -1771,7 +1771,7 @@
           },
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-          "node": "n188",
+          "node": "n126",
           "provenanceClass": "DERIVED"
         },
         "chosen": null,
@@ -1830,10 +1830,11 @@
       },
       "notAssessed": [
         "The ring aisle is the ramp: it climbs one 3.2 m storey over one 121.00 m lap, 2.65%, within the 4% a floor with parked cars on it may fall (DBC B.7.2.3.1, Figure B.55). No ramp strip is needed.",
-        "Of the 204 m² reserved for plant and circulation, 84 m² is drawn on the island and 120 m² is not (35 m² of it has no room on the island at all). The deduction is still charged in full against the bay count.",
+        "Of the 204 m² reserved for plant and circulation, 169 m² is drawn on the island in 2 piece(s) and 35 m² has no room on it at all. The deduction is still charged in full against the bay count.",
         "Bays stand against all four walls and one 6 m ring aisle serves them: 26 to each long wall and 2 to each short one, less the 0 the way in and the core take. The island the ring encloses is 42.00 × 6.50 m.",
-        "Laid out as bays to the walls, the ring aisle sloped as the ramp: 56 bays, against 0 modules along the width (a straight ramp climbing a 3.2 m storey needs 6.30 × 30.27 m (DBC Tables B.9 and B.10) and this packing has 65.00 × 26.36 m); 18 modules along the depth; 0 bays to the walls, one ring aisle (a straight ramp climbing a 3.2 m storey needs 6.30 × 30.27 m (DBC Tables B.9 and B.10), reached from the ring at one end of the island, and the 42.00 × 6.50 m island does not have it clear of the core), in the same rectangle. All 4 were packed.",
+        "Laid out as bays to the walls, the ring aisle sloped as the ramp: 56 bays, against 0 modules along the width (a straight ramp climbing a 3.2 m storey needs 6.30 × 30.27 m (DBC Tables B.9 and B.10) and this packing has 65.00 × 26.36 m); 18 modules along the depth; 0 bays to the walls, one ring aisle (a straight ramp climbing a 3.2 m storey needs 6.30 × 30.27 m (DBC Tables B.9 and B.10), reached from the ring at one end of the island, and the 42.00 × 6.50 m island does not have it clear of the core), on the same level. All 4 were packed.",
         "The 288 m² deducted for cores, plant and the ramp landing costs about 13 bays at 21.25 m² each — the area one more bay takes inside a module, not the gross area per bay. Of it, 83 m² is the core, standing where it is drawn (0 bay(s) were not placed there), and 204 m² is the strip reserved at the edge.",
+        "Headroom (Table B.9, 2.4 m clear above any point of a ramp): the ramps stand in one strip on every level, so over each is the next, one 3.20 m storey up. The slab, its beams and anything hung below them over the ramp may be at most 0.80 m deep. No structure is drawn: this is the budget a design must fit in, not a statement that one does.",
         "Whether a T junction sits opposite the chosen opening (B.7.2.1: \"Vehicle access shall not be located opposite a T junction\"). That needs the surrounding road network, which no affection plan carries.",
         "RTA approval. B.7.2.1 defers the location to RTA requirements and the Dubai access management manual; nothing here substitutes for that.",
         "Whether a traffic impact study is required for this development."
@@ -1858,7 +1859,7 @@
         },
         "rank": 1,
         "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-        "node": "n188",
+        "node": "n126",
         "provenanceClass": "DERIVED"
       },
       "chosen": null,
@@ -1916,22 +1917,22 @@
       ]
     },
     "levelPlanRefusal": null,
-    "bayAreaFactorBasis": "no cited rule fixes the gross area consumed per bay. 32 m²/bay is the mid-point of the 28–35 m²/bay range typical of a structured basement, and it is ranked in the assumption register because the parking band moves roughly in proportion to it.",
+    "bayAreaFactorBasis": "the usable fraction of a parking level after cores, ramps and plant",
     "parkingInFar": {
       "countsTowardFar": {
-        "regulatoryGfaM2": "7520.00",
-        "governingGfaM2": "6774.19",
+        "regulatoryGfaM2": "8287.20",
+        "governingGfaM2": "7548.39",
         "governingBand": "PARKING"
       },
       "excludedFromFar": {
         "regulatoryGfaM2": "16000.00",
-        "governingGfaM2": "6774.19",
+        "governingGfaM2": "7548.39",
         "governingBand": "PARKING"
       },
-      "regulatorySpreadM2": "8480.00",
+      "regulatorySpreadM2": "7712.80",
       "governingSpreadM2": "0.00",
       "governingSpreadRelative": "0.000000",
-      "verdict": "The parking-in-FAR treatment moves regulatory capacity by 8480 m², but not the governing capacity: the parking limit binds below both treatments. On this plot the open regulatory question does not change the answer — though it would on a plot where the FAR ceiling binds."
+      "verdict": "The parking-in-FAR treatment moves regulatory capacity by 7713 m², but not the governing capacity: the parking limit binds below both treatments. On this plot the open regulatory question does not change the answer — though it would on a plot where the FAR ceiling binds."
     },
     "exports": {
       "gateSequence": [
@@ -2303,7 +2304,7 @@
           "Pedestrian entrance, refuse room and escape distances — NOT ASSESSED until their rules are encoded.",
           "The sloped ring is drawn level in 3D and in section. On plan the ring aisle and the bays on it climb one storey over each 121.00 m lap; the 3D view and the sections stand every parking level flat at its floor height, and where the core door meets the ring at each level is not drawn.",
           "The core, as a design. Its outline is the tower plate scaled to the core area, and only that area is a computed quantity. The stairs, lifts and lobby drawn inside it, and the door into it at ground level, are an indicative layout, assumed: egress, lift traffic and fire-fighting are NOT ASSESSED, no riser or core wall is placed, and no route from the street to the core's door is drawn.",
-          "The ground floor, as a services design. Every room in its reserved strip whose width is a typical figure is an assumption: it is not sized, ventilated or access-checked against a Civil Defence or municipality requirement. The substation and the LV room are sized from DEWA §11.4.1 and §11.2.3, and neither is ventilated or access-checked either — §11.5.1 is only partly mechanizable and is NOT ASSESSED. ENTRANCE LOBBY: ENTRANCE LOBBY needs 6.00 m along the strip and 2.92 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. GENERATOR ROOM: GENERATOR ROOM needs 5.00 m along the strip and 2.92 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. PUMP ROOM: PUMP ROOM needs 5.00 m along the strip and 2.92 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. WATER TANK: WATER TANK needs 6.00 m along the strip and 2.92 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. GARBAGE ROOM: GARBAGE ROOM needs 4.00 m along the strip and 2.92 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. MM ROOM: MM ROOM needs 2.50 m along the strip and 0.42 m of its 13.00 m is left, so it was not drawn rather than drawn narrow."
+          "The ground floor, as a services design. Every room in its reserved strip whose width is a typical figure is an assumption: it is not sized, ventilated or access-checked against a Civil Defence or municipality requirement. The substation and the LV room are sized from DEWA §11.4.1 and §11.2.3, and neither is ventilated or access-checked either — §11.5.1 is only partly mechanizable and is NOT ASSESSED. PUMP ROOM: PUMP ROOM needs 5.00 m along the strip and 2.92 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. WATER TANK: WATER TANK needs 6.00 m along the strip and 2.92 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. GARBAGE ROOM: GARBAGE ROOM needs 4.00 m along the strip and 2.92 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. MM ROOM: MM ROOM needs 2.50 m along the strip and 0.42 m of its 13.00 m is left, so it was not drawn rather than drawn narrow."
         ]
       },
       "jsonFields": [

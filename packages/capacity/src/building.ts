@@ -401,9 +401,12 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       });
     }
     notModelled.push(
-      'Ramp headroom (2.4 m, DBC Table B.9) and the approach from the street — NOT ' +
-        'ASSESSED. The 3D view and the sections draw each ramp as one plane from foot to ' +
-        'head; its 6% transitions are in the run, not drawn.',
+      'The structure over each ramp. DBC Table B.9 asks 2.4 m clear above any point of ' +
+        'it, which fixes how deep the slab over it may be — that budget is on every ' +
+        'parking sheet — but no slab or beam is drawn, so whether a design fits it is ' +
+        'NOT ASSESSED, nor is the approach from the street. The 3D view and the sections ' +
+        'draw each ramp as one plane from foot to head; its 6% transitions are in the ' +
+        'run, not drawn.',
     );
   } else if (strip && parkingStack.length === 1) {
     notModelled.push(
@@ -524,9 +527,14 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     const obstacles = [coreHere, ground.parking?.rampStrip ?? null].filter(
       (ring): ring is NonNullable<typeof ring> => ring !== null,
     );
+    const overflow = (levelPlan?.reservedZones ?? [])
+      .filter((z) => z !== zone)
+      .slice()
+      .sort((a, b) => Math.abs(ringArea(b)) - Math.abs(ringArea(a)));
     const program = layoutGroundProgram({
       tracer,
       zone,
+      ...(overflow.length > 0 ? { overflow } : {}),
       obstacles,
       ...(core
         ? {
@@ -814,11 +822,17 @@ function parkingOf(plan: LevelPlan, climbs: 'UP' | 'DOWN' | null): NonNullable<M
             that part is drawn; the label says how much of the whole it is,
             rather than printing the whole figure across a smaller rectangle.
           */
-          const drawn = new Decimal(Math.abs(ringArea(plan.reservedZone))).div(1_000_000);
+          const zones = plan.reservedZones.length > 0 ? plan.reservedZones : [plan.reservedZone];
+          const drawn = zones.reduce(
+            (s, z) => s.plus(new Decimal(Math.abs(ringArea(z))).div(1_000_000)),
+            new Decimal(0),
+          );
           const whole = plan.reservedAreaM2.value;
           const part = drawn.lt(whole.minus(1)) ? `${drawn.toFixed(0)} OF ` : '';
+          const others = zones.filter((z) => z !== plan.reservedZone);
           return {
             outline: plan.reservedZone.map(pt),
+            ...(others.length > 0 ? { pieces: others.map((z) => z.map(pt)) } : {}),
             areaM2: toWire(plan.reservedAreaM2),
             label:
               plan.reservedAreaM2 === plan.deductionsM2
@@ -835,6 +849,14 @@ function parkingOf(plan: LevelPlan, climbs: 'UP' | 'DOWN' | null): NonNullable<M
             lapM: plan.slopedFloor.lapM.toFixed(2),
             centreLine: plan.slopedFloor.centreLine.map(pt),
             climbs,
+          },
+        }
+      : {}),
+    ...(plan.headroom
+      ? {
+          rampHeadroom: {
+            clearHeightM: toWire(plan.headroom.clearHeightM),
+            structuralBudgetM: toWire(plan.headroom.structuralBudgetM),
           },
         }
       : {}),

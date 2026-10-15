@@ -210,7 +210,9 @@ describe('a podium that is not a rectangle', () => {
   it('says what it gave up, in square metres and not only as a ratio', () => {
     const note = p.notAssessed.find((n) => n.includes('not a rectangle'));
     expect(note).toBeDefined();
-    expect(note).toMatch(/m² was left unpacked/);
+    // Packed in the rectangle, the rest is "left unpacked"; laid across the whole
+    // footprint, only the wedges along the edges are. Either way, in m².
+    expect(note).toMatch(/m² (?:was left unpacked|along its edges holds no whole bay)/);
     expect(note).toMatch(/floor/);
   });
 

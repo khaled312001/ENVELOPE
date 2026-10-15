@@ -355,7 +355,11 @@ describe('the parking the sheets will draw', () => {
   it('reserves the deducted area as a zone, and says how much of it the drawing holds', () => {
     const out = runPipeline(input(RECT_80x40));
     const reserved = out.building.levels.find((l) => l.parking)!.parking!.reserved!;
-    const drawnM2 = new Decimal(area(reserved.outline)).div(1_000_000);
+    // Every piece is drawn now, so what the drawing holds is their sum.
+    const drawnM2 = [reserved.outline, ...(reserved.pieces ?? [])].reduce(
+      (s, ring) => s.plus(new Decimal(area(ring)).div(1_000_000)),
+      new Decimal(0),
+    );
     // Never drawn larger than it is; where the island holds only part of it,
     // the label says "<drawn> OF <whole>" rather than printing the whole figure.
     expect(drawnM2.lte(new Decimal(reserved.areaM2.value).plus(1))).toBe(true);
@@ -384,11 +388,24 @@ describe('the ramp', () => {
     expect(ramp.toElevationMm - ramp.fromElevationMm).toBe(rise.times(1000).toNumber());
   });
 
-  it('cites the tables it was sized to, and leaves headroom NOT ASSESSED', () => {
+  it('cites the tables it was sized to, and states headroom as a budget, not a design', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, ...STRIP }));
     const ramp = out.building.ramps[0]!;
     expect(ramp.label).toMatch(/DBC TABLES B\.9, B\.10/);
-    expect(out.building.notModelled.join(' ')).toMatch(/headroom \(2\.4 m, DBC Table B\.9\)[^.]*NOT\s+ASSESSED/);
+    // 3.2 m storey − 2.4 m clear: the slab over a stacked ramp may be 0.8 m deep.
+    const parking = out.building.levels.find((l) => l.parking)!.parking!;
+    expect(parking.rampHeadroom?.structuralBudgetM.value).toBe('0.8');
+    expect(parking.rampHeadroom?.clearHeightM.provenanceClass).toBe('DERIVED');
+    // Whether a slab fits it is the structure, which is not drawn — said in words.
+    expect(out.building.notModelled.join(' ')).toMatch(/Table B\.9 asks 2\.4 m clear[^]*NOT\s+ASSESSED/);
+  });
+
+  it('refuses no ramp a storey has room for, and says when one has none', () => {
+    const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, ...STRIP }));
+    expect(out.levelPlan!.headroom?.feasible).toBe(true);
+    expect(out.levelPlan!.notAssessed.join(' ') + out.building.notModelled.join(' ')).not.toMatch(
+      /cannot be met/,
+    );
   });
 
   it('is not invented where there is only one parking level to reach', () => {

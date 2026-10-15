@@ -100,7 +100,13 @@ export interface ModelAisle {
  * size, not a core with stairs and lifts nobody laid out.
  */
 export interface ModelReservedZone {
+  /** The largest piece, which carries the label. */
   readonly outline: ModelRing;
+  /**
+   * Every other piece the reserved area is drawn in. Optional because a run
+   * stored before the area was drawn whole carries one outline only.
+   */
+  readonly pieces?: readonly ModelRing[];
   readonly areaM2: TracedWire;
   readonly label: string;
 }
@@ -243,6 +249,16 @@ export interface ModelLevel {
       readonly climbs: 'UP' | 'DOWN' | null;
     };
     /**
+     * Table B.9's 2.4 m clear height over a ramp, as the deepest the structure
+     * over it may be: the ramps stand stacked, one storey apart. A budget, not a
+     * design — no slab is drawn. Absent on runs stored before 15 Oct 2026 and
+     * where no ramp is drawn.
+     */
+    readonly rampHeadroom?: {
+      readonly clearHeightM: TracedWire;
+      readonly structuralBudgetM: TracedWire;
+    };
+    /**
      * The module the level was laid out to, as Table B.11 states it.
      *
      * Three strings, so the sheet can dimension one module across — bay, aisle,
@@ -269,9 +285,9 @@ export interface ModelLevel {
  *
  * A sloped plane from `foot` (on the lower level) to `head` (on the upper), so
  * the massing can stand it up and the section can draw it. The gradient is
- * computed from the rise and the run the layout reserved — and whether that
- * gradient is permitted is NOT ASSESSED: B.7.2.2 is not encoded, and a ramp
- * drawn in cited ink would claim it was.
+ * computed from the rise and the run the layout reserved, and the run was sized
+ * to Table B.9's 12% with Table B.10's transitions, so it is within them by
+ * construction (`ramp-rules.ts` in `@envelope/capacity`).
  */
 export interface ModelRamp {
   readonly id: string;

@@ -787,6 +787,10 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     if (!groundRooms) {
       items.push(label(Role.RESERVED, centroidOf(r.outline), r.label, 1.8, wide ? 0 : 90, 'middle', sourceOf(r.areaM2)));
     }
+    // The other pieces of the same area: hatched alike, labelled once, on the largest.
+    (r.pieces ?? []).forEach((piece, i) => {
+      items.push(shape(Role.RESERVED, piece, true, { source: sourceOf(r.areaM2), name: `${r.label} (${i + 2})` }));
+    });
   }
   if (groundRooms) {
     for (const room of groundRooms.rooms) items.push(...groundRoomItems(room, groundRooms.source));
@@ -958,7 +962,18 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     { role: Role.BAY, label: 'Parking bay, Table B.11' },
     ...(parking.bays.some((b) => b.accessible) ? [{ role: Role.BAY_ACCESSIBLE, label: 'Accessible bay' }] : []),
     { role: Role.AISLE, label: 'Drive aisle' },
-    ...(parking.rampStrip ? [{ role: Role.RAMP, label: 'Ramp; headroom NOT ASSESSED' }] : []),
+    ...(parking.rampStrip
+      ? [
+          {
+            role: Role.RAMP,
+            // The budget Table B.9's clear height leaves the slab over it; a run
+            // stored before the budget existed still says it was not assessed.
+            label: parking.rampHeadroom
+              ? `Ramp; slab over it ≤ ${parking.rampHeadroom.structuralBudgetM.value} m deep`
+              : 'Ramp; headroom NOT ASSESSED',
+          },
+        ]
+      : []),
     ...(parking.reserved
       ? [
           {

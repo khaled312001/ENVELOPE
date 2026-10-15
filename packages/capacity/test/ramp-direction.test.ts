@@ -392,7 +392,9 @@ describe('ramp types', () => {
     const straight = layout({ rampPlan: { ...plan, type: RampType.STRAIGHT } });
     const split = layout({ rampPlan: { ...plan, type: RampType.SPLIT } });
     expect(split.bayCount.value).toBe(straight.bayCount.value);
-    expect(split.notes.join(' ')).toMatch(/headroom \(2\.4 m\) is NOT ASSESSED/);
+    // Headroom is stated as the budget the structure over the ramp must fit in.
+    expect(split.notes.join(' ')).toMatch(/at most 0\.80 m deep/);
+    expect(split.notes.join(' ')).not.toMatch(/headroom \(2\.4 m\) is NOT ASSESSED/);
   });
 
   it('refuses the turning ramp by name rather than approximating it', () => {

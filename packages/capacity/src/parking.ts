@@ -246,8 +246,8 @@ export function solveParking(input: ParkingInput): ParkingResult {
       provenanceClass: 'DERIVED',
       detail: {
         note:
-          'Above the required fraction rather than equal to it, because the bay ' +
-          'count is rounded up to a whole bay.',
+          'At or above the required fraction: above it whenever the bay count is ' +
+          'rounded up to a whole bay.',
       },
     },
   );

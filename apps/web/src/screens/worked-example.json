@@ -156,21 +156,21 @@
         "y": "7.199"
       }
     ],
-    "totalBays": "265",
+    "totalBays": "184",
     "bayAreaFactorM2": "29.1049",
     "bayAreaFactorClass": "ASSUMED",
     "bandAM2": "16000",
     "bandBM2": "17920",
-    "bandCM2": "7258.065",
+    "bandCM2": "10451.6136",
     "governingBand": "PARKING",
-    "governingGfaM2": "7258.065",
-    "headroomToNextM2": "8741.94",
+    "governingGfaM2": "10451.6136",
+    "headroomToNextM2": "5548.39",
     "nextBindingBand": "REGULATORY",
-    "levels": "5",
+    "levels": "8",
     "formulas": {
       "bandA": "FAR 5 × plot area 3200.00 m² (parking excluded from FAR)",
       "bandB": "tower plate 1280.00 m² × 14 level(s)",
-      "bandC": "75 unit(s) supportable by parking × 96.77 m² GFA per unit",
+      "bandC": "108 unit(s) supportable by parking × 96.77 m² GFA per unit",
       "governingGfa": "min(band A, band B, band C)",
       "levels": "floor(min(14, governing GFA ÷ tower plate))"
     },
@@ -2174,19 +2174,19 @@
     "bayAreaFactorBasis": "the usable fraction of a parking level after cores, ramps and plant",
     "parkingInFar": {
       "countsTowardFar": {
-        "regulatoryGfaM2": "8287.20",
-        "governingGfaM2": "7258.06",
+        "regulatoryGfaM2": "10644.70",
+        "governingGfaM2": "10451.61",
         "governingBand": "PARKING"
       },
       "excludedFromFar": {
         "regulatoryGfaM2": "16000.00",
-        "governingGfaM2": "7258.06",
+        "governingGfaM2": "10451.61",
         "governingBand": "PARKING"
       },
-      "regulatorySpreadM2": "7712.80",
+      "regulatorySpreadM2": "5355.30",
       "governingSpreadM2": "0.00",
       "governingSpreadRelative": "0.000000",
-      "verdict": "The parking-in-FAR treatment moves regulatory capacity by 7713 m², but not the governing capacity: the parking limit binds below both treatments. On this plot the open regulatory question does not change the answer — though it would on a plot where the FAR ceiling binds."
+      "verdict": "The parking-in-FAR treatment moves regulatory capacity by 5355 m², but not the governing capacity: the parking limit binds below both treatments. On this plot the open regulatory question does not change the answer — though it would on a plot where the FAR ceiling binds."
     },
     "exports": {
       "gateSequence": [
@@ -2442,16 +2442,40 @@
             "assumedInk": true
           },
           {
-            "name": "ENV-L06-CONTEXT",
-            "assumedInk": false
+            "name": "ENV-L06-SLAB",
+            "assumedInk": true
           },
           {
-            "name": "ENV-L07-CONTEXT",
-            "assumedInk": false
+            "name": "ENV-L06-MASS",
+            "assumedInk": true
           },
           {
-            "name": "ENV-L08-CONTEXT",
-            "assumedInk": false
+            "name": "ENV-L06-CORE",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L07-SLAB",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L07-MASS",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L07-CORE",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L08-SLAB",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L08-MASS",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L08-CORE",
+            "assumedInk": true
           },
           {
             "name": "ENV-L09-CONTEXT",

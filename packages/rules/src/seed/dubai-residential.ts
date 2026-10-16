@@ -61,6 +61,30 @@ function draftCitation(clause: string, note: string) {
   };
 }
 
+/**
+ * DBC 2021 Table B.13, the parking ratios — the first seed citation that is not
+ * a placeholder. The record stays `DRAFT`: a real page and verbatim text make the
+ * rule *checkable*, not approved, and approval is still a named architect's act.
+ *
+ * `sourceBbox` is the whole page, as `TABLE_B11`'s is: the table runs across
+ * p89–90, and a box claiming the residential rows would be a precision nobody
+ * measured. B.7.2.6.1 ¶1 also says the affection plan or DCR "shall take
+ * precedent" over the table, which `resolveParameter` gives by precedence when
+ * such a rule is on file.
+ */
+const TABLE_B13 = {
+  instrumentId: 'DUBAI_BUILDING_CODE',
+  instrumentVersion: '2021',
+  clauseReference: 'B.7.2.6.1 ¶1, Table B.13 — Parking ratios (Residential)',
+  documentUri: 'docs/00-source/regulations/Dubai Building Code_English_2021 Edition_compressed.pdf',
+  sourcePage: 89,
+  sourceBbox: [0, 0, 842, 595] as const,
+  sourceTextVerbatim:
+    'Parking ratios shall be determined in accordance with Table B.13 for the relevant ' +
+    'building occupancy. Parking requirements set out in the affection plan or DCR shall ' +
+    'take precedent over Table B.13.',
+};
+
 const draft = (
   r: Omit<RuleRecord, 'status' | 'authoredBy' | 'approvedBy' | 'approvedAt' | 'recordedAt' | 'version' | 'supersedes'>,
 ): RuleRecord => ({
@@ -365,13 +389,25 @@ export const SEED_RULES: readonly RuleRecord[] = [
     ruleClass: RuleClass.FILTERING,
     operator: Operator.MIN,
     evaluator: EvaluatorName.RATIO_PER_UNIT_TYPE,
+    // Table B.13's residential rows, as printed. 2BED was 1.50 here as a
+    // placeholder and the code says 1; duplex and penthouse take 3 whatever
+    // their bedroom count, which is why they are types and not bedroom counts.
     evaluatorArgs: {
-      ratios: { STUDIO: '1.00', '1BED': '1.00', '2BED': '1.50', '3BED': '2.00' },
+      ratios: {
+        STUDIO: '1',
+        '1BED': '1',
+        '2BED': '1',
+        '3BED': '2',
+        '4BED': '2',
+        '5BED': '3',
+        DUPLEX: '3',
+        PENTHOUSE: '3',
+      },
       mixPath: 'unit.mix',
     },
     unit: 'bays',
     applicability: { all: [RESIDENTIAL] },
-    citation: draftCitation('Part B, parking schedule', 'resident parking bays per unit type'),
+    citation: TABLE_B13,
     jurisdiction: 'DM_MAINLAND',
     isLifeSafety: false,
     mechanization: Mechanization.MECHANIZED,
@@ -380,8 +416,12 @@ export const SEED_RULES: readonly RuleRecord[] = [
     tests: [
       {
         kind: 'POSITIVE',
-        context: { land_use: 'RESIDENTIAL_MULTI', unit: { mix: [{ typeId: '2BED', count: 10 }] } },
-        expected: 15,
+        context: {
+          land_use: 'RESIDENTIAL_MULTI',
+          unit: { mix: [{ typeId: '2BED', count: 10 }, { typeId: '3BED', count: 2 }, { typeId: 'PENTHOUSE', count: 1 }] },
+        },
+        expected: 17,
+        note: '10 × 1 + 2 × 2 + 1 × 3, Table B.13. The placeholder gave a 2BED 1.5 bays.',
       },
       {
         kind: 'BOUNDARY',
@@ -399,18 +439,24 @@ export const SEED_RULES: readonly RuleRecord[] = [
     ruleClass: RuleClass.FILTERING,
     operator: Operator.MIN,
     evaluator: EvaluatorName.SCALAR_MIN,
-    evaluatorArgs: { value: '0.15' },
+    // Table B.13 prints no visitor allowance on any residential row (the
+    // University row is the only one in the table that adds visitors). This was
+    // 0.15 as a placeholder, which added 15% to every run's demand on no
+    // authority. It is 0 *under the table* rather than deleted, because a deleted
+    // rule falls through to "no visitor rule applies", amber, and the table does
+    // apply — it is a rule that says none. A DCR that asks for visitors outranks it.
+    evaluatorArgs: { value: '0' },
     unit: 'ratio',
     applicability: { all: [RESIDENTIAL] },
-    citation: draftCitation('Part B, parking schedule', 'visitor parking as a fraction of resident bays'),
+    citation: TABLE_B13,
     jurisdiction: 'DM_MAINLAND',
     isLifeSafety: false,
     mechanization: Mechanization.MECHANIZED,
     validFrom: '2021-01-01',
     validTo: null,
     tests: [
-      { kind: 'POSITIVE', context: { land_use: 'RESIDENTIAL_MULTI' }, expected: 0.15 },
-      { kind: 'BOUNDARY', context: { land_use: 'RESIDENTIAL_MULTI', unit: { mix: [] } }, expected: 0.15 },
+      { kind: 'POSITIVE', context: { land_use: 'RESIDENTIAL_MULTI' }, expected: 0 },
+      { kind: 'BOUNDARY', context: { land_use: 'RESIDENTIAL_MULTI', unit: { mix: [] } }, expected: 0 },
       { kind: 'NEGATIVE', context: { land_use: 'COMMERCIAL' }, expected: 'NOT_APPLICABLE' },
     ],
   }),

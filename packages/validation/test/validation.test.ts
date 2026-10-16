@@ -347,6 +347,42 @@ describe('constraint categories (§16.1)', () => {
     }
     expect(deferred.find((d) => d.ruleId === 'R-EGRESS-TRAVEL')?.isLifeSafety).toBe(true);
   });
+
+  it('declares a rule the run set aside, with its reason, and never holds the run to it', () => {
+    const set: ConstraintSet = {
+      ...constraintSet({
+        resolved: [
+          { rule: COVERAGE_MAX, value: scalar('60') },
+          { rule: FAR_MAX, value: scalar('5.00') },
+        ],
+      }),
+      setAside: [
+        { parameterId: 'coverage.max', rule: COVERAGE_MAX, reason: 'the podium statement STMT-X puts the podium on the boundary.' },
+      ],
+    };
+    expect(hardConstraintsFrom(set).map((c) => c.ruleId)).toEqual(['R-FAR-MAX']);
+    const declared = deferredConstraintsFrom(set).find((d) => d.ruleId === 'R-COVERAGE-MAX');
+    expect(declared?.reason).toMatch(/^set aside for this run and not checked: .*STMT-X/);
+
+    // 100% coverage against a 60% rule that was set aside: not a violation.
+    const o = observations();
+    const report = validateConfiguration(
+      input(set, {
+        'coverage.max': o.quantity('coverage', '100', '%'),
+        'far.max': o.quantity('far', '4.00', 'ratio'),
+      }),
+    );
+    expect(report.summary.hardViolated).toBe(0);
+    expect(report.emissionBlocked).toEqual([]);
+
+    // Without the set-aside entry, the same observation blocks the run.
+    const strict = validateConfiguration(
+      input(constraintSet({ resolved: [{ rule: COVERAGE_MAX, value: scalar('60') }] }), {
+        'coverage.max': o.quantity('coverage2', '100', '%'),
+      }),
+    );
+    expect(strict.summary.hardViolated).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------

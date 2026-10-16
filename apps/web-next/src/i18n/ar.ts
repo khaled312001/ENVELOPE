@@ -248,6 +248,10 @@ export const AR: Dict = {
     edgeOf: (i: number, j: number): string => `الحد ${i}، من P${i} إلى P${j}`,
     choose: 'اختر التصنيف…',
     hierarchyOf: (i: number): string => `تصنيف الطريق على الحد ${i}`,
+    towerSetback: 'ارتداد البرج (م). البوديوم والبدرومات تصل إلى هذا الحد.',
+    towerSetbackOf: (i: number): string => `ارتداد البرج على الحد ${i}، بالمتر`,
+    towerSetbackBlank: 'من القاعدة',
+    towerSetbackFromSheet: 'ارتداد البرج كما يذكره مخطط الأرض:',
     hierarchy: 'تصنيف الطريق…',
     road: {
       ARTERIAL: 'طريق شرياني',

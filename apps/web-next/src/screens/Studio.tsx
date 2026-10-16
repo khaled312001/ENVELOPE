@@ -33,11 +33,13 @@ import {
   EMPTY_PLOT,
   EMPTY_RULES,
   exampleStudy,
+  plotIdentity,
   recalledRequest,
   rememberRequest,
   requestBody,
   type RulesForm,
   rulesFrom,
+  typedSetbacksOf,
 } from '../studio/model.js';
 import { pointsToDraft, pointsToRing, ringToDraft } from '../studio/geometry.js';
 import { ParkingCanvas, ParkingPanel } from '../studio/ParkingStep.js';
@@ -232,7 +234,8 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   };
   const editPlot = (next: DraftPlot): void => {
     setDraft(next);
-    unfile();
+    // A typed tower setback is sent with the run, not filed with the plot: changing one keeps the plot.
+    if (plotIdentity(next) !== plotIdentity(draft)) unfile();
   };
   const editStatedArea = (next: string): void => {
     setStatedArea(next);
@@ -507,7 +510,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 form={rules}
                 onChange={setRules}
                 busy={busy === 'run'}
-                onCompute={() => void compute(requestBody(plotId, rules))}
+                onCompute={() => void compute(requestBody(plotId, rules, undefined, typedSetbacksOf(draft)))}
                 hasRun={run !== null}
               />
             ) : step === 'capacity' && run ? (

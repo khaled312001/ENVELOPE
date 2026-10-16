@@ -862,6 +862,10 @@ export interface RunRequestBody {
    * server refuses: a run may not put its own answer under somebody else's name.
    */
   readonly parkingInFarStatementId?: string;
+  /** The podium statement's id: basements, ground and podium on the boundary where the sheet is silent. */
+  readonly podiumSetbackStatementId?: string;
+  /** Tower setbacks typed by the reader, by edge, metres. USER_SET. */
+  readonly typedSetbacks?: readonly { readonly edgeSeq: number; readonly metres: string }[];
   readonly unitMix: {
     readonly source: 'USER_SET' | 'ASSUMED';
     readonly entries: readonly {

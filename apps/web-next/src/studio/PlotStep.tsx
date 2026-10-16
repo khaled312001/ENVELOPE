@@ -161,6 +161,9 @@ export function PlotPanel({
     onChange({ ...draft, vertices: draft.vertices.map((v, j) => (j === i ? { ...v, [key]: value } : v)) });
   const setEdge = (i: number, patch: Partial<DraftPlot['edges'][number]>): void =>
     onChange({ ...draft, edges: draft.edges.map((e, j) => (j === i ? { ...e, ...patch } : e)) });
+  /** The setback the filed sheet binds for this kind of boundary, if it binds one. */
+  const sheetSetback = (cls: Exclude<EdgeClass, ''>): string | undefined =>
+    created?.sheet.bound.find((b) => b.parameterId === `setback.${cls.toLowerCase()}`)?.value;
   const add = (): void =>
     onChange({ ...draft, vertices: [...draft.vertices, { x: '', y: '' }], edges: [...draft.edges, { classification: '', roadHierarchy: '' }] });
   const remove = (i: number): void =>
@@ -211,7 +214,7 @@ export function PlotPanel({
       ...draft,
       edges: draft.edges.map((e, i) => {
         const h = hints[i];
-        return h && e.classification === '' ? { classification: h.classification, roadHierarchy: '' } : e;
+        return h && e.classification === '' ? { ...e, classification: h.classification, roadHierarchy: '' } : e;
       }),
     });
 
@@ -386,6 +389,37 @@ export function PlotPanel({
                         </Select>
                       ) : null}
                     </div>
+                    {/*
+                      THE TOWER SETBACK FOR THIS BOUNDARY (Eng. Mohamed, 16 Oct 2026).
+                      The podium, ground and basements stand on the boundary; this is
+                      the margin for the levels above. Where the filed sheet states a
+                      setback for this kind of boundary it is shown and not editable —
+                      the sheet governs; elsewhere the reader may type one, USER_SET.
+                    */}
+                    {e.classification !== '' ? (
+                      (() => {
+                        const stated = sheetSetback(e.classification);
+                        return stated ? (
+                          <p className="text-[11.5px] text-secondary">
+                            {t.plot.towerSetbackFromSheet} <span className="figure text-fg">{stated} m</span>
+                          </p>
+                        ) : (
+                          <label className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-2 text-[11.5px] text-secondary">
+                            <span>{t.plot.towerSetback}</span>
+                            <Input
+                              aria-label={t.plot.towerSetbackOf(i)}
+                              inputMode="decimal"
+                              placeholder={t.plot.towerSetbackBlank}
+                              value={e.towerSetback ?? ''}
+                              onChange={(ev) => setEdge(i, { towerSetback: ev.target.value })}
+                              aria-invalid={(e.towerSetback ?? '').trim() !== '' && !/^\d+(\.\d+)?$/.test((e.towerSetback ?? '').trim()) ? true : undefined}
+                              className="figure h-8 px-2"
+                              dir="ltr"
+                            />
+                          </label>
+                        );
+                      })()
+                    ) : null}
                   </div>
                 </li>
               );

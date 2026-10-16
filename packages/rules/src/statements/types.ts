@@ -67,6 +67,12 @@ export const StatementSubject = {
    * is resolvable by `resolveParameter` and this must never reach it.
    */
   CORE_PLATE_FRACTION: 'CORE_PLATE_FRACTION',
+  /**
+   * The setback the podium, the ground floor and the basements keep from the plot
+   * boundary, in metres — `"0"`. Applies only on edges the plot's own instrument
+   * sets no setback for; the sheet governs wherever it speaks.
+   */
+  PODIUM_SETBACK: 'PODIUM_SETBACK',
 } as const;
 export type StatementSubject = (typeof StatementSubject)[keyof typeof StatementSubject];
 

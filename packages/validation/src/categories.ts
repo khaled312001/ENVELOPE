@@ -291,6 +291,7 @@ export function describeConstraint(constraint: Constraint): string {
  */
 export function hardConstraintsFrom(set: ConstraintSet): readonly HardConstraint[] {
   const out: HardConstraint[] = [];
+  const setAside = new Set((set.setAside ?? []).map((s) => `${s.parameterId}@${s.rule.ruleId}`));
   for (const [parameterId, resolution] of set.resolutions) {
     if (resolution.status !== ResolutionStatus.RESOLVED) continue;
     const governing = resolution.governing;
@@ -301,6 +302,9 @@ export function hardConstraintsFrom(set: ConstraintSet): readonly HardConstraint
     if (governing === undefined) continue;
     const rule = governing.rule;
     if (categoryForRuleClass(rule.ruleClass) !== ConstraintCategory.HARD) continue;
+    // Set aside by a named person for this run: declared in the deferred list
+    // with its reason, by `deferredConstraintsFrom`, never quietly skipped.
+    if (setAside.has(`${parameterId}@${rule.ruleId}`)) continue;
     out.push({
       category: ConstraintCategory.HARD,
       constraintId: `${parameterId}@${rule.ruleId}`,
@@ -327,14 +331,24 @@ export function hardConstraintsFrom(set: ConstraintSet): readonly HardConstraint
  */
 export function deferredConstraintsFrom(set: ConstraintSet): readonly DeferredConstraint[] {
   const rules: readonly RuleRecord[] = [...set.deferred, ...set.evaluative];
-  return rules.map((rule) => ({
-    category: ConstraintCategory.DEFERRED,
-    ruleId: rule.ruleId,
-    parameterId: rule.parameterId,
-    reason: deferralReason(rule),
-    citation: rule.citation,
-    isLifeSafety: rule.isLifeSafety,
-  }));
+  return [
+    ...rules.map((rule) => ({
+      category: ConstraintCategory.DEFERRED,
+      ruleId: rule.ruleId,
+      parameterId: rule.parameterId,
+      reason: deferralReason(rule),
+      citation: rule.citation,
+      isLifeSafety: rule.isLifeSafety,
+    })),
+    ...(set.setAside ?? []).map((s) => ({
+      category: ConstraintCategory.DEFERRED,
+      ruleId: s.rule.ruleId,
+      parameterId: s.parameterId,
+      reason: `set aside for this run and not checked: ${s.reason}`,
+      citation: s.rule.citation,
+      isLifeSafety: s.rule.isLifeSafety,
+    })),
+  ];
 }
 
 /**

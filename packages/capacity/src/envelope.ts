@@ -50,6 +50,7 @@ import {
   type EvalContext,
   type Resolution,
   type RuleRecord,
+  type SetAsideRule,
 } from '@envelope/rules';
 
 import { FixpointStatus, runFixpoint, type FixpointOutcome } from './fixpoint.js';
@@ -73,12 +74,38 @@ export const ENVELOPE_PARAMETERS = [
   'floor_to_floor',
 ] as const;
 
+/** Who stated something the engine takes as an input, resolved at the composition root. */
+export interface StatementRef {
+  readonly statementId: string;
+  readonly statedBy: string;
+  readonly statedOn: string;
+  readonly verbatim: string;
+}
+
+/** A setback the reader typed for one edge of the TOWER, because no instrument states one. */
+export interface TypedSetback {
+  readonly metres: Decimal;
+  readonly actor: { readonly id: string; readonly name: string };
+}
+
 export interface EnvelopeInput {
   readonly plot: Plot;
   readonly rules: readonly RuleRecord[];
   readonly tracer: Tracer;
   /** Extra context the rules may read: land use, road hierarchy, brief targets. */
   readonly context: EvalContext;
+  /**
+   * The podium stands on the boundary wherever the plot's own instrument is
+   * silent — see `PODIUM_SETBACK_STATEMENT`. Absent, the podium is held to the
+   * tower's setback line, which is how every run before 16 Oct 2026 was solved.
+   */
+  readonly podiumAtBoundary?: StatementRef;
+  /**
+   * Tower setbacks the reader typed, by edge seq. Each replaces a GENERAL rule's
+   * value on its edge, `USER_SET`. Never the plot's own instrument's: a typed
+   * value on an edge the affection plan governs halts the run in a sentence.
+   */
+  readonly typedSetbacks?: ReadonlyMap<number, TypedSetback>;
 }
 
 /** State the fixpoint iterates over. */
@@ -108,6 +135,14 @@ export interface EnvelopeSolution extends BuildableEnvelope {
    * reads the materialised bounds as data and does its own arithmetic. §16.4.
    */
   readonly finalContext: EvalContext;
+  /**
+   * Governing general rules this run did not apply, and why: the coverage rule
+   * the podium statement replaces, and a setback rule every edge of whose class
+   * carries a typed value. The pipeline hands them to the validator, which
+   * declares each one as not checked rather than holding the run to a rule the
+   * engine was told not to apply.
+   */
+  readonly setAside: readonly SetAsideRule[];
   /**
    * The setback line, the podium and the tower plate, as polygons.
    *
@@ -192,6 +227,52 @@ function setbackForEdge(
 }
 
 /**
+ * The tower setback on one edge: the rule's, or the one the reader typed.
+ *
+ * PRECEDENCE, and why it is this way round. The plot's own instrument governs
+ * (§11.5 step 1) and a typed value may not override it — that would be a person
+ * relaxing an issued sheet by typing. Below the instrument, a typed value beats a
+ * GENERAL rule: Eng. Mohamed, «لو مش موجوده في ال affection plan اكتبهاله». The
+ * general rule is then recorded as superseded by the typed value, visible.
+ */
+function towerSetbackAt(
+  plot: Plot,
+  edgeSeq: number,
+  rules: readonly RuleRecord[],
+  ctx: EvalContext,
+  typed: ReadonlyMap<number, TypedSetback> | undefined,
+): {
+  readonly value: Decimal | undefined;
+  readonly resolution: Resolution;
+  readonly parameterId: string;
+  readonly typed: TypedSetback | undefined;
+  readonly plotSpecific: boolean;
+} {
+  const { resolution, parameterId } = setbackForEdge(plot, edgeSeq, rules, ctx);
+  const governing = resolution.governing;
+  const plotSpecific = governing !== undefined && isPlotSpecific(governing.rule);
+  const mine = typed?.get(edgeSeq);
+  if (mine && plotSpecific) {
+    const stated = governing.value.kind === 'scalar' ? `${governing.value.value.toString()} m` : 'a setback';
+    throw new EnvelopeHaltedError(
+      `edge ${edgeSeq}: the affection plan states ${stated} for this boundary, and a typed ` +
+        `setback of ${mine.metres.toString()} m may not replace it. Clear the typed value — ` +
+        'the sheet governs this edge.',
+      { edgeSeq, typed: mine.metres.toString() },
+    );
+  }
+  if (mine) return { value: mine.metres, resolution, parameterId, typed: mine, plotSpecific };
+  const v = governing?.value;
+  return {
+    value: resolution.status === ResolutionStatus.RESOLVED && v && v.kind === 'scalar' ? v.value : undefined,
+    resolution,
+    parameterId,
+    typed: undefined,
+    plotSpecific,
+  };
+}
+
+/**
  * Solve the buildable envelope.
  *
  * @throws {EnvelopeHaltedError} when a parameter needs adjudication, is
@@ -199,7 +280,22 @@ function setbackForEdge(
  * these is a state the product must show the user, not a failure to hide.
  */
 export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
-  const { plot, rules, tracer } = input;
+  const { plot, rules, tracer, podiumAtBoundary } = input;
+  const typed = input.typedSetbacks;
+  for (const seq of typed?.keys() ?? []) {
+    if (!plot.edges.some((e) => e.seq === seq)) {
+      throw new EnvelopeHaltedError(`a setback was typed for edge ${seq}, and this plot has no such edge.`, {
+        edgeSeq: seq,
+      });
+    }
+    const m = typed!.get(seq)!.metres;
+    if (m.lt(0) || m.gt(50)) {
+      throw new EnvelopeHaltedError(
+        `edge ${seq}: a setback of ${m.toString()} m is outside 0–50 m. Check the figure.`,
+        { edgeSeq: seq },
+      );
+    }
+  }
 
   // Every area term this function computes must exist in the signed annex —
   // FR-DEF-001 AC5, mechanically.
@@ -311,16 +407,23 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
 
   const fixpoint = runFixpoint<SolverState>({
     seed: { levels: maxLevelsByHeight, ctx: withLevels(maxLevelsByHeight) },
-    ruleSetKey: (s) => convergenceKey(plot, rules, s.ctx),
+    ruleSetKey: (s) => convergenceKey(plot, rules, s.ctx, typed),
     step: (s) => {
-      const footprint = footprintAt(plot, rules, s.ctx);
-      const coverage = num(resolveParameter('coverage.max', rules, s.ctx));
+      const footprint = footprintAt(plot, rules, s.ctx, typed, podiumAtBoundary !== undefined);
+      const coverageRes = resolveParameter('coverage.max', rules, s.ctx);
+      // Set aside under the podium statement unless the plot's own sheet states it — see the final pass.
+      const coverage =
+        podiumAtBoundary && coverageRes.governing && !isPlotSpecific(coverageRes.governing.rule)
+          ? undefined
+          : num(coverageRes);
       const plateCap = num(resolveParameter('tower_plate.max', rules, s.ctx));
 
       const podium = coverage
-        ? Decimal.min(footprint, coverage.div(100).times(plotAreaM2))
-        : footprint;
-      const plate = plateCap ? Decimal.min(podium, plateCap) : podium;
+        ? Decimal.min(footprint.podium, coverage.div(100).times(plotAreaM2))
+        : footprint.podium;
+      // The tower stands on the podium and inside its own setback line.
+      const tower = Decimal.min(footprint.tower, podium);
+      const plate = plateCap ? Decimal.min(tower, plateCap) : tower;
 
       // Levels needed to realise the permitted GFA on this plate, capped by
       // the height ceiling. This is the deck's own arithmetic.
@@ -369,13 +472,52 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     traced: Traced<Decimal>;
   }[] = [];
   const insets: EdgeInset[] = [];
+  const podiumInsets: EdgeInset[] = [];
+  /** Per edge: the podium's setback, and whether the plot's own sheet set it. */
+  const podiumSetbacks: { seq: number; valueM: Decimal; fromSheet: boolean; tower: Traced<Decimal> }[] = [];
 
   for (const edge of plot.edges) {
-    const { resolution, parameterId } = setbackForEdge(plot, edge.seq, rules, finalCtx);
+    const at = towerSetbackAt(plot, edge.seq, rules, finalCtx, typed);
+    const { resolution, parameterId } = at;
+    if (at.typed) {
+      /* Typed by the reader, for an edge no instrument of this plot speaks to. */
+      const traced = tracer.userSet(`${parameterId}.edge_${edge.seq}`, at.typed.metres, {
+        actor: at.typed.actor,
+        label: `tower setback for edge ${edge.seq} (${edge.classification}), typed`,
+        unit: 'm',
+      });
+      const span = ringSpanOf(edge);
+      for (let k = 0; k < span.count; k += 1) {
+        insets.push({ seq: span.from + k, insetMm: toMm(at.typed.metres) });
+        podiumInsets.push({ seq: span.from + k, insetMm: toMm(podiumAtBoundary ? new Decimal(0) : at.typed.metres) });
+      }
+      appliedSetbacks.push({
+        seq: edge.seq,
+        valueM: at.typed.metres,
+        ruleId: 'USER_SET',
+        parameterId,
+        traced,
+      });
+      podiumSetbacks.push({
+        seq: edge.seq,
+        valueM: podiumAtBoundary ? new Decimal(0) : at.typed.metres,
+        fromSheet: false,
+        tower: traced,
+      });
+      // The general rule the typed value replaced, beaten and visible.
+      if (resolution.governing) {
+        tracer.supersededBy(
+          { ruleId: resolution.governing.rule.ruleId, citation: resolution.governing.rule.citation },
+          traced,
+        );
+      }
+      continue;
+    }
     if (resolution.status !== ResolutionStatus.RESOLVED || !resolution.governing) {
       throw new EnvelopeHaltedError(
         `no approved rule governs ${parameterId} for edge ${edge.seq} ` +
-          `(${edge.classification}). FR-PLT-001 AC3 forbids a default setback.`,
+          `(${edge.classification}). FR-PLT-001 AC3 forbids a default setback. ` +
+          'Type the tower setback for this edge on the plot step.',
         { edgeSeq: edge.seq, classification: edge.classification, status: resolution.status },
       );
     }
@@ -385,6 +527,7 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
         kind: value.kind,
       });
     }
+    const podiumValue = podiumAtBoundary && !at.plotSpecific ? new Decimal(0) : value.value;
     // One inset per *ring* edge, not per boundary. A curved boundary is one
     // entry in `plot.edges` and many vertices in `plot.ring` — the kernel is
     // polygonal — so the setback the reader set for that frontage is applied to
@@ -394,6 +537,7 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     const span = ringSpanOf(edge);
     for (let k = 0; k < span.count; k += 1) {
       insets.push({ seq: span.from + k, insetMm: toMm(value.value) });
+      podiumInsets.push({ seq: span.from + k, insetMm: toMm(podiumValue) });
     }
 
     // One traced node per edge, emitted unconditionally.
@@ -425,6 +569,7 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
       parameterId,
       traced,
     });
+    podiumSetbacks.push({ seq: edge.seq, valueM: podiumValue, fromSheet: at.plotSpecific, tower: traced });
     // §11.5 step 3 — losers stay visible.
     for (const loser of resolution.superseded) {
       tracer.supersededBy({ ruleId: loser.rule.ruleId, citation: loser.rule.citation }, traced);
@@ -481,7 +626,9 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
         appliedSetbacks.map((a) => [`edge_${a.seq}`, a.traced] as const),
       ),
       unit: 'm²',
-      provenanceClass: 'DERIVED',
+      // A typed setback makes this USER_SET by inheritance; claiming DERIVED over
+      // it would say a clause set a value a person typed.
+      ...(appliedSetbacks.some((a) => a.ruleId === 'USER_SET') ? {} : { provenanceClass: 'DERIVED' as const }),
       detail: {
         metric: metric('SETBACK_PERMITTED_FOOTPRINT').metricId,
         appliedSetbacks: appliedSetbacks.map((s) => ({
@@ -494,10 +641,71 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     },
   );
 
+  /*
+    THE PODIUM'S OWN SETBACK LINE.
+
+    With a podium statement, every edge the plot's own sheet is silent on is 0 —
+    the podium, the ground floor and the basements stand on the boundary — and an
+    edge the sheet sets back stays set back for the podium too. Without one, the
+    podium is held to the tower's line, as every run before 16 Oct 2026 was.
+  */
+  const podiumOnTowerLine = !podiumAtBoundary;
+  const podiumAllZero = podiumInsets.every((i) => i.insetMm === 0);
+  const podiumOffset = podiumOnTowerLine
+    ? offset
+    : podiumAllZero
+      ? { ring: plot.ring, areaMm2: plot.computedAreaMm2, exact: true }
+      : offsetPerEdge(plot.ring, podiumInsets, arcs);
+  const podiumSetbackM2 = mm2ToM2(podiumOffset.areaMm2);
+  let podiumSetbackFootprint: Traced<Decimal> | undefined;
+  if (podiumAtBoundary) {
+    const zeroEdges = podiumSetbacks.filter((p) => !p.fromSheet);
+    const statement = tracer.userSet('envelope.podium_setback_m', new Decimal(0), {
+      actor: { id: podiumAtBoundary.statementId, name: podiumAtBoundary.statedBy },
+      label:
+        `podium setback on edges ${zeroEdges.map((p) => p.seq).join(', ') || 'none'} — stated ` +
+        `${podiumAtBoundary.statedOn}: "${podiumAtBoundary.verbatim}"`,
+      unit: 'm',
+    });
+    podiumSetbackFootprint = tracer.computed('envelope.podium_setback_footprint', podiumSetbackM2, {
+      formula: podiumAllZero
+        ? 'the plot itself: the podium, ground floor and basements stand on every boundary'
+        : 'each edge offset by the podium setback: 0 where only a general rule speaks, ' +
+          'the sheet’s figure where the plot’s own sheet states one',
+      uses: {
+        statement,
+        ...Object.fromEntries(
+          podiumSetbacks.filter((p) => p.fromSheet).map((p) => [`edge_${p.seq}`, p.tower] as const),
+        ),
+      },
+      unit: 'm²',
+      detail: {
+        podiumSetbacks: podiumSetbacks.map((p) => ({
+          edge: p.seq,
+          setbackM: p.valueM.toString(),
+          from: p.fromSheet ? 'the plot’s own sheet' : 'podium statement',
+        })),
+      },
+    });
+  }
+
   // --- Coverage cap ---
+  /*
+    UNDER THE PODIUM STATEMENT, ONLY THE PLOT'S OWN SHEET CAPS COVERAGE.
+
+    A general coverage rule (the seed's 60%, "DCR, plot schedule" — a draft
+    placeholder for exactly the schedule an affection plan is) would scale a
+    podium the statement puts on the boundary back to 60% of the plot, and the
+    parking would lose the margin the statement exists to give back. So it is
+    set aside, recorded as superseded by the statement, visible. A coverage the
+    plot's own sheet prints still binds — the sheet governs where it speaks.
+  */
   const coverageRes = resolutions.get('coverage.max');
-  const coveragePct = num(coverageRes);
-  const coverageCapM2 = coveragePct ? coveragePct.div(100).times(plotAreaM2) : setbackFootprintM2;
+  const coverageGoverning = coverageRes?.governing;
+  const coverageSetAside =
+    podiumAtBoundary !== undefined && coverageGoverning !== undefined && !isPlotSpecific(coverageGoverning.rule);
+  const coveragePct = coverageSetAside ? undefined : num(coverageRes);
+  const coverageCapM2 = coveragePct ? coveragePct.div(100).times(plotAreaM2) : podiumSetbackM2;
   const coverageCap = coveragePct
     ? tracer.derived('envelope.coverage_cap', coverageCapM2, {
         rule: {
@@ -509,67 +717,142 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
         detail: { metric: metric('PLOT_COVERAGE').metricId },
       })
     : tracer.assumed('envelope.coverage_cap', coverageCapM2, {
-        basis:
-          'no approved coverage rule applies to this plot, so the setback-permitted ' +
-          'footprint is not further reduced. If a coverage cap exists and has not ' +
-          'been encoded, this over-states the podium.',
+        basis: coverageSetAside
+          ? `the general coverage rule ${coverageGoverning!.rule.ruleId} is not applied to a podium ` +
+            'the podium statement puts on the boundary; the plot’s own sheet states no coverage. ' +
+            'If the community’s regulations cap coverage, this over-states the podium.'
+          : `no approved coverage rule applies to this plot, so the ${podiumOnTowerLine ? 'setback-permitted footprint' : 'podium setback line'} ` +
+            'is not further reduced. If a coverage cap exists and has not ' +
+            'been encoded, this over-states the podium.',
         unit: 'm²',
       });
+  if (coverageSetAside && podiumSetbackFootprint) {
+    tracer.supersededBy(
+      { ruleId: coverageGoverning!.rule.ruleId, citation: coverageGoverning!.rule.citation },
+      podiumSetbackFootprint,
+    );
+  }
 
-  // --- Podium footprint = min(setback-permitted, coverage cap) ---
-  const podiumM2 = Decimal.min(setbackFootprintM2, coverageCapM2);
+  const setAside: SetAsideRule[] = [];
+  if (coverageSetAside) {
+    setAside.push({
+      parameterId: 'coverage.max',
+      rule: coverageGoverning!.rule,
+      reason:
+        `${podiumAtBoundary!.statedBy}'s statement ${podiumAtBoundary!.statementId} ` +
+        `(${podiumAtBoundary!.statedOn}) puts the podium, ground floor and basements on the ` +
+        'boundary wherever the plot’s own sheet is silent, and this plot’s sheet states no coverage.',
+    });
+  }
+  /*
+    A setback rule every edge of whose class carries a typed value governs no edge
+    of this run. One that still governs another edge of the class stays a hard
+    constraint, and the composition root observes it on the edges it governs.
+  */
+  const typedByParameter = new Map<string, { typed: number; total: number; rule?: RuleRecord }>();
+  for (const edge of plot.edges) {
+    const at = towerSetbackAt(plot, edge.seq, rules, finalCtx, typed);
+    const entry = typedByParameter.get(at.parameterId) ?? { typed: 0, total: 0 };
+    entry.total += 1;
+    if (at.typed) {
+      entry.typed += 1;
+      if (at.resolution.governing) entry.rule = at.resolution.governing.rule;
+    }
+    typedByParameter.set(at.parameterId, entry);
+  }
+  for (const [parameterId, entry] of typedByParameter) {
+    if (entry.typed === entry.total && entry.rule) {
+      setAside.push({
+        parameterId,
+        rule: entry.rule,
+        reason:
+          `every edge this rule governs on this plot carries a tower setback typed on the ` +
+          `plot step, USER_SET by the person who ran it.`,
+      });
+    }
+  }
+
+  // --- Podium footprint = min(the podium's setback line, coverage cap) ---
+  const podiumM2 = Decimal.min(podiumSetbackM2, coverageCapM2);
+  const podiumLineLabel = podiumOnTowerLine ? 'setback-permitted footprint' : 'podium setback line';
   const podiumBinding: BindingConstraint = podiumM2.eq(coverageCapM2)
     ? {
         dimension: 'podium_footprint',
         ruleId: coverageRes?.governing?.rule.ruleId ?? 'ASSUMED',
         label: 'plot coverage cap',
         valueM: coverageCapM2,
-        ...nearTie('setback-permitted footprint', setbackFootprintM2, coverageCapM2, setbackRule?.ruleId),
+        ...nearTie(podiumLineLabel, podiumSetbackM2, coverageCapM2, setbackRule?.ruleId),
       }
     : {
         dimension: 'podium_footprint',
-        ruleId: setbackRule?.ruleId ?? 'SETBACKS',
-        label: 'setback-permitted footprint',
-        valueM: setbackFootprintM2,
-        ...nearTie('plot coverage cap', coverageCapM2, setbackFootprintM2, coverageRes?.governing?.rule.ruleId),
+        ruleId: podiumOnTowerLine ? (setbackRule?.ruleId ?? 'SETBACKS') : podiumAtBoundary.statementId,
+        label: podiumLineLabel,
+        valueM: podiumSetbackM2,
+        ...nearTie('plot coverage cap', coverageCapM2, podiumSetbackM2, coverageRes?.governing?.rule.ruleId),
       };
   bindings.push(podiumBinding);
 
   const podiumFootprint = tracer.computed('envelope.podium_footprint', podiumM2, {
-    formula: 'min(setback-permitted footprint, coverage cap)',
-    uses: { setback: setbackPermittedFootprint, coverage: coverageCap },
+    formula: podiumOnTowerLine
+      ? 'min(setback-permitted footprint, coverage cap)'
+      : 'min(podium setback line, coverage cap)',
+    uses: podiumSetbackFootprint
+      ? { podiumLine: podiumSetbackFootprint, coverage: coverageCap }
+      : { setback: setbackPermittedFootprint, coverage: coverageCap },
     unit: 'm²',
     detail: { metric: metric('PODIUM_FOOTPRINT').metricId, binding: podiumBinding.label },
   });
 
-  // --- Tower plate cap ---
+  // --- Tower plate = min(tower setback line, podium, tower plate cap) ---
+  /*
+    The tower stands on the podium AND inside its own setback line. Until the
+    podium had its own line the two were one ring and the second term was the
+    first; now the tower's setback is what bounds the plate on every plot whose
+    podium reaches the boundary.
+  */
+  const towerOnPodiumM2 = Decimal.min(setbackFootprintM2, podiumM2);
   const plateRes = resolutions.get('tower_plate.max');
   const plateCap = num(plateRes);
-  const plateM2 = plateCap ? Decimal.min(podiumM2, plateCap) : podiumM2;
+  const plateM2 = plateCap ? Decimal.min(towerOnPodiumM2, plateCap) : towerOnPodiumM2;
+  const towerUses = podiumOnTowerLine
+    ? { podium: podiumFootprint }
+    : { podium: podiumFootprint, towerSetback: setbackPermittedFootprint };
+  const towerTerm = podiumOnTowerLine ? 'podium footprint' : 'tower setback line, podium footprint';
   const towerPlateCap = plateCap
     ? tracer.derived('envelope.tower_plate_cap', plateM2, {
         rule: {
           ruleId: plateRes!.governing!.rule.ruleId,
           citation: plateRes!.governing!.rule.citation,
         },
-        formula: `min(podium footprint, tower plate cap ${plateCap.toString()} m²)`,
-        uses: { podium: podiumFootprint },
+        formula: `min(${towerTerm}, tower plate cap ${plateCap.toString()} m²)`,
+        uses: towerUses,
         unit: 'm²',
         detail: { metric: metric('TOWER_PLATE').metricId },
       })
     : tracer.computed('envelope.tower_plate_cap', plateM2, {
-        formula: 'no tower plate cap applies; the plate is the podium footprint',
-        uses: { podium: podiumFootprint },
+        formula: podiumOnTowerLine
+          ? 'no tower plate cap applies; the plate is the podium footprint'
+          : `min(${towerTerm}); no tower plate cap applies`,
+        uses: towerUses,
         unit: 'm²',
       });
 
-  if (plateCap && plateCap.lt(podiumM2)) {
+  if (!podiumOnTowerLine && setbackFootprintM2.lt(podiumM2) && !(plateCap && plateCap.lt(setbackFootprintM2))) {
+    bindings.push({
+      dimension: 'tower_plate',
+      ruleId: setbackRule?.ruleId ?? 'SETBACKS',
+      label: 'tower setback line',
+      valueM: setbackFootprintM2,
+      ...(plateCap ? nearTie('tower plate cap', plateCap, setbackFootprintM2, plateRes?.governing?.rule.ruleId) : {}),
+    });
+  }
+  if (plateCap && plateCap.lt(towerOnPodiumM2)) {
     bindings.push({
       dimension: 'tower_plate',
       ruleId: plateRes!.governing!.rule.ruleId,
       label: 'tower plate cap',
       valueM: plateCap,
-      ...nearTie('podium footprint', podiumM2, plateCap, podiumBinding.ruleId),
+      ...nearTie(podiumOnTowerLine ? 'podium footprint' : 'tower setback line', towerOnPodiumM2, plateCap, podiumBinding.ruleId),
     });
   }
 
@@ -582,10 +865,11 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
   // whole setback ring — a slab, and a car park packed into it, larger than the
   // number beside them. Cut to the cap here, once, so every consumer agrees.
   const setbackRing = offset.ring;
-  const coverageBinds = podiumM2.lt(setbackFootprintM2);
+  const podiumLineRing = podiumOffset.ring;
+  const coverageBinds = podiumM2.lt(podiumSetbackM2);
   const podiumRing = coverageBinds
-    ? scaleToArea(setbackRing, podiumM2.times(1_000_000).toDecimalPlaces(0).toNumber())
-    : setbackRing;
+    ? scaleToArea(podiumLineRing, podiumM2.times(1_000_000).toDecimalPlaces(0).toNumber())
+    : podiumLineRing;
   if (coverageBinds) verifiedArea(podiumRing, 'podium footprint');
   const podiumPlacement = coverageBinds
     ? tracer.assumed('envelope.podium_placement', 'centred in the setback line', {
@@ -597,10 +881,15 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
           'every side. Its area is the cited figure; its position is this assumption.',
       })
     : undefined;
-  // scaleToArea works in mm²; plateM2 is m².
-  const plateRing = plateCap
-    ? scaleToArea(podiumRing, plateM2.times(1_000_000).toDecimalPlaces(0).toNumber())
-    : podiumRing;
+  /*
+    The ring the tower stands in: its own setback line, unless the podium came
+    out smaller (a coverage cap), when it is the podium. Then scaled to the plate
+    cap where that binds. scaleToArea works in mm²; plateM2 is m².
+  */
+  const towerBase = setbackFootprintM2.lte(podiumM2) ? setbackRing : podiumRing;
+  const plateRing = plateCap && plateCap.lt(towerOnPodiumM2)
+    ? scaleToArea(towerBase, plateM2.times(1_000_000).toDecimalPlaces(0).toNumber())
+    : towerBase;
   verifiedArea(plateRing, 'tower plate');
 
   // --- Height ---
@@ -684,6 +973,7 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
 
   return {
     setbackPermittedFootprint,
+    ...(podiumSetbackFootprint ? { podiumSetbackFootprint } : {}),
     coverageCap,
     podiumFootprint,
     towerPlateCap,
@@ -698,6 +988,7 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     resolutions,
     blocked: [],
     finalContext: finalCtx,
+    setAside,
     setbackRing,
     podiumRing,
     plateRing,
@@ -737,6 +1028,7 @@ function convergenceKey(
   plot: Plot,
   rules: readonly RuleRecord[],
   ctx: EvalContext,
+  typed: ReadonlyMap<number, TypedSetback> | undefined,
 ): string {
   const applicable = applicableRuleSetKey(rules, ctx);
 
@@ -746,34 +1038,52 @@ function convergenceKey(
     if (v !== undefined) resolved.push(`${p}=${v.toString()}`);
   }
   for (const edge of plot.edges) {
-    const { resolution, parameterId } = setbackForEdge(plot, edge.seq, rules, ctx);
-    const v = num(resolution);
-    resolved.push(`${parameterId}#${edge.seq}=${v?.toString() ?? 'none'}`);
+    const { value, parameterId } = towerSetbackAt(plot, edge.seq, rules, ctx, typed);
+    resolved.push(`${parameterId}#${edge.seq}=${value?.toString() ?? 'none'}`);
   }
 
   return `${applicable}::${resolved.sort().join(',')}`;
 }
 
-function footprintAt(plot: Plot, rules: readonly RuleRecord[], ctx: EvalContext): Decimal {
+/** The tower's setback footprint and the podium's, at one level assumption, m². */
+function footprintAt(
+  plot: Plot,
+  rules: readonly RuleRecord[],
+  ctx: EvalContext,
+  typed: ReadonlyMap<number, TypedSetback> | undefined,
+  podiumAtBoundary: boolean,
+): { readonly tower: Decimal; readonly podium: Decimal } {
+  const zero = { tower: new Decimal(0), podium: new Decimal(0) };
   const insets: EdgeInset[] = [];
+  const podiumInsets: EdgeInset[] = [];
   for (const edge of plot.edges) {
-    const { resolution } = setbackForEdge(plot, edge.seq, rules, ctx);
-    const v = resolution.governing?.value;
-    if (!v || v.kind !== 'scalar') {
+    const s = towerSetbackAt(plot, edge.seq, rules, ctx, typed);
+    if (s.value === undefined) {
       // Mid-iteration, an unresolved setback means this level assumption is not
       // viable. Returning zero drives the next iteration to the height cap
       // rather than crashing inside the loop; the final pass reports properly.
+      return zero;
+    }
+    const span = ringSpanOf(edge);
+    for (let k = 0; k < span.count; k += 1) {
+      insets.push({ seq: span.from + k, insetMm: toMm(s.value) });
+      podiumInsets.push({
+        seq: span.from + k,
+        insetMm: toMm(podiumAtBoundary && !s.plotSpecific ? new Decimal(0) : s.value),
+      });
+    }
+  }
+  const areaOf = (ins: readonly EdgeInset[]): Decimal => {
+    if (ins.every((i) => i.insetMm === 0)) return mm2ToM2(plot.computedAreaMm2);
+    try {
+      return mm2ToM2(offsetPerEdge(plot.ring, ins).areaMm2);
+    } catch {
+      // Over-consumed at this level assumption. Zero pushes the iteration toward
+      // fewer levels, which is the direction that relieves the setback.
       return new Decimal(0);
     }
-    insets.push({ seq: edge.seq, insetMm: toMm(v.value) });
-  }
-  try {
-    return mm2ToM2(offsetPerEdge(plot.ring, insets).areaMm2);
-  } catch {
-    // Over-consumed at this level assumption. Zero pushes the iteration toward
-    // fewer levels, which is the direction that relieves the setback.
-    return new Decimal(0);
-  }
+  };
+  return { tower: areaOf(insets), podium: areaOf(podiumInsets) };
 }
 
 /**

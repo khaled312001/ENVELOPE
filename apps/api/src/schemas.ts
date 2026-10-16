@@ -171,6 +171,20 @@ export const runRequest = z.object({
     one thing an attribution must not allow.
   */
   parkingInFarStatementId: z.string().min(1).optional(),
+  /**
+   * The podium statement: basements, ground and podium stand on the boundary
+   * wherever the plot's own sheet is silent. Looked up and refused the same way
+   * as the parking statement. Absent, the podium keeps the tower's setback line.
+   */
+  podiumSetbackStatementId: z.string().min(1).optional(),
+  /**
+   * Tower setbacks typed by the actor, by edge, in metres. USER_SET. An edge the
+   * affection plan governs refuses a typed value (422, in a sentence).
+   */
+  typedSetbacks: z
+    .array(z.object({ edgeSeq: z.number().int().min(0).max(999), metres: decimalString }))
+    .max(64)
+    .optional(),
   unitMix: z
     .object({
       source: z.enum(['USER_SET', 'ASSUMED']),

@@ -249,6 +249,10 @@ export const EN = {
     edgeOf: (i: number, j: number): string => `Boundary ${i}, from P${i} to P${j}`,
     choose: 'Classify…',
     hierarchyOf: (i: number): string => `Road hierarchy of boundary ${i}`,
+    towerSetback: 'Tower setback (m). The podium and basements reach this boundary.',
+    towerSetbackOf: (i: number): string => `Tower setback on boundary ${i}, metres`,
+    towerSetbackBlank: 'from the rule',
+    towerSetbackFromSheet: 'Tower setback, as the affection plan states:',
     hierarchy: 'Road hierarchy…',
     road: {
       ARTERIAL: 'Arterial road',

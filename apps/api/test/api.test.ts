@@ -1615,6 +1615,56 @@ describe('a plot that is not convex', () => {
   });
 });
 
+/*
+  The podium statement and typed tower setbacks, end to end (16 Oct 2026).
+*/
+describe('the podium on the boundary, the tower inside its setbacks', () => {
+  const plotOf = async (plotNumber: string): Promise<string> => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/plots',
+      headers: ACTOR,
+      payload: { ...SQUARE_80x40, plotNumber },
+    });
+    return created.json().plotId as string;
+  };
+
+  it('puts the podium on the plot under the statement, and applies a typed setback as USER_SET', async () => {
+    const plotId = await plotOf('345-1234-pd');
+    const run = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: {
+        ...RUN_BODY,
+        plotId,
+        podiumSetbackStatementId: 'STMT-PODIUM-SETBACK-2026-10-16',
+        typedSetbacks: [{ edgeSeq: 1, metres: '3' }],
+      },
+    });
+    expect(run.statusCode, run.body).toBe(201);
+    expect(run.body).toMatch(/podium_setback_footprint/);
+    // The general coverage rule the statement replaces is declared as not
+    // checked, by name — never silently dropped, and never blocking the run.
+    const outcomes = run.json().checks.validation.outcomes as { category: string; parameterId: string; reason?: string; statement?: string }[];
+    const coverage = outcomes.filter((o) => o.parameterId === 'coverage.max');
+    expect(coverage.map((o) => o.category)).toEqual(['DEFERRED']);
+    expect(JSON.stringify(coverage)).toMatch(/set aside for this run.*STMT-PODIUM-SETBACK-2026-10-16/);
+  });
+
+  it('refuses a podium statement id nobody holds, in a sentence', async () => {
+    const plotId = await plotOf('345-1234-px');
+    const run = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId, podiumSetbackStatementId: 'STMT-NOPE' },
+    });
+    expect(run.statusCode).toBe(400);
+    expect(run.json().message).toMatch(/no podium setback statement on file/);
+  });
+});
+
 /**
  * A plot with a curved boundary.
  *

@@ -1765,6 +1765,28 @@ function statementOn(body: RunRequest): RunInput['parkingInFarStatement'] {
   };
 }
 
+/** The podium statement, refused exactly as `statementOn` refuses: unknown id, or the wrong subject. */
+function podiumStatementOn(body: RunRequest): RunInput['podiumAtBoundaryStatement'] {
+  if (body.podiumSetbackStatementId === undefined) return undefined;
+  const stmt = statementById(body.podiumSetbackStatementId);
+  if (!stmt || stmt.subject !== StatementSubject.PODIUM_SETBACK) {
+    throw Object.assign(
+      new Error(
+        `no podium setback statement on file with id "${body.podiumSetbackStatementId}". ` +
+          'Send the id of a recorded podium statement, or none — the podium then keeps the ' +
+          'tower’s setback line.',
+      ),
+      { statusCode: 400 },
+    );
+  }
+  return {
+    statementId: stmt.statementId,
+    statedBy: stmt.statedBy.name,
+    statedOn: stmt.statedOn,
+    verbatim: stmt.verbatim,
+  };
+}
+
 function runInputFrom(
   body: RunRequest,
   plot: Plot,
@@ -1777,12 +1799,17 @@ function runInputFrom(
     would make the engine's answer depend on a table it does not own.
   */
   const statement = statementOn(body);
+  const podiumStatement = podiumStatementOn(body);
   return {
     plot,
     rules,
     actor: { id: actor.id, name: actor.name },
     parkingInFar: body.parkingInFar,
     ...(statement ? { parkingInFarStatement: statement } : {}),
+    ...(podiumStatement ? { podiumAtBoundaryStatement: podiumStatement } : {}),
+    ...(body.typedSetbacks?.length
+      ? { typedSetbacks: body.typedSetbacks.map((s) => ({ edgeSeq: s.edgeSeq, metres: new Decimal(s.metres) })) }
+      : {}),
     unitMix: {
       source: body.unitMix.source,
       entries: body.unitMix.entries.map(

@@ -16,8 +16,35 @@ export interface DraftPlot {
   readonly plotNumber: string;
   readonly community: string;
   readonly vertices: readonly { readonly x: string; readonly y: string }[];
-  readonly edges: readonly { readonly classification: EdgeClass; readonly roadHierarchy: Hierarchy }[];
+  readonly edges: readonly {
+    readonly classification: EdgeClass;
+    readonly roadHierarchy: Hierarchy;
+    /**
+     * The TOWER setback the reader typed for this boundary, metres. Blank uses the
+     * affection plan's or the general rule's. Not part of the plot: it is sent
+     * with the run, so changing it never un-files the plot.
+     */
+    readonly towerSetback?: string;
+  }[];
 }
+
+/** The plot as the engine files it — everything but the typed tower setbacks. */
+export function plotIdentity(d: DraftPlot): string {
+  return JSON.stringify({
+    ...d,
+    edges: d.edges.map((e) => ({ classification: e.classification, roadHierarchy: e.roadHierarchy })),
+  });
+}
+
+/** The typed tower setbacks, as the run sends them. A blank or unreadable box sends nothing. */
+export function typedSetbacksOf(d: DraftPlot): readonly { edgeSeq: number; metres: string }[] {
+  return d.edges.flatMap((e, edgeSeq) => {
+    const v = e.towerSetback?.trim() ?? '';
+    return /^\d+(\.\d+)?$/.test(v) ? [{ edgeSeq, metres: v }] : [];
+  });
+}
+
+export const PODIUM_SETBACK_STATEMENT_ID = 'STMT-PODIUM-SETBACK-2026-10-16';
 
 export const EMPTY_PLOT: DraftPlot = {
   plotNumber: '',
@@ -162,7 +189,12 @@ export function rulesProblems(f: RulesForm): RulesProblems {
   return p;
 }
 
-export function requestBody(plotId: string, f: RulesForm, chosenAccessEdgeSeq?: number): RunRequestBody {
+export function requestBody(
+  plotId: string,
+  f: RulesForm,
+  chosenAccessEdgeSeq?: number,
+  typedSetbacks: readonly { edgeSeq: number; metres: string }[] = [],
+): RunRequestBody {
   const levels = {
     basements: Number(f.basements),
     groundIsParking: f.groundIsParking === 'yes',
@@ -173,6 +205,9 @@ export function requestBody(plotId: string, f: RulesForm, chosenAccessEdgeSeq?: 
     plotId,
     parkingInFar: 'EXCLUDED_FROM_FAR',
     parkingInFarStatementId: PARKING_IN_FAR_STATEMENT_ID,
+    // Basements, ground and podium on the boundary unless the sheet says otherwise (Eng. Mohamed, 16 Oct 2026).
+    podiumSetbackStatementId: PODIUM_SETBACK_STATEMENT_ID,
+    ...(typedSetbacks.length ? { typedSetbacks } : {}),
     unitMix:
       f.mixSource === 'ASSUMED'
         ? { source: 'ASSUMED', entries: f.mix, basis: DEFAULT_MIX_BASIS }

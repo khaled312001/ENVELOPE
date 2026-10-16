@@ -199,7 +199,17 @@ export interface BindingConstraint {
 }
 
 export interface BuildableEnvelope {
+  /** The TOWER's setback line: every edge offset by its own setback. */
   readonly setbackPermittedFootprint: TracedDecimal;
+  /**
+   * The setback line the PODIUM (basements, ground, podium levels) is held to.
+   *
+   * Absent on runs computed without a podium statement, where the podium was held
+   * to the tower's line — every run before 16 Oct 2026. Present, it is the plot
+   * itself on every edge the plot's own instrument sets no setback for: Eng.
+   * Mohamed, «ال دور ال ارضي و البوديوم و البدروم بياخدو مساحه الارض كلها».
+   */
+  readonly podiumSetbackFootprint?: TracedDecimal;
   readonly coverageCap: TracedDecimal;
   readonly podiumFootprint: TracedDecimal;
   readonly towerPlateCap: TracedDecimal;

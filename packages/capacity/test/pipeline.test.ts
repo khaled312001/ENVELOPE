@@ -393,6 +393,74 @@ describe('§13.3 — every DERIVED value reaches a cited rule', () => {
  * implicit: there was no `1.00` anywhere to argue with.
  */
 /*
+  THE PODIUM ON THE BOUNDARY, THE TOWER INSIDE ITS SETBACKS. 16 Oct 2026.
+
+  Eng. Mohamed, beside a car park packed inside the setback line: the ground
+  floor, the podium and the basements take the whole plot; setbacks are for the
+  levels above the podium. Before this, one setback line held every level, and
+  the parking levels lost a margin of bays on every edge.
+*/
+describe('the podium statement and typed tower setbacks', () => {
+  const PODIUM = {
+    statementId: 'STMT-PODIUM-SETBACK-2026-10-16',
+    statedBy: 'Eng. Mohamed',
+    statedOn: '2026-10-16',
+    verbatim: 'ال دور ال ارضي و البوديوم و البدروم بياخدو مساحه الارض كلها مفيش setbacks',
+  };
+
+  it('puts the podium on the plot and keeps the tower inside the setback line', () => {
+    const before = runPipeline(baseInput());
+    const after = runPipeline(baseInput({ podiumAtBoundaryStatement: PODIUM }));
+    // 80 × 40 m, no coverage cap in the seed rules.
+    expect(after.envelope.podiumFootprint.value.toFixed(2)).toBe('3200.00');
+    expect(after.envelope.podiumSetbackFootprint?.value.toFixed(2)).toBe('3200.00');
+    // The tower's line is unchanged by the statement, and bounds the plate.
+    expect(after.envelope.setbackPermittedFootprint.value.toFixed(2)).toBe(
+      before.envelope.setbackPermittedFootprint.value.toFixed(2),
+    );
+    expect(after.envelope.towerPlateCap.value.lte(after.envelope.setbackPermittedFootprint.value)).toBe(true);
+    expect(after.envelope.podiumFootprint.value.gt(before.envelope.podiumFootprint.value)).toBe(true);
+  });
+
+  it('lays out more bays per level on the whole plot than inside the setback', () => {
+    const before = runPipeline(baseInput());
+    const after = runPipeline(baseInput({ podiumAtBoundaryStatement: PODIUM }));
+    expect(after.levelPlan?.bayCount.value).toBeGreaterThan(before.levelPlan?.bayCount.value ?? 0);
+  });
+
+  it('names the practitioner as the source of the zero, never a clause', () => {
+    const out = runPipeline(baseInput({ podiumAtBoundaryStatement: PODIUM }));
+    const nodes = out.graph.nodes.filter((n) => n.parameterId === 'envelope.podium_setback_m');
+    expect(nodes.find((n) => n.kind === 'VALUE')?.provenanceClass).toBe(ProvenanceClass.USER_SET);
+    expect(nodes.find((n) => n.kind === 'INPUT')?.label).toMatch(/مفيش setbacks/);
+  });
+
+  it('a typed tower setback replaces the general rule on its edge, USER_SET', () => {
+    const out = runPipeline(
+      baseInput({ podiumAtBoundaryStatement: PODIUM, typedSetbacks: [{ edgeSeq: 1, metres: new Decimal('3') }] }),
+    );
+    const edge1 = out.envelope.appliedSetbacks.find((a) => a.seq === 1)!;
+    expect(edge1.valueM.toString()).toBe('3');
+    expect(edge1.ruleId).toBe('USER_SET');
+    expect(edge1.traced.provenanceClass).toBe(ProvenanceClass.USER_SET);
+    // And the footprint does not claim a clause set it.
+    expect(out.envelope.setbackPermittedFootprint.provenanceClass).not.toBe(ProvenanceClass.DERIVED);
+  });
+
+  it('refuses a typed setback on an edge the plot does not have', () => {
+    expect(() => runPipeline(baseInput({ typedSetbacks: [{ edgeSeq: 9, metres: new Decimal('3') }] }))).toThrow(
+      /no such edge/,
+    );
+  });
+
+  it('without the statement, the podium keeps the tower line, as every older run did', () => {
+    const out = runPipeline(baseInput());
+    expect(out.envelope.podiumSetbackFootprint).toBeUndefined();
+    expect(out.envelope.podiumFootprint.value.lte(out.envelope.setbackPermittedFootprint.value)).toBe(true);
+  });
+});
+
+/*
   The saleable question was deferred out of this phase on 16 Oct 2026 (Eng.
   Mohamed). The studio sends it ASSUMED with a basis; the engine must emit it
   amber, list it in the register with a measured sensitivity, and refuse an

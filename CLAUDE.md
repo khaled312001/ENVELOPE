@@ -219,6 +219,20 @@ is a defect even when it makes something easier.
   *area* outright. Both are listed above the remaining questions, not hidden. The
   level counts open at a visible `0` with −/+ steppers; ground-floor-is-parking
   still opens unanswered. Do not put the two questions back without asking him.
+- **The podium stands on the boundary; setbacks are the tower's.** Eng. Mohamed, 16 Oct
+  2026: the ground floor, podium and basements take the whole plot, and a setback
+  applies only to the unit levels above the podium. That is
+  `STMT-PODIUM-SETBACK-2026-10-16`, a `PracticeStatement`. Under it the podium's line is
+  0 wherever the plot's own sheet is silent and the sheet's figure where it speaks.
+  The tower stays inside `min(tower setback line, podium, cap)`. A tower setback the
+  reader types on the plot step is `USER_SET` for that edge and supersedes the general
+  rule, visibly. A typed value on an edge the affection plan governs **halts the run**,
+  because a typed number may not overrule the plot's instrument. A general coverage rule
+  is set aside under the statement, but the sheet's own coverage still binds. **Set
+  aside is never dropped.** The engine publishes `ConstraintSet.setAside`, and the
+  validator declares each entry in the deferred list with the reason and the
+  statement's id. It does not check them, and it does not block on them. Typed edges are
+  left out of the setback observation, so the rule is still held on the edges it governs.
 - **The saleable figure is asked in whichever unit the reader holds, and the divisor
   is the envelope's own GFA.** `SaleableEfficiencyInput` takes a ratio **or** an area,
   exactly one, enforced by `exactOptionalPropertyTypes` rather than by a runtime check;

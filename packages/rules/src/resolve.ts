@@ -407,6 +407,24 @@ export interface ConstraintSet {
   readonly deferred: readonly RuleRecord[];
   /** Parameters that halted. Non-empty means the run cannot proceed (§11.6). */
   readonly blocked: readonly Resolution[];
+  /**
+   * Governing rules the run did not apply, because a named person or statement
+   * replaced them for this run (a podium statement, a typed tower setback).
+   *
+   * They are not dropped from the set. A validator that silently stopped
+   * checking a rule would be the same defect as one that never loaded it. It
+   * declares each one as not checked, with the reason and the name of whoever
+   * set it aside, in the deferred list every output carries.
+   */
+  readonly setAside?: readonly SetAsideRule[];
+}
+
+/** One governing rule a run did not apply, and who replaced it. */
+export interface SetAsideRule {
+  readonly parameterId: string;
+  readonly rule: RuleRecord;
+  /** A sentence naming what replaced the rule and who stated it. */
+  readonly reason: string;
 }
 
 export function materialize(

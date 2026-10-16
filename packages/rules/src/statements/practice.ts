@@ -102,9 +102,49 @@ export const CORE_PLATE_FRACTION_STATEMENT: PracticeStatement = {
     'fire-fighting shaft is placed.',
 };
 
+/**
+ * The podium is built to the boundary; setbacks are the tower's. 16 Oct 2026.
+ *
+ * Written beside a screenshot of a car park packed inside the setback line, with
+ * a strip of usable plot round it that nothing occupied. The engine had one
+ * setback line and held every level to it, so the levels where parking lives —
+ * basements, ground, podium — lost a margin of bays on every edge.
+ *
+ * USER_SET by him, for the same reason the other two are: no clause of the Dubai
+ * Building Code in the engine says a podium may stand on the boundary, and a
+ * practitioner saying so is not a citation. The sheet still governs wherever it
+ * states a setback: an affection plan that sets the building back 3 m sets the
+ * podium back 3 m too.
+ */
+export const PODIUM_SETBACK_STATEMENT: PracticeStatement = {
+  statementId: 'STMT-PODIUM-SETBACK-2026-10-16',
+  subject: StatementSubject.PODIUM_SETBACK,
+  value: '0',
+  statedBy: {
+    name: 'Eng. Mohamed',
+    role: 'the architect this engine is being built for, in Dubai practice',
+  },
+  statedOn: '2026-10-16',
+  source: 'written note on the studio’s results, 16 October 2026',
+  verbatim:
+    'ال دور ال ارضي و البوديوم و البدروم بياخدو مساحه الارض كلها مفيش setbacks … ' +
+    'الكلام دا علي الادوار الي بعد البوديوم الي هيبقي فيها وحدات',
+  translation:
+    'The ground floor, the podium and the basement take the whole plot — no setbacks. ' +
+    'The setbacks are for the levels above the podium, the ones that hold units.',
+  limits:
+    'A practitioner’s statement of how he lays out the podium in his own work. It is not a ' +
+    'clause of the Dubai Building Code and has not been checked against one, or against the ' +
+    'community’s development control regulations, which can set a podium back. Where the ' +
+    'plot’s own affection plan states a setback for an edge, the sheet governs that edge for ' +
+    'the podium as well. A podium on a boundary also raises fire separation and openings ' +
+    'toward the neighbour; none of that is assessed.',
+};
+
 export const PRACTICE_STATEMENTS: readonly PracticeStatement[] = [
   PARKING_IN_FAR_STATEMENT,
   CORE_PLATE_FRACTION_STATEMENT,
+  PODIUM_SETBACK_STATEMENT,
 ];
 
 /**

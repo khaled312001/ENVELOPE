@@ -59,7 +59,7 @@ import { layoutCore } from './core-layout.js';
 import { DrivewayType, ParkingAngle, standardFor, type RampType } from './layout.js';
 import { AccessChoiceRefusedError } from './access.js';
 import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './core.js';
-import { solveEnvelope, type EnvelopeSolution } from './envelope.js';
+import { solveEnvelope, type EnvelopeSolution, type StatementRef } from './envelope.js';
 import { planParkingLevel, type LevelPlan } from './level-plan.js';
 import { buildMassing, type MassingResult } from './massing.js';
 import { solveParking, traceUsableFraction } from './parking.js';
@@ -160,6 +160,19 @@ export interface RunInput {
     readonly statedOn: string;
     readonly verbatim: string;
   };
+  /**
+   * The podium, ground floor and basements stand on the boundary wherever the
+   * plot's own sheet is silent — Eng. Mohamed, 16 Oct 2026. Resolved from a
+   * statement id at the composition root, as `parkingInFarStatement` is. Absent,
+   * the podium is held to the tower's setback line, as every older run was.
+   */
+  readonly podiumAtBoundaryStatement?: StatementRef;
+  /**
+   * Tower setbacks the reader typed, for edges no instrument of the plot speaks
+   * to. Each is `USER_SET` by `actor` and replaces a general rule's value on its
+   * edge; on an edge the sheet governs it halts the run in a sentence.
+   */
+  readonly typedSetbacks?: readonly { readonly edgeSeq: number; readonly metres: Decimal }[];
   readonly unitMix: {
     readonly source: 'USER_SET' | 'ASSUMED';
     readonly entries: readonly UnitTypeMix[];
@@ -491,7 +504,20 @@ export function runPipeline(input: RunInput): RunOutput {
       : 'parking in FAR',
   });
 
-  const envelope = solveEnvelope({ plot: input.plot, rules: input.rules, tracer, context });
+  const envelope = solveEnvelope({
+    plot: input.plot,
+    rules: input.rules,
+    tracer,
+    context,
+    ...(input.podiumAtBoundaryStatement ? { podiumAtBoundary: input.podiumAtBoundaryStatement } : {}),
+    ...(input.typedSetbacks?.length
+      ? {
+          typedSetbacks: new Map(
+            input.typedSetbacks.map((s) => [s.edgeSeq, { metres: s.metres, actor: input.actor }] as const),
+          ),
+        }
+      : {}),
+  });
 
   const plateM2 = envelope.towerPlateCap.value;
   const levels = envelope.maxLevelsByHeight.value;
@@ -708,11 +734,12 @@ export function runPipeline(input: RunInput): RunOutput {
   // would make the validator's coverage a function of the generator's appetite,
   // and a rule the generator ignored is exactly the rule a validator should be
   // able to notice went unchecked.
-  const constraintSet = materialize(
-    input.rules,
-    [...new Set(input.rules.map((r) => r.parameterId))],
-    envelope.finalContext,
-  );
+  const constraintSet = {
+    ...materialize(input.rules, [...new Set(input.rules.map((r) => r.parameterId))], envelope.finalContext),
+    // The rules this run was told not to apply, carried to the validator so it
+    // can say so rather than silently skip them or block on them.
+    setAside: envelope.setAside,
+  };
 
   /*
     THE CORE — sized here and drawn everywhere, never subtracted.

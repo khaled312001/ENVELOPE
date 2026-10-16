@@ -158,7 +158,13 @@ export interface FarClaim {
 
 /** INV-08, INV-09, INV-10. */
 export interface EnvelopeClaim {
+  /** The line the PODIUM is held to (INV-08). The tower's own line when the podium has none. */
   readonly setbackPermittedFootprintM2: Numeric;
+  /**
+   * The TOWER's setback line, supplied only when the podium has its own (since
+   * 16 Oct 2026). Adds a third arm to INV-10: the plate inside the tower's line.
+   */
+  readonly towerSetbackFootprintM2?: Numeric;
   /** Absent when no approved coverage rule applies — see `capacity/envelope.ts`. */
   readonly coverageCapM2?: Numeric;
   readonly podiumFootprintM2: Numeric;
@@ -774,12 +780,23 @@ const inv10: InvariantCheck = {
 
     const cap = dec(s.envelope.towerPlateCapM2);
     const withinCap = plate.lte(cap);
-    return verdict(withinPodium && withinCap, {
+    /* A third arm when the podium has its own line: the plate inside the TOWER's
+       setback line, which INV-08 no longer sees (it holds the podium to its own). */
+    const towerLine =
+      s.envelope.towerSetbackFootprintM2 === undefined ? undefined : dec(s.envelope.towerSetbackFootprintM2);
+    const withinTowerLine = towerLine === undefined || plate.lte(towerLine);
+    return verdict(withinPodium && withinCap && withinTowerLine, {
       observed: show(plate),
-      expected: `≤ min(${show(podium)}, ${show(cap)})`,
+      expected:
+        towerLine === undefined
+          ? `≤ min(${show(podium)}, ${show(cap)})`
+          : `≤ min(${show(podium)}, ${show(cap)}, ${show(towerLine)})`,
       detail:
         `plate ${show(plate)} m²; podium arm ${withinPodium ? 'holds' : 'fails'} ` +
-        `(${show(podium)} m²), cap arm ${withinCap ? 'holds' : 'fails'} (${show(cap)} m²). ` +
+        `(${show(podium)} m²), cap arm ${withinCap ? 'holds' : 'fails'} (${show(cap)} m²)` +
+        (towerLine === undefined
+          ? '. '
+          : `, tower setback arm ${withinTowerLine ? 'holds' : 'fails'} (${show(towerLine)} m²). `) +
         `PRD Appendix A selects a 1,060 m² plate with no stated derivation while its ` +
         `own printed computation gives 1,280 — both satisfy this check, which is why ` +
         `it is an invariant and not a validation.`,

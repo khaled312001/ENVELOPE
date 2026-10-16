@@ -127,7 +127,17 @@ export function buildInvariantSubject(
     },
 
     envelope: {
-      setbackPermittedFootprintM2: str(envelope.setbackPermittedFootprint),
+      /*
+        INV-08 holds the PODIUM to the line the podium is held to. Since the podium
+        statement (16 Oct 2026) that is its own line — the plot, where the sheet is
+        silent — and the tower's line goes to INV-10's setback arm instead. Holding
+        a boundary podium to the tower's line would fail every such run on a rule
+        the engine no longer applies to the podium.
+      */
+      setbackPermittedFootprintM2: str(envelope.podiumSetbackFootprint ?? envelope.setbackPermittedFootprint),
+      ...(envelope.podiumSetbackFootprint
+        ? { towerSetbackFootprintM2: str(envelope.setbackPermittedFootprint) }
+        : {}),
       coverageCapM2: str(envelope.coverageCap),
       podiumFootprintM2: str(envelope.podiumFootprint),
       towerPlateM2: str(envelope.towerPlateCap),
@@ -219,6 +229,10 @@ function observationsFrom(output: RunOutput): Record<string, Observation> {
 
   const worstByParameter = new Map<string, (typeof envelope.appliedSetbacks)[number]>();
   for (const applied of envelope.appliedSetbacks) {
+    // A tower setback typed on the plot step is held to no rule: it replaced the
+    // general rule on that edge, USER_SET. The rule is observed on the edges it
+    // still governs; where it governs none, the engine set it aside by name.
+    if (applied.ruleId === 'USER_SET') continue;
     const held = worstByParameter.get(applied.parameterId);
     if (!held || applied.valueM.lt(held.valueM)) {
       worstByParameter.set(applied.parameterId, applied);

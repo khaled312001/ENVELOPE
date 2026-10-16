@@ -439,7 +439,29 @@ export function PlotMapView({
         });
         m.on('mouseup', end);
         m.on('touchend', end);
-        m.getCanvas().addEventListener('mouseleave', () => hoverRef.current(null));
+
+        /* The segment being drawn follows the pointer through a drag as well. MapLibre stops firing its
+           `mousemove` while one of its own gestures runs ("should not be fired when interaction handlers
+           (pan, rotate, etc) are active"), so dragging the map mid-segment froze the dashed line and left
+           its length where the map used to be — and a finger, which never hovers, got no line at all. The
+           pointer is followed on the canvas itself, and re-read on every frame the map moves under it. */
+        let screen: { x: number; y: number } | null = null;
+        const container = m.getCanvasContainer();
+        const under = (): void => {
+          if (!screen || dragging || shifting) return;
+          const ll = m.unproject([screen.x, screen.y]);
+          hoverRef.current({ lng: ll.lng, lat: ll.lat });
+        };
+        container.addEventListener('pointermove', (e) => {
+          const r = container.getBoundingClientRect();
+          screen = { x: e.clientX - r.left, y: e.clientY - r.top };
+          under();
+        });
+        m.on('move', under);
+        container.addEventListener('pointerleave', () => {
+          screen = null;
+          hoverRef.current(null);
+        });
       } catch {
         // No WebGL is a real state on a site laptop; the table still works.
         if (!cancelled) setMapState('unavailable');

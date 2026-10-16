@@ -415,6 +415,44 @@ is a defect even when it makes something easier.
   both reported, reproducible — an *orientation*. Searching where the ramp or the core
   goes is the optimiser of 34:37, a `TRADEOFF` value, and `PHASE_0_CLASSES` refuses to
   emit one by construction. Do not let the first grow into the second.
+- **Every arrangement is packed, and the reader may pick one.** Eng. Mohamed, 16 Oct
+  2026: «كذا اوبشن واكتر من رسمه … وله حرية الاختيار». `layout.ts` packs every fixed
+  candidate (WIDTH, DEPTH, PERIMETER, SLOPED, FIELD_WIDTH, FIELD_DEPTH) on every run and
+  publishes each count or refusal; the default is the one with the most bays. A pick is
+  `USER_SET` under the actor and refused at the boundary (`G2:arrangement`) when it is
+  not offered or places no bay. A choice among fixed candidates, all reported, is not
+  the optimiser of 34:37 — do not let it search positions.
+- **A car's turn is checked by analogy, and says so.** The Dubai Building Code states no
+  turning radius for a parking aisle. `turning.ts` sweeps every turn between
+  perpendicular aisles at Table B.9's curved-ramp minimum (inner 4 m, lane 3.5 m),
+  `ASSUMED` with that basis and a measured sensitivity of zero on the bay count. A turn
+  that leaves the aisles is drawn and said in words; it never drops a bay.
+- **The accessible bays are designated and paid for.** The renderers could draw an
+  accessible bay from the start and the engine never placed one. `accessible.ts`
+  counts Table C.17 off the building's whole supply (rounding, the first 500 and the
+  under-25 case are `ASSUMED`, read on the side that provides more), places them on
+  the level the street reaches — the ground floor where it parks, else B1 — at the
+  groups nearest the core, and turns a neighbouring bay into each 1.2 m access aisle
+  (C.6.4.2 f/g): three bays become two accessible bays and their shared aisle. One
+  bay per group is given up and counted in the supply; a bay count that includes a
+  hatched aisle is a count nobody can park in. One is a 3.35 m van bay (Table C.18).
+  B.7.2.6.2's preferred bays are marked after the demand is known, since marking
+  changes no count. Walking distance and the accessible route are NOT ASSESSED; the
+  straight line to the core is measured and said.
+- **A dead end is reported, never repaired.** B.7.2.3.3 ¶8 is a "should": `dead-ends.ts`
+  finds each stretch of aisle beyond its last way out, counts the bays that open onto
+  it, and the sheet labels any over eight at its closed end. No bay is dropped and no
+  aisle is added for it.
+- **Claude's reading is asked for, never fetched.** The advisor (`apps/api/src/advisor.ts`)
+  answers only when the reader presses its button — every call is billed (16 Oct 2026:
+  «قلل من استخدام Api كلود اجعله للمستخدم») — and the server caches an answer for an
+  hour. It is text beside the figures and changes none of them; it is not in any
+  exported file, because an export is the engine's and the gates' word, not a model's.
+  Never exercise it with the real key in a test or an e2e run.
+- **Engine text is shown in the reader's language.** `apps/web-next/src/lib/engine-notes.ts`
+  and `engine-run-notes.ts` map every note, label, parameter id and refusal the engine
+  writes; a new engine sentence a reader can see needs its entry there, or the Arabic
+  page shows English. Drawings, DXF layers and title strips stay in English ASCII.
 - **The massing is built in the engine, not the renderer.** A 3D view is the most persuasive
   surface in the product; a massing assembled by a viewer would be a building nobody
   computed, drawn convincingly. `@envelope/massing` takes a `BuildingModel` and nothing

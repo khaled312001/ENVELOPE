@@ -27,6 +27,7 @@ import { Notice, Spinner } from '../ui/primitives.js';
 import { toneAt } from '../ui/tile.js';
 import { CapacityCanvas, CapacityPanel } from '../studio/CapacityStep.js';
 import { ChecksCanvas, ChecksPanel } from '../studio/ChecksStep.js';
+import { ComputingMark } from '../studio/ComputingMark.js';
 import { ExportPanel } from '../studio/ExportStep.js';
 import {
   type DraftPlot,
@@ -478,6 +479,8 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 {canvas}
               </motion.div>
             </AnimatePresence>
+            {/* Over whatever the canvas held, until the massing and the drawings arrive. */}
+            {busy === 'run' ? <ComputingMark /> : null}
           </main>
 
           {/* ── Inspector ── */}

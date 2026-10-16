@@ -190,6 +190,11 @@ export const EN = {
 
   studio: {
     loading: 'Opening the study…',
+    // Says what is being done, not who does it: every figure comes from the rules on file.
+    computing: {
+      title: 'Computing the study',
+      body: 'The envelope, the parking, the massing and the drawings, from the rules on file.',
+    },
     loadFailed: 'This study could not be opened.',
     plotFailed: 'The plot could not be filed.',
     runFailed: 'The engine could not compute this study.',

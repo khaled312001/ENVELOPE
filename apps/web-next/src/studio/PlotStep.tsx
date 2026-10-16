@@ -2,9 +2,8 @@ import { CircleCheck, FileCheck2, Map as MapIcon, PenSquare, Plus, Trash2, X } f
 import { lazy, Suspense, useMemo, useState } from 'react';
 
 import type { PlotCreated, PlotView } from '@web/api/client.js';
-import type { LngLat } from '@web/geo.js';
 
-import type { MapTrace, SheetImage } from '../components/PlotMapView.js';
+import type { MapTrace, SheetUnderlay } from '../components/PlotMapView.js';
 import { PlotSketch } from '../components/PlotSketch.js';
 import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
@@ -30,7 +29,7 @@ export function PlotCanvas({
   trace,
   onTrace,
   statedArea,
-  sheetImage,
+  sheetUnderlay,
   onUseTrace,
   onEdit,
   created = null,
@@ -42,8 +41,9 @@ export function PlotCanvas({
   readonly trace: MapTrace;
   readonly onTrace: (next: MapTrace) => void;
   readonly statedArea: string;
-  readonly sheetImage: SheetImage | null;
-  readonly onUseTrace: (ring: readonly LngLat[]) => void;
+  /** The affection plan in use, to lay under the imagery; null when none is. */
+  readonly sheetUnderlay: SheetUnderlay | null;
+  readonly onUseTrace: (trace: MapTrace) => void;
   /** With this, each boundary's number on the plan opens it for classifying, in place. */
   readonly onEdit?: (next: DraftPlot) => void;
   readonly created?: PlotCreated | null;
@@ -95,7 +95,7 @@ export function PlotCanvas({
               </p>
             }
           >
-            <PlotMapView trace={trace} onTrace={onTrace} statedAreaM2={statedArea} sheet={sheetImage} onUse={onUseTrace} />
+            <PlotMapView trace={trace} onTrace={onTrace} statedAreaM2={statedArea} sheet={sheetUnderlay} onUse={onUseTrace} />
           </Suspense>
         </div>
       ) : (

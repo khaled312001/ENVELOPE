@@ -14,10 +14,10 @@ import {
   type RunRequestBody,
   type RunView,
 } from '@web/api/client.js';
-import type { LngLat } from '@web/geo.js';
 
 import { DerivationDrawer } from '../components/Derivation.js';
 import type { MapTrace } from '../components/PlotMapView.js';
+import { type SheetUnderlay, underlayRegion } from '../components/sheet-underlay.js';
 import { TopBar } from '../components/Shell.js';
 import { InspectProvider } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
@@ -282,11 +282,23 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
       unfile();
     }
   };
-  const applyTrace = (ring: readonly LngLat[]): void => {
-    editPlot(ringToDraft(ring, draft));
+  const applyTrace = (traced: MapTrace): void => {
+    // With the trace's lineage, so a boundary the map split or merged keeps the class the table gave it.
+    editPlot(ringToDraft(traced.ring, draft, traced.lineage));
     // Back to the plan: the boundaries are numbered there, and each still needs classifying.
     setPlotView('plan');
   };
+
+  /*
+    The affection plan under the map: the issued PDF itself, drawn in this
+    browser, and the part of its first page that is the plan — the intake's
+    picture only when it read the plot out of it, otherwise the page. Held in a
+    memo so a re-render is not a new sheet to draw.
+  */
+  const sheetUnderlay = useMemo<SheetUnderlay | null>(
+    () => (sheet && sheetUsed ? { pdfBase64: sheet.attachment.content, region: underlayRegion(sheet.read.facts.sitePlan) } : null),
+    [sheet, sheetUsed],
+  );
 
   const reachable: Record<StepId, boolean> = {
     sheet: true,
@@ -328,7 +340,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
             trace={trace}
             onTrace={setTrace}
             statedArea={statedArea}
-            sheetImage={sheetUsed ? (sheet?.read.facts.sitePlan?.image ?? null) : null}
+            sheetUnderlay={sheetUnderlay}
             onUseTrace={applyTrace}
             onEdit={editPlot}
             created={created}
@@ -347,7 +359,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
             trace={trace}
             onTrace={setTrace}
             statedArea={statedArea}
-            sheetImage={null}
+            sheetUnderlay={null}
             onUseTrace={applyTrace}
           />
         );
@@ -361,7 +373,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
         return run ? <ParkingCanvas run={run} initialKind="SITE" /> : null;
     }
     // `applyTrace` is rebuilt each render but reads only `draft`, which is listed.
-  }, [busy, step, draft, plot, created, run, t, sheet, sheetUsed, plotView, trace, statedArea]);
+  }, [busy, step, draft, plot, created, run, t, sheetUnderlay, sheet, plotView, trace, statedArea]);
 
   return (
     <InspectProvider value={run ? setNode : null}>

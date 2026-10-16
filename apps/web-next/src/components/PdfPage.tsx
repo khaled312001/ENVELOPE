@@ -1,8 +1,7 @@
 import { FileText } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import PDF_WORKER_URL from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
-
 import { useLocale } from '../lib/locale.js';
+import { rasterSheet } from '../lib/sheet-raster.js';
 import { EmptyState, Spinner } from '../ui/primitives.js';
 
 /*
@@ -10,13 +9,9 @@ import { EmptyState, Spinner } from '../ui/primitives.js';
 
   The browser's own PDF viewer is not available: the site's policy is
   `object-src 'none'`, and an embedded viewer would be a second document
-  nobody can style or read aloud. pdf.js draws page one onto a canvas instead,
-  so what the reader checks the read values against is the sheet as issued.
-
-  The legacy build, because the modern one calls `Map.getOrInsertComputed`
-  with no fallback and a browser a year old does not have it. WebAssembly
-  stays off: the policy grants no `wasm-unsafe-eval`, and pdf.js's own
-  JavaScript decoders draw a sheet like this one without it.
+  nobody can style or read aloud. pdf.js draws page one onto a canvas instead
+  (`lib/sheet-raster.ts`, which also draws the map's underlay), so what the
+  reader checks the read values against is the sheet as issued.
 
   Loaded with the sheet step and not before: pdf.js is the second-heaviest
   thing the studio can load.
@@ -31,33 +26,21 @@ export function PdfPage({ base64, label }: { readonly base64: string; readonly l
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
 
   useEffect(() => {
-    let cancelled = false;
-    let destroy: (() => void) | null = null;
+    const signal = { cancelled: false };
     setState('loading');
-    void (async () => {
-      try {
-        const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-        pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
-        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-        const task = pdfjs.getDocument({ data: bytes, useWasm: false });
-        destroy = () => void task.destroy();
-        const doc = await task.promise;
-        const page = await doc.getPage(1);
+    // The same renderer the map's underlay uses, so the two never draw one sheet two ways.
+    rasterSheet(base64, null, LONG_SIDE_PX, undefined, signal)
+      .then((drawn) => {
         const canvas = ref.current;
-        if (cancelled || !canvas) return;
-        const base = page.getViewport({ scale: 1 });
-        const viewport = page.getViewport({ scale: LONG_SIDE_PX / Math.max(base.width, base.height) });
-        canvas.width = Math.round(viewport.width);
-        canvas.height = Math.round(viewport.height);
-        await page.render({ canvas, viewport }).promise;
-        if (!cancelled) setState('ready');
-      } catch {
-        if (!cancelled) setState('failed');
-      }
-    })();
+        if (signal.cancelled || !canvas) return;
+        canvas.width = drawn.width;
+        canvas.height = drawn.height;
+        canvas.getContext('2d')?.drawImage(drawn, 0, 0);
+        setState('ready');
+      })
+      .catch(() => !signal.cancelled && setState('failed'));
     return () => {
-      cancelled = true;
-      destroy?.();
+      signal.cancelled = true;
     };
   }, [base64]);
 

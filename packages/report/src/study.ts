@@ -46,6 +46,7 @@ import {
   NodeKind,
   RENDER_HINTS,
   RenderHint,
+  metric,
   type BuildingModel,
   type Citation,
 } from '@envelope/core';
@@ -60,7 +61,7 @@ import {
   type GfaStatementSection,
   type RunReport,
 } from './json.js';
-import { INVARIANT, engineNote, type Locale } from './words/index.js';
+import { INVARIANT, METRIC_AR, engineNote, type Locale } from './words/index.js';
 
 export interface StudyReportOptions {
   /** The language the reader was working in when they asked for the report. */
@@ -128,7 +129,36 @@ const EN = {
     'Assumptions and limits',
     'Checks and claims',
     'Sources and run',
+    'Annex: inputs, rules and definitions',
   ],
+  inputsTitle: 'Inputs entered by a named person',
+  inputsLede: 'Every value a person entered for this run, with who entered it and when. Each one is marked as entered wherever it is used.',
+  noInputs: 'No value in this run was entered by hand.',
+  colInput: 'Input',
+  colEnteredBy: 'Entered by',
+  colWhen: 'Date',
+  rulesTitle: 'Rules applied',
+  rulesLede: (applied: number, considered: number): string =>
+    `${applied} rule${applied === 1 ? '' : 's'} set a value in this run, and ${considered} more ${considered === 1 ? 'was' : 'were'} considered and not applied — listed, because a rule that did not apply is a fact, not a silence.`,
+  colParameter: 'Parameter',
+  excludedTitle: 'Rules considered and not applied',
+  colOutcome: 'Outcome',
+  disposition: {
+    APPLIED: 'Applied',
+    NOT_APPLICABLE: 'Does not apply',
+    SUPERSEDED: 'Superseded',
+    DEFERRED: 'Not assessed',
+    NOT_APPROVED: 'Not approved',
+    OUT_OF_SCOPE: 'Out of scope',
+  } as Readonly<Record<string, string>>,
+  definitionsTitle: 'Area definitions',
+  definitionsLede: (version: string): string =>
+    `Each area term this study uses, with what it includes and leaves out, from annex ${version}. Two studies that define an area differently are not comparable.`,
+  colTerm: 'Term',
+  colDefinition: 'Definition',
+  colIncludes: 'Includes',
+  colExcludes: 'Leaves out',
+  pending: 'Awaiting sign-off',
   community: 'Community',
   landUse: 'Land use',
   areaStated: 'Plot area on the affection plan',
@@ -263,7 +293,11 @@ const EN = {
     INDUSTRIAL: 'Industrial',
   } as Readonly<Record<string, string>>,
   band: { REGULATORY: 'regulatory', GEOMETRIC: 'geometric', PARKING: 'parking' },
-  instrument: { DUBAI_BUILDING_CODE: 'Dubai Building Code' } as Readonly<Record<string, string>>,
+  instrument: {
+    DUBAI_BUILDING_CODE: 'Dubai Building Code',
+    // A development rule's citation, said for what it is: no instrument stands behind it yet.
+    'PLACEHOLDER-NOT-A-REAL-INSTRUMENT': 'Placeholder, not yet sourced —',
+  } as Readonly<Record<string, string>>,
   units: {} as Readonly<Record<string, string>>,
 };
 
@@ -271,7 +305,8 @@ type Words = typeof EN;
 
 const AR: Words = {
   docType: 'دراسة السعة التطويرية',
-  plot: (n) => `قطعة الأرض ${n}`,
+  // Isolated left to right (U+2066 … U+2069): in a right-to-left line "345-1234" otherwise prints as "1234-345".
+  plot: (n) => `قطعة الأرض ⁦${n}⁩`,
   computedAt: 'تاريخ الحساب',
   reviewedBy: 'المراجع',
   noReviewer: 'لا يوجد مراجع مسمى',
@@ -321,7 +356,36 @@ const AR: Words = {
     'الافتراضات والحدود',
     'الفحوصات وما تدعيه الدراسة',
     'المصادر وبيانات الحساب',
+    'ملحق: المدخلات والقواعد والتعريفات',
   ],
+  inputsTitle: 'مدخلات أدخلها شخص مسمى',
+  inputsLede: 'كل قيمة أدخلها شخص لهذا الحساب، ومن أدخلها ومتى. وكل منها معلمة كمدخل حيثما استخدمت.',
+  noInputs: 'لا توجد قيمة أدخلت يدويا في هذا الحساب.',
+  colInput: 'المدخل',
+  colEnteredBy: 'أدخلها',
+  colWhen: 'التاريخ',
+  rulesTitle: 'القواعد المطبقة',
+  rulesLede: (applied, considered) =>
+    `حددت ${applied} من القواعد قيما في هذا الحساب، ودرست ${considered} أخرى ولم تطبق — وهي مذكورة، لأن عدم انطباق قاعدة حقيقة تذكر لا صمت.`,
+  colParameter: 'العنصر',
+  excludedTitle: 'قواعد درست ولم تطبق',
+  colOutcome: 'النتيجة',
+  disposition: {
+    APPLIED: 'طبقت',
+    NOT_APPLICABLE: 'لا تنطبق',
+    SUPERSEDED: 'حلت محلها أخرى',
+    DEFERRED: 'لم تخضع للتقييم',
+    NOT_APPROVED: 'غير معتمدة',
+    OUT_OF_SCOPE: 'خارج النطاق',
+  },
+  definitionsTitle: 'تعريفات المساحات',
+  definitionsLede: (version) =>
+    `كل مصطلح مساحة تستخدمه هذه الدراسة، وما يشمله وما لا يشمله، من الملحق ${version}. دراستان تعرفان المساحة بشكل مختلف لا تصح المقارنة بينهما.`,
+  colTerm: 'المصطلح',
+  colDefinition: 'التعريف',
+  colIncludes: 'يشمل',
+  colExcludes: 'لا يشمل',
+  pending: 'بانتظار الاعتماد',
   community: 'المنطقة',
   landUse: 'استخدام الأرض',
   areaStated: 'مساحة القطعة في مخطط الأفكشن',
@@ -453,7 +517,7 @@ const AR: Words = {
     INDUSTRIAL: 'صناعي',
   },
   band: { REGULATORY: 'التنظيم', GEOMETRIC: 'الشكل الهندسي', PARKING: 'المواقف' },
-  instrument: { DUBAI_BUILDING_CODE: 'كود دبي للبناء' },
+  instrument: { DUBAI_BUILDING_CODE: 'كود دبي للبناء', 'PLACEHOLDER-NOT-A-REAL-INSTRUMENT': 'مرجع مؤقت لم يوثق بعد —' },
   units: {
     'm²': 'م²',
     m: 'م',
@@ -999,6 +1063,79 @@ function sourcesSection(run: RunReport, L: Locale, sources: Sources): string {
   );
 }
 
+/*
+  THE ANNEX, SO THE PRINTED STUDY HOLDS EVERYTHING (16 Oct 2026: «شامل كل شئ»).
+
+  The sections above carry what a reader decides on; this carries what an
+  auditor checks it against: every value a named person entered, every rule
+  that set a value and every rule considered and not applied, and the
+  definition of every area term the study used. All of it is the run's own
+  record, printed — nothing here is computed. A rule's citation is printed
+  beside it rather than added to section 7: those are the clauses the figures
+  rest on, these are the ones the engine looked at.
+*/
+function annexSection(run: RunReport, L: Locale): string {
+  const w = WORDS[L];
+  const name = (id: string): string => {
+    const said = engineNote(id, L);
+    return said === null ? `<bdi class="mono">${esc(id)}</bdi>` : esc(said);
+  };
+  const valueOf = (value: string, unit: string | null): string =>
+    NUMBER.test(value) ? plain(value, unit ?? undefined, L) : esc(say(value, L));
+  const cited = (c: Citation): string =>
+    `<span class="cite">${esc(instrumentName(c, w))} <bdi>${esc(clauseNumber(c))}</bdi></span>`;
+
+  const inputs = run.userInputs.map((u) => [
+    name(u.parameterId),
+    shown({ value: u.value, unit: u.unit ?? undefined, renderHint: RenderHint.USER_BADGE }, L),
+    esc(u.enteredBy.name),
+    `<bdi class="mono">${esc(u.enteredAt.slice(0, 10))}</bdi>`,
+  ]);
+  const applied = run.rules.applied.map((r) => [name(r.parameterId), valueOf(r.value, r.unit), cited(r.citation)]);
+  const excluded = run.rules.excluded.map((r) => [
+    name(r.parameterId),
+    esc(w.disposition[r.disposition] ?? r.disposition),
+    esc(say(r.reason, L)),
+    cited(r.citation),
+  ]);
+  const list = (items: readonly string[]): string =>
+    items.length === 0 ? '—' : `<ul class="terms">${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`;
+  const definitions = run.areaTermsUsed.map((id) => {
+    const d = metric(id);
+    const ar = L === 'ar' ? METRIC_AR[id] : undefined;
+    return [
+      `${esc(ar?.name ?? d.name)}` + (d.approvalStatus === 'APPROVED' ? '' : `<div class="note">${esc(w.pending)}</div>`),
+      esc(ar?.formula ?? d.formulaStatement),
+      list(ar?.inclusions ?? d.inclusions),
+      list(ar?.exclusions ?? d.exclusions),
+    ];
+  });
+
+  return (
+    `<section class="page">${sectionHead(8, w)}` +
+    `<h3>${esc(w.inputsTitle)}</h3><p class="note">${esc(w.inputsLede)}</p>` +
+    (inputs.length === 0
+      ? `<p class="note">${esc(w.noInputs)}</p>`
+      : table(w.inputsTitle, [w.colInput, w.colValue, w.colEnteredBy, w.colWhen], inputs, '', ['38%', '24%', '24%', '14%'])) +
+    `<h3>${esc(w.rulesTitle)}</h3>` +
+    `<p class="note">${esc(w.rulesLede(run.rules.applied.length, run.rules.excluded.length))}</p>` +
+    table(w.rulesTitle, [w.colParameter, w.colValue, w.colSource], applied, '', ['44%', '22%', '34%']) +
+    (excluded.length === 0
+      ? ''
+      : `<h3>${esc(w.excludedTitle)}</h3>` +
+        table(w.excludedTitle, [w.colParameter, w.colOutcome, w.colWhy, w.colSource], excluded, '', ['26%', '16%', '36%', '22%'])) +
+    `<h3>${esc(w.definitionsTitle)}</h3>` +
+    `<p class="note">${esc(w.definitionsLede(run.metricDefinitionsVersion))}</p>` +
+    table(w.definitionsTitle, [w.colTerm, w.colDefinition, w.colIncludes, w.colExcludes], definitions, 'definitions', [
+      '20%',
+      '30%',
+      '27%',
+      '23%',
+    ]) +
+    `</section>`
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Stylesheet
 // ---------------------------------------------------------------------------
@@ -1109,6 +1246,10 @@ table.assumptions td:nth-child(4), table.assumptions td:nth-child(5) { font-size
 table.assumptions .qty { white-space: normal; }
 ul.notes { margin: 6px 0 0; padding-inline-start: 18px; font-size: 0.82rem; color: var(--ink-2); }
 ul.notes li { margin-bottom: 4px; }
+table.definitions { table-layout: fixed; }
+table.definitions td { font-size: 0.8rem; }
+ul.terms { margin: 0; padding-inline-start: 16px; }
+ul.terms li { margin-bottom: 2px; }
 
 .claim { border-top: 1px solid var(--rule-strong); padding: 8px 0; break-inside: avoid; }
 .claim p { margin: 0 0 4px; }
@@ -1131,6 +1272,8 @@ ul.notes li { margin-bottom: 4px; }
   .page, .sheet-page { margin: 0; padding: 0; box-shadow: none; break-after: page; }
   .sheet-page { page: sheet; }
   .page.joined { break-after: auto; }
+  /* The last section ends the document: a break after it would leave the closing line alone on a blank page. */
+  main > section:last-child { break-after: auto; }
   .drawings-intro { margin-top: 10mm; break-inside: avoid; }
   .sheet-frame svg { border: none; width: auto; height: 172mm; margin: 0 auto; }
   .end-footer { padding: 0; }
@@ -1196,8 +1339,8 @@ export function studyReportHtml(run: RunReport, options: StudyReportOptions): st
     assumptionsSection(run, options),
     checksSection(run, L, sources),
   ].join('');
-  // Last, so it lists every clause the sections above cited.
-  const end = sourcesSection(run, L, sources);
+  // After the sections, so it lists every clause they cited; the annex prints its own beside each rule.
+  const end = sourcesSection(run, L, sources) + annexSection(run, L);
 
   const title = `${w.docType} — ${w.plot(run.plot.plotNumber)}, ${run.plot.community}`;
   return (
@@ -1207,7 +1350,7 @@ export function studyReportHtml(run: RunReport, options: StudyReportOptions): st
     `<title>${esc(title)}</title>` +
     `<style>${STYLESHEET}${pageFooter(run, w)}</style></head>` +
     `<body><main id="main">${body}${end}</main>` +
-    `<footer class="end-footer"><span>Run <bdi class="mono">${esc(run.runId)}</bdi></span>` +
+    `<footer class="end-footer"><span dir="ltr">Run <span class="mono">${esc(run.runId)}</span></span>` +
     `<span>REGULATORY VALIDITY: NOT ASSESSED</span></footer>` +
     `</body></html>`
   );

@@ -114,7 +114,67 @@ function groundFloorDesign(t: string): Said | null {
   };
 }
 
+/**
+ * Every parameter a rule or a named input can carry, by its id — what the study's
+ * annex lists rules and inputs under. An id with no name here prints as the id.
+ */
+const PARAMETERS: Readonly<Record<string, Said>> = {
+  'far.max': { en: 'Floor area ratio, maximum', ar: 'معامل البناء، الحد الأقصى' },
+  'coverage.max': { en: 'Plot coverage, maximum', ar: 'نسبة التغطية، الحد الأقصى' },
+  'tower_plate.max': { en: 'Tower plate, maximum', ar: 'مسطح البرج، الحد الأقصى' },
+  'height.max': { en: 'Building height, maximum', ar: 'ارتفاع المبنى، الحد الأقصى' },
+  'levels.max_above_ground': { en: 'Floors above ground, maximum', ar: 'الأدوار فوق الأرض، الحد الأقصى' },
+  floor_to_floor: { en: 'Floor-to-floor height', ar: 'الارتفاع من دور إلى دور' },
+  'setback.road': { en: 'Setback from a road', ar: 'الارتداد عن الطريق' },
+  'setback.adjacent_plot': { en: 'Setback from a neighbouring plot', ar: 'الارتداد عن القطعة المجاورة' },
+  'setback.open_space': { en: 'Setback from open space', ar: 'الارتداد عن المساحة المفتوحة' },
+  'setback.other': { en: 'Setback from another boundary', ar: 'الارتداد عن حد آخر' },
+  'parking.demand': { en: 'Parking demand', ar: 'المواقف المطلوبة' },
+  'parking.visitor_fraction': { en: 'Visitor parking share', ar: 'نسبة مواقف الزوار' },
+  'parking.levels_available': { en: 'Parking levels available', ar: 'أدوار المواقف المتاحة' },
+  'parking.usable_fraction': { en: 'Usable share of a parking level', ar: 'النسبة القابلة للاستخدام من دور المواقف' },
+  'parking.unit_mix': { en: 'Unit mix', ar: 'توزيع الوحدات' },
+  'capacity.saleable_efficiency': { en: 'Saleable share of floor area', ar: 'نسبة المساحة القابلة للبيع' },
+  'capacity.user_realism_discount': { en: 'Realism discount', ar: 'خصم الواقعية' },
+  'definitions.parking_in_far': { en: 'Parking in FAR', ar: 'المواقف في معامل البناء' },
+  'egress.travel_distance.max': { en: 'Escape travel distance, maximum', ar: 'مسافة الهروب، الحد الأقصى' },
+  'plant.substation.edge_class': { en: 'Substation: boundary it faces', ar: 'المحطة الفرعية: الحد الذي تواجهه' },
+  'plant.substation.min_width_m': { en: 'Substation: minimum width', ar: 'المحطة الفرعية: أقل عرض' },
+  'plant.substation.clear_height_m': { en: 'Substation: clear height', ar: 'المحطة الفرعية: الارتفاع الصافي' },
+  'plant.substation.ventilated_sides': { en: 'Substation: ventilated sides', ar: 'المحطة الفرعية: الجوانب المهواة' },
+  'plant.substation.basement_index': { en: 'Substation: basement level', ar: 'المحطة الفرعية: دور البدروم' },
+  'plant.lv_room.adjacency': { en: 'Low-voltage room: beside the substation', ar: 'غرفة الجهد المنخفض: بجوار المحطة الفرعية' },
+};
+
+/** Why a rule was considered and not applied, as `apps/api/src/report.ts` (`reasonFor`) writes it. */
+function ruleReason(t: string): Said | null {
+  if (t.startsWith('Its applicability predicate did not match this plot')) {
+    return {
+      en: 'Does not apply to this plot: a different land use, community or boundary kind.',
+      ar: 'لا تنطبق على هذه القطعة: استخدام أرض أو منطقة أو نوع حد مختلف.',
+    };
+  }
+  const s = /^Considered for (\S+) and superseded by (\S+) under the §11\.5 precedence order\./.exec(t);
+  if (s) {
+    return {
+      en: `Superseded by ${s[2]}, which takes precedence (§11.5).`,
+      ar: `حلت محلها القاعدة ${s[2]} لأنها مقدمة عليها (§11.5).`,
+    };
+  }
+  if (t.startsWith('Applicable and not assessed.')) {
+    return t.includes('can only reject a candidate')
+      ? {
+          en: 'Applies, and not assessed: it can only reject a design, and this phase generates none to reject.',
+          ar: 'تنطبق ولم تخضع للتقييم: يمكنها فقط رفض تصميم، وهذه المرحلة لا تولد تصميما ترفضه.',
+        }
+      : { en: 'Applies, and not assessed: it cannot be checked at this level of detail.', ar: 'تنطبق ولم تخضع للتقييم: لا يمكن فحصها بهذا المستوى من التفصيل.' };
+  }
+  return null;
+}
+
 export const STUDY_READERS: readonly Reader[] = [
+  exact(PARAMETERS),
+  ruleReason,
   exact(BANDS),
   exact(DIMENSIONS),
   exact(CLAIM),

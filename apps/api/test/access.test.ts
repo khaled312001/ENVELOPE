@@ -357,7 +357,10 @@ describe('"from any route" — the router’s list, not this file’s', () => {
       const res = await app.inject({ ...request(route), headers: { cookie: author.cookie } });
       expect({ route, notFound: res.statusCode === 404 }).toEqual({ route, notFound: false });
     }
-  });
+    // Two sign-ups (scrypt), a run, and every route answered for real by the author — the
+    // study report with its drawings among them. Over 5 s on a busy machine; a timeout here
+    // would fail on load, not on access.
+  }, 30_000);
 
   it('answers a non-member 404 on every route that names somebody else’s workspace', async () => {
     const owner = await signUp('owner@example.com');

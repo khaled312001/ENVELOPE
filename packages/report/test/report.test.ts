@@ -20,6 +20,8 @@ import {
   RenderHint,
   NodeKind,
   EdgeKind,
+  ALL_DEFINITIONS,
+  metric,
 } from '@envelope/core';
 import type { Citation, NodeId, ProvenanceEdge, ProvenanceNode, TracedWire } from '@envelope/core';
 import { runPipeline } from '@envelope/capacity';
@@ -28,6 +30,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { initGeometry } from '@envelope/geometry';
 
 import { META, RECT_80x40, runInput } from '../../../test-support/pipeline.js';
+
+import { esc } from '../src/html.js';
+import { METRIC_AR } from '../src/words/index.js';
 
 import {
   CLAIM_STATEMENT_VERBATIM,
@@ -1124,6 +1129,37 @@ describe('the study report', () => {
     const html = studyReportHtml(makeRun(), { locale: 'en', sheets: set, building: b.building });
     expect(html.split('<section class="sheet-page"').length - 1).toBe(set.length);
     expect(html.split('<svg').length - 1).toBeGreaterThanOrEqual(set.length);
+  });
+
+  it('ends with an annex holding the inputs, every rule considered and every area definition used', () => {
+    const run = makeRun();
+    for (const locale of ['en', 'ar'] as const) {
+      const html = studyReportHtml(run, { locale, sheets: [], building: null });
+      expect(html).toContain('id="s8"');
+      for (const u of run.userInputs) expect(html).toContain(esc(u.enteredBy.name));
+      for (const id of run.areaTermsUsed) {
+        const name = locale === 'ar' ? METRIC_AR[id]!.name : metric(id).name;
+        expect(html).toContain(esc(name));
+      }
+    }
+    expect(studyReportHtml(run, { locale: 'en', sheets: [], building: null }).split('<tr>').length).toBeGreaterThan(
+      run.rules.applied.length + run.rules.excluded.length,
+    );
+  });
+
+  it('says every area definition in Arabic line for line, so no term loses an inclusion in translation', () => {
+    for (const d of ALL_DEFINITIONS) {
+      const ar = METRIC_AR[d.metricId];
+      expect(ar, d.metricId).toBeDefined();
+      expect(ar!.inclusions.length, `${d.metricId} inclusions`).toBe(d.inclusions.length);
+      expect(ar!.exclusions.length, `${d.metricId} exclusions`).toBe(d.exclusions.length);
+    }
+  });
+
+  it('prints nothing after its last page: the closing line is not left alone on a blank sheet', () => {
+    expect(studyReportHtml(makeRun(), { locale: 'en', sheets: [], building: null })).toContain(
+      'main > section:last-child { break-after: auto; }',
+    );
   });
 
   it('refuses what the audit report refuses: a failed invariant is not emitted in any language', () => {

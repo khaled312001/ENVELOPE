@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Hand, Info, Layers, Loader2, MapPinned, MousePointerClick, Move, PenLine, Plus, Ruler, Search, Trash2, Undo2 } from 'lucide-react';
+import { Eye, EyeOff, Hand, Info, Layers, MapPinned, MousePointerClick, Move, PenLine, Plus, Ruler, Search, Trash2, Undo2 } from 'lucide-react';
 import type { GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent, MapLayerTouchEvent, PointLike } from 'maplibre-gl';
 import MAPLIBRE_WORKER_URL from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { type FormEvent, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -26,7 +26,7 @@ import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
 import { useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
-import { Input } from '../ui/primitives.js';
+import { Input, Spinner } from '../ui/primitives.js';
 import {
   deleteCorner,
   EMPTY_TRACE,
@@ -1135,7 +1135,7 @@ export function PlotMapView({
           </div>
           {underlayState === 'drawing' ? (
             <p className="flex items-center gap-2 text-secondary" role="status">
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              <Spinner className="text-accent" />
               {t.sheet.drawing}
             </p>
           ) : underlayState === 'failed' ? (
@@ -1204,7 +1204,7 @@ export function PlotMapView({
         <div className="flex flex-wrap items-end gap-2">
           <div className="grid min-w-0 flex-1 gap-1 rounded-lg border border-line bg-panel/95 px-3 py-2 shadow-soft backdrop-blur">
             <p id="pm-how" className="flex items-center gap-2 text-[12.5px] text-fg" role="status">
-              {busy ? <Loader2 className="size-4 animate-spin text-accent" aria-hidden="true" /> : null}
+              {busy ? <Spinner className="text-accent" /> : null}
               {how}
             </p>
             {notice && stage === null ? <p className="text-[12px] text-secondary">{notice}</p> : null}

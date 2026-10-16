@@ -195,6 +195,12 @@ export const EN = {
       title: 'Computing the study',
       body: 'The envelope, the parking, the massing and the drawings, from the rules on file.',
     },
+    // The same mark over every wait in the studio, each saying what it waits for.
+    waiting: {
+      load: { title: 'Opening the study', body: 'The plot, the answers and the result stored for it.' },
+      sheet: { title: 'Reading the affection plan', body: 'Each value is taken from where the sheet prints it.' },
+      plot: { title: 'Filing the plot', body: 'The corners, the boundaries and the area as you drew them.' },
+    },
     loadFailed: 'This study could not be opened.',
     plotFailed: 'The plot could not be filed.',
     runFailed: 'The engine could not compute this study.',

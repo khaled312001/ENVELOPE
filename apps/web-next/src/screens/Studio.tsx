@@ -23,7 +23,7 @@ import { InspectProvider } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
 import { useLocale } from '../lib/locale.js';
 import { useNav } from '../lib/nav.js';
-import { Notice, Spinner } from '../ui/primitives.js';
+import { Notice } from '../ui/primitives.js';
 import { toneAt } from '../ui/tile.js';
 import { CapacityCanvas, CapacityPanel } from '../studio/CapacityStep.js';
 import { ChecksCanvas, ChecksPanel } from '../studio/ChecksStep.js';
@@ -321,13 +321,8 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   };
 
   const canvas: ReactNode = useMemo(() => {
-    if (busy === 'load') {
-      return (
-        <p className="flex h-full items-center justify-center gap-2 text-secondary">
-          <Spinner /> {t.studio.loading}
-        </p>
-      );
-    }
+    // The mark over the canvas says it; an empty canvas under it, not a second message.
+    if (busy === 'load') return <div className="h-full" />;
     switch (step) {
       case 'sheet':
         return <SheetCanvas sheet={sheet} />;
@@ -479,8 +474,8 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 {canvas}
               </motion.div>
             </AnimatePresence>
-            {/* Over whatever the canvas held, until the massing and the drawings arrive. */}
-            {busy === 'run' ? <ComputingMark /> : null}
+            {/* Over whatever the canvas held, at every wait: the study opening, the sheet read, the plot filed, the run. */}
+            {busy ? <ComputingMark stage={busy} /> : null}
           </main>
 
           {/* ── Inspector ── */}

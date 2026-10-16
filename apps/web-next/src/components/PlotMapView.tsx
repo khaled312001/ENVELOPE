@@ -100,6 +100,7 @@ const ID = {
   shape: 'pm-shape',
   ring: 'pm-ring',
   rubber: 'pm-rubber',
+  rubberCase: 'pm-rubber-case',
   points: 'pm-points',
   sheetEdge: 'pm-sheet-edge',
 } as const;
@@ -317,12 +318,31 @@ export function PlotMapView({
             layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: { 'line-width': 3, ...(accent ? { 'line-color': accent } : {}) },
           });
-          // The segment being drawn, dashed: it is where the next corner would go, not a boundary yet.
+          /* The segment being drawn, pulled taut from the last corner to the pointer, and the one that
+             would close the ring from the pointer back to the first corner, fainter. Dashed: they are where
+             the next corner would go, not boundaries yet. As heavy as a boundary, over a plate-coloured
+             casing, because a 2 px dash on satellite imagery was a line nobody could find. */
+          m.addLayer({
+            id: ID.rubberCase,
+            type: 'line',
+            source: ID.rubber,
+            layout: { 'line-cap': 'round' },
+            paint: {
+              'line-width': 6,
+              'line-opacity': ['case', ['==', ['get', 'kind'], 'close'], 0.4, 0.85],
+              ...(plate ? { 'line-color': plate } : {}),
+            },
+          });
           m.addLayer({
             id: ID.rubber,
             type: 'line',
             source: ID.rubber,
-            paint: { 'line-width': 2, 'line-dasharray': [2, 2], ...(accent ? { 'line-color': accent } : {}) },
+            paint: {
+              'line-width': 3,
+              'line-dasharray': [2, 1.5],
+              'line-opacity': ['case', ['==', ['get', 'kind'], 'close'], 0.5, 1],
+              ...(accent ? { 'line-color': accent } : {}),
+            },
           });
           m.addLayer({
             id: ID.points,
@@ -552,7 +572,17 @@ export function PlotMapView({
       return;
     }
     rubberShown.current = true;
-    void rubber?.setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[last.lng, last.lat], [p.lng, p.lat]] } });
+    const first = trace.ring[0];
+    void rubber?.setData({
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', properties: { kind: 'next' }, geometry: { type: 'LineString', coordinates: [[last.lng, last.lat], [p.lng, p.lat]] } },
+        // Back to the first corner once there is a segment to close: two corners and the pointer are a triangle.
+        ...(first && trace.ring.length >= 2
+          ? [{ type: 'Feature' as const, properties: { kind: 'close' }, geometry: { type: 'LineString' as const, coordinates: [[p.lng, p.lat], [first.lng, first.lat]] } }]
+          : []),
+      ],
+    });
     const at = map.project([(last.lng + p.lng) / 2, (last.lat + p.lat) / 2]);
     setLive({ x: at.x, y: at.y, text: metresText(lengthM) });
   }, [trace, tool, stage]);

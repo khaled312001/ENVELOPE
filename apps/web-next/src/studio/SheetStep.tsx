@@ -7,13 +7,24 @@ import type { TracedWire } from '@web/components/TracedValue.js';
 import { Traced } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
-import { EngineText, useLocale } from '../lib/locale.js';
+import { EngineNote, EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, EmptyState, Notice, PanelHeader, Spinner } from '../ui/primitives.js';
 import { IconTile } from '../ui/tile.js';
 import { Footer, Heading, More, NextStep } from './parts.js';
 
 // pdf.js comes down only once a sheet has been read.
+/** The reader's field ids, named as the read panel already names them. */
+const GAP_FIELD: Readonly<Record<string, 'area' | 'gfa' | 'far' | 'height' | 'setbacks' | 'coverage' | 'landUse'>> = {
+  total_area_sqm: 'area',
+  gfa_permitted_sqm: 'gfa',
+  far: 'far',
+  height_allowance: 'height',
+  setbacks: 'setbacks',
+  plot_coverage: 'coverage',
+  land_use: 'landUse',
+};
+
 const PdfPage = lazy(() => import('../components/PdfPage.js').then((m) => ({ default: m.PdfPage })));
 
 /*
@@ -147,12 +158,19 @@ export function SheetPanel({
               <section aria-labelledby="sheet-gaps" className="grid gap-2">
                 <Heading id="sheet-gaps">{t.sheet.gaps}</Heading>
                 <ul className="grid gap-1.5 text-[12.5px]">
-                  {facts.missing.map((m) => (
-                    <li key={m.field} className="rounded-md border border-line bg-raised px-3 py-2">
-                      <EngineText className="block font-medium text-fg">{m.label}</EngineText>
-                      <EngineText className="block text-secondary">{m.consequence}</EngineText>
-                    </li>
-                  ))}
+                  {facts.missing.map((m) => {
+                    const named = GAP_FIELD[m.field];
+                    return (
+                      <li key={m.field} className="rounded-md border border-line bg-raised px-3 py-2">
+                        {named ? (
+                          <span className="block font-medium text-fg">{t.sheet.fields[named]}</span>
+                        ) : (
+                          <EngineText className="block font-medium text-fg">{m.label}</EngineText>
+                        )}
+                        <EngineNote className="block text-secondary" text={m.consequence} />
+                      </li>
+                    );
+                  })}
                 </ul>
               </section>
             ) : null}

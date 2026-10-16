@@ -323,6 +323,61 @@ const READERS: readonly Reader[] = [
       ar: `واجهة بطول ${m[1]} م. بعد ${m[2]} م ابتعاد عن التقاطع عند كل ركن (B.7.2.1) يتبقى ${m[3]} م، وهذا لا يتسع لمدخل بعرض ${m[4]} م.`,
     };
   },
+  /* What the affection plan does not print (`packages/intake`). The sheet step lists these
+     as findings, and on /ar/studio they were the one English paragraph left on that step. */
+  ...(
+    [
+      [
+        'Plot area is the denominator of every capacity number',
+        'مساحة القطعة هي المقام في كل رقم للسعة، والحساب متوقف بدونها.',
+      ],
+      [
+        'This sheet states its limit as a floor ratio and prints no GFA.',
+        'هذا المخطط يحدد حده بمعامل بناء ولا يطبع المساحة الطابقية. المساحة تحسب من المعامل × مساحة القطعة، ولا يلزم من المخطط غير ذلك.',
+      ],
+      [
+        'Permitted GFA is not printed on this sheet.',
+        'المساحة الطابقية المسموحة غير مطبوعة في هذا المخطط. تؤخذ من لائحة التطوير أو يحددها شخص مسمى، ولا تستنتج من قطعة مجاورة.',
+      ],
+      [
+        'This sheet prints a maximum GFA and no floor area ratio.',
+        'هذا المخطط يطبع أقصى مساحة طابقية ولا يطبع معامل البناء. الدراسة تحسب المعامل من أرقام المخطط نفسه: أقصى مساحة طابقية ÷ مساحة القطعة، ولا يلزم غير ذلك.',
+      ],
+      [
+        'Floor area ratio is not printed on this sheet.',
+        'معامل البناء غير مطبوع في هذا المخطط، وهو مطلوب قبل حساب أي رقم للسعة.',
+      ],
+      ['Permitted storey count is not printed', 'عدد الأدوار المسموح غير مطبوع، فالغلاف بلا حد رأسي.'],
+      [
+        'This sheet prints "SEE NOTES" against every face',
+        'هذا المخطط يطبع «SEE NOTES» أمام كل واجهة بدل المسافة، ويحيل إلى ملاحظة تجعل الارتداد ربع ارتفاع المبنى، بحد أقصى 7.5 م وحد أدنى 3 م. هذه قاعدة مدخلها عدد الأدوار وليست مسافات، فلا يقرأ ارتداد من المخطط. تكتب كقاعدة أو يحددها شخص مسمى.',
+      ],
+      [
+        'No setback schedule on the sheet.',
+        'لا جدول ارتدادات في المخطط. تحكم لوائح تراخيص ولائحة المطور الرئيسي، ويجب توفيرها.',
+      ],
+      [
+        'This sheet prints "N/A" against the maximum coverage',
+        'هذا المخطط يطبع «N/A» أمام أقصى نسبة تغطية: لا يضع حدا للتغطية. المسقط بلا حد أفقي من هذه الوثيقة، ويؤخذ من لائحة التطوير أو من شخص مسمى.',
+      ],
+      ['No coverage cap on the sheet', 'لا حد لنسبة التغطية في المخطط، فالمسقط بلا حد أفقي من هذه الوثيقة.'],
+      ['Land use selects the applicable rule set', 'استعمال الأرض هو ما يختار مجموعة القواعد، ولا يمكن اختيار أي منها بدونه.'],
+    ] as const
+  ).map(
+    ([start, ar]): Reader =>
+      (t) =>
+        t.startsWith(start) ? { en: t, ar } : null,
+  ),
+  (t) => {
+    // The Municipality's setback is a rule in Arabic, quoted from the sheet: kept as printed.
+    const m = /^This sheet states its setback as a rule, not a distance: «([^»]*)»/.exec(t);
+    return m
+      ? {
+          en: t,
+          ar: `هذا المخطط يحدد الارتداد بقاعدة لا بمسافة: «${m[1]}» — ربع ارتفاع المبنى من الجيران ومن منتصف السكك، بحد أقصى 7.5 م وحد أدنى 3 م. مدخلها عدد الأدوار، فلا تقرأ مسافة من المخطط. تكتب كقاعدة أو يحددها شخص مسمى.`,
+        }
+      : null;
+  },
 ];
 
 /** The engine's sentence, short and in `locale`; null when its wording is not one this file knows. */

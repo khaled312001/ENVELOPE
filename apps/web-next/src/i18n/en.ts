@@ -720,7 +720,7 @@ export const EN = {
     files: 'Files',
     locked: 'Files — sign both gates to unlock',
     file: {
-      html: { name: 'Report', body: 'Opens in a new tab. Print to save as PDF.' },
+      html: { name: 'Report', body: 'Opens in a new tab, with a button above it to print or save as PDF on A4.' },
       sheets: { name: 'A3 drawing set', body: 'Every sheet on this screen, for print.' },
       dxf: { name: 'DXF', body: 'The building in 3D, in metres, for CAD.' },
       glb: { name: '3D model (.glb)', body: 'The massing as a glTF binary.' },
@@ -728,6 +728,20 @@ export const EN = {
       json: { name: 'JSON', body: 'The whole study, with its fingerprint.' },
     },
     stamped: 'Each file states “regulatory validity: not assessed” and carries this study’s fingerprint.',
+  },
+
+  report: {
+    title: 'Study report',
+    hint: 'A4, in this page’s language. In the print window choose “Save as PDF”; the paper size is set by the report.',
+    print: 'Print or save as PDF (A4)',
+    download: 'Download HTML',
+    back: 'Back to the study',
+    loading: 'Preparing the report…',
+    frame: 'The study report',
+    failed: 'The report could not be prepared. Try again.',
+    failedTitle: 'No report yet',
+    open: 'Open the report',
+    printNow: 'Print or save as PDF (A4)',
   },
 
   notFound: {

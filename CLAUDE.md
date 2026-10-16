@@ -469,7 +469,15 @@ is a defect even when it makes something easier.
   `packages/report/src/words/`, moved there from `apps/web-next` so the screen and
   the paper read one dictionary. A new engine sentence needs its entry there. The
   stamp stays in English beside the Arabic, because it is the literal every gate
-  greps for.
+  greps for. It ends with an annex (section 8): the named inputs, every rule applied
+  and considered, and every area definition used, the last in Arabic from
+  `words/metric-notes.ts`, held line for line to the annex by a test. Its print
+  button lives **outside** it, at `/studio/:runId/report`
+  (`apps/web-next/src/screens/Report.tsx`), because the report carries no script.
+  The viewer prints the frame, so the report's own `@page` sets A4. The frame is
+  sandboxed with `allow-same-origin allow-modals` and no scripts. Drop
+  `allow-modals` and the browser silently refuses `print()`. The export step also
+  prints it straight through a hidden frame.
 - **Engine text is shown in the reader's language.** `packages/report/src/words/`
   (`engine-notes.ts`, `engine-run-notes.ts`, `study-notes.ts`; the site imports it as
   `@envelope/report/words`) maps every note, label, parameter id and refusal the engine

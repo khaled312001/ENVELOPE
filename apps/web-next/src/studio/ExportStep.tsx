@@ -1,7 +1,8 @@
-import { Box, Check, FileCode2, FileJson, FileSpreadsheet, FileText, Layers, Lock } from 'lucide-react';
+import { Box, Check, FileCode2, FileJson, FileSpreadsheet, FileText, Layers, Lock, Printer } from 'lucide-react';
 import { useState } from 'react';
 
 import { type Actor, api, ApiError, type RunView } from '@web/api/client.js';
+import { printDocument } from '@web/documents.js';
 import { hashOf } from '@web/gateHash.js';
 
 import { cn } from '../lib/cn.js';
@@ -24,7 +25,7 @@ import { AdvisorBox } from './AdvisorBox.js';
 type Format = 'html' | 'sheets' | 'dxf' | 'xlsx' | 'glb' | 'json';
 
 export function ExportPanel({ actor, run, onSigned }: { readonly actor: Actor; readonly run: RunView; readonly onSigned: () => Promise<void> }): JSX.Element {
-  const { t, locale } = useLocale();
+  const { t, locale, href } = useLocale();
   const gates = run.gates ?? {};
   const g3 = gates['G3_ASSUMPTIONS_ACKNOWLEDGED'];
   const g4 = gates['G4_REVIEWER_NAMED'];
@@ -45,14 +46,35 @@ export function ExportPanel({ actor, run, onSigned }: { readonly actor: Actor; r
     }
   };
 
+  /*
+    The report straight to the print dialog, without opening it: a hidden frame
+    holding the report prints itself on the paper its own `@page` names — A4 —
+    and "Save as PDF" in that dialog is the PDF. See `apps/web/src/documents.ts`.
+  */
+  const printReport = async (): Promise<void> => {
+    setBusy('print');
+    setError(null);
+    try {
+      printDocument(await api.exportRunHtml(actor, run.runId, 'html', locale), 'text/html');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : t.exports.failed);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const download = async (format: Format): Promise<void> => {
     setBusy(format);
     setError(null);
     try {
       const name = `topai-${run.plot.plotNumber}-${run.runId.slice(0, 8)}`;
-      if (format === 'html' || format === 'sheets') {
-        // The report is print-first HTML; the browser makes the PDF from it, and says so.
-        // The study report is written in the page's language; the drawing set stays English.
+      if (format === 'html') {
+        // The report opens in its own viewer, with the A4 print button above it (`screens/Report.tsx`).
+        window.open(href(`/studio/${run.runId}/report`), '_blank', 'noopener');
+        return;
+      }
+      if (format === 'sheets') {
+        // The drawing set is print-first HTML on A3; the browser makes the PDF from it. It stays English.
         const html = await api.exportRunHtml(actor, run.runId, format, locale);
         const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
         window.open(url, '_blank', 'noopener');
@@ -131,6 +153,17 @@ export function ExportPanel({ actor, run, onSigned }: { readonly actor: Actor; r
         </Button>
       ) : null}
       {lead ? <p className="text-[11.5px] text-secondary">{t.exports.file[lead.f].body}</p> : null}
+      <Button
+        variant="secondary"
+        size="lg"
+        className="w-full"
+        disabled={!open || busy !== null}
+        aria-busy={busy === 'print' || undefined}
+        onClick={() => void printReport()}
+      >
+        {busy === 'print' ? <Spinner /> : <Printer aria-hidden="true" />}
+        {t.report.printNow}
+      </Button>
       <ul className="grid grid-cols-2 gap-2">
         {rest.map(({ f, icon: Icon, needsModel }) => {
           const unavailable = needsModel && !run.building;

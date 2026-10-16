@@ -21,6 +21,7 @@ import { TooltipProvider } from './ui/radix.js';
 // The studio carries the drawing set and the engine views; the public pages should not wait for them.
 const Studio = lazy(() => import('./screens/Studio.js').then((m) => ({ default: m.Studio })));
 const Studies = lazy(() => import('./screens/Studies.js').then((m) => ({ default: m.Studies })));
+const Report = lazy(() => import('./screens/Report.js').then((m) => ({ default: m.Report })));
 const Product = lazy(() => import('./screens/site/Product.js').then((m) => ({ default: m.Product })));
 const Parking = lazy(() => import('./screens/site/Parking.js').then((m) => ({ default: m.Parking })));
 const Method = lazy(() => import('./screens/site/Method.js').then((m) => ({ default: m.Method })));
@@ -125,6 +126,7 @@ function App(): JSX.Element {
         <Route path="/studies" element={<Working title={t.shell.studies}><Gated>{(actor) => <Studies actor={actor} />}</Gated></Working>} />
         <Route path="/studio" element={<Working title={t.shell.newStudy}><Gated>{(actor) => <Studio actor={actor} />}</Gated></Working>} />
         <Route path="/studio/:runId" element={<Working title={t.shell.studies}><Gated>{(actor) => <Studio actor={actor} />}</Gated></Working>} />
+        <Route path="/studio/:runId/report" element={<Working title={t.report.title}><Gated>{(actor) => <Report actor={actor} />}</Gated></Working>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

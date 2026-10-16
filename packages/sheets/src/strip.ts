@@ -295,7 +295,9 @@ export function paperFurniture(input: StripInput): PaperItem[] {
     }
     const lines = wrap(entry.label, 2.2, width - 12);
     lines.forEach((line, i) => items.push(text('note', { x: left + 12, y: y + 3 + i * 3 }, line, 2.2)));
-    y += Math.max(5.4, lines.length * 3 + 2.4);
+    // 5.0 mm a row: the 4 mm swatch and a millimetre between. It was 5.4 until the
+    // car's turn needed a row of its own on a key that was already full.
+    y += Math.max(5, lines.length * 3 + 2);
   }
 
   // The scheme, under the key: how a bay number is arrived at, what is not

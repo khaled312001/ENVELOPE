@@ -88,10 +88,10 @@ describe('a parking level, read back', () => {
         expect(cars).toHaveLength(Number(level.parking!.bayCount.value));
         for (const car of cars) expect(car.layer).toBe(layerName(level.id, 'car'));
         // Counted as parsed entities on the bay layer, not as string occurrences:
-        // R12 repeats the layer on every VERTEX and SEQEND.
-        const bays = dxf.entities.filter(
-          (e) => e.type === 'POLYLINE' && (e.layer === layerName(level.id, 'bay') || e.layer === layerName(level.id, 'bay-accessible')),
-        );
+        // R12 repeats the layer on every VERTEX and SEQEND. Every layer a bay is drawn on —
+        // the access aisle beside an accessible bay holds no car and is not one of them.
+        const bayLayers = new Set(['bay', 'bay-accessible', 'bay-preferred'].map((r) => layerName(level.id, r as 'bay')));
+        const bays = dxf.entities.filter((e) => e.type === 'POLYLINE' && bayLayers.has(e.layer));
         expect(bays).toHaveLength(cars.length);
       }
     }

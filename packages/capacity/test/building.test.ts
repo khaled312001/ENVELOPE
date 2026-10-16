@@ -334,9 +334,11 @@ describe('the parking the sheets will draw', () => {
   it('draws the laid-out count on every parking level, and totals it once', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 2 }));
     const perLevel = out.levelPlan!.bayCount.value;
-    const atGrade = out.levelPlan!.grade!.bayCount.value;
+    // Less the bays the accessible bays take as their access aisles: grade is the level the street reaches.
+    const atGrade = out.levelPlan!.accessible!.bayCount.value;
+    expect(atGrade).toBe(out.levelPlan!.grade!.bayCount.value - out.levelPlan!.accessible!.lost);
     const parking = out.building.levels.filter((l) => l.parking);
-    // Grade first: it gives up what the drive and the plant stand on; the level above does not.
+    // Grade first: it gives up what the drive, the plant and the access aisles stand on; the level above does not.
     expect(parking.map((l) => l.id)).toEqual(['G', 'P1']);
     expect(parking.map((l) => l.parking!.bays.length)).toEqual([atGrade, perLevel]);
     expect(parking.map((l) => Number(l.parking!.bayCount.value))).toEqual([atGrade, perLevel]);

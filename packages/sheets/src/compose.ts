@@ -959,6 +959,24 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
   }
 
   /*
+    THE TURNS, as the client draws them: at every corner where a car turns from
+    one aisle into another, both edges of the lane it sweeps, dashed. Inked by
+    the radius's class — assumed from Table B.9 — and a turn that leaves the
+    aisles at that radius says so in words beside it, not only in a count.
+  */
+  if (parking.turning) {
+    const turnSource = sourceOf(parking.turning.fitting);
+    for (const turn of parking.turns ?? []) {
+      items.push(shape(Role.TURN, turn.inner, false, { source: turnSource }));
+      items.push(shape(Role.TURN, turn.outer, false, { source: turnSource }));
+      if (!turn.fits) {
+        const mid = turn.outer[Math.floor(turn.outer.length / 2)]!;
+        items.push(label(Role.TURN, mid, 'TURN LEAVES THE AISLE AT THIS RADIUS', 1.8, 0, 'middle', turnSource));
+      }
+    }
+  }
+
+  /*
     THE DRIVE FROM THE ENTRANCE, at grade only: the opening carried onto the plot
     to the aisle it lands on. Drawn as an aisle, because it is one — the bays it
     crosses were given up for it, and that count is on this sheet.
@@ -1004,16 +1022,61 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
   }
 
   // --- bays: outline, car, number -----------------------------------------------------------
+  /*
+    THE ACCESS AISLES, where the level holds the accessible bays: hatched, because
+    nobody parks there, and named in words along their length (C.6.4.2 f).
+  */
+  for (const aisle of parking.accessAisles ?? []) {
+    items.push(shape(Role.ACCESS_AISLE, aisle, true, { name: 'Access aisle beside an accessible bay, DBC C.6.4.2 f)' }));
+    const [p0, p1, p2] = aisle as readonly [ModelPoint, ModelPoint, ModelPoint];
+    const long = lengthOf(p1, p2) >= lengthOf(p0, p1);
+    const centre = midpointOf(p0, p2);
+    items.push(label(Role.ACCESS_AISLE, centre, 'ACCESS AISLE', 1.2, long ? angleOf(p1, p2) : angleOf(p0, p1)));
+  }
+
+  // --- bays: outline, car, number -----------------------------------------------------------
   for (const { bay, at: c, rotationDeg: axis, tail } of placeCars(parking)) {
+    const role = bay.accessible ? Role.BAY_ACCESSIBLE : bay.use === 'PREFERRED' ? Role.BAY_PREFERRED : Role.BAY;
     items.push(
-      shape(bay.accessible ? Role.BAY_ACCESSIBLE : Role.BAY, bay.outline, true, {
+      shape(role, bay.outline, true, {
         source: parking.baysSource,
         bay: bay.number,
-        name: `Bay ${bay.number}${bay.accessible ? ', accessible' : ''}`,
+        name:
+          `Bay ${bay.number}` +
+          (bay.accessible ? (bay.use === 'VAN' ? ', accessible, van' : ', accessible') : '') +
+          (bay.use === 'PREFERRED' ? ', preferred: hybrid, electric, carpool' : ''),
       }),
     );
     items.push({ kind: 'symbol', role: Role.CAR, symbol: SymbolName.CAR, at: c, rotationDeg: axis, scale: 1, bay: bay.number });
     items.push(label(Role.BAY_NUMBER, tail, String(bay.number), 1.6, axis + 90));
+    // In words as well as in ink (1.4.1): the van bay and the preferred bays say what they are.
+    const tag = bay.accessible ? (bay.use === 'VAN' ? 'VAN' : null) : bay.use === 'PREFERRED' ? 'PREF' : null;
+    if (tag) items.push(label(role, midpointOf(c, tail), tag, 1.2, axis + 90));
+  }
+
+  /*
+    THE DEAD ENDS, B.7.2.3.3 ¶8: a "should", so it is said at the closed end in
+    words and changes no count. Only where the stretch serves more than the eight
+    the clause advises; a shorter one is what the clause allows.
+  */
+  for (const end of parking.deadEnds ?? []) {
+    if (end.bays <= 8) continue;
+    // Down the aisle from its closed end, a metre in: across the end it ran over whatever stands beyond.
+    const run = lengthOf(end.at, end.along) || 1;
+    const dir = { x: (end.along.x - end.at.x) / run, y: (end.along.y - end.at.y) / run };
+    const angle = angleOf(end.at, end.along);
+    const upright = Math.cos((angle * Math.PI) / 180) >= 0;
+    items.push(
+      label(
+        Role.DEAD_END,
+        // Off the centre line, where the aisle's own label and arrow run.
+        offsetPoint(offsetPoint(end.at, dir, 1000), { x: -dir.y, y: dir.x }, 1800),
+        `DEAD END - ${end.bays} BAYS, 8 ADVISED`,
+        1.4,
+        upright ? angle : angle + 180,
+        upright ? 'start' : 'end',
+      ),
+    );
   }
 
   /*
@@ -1058,8 +1121,23 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
   const legend: LegendEntry[] = [
     { role: Role.SLAB, provenanceClass: level.outlineSource.provenanceClass, label: 'Slab edge' },
     { role: Role.BAY, label: 'Parking bay, Table B.11' },
-    ...(parking.bays.some((b) => b.accessible) ? [{ role: Role.BAY_ACCESSIBLE, label: 'Accessible bay' }] : []),
+    ...(parking.bays.some((b) => b.accessible)
+      ? [{ role: Role.BAY_ACCESSIBLE, label: 'Accessible bay, C.6.4; aisle hatched' }]
+      : []),
+    ...(parking.bays.some((b) => b.use === 'PREFERRED')
+      ? [{ role: Role.BAY_PREFERRED, label: 'Preferred bay (PREF), B.7.2.6.2' }]
+      : []),
     { role: Role.AISLE, label: 'Drive aisle' },
+    ...(parking.turning && (parking.turns ?? []).length > 0
+      ? [
+          {
+            role: Role.TURN,
+            provenanceClass: parking.turning.fitting.provenanceClass,
+            // One line: the key on a parking sheet is full, and the strip refuses rather than overprints.
+            label: `Car turn, R ${parking.turning.innerRadiusM.value} m assumed`,
+          },
+        ]
+      : []),
     ...(parking.rampStrip
       ? [
           {
@@ -1156,7 +1234,9 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       number,
       scale: s,
       meta,
-      facts,
+      // Not the level's own row: the title under the key names it, and the strip
+      // needed the room for the accessible and preferred bays' rows of the key.
+      facts: facts.filter((f) => f.label !== 'Level'),
       legend,
       legendNotes: [BAY_NUMBERING, NO_GRID, CAD_LAYERS],
       north: true,

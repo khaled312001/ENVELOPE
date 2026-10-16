@@ -59,7 +59,9 @@ import {
   subtractSpans,
 } from '@envelope/geometry';
 
+import type { AccessiblePlan } from './accessible.js';
 import { CORE_NOT_MODELLED, type CoreResult } from './core.js';
+import { deadEnds } from './dead-ends.js';
 import type { CoreLayout } from './core-layout.js';
 import { layoutGroundProgram } from './ground-program.js';
 import { CROSS_AISLE_ROW } from './layout.js';
@@ -287,9 +289,26 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   const climbs: 'UP' | 'DOWN' | null =
     parkingBelow > 0 && parkingInPodium <= 1 ? 'DOWN' : parkingBelow === 0 && parkingInPodium > 1 ? 'UP' : null;
   const parkingContent: ModelLevel['parking'] = levelPlan ? parkingOf(levelPlan, climbs) : null;
+  /*
+    The accessible bays stand on the level the street reaches, which the pipeline
+    chose with the same question asked here. Two answers would be a supply counted
+    on one level and drawn on another, so a disagreement is a defect, not a case.
+  */
+  const accessible = levelPlan?.accessible;
+  if (accessible && accessible.onGrade !== parkingInPodium >= 1) {
+    throw new Error(
+      `the accessible bays were placed ${accessible.onGrade ? 'at grade' : 'below grade'} and the model ` +
+        `puts ${parkingInPodium} parking level(s) in the podium`,
+    );
+  }
   // The level at grade, when it parks: its own content, the drive and the plant on it.
   const gradeContent: ModelLevel['parking'] =
-    levelPlan?.grade && parkingInPodium >= 1 ? parkingOf(levelPlan, climbs, levelPlan.grade) : parkingContent;
+    levelPlan && parkingInPodium >= 1 && (levelPlan.grade || accessible)
+      ? parkingOf(levelPlan, climbs, levelPlan.grade, accessible)
+      : parkingContent;
+  // The first basement, where the ground floor does not park: the accessible bays are there.
+  const firstBelowContent: ModelLevel['parking'] =
+    levelPlan && accessible && !accessible.onGrade ? parkingOf(levelPlan, climbs, undefined, accessible) : parkingContent;
   if (parkingCount > 0 && !levelPlan) {
     notModelled.push(
       `Parking bays. The level could not be laid out: ${input.levelPlanRefusal ?? 'no reason was recorded'}`,
@@ -317,7 +336,7 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       outline: envelope.podiumRing.map(pt),
       outlineSource: podiumSource,
       placed: true,
-      parking: parkingContent,
+      parking: k === 1 ? firstBelowContent : parkingContent,
     });
   }
 
@@ -459,20 +478,28 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
 
   // --- what is drawn, counted once -------------------------------------------------
   const perLevel = levelPlan?.bayCount;
-  const atGrade = gradeContent !== parkingContent ? levelPlan?.grade?.bayCount : undefined;
+  // The one level that differs from the shared layout: grade, or the first basement.
+  const atGrade =
+    gradeContent !== parkingContent
+      ? (accessible?.bayCount ?? levelPlan?.grade?.bayCount)
+      : firstBelowContent !== parkingContent
+        ? accessible?.bayCount
+        : undefined;
+  const entryWords = firstBelowContent !== parkingContent ? 'on the first basement' : 'at grade';
   const drawnBays = perLevel
     ? atGrade
       ? tracer.computed('building.drawn_bays', atGrade.value + perLevel.value * (parkingCount - 1), {
           formula:
-            `${atGrade.value} bays at grade + ${perLevel.value} bays laid out per level × ` +
+            `${atGrade.value} bays ${entryWords} + ${perLevel.value} bays laid out per level × ` +
             `${parkingCount - 1} other parking level(s)`,
           uses: { atGrade, perLevel, levels: input.parkingLevels },
           unit: 'bays',
           detail: {
             note:
-              'Every bay the sheets, the massing and the DXF draw. The levels other than ' +
-              'grade share one layout; the one at grade gives up the bays under the drive ' +
-              'from the entrance and under the substation on the road.',
+              'Every bay the sheets, the massing and the DXF draw. The other parking levels ' +
+              'share one layout; the level the street reaches gives up the bays under the drive ' +
+              'from the entrance and under the substation on the road where it is the ground ' +
+              'floor, and the bays its accessible bays take as their access aisles.',
           },
         })
       : tracer.computed('building.drawn_bays', perLevel.value * parkingCount, {
@@ -830,12 +857,14 @@ function parkingOf(
   plan: LevelPlan,
   climbs: 'UP' | 'DOWN' | null,
   grade?: GradePlan,
+  accessible?: AccessiblePlan,
 ): NonNullable<ModelLevel['parking']> {
   const byScan = (a: WorldRect, b: WorldRect): number =>
     a.yM.comparedTo(b.yM) || a.xM.comparedTo(b.xM);
-  // At grade the level is the shared layout less what the drive and the plant stand on.
-  const rects = grade?.rects ?? plan.rects;
-  const count = grade?.bayCount ?? plan.bayCount;
+  // At grade the level is the shared layout less what the drive and the plant stand on;
+  // on the level the street reaches, less the access aisles too.
+  const rects = accessible?.rects ?? grade?.rects ?? plan.rects;
+  const count = accessible?.bayCount ?? grade?.bayCount ?? plan.bayCount;
 
   const bays: ModelBay[] = rects
     .filter((r) => r.kind === 'BAY' || r.kind === 'ACCESSIBLE_BAY')
@@ -845,7 +874,12 @@ function parkingOf(
       number: i + 1,
       outline: r.world.map(pt),
       accessible: r.kind === 'ACCESSIBLE_BAY',
+      ...(r.use ? { use: r.use } : {}),
     }));
+  const accessAisles = rects.filter((r) => r.kind === 'ACCESS_AISLE').map((r) => r.world.map(pt));
+  const ends = accessible
+    ? deadEnds(rects, new Decimal(plan.layout.standard.drivewayWidthM), plan.layout.standard.angle === 'PARALLEL')
+    : plan.deadEnds;
 
   const standard = plan.layout.standard;
   const twoWay = standard.driveway === 'TWO_WAY';
@@ -881,6 +915,15 @@ function parkingOf(
     ...(grade && grade.drives.length > 0
       ? { drives: grade.drives.map((d) => ({ outline: d.world.map(pt), label: d.label })) }
       : {}),
+    ...(accessAisles.length > 0 ? { accessAisles } : {}),
+    deadEnds: ends.map((d) => ({ at: pt(d.at), along: pt(d.along), bays: d.bays })),
+    turns: plan.turning.turns.map((t) => ({ inner: t.inner.map(pt), outer: t.outer.map(pt), fits: t.fits })),
+    turning: {
+      innerRadiusM: toWire(plan.turning.innerRadiusM),
+      laneM: toWire(plan.turning.laneM),
+      fitting: toWire(plan.turning.fitting),
+      total: plan.turning.total,
+    },
     reserved: plan.reservedZone
       ? (() => {
           /*

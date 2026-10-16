@@ -83,6 +83,12 @@ export interface ParkingInput {
      * Counted once, in place of one of the levels at `baysPerLevel`.
      */
     readonly groundBays?: Traced<number>;
+    /**
+     * Which level `groundBays` is, in words: the ground floor, or the first
+     * basement where the ground floor does not park and the accessible bays stand
+     * on the first level below it. The ground floor when absent.
+     */
+    readonly firstLevel?: string;
   };
 }
 
@@ -350,7 +356,7 @@ export function solveParking(input: ParkingInput): ParkingResult {
     ? ground
       ? tracer.computed('parking.levels_required', levelsRequiredValue, {
           formula:
-            `the ground floor's ${ground.value} bays, then ceil(${Math.max(0, totalBaysValue - ground.value)} ` +
+            `${measured.firstLevel ?? 'the ground floor'}'s ${ground.value} bays, then ceil(${Math.max(0, totalBaysValue - ground.value)} ` +
             `bays still required ÷ ${measured.baysPerLevel.value} bays per level): ${levelsRequiredValue} level(s)`,
           uses: { required: totalBays, perLevel: measured.baysPerLevel, ground },
           unit: 'levels',
@@ -390,7 +396,7 @@ export function solveParking(input: ParkingInput): ParkingResult {
   const providedBays = laid
     ? tracer.computed('parking.provided_bays', suppliedBays.toNumber(), {
         formula: groundLaid
-          ? `${groundLaid.value} bays on the ground floor + ${laid.baysPerLevel.value} bays laid out per ` +
+          ? `${groundLaid.value} bays on ${laid.firstLevel ?? 'the ground floor'} + ${laid.baysPerLevel.value} bays laid out per ` +
             `level × ${input.levelsAvailable - 1} other parking level(s)`
           : `${laid.baysPerLevel.value} bays laid out per level × ${input.levelsAvailable} parking level(s)`,
         uses: { perLevel: laid.baysPerLevel, levels: levelsAvailable, ...(groundLaid ? { ground: groundLaid } : {}) },
@@ -400,7 +406,8 @@ export function solveParking(input: ParkingInput): ParkingResult {
             'Counted on the drawn level, not divided out of an area: every bay is placed ' +
             'to Table B.11 and reachable from the way in. The same layout on every ' +
             'parking level, less what the drive from the entrance and the substation take ' +
-            'on the ground floor. When this is below the required count the scheme does not ' +
+            'on the ground floor and what the access aisles of the accessible bays take on ' +
+            'the level the street reaches. When this is below the required count the scheme does not ' +
             'park itself, and Band C is what that costs.',
         },
       })

@@ -34,8 +34,14 @@ import type { WorldRect } from './level-plan.js';
 const TOUCH_MM2 = 10_000;
 /** How far into an aisle a drive runs before it is on it: half a metre. */
 const INTO_AISLE_MM = 500;
-/** Share of a drive's width an aisle must take for the drive to land on it. */
-const LANDS_ON = 0.9;
+/**
+ * Share of a drive's width that must run straight into an aisle for the drive to
+ * land on it. Half, not nearly all: an entrance on a diagonal frontage meets the
+ * end of an aisle with part of its width, and a car turns onto it from there. The
+ * drive still runs at its full width to the deepest of those lanes, so every bay
+ * in front of any part of the opening is given up.
+ */
+const LANDS_ON = 0.5;
 
 export interface GradeDrive {
   readonly opening: AccessOpening;
@@ -88,10 +94,24 @@ function sweep(a: Pt, b: Pt, n: { x: number; y: number }, depthMm: number): read
   return [a, b, pt(b.x + n.x * depthMm, b.y + n.y * depthMm), pt(a.x + n.x * depthMm, a.y + n.y * depthMm)];
 }
 
+/** Lanes across a drive's width, each followed straight in to where it first meets an aisle. */
+const LANES = 9;
+/** Each lane's width: wide enough for the clipper to find, narrow enough to be a line. */
+const LANE_MM = 20;
+
 /**
  * Carry one opening onto the plot until it lands on a drive aisle: the nearest
- * aisle that takes nearly all of the drive's width, half a metre in. Read off
- * the aisles' own corners, projected on the drive's two axes, so no stepping.
+ * aisle that at least half the drive's width runs straight into, half a metre
+ * past the point where the LAST of those lanes reaches it.
+ *
+ * Measured lane by lane, in front of the opening, never off the aisle's corners.
+ * It was the corners once, and on Al Mamzar's diagonal frontage that failed
+ * silently: a long aisle projected onto a slanted boundary "covered" the whole
+ * opening and had a corner level with the boundary, so the drive landed half a
+ * metre in, crossed nothing, and the four bays it really runs through were
+ * drawn, counted and parked across the entrance. A drive that meets an aisle at
+ * an angle has to run until its far edge is on it, so the depth is the deepest
+ * lane's, not the shallowest.
  */
 function driveFrom(
   o: AccessOpening,
@@ -105,15 +125,24 @@ function driveFrom(
   if (w === 0) return null;
   const u = { x: t.x / w, y: t.y / w };
   const n = inward(ring, a, b);
+  // Far enough to cross the whole plot from any boundary.
+  const xs = ring.map((p) => p.x);
+  const ys = ring.map((p) => p.y);
+  const reachMm = Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) + 1000;
+  const at = (s: number): Pt => pt(a.x + u.x * s, a.y + u.y * s);
+
   let best: number | undefined;
   for (const aisle of aisles) {
-    const along = aisle.map((p) => (p.x - a.x) * u.x + (p.y - a.y) * u.y);
-    const into = aisle.map((p) => (p.x - a.x) * n.x + (p.y - a.y) * n.y);
-    const covered = Math.min(Math.max(...along), w) - Math.max(Math.min(...along), 0);
-    if (covered < LANDS_ON * w) continue;
-    const near = Math.min(...into);
-    if (Math.max(...into) <= 0) continue;
-    const reach = Math.max(near, 0) + INTO_AISLE_MM;
+    const hits: number[] = [];
+    for (let k = 0; k < LANES; k += 1) {
+      const s = (w * (k + 0.5)) / LANES;
+      const lane = sweep(at(s - LANE_MM / 2), at(s + LANE_MM / 2), n, reachMm);
+      const met = intersect(lane as Ring, aisle as Ring).flat();
+      if (met.length === 0) continue;
+      hits.push(Math.min(...met.map((p) => (p.x - a.x) * n.x + (p.y - a.y) * n.y)));
+    }
+    if (hits.length < LANDS_ON * LANES) continue;
+    const reach = Math.max(Math.max(...hits), 0) + INTO_AISLE_MM;
     if (best === undefined || reach < best) best = reach;
   }
   return best === undefined ? null : { world: sweep(a, b, n, best), depthMm: best };

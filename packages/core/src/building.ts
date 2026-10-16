@@ -71,6 +71,13 @@ export interface ModelBay {
   readonly number: number;
   readonly outline: ModelRing;
   readonly accessible: boolean;
+  /**
+   * What else the bay is set aside for: the accessible van bay of DBC C.6.4.1 ¶4
+   * (3.35 m wide, Table C.18), or a preferred bay for hybrid, electric and carpool
+   * vehicles under B.7.2.6.2. Absent on every other bay and on runs stored before
+   * 16 Oct 2026.
+   */
+  readonly use?: 'VAN' | 'PREFERRED';
 }
 
 export interface ModelAisle {
@@ -231,7 +238,8 @@ export interface ModelLevel {
   /**
    * Present on parking levels only. Identical on every one (see `parking.ts`)
    * except the one at grade, which also carries the drive from the entrance and
-   * gives up the bays that drive, and the substation on the road, stand on.
+   * gives up the bays that drive, and the substation on the road, stand on — and
+   * the level the street reaches, which holds the accessible bays and their aisles.
    */
   readonly parking: {
     readonly bays: readonly ModelBay[];
@@ -242,6 +250,35 @@ export interface ModelLevel {
      * 16 Oct 2026.
      */
     readonly drives?: readonly { readonly outline: ModelRing; readonly label: string }[];
+    /**
+     * Beside each accessible bay, the aisle DBC C.6.4.2 f) asks for, at least
+     * 1.2 m wide, shared by two bays where it is central to both (g). On the level
+     * the street reaches only, and absent on runs stored before 16 Oct 2026.
+     */
+    readonly accessAisles?: readonly ModelRing[];
+    /**
+     * Each dead-end stretch of driveway (B.7.2.3.3 ¶8: avoided where possible,
+     * eight spaces at most), with the bays it serves and its closed end, where
+     * the drawing says so. Absent on runs stored before 16 Oct 2026.
+     */
+    readonly deadEnds?: readonly { readonly at: ModelPoint; readonly along: ModelPoint; readonly bays: number }[];
+    /**
+     * Every turn from one aisle into a perpendicular one: the swept lane's inner
+     * and outer edge, and whether it stays on the aisles at the radius and lane in
+     * `turning`. Absent on runs stored before 16 Oct 2026.
+     */
+    readonly turns?: readonly {
+      readonly inner: readonly ModelPoint[];
+      readonly outer: readonly ModelPoint[];
+      readonly fits: boolean;
+    }[];
+    /** The radius and lane the turns were checked at — both assumed — and how many fit. */
+    readonly turning?: {
+      readonly innerRadiusM: TracedWire;
+      readonly laneM: TracedWire;
+      readonly fitting: TracedWire;
+      readonly total: number;
+    };
     readonly reserved: ModelReservedZone | null;
     /** The ramp strip reserved on this level, whether or not a ramp uses it. */
     readonly rampStrip: ModelRing | null;

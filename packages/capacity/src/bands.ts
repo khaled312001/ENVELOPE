@@ -77,7 +77,10 @@ export interface BandsInput {
   /** Tower plate × achievable levels — what the envelope physically holds. */
   readonly towerPlateM2: Decimal;
   readonly maxLevels: number;
+  /** The rule that bound the levels: the height rule, or the plan's stated level count where that governs. */
   readonly heightRule: BandSource;
+  /** Band B's name when the plan's level count, not a height, bound it. */
+  readonly geometricLabel?: string;
   /**
    * The podium footprint and floor-to-floor, carried so this module can state
    * what the answer *achieves* on coverage and height rather than only what the
@@ -172,7 +175,7 @@ export function computeBands(input: BandsInput): CapacityResult {
   // --- Governing = min(A, B, C) -------------------------------------------
   const entries = [
     { band: CapacityBand.REGULATORY, value: input.permittedGfaM2, traced: bandA, ruleId: input.farRule.ruleId, label: 'FAR ceiling' },
-    { band: CapacityBand.GEOMETRIC, value: bandBValue, traced: bandB, ruleId: input.heightRule.ruleId, label: 'height ceiling and tower plate' },
+    { band: CapacityBand.GEOMETRIC, value: bandBValue, traced: bandB, ruleId: input.heightRule.ruleId, label: input.geometricLabel ?? 'height ceiling and tower plate' },
     { band: CapacityBand.PARKING, value: bandCValue, traced: bandC, ruleId: input.parkingRule.ruleId, label: 'parking supply' },
   ].sort((a, b) => a.value.comparedTo(b.value));
 

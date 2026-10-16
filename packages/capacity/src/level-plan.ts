@@ -44,17 +44,21 @@ import {
 } from '@envelope/geometry';
 
 import { placeVehicleAccess, type AccessChoice, type AccessResult } from './access.js';
+import type { AccessiblePlan } from './accessible.js';
+import { deadEnds, type DeadEnd } from './dead-ends.js';
 import type { GradePlan } from './grade.js';
 import type { RampHeadroom } from './ramp-rules.js';
+import { findTurns, type Pt2 } from './turning.js';
 import {
   layoutParkingLevel,
   RING_AISLE_ROW,
   type ParkingAngle,
+  type ParkingArrangement,
   type ParkingLayoutInput,
   type ParkingLayoutResult,
   type PlacedRect,
   type RampType,
-  type RectKind,
+  RectKind,
 } from './layout.js';
 
 /** A rectangle from the packer, carried with the world polygon that draws it. */
@@ -74,12 +78,20 @@ export interface WorldRect {
    * rotation is three chances for the drawing to disagree with the count.
    */
   readonly world: readonly Pt[];
+  /**
+   * What a bay is set aside for, on the level `accessible.ts` designates: the
+   * van bay among the accessible ones (C.6.4.1 ¶4), or a preferred bay for
+   * hybrid, electric and carpool vehicles (B.7.2.6.2). Absent on every other bay.
+   */
+  readonly use?: 'VAN' | 'PREFERRED';
 }
 
 export interface LevelPlan {
   readonly layout: ParkingLayoutResult;
   readonly access: AccessResult;
   readonly rects: readonly WorldRect[];
+  /** Every turn between perpendicular aisles, checked against an assumed radius and lane. */
+  readonly turning: LevelTurning;
   /** The packing rectangle, in plot coordinates. */
   readonly packingRect: {
     readonly widthM: Decimal;
@@ -194,6 +206,77 @@ export interface LevelPlan {
    * Set by the pipeline, which knows whether the ground floor parks; see `grade.ts`.
    */
   readonly grade?: GradePlan;
+  /**
+   * The accessible and preferred bays, on the level the street reaches: the
+   * ground floor where it parks, else the first basement. Set by the pipeline,
+   * which knows the building's total; see `accessible.ts`.
+   */
+  readonly accessible?: AccessiblePlan;
+  /** The shared layout's dead-end driveways, B.7.2.3.3 ¶8; see `dead-ends.ts`. */
+  readonly deadEnds: readonly DeadEnd[];
+}
+
+/** The turns of one level's aisle network, checked; see `turning.ts`. */
+export interface LevelTurning {
+  /** Table B.9's curved-ramp minimum inner radius, taken for every aisle turn. ASSUMED. */
+  readonly innerRadiusM: TracedDecimal;
+  /** Table B.9's curved-ramp minimum lane, likewise. ASSUMED. */
+  readonly laneM: TracedDecimal;
+  /** How many of the turns fit on the aisles, of `total`. Carries the assumption's class. */
+  readonly fitting: Traced<number>;
+  readonly total: number;
+  /** Each turn's swept lane in plot millimetres: its inner and outer edge. */
+  readonly turns: readonly { readonly inner: readonly Pt[]; readonly outer: readonly Pt[]; readonly fits: boolean }[];
+}
+
+const TURN_BASIS =
+  'DBC Part B states no turning radius for a car on a parking aisle. Table B.9 gives, ' +
+  'for a curved ramp, a minimum inner circle radius of 4 m and a minimum lane of 3.5 m, ' +
+  'the nearest figures the code gives for a car turning, so they are taken for every ' +
+  'aisle turn: one car at a time, held against the two outer walls.';
+
+function turningOn(tracer: Tracer, layout: ParkingLayoutResult, toWorld: (p: Pt2) => Pt): LevelTurning {
+  const innerRadiusM = tracer.assumed('parking.turning_inner_radius_m', new Decimal(4), {
+    basis: TURN_BASIS,
+    label: 'inner turning radius on an aisle',
+    unit: 'm',
+  });
+  const laneM = tracer.assumed('parking.turning_lane_m', new Decimal('3.5'), {
+    basis: TURN_BASIS,
+    label: 'lane a car turns in',
+    unit: 'm',
+  });
+  const aisles = layout.rects.filter((r) => r.kind === RectKind.AISLE);
+  const turns = findTurns({
+    aisles,
+    innerRadiusM: innerRadiusM.value,
+    laneM: laneM.value,
+    minOpeningM: new Decimal(layout.standard.drivewayWidthM),
+  });
+  const fit = turns.filter((t) => t.fits).length;
+  const fitting = tracer.computed('parking.turns_fitting', fit, {
+    formula:
+      `${fit} of ${turns.length} turns between perpendicular aisles keep a lane of ` +
+      `${laneM.value.toString()} m at an inner radius of ${innerRadiusM.value.toString()} m on the aisles`,
+    uses: { innerRadius: innerRadiusM, lane: laneM },
+    unit: 'turns',
+  });
+  // Measured rather than left unsaid: the turns are checked and drawn, and enter no bay count.
+  for (const a of [innerRadiusM, laneM]) {
+    tracer.sensitiveTo(layout.bayCount, a, {
+      relativeEffect: '0',
+      perturbation:
+        'the turning radius or lane changed by 10% — the turns are checked and drawn and ' +
+        'enter no bay count, so the measured effect on the count is exactly zero',
+    });
+  }
+  return {
+    innerRadiusM,
+    laneM,
+    fitting,
+    total: turns.length,
+    turns: turns.map((t) => ({ inner: t.inner.map(toWorld), outer: t.outer.map(toWorld), fits: t.fits })),
+  };
 }
 
 export interface LevelPlanInput {
@@ -243,6 +326,8 @@ export interface LevelPlanInput {
   readonly rampPlan?: { readonly schedule: LevelSchedule; readonly actor?: Actor };
   /** A ramp arrangement somebody stated; see `ParkingLayoutInput.rampType`. */
   readonly rampType?: { readonly type: RampType; readonly actor?: Actor };
+  /** The arrangement a reader picked; see `ParkingLayoutInput.arrangement`. */
+  readonly arrangement?: { readonly id: ParkingArrangement; readonly actor?: Actor };
   /** See `ParkingLayoutInput.slopedRing`. */
   readonly slopedRing?: boolean;
 }
@@ -372,6 +457,7 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
           ...(input.rampType.actor ? { rampTypeActor: input.rampType.actor } : {}),
         }
       : {}),
+    ...(input.arrangement ? { arrangement: input.arrangement } : {}),
     ...(input.core && coreRect ? { core: { rect: coreRect, areaM2: input.core.areaM2 } } : {}),
     ...(input.angle === undefined ? {} : { angle: input.angle }),
     ...(input.structuralGridM === undefined ? {} : { structuralGridM: input.structuralGridM }),
@@ -570,10 +656,13 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     );
   }
 
+  const turning = turningOn(input.tracer, layout, (p) => fromLocal(rect, p.x * 1000, p.y * 1000));
+
   return {
     layout,
     access,
     rects,
+    turning,
     packingRect: {
       widthM,
       depthM,
@@ -606,5 +695,6 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     nonParkingFloorAreaM2,
     reservedAreaM2: layout.reservedAreaM2,
     notAssessed,
+    deadEnds: deadEnds(rects, new Decimal(layout.standard.drivewayWidthM), layout.standard.angle === 'PARALLEL'),
   };
 }

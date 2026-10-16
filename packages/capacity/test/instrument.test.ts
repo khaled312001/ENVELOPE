@@ -266,6 +266,37 @@ describe('the plan’s stated level count', () => {
     expect(levels?.runnerUp?.label).toMatch(/superseded/);
   });
 
+  /*
+    And the checks downstream are held to the same ceiling. Mamzar was built at
+    eighteen levels and then refused by INV-14 and the hard-constraint check,
+    both still reading the 45 m the plan had superseded.
+  */
+  it('makes the plan’s level count the ceiling, and sets the generic rule aside in words', () => {
+    const out = runPipeline(withHeight('G+2P+20', 23, 2));
+    const f2f = out.envelope.floorToFloorM.value;
+    expect(out.envelope.heightCeilingM.value.toString()).toBe(f2f.times(23).toString());
+    expect(out.envelope.heightCeilingM.provenanceClass).toBe('DERIVED');
+    const aside = out.envelope.setAside.find((s) => s.parameterId === 'height.max');
+    expect(aside?.rule.ruleId).toBe('R-HEIGHT-MAX-RES');
+    expect(aside?.reason).toMatch(/23 level\(s\).*§11\.5 step 1/);
+  });
+
+  it('sets nothing aside where the generic height still governs', () => {
+    const lifeSafe = seedRules().map((r) =>
+      r.parameterId === 'height.max' ? { ...r, isLifeSafety: true } : r,
+    );
+    const limits: StatedLimits = {
+      ...sheet('5.0'),
+      height: {
+        value: { typicalFloors: 20, podiumLevels: 2, totalLevels: 23, raw: 'G+2P+20' },
+        citation: citation('height', 'G+2P+20'),
+      },
+    };
+    const out = runPipeline(input([...lifeSafe, ...rulesFromInstrument(limits, BINDING).rules]));
+    expect(out.envelope.setAside.some((s) => s.parameterId === 'height.max')).toBe(false);
+    expect(out.envelope.heightCeilingM.value.toNumber()).toBe(45);
+  });
+
   it('still yields to a height rule that carries life safety', () => {
     const lifeSafe = seedRules().map((r) =>
       r.parameterId === 'height.max' ? { ...r, isLifeSafety: true } : r,

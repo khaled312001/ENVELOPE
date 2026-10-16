@@ -894,14 +894,6 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
 
   // --- Height ---
   const heightRes = resolutions.get('height.max')!;
-  const heightCeilingT = tracer.derived('envelope.height_ceiling_m', heightCeiling, {
-    rule: {
-      ruleId: heightRes.governing!.rule.ruleId,
-      citation: heightRes.governing!.rule.citation,
-    },
-    formula: 'height ceiling from the governing rule',
-    unit: 'm',
-  });
   const f2fRes = resolutions.get('floor_to_floor')!;
   const floorToFloorT = tracer.derived('envelope.floor_to_floor_m', floorToFloor, {
     rule: { ruleId: f2fRes.governing!.rule.ruleId, citation: f2fRes.governing!.rule.citation },
@@ -925,6 +917,45 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
           unit: 'levels',
         })
       : undefined;
+  /*
+    WHEN THE PLAN GOVERNS HOW TALL, THE CEILING IS THE PLAN'S. Mamzar 1341556
+    states 18 levels and the generic placeholder says 45 m; the engine built the
+    18 under §11.5 step 1 and then INV-14, INV-11 and the hard-constraint check
+    all held the run to the 45 m it had just superseded, and refused it. The
+    ceiling every check and every drawing reads is therefore the plan's count at
+    the governing floor-to-floor, and the generic rule is set aside — declared
+    as not checked, with the reason, never quietly dropped.
+  */
+  const heightCeilingT: Traced<Decimal> =
+    planSupersedesMetres && statedLevelsT
+      ? tracer.computed('envelope.height_ceiling_m', floorToFloor.times(statedLevelsT.value), {
+          formula:
+            `stated level count ${statedLevelsT.value} × floor-to-floor ${floorToFloor.toString()} m — ` +
+            `the plot's own plan, which governs under §11.5 step 1 over the generic ` +
+            `${heightCeiling.toString()} m`,
+          uses: { stated: statedLevelsT, f2f: floorToFloorT },
+          unit: 'm',
+        })
+      : tracer.derived('envelope.height_ceiling_m', heightCeiling, {
+          rule: {
+            ruleId: heightRes.governing!.rule.ruleId,
+            citation: heightRes.governing!.rule.citation,
+          },
+          formula: 'height ceiling from the governing rule',
+          unit: 'm',
+        });
+  if (planSupersedesMetres && statedLevelsT) {
+    const generic = heightRes.governing!.rule;
+    tracer.supersededBy({ ruleId: generic.ruleId, citation: generic.citation }, heightCeilingT);
+    setAside.push({
+      parameterId: 'height.max',
+      rule: generic,
+      reason:
+        `the plot's own affection plan states ${statedLevelsT.value} level(s) above ground, ` +
+        `which governs how tall under §11.5 step 1; the generic ${heightCeiling.toString()} m ` +
+        'is not applied to this plot.',
+    });
+  }
   const byMetres = `floor(height ceiling ${heightCeiling.toString()} m ÷ floor-to-floor ${floorToFloor.toString()} m) = ${levelsByMetres}`;
   const maxLevels: Traced<number> = tracer.computed(
     'envelope.max_levels_by_height',

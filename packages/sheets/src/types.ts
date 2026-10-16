@@ -55,10 +55,22 @@ export const Role = {
   CONTEXT: 'context',
   BAY: 'bay',
   BAY_ACCESSIBLE: 'bay-accessible',
+  /** The aisle beside an accessible bay, DBC C.6.4.2 f): hatched, because nobody parks in it. */
+  ACCESS_AISLE: 'access-aisle',
+  /** A bay set aside for hybrid, electric and carpool vehicles, DBC B.7.2.6.2. */
+  BAY_PREFERRED: 'bay-preferred',
+  /** The closed end of a driveway serving more bays than B.7.2.3.3 ¶8 advises. Words only. */
+  DEAD_END: 'dead-end',
   BAY_NUMBER: 'bay-number',
   CAR: 'car',
   AISLE: 'aisle',
   AISLE_ARROW: 'aisle-arrow',
+  /**
+   * A car's turn from one aisle into another: the swept lane's two edges, at the
+   * radius and lane `turning.ts` assumed from Table B.9. Inked by that assumption's
+   * class, so the path a reader sees curve is amber, as the number behind it is.
+   */
+  TURN: 'turn',
   RAMP: 'ramp',
   RAMP_ARROW: 'ramp-arrow',
   RESERVED: 'reserved',

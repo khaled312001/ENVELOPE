@@ -22,7 +22,7 @@ import {
   type Plot,
   type UnitTypeMix,
 } from '@envelope/core';
-import { analysePlot, area, initGeometry, intersect, type Ring } from '@envelope/geometry';
+import { analysePlot, area, containsPoint, initGeometry, intersect, type Ring } from '@envelope/geometry';
 import { asOfNow, loadSeedRulesForDevelopment, RuleStore } from '@envelope/rules';
 import { beforeAll, describe, expect, it } from 'vitest';
 
@@ -154,6 +154,53 @@ describe('the drive from the entrance', () => {
   });
 });
 
+/*
+  AL MAMZAR'S SHAPE: a long neighbour on one side and the road on the diagonal.
+  The aisles run square to the neighbour, so they meet the entrance at an angle.
+  The drive was measured off the aisles' corners and landed half a metre in,
+  crossed nothing, and left four bays parked across the entrance — while the
+  test above, on a rectangle, went on passing.
+*/
+const DIAGONAL: Ring = [pt(0, 0), pt(0, 140), pt(75, 62), pt(75, 52)];
+const DIAGONAL_CLASSES = [ADJACENT_PLOT, ROAD, ROAD, ROAD] as const;
+
+describe('the drive from an entrance on a diagonal frontage', () => {
+  const run = (): RunOutput => runPipeline({ ...input(DIAGONAL_CLASSES), plot: plotOf(DIAGONAL, DIAGONAL_CLASSES) });
+
+  it('runs until at least half its far edge is on a drive aisle, not just its nearest corner', () => {
+    const out = run();
+    expect(out.levelPlanRefusal).toBeUndefined();
+    const grade = out.levelPlan!.grade!;
+    const aisles = out.levelPlan!.rects.filter((r) => r.kind === 'AISLE').map((r) => r.world as Ring);
+    expect(grade.notes).toEqual([]);
+    expect(grade.drives.length).toBeGreaterThan(0);
+    for (const d of grade.drives) {
+      const [a, b, c, e] = d.world as readonly ModelPoint[];
+      // Nine points across the far edge, each stepped 10 mm back toward the opening.
+      const len = Math.hypot(e!.x - a!.x, e!.y - a!.y);
+      const back = { x: ((a!.x - e!.x) / len) * 10, y: ((a!.y - e!.y) / len) * 10 };
+      let on = 0;
+      for (let k = 0; k < 9; k += 1) {
+        const f = (k + 0.5) / 9;
+        const p = { x: Math.round(e!.x + (c!.x - e!.x) * f + back.x), y: Math.round(e!.y + (c!.y - e!.y) * f + back.y) };
+        if (aisles.some((r) => containsPoint(r, p as Ring[number]))) on += 1;
+      }
+      expect(on).toBeGreaterThanOrEqual(5);
+      expect(Math.hypot(b!.x - a!.x, b!.y - a!.y)).toBeGreaterThan(0);
+    }
+  });
+
+  it('gives up every bay it crosses at grade, and counts them', () => {
+    const out = run();
+    const { grade } = levelsOf(out);
+    for (const bay of grade.parking!.bays) {
+      for (const d of grade.parking!.drives!) expect(overlapMm2(bay.outline, d.outline)).toBeLessThanOrEqual(10_000);
+    }
+    const plan = out.levelPlan!;
+    expect(plan.grade!.bayCount.value).toBe(plan.bayCount.value - plan.grade!.dropped.drive - plan.grade!.dropped.plant);
+  });
+});
+
 describe('the transformer room on the road', () => {
   it('stands against a ROAD boundary, never one shared with a neighbour', () => {
     // One road, three neighbours: the band has exactly one boundary it may use.
@@ -276,14 +323,18 @@ describe('the supply the answer rests on', () => {
   it('is the bays at grade plus the shared layout on every other parking level', () => {
     const out = runPipeline(input(TWO_ROADS, { parkingLevelsAvailable: 3, podiumLevels: 3 }));
     const perLevel = out.levelPlan!.bayCount.value;
-    const atGrade = out.levelPlan!.grade!.bayCount.value;
+    // The grade plan's own count, less the bays its accessible bays take as their aisles.
+    const accessible = out.levelPlan!.accessible!;
+    expect(accessible.onGrade).toBe(true);
+    const atGrade = out.levelPlan!.grade!.bayCount.value - accessible.lost;
+    expect(accessible.bayCount.value).toBe(atGrade);
     const { parking } = levelsOf(out);
     expect(parking.map((l) => l.parking!.bays.length)).toEqual([atGrade, perLevel, perLevel]);
     expect(Number(out.building.drawnBays.value)).toBe(atGrade + 2 * perLevel);
     expect(out.parking.providedBays.value).toBe(atGrade + 2 * perLevel);
   });
 
-  it('keeps one layout on every level when the ground floor does not park', () => {
+  it('keeps one layout on every level when the ground floor does not park, but the first basement’s accessible bays', () => {
     const out = runPipeline(
       input(TWO_ROADS, {
         levelSchedule: { basements: 2, groundIsParking: false, podiumAboveGround: 0, podiumParkingLevels: 0 },
@@ -291,12 +342,16 @@ describe('the supply the answer rests on', () => {
     );
     expect(out.levelPlan!.grade).toBeUndefined();
     const perLevel = out.levelPlan!.bayCount.value;
+    const accessible = out.levelPlan!.accessible!;
+    expect(accessible.onGrade).toBe(false);
+    expect(accessible.lost).toBeGreaterThan(0);
     const { parking } = levelsOf(out);
-    expect(parking.length).toBe(2);
-    for (const l of parking) {
-      expect(l.parking!.bays.length).toBe(perLevel);
-      expect(l.parking!.drives).toBeUndefined();
-    }
-    expect(out.parking.providedBays.value).toBe(2 * perLevel);
+    // Bottom up: B2 keeps the shared layout, B1 — the level the street reaches — holds the accessible bays.
+    expect(parking.map((l) => l.id)).toEqual(['B2', 'B1']);
+    expect(parking.map((l) => l.parking!.bays.length)).toEqual([perLevel, perLevel - accessible.lost]);
+    expect(parking[0]!.parking!.bays.some((b) => b.accessible)).toBe(false);
+    expect(parking[1]!.parking!.bays.some((b) => b.accessible)).toBe(true);
+    for (const l of parking) expect(l.parking!.drives).toBeUndefined();
+    expect(out.parking.providedBays.value).toBe(2 * perLevel - accessible.lost);
   });
 });

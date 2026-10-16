@@ -159,7 +159,16 @@ export function standardFor(angle: ParkingAngle, driveway: DrivewayType): BaySta
 }
 
 export class ParkingLayoutError extends Error {
-  override readonly name = 'ParkingLayoutError';
+  override readonly name: string = 'ParkingLayoutError';
+}
+
+/**
+ * A picked arrangement this level cannot lay out. A refused request, not a
+ * finding about the plot, so the pipeline blocks the run with it — as a refused
+ * entrance does — instead of drawing another arrangement nobody picked.
+ */
+export class ArrangementChoiceRefusedError extends ParkingLayoutError {
+  override readonly name = 'ArrangementChoiceRefusedError';
 }
 
 // ---------------------------------------------------------------------------
@@ -177,6 +186,12 @@ export interface Rect {
 export const RectKind = {
   BAY: 'BAY',
   ACCESSIBLE_BAY: 'ACCESSIBLE_BAY',
+  /**
+   * The 1.2 m (or wider) aisle beside an accessible bay, C.6.4.2 f). Never placed
+   * by a packer: `accessible.ts` makes one out of a bay on the level nearest the
+   * street, so it never appears in the shared layout.
+   */
+  ACCESS_AISLE: 'ACCESS_AISLE',
   AISLE: 'AISLE',
   RAMP: 'RAMP',
   OBSTRUCTION: 'OBSTRUCTION',
@@ -298,6 +313,13 @@ export interface ParkingLayoutInput {
   /** Who stated `rampType`, so it is `USER_SET` under a name and not an assumption. */
   readonly rampTypeActor?: Actor;
   /**
+   * The arrangement a reader picked from `ParkingLayoutResult.arrangements`. Absent,
+   * the one placing the most bays is laid out, as it always was. Stated, that one
+   * is laid out, or the level is refused in a sentence when it places nothing or
+   * is not on this level's list — never quietly swapped for another.
+   */
+  readonly arrangement?: { readonly id: ParkingArrangement; readonly actor?: Actor };
+  /**
    * Whether the ring may be the ramp. False where there is one parking level: a
    * floor that climbs a storey a lap has to have a storey to climb to.
    */
@@ -350,6 +372,10 @@ export interface ParkingLayoutResult {
    * what it came to.
    */
   readonly orientation: Traced<string>;
+  /** The arrangement laid out. */
+  readonly arrangement: ParkingArrangement;
+  /** Every arrangement packed on this level, in a fixed order, with its count — the options a reader picks from. */
+  readonly arrangements: readonly ArrangementCandidate[];
   readonly losses: ParkingLosses;
   /**
    * The ramp strip's plan size, its kind and which way it runs, when the level
@@ -873,6 +899,38 @@ const RAMP_TYPE_BASIS =
   'chose a type for this run. The alternatives are enumerated and reported beside it; ' +
   'straight and split take the same plan area, so no bay count separates them, and a ' +
   'ranking invented here would be a preference presented as a finding.';
+
+/**
+ * THE ARRANGEMENTS A LEVEL IS PACKED IN, NAMED SO A READER CAN PICK ONE.
+ *
+ * Eng. Mohamed, 16 Oct 2026: *"ينفع يعملي كذا اوبشن واكتر من رسمه وكلهم لازم صح
+ * بافكار مختلفه مثلا فى الباركنج وله حرية الاختيار"*. The list was already there —
+ * every run packs each of these and keeps the most bays — and only the choice was
+ * the engine's. Now each is reported with its count, and one stated by a named
+ * reader is laid out as stated, `USER_SET` under that name, even where another
+ * places more bays: the count it costs is in the same list beside it.
+ *
+ * This is a choice among the same fixed candidates on every run, never a search:
+ * nothing here moves a ramp or a core to find more bays — that is the optimiser
+ * of 34:37, a `TRADEOFF` value Phase 0 refuses to emit.
+ */
+export const ParkingArrangement = {
+  WIDTH: 'WIDTH',
+  DEPTH: 'DEPTH',
+  PERIMETER: 'PERIMETER',
+  SLOPED: 'SLOPED',
+  FIELD_WIDTH: 'FIELD_WIDTH',
+  FIELD_DEPTH: 'FIELD_DEPTH',
+} as const;
+export type ParkingArrangement = (typeof ParkingArrangement)[keyof typeof ParkingArrangement];
+
+/** One arrangement as packed on this level: what it placed, or why it placed none. */
+export interface ArrangementCandidate {
+  readonly id: ParkingArrangement;
+  readonly name: string;
+  readonly bayCount: number;
+  readonly refusal?: string;
+}
 
 // ---------------------------------------------------------------------------
 // The packer
@@ -2501,13 +2559,19 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     FIELD_DEPTH: 'rows across the whole footprint, along the depth',
   } as const;
   const candidates = [
-    { packing: alongWidth, name: ORIENTATION.WIDTH },
-    { packing: alongDepth, name: ORIENTATION.DEPTH },
-    { packing: perimeter, name: ORIENTATION.PERIMETER },
-    ...(sloped ? [{ packing: sloped, name: ORIENTATION.SLOPED }] : []),
-    ...(fieldWidth ? [{ packing: fieldWidth, name: ORIENTATION.FIELD_WIDTH }] : []),
-    ...(fieldDepth ? [{ packing: fieldDepth, name: ORIENTATION.FIELD_DEPTH }] : []),
+    { packing: alongWidth, name: ORIENTATION.WIDTH, id: ParkingArrangement.WIDTH },
+    { packing: alongDepth, name: ORIENTATION.DEPTH, id: ParkingArrangement.DEPTH },
+    { packing: perimeter, name: ORIENTATION.PERIMETER, id: ParkingArrangement.PERIMETER },
+    ...(sloped ? [{ packing: sloped, name: ORIENTATION.SLOPED, id: ParkingArrangement.SLOPED }] : []),
+    ...(fieldWidth ? [{ packing: fieldWidth, name: ORIENTATION.FIELD_WIDTH, id: ParkingArrangement.FIELD_WIDTH }] : []),
+    ...(fieldDepth ? [{ packing: fieldDepth, name: ORIENTATION.FIELD_DEPTH, id: ParkingArrangement.FIELD_DEPTH }] : []),
   ] as const;
+  const arrangements: readonly ArrangementCandidate[] = candidates.map((c) => ({
+    id: c.id,
+    name: c.name,
+    bayCount: c.packing.bayCount,
+    ...(c.packing.refusal ? { refusal: c.packing.refusal } : {}),
+  }));
 
   if (candidates.every((c) => c.packing.bayCount === 0)) {
     throw new ParkingLayoutError(
@@ -2522,27 +2586,60 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
   }
   // Ties go to the earlier candidate, so the answer does not depend on the order
   // two equal packings happened to be built in.
-  const winner = candidates.reduce((a, b) => (b.packing.bayCount > a.packing.bayCount ? b : a));
+  const stated = input.arrangement;
+  const statedCandidate = stated ? candidates.find((c) => c.id === stated.id) : undefined;
+  if (stated && !statedCandidate) {
+    throw new ArrangementChoiceRefusedError(
+      `the parking arrangement ${stated.id} is not one this level can be packed in: ` +
+        (stated.id === ParkingArrangement.SLOPED
+          ? 'the ring may be the ramp only where there are two parking levels or more and no ramp strip was stated. '
+          : 'rows across the whole footprint are offered only where the footprint is not itself a rectangle. ') +
+        `This level offers ${candidates.map((c) => `${c.id} (${c.packing.bayCount} bays)`).join(', ')}.`,
+    );
+  }
+  if (statedCandidate && statedCandidate.packing.bayCount === 0) {
+    throw new ArrangementChoiceRefusedError(
+      `the parking arrangement ${statedCandidate.id} places no bay on this level` +
+        (statedCandidate.packing.refusal ? `: ${statedCandidate.packing.refusal}` : '.') +
+        ` This level offers ${candidates.map((c) => `${c.id} (${c.packing.bayCount} bays)`).join(', ')}.`,
+    );
+  }
+  const winner = statedCandidate ?? candidates.reduce((a, b) => (b.packing.bayCount > a.packing.bayCount ? b : a));
   const packing = winner.packing;
   const chosen = winner.name;
-  const orientation = tracer.derived('parking.module_orientation', chosen, {
-    rule: { ruleId: 'DBC.B.7.2.4.TABLE_B11', citation: TABLE_B11 },
-    formula: `max(${candidates.map((c) => `${c.packing.bayCount} ${c.name}`).join(', ')})`,
-    uses: { moduleDepth },
-    detail: {
-      note:
-        'Every enumerated arrangement is packed and the best is taken. This searches an ' +
-        'arrangement, not a design: the candidate list is the same on every run, ' +
-        'all of them are reported, the core stands where the run already put it, and ' +
-        'the answer is reproducible. It is not the ramp-and-core optimiser, which ' +
-        'is a TRADEOFF value Phase 0 refuses to emit.',
-    },
-  });
+  const listed = candidates.map((c) => `${c.packing.bayCount} ${c.name}`).join(', ');
+  const orientation = ((): Traced<string> => {
+    if (stated?.actor) {
+      return tracer.userSet('parking.module_orientation', chosen, { actor: stated.actor, label: 'parking arrangement' });
+    }
+    if (stated) {
+      // Handed in under nobody's name: an assumption saying so, not somebody's statement.
+      return tracer.assumed('parking.module_orientation', chosen, {
+        basis:
+          `The arrangement "${chosen}" was handed to the layout with no named user attached. ` +
+          `Every arrangement on this level: ${listed}.`,
+        label: 'parking arrangement',
+      });
+    }
+    return tracer.derived('parking.module_orientation', chosen, {
+      rule: { ruleId: 'DBC.B.7.2.4.TABLE_B11', citation: TABLE_B11 },
+      formula: `max(${listed})`,
+      uses: { moduleDepth },
+      detail: {
+        note:
+          'Every enumerated arrangement is packed and the best is taken. This searches an ' +
+          'arrangement, not a design: the candidate list is the same on every run, ' +
+          'all of them are reported, the core stands where the run already put it, and ' +
+          'the answer is reproducible. It is not the ramp-and-core optimiser, which ' +
+          'is a TRADEOFF value Phase 0 refuses to emit.',
+      },
+    });
+  })();
   notes.push(...packing.notes);
   const losers = candidates.filter((c) => c !== winner);
   if (losers.some((c) => c.packing.bayCount !== packing.bayCount)) {
     notes.push(
-      `Laid out as ${chosen}: ${packing.bayCount} bays, against ` +
+      `Laid out as ${chosen}${statedCandidate ? ', as picked' : ''}: ${packing.bayCount} bays, against ` +
         losers
           .map((c) => `${c.packing.bayCount} ${c.name}${c.packing.refusal ? ` (${c.packing.refusal})` : ''}`)
           .join('; ') +
@@ -2834,6 +2931,8 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     usableAreaM2: chargedUsable,
     standard,
     orientation,
+    arrangement: winner.id,
+    arrangements,
     losses,
     notes,
   };

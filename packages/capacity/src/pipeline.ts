@@ -57,8 +57,16 @@ import { buildBuildingModel, parkingInPodiumOf } from './building.js';
 import { planGrade } from './grade.js';
 import { buildGfaStatement, type GfaStatement } from './gfa-statement.js';
 import { layoutCore } from './core-layout.js';
-import { DrivewayType, ParkingAngle, standardFor, type RampType } from './layout.js';
+import {
+  ArrangementChoiceRefusedError,
+  DrivewayType,
+  ParkingAngle,
+  standardFor,
+  type ParkingArrangement,
+  type RampType,
+} from './layout.js';
 import { AccessChoiceRefusedError, type AccessChoice } from './access.js';
+import { designateAccessible, designatePreferred } from './accessible.js';
 import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './core.js';
 import { solveEnvelope, type EnvelopeSolution, type StatementRef } from './envelope.js';
 import { planParkingLevel, type LevelPlan } from './level-plan.js';
@@ -262,6 +270,11 @@ export interface RunInput {
      * them — and the most bays wins. Stated, the ramp is that strip.
      */
     readonly rampType?: RampType;
+    /**
+     * The parking arrangement the run's actor picked from a previous run's
+     * `arrangements`, `USER_SET` under that actor. Absent, the most bays wins.
+     */
+    readonly arrangement?: ParkingArrangement;
   };
   /**
    * Levels standing on the podium footprint, **the ground floor included**.
@@ -884,6 +897,9 @@ export function runPipeline(input: RunInput): RunOutput {
       ...(input.levelPlan?.rampType === undefined
         ? {}
         : { rampType: { type: input.levelPlan.rampType, actor: input.actor } }),
+      ...(input.levelPlan?.arrangement === undefined
+        ? {}
+        : { arrangement: { id: input.levelPlan.arrangement, actor: input.actor } }),
       // On unless switched off: a bay under the stairs and lifts is not a bay.
       ...(input.levelPlan?.avoidCore === false ? {} : { core: parkingObstruction }),
       ...(input.levelPlan?.structuralGridM === undefined
@@ -915,6 +931,26 @@ export function runPipeline(input: RunInput): RunOutput {
         }),
       };
     }
+    /*
+      THE ACCESSIBLE BAYS, ON THE LEVEL THE STREET REACHES (DBC C.6.4). Counted
+      off the building's whole supply, placed on one level, and paid for in bays:
+      each takes a neighbour as its access aisle. See `accessible.ts`.
+    */
+    if (parkingLevelsAvailable >= 1) {
+      const plan = levelPlan;
+      levelPlan = {
+        ...plan,
+        accessible: designateAccessible({
+          tracer,
+          onGrade: plan.grade !== undefined,
+          rects: plan.grade?.rects ?? plan.rects,
+          levelBays: plan.grade?.bayCount ?? plan.bayCount,
+          others: { perLevel: plan.bayCount, levels: parkingLevelsAvailable - 1 },
+          bayWidthM: new Decimal(plan.layout.standard.bayWidthM),
+          core: parkingObstruction.ring,
+        }),
+      };
+    }
   } catch (error) {
     /*
       A refused CHOICE is not a finding about the plot, it is a request the
@@ -923,6 +959,9 @@ export function runPipeline(input: RunInput): RunOutput {
     */
     if (error instanceof AccessChoiceRefusedError) {
       throw new RunBlockedError(error.message, 'G2:access');
+    }
+    if (error instanceof ArrangementChoiceRefusedError) {
+      throw new RunBlockedError(error.message, 'G2:arrangement');
     }
     levelPlanRefusal = error instanceof Error ? error.message : String(error);
   }
@@ -946,7 +985,14 @@ export function runPipeline(input: RunInput): RunOutput {
       ? {
           laidOut: {
             baysPerLevel: levelPlan.bayCount,
-            ...(levelPlan.grade ? { groundBays: levelPlan.grade.bayCount } : {}),
+            ...(levelPlan.accessible
+              ? {
+                  groundBays: levelPlan.accessible.bayCount,
+                  firstLevel: levelPlan.accessible.onGrade ? 'the ground floor' : 'the first basement',
+                }
+              : levelPlan.grade
+                ? { groundBays: levelPlan.grade.bayCount }
+                : {}),
           },
         }
       : {}),
@@ -978,6 +1024,13 @@ export function runPipeline(input: RunInput): RunOutput {
       ? Decimal.max(new Decimal(0), grossPermittedGfa.minus(parkingAreaM2))
       : grossPermittedGfa;
 
+  const levelsGoverning = envelope.resolutions.get('levels.max_above_ground')?.governing;
+  const levelsCited: BandSource | undefined =
+    levelsGoverning &&
+    envelope.bindingConstraints.some((b) => b.dimension === 'levels' && b.ruleId === levelsGoverning.rule.ruleId)
+      ? { ruleId: levelsGoverning.rule.ruleId, citation: levelsGoverning.rule.citation }
+      : undefined;
+
   const capacity = computeBands({
     tracer,
     permittedGfaM2: availableGfaM2,
@@ -990,7 +1043,15 @@ export function runPipeline(input: RunInput): RunOutput {
     farRule: bandSource('far.max'),
     towerPlateM2: plateM2,
     maxLevels: levels,
-    heightRule: bandSource('height.max'),
+    /*
+      THE RULE BAND B STANDS ON IS THE ONE THAT BOUND THE LEVELS. Where the plot's
+      own plan states the level count and it governs, citing the generic height
+      rule put a set-aside placeholder (R-HEIGHT-MAX-RES on Mamzar) on screen as
+      the governing constraint — a citation of a rule the run had just set aside.
+    */
+    ...(levelsCited
+      ? { heightRule: levelsCited, geometricLabel: 'level count on the affection plan and tower plate' }
+      : { heightRule: bandSource('height.max') }),
     podiumFootprint: envelope.podiumFootprint,
     floorToFloorM: envelope.floorToFloorM,
     ...(envelope.resolutions.get('coverage.max')?.governing
@@ -1042,6 +1103,19 @@ export function runPipeline(input: RunInput): RunOutput {
       },
     },
   );
+
+  // The preferred bays of B.7.2.6.2 are counted off what the answer REQUIRES, so
+  // they wait for it; marking one changes no count, so nothing above moves.
+  if (levelPlan?.accessible) {
+    levelPlan = {
+      ...levelPlan,
+      accessible: designatePreferred(tracer, levelPlan.accessible, {
+        requiredBays: demandAtGoverningBays,
+        providedBays: parking.providedBays.value,
+        core: parkingObstruction.ring,
+      }),
+    };
+  }
 
   const building = buildBuildingModel({
     tracer,

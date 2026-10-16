@@ -258,7 +258,9 @@ export const runRequest = z.object({
     .object({
       value: decimalString.optional(),
       saleableAreaM2: decimalString.optional(),
-      source: z.enum(['USER_SET', 'DERIVED']),
+      /* ASSUMED: the question was deferred out of this phase (16 Oct 2026). The
+         engine refuses one without a basis or with an area, in a sentence. */
+      source: z.enum(['USER_SET', 'DERIVED', 'ASSUMED']),
       basis: z.string().min(20).optional(),
     })
     .superRefine((v, ctx) => {

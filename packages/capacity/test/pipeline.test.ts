@@ -392,6 +392,44 @@ describe('§13.3 — every DERIVED value reaches a cited rule', () => {
  * high on every run. It survived for as long as it did precisely because it was
  * implicit: there was no `1.00` anywhere to argue with.
  */
+/*
+  The saleable question was deferred out of this phase on 16 Oct 2026 (Eng.
+  Mohamed). The studio sends it ASSUMED with a basis; the engine must emit it
+  amber, list it in the register with a measured sensitivity, and refuse an
+  assumption with no basis or an assumed AREA.
+*/
+describe('an assumed saleable share', () => {
+  const assumed = (patch: Partial<RunInput['saleableEfficiency']> = {}): RunInput =>
+    baseInput({
+      saleableEfficiency: {
+        value: new Decimal('0.95'),
+        source: 'ASSUMED',
+        basis: 'not asked in this phase; the middle of a 93–97% brief range, for this test',
+        ...patch,
+      } as RunInput['saleableEfficiency'],
+    });
+
+  it('is ASSUMED in the graph and in the register, with a measured sensitivity', () => {
+    const input = assumed();
+    const out = runPipeline(input);
+    expect(out.saleableEfficiency.provenanceClass).toBe(ProvenanceClass.ASSUMED);
+    const row = buildAssumptionRegister(input, out).find((e) => e.parameterId === 'capacity.saleable_efficiency');
+    expect(row, 'the assumed share is missing from the register').toBeDefined();
+    expect(row!.basis).toMatch(/not asked in this phase/);
+    expect(row!.sensitivity).not.toBeNull();
+  });
+
+  it('refuses an assumed share with no basis', () => {
+    expect(() => runPipeline(assumed({ basis: '  ' }))).toThrow(/requires a basis/);
+  });
+
+  it('refuses an assumed AREA', () => {
+    expect(() =>
+      runPipeline(assumed({ value: undefined, saleableAreaM2: new Decimal('2000') } as never)),
+    ).toThrow(/cannot be assumed/);
+  });
+});
+
 describe('saleable efficiency', () => {
   /** Same envelope, efficiency varied, parking relieved so regulation governs. */
   const unitsAt = (value: string, levels = 12): number =>

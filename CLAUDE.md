@@ -210,6 +210,15 @@ is a defect even when it makes something easier.
   exact shape of failure "no hidden defaults" exists to catch. `capacity.gfa_per_unit_m2`
   and `capacity.weighted_nsa_m2` are now separate nodes: what a unit *costs* in GFA and
   what it *sells*. Azizi's own brief states the market number, 93–97%.
+- **What the studio stopped asking on 16 Oct 2026, and what it sends instead.** Eng.
+  Mohamed: parking is never counted in FAR here, and the saleable share is out of
+  this phase. So `apps/web-next` sends `parkingInFar: EXCLUDED_FROM_FAR` *under his
+  recorded statement's id* (USER_SET by him, quoted — never a bare answer nobody
+  owns), and the saleable share as `ASSUMED` 0.95 with a basis, amber, measured in
+  the register. The engine refuses an assumed share without a basis and an assumed
+  *area* outright. Both are listed above the remaining questions, not hidden. The
+  level counts open at a visible `0` with −/+ steppers; ground-floor-is-parking
+  still opens unanswered. Do not put the two questions back without asking him.
 - **The saleable figure is asked in whichever unit the reader holds, and the divisor
   is the envelope's own GFA.** `SaleableEfficiencyInput` takes a ratio **or** an area,
   exactly one, enforced by `exactOptionalPropertyTypes` rather than by a runtime check;

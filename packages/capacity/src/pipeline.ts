@@ -108,7 +108,13 @@ export interface Actor {
  * one they did not type and can check it against the one they did.
  */
 export type SaleableEfficiencyInput = {
-  readonly source: 'USER_SET' | 'DERIVED';
+  /*
+    ASSUMED since 16 Oct 2026, when Eng. Mohamed deferred the question out of
+    this phase ("مش هيكون في المرحله دي هناجله"). Not a default: the caller
+    sends the value AND a basis, the engine emits it amber, and the register
+    measures it. A ratio only — an assumed AREA would be a guess at a brief.
+  */
+  readonly source: 'USER_SET' | 'DERIVED' | 'ASSUMED';
   readonly basis?: string;
   readonly actor?: { readonly id: string; readonly name: string };
 } & (
@@ -521,6 +527,16 @@ export function runPipeline(input: RunInput): RunOutput {
   const envelopeGfa = plateM2.times(levels);
 
   const statedArea = efficiency.saleableAreaM2;
+  if (efficiency.source === 'ASSUMED' && (statedArea !== undefined || !efficiency.basis?.trim())) {
+    throw new RunBlockedError(
+      statedArea !== undefined
+        ? 'a saleable AREA cannot be assumed — it is a figure from a brief. Assume a share ' +
+          'of GFA with a basis, or enter the area as yours.'
+        : 'an ASSUMED saleable share requires a basis. If you cannot write down why this ' +
+          'share, you do not have an assumption, you have a guess.',
+      'saleable_efficiency',
+    );
+  }
   if (statedArea !== undefined && statedArea.lte(0)) {
     throw new RunBlockedError(
       `saleable area must be above zero; got ${statedArea.toString()} m².`,
@@ -600,6 +616,12 @@ export function runPipeline(input: RunInput): RunOutput {
         ? tracer.userSet('capacity.saleable_efficiency', ratio, {
             actor: efficiency.actor ?? input.actor,
             label: 'saleable area ÷ GFA',
+            unit: 'ratio',
+          })
+        : efficiency.source === 'ASSUMED'
+        ? tracer.assumed('capacity.saleable_efficiency', ratio, {
+            label: 'saleable area ÷ GFA',
+            basis: efficiency.basis!,
             unit: 'ratio',
           })
         : tracer.computed('capacity.saleable_efficiency', ratio, {
@@ -1093,6 +1115,21 @@ const PERTURBABLE: readonly Perturbable[] = [
       // one `solveCore` assumed, and the input holds nothing at all.
       coreAreaM2: base.core.areaM2.value.times(factor),
     }),
+  },
+  {
+    /* Clamped at 1 for the reason the usable fraction is: a building cannot sell
+       more than it has. Only an ASSUMED share reaches the register at all. */
+    parameterId: 'capacity.saleable_efficiency',
+    apply: (input, factor) =>
+      input.saleableEfficiency.value === undefined
+        ? input
+        : {
+            ...input,
+            saleableEfficiency: {
+              ...input.saleableEfficiency,
+              value: Decimal.min(new Decimal(1), input.saleableEfficiency.value.times(factor)),
+            },
+          },
   },
   {
     parameterId: 'capacity.user_realism_discount',

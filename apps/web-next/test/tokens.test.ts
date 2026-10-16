@@ -224,9 +224,15 @@ describe('the claim the product never makes', () => {
     expect(landing).toMatch(/L\.claims\.regulatory/);
     expect(checks).toMatch(/'regulatoryValidity'\] as const/);
   });
-  it('parking-in-FAR opens with nothing selected', () => {
+  /*
+    Parking-in-FAR stopped being asked on 16 Oct 2026 (Eng. Mohamed). What may
+    not replace the question is an answer nobody owns: the run cites his
+    recorded statement by id, and the saleable share goes ASSUMED with a basis.
+  */
+  it('parking-in-FAR is sent under the statement it rests on, never bare', () => {
     const model = readFileSync(join(ROOT, 'src', 'studio', 'model.ts'), 'utf8');
-    expect(model).toMatch(/parkingInFar: '',/);
-    expect(model).toMatch(/saleable: '',/);
+    expect(model).toMatch(/parkingInFarStatementId: PARKING_IN_FAR_STATEMENT_ID/);
+    expect(model).toMatch(/source: 'ASSUMED', basis: SALEABLE_BASIS/);
+    expect(model).toMatch(/groundIsParking: '',/);
   });
 });

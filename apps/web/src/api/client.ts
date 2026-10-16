@@ -930,7 +930,8 @@ export interface RunRequestBody {
    * both numbers, so whichever one was not typed can still be checked.
    */
   readonly saleableEfficiency: {
-    readonly source: 'USER_SET' | 'DERIVED';
+    /** ASSUMED needs a basis and a ratio; see `SaleableEfficiencyInput`. */
+    readonly source: 'USER_SET' | 'DERIVED' | 'ASSUMED';
     readonly basis?: string;
   } & (
     | { readonly value: string; readonly saleableAreaM2?: undefined }

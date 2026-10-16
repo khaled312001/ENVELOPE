@@ -9,7 +9,6 @@ import {
   api,
   ApiError,
   encodeAttachment,
-  type ParkingComparison,
   type PlotCreated,
   type PlotView,
   type RunRequestBody,
@@ -88,7 +87,6 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   const [busy, setBusy] = useState<'plot' | 'run' | 'load' | 'sheet' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [node, setNode] = useState<string | null>(null);
-  const [comparison, setComparison] = useState<ParkingComparison | null>(null);
 
   // Step 0: the sheet as read, and whether the reader chose to use it for this study.
   const [sheet, setSheet] = useState<SheetState | null>(null);
@@ -215,21 +213,6 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
       }
     },
     [actor, navigate, queries, t],
-  );
-
-  const compare = useCallback(
-    async (body: RunRequestBody) => {
-      setBusy('run');
-      setError(null);
-      try {
-        setComparison(await api.compareParkingInFar(actor, body));
-      } catch (e) {
-        setError(e instanceof ApiError ? e.message : t.studio.runFailed);
-      } finally {
-        setBusy(null);
-      }
-    },
-    [actor, t],
   );
 
   const refresh = useCallback(async () => {
@@ -525,8 +508,6 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 onChange={setRules}
                 busy={busy === 'run'}
                 onCompute={() => void compute(requestBody(plotId, rules))}
-                onCompare={() => void compare(requestBody(plotId, rules))}
-                comparison={comparison}
                 hasRun={run !== null}
               />
             ) : step === 'capacity' && run ? (

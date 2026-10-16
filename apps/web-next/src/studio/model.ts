@@ -38,12 +38,28 @@ export interface MixRow {
   readonly nsaM2: string;
 }
 
+/*
+  TWO QUESTIONS THIS STUDIO NO LONGER ASKS, AND WHAT IS SENT INSTEAD.
+
+  Eng. Mohamed, 16 Oct 2026: «الغي اول سؤال بتاع parking in FAR لا دايما
+  مبيتحسبش» and «ال سوال التاني بتاع saleable area مش هيكون في المرحله دي».
+
+  Parking-in-FAR is sent as his recorded statement, by id — so the run carries
+  USER_SET by Eng. Mohamed, quoted, never a default nobody owns (FR-DEF-002).
+  The server refuses an id whose recorded answer differs from the one sent.
+
+  The saleable share is sent ASSUMED, with the basis below, and it is amber in
+  the run's assumptions like every other filled gap.
+*/
+export const PARKING_IN_FAR_STATEMENT_ID = 'STMT-PARKING-IN-FAR-2026-09-28';
+
+export const SALEABLE_ASSUMED = '0.95';
+export const SALEABLE_BASIS =
+  'not asked in this phase: Eng. Mohamed deferred the saleable question on 16 Oct 2026. ' +
+  '0.95 is the middle of the 93–97% of GFA a Dubai developer brief on file expects. It ' +
+  'moves the unit count, and through it the parking required, one for one.';
+
 export interface RulesForm {
-  /** No default, and none may be added: FR-DEF-002. It swings capacity 15–35%. */
-  readonly parkingInFar: RunRequestBody['parkingInFar'] | '';
-  readonly saleableUnit: 'RATIO' | 'AREA';
-  /** No default either: the engine used to take 1.00 here, and every unit count was 3–7% high. */
-  readonly saleable: string;
   readonly basements: string;
   readonly groundIsParking: '' | 'yes' | 'no';
   readonly podiumAboveGround: string;
@@ -77,14 +93,17 @@ export const USABLE_FRACTION_BASIS =
   'the fraction of a parking level left for bays and aisles once cores, ramps and ' +
   'plant are taken out. No cited rule fixes it.';
 
+/*
+  The three level counts open at 0, visibly, with a − and a + beside each
+  (Eng. Mohamed, 16 Oct 2026: «خلي يكون في رقم 0 جاهز و انا ازود او انقص»).
+  A zero on the screen is a stated schedule, not a hidden one. Whether the
+  ground floor is parking still opens unanswered.
+*/
 export const EMPTY_RULES: RulesForm = {
-  parkingInFar: '',
-  saleableUnit: 'RATIO',
-  saleable: '',
-  basements: '',
+  basements: '0',
   groundIsParking: '',
-  podiumAboveGround: '',
-  podiumParkingLevels: '',
+  podiumAboveGround: '0',
+  podiumParkingLevels: '0',
   coreArea: '',
   mix: DEFAULT_MIX,
   mixSource: 'ASSUMED',
@@ -105,9 +124,6 @@ export function exampleStudy(): { plot: DraftPlot; rules: RulesForm } {
       })),
     },
     rules: {
-      parkingInFar: r.parkingInFar as RunRequestBody['parkingInFar'],
-      saleableUnit: 'RATIO',
-      saleable: r.saleableEfficiency.value,
       basements: String(r.levels.basements),
       groundIsParking: r.levels.groundIsParking ? 'yes' : 'no',
       podiumAboveGround: String(r.levels.podiumAboveGround),
@@ -123,22 +139,20 @@ const DECIMAL = /^\d+(\.\d+)?$/;
 const INTEGER = /^\d+$/;
 
 export interface RulesProblems {
-  readonly parkingInFar?: true;
-  readonly saleable?: 'missing' | 'format' | 'range';
   readonly levels?: 'missing' | 'format' | 'podium';
   readonly coreArea?: true;
   readonly mix?: 'format' | 'total';
 }
 
+/** Step a whole-number field by ±1, never below 0. A field that is not a whole number starts from 0. */
+export function stepCount(value: string, delta: 1 | -1): string {
+  const n = INTEGER.test(value.trim()) ? Number(value.trim()) : 0;
+  return String(Math.max(0, n + delta));
+}
+
 /** What still stops the run. Each problem is a question the reader has not answered, not a default to fill. */
 export function rulesProblems(f: RulesForm): RulesProblems {
   const p: { -readonly [K in keyof RulesProblems]: RulesProblems[K] } = {};
-  if (f.parkingInFar === '') p.parkingInFar = true;
-  const s = f.saleable.trim();
-  if (s === '') p.saleable = 'missing';
-  else if (!DECIMAL.test(s)) p.saleable = 'format';
-  else if (f.saleableUnit === 'RATIO' && !(s.startsWith('0.') || s === '1' || s === '1.0' || s === '1.00')) p.saleable = 'range';
-  else if (/^0+(\.0+)?$/.test(s)) p.saleable = 'range';
   const ints = [f.basements, f.podiumAboveGround, f.podiumParkingLevels];
   if (ints.some((x) => x.trim() === '') || f.groundIsParking === '') p.levels = 'missing';
   else if (ints.some((x) => !INTEGER.test(x.trim()))) p.levels = 'format';
@@ -157,7 +171,8 @@ export function requestBody(plotId: string, f: RulesForm, chosenAccessEdgeSeq?: 
   };
   return {
     plotId,
-    parkingInFar: f.parkingInFar as RunRequestBody['parkingInFar'],
+    parkingInFar: 'EXCLUDED_FROM_FAR',
+    parkingInFarStatementId: PARKING_IN_FAR_STATEMENT_ID,
     unitMix:
       f.mixSource === 'ASSUMED'
         ? { source: 'ASSUMED', entries: f.mix, basis: DEFAULT_MIX_BASIS }
@@ -168,20 +183,7 @@ export function requestBody(plotId: string, f: RulesForm, chosenAccessEdgeSeq?: 
     ...(f.coreArea.trim() === '' ? {} : { coreAreaM2: f.coreArea.trim() }),
     ...(chosenAccessEdgeSeq === undefined ? {} : { chosenAccessEdgeSeq }),
     parkingUsableFraction: { value: '0.85', source: 'ASSUMED', basis: USABLE_FRACTION_BASIS },
-    saleableEfficiency:
-      f.saleableUnit === 'AREA'
-        ? {
-            saleableAreaM2: f.saleable.trim(),
-            source: 'USER_SET',
-            basis:
-              'a saleable area in square metres, entered by the person running this study; ' +
-              'the share of GFA is computed from it, and no developer standard was selected',
-          }
-        : {
-            value: f.saleable.trim(),
-            source: 'USER_SET',
-            basis: 'entered by the person running this study; no developer standard was selected',
-          },
+    saleableEfficiency: { value: SALEABLE_ASSUMED, source: 'ASSUMED', basis: SALEABLE_BASIS },
     realismDiscount: '1.00',
     useDraftRules: true,
   };
@@ -189,11 +191,7 @@ export function requestBody(plotId: string, f: RulesForm, chosenAccessEdgeSeq?: 
 
 /** Recover the form from a request this browser sent, so a re-run asks nothing twice. */
 export function rulesFrom(body: RunRequestBody): RulesForm {
-  const area = body.saleableEfficiency.saleableAreaM2;
   return {
-    parkingInFar: body.parkingInFar,
-    saleableUnit: area !== undefined ? 'AREA' : 'RATIO',
-    saleable: area ?? body.saleableEfficiency.value ?? '',
     basements: String(body.levels?.basements ?? ''),
     groundIsParking: body.levels ? (body.levels.groundIsParking ? 'yes' : 'no') : '',
     podiumAboveGround: String(body.levels?.podiumAboveGround ?? ''),

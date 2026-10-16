@@ -159,6 +159,7 @@ export function statedLimitsFrom(
 
   const far = lift<Decimal>(facts.far);
   const gfaM2 = lift<Decimal>(facts.gfaSqm);
+  const plotAreaM2 = lift<Decimal>(facts.totalAreaSqm);
   const coverage = lift<CoverageSchedule>(facts.coverage);
   const setbacks = lift<SetbackSchedule>(facts.setbacks);
   const height = lift<HeightAllowance>(facts.height);
@@ -166,6 +167,7 @@ export function statedLimitsFrom(
   return {
     ...(far ? { far } : {}),
     ...(gfaM2 ? { gfaM2 } : {}),
+    ...(plotAreaM2 ? { plotAreaM2 } : {}),
     ...(coverage ? { coverage } : {}),
     ...(setbacks ? { setbacks } : {}),
     ...(height ? { height } : {}),
@@ -267,6 +269,8 @@ export interface StoredSheetWire {
   readonly documentUri: string;
   readonly far?: { readonly value: string; readonly citation: Citation };
   readonly gfaM2?: { readonly value: string; readonly citation: Citation };
+  /** Absent on every sheet stored before 16 Oct 2026; such a sheet binds no derived FAR. */
+  readonly plotAreaM2?: { readonly value: string; readonly citation: Citation };
   readonly coverage?: {
     readonly value: { podium?: string; tower?: string; raw: string };
     readonly citation: Citation;
@@ -343,6 +347,9 @@ export function serialiseSheet(sheet: StoredSheet): StoredSheetWire {
     documentUri: sheet.documentUri,
     ...(l.far ? { far: { value: l.far.value.toString(), citation: l.far.citation } } : {}),
     ...(l.gfaM2 ? { gfaM2: { value: l.gfaM2.value.toString(), citation: l.gfaM2.citation } } : {}),
+    ...(l.plotAreaM2
+      ? { plotAreaM2: { value: l.plotAreaM2.value.toString(), citation: l.plotAreaM2.citation } }
+      : {}),
     ...(l.coverage
       ? {
           coverage: {
@@ -376,6 +383,9 @@ export function deserialiseSheet(w: StoredSheetWire): StoredSheet {
   const limits: StatedLimits = {
     ...(w.far ? { far: { value: new Decimal(w.far.value), citation: w.far.citation } } : {}),
     ...(w.gfaM2 ? { gfaM2: { value: new Decimal(w.gfaM2.value), citation: w.gfaM2.citation } } : {}),
+    ...(w.plotAreaM2
+      ? { plotAreaM2: { value: new Decimal(w.plotAreaM2.value), citation: w.plotAreaM2.citation } }
+      : {}),
     ...(w.coverage
       ? {
           coverage: {

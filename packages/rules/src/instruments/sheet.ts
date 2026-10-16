@@ -55,10 +55,10 @@
  *   `levels.max_above_ground`, a count, and is never converted into `height.max`.
  *   It used to bind nothing at all, which is how `G+4` reported thirteen levels;
  *   see the height block below.
- * - **A stated GFA binds nothing, because there is no `gfa.max` parameter.** GFA is
- *   derived from FAR and plot area; a sheet's GFA is a cross-check against that
- *   derivation, which `intake` already performs, and inventing a parameter here to
- *   carry it would put a second ceiling in the envelope that no evaluator reads.
+ * - **A stated GFA beside a stated FAR binds nothing more**, because there is no
+ *   `gfa.max` parameter: the FAR binds and the GFA is a cross-check against it.
+ *   A GFA printed with NO FAR (every DDA sheet) binds `far.max` as the sheet's own
+ *   GFA ÷ its own printed plot area — see the FAR block below.
  * - **Tower coverage binds nothing.** `coverage.max` governs the podium footprint;
  *   the tower is capped by `tower_plate.max`, which is an area in m² and not a
  *   percentage, so the two are not interchangeable.
@@ -189,9 +189,45 @@ export function rulesFromInstrument(
     note: EXPIRY_NOTE,
   });
 
+  /*
+    A SHEET THAT PRINTS A MAXIMUM GFA AND NO FAR STILL STATES ITS RATIO.
+
+    Every DDA sheet does this: `MAX. GFA 2,288.08 m²` beside `PLOT AREA 1,040.04 m²`
+    and no ratio. The ratio is then the sheet's own two figures divided — not a
+    figure borrowed from a neighbour, not a default, and nothing a reader could
+    argue with that they could not argue with on the sheet itself. Refusing it
+    (as this module once did) blocked every DDA plot over arithmetic Eng. Mohamed
+    does in his head, and the refusal protected nothing: the printed GFA IS the
+    limit, and a FAR is only the form the engine carries it in.
+
+    Rounded DOWN at six places, so the ratio times the printed area never exceeds
+    the printed GFA. The citation is the GFA's box, and the clause says in words
+    that the ratio was divided out of two printed figures, so the provenance tree
+    shows a reader the arithmetic rather than a FAR the sheet never printed.
+  */
+  const farFromGfa =
+    !limits.far && limits.gfaM2 && limits.plotAreaM2 && limits.plotAreaM2.value.gt(0)
+      ? {
+          value: limits.gfaM2.value
+            .div(limits.plotAreaM2.value)
+            .toDecimalPlaces(6, Decimal.ROUND_DOWN),
+          citation: {
+            ...limits.gfaM2.citation,
+            clauseReference:
+              `${limits.gfaM2.citation.clauseReference} ÷ ${limits.plotAreaM2.citation.clauseReference}`,
+            sourceTextVerbatim:
+              `FAR not printed; taken from the sheet's own figures: max GFA ` +
+              `${limits.gfaM2.value.toString()} m² ÷ plot area ` +
+              `${limits.plotAreaM2.value.toString()} m² (rounded down at 6 places). ` +
+              `GFA as printed: "${limits.gfaM2.citation.sourceTextVerbatim}"`,
+          },
+        }
+      : undefined;
+  const farStated = limits.far ?? farFromGfa;
+
   // --- FAR -----------------------------------------------------------------
-  if (limits.far) {
-    const value = limits.far.value;
+  if (farStated) {
+    const value = farStated.value;
     rules.push(
       record({
         ruleId: `INSTRUMENT.${binding.instrumentId}.far.max`,
@@ -201,7 +237,7 @@ export function rulesFromInstrument(
         evaluatorArgs: { value: value.toString() },
         unit: 'ratio',
         applicability: { all: [thisPlot] },
-        citation: limits.far.citation,
+        citation: farStated.citation,
         tests: [
           {
             kind: 'POSITIVE',
@@ -220,13 +256,15 @@ export function rulesFromInstrument(
     );
   }
 
-  if (limits.gfaM2) {
+  if (limits.gfaM2 && !farFromGfa) {
     notBound.push({
       field: 'gfaSqm',
       stated: `${limits.gfaM2.value.toString()} m²`,
-      reason:
-        'GFA is derived from FAR and plot area; there is no gfa.max parameter for a ' +
-        'ceiling to bind to. The sheet’s GFA is checked against the derivation instead.',
+      reason: limits.far
+        ? 'The sheet prints a FAR, which binds; its GFA is checked against FAR × plot area ' +
+          'instead of being a second ceiling.'
+        : 'The sheet prints a GFA and no plot area to divide it by, so no ratio could be ' +
+          'taken from it. Enter the FAR under a named user.',
     });
   }
 

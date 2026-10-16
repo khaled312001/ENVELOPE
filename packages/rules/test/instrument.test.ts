@@ -178,11 +178,65 @@ describe('what it refuses to bind', () => {
     return entry!.reason;
   };
 
-  it('reports the stated GFA, because no parameter carries a GFA ceiling', () => {
-    expect(reasonFor('gfaSqm')).toMatch(/no gfa\.max parameter/);
+  it('reports a GFA printed beside a FAR as a cross-check, not a second ceiling', () => {
+    expect(reasonFor('gfaSqm')).toMatch(/prints a FAR, which binds/);
     const { rules } = rulesFromInstrument(WARSAN, BINDING);
     expect(rules.some((r) => r.parameterId.startsWith('gfa'))).toBe(false);
   });
+});
+
+/*
+  DDA sheet 5134565 (SAIH SHUAIB 1) prints MAX. GFA 2,288.08 m² and PLOT AREA
+  1,040.04 m², and no FAR. The study was blocked on it (Eng. Mohamed, 16 Oct
+  2026): the ratio is the sheet's own two figures divided, and refusing it
+  protected nothing.
+*/
+describe('a sheet that prints a GFA and no FAR', () => {
+  const DDA_PLOT = '5134565';
+  const DDA_BINDING: InstrumentBinding = { ...BINDING, plotNumber: DDA_PLOT, instrumentId: 'DDA-5134565' };
+  const DDA: StatedLimits = {
+    gfaM2: { value: new Decimal('2288.08'), citation: citation('MAX. GFA', '2,288.08 SQ.M') },
+    plotAreaM2: { value: new Decimal('1040.04'), citation: citation('PLOT AREA', '1,040.04 SQ.M') },
+  };
+
+  it('binds far.max as the printed GFA ÷ the printed plot area, rounded down', () => {
+    const { rules, notBound } = rulesFromInstrument(DDA, DDA_BINDING);
+    const far = rules.find((r) => r.parameterId === 'far.max');
+    expect(far?.evaluatorArgs['value']).toBe('2.199992');
+    // Never above the cap it was taken from.
+    expect(new Decimal('2.199992').times('1040.04').lte('2288.08')).toBe(true);
+    expect(notBound.some((n) => n.field === 'gfaSqm')).toBe(false);
+  });
+
+  it('cites the GFA box and says the ratio was divided out, in words', () => {
+    const { rules } = rulesFromInstrument(DDA, DDA_BINDING);
+    const far = rules.find((r) => r.parameterId === 'far.max')!;
+    expect(far.citation.clauseReference).toBe('MAX. GFA ÷ PLOT AREA');
+    expect(far.citation.sourceTextVerbatim).toMatch(/FAR not printed/);
+    expect(far.citation.sourceTextVerbatim).toMatch(/2288\.08 m² ÷ plot area 1040\.04 m²/);
+  });
+
+  it('governs resolution over the seed rule, as a printed FAR would', () => {
+    const { rules } = rulesFromInstrument(DDA, DDA_BINDING);
+    const resolution = resolveParameter('far.max', [...SEED_RULES, ...rules], ctx(DDA_PLOT));
+    expect(resolution.governing!.value).toEqual({ kind: 'scalar', value: new Decimal('2.199992') });
+  });
+
+  it('a printed FAR still wins over the quotient', () => {
+    const both: StatedLimits = { ...DDA, far: { value: new Decimal('2.5'), citation: citation('far', 'FAR 2.5') } };
+    const far = rulesFromInstrument(both, DDA_BINDING).rules.filter((r) => r.parameterId === 'far.max');
+    expect(far).toHaveLength(1);
+    expect(far[0]!.evaluatorArgs['value']).toBe('2.5');
+  });
+
+  it('a GFA with no plot area binds nothing and says why', () => {
+    const { rules, notBound } = rulesFromInstrument({ gfaM2: DDA.gfaM2! }, DDA_BINDING);
+    expect(rules.some((r) => r.parameterId === 'far.max')).toBe(false);
+    expect(notBound.find((n) => n.field === 'gfaSqm')?.reason).toMatch(/no plot area/);
+  });
+});
+
+describe('what it refuses to bind, continued', () => {
 
   /*
     THE LEVEL COUNT BINDS, AS A COUNT. This test used to assert the opposite —

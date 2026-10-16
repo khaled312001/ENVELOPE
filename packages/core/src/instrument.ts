@@ -101,6 +101,13 @@ export interface StatedLimit<T> {
 export interface StatedLimits {
   readonly far?: StatedLimit<Decimal>;
   readonly gfaM2?: StatedLimit<Decimal>;
+  /**
+   * The plot area the sheet prints. Not a limit, and it binds nothing by itself:
+   * it is carried so that a sheet which prints a maximum GFA and no FAR (every DDA
+   * sheet) can have its ratio taken from its OWN two figures — see the FAR block
+   * in `rules/instruments/sheet.ts`.
+   */
+  readonly plotAreaM2?: StatedLimit<Decimal>;
   readonly coverage?: StatedLimit<CoverageSchedule>;
   readonly setbacks?: StatedLimit<SetbackSchedule>;
   readonly height?: StatedLimit<HeightAllowance>;

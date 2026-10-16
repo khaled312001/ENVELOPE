@@ -809,19 +809,15 @@ export function readFacts(
         );
 
   /*
-    A DDA SHEET STATES NO FAR, AND ONE IS NOT COMPUTED FOR IT.
+    A DDA SHEET PRINTS NO FAR, AND THIS FIELD SAYS SO.
 
-    `2,288.08 ÷ 1,040.04 = 2.2` is exact, and it is still not a reading. The
-    sheet prints a maximum GFA; whether that cap was set by a ratio, by a
-    massing study or by a plot-specific condition is not on the document, and
-    publishing 2.2 as `affection_plan.far` would put a figure no instrument
-    states into a field whose whole meaning is that an instrument states it.
-    `DJAZ1MED12RES011` is the same refusal from the other direction — a printed
-    height and no FAR — and it is the one this product exists for.
-
-    The ratio IS computed, below, as a cross-check on the two figures that ARE
-    printed. A cross-check is a statement about the document; a value is a
-    statement about the plot.
+    `affection_plan.far` means "the sheet printed this ratio", and a DDA sheet
+    prints none, so the field stays absent. The ratio is NOT refused, though:
+    the sheet prints a maximum GFA and a plot area, and their quotient is the
+    limit in the form the engine carries. `rules/instruments/sheet.ts` binds it
+    with the division in its citation, and `blockingGaps` therefore does not
+    stop a DDA run. `DJAZ1MED12RES011` is different and still blocks: it prints a
+    height and neither a FAR nor a GFA, so there is nothing to divide.
   */
   /* «ونسبة طابقية = 5.0», on the Municipality's Height row — "floor ratio". */
   const dmHeightRow = dmRows.Height;
@@ -837,7 +833,7 @@ export function readFacts(
           'far',
           'FAR',
           dda
-            ? 'This sheet prints a maximum GFA and no floor area ratio. The ratio implied by the two printed figures is reported as a cross-check and is not published as the plot’s FAR: the sheet does not state one. Obtain it from the DCR, or set it under a named user.'
+            ? 'This sheet prints a maximum GFA and no floor area ratio. The study takes the ratio from the sheet’s own figures: maximum GFA ÷ plot area. Nothing else is needed for it.'
             : 'Floor area ratio is not printed on this sheet. Required before any capacity figure may be produced.',
         );
 
@@ -1011,8 +1007,8 @@ export function readFacts(
       passed: true,
       detail:
         `${gfaSqm.value.toString()} m² ÷ ${totalAreaSqm.value.toString()} m² = ` +
-        `${qRatio(implied).toString()}. This sheet states no FAR, and this ratio is not ` +
-        'published as one — it is the quotient of two printed figures, not a reading.',
+        `${qRatio(implied).toString()}. This sheet prints no FAR; the study binds this ` +
+        'quotient of its two printed figures as the ratio, and says so in its citation.',
     });
   }
 
@@ -1151,6 +1147,14 @@ export function blockingGaps(facts: AffectionPlanFacts): readonly MissingField[]
     standing. The gap is still listed in `missing`; it just does not block.
   */
   if (facts.far !== undefined) blocking.delete('gfa_permitted_sqm');
+  /*
+    And a missing FAR blocks only beside a missing GFA or plot area. A sheet that
+    prints both (every DDA sheet) states its ratio as their quotient, which
+    `rules/instruments/sheet.ts` binds with the arithmetic in its citation. The
+    gap stays in `missing` — the sheet does not print a FAR, and saying so is
+    still true.
+  */
+  if (facts.gfaSqm !== undefined && facts.totalAreaSqm !== undefined) blocking.delete('far');
   return facts.missing.filter((m) => blocking.has(m.field));
 }
 

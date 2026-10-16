@@ -358,21 +358,22 @@ describe('the DDA dialect — plot 5134565, Saih Shuaib 1', () => {
   });
 
   /*
-    2,288.08 ÷ 1,040.04 = 2.2 exactly, and it is still not this plot's FAR: the
-    sheet does not state one, and a field whose meaning is that an instrument
-    states it may not be filled by arithmetic. The quotient is reported as a
-    cross-check, which is a statement about the document.
+    The sheet prints no FAR, so `facts.far` stays absent — that field means "the
+    sheet printed this". But it prints a max GFA and a plot area, and their
+    quotient is the ratio: the study is NOT blocked (Eng. Mohamed, 16 Oct 2026 —
+    "هو عندو الارقام الي يقدر منها يطلع ال FAR"). `rules` binds the quotient.
   */
-  it('publishes no FAR, and says what the two printed figures imply instead', () => {
+  it('publishes no FAR field, does not block, and states the quotient', () => {
     expect(facts.far).toBeUndefined();
-    expect(blockingGaps(facts).map((m) => m.field)).toContain('far');
+    expect(facts.missing.map((m) => m.field)).toContain('far');
+    expect(blockingGaps(facts)).toEqual([]);
     const stated = facts.crossChecks.find((c) => c.name.includes('prints no FAR'));
     expect(stated).toBeDefined();
     /* `2.199992`, not `2.2`: the quotient is quantised to the engine's ratio
        precision and printed as it falls out, because rounding it to the figure a
        reader expects would be the first step towards publishing it as one. */
     expect(stated?.detail).toContain('2.199992');
-    expect(stated?.detail).toContain('not published as one');
+    expect(stated?.detail).toContain('binds this quotient');
   });
 
   /* `SEE NOTES` is a deferral to a rule with the storey count as its input, and

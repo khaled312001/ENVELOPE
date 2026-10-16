@@ -11,8 +11,8 @@ import { ARRANGEMENT_NAME, engineNote, type Reader, type Said } from './engine-n
   are recognised by their fixed wording here, their figures lifted from the
   engine's own text, and said again briefly in both languages.
 
-  The report, the drawings and the DXF keep the engine's words verbatim; this is
-  the screen only. A sentence nothing here recognises is shown as written, so a
+  The screen and the study report read these; the drawings, the DXF and the JSON
+  keep the engine's words verbatim. A sentence nothing here recognises is shown as written, so a
   new note arrives in English rather than not at all — and `refusalOf` puts an
   Arabic headline over an unrecognised refusal so the page never opens on one.
 */

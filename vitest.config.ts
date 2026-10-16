@@ -34,6 +34,8 @@ export default defineConfig({
       '@envelope/capacity': pkg('capacity'),
       '@envelope/invariants': pkg('invariants'),
       '@envelope/validation': pkg('validation'),
+      // Before the package itself: an alias also matches its own subpaths, in order.
+      '@envelope/report/words': new URL('./packages/report/src/words/index.ts', import.meta.url).pathname,
       '@envelope/report': pkg('report'),
       '@envelope/intake': pkg('intake'),
       '@envelope/exports': pkg('exports'),

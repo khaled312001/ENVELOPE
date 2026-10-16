@@ -156,7 +156,7 @@ const HTML_ESCAPES: Readonly<Record<string, string>> = {
  * one field in the model most likely to contain a character that would close a
  * tag.
  */
-function esc(text: string): string {
+export function esc(text: string): string {
   return text.replace(/[&<>"']/g, (character) => HTML_ESCAPES[character]!);
 }
 
@@ -183,7 +183,7 @@ export function groupDigits(text: string): string {
 // Uncertainty states — §13.1, §20.3
 // ---------------------------------------------------------------------------
 
-interface StateTreatment {
+export interface StateTreatment {
   readonly className: string;
   /** Survives greyscale. Empty only where the state needs no marker. */
   readonly glyph: string;
@@ -198,7 +198,7 @@ interface StateTreatment {
  * fails this build rather than falling through to a neutral rendering, which is
  * the one outcome §13.1 cannot tolerate — an unmarked value is read as a fact.
  */
-function treatmentFor(hint: RenderHint): StateTreatment {
+export function treatmentFor(hint: RenderHint): StateTreatment {
   switch (hint) {
     case RenderHint.NEUTRAL_WITH_CITATION:
       return { className: 'v-derived', glyph: '', label: 'derived from a cited rule' };
@@ -1449,8 +1449,15 @@ function provenanceAppendix(run: RunReport, indexes: Indexes): string {
 // ---------------------------------------------------------------------------
 
 /** A CSS string literal. The values are ours, but a run id is still input. */
+/** A CSS string inside a <style> element: `<` and `>` as CSS escapes, so no text can end the element. */
 const cssString = (text: string): string =>
-  `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ')}"`;
+  `"${text
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/</g, '\\3c ')
+    .replace(/>/g, '\\3e ')
+    .replace(/&/g, '\\26 ')
+    .replace(/[\r\n]+/g, ' ')}"`;
 
 /**
  * The running footer, on every printed page, as page-margin boxes.

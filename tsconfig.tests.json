@@ -45,6 +45,8 @@
     */
     "paths": {
       "@envelope/*": ["./packages/*/dist/index.d.ts"],
+      // The one subpath export: the engine's sentences in the reader's language.
+      "@envelope/report/words": ["./packages/report/dist/words/index.d.ts"],
       // The site's own alias for the classic app's helpers, as its vite.config.ts and Vitest resolve it.
       "@web/*": ["./apps/web/src/*"]
     }

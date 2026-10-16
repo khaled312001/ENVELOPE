@@ -11,6 +11,7 @@
   "dependencies": {
     "@envelope/core": "workspace:*",
     "@envelope/massing": "workspace:*",
+    "@envelope/report": "workspace:*",
     "@envelope/sheets": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.104.2",

@@ -67,6 +67,8 @@ export {
   type ReportDrawings,
 } from './html.js';
 
+export { studyReportHtml, type StudyReportOptions } from './study.js';
+
 export {
   FINGERPRINT_ALGORITHM,
   FINGERPRINT_COVERS,

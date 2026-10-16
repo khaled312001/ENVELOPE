@@ -66,6 +66,7 @@ import {
 import {
   fromJson,
   runFingerprint,
+  studyReportHtml,
   toHtml,
   toJson,
   toJsonString,
@@ -1470,8 +1471,26 @@ export async function build(
       },
     };
 
-    const format = (request.query as { format?: string }).format ?? 'json';
+    const query = request.query as { format?: string; lang?: string };
+    const format = query.format ?? 'json';
+    /*
+      THE STUDY REPORT, IN THE READER'S LANGUAGE (16 Oct 2026). The cover, the
+      figures, the drawings, the assumptions and the claim statement — what a
+      reader takes away. `lang` is the page the reader asked from; anything but
+      Arabic is English, so an unknown value never refuses a gated download.
+    */
     if (format === 'html') {
+      reply.header('content-type', 'text/html; charset=utf-8');
+      return studyReportHtml(reviewed, {
+        locale: query.lang === 'ar' ? 'ar' : 'en',
+        sheets: runSheets(drawable),
+        building: drawable.building ?? null,
+      });
+    }
+
+    // The §3.4 audit document — every rule considered, every definition, the
+    // derivation index. Still issued behind the same gates; English only.
+    if (format === 'audit') {
       reply.header('content-type', 'text/html; charset=utf-8');
       return toHtml(reviewed, { sheets: runSheets(drawable) });
     }

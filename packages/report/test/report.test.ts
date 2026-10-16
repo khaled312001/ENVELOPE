@@ -44,6 +44,7 @@ import {
   groupDigits,
   runFingerprint,
   drawingSetHtml,
+  studyReportHtml,
   toHtml,
   toJson,
   toJsonString,
@@ -981,6 +982,19 @@ describe('the GFA calculation', () => {
     expect(toHtml(makeRun())).not.toContain('<h3>GFA calculation</h3>');
   });
 
+  it('survives the JSON export: a statement the import dropped was a report missing its area table', () => {
+    const run = withStatement();
+    expect(roundTrip(run).capacity.gfaStatement).toEqual(run.capacity.gfaStatement);
+  });
+
+  it('is in the study report, in both languages', () => {
+    for (const locale of ['en', 'ar'] as const) {
+      const html = studyReportHtml(withStatement(), { locale, sheets: [], building: null });
+      expect(html).toContain('4,778.31');
+      expect(html).toContain('51,433.24');
+    }
+  });
+
   it('states allowed, proposed and the floors, in square metres and square feet', () => {
     const html = toHtml(withStatement());
     expect(html).toContain('<h3>GFA calculation</h3>');
@@ -1063,6 +1077,62 @@ describe('the drawing set', () => {
 
   it('refuses to be an empty set', () => {
     expect(() => drawingSetHtml([], META)).toThrow(/no sheets/);
+  });
+});
+
+describe('the study report', () => {
+  /*
+    The report a reader downloads from the studio, in the studio's language. It
+    renders the same run as `toHtml` and is held to the same refusals; what is
+    checked here is what a translation or a "cleaner" layout would be tempted
+    to drop.
+  */
+  beforeAll(async () => {
+    await initGeometry();
+  });
+  const built = (): ReturnType<typeof runPipeline> => runPipeline(runInput(RECT_80x40));
+
+  it('carries the stamp on the cover, in every page footer and in the claim statement — in Arabic too', () => {
+    for (const locale of ['en', 'ar'] as const) {
+      const html = studyReportHtml(makeRun(), { locale, sheets: [], building: null });
+      expect(html.split('REGULATORY VALIDITY: NOT ASSESSED').length - 1).toBeGreaterThanOrEqual(3);
+      expect(html).toMatch(/@bottom-right \{ content: "REGULATORY VALIDITY: NOT ASSESSED/);
+    }
+  });
+
+  it('is written in the reader’s language, right to left in Arabic', () => {
+    const ar = studyReportHtml(makeRun(), { locale: 'ar', sheets: [], building: null });
+    expect(ar).toMatch(/<html lang="ar" dir="rtl">/);
+    expect(ar).toContain('لم يخضع للتقييم');
+    const en = studyReportHtml(makeRun(), { locale: 'en', sheets: [], building: null });
+    expect(en).toMatch(/<html lang="en" dir="ltr">/);
+  });
+
+  it('marks every assumption amber and lists each one', () => {
+    const run = makeRun();
+    expect(run.assumptions.length).toBeGreaterThan(0);
+    const html = studyReportHtml(run, { locale: 'en', sheets: [], building: null });
+    expect(html).toContain('v-assumed');
+    // Each listed with the basis it was assumed on — an assumption without its reason is a hidden default.
+    for (const a of run.assumptions) expect(html).toContain(a.basis.slice(0, 40).replace(/&/g, '&amp;').replace(/</g, '&lt;'));
+    expect(html).toContain(`${run.assumptions.length} value`);
+  });
+
+  it('draws every sheet of the set, on its own page, from the building model', () => {
+    const b = built();
+    const set = composeSheets(b.building, META);
+    const html = studyReportHtml(makeRun(), { locale: 'en', sheets: set, building: b.building });
+    expect(html.split('<section class="sheet-page"').length - 1).toBe(set.length);
+    expect(html.split('<svg').length - 1).toBeGreaterThanOrEqual(set.length);
+  });
+
+  it('refuses what the audit report refuses: a failed invariant is not emitted in any language', () => {
+    const run = makeRun();
+    const failing: RunReport = {
+      ...run,
+      invariants: run.invariants.map((i, k) => (k === 0 ? { ...i, status: InvariantStatus.FAIL } : i)),
+    };
+    expect(() => studyReportHtml(failing, { locale: 'ar', sheets: [], building: null })).toThrow(InvariantFailureError);
   });
 });
 

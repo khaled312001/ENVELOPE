@@ -153,6 +153,9 @@ importers:
       '@envelope/massing':
         specifier: workspace:*
         version: link:../../packages/massing
+      '@envelope/report':
+        specifier: workspace:*
+        version: link:../../packages/report
       '@envelope/sheets':
         specifier: workspace:*
         version: link:../../packages/sheets

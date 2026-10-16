@@ -1075,9 +1075,10 @@ describe('export — the §3.4 artifact', () => {
     ).json();
     await openGates(run.runId, run);
 
+    // The audit report: every section of the run, as the full artifact always was.
     const res = await app.inject({
       method: 'POST',
-      url: `/api/runs/${run.runId}/export?format=html`,
+      url: `/api/runs/${run.runId}/export?format=audit`,
       headers: REVIEWER,
     });
     expect(res.statusCode).toBe(200);
@@ -1091,6 +1092,20 @@ describe('export — the §3.4 artifact', () => {
     // root, and the renderer prefixes the letter — "Band A · Band A — regulatory" was both.
     expect(html).toContain('<h3>Band A · regulatory</h3>');
     expect(html).not.toMatch(/<h3>Band [ABC] · Band/);
+
+    // The study report, in the language asked for, carries the same stamp and the same draft warning.
+    for (const lang of ['en', 'ar'] as const) {
+      const study = await app.inject({
+        method: 'POST',
+        url: `/api/runs/${run.runId}/export?format=html&lang=${lang}`,
+        headers: REVIEWER,
+      });
+      expect(study.statusCode).toBe(200);
+      expect(study.body).toContain(`<html lang="${lang}" dir="${lang === 'ar' ? 'rtl' : 'ltr'}">`);
+      expect(study.body).toContain('REGULATORY VALIDITY: NOT ASSESSED');
+      expect(study.body).toMatch(lang === 'ar' ? /قواعد لم تعتمد بعد|لم تعتمد/ : /rules not yet approved/);
+      expect(study.body).toMatch(/@media\s+print/);
+    }
   });
 
   it('produces the same bytes twice — §13.4', async () => {
@@ -1203,22 +1218,29 @@ describe('security', () => {
       });
     }
 
-    const html = (
-      await app.inject({
-        method: 'POST',
-        url: `/api/runs/${run.runId}/export?format=html`,
-        headers: REVIEWER,
-      })
-    ).body;
+    // Every HTML the export writes: the study report in both languages, and the audit report.
+    // The study report's page footer carries the plot number inside a <style> element, where
+    // HTML escaping does not apply and only a CSS escape keeps `</style>` from ending it.
+    for (const query of ['format=html&lang=en', 'format=html&lang=ar', 'format=audit']) {
+      const html = (
+        await app.inject({
+          method: 'POST',
+          url: `/api/runs/${run.runId}/export?${query}`,
+          headers: REVIEWER,
+        })
+      ).body;
 
-    // The payload must reach the document — otherwise this test proves nothing —
-    // and every occurrence of it must be inert.
-    expect(html).toContain('&lt;script&gt;');
-    expect(html).not.toContain('<script>alert');
-    expect(html).not.toContain('<svg onload');
-    // No script element and no inline handler anywhere in the report.
-    expect(html).not.toMatch(/<script[\s>]/);
-    expect(html).not.toMatch(/\son\w+\s*=\s*["']/);
+      // The payload must reach the document — otherwise this test proves nothing —
+      // and every occurrence of it must be inert.
+      expect(html).toContain('&lt;script&gt;');
+      expect(html).not.toContain('<script>alert');
+      expect(html).not.toContain('<svg onload');
+      // Every style element closes where it was meant to: one `</style>` per `<style`, none ended early by a plot number.
+      expect((html.match(/<\/style>/g) ?? []).length).toBe((html.match(/<style[\s>]/g) ?? []).length);
+      // No script element and no inline handler anywhere in the report.
+      expect(html).not.toMatch(/<script[\s>]/);
+      expect(html).not.toMatch(/\son\w+\s*=\s*["']/);
+    }
   });
 
   it('rejects a cross-origin request from an origin that is not allowlisted', async () => {

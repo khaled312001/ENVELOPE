@@ -1148,6 +1148,79 @@ function readRuleSet(value: unknown, at: string): RuleSetProvenance {
   }
 }
 
+const GFA_CAP = { RESIDENTIAL: 'RESIDENTIAL', COMMERCIAL: 'COMMERCIAL' } as const;
+const GFA_ROW = {
+  GROUND: 'GROUND',
+  PODIUM: 'PODIUM',
+  TYPICAL: 'TYPICAL',
+  UNPLACED: 'UNPLACED',
+  PARKING: 'PARKING',
+  COMMERCIAL: 'COMMERCIAL',
+  ROOF: 'ROOF',
+} as const;
+
+function readStatedArea(value: unknown, at: string): StatedArea {
+  const o = readObject(value, at);
+  return { m2: readDecimal(o['m2'], `${at}.m2`), ft2: readDecimal(o['ft2'], `${at}.ft2`) };
+}
+
+/**
+ * The GFA statement, read back with the same teeth as the rest of the run.
+ *
+ * It was written into every stored report and dropped here on the way out, so
+ * the printed report never carried the table the client asked for by name —
+ * while every test passed, because none of them round-tripped a run that had one.
+ */
+function readGfaStatement(value: unknown, at: string): GfaStatementSection {
+  const o = readObject(value, at);
+  return {
+    plotArea: readStatedArea(o['plotArea'], `${at}.plotArea`),
+    allowed: readWire(o['allowed'], `${at}.allowed`),
+    allowedFt2: readDecimal(o['allowedFt2'], `${at}.allowedFt2`),
+    caps: readList(o['caps'], `${at}.caps`, (v, a) => {
+      const c = readObject(v, a);
+      return {
+        kind: readMember(c['kind'], `${a}.kind`, GFA_CAP),
+        allowed: readNullable(c['allowed'], `${a}.allowed`, readWire),
+        allowedFt2: readNullable(c['allowedFt2'], `${a}.allowedFt2`, readDecimal),
+        proposed: readNullable(c['proposed'], `${a}.proposed`, readWire),
+        proposedFt2: readNullable(c['proposedFt2'], `${a}.proposedFt2`, readDecimal),
+        remaining: readNullable(c['remaining'], `${a}.remaining`, readWire),
+        remainingFt2: readNullable(c['remainingFt2'], `${a}.remainingFt2`, readDecimal),
+        notes: readList(c['notes'], `${a}.notes`, readString),
+      };
+    }),
+    rows: readList(o['rows'], `${at}.rows`, (v, a) => {
+      const r = readObject(v, a);
+      return {
+        kind: readMember(r['kind'], `${a}.kind`, GFA_ROW),
+        cap: readMember(r['cap'], `${a}.cap`, GFA_CAP),
+        levelIds: readList(r['levelIds'], `${a}.levelIds`, readString),
+        count: readInteger(r['count'], `${a}.count`),
+        perLevel: readNullable(r['perLevel'], `${a}.perLevel`, readWire),
+        perLevelFt2: readNullable(r['perLevelFt2'], `${a}.perLevelFt2`, readDecimal),
+        levelCount: readNullable(r['levelCount'], `${a}.levelCount`, readWire),
+        area: readWire(r['area'], `${a}.area`),
+        areaFt2: readDecimal(r['areaFt2'], `${a}.areaFt2`),
+      };
+    }),
+    omissions: readList(o['omissions'], `${at}.omissions`, (v, a) => {
+      const m = readObject(v, a);
+      return {
+        kind: readMember(m['kind'], `${a}.kind`, GFA_ROW),
+        cap: readMember(m['cap'], `${a}.cap`, GFA_CAP),
+        reason: readString(m['reason'], `${a}.reason`),
+      };
+    }),
+    reconciliation: readList(o['reconciliation'], `${at}.reconciliation`, readString),
+    proposed: readWire(o['proposed'], `${at}.proposed`),
+    proposedFt2: readDecimal(o['proposedFt2'], `${at}.proposedFt2`),
+    remaining: readWire(o['remaining'], `${at}.remaining`),
+    remainingFt2: readDecimal(o['remainingFt2'], `${at}.remainingFt2`),
+    partFloorNotPlaced: readStatedArea(o['partFloorNotPlaced'], `${at}.partFloorNotPlaced`),
+  };
+}
+
 function readRun(value: unknown, at: string): RunReport {
   const o = readObject(value, at);
   const plot = readObject(o['plot'], `${at}.plot`);
@@ -1279,6 +1352,10 @@ function readRun(value: unknown, at: string): RunReport {
         `${at}.capacity.userRealismDiscount`,
       ),
       levels: readWire(capacity['levels'], `${at}.capacity.levels`),
+      // Absent on a run stored before the statement existed; never synthesised.
+      ...(capacity['gfaStatement'] === undefined
+        ? {}
+        : { gfaStatement: readGfaStatement(capacity['gfaStatement'], `${at}.capacity.gfaStatement`) }),
     },
     parking: {
       residentBays: readWire(parking['residentBays'], `${at}.parking.residentBays`),

@@ -161,6 +161,17 @@ const READERS: readonly Reader[] = [
     };
   },
   (t) => {
+    const m = /^([\d.]+) m is left clear after every (\d+) bays along a run, for the columns: .*= ([\d.]+) m to a group\./.exec(t);
+    if (!m) return null;
+    return {
+      en: t,
+      ar:
+        `تترك ${m[1]} م خالية بعد كل ${m[2]} مواقف على امتداد الصف، لمواضع الأعمدة، فطول المجموعة ${m[3]} م. ` +
+        'لا يرسم عمود في هذه المسافة ولا يحدد مقاسه. ويطلب الجدول B.11 مسافة إضافية قدرها 300 مم للموقف المجاور ' +
+        'لعنصر إنشائي، ولم تضف هنا، وكون المسافة تشملها أم لا لم يقيم.',
+    };
+  },
+  (t) => {
     const m = /^The cross aisle costs (\d+) bays across ([\d,.]+) m²/.exec(t);
     if (!m) return null;
     return {

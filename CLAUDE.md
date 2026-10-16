@@ -361,6 +361,22 @@ is a defect even when it makes something easier.
   The placement is `DERIVED` "against boundary k" from §11.3.1, with B.4.2.3 ¶12
   letting it stand in the setback. Searching positions for the fewest bays lost
   would be the optimiser `PHASE_0_CLASSES` refuses.
+- **Half a metre after every three bays, under his name.** Eng. Mohamed, 16 Oct
+  2026, asked twice the same day: «كل ٣ باكييات بينهم مسافه ٥٠ سم». That is
+  `STMT-COLUMN-GAP-2026-10-16`, sent by `apps/web-next` by id; the gap is the one
+  the statement records, never a figure in the request. Every packer places bays
+  along a run through `bayAlong`/`baysAlong` in `layout.ts`, so no arrangement
+  can forget it, and a gap is only ever *between* groups. The gap is left empty —
+  no column is drawn or sized — and Table B.11's extra 300 mm beside a structural
+  element is **not** added: whether his 0.50 m includes it is an open question,
+  said in the note under every drawing. A level given both this and
+  `structuralGridM` is refused, because those are two models of the same columns.
+- **The entrance is placed on the plan.** «من هنا قصدي», over the plot step's
+  plan: the reader clicks a road boundary where the entrance goes, and the click
+  becomes metres from the boundary's first corner using the **engine's** length,
+  so an unfiled plot places nothing. It is drawn as a point with an arrow, not as
+  an opening — the opening's extent is the engine's to work out — and it is sent
+  with the run, where B.7.2.1 accepts or refuses it in a sentence.
 - **The orientation is swept; the design is not.** Runs along a level's width and runs
   along its depth place different numbers of bays in the same rectangle. Both are
   packed, the better is kept, and the loser's count is in the formula. Two candidates,

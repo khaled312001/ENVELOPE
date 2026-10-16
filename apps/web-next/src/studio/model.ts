@@ -46,6 +46,9 @@ export function typedSetbacksOf(d: DraftPlot): readonly { edgeSeq: number; metre
 
 export const PODIUM_SETBACK_STATEMENT_ID = 'STMT-PODIUM-SETBACK-2026-10-16';
 
+/* Half a metre after every three bays, for the columns (Eng. Mohamed, 16 Oct 2026), sent under his statement. */
+export const COLUMN_GAP_STATEMENT_ID = 'STMT-COLUMN-GAP-2026-10-16';
+
 export const EMPTY_PLOT: DraftPlot = {
   plotNumber: '',
   community: '',
@@ -207,6 +210,7 @@ export function requestBody(
     parkingInFarStatementId: PARKING_IN_FAR_STATEMENT_ID,
     // Basements, ground and podium on the boundary unless the sheet says otherwise (Eng. Mohamed, 16 Oct 2026).
     podiumSetbackStatementId: PODIUM_SETBACK_STATEMENT_ID,
+    columnGapStatementId: COLUMN_GAP_STATEMENT_ID,
     ...(typedSetbacks.length ? { typedSetbacks } : {}),
     unitMix:
       f.mixSource === 'ASSUMED'

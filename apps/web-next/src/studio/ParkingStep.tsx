@@ -480,7 +480,9 @@ function EntranceEditor({
               className="size-4 accent-[var(--accent)]"
             />
             <span className="flex-1">{t.parking.arrangements[a]}</span>
-            <span className="figure text-[12px] text-secondary">{t.parking.arrangementWidth[a]}</span>
+            <span dir="ltr" className="figure text-[12px] text-secondary">
+              {t.parking.arrangementWidth[a]}
+            </span>
           </label>
         ))}
       </fieldset>

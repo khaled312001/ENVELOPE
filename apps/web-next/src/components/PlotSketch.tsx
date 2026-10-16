@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'motion/react';
-import type { KeyboardEvent, MouseEvent } from 'react';
+import { type KeyboardEvent, type MouseEvent, type PointerEvent, useState } from 'react';
 
 import { cn } from '../lib/cn.js';
 import { EASE } from '../ui/motion.js';
@@ -31,6 +31,19 @@ export interface SketchOpening {
   readonly role: 'ENTRY_EXIT' | 'ENTRY' | 'EXIT';
 }
 
+/**
+ * Where the reader put an opening, before the engine has drawn it: a point on a
+ * boundary, `at` of the way from its first corner, and which way its cars go. A
+ * mark of what was asked for, drawn as a point and not as an opening — the
+ * opening's extent is the engine's to work out.
+ */
+export interface SketchPin {
+  readonly seq: number;
+  readonly at: number;
+  readonly role: SketchOpening['role'];
+  readonly label: string;
+}
+
 export interface SketchEdge {
   readonly seq: number;
   readonly classification: 'ROAD' | 'ADJACENT_PLOT' | 'OPEN_SPACE' | 'OTHER' | '';
@@ -59,6 +72,7 @@ export function PlotSketch({
   pickLabel,
   onPickAt,
   openings = [],
+  pins = [],
 }: {
   readonly vertices: readonly { readonly x: string; readonly y: string }[];
   readonly edges: readonly SketchEdge[];
@@ -79,8 +93,12 @@ export function PlotSketch({
   readonly onPickAt?: (seq: number, fraction: number) => void;
   /** Vehicle openings, each drawn as a gap in the boundary with the way its cars go. */
   readonly openings?: readonly SketchOpening[];
+  /** Openings the reader placed and the engine has not drawn yet. */
+  readonly pins?: readonly SketchPin[];
 }): JSX.Element {
   const reduce = useReducedMotion();
+  // Where the pointer is on a boundary, while `onPickAt` is listening: the point a click would place.
+  const [hover, setHover] = useState<{ readonly seq: number; readonly at: number } | null>(null);
   const pts = vertices.map((v) => ({ x: Number(v.x), y: Number(v.y) })).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
   if (pts.length < 3) {
     return (
@@ -136,19 +154,17 @@ export function PlotSketch({
         const hot = highlight === i || chosenEdge === i;
         const unanswered = (e?.classification ?? '') === '';
         const pick = onPick ? (): void => onPick(i) : undefined;
-        // Where on this boundary the pointer landed, as a fraction of its length.
-        const pickAt = onPickAt
-          ? (ev: MouseEvent<SVGLineElement>): void => {
-              const svg = ev.currentTarget.ownerSVGElement;
-              const m = svg?.getScreenCTM();
-              if (!svg || !m) return onPickAt(i, 0.5);
-              const at = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(m.inverse());
-              const dx = x2 - x1;
-              const dy = y2 - y1;
-              const t = ((at.x - x1) * dx + (at.y - y1) * dy) / (dx * dx + dy * dy || 1);
-              onPickAt(i, Math.min(1, Math.max(0, t)));
-            }
-          : undefined;
+        // Where on this boundary the pointer is, as a fraction of its length.
+        const along = (ev: MouseEvent<SVGLineElement> | PointerEvent<SVGLineElement>): number => {
+          const m = ev.currentTarget.ownerSVGElement?.getScreenCTM();
+          if (!m) return 0.5;
+          const at = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(m.inverse());
+          const dx = x2 - x1;
+          const dy = y2 - y1;
+          const t = ((at.x - x1) * dx + (at.y - y1) * dy) / (dx * dx + dy * dy || 1);
+          return Math.min(1, Math.max(0, t));
+        };
+        const pickAt = onPickAt ? (ev: MouseEvent<SVGLineElement>): void => onPickAt(i, along(ev)) : undefined;
         return (
           <g key={i}>
             {pick || pickAt ? (
@@ -161,9 +177,15 @@ export function PlotSketch({
                 stroke="transparent"
                 strokeWidth={18}
                 vectorEffect="non-scaling-stroke"
-                className="cursor-pointer"
+                className={onPickAt ? 'cursor-crosshair' : 'cursor-pointer'}
                 aria-hidden="true"
                 onClick={pickAt ?? pick}
+                {...(onPickAt
+                  ? {
+                      onPointerMove: (ev: PointerEvent<SVGLineElement>) => setHover({ seq: i, at: along(ev) }),
+                      onPointerLeave: () => setHover(null),
+                    }
+                  : {})}
               />
             ) : null}
             <line
@@ -332,6 +354,102 @@ export function PlotSketch({
           </g>
         );
       })}
+      {(() => {
+        /*
+          THE READER'S PLACEMENT, AND THE POINT A CLICK WOULD PLACE. Both are a point
+          on the boundary with an arrow across it the way the cars go — the same ink
+          the engine's openings use, without the opening's width, which is the
+          engine's to work out once the run is computed.
+        */
+        const onEdge = (seq: number, at: number) => {
+          const p = pts[seq];
+          const q = pts[(seq + 1) % pts.length];
+          if (!p || !q) return null;
+          const a = P(p);
+          const b = P(q);
+          const x = a[0] + (b[0] - a[0]) * at;
+          const y = a[1] + (b[1] - a[1]) * at;
+          const [ccx, ccy] = P({ x: cx, y: cy });
+          let nx = -(b[1] - a[1]);
+          let ny = b[0] - a[0];
+          const nl = Math.hypot(nx, ny) || 1;
+          nx /= nl;
+          ny /= nl;
+          if ((ccx - x) * nx + (ccy - y) * ny < 0) {
+            nx = -nx;
+            ny = -ny;
+          }
+          return { x, y, nx, ny };
+        };
+        const arrow = (o: { x: number; y: number; nx: number; ny: number }, role: SketchPin['role']): string => {
+          const L = unit * 9;
+          const tail: [number, number] = [o.x - o.nx * L * 0.45, o.y - o.ny * L * 0.45];
+          const tip: [number, number] = [o.x + o.nx * L * 0.55, o.y + o.ny * L * 0.55];
+          const head = (to: [number, number], from: [number, number]): string => {
+            const ux = to[0] - from[0];
+            const uy = to[1] - from[1];
+            const ul = Math.hypot(ux, uy) || 1;
+            const [px, py] = [(ux / ul) * unit * 2.4, (uy / ul) * unit * 2.4];
+            return `M${to[0] - px - py * 0.6} ${to[1] - py + px * 0.6} L${to[0]} ${to[1]} L${to[0] - px + py * 0.6} ${to[1] - py - px * 0.6}`;
+          };
+          const [from, to] = role === 'EXIT' ? [tip, tail] : [tail, tip];
+          return `M${from[0]} ${from[1]} L${to[0]} ${to[1]} ${head(to, from)}${role === 'ENTRY_EXIT' ? ` ${head(from, to)}` : ''}`;
+        };
+        const ghost = hover && onPickAt ? onEdge(hover.seq, hover.at) : null;
+        const ghostLength = hover ? edges[hover.seq]?.lengthM : undefined;
+        return (
+          <g pointerEvents="none">
+            {pins.map((pin) => {
+              const o = onEdge(pin.seq, pin.at);
+              if (!o) return null;
+              return (
+                <g key={`pin-${pin.seq}-${pin.role}`} data-pin={pin.role}>
+                  <path d={arrow(o, pin.role)} fill="none" stroke="var(--surface-panel)" strokeWidth={5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                  <path d={arrow(o, pin.role)} fill="none" stroke="var(--text-primary)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                  <circle cx={o.x} cy={o.y} r={unit * 1.6} fill="var(--accent-strong)" stroke="var(--surface-panel)" strokeWidth={unit * 0.5} />
+                  <text
+                    x={o.x - o.nx * unit * 8}
+                    y={o.y - o.ny * unit * 8}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={unit * 2.8}
+                    fontWeight={600}
+                    fill="var(--text-primary)"
+                    stroke="var(--surface-base)"
+                    strokeWidth={unit * 0.8}
+                    paintOrder="stroke"
+                  >
+                    {pin.label}
+                  </text>
+                </g>
+              );
+            })}
+            {ghost && hover ? (
+              <g data-ghost="" opacity={0.75}>
+                <circle cx={ghost.x} cy={ghost.y} r={unit * 1.4} fill="none" stroke="var(--accent-strong)" strokeWidth={unit * 0.5} />
+                <circle cx={ghost.x} cy={ghost.y} r={unit * 0.5} fill="var(--accent-strong)" />
+                {ghostLength ? (
+                  <text
+                    direction="ltr"
+                    x={ghost.x + ghost.nx * unit * 6}
+                    y={ghost.y + ghost.ny * unit * 6}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={unit * 2.6}
+                    fontFamily="var(--font-mono)"
+                    fill="var(--text-primary)"
+                    stroke="var(--surface-base)"
+                    strokeWidth={unit * 0.8}
+                    paintOrder="stroke"
+                  >
+                    {`P${hover.seq} + ${(hover.at * Number(ghostLength)).toFixed(1)} m`}
+                  </text>
+                ) : null}
+              </g>
+            ) : null}
+          </g>
+        );
+      })()}
       {!compact ? (
         <g transform={`translate(${w - pad * 0.55} ${pad * 0.6})`} aria-hidden="true">
           <path d={`M0 ${-unit * 4} L${unit * 2} ${unit * 2} L0 ${unit * 0.8} L${-unit * 2} ${unit * 2} Z`} fill="var(--text-secondary)" />

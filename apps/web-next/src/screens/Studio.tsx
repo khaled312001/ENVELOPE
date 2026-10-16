@@ -43,7 +43,7 @@ import {
   typedSetbacksOf,
 } from '../studio/model.js';
 import { pointsToDraft, pointsToRing, ringToDraft } from '../studio/geometry.js';
-import { ParkingCanvas, ParkingPanel } from '../studio/ParkingStep.js';
+import { ParkingCanvas, ParkingPanel, type VehicleAccessBody } from '../studio/ParkingStep.js';
 import { PlotCanvas, PlotPanel, type PlotViewMode } from '../studio/PlotStep.js';
 import { RulesPanel } from '../studio/RulesStep.js';
 import { SHEET_MAX_BYTES, SheetCanvas, SheetPanel, type SheetState } from '../studio/SheetStep.js';
@@ -85,6 +85,8 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   const [rules, setRules] = useState<RulesForm>(EMPTY_RULES);
   const [request, setRequest] = useState<RunRequestBody | null>(null);
   const [run, setRun] = useState<RunView | null>(null);
+  // The vehicle entrance the reader placed on the plan, sent with the run; null lets the engine recommend one.
+  const [entrance, setEntrance] = useState<VehicleAccessBody | null>(null);
   // A new study opens on the affection plan; the worked example and a stored run already have a plot.
   const [step, setStep] = useState<StepId>(() => (runId || params.get('example') === '1' ? 'plot' : 'sheet'));
   const [busy, setBusy] = useState<'plot' | 'run' | 'load' | 'sheet' | null>(null);
@@ -128,6 +130,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
         });
         const body = recalledRequest(runId);
         setRequest(body);
+        setEntrance(body?.vehicleAccess ?? null);
         if (body) setRules(rulesFrom(body));
         setStep((s) => (s === 'sheet' || s === 'plot' || s === 'rules' ? 'capacity' : s));
       } catch (e) {
@@ -167,6 +170,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
       setPlot(view);
       setRun(null);
       setRequest(null);
+      setEntrance(null);
       setStep('rules');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t.studio.plotFailed);
@@ -205,6 +209,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
         const result = await api.createRun(actor, body);
         rememberRequest(result.runId, body);
         setRequest(body);
+        setEntrance(body.vehicleAccess ?? null);
         setRun(result);
         setStep((s) => (s === 'rules' ? 'capacity' : s));
         void queries.invalidateQueries({ queryKey: ['runs'] });
@@ -230,6 +235,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
       setPlot(null);
       setRun(null);
       setRequest(null);
+      setEntrance(null);
       if (runId) navigate('/studio', { replace: true });
     }
   };
@@ -320,6 +326,28 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
     export: Boolean(run?.gates?.['G3_ASSUMPTIONS_ACKNOWLEDGED'] && run?.gates?.['G4_REVIEWER_NAMED']),
   };
 
+  /*
+    The entrance, from wherever it was placed — the plan or the parking step. With
+    a run on screen the same request is sent again with only the entrance changed
+    (or the choice taken back); before the first run it waits and travels with it.
+  */
+  const placeEntrance = useCallback(
+    (placed: VehicleAccessBody | null) => {
+      // With a run, the entrance becomes the one in use only once the engine accepts it (`compute` sets it).
+      if (!request) {
+        setEntrance(placed);
+        return;
+      }
+      const { chosenAccessEdgeSeq: _older, vehicleAccess: _previous, ...rest } = request;
+      void compute(placed === null ? rest : { ...rest, vehicleAccess: placed });
+    },
+    [request, compute],
+  );
+  const entranceTool = useMemo(
+    () => ({ value: entrance, onChange: placeEntrance, access: run?.levelPlan?.access ?? null, recomputes: request !== null }),
+    [entrance, placeEntrance, run, request],
+  );
+
   const canvas: ReactNode = useMemo(() => {
     // The mark over the canvas says it; an empty canvas under it, not a second message.
     if (busy === 'load') return <div className="h-full" />;
@@ -340,6 +368,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
             onUseTrace={applyTrace}
             onEdit={editPlot}
             created={created}
+            entrance={entranceTool}
           />
         );
       case 'rules':
@@ -357,6 +386,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
             statedArea={statedArea}
             sheetUnderlay={null}
             onUseTrace={applyTrace}
+            entrance={entranceTool}
           />
         );
       case 'capacity':
@@ -369,7 +399,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
         return run ? <ParkingCanvas run={run} initialKind="SITE" /> : null;
     }
     // `applyTrace` is rebuilt each render but reads only `draft`, which is listed.
-  }, [busy, step, draft, plot, created, run, t, sheetUnderlay, sheet, plotView, trace, statedArea]);
+  }, [busy, step, draft, plot, created, run, t, sheetUnderlay, sheet, plotView, trace, statedArea, entranceTool]);
 
   return (
     <InspectProvider value={run ? setNode : null}>
@@ -522,7 +552,12 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 form={rules}
                 onChange={setRules}
                 busy={busy === 'run'}
-                onCompute={() => void compute(requestBody(plotId, rules, undefined, typedSetbacksOf(draft)))}
+                onCompute={() =>
+                  void compute({
+                    ...requestBody(plotId, rules, undefined, typedSetbacksOf(draft)),
+                    ...(entrance ? { vehicleAccess: entrance } : {}),
+                  })
+                }
                 hasRun={run !== null}
               />
             ) : step === 'capacity' && run ? (
@@ -533,10 +568,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 busy={busy === 'run'}
                 canChoose={request !== null}
                 onPlace={(placed) => {
-                  if (!request) return;
-                  // The same request, with only the entrance changed — or the choice taken back.
-                  const { chosenAccessEdgeSeq: _older, vehicleAccess: _previous, ...rest } = request;
-                  void compute(placed === null ? rest : { ...rest, vehicleAccess: placed });
+                  if (request) placeEntrance(placed);
                 }}
                 onNext={() => setStep('checks')}
               />

@@ -51,6 +51,10 @@ export function RulesPanel({
             <span className="font-medium text-fg">{t.rules.farFixed}</span>{' '}
             <span className="text-secondary">{t.rules.farFixedBy}</span>
           </li>
+          <li className="rounded-md border border-line bg-base px-3 py-2">
+            <span className="font-medium text-fg">{t.rules.columnGap}</span>{' '}
+            <span className="text-secondary">{t.rules.columnGapBy}</span>
+          </li>
           <li className="flex items-start gap-2 rounded-md border border-dashed border-assumed/70 bg-assumed-surface px-3 py-2 text-fg">
             <Badge tone="assumed" className="shrink-0">
               {t.classLabel.ASSUMED}

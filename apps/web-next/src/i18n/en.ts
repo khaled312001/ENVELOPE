@@ -294,6 +294,23 @@ export const EN = {
     area: 'Plot area',
     shape: 'Shape',
     toRules: 'Continue to the rules',
+    // The vehicle entrance, placed on the plan (Eng. Mohamed, 16 Oct 2026: «من هنا قصدي»).
+    entrance: {
+      tool: 'Vehicle entrance',
+      title: 'Vehicle entrance',
+      hint: 'Click a road boundary at the point where the entrance goes.',
+      exitNext: 'Now click where the exit goes.',
+      entryNext: 'Now click where the entry goes.',
+      needsFile: 'File the plot first. The point is measured along the boundary length the engine computes.',
+      notRoad: (n: number): string => `Boundary ${n} is not a road. An entrance goes on a road boundary.`,
+      at: (what: string, n: number, m: string): string => `${what}: boundary ${n}, ${m} m from P${n}`,
+      sent: 'Sent with the run. The engine checks it against B.7.2.1 and refuses it, saying why, if it is too near a junction.',
+      recomputes: 'Placing it computes the study again.',
+      none: 'No entrance placed. The engine recommends one under B.7.2.1.',
+      remove: 'Remove the entrance',
+      done: 'Done',
+      pin: { ENTRY_EXIT: 'Entrance', ENTRY: 'Entry', EXIT: 'Exit' },
+    },
   },
 
   sheet: {
@@ -423,6 +440,8 @@ export const EN = {
     hint: 'Answer both to compute.',
     farFixed: 'Parking is not counted in FAR.',
     farFixedBy: 'Eng. Mohamed’s statement of 28 Sep 2026. Not a clause of the code.',
+    columnGap: '0.50 m is left after every 3 parking bays, for the columns.',
+    columnGapBy: 'Eng. Mohamed’s statement of 16 Oct 2026. Not a clause of the code.',
     saleableFixed: (share: string): string => `Saleable share of GFA assumed at ${share}. Not asked in this phase.`,
     notDecimal: 'Enter a number, using a point for decimals.',
     increase: (label: string): string => `One more: ${label}`,

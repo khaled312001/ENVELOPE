@@ -1,7 +1,7 @@
-import { CircleCheck, FileCheck2, Map as MapIcon, PenSquare, Plus, Trash2, X } from 'lucide-react';
+import { CircleCheck, FileCheck2, LogIn, Map as MapIcon, PenSquare, Plus, Trash2, X } from 'lucide-react';
 import { lazy, Suspense, useMemo, useState } from 'react';
 
-import type { PlotCreated, PlotView } from '@web/api/client.js';
+import type { LevelPlanView, PlotCreated, PlotView } from '@web/api/client.js';
 
 import type { MapTrace, SheetUnderlay } from '../components/PlotMapView.js';
 import { PlotSketch } from '../components/PlotSketch.js';
@@ -11,8 +11,10 @@ import { EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, Field, Input, Notice, PanelHeader, Select, Spinner } from '../ui/primitives.js';
 import { Segmented } from '../ui/radix.js';
+import { useEntranceOnPlan } from './EntranceOnPlan.js';
 import { legsToDraft, pointsToDraft } from './geometry.js';
 import type { DraftPlot, EdgeClass, Hierarchy } from './model.js';
+import type { VehicleAccessBody } from './ParkingStep.js';
 import { Footer, Heading, NextStep, Row } from './parts.js';
 import type { SheetState } from './SheetStep.js';
 
@@ -33,6 +35,7 @@ export function PlotCanvas({
   onUseTrace,
   onEdit,
   created = null,
+  entrance,
 }: {
   readonly draft: DraftPlot;
   readonly plot: PlotView | null;
@@ -47,9 +50,17 @@ export function PlotCanvas({
   /** With this, each boundary's number on the plan opens it for classifying, in place. */
   readonly onEdit?: (next: DraftPlot) => void;
   readonly created?: PlotCreated | null;
+  /** With this, the plan carries a tool that puts the vehicle entrance where the reader clicks. */
+  readonly entrance?: {
+    readonly value: VehicleAccessBody | null;
+    readonly onChange: (next: VehicleAccessBody | null) => void;
+    readonly access: LevelPlanView['access'] | null;
+    readonly recomputes: boolean;
+  };
 }): JSX.Element {
   const { t } = useLocale();
   const [picked, setPicked] = useState<number | null>(null);
+  const [placing, setPlacing] = useState(false);
   const vertices = plot?.vertices ?? draft.vertices;
   const edges = plot
     ? plot.edges.map((e) => ({ seq: e.seq, classification: e.classification, roadHierarchy: e.roadHierarchy, lengthM: e.lengthM }))
@@ -57,9 +68,18 @@ export function PlotCanvas({
   // Only while the drawing's boundaries ARE the draft's: boundary i on screen must be the one edited.
   const pickable = onEdit !== undefined && vertices.length === draft.vertices.length && draft.edges.length === draft.vertices.length;
   const open = pickable && picked !== null && picked < draft.edges.length ? picked : null;
+  const tool = useEntranceOnPlan({
+    entrance: entrance?.value ?? null,
+    onEntrance: entrance?.onChange ?? (() => undefined),
+    edges,
+    access: entrance?.access ?? null,
+    recomputes: entrance?.recomputes ?? false,
+    onDone: () => setPlacing(false),
+  });
+  const placingNow = placing && entrance !== undefined && view === 'plan';
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-center border-b border-line bg-panel/90 px-3 py-2 backdrop-blur">
+      <div className="flex flex-wrap items-center justify-center gap-2 border-b border-line bg-panel/90 px-3 py-2 backdrop-blur">
         <Segmented<PlotViewMode>
           label={t.plot.view}
           value={view}
@@ -85,6 +105,20 @@ export function PlotCanvas({
             },
           ]}
         />
+        {entrance && view === 'plan' ? (
+          <Button
+            size="sm"
+            variant={placingNow ? 'accent' : 'secondary'}
+            aria-pressed={placingNow}
+            onClick={() => {
+              setPlacing((p) => !p);
+              setPicked(null);
+            }}
+          >
+            <LogIn className="size-3.5" aria-hidden="true" />
+            {t.plot.entrance.tool}
+          </Button>
+        ) : null}
       </div>
       {view === 'map' ? (
         <div className="relative min-h-0 flex-1">
@@ -100,6 +134,7 @@ export function PlotCanvas({
         </div>
       ) : (
         <>
+          {placingNow ? tool.card : null}
           <div className="relative min-h-0 flex-1 p-6 sm:p-10">
             <PlotSketch
               vertices={vertices}
@@ -115,8 +150,10 @@ export function PlotCanvas({
                     },
                   }
                 : {})}
+              pins={tool.pins}
+              {...(placingNow ? { onPickAt: tool.onPickAt } : {})}
             />
-            {pickable && open === null ? (
+            {pickable && open === null && !placingNow ? (
               <p className="pointer-events-none absolute inset-x-0 top-2 text-center text-[12px] text-secondary">{t.plot.planPick}</p>
             ) : null}
             {open !== null && onEdit ? (

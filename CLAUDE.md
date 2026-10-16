@@ -449,10 +449,32 @@ is a defect even when it makes something easier.
   hour. It is text beside the figures and changes none of them; it is not in any
   exported file, because an export is the engine's and the gates' word, not a model's.
   Never exercise it with the real key in a test or an e2e run.
-- **Engine text is shown in the reader's language.** `apps/web-next/src/lib/engine-notes.ts`
-  and `engine-run-notes.ts` map every note, label, parameter id and refusal the engine
+- **Claude is guide and corrector on every step, and may propose edits — never make
+  them.** 16 Oct 2026: «كموجه ومساعد ومصحح … التعديل على المدخلات كتحسين … وكل شئ
+  بناء على كود دبي». The box is on all seven steps (the ones before a run read the
+  reader's own inputs, never the sheet's PDF or picture) and under every error the
+  studio shows. It may return edits, but only to the fields
+  `apps/web-next/src/studio/advisor-edits.ts` lists: the level schedule, the core,
+  and each boundary's class, road rank and tower setback. No FAR, GFA, height,
+  coverage or mix, because those come from instruments. The server drops any edit
+  whose clause is not literally in the code text it sent (`takeEdits`). An edit is
+  a proposal until the reader presses Apply. It is then written into the same form
+  state typing would write, so it is the reader's input, un-files a plot the same
+  way, and counts only when the reader computes again. Do not let it apply itself.
+- **The study report is in the reader's language; the audit report is not gone.**
+  `?format=html` is `studyReportHtml` (`packages/report/src/study.ts`): cover,
+  plot, capacity, parking, the drawings from the building model, assumptions,
+  checks and sources, in `?lang=en|ar`. `?format=audit` is the full `toHtml`
+  report as before. The engine's sentences are translated by
+  `packages/report/src/words/`, moved there from `apps/web-next` so the screen and
+  the paper read one dictionary. A new engine sentence needs its entry there. The
+  stamp stays in English beside the Arabic, because it is the literal every gate
+  greps for.
+- **Engine text is shown in the reader's language.** `packages/report/src/words/`
+  (`engine-notes.ts`, `engine-run-notes.ts`, `study-notes.ts`; the site imports it as
+  `@envelope/report/words`) maps every note, label, parameter id and refusal the engine
   writes; a new engine sentence a reader can see needs its entry there, or the Arabic
-  page shows English. Drawings, DXF layers and title strips stay in English ASCII.
+  page and the Arabic report show English. Drawings, DXF layers and title strips stay in English ASCII.
 - **The massing is built in the engine, not the renderer.** A 3D view is the most persuasive
   surface in the product; a massing assembled by a viewer would be a building nobody
   computed, drawn convincingly. `@envelope/massing` takes a `BuildingModel` and nothing

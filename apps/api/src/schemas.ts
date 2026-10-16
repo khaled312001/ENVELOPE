@@ -178,6 +178,12 @@ export const runRequest = z.object({
    */
   podiumSetbackStatementId: z.string().min(1).optional(),
   /**
+   * The column-gap statement: a clear gap after every three bays along a run.
+   * Looked up and refused the same way; the gap is the one the statement
+   * records, never a figure sent beside it. Absent, bays pack shoulder to shoulder.
+   */
+  columnGapStatementId: z.string().min(1).optional(),
+  /**
    * Tower setbacks typed by the actor, by edge, in metres. USER_SET. An edge the
    * affection plan governs refuses a typed value (422, in a sentence).
    */

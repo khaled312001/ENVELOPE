@@ -169,6 +169,13 @@ export interface RunInput {
    */
   readonly podiumAtBoundaryStatement?: StatementRef;
   /**
+   * A clear gap between every three bays along a run, for the columns — Eng.
+   * Mohamed, 16 Oct 2026. Resolved from a statement id at the composition root,
+   * with the gap his statement records. Absent, bays are packed shoulder to
+   * shoulder, as every older run was, so a stored run keeps its count.
+   */
+  readonly columnGapStatement?: StatementRef & { readonly gapM: Decimal };
+  /**
    * Tower setbacks the reader typed, for edges no instrument of the plot speaks
    * to. Each is `USER_SET` by `actor` and replaces a general rule's value on its
    * edge; on an edge the sheet governs it halts the run in a sentence.
@@ -844,6 +851,23 @@ export function runPipeline(input: RunInput): RunOutput {
   const podiumMassLevels = massing.masses.find((m) => m.id === 'podium')?.levels.value ?? 0;
   const groundParks = parkingInPodiumOf(schedule, parkingLevelsAvailable, podiumMassLevels) >= 1;
 
+  /*
+    THE COLUMN GAP, UNDER HIS NAME. USER_SET by the statement's author and quoted
+    in the label, as the podium setback is: no clause of the Dubai Building Code
+    places a column every three bays, and a practitioner saying so is not one.
+  */
+  const gapStatement = input.columnGapStatement;
+  const columnGap = gapStatement
+    ? {
+        everyBays: 3,
+        gapM: tracer.userSet('parking.column_gap_m', gapStatement.gapM, {
+          actor: { id: gapStatement.statementId, name: gapStatement.statedBy },
+          label: `clear gap after every 3 bays, for the columns — stated ${gapStatement.statedOn}: "${gapStatement.verbatim}"`,
+          unit: 'm',
+        }),
+      }
+    : undefined;
+
   let levelPlan: LevelPlan | undefined;
   let levelPlanRefusal: string | undefined;
   try {
@@ -865,6 +889,7 @@ export function runPipeline(input: RunInput): RunOutput {
       ...(input.levelPlan?.structuralGridM === undefined
         ? {}
         : { structuralGridM: input.levelPlan.structuralGridM }),
+      ...(columnGap ? { columnGap } : {}),
       ...(input.levelPlan?.accessEdgeSeq === undefined
         ? {}
         : { affectionPlanAccessEdgeSeq: input.levelPlan.accessEdgeSeq }),

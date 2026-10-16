@@ -73,6 +73,12 @@ export const StatementSubject = {
    * sets no setback for; the sheet governs wherever it speaks.
    */
   PODIUM_SETBACK: 'PODIUM_SETBACK',
+  /**
+   * The clear gap left between every group of three bays in a run, in metres —
+   * `"0.5"` — where the columns stand. The three is in the subject, not the
+   * value: a statement about groups of four would be a different statement.
+   */
+  COLUMN_GAP_EVERY_THREE_BAYS: 'COLUMN_GAP_EVERY_THREE_BAYS',
 } as const;
 export type StatementSubject = (typeof StatementSubject)[keyof typeof StatementSubject];
 

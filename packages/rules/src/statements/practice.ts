@@ -141,10 +141,48 @@ export const PODIUM_SETBACK_STATEMENT: PracticeStatement = {
     'toward the neighbour; none of that is assessed.',
 };
 
+/**
+ * Half a metre between every three bays, for the columns. 16 Oct 2026.
+ *
+ * Written with his notes on the parking drawings, and asked for again the same
+ * day when the drawings still packed bays shoulder to shoulder the length of a
+ * run. Three 2.50 m bays and 0.50 m is an 8.00 m bay — the structural grid his
+ * own prototypes are drawn on — so the gap is where the column line falls.
+ *
+ * USER_SET by him. Table B.11's closing note asks 300 mm more for a bay "bounded
+ * by building structural elements", and 0.50 m holds a column but not a column
+ * and that clearance either side: whether his half metre includes it is a
+ * question for him, and it is in `limits` rather than decided here.
+ */
+export const COLUMN_GAP_STATEMENT: PracticeStatement = {
+  statementId: 'STMT-COLUMN-GAP-2026-10-16',
+  subject: StatementSubject.COLUMN_GAP_EVERY_THREE_BAYS,
+  value: '0.5',
+  statedBy: {
+    name: 'Eng. Mohamed',
+    role: 'the architect this engine is being built for, in Dubai practice',
+  },
+  statedOn: '2026-10-16',
+  source: 'written notes on the studio’s parking drawings, 16 October 2026, repeated the same day',
+  verbatim:
+    'بعد ما حددنا مداخلنا و مخارجنا بيكون في مسار حركه لل عربيات المسار دا بيترسم بعدين بنرص ال ' +
+    'باكيات كل ٣ باكييات بينهم مسافه ٥٠ سم',
+  translation:
+    'Once the entrances and exits are set there is a path for the cars; that path is drawn, ' +
+    'then the bays are laid along it, with 50 cm between every three bays.',
+  limits:
+    'A practitioner’s rule for laying out bays in his own work, for the columns. It is not a ' +
+    'clause of the Dubai Building Code. It places no column and sizes none: the half metre is ' +
+    'left clear, nothing is drawn in it. Table B.11 asks a further 300 mm for a bay beside a ' +
+    'structural element, which this gap does not add; whether the 0.50 m already includes it ' +
+    'has not been asked. A scheme on a different grid is not a case this statement describes.',
+};
+
 export const PRACTICE_STATEMENTS: readonly PracticeStatement[] = [
   PARKING_IN_FAR_STATEMENT,
   CORE_PLATE_FRACTION_STATEMENT,
   PODIUM_SETBACK_STATEMENT,
+  COLUMN_GAP_STATEMENT,
 ];
 
 /**

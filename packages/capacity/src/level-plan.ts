@@ -50,6 +50,7 @@ import {
   layoutParkingLevel,
   RING_AISLE_ROW,
   type ParkingAngle,
+  type ParkingLayoutInput,
   type ParkingLayoutResult,
   type PlacedRect,
   type RampType,
@@ -224,6 +225,8 @@ export interface LevelPlanInput {
   readonly includeRamp: boolean;
   readonly angle?: ParkingAngle;
   readonly structuralGridM?: Decimal;
+  /** Passed through to `layoutParkingLevel` — the gap left between groups of bays for the columns. */
+  readonly columnGap?: ParkingLayoutInput['columnGap'];
   /** Passed through to `placeVehicleAccess` — the sheet's stated access side. */
   readonly affectionPlanAccessEdgeSeq?: number;
   /** Passed through to `placeVehicleAccess` — the entrance a person placed. */
@@ -372,6 +375,7 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     ...(input.core && coreRect ? { core: { rect: coreRect, areaM2: input.core.areaM2 } } : {}),
     ...(input.angle === undefined ? {} : { angle: input.angle }),
     ...(input.structuralGridM === undefined ? {} : { structuralGridM: input.structuralGridM }),
+    ...(input.columnGap ? { columnGap: input.columnGap } : {}),
     ...(field ? { field } : {}),
   });
 

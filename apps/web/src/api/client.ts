@@ -915,6 +915,8 @@ export interface RunRequestBody {
   readonly parkingInFarStatementId?: string;
   /** The podium statement's id: basements, ground and podium on the boundary where the sheet is silent. */
   readonly podiumSetbackStatementId?: string;
+  /** The column-gap statement's id: a clear gap after every three bays, the gap the statement records. */
+  readonly columnGapStatementId?: string;
   /** Tower setbacks typed by the reader, by edge, metres. USER_SET. */
   readonly typedSetbacks?: readonly { readonly edgeSeq: number; readonly metres: string }[];
   readonly unitMix: {

@@ -1663,6 +1663,63 @@ describe('the podium on the boundary, the tower inside its setbacks', () => {
     expect(run.statusCode).toBe(400);
     expect(run.json().message).toMatch(/no podium setback statement on file/);
   });
+
+  /*
+    Half a metre after every three bays (Eng. Mohamed, 16 Oct 2026). The gap is
+    the one his statement records — the request names the statement, never a
+    figure — and the bays on the wire stand in threes with it between them.
+  */
+  it('leaves 0.50 m after every three bays under the column-gap statement', async () => {
+    const plotId = await plotOf('345-1234-cg');
+    const run = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId, columnGapStatementId: 'STMT-COLUMN-GAP-2026-10-16' },
+    });
+    expect(run.statusCode, run.body).toBe(201);
+    expect(run.body).toMatch(/parking\.column_gap_m/);
+    const rects = run.json().levelPlan.rects as { kind: string; widthM: string; heightM: string; outline: { x: string; y: string }[] }[];
+    // Bays along x: the starts of every bay, by the line they stand on.
+    const lines = new Map<string, number[]>();
+    for (const r of rects.filter((x) => x.kind === 'BAY')) {
+      const xs = r.outline.map((p) => Number(p.x));
+      const ys = r.outline.map((p) => Number(p.y));
+      const alongX = Math.max(...xs) - Math.min(...xs) < Math.max(...ys) - Math.min(...ys);
+      const key = `${alongX ? 'x' : 'y'}${(alongX ? Math.min(...ys) : Math.min(...xs)).toFixed(2)}`;
+      lines.set(key, [...(lines.get(key) ?? []), alongX ? Math.min(...xs) : Math.min(...ys)]);
+    }
+    let touching = 0;
+    let longest = 0;
+    let gaps = 0;
+    for (const at of lines.values()) {
+      at.sort((a, b) => a - b);
+      touching = 1;
+      for (let i = 1; i < at.length; i += 1) {
+        const step = Math.round((at[i]! - at[i - 1]!) * 1000) / 1000;
+        if (step === 2.5) touching += 1;
+        else {
+          if (step === 3) gaps += 1;
+          touching = 1;
+        }
+        longest = Math.max(longest, touching);
+      }
+    }
+    expect(longest).toBeLessThanOrEqual(3);
+    expect(gaps).toBeGreaterThan(0);
+  });
+
+  it('refuses a column-gap statement id nobody holds, in a sentence', async () => {
+    const plotId = await plotOf('345-1234-cx');
+    const run = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId, columnGapStatementId: 'STMT-PODIUM-SETBACK-2026-10-16' },
+    });
+    expect(run.statusCode).toBe(400);
+    expect(run.json().message).toMatch(/no column-gap statement on file/);
+  });
 });
 
 /**

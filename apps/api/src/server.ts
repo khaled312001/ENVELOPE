@@ -1787,6 +1787,29 @@ function podiumStatementOn(body: RunRequest): RunInput['podiumAtBoundaryStatemen
   };
 }
 
+/** The column-gap statement, refused as the others are: unknown id, or the wrong subject. */
+function columnGapStatementOn(body: RunRequest): RunInput['columnGapStatement'] {
+  if (body.columnGapStatementId === undefined) return undefined;
+  const stmt = statementById(body.columnGapStatementId);
+  if (!stmt || stmt.subject !== StatementSubject.COLUMN_GAP_EVERY_THREE_BAYS) {
+    throw Object.assign(
+      new Error(
+        `no column-gap statement on file with id "${body.columnGapStatementId}". ` +
+          'Send the id of a recorded column-gap statement, or none — the bays then pack ' +
+          'shoulder to shoulder along every run.',
+      ),
+      { statusCode: 400 },
+    );
+  }
+  return {
+    statementId: stmt.statementId,
+    statedBy: stmt.statedBy.name,
+    statedOn: stmt.statedOn,
+    verbatim: stmt.verbatim,
+    gapM: new Decimal(stmt.value),
+  };
+}
+
 function runInputFrom(
   body: RunRequest,
   plot: Plot,
@@ -1800,6 +1823,7 @@ function runInputFrom(
   */
   const statement = statementOn(body);
   const podiumStatement = podiumStatementOn(body);
+  const columnGapStatement = columnGapStatementOn(body);
   return {
     plot,
     rules,
@@ -1807,6 +1831,7 @@ function runInputFrom(
     parkingInFar: body.parkingInFar,
     ...(statement ? { parkingInFarStatement: statement } : {}),
     ...(podiumStatement ? { podiumAtBoundaryStatement: podiumStatement } : {}),
+    ...(columnGapStatement ? { columnGapStatement } : {}),
     ...(body.typedSetbacks?.length
       ? { typedSetbacks: body.typedSetbacks.map((s) => ({ edgeSeq: s.edgeSeq, metres: new Decimal(s.metres) })) }
       : {}),

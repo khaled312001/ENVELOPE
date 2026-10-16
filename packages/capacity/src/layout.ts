@@ -237,6 +237,16 @@ export interface ParkingLayoutInput {
    */
   readonly structuralGridM?: Decimal;
   /**
+   * A clear gap left between every `everyBays` bays along a run, where the
+   * columns stand — Eng. Mohamed's half metre every three bays (16 Oct 2026).
+   * Traced by the caller, `USER_SET` under his statement. The gap is left empty:
+   * no column is placed in it and none is sized.
+   *
+   * Not with `structuralGridM`, which charges the columns as a wider bay: the two
+   * are two models of the same columns, and a level given both is refused.
+   */
+  readonly columnGap?: { readonly everyBays: number; readonly gapM: TracedDecimal };
+  /**
    * Area removed before layout for cores, plant, ramp landing and circulation
    * that is not drive aisle. Never defaulted silently — see the constructor.
    */
@@ -877,6 +887,10 @@ interface PackOptions {
   readonly aisleWidth: Decimal;
   readonly moduleDepth: Decimal;
   readonly effectiveBayWidth: Decimal;
+  /** Bays in a group between column gaps; 0 where no gap is left. */
+  readonly columnEvery: number;
+  /** The clear gap after each group, metres. */
+  readonly columnGapM: Decimal;
   readonly includeRamp: boolean;
   /**
    * The straight ramp's plan size for one storey, from Tables B.9 and B.10 — the
@@ -944,6 +958,29 @@ interface Packing {
 }
 
 const ZERO = new Decimal(0);
+
+type Pitch = Pick<PackOptions, 'effectiveBayWidth' | 'columnEvery' | 'columnGapM'>;
+
+/**
+ * Where bay `k` of a run starts, measured from the run's start: `k` bays, and a
+ * column gap after every full group before it. Every packer places bays along a
+ * run through this one function, so the gap cannot be left in one arrangement
+ * and forgotten in another.
+ */
+function bayAlong(o: Pitch, k: number): Decimal {
+  const gaps = o.columnEvery > 0 ? Math.floor(k / o.columnEvery) : 0;
+  return o.effectiveBayWidth.times(k).plus(o.columnGapM.times(gaps));
+}
+
+/**
+ * How many bays a run of `length` holds, column gaps included. A gap is only
+ * ever BETWEEN two groups: a run that ends on a full group pays no gap after it.
+ */
+function baysAlong(o: Pitch, length: Decimal): number {
+  let n = 0;
+  while (bayAlong(o, n).plus(o.effectiveBayWidth).lte(length)) n += 1;
+  return n;
+}
 
 function refused(reason: string): Packing {
   return {
@@ -1079,7 +1116,7 @@ function packLevel(o: PackOptions): Packing {
         'nothing else',
     );
   }
-  const baysPerRun = packWidth.div(o.effectiveBayWidth).floor().toNumber();
+  const baysPerRun = baysAlong(o, packWidth);
   if (baysPerRun < 1) {
     return refused(
       `a ${packWidth.toFixed(2)} m packable width cannot hold one ` +
@@ -1087,11 +1124,7 @@ function packLevel(o: PackOptions): Packing {
         (o.includeRamp ? ' once the ramp strip and the cross aisle are reserved' : ''),
     );
   }
-  const baysPerRunUnconnected = o.widthM
-    .minus(rampX)
-    .div(o.effectiveBayWidth)
-    .floor()
-    .toNumber();
+  const baysPerRunUnconnected = baysAlong(o, o.widthM.minus(rampX));
 
   // --- pack double-loaded modules ----------------------------------------
   let availableDepth = availableDepth0;
@@ -1111,7 +1144,7 @@ function packLevel(o: PackOptions): Packing {
       rects.push({
         kind: RectKind.BAY,
         row: r,
-        x: runX.plus(o.effectiveBayWidth.times(i)),
+        x: runX.plus(bayAlong(o, i)),
         y,
         width: o.bayWidth,
         height: o.bayLength,
@@ -1404,22 +1437,22 @@ function packPerimeter(o: PackOptions): Packing {
   };
 
   // --- the four bay runs ---------------------------------------------------
-  const acrossCount = W.div(o.effectiveBayWidth).floor().toNumber();
+  const acrossCount = baysAlong(o, W);
   const sideStart = inner.y0.plus(o.aisleWidth);
   const sideEnd = inner.y1.minus(o.aisleWidth);
-  const downCount = sideEnd.minus(sideStart).div(o.effectiveBayWidth).floor().toNumber();
+  const downCount = sideEnd.lt(sideStart) ? -1 : baysAlong(o, sideEnd.minus(sideStart));
   if (acrossCount < 1 || downCount < 0) {
     return refused(
       `a ${W.toFixed(2)} m wall holds no ${o.effectiveBayWidth.toString()} m bay run`,
     );
   }
   for (let i = 0; i < acrossCount; i += 1) {
-    const x = o.effectiveBayWidth.times(i);
+    const x = bayAlong(o, i);
     bayAt(x, ZERO, o.bayWidth, o.bayLength, 0);
     bayAt(x, D.minus(o.bayLength), o.bayWidth, o.bayLength, 1);
   }
   for (let i = 0; i < downCount; i += 1) {
-    const y = sideStart.plus(o.effectiveBayWidth.times(i));
+    const y = sideStart.plus(bayAlong(o, i));
     bayAt(ZERO, y, o.bayLength, o.bayWidth, 2);
     bayAt(W.minus(o.bayLength), y, o.bayLength, o.bayWidth, 3);
   }
@@ -1621,9 +1654,9 @@ function packPerimeter(o: PackOptions): Packing {
       // the far band's at the island's far edge.
       const b0 = islandRows === 2 && i === 1 ? shortLen.minus(o.bayLength) : ZERO;
       for (const [lo, hi] of clear([b0, b0.plus(o.bayLength)])) {
-        const n = hi.minus(lo).div(o.effectiveBayWidth).floor().toNumber();
+        const n = baysAlong(o, hi.minus(lo));
         for (let k = 0; k < n; k += 1) {
-          const b = onIsland(lo.plus(o.effectiveBayWidth.times(k)), o.bayWidth, b0, o.bayLength);
+          const b = onIsland(lo.plus(bayAlong(o, k)), o.bayWidth, b0, o.bayLength);
           bayAt(b.x, b.y, b.width, b.height, 4 + i);
           islandBays += 1;
         }
@@ -1767,6 +1800,14 @@ function packField(o: FieldOptions): Packing {
   const aisle = mm(o.aisleWidth);
   const bayW = mm(o.bayWidth);
   const pitch = mm(o.effectiveBayWidth);
+  const gapMm = mm(o.columnGapM);
+  // `bayAlong` and `baysAlong` in whole millimetres, for the rows this packer lays in them.
+  const alongMm = (k: number): number => k * pitch + (o.columnEvery > 0 ? Math.floor(k / o.columnEvery) * gapMm : 0);
+  const fitsMm = (length: number): number => {
+    let n = 0;
+    while (alongMm(n) + pitch <= length) n += 1;
+    return n;
+  };
   const ys = o.polygon.map((p) => p.y);
   const yMin = Math.ceil(Math.min(...ys));
   const yMax = Math.floor(Math.max(...ys));
@@ -1867,9 +1908,9 @@ function packField(o: FieldOptions): Packing {
       ];
       for (const [b0, b1] of sides) {
         for (const [x0, x1] of intersectIntervals(allowed(b0, b1), [iv])) {
-          const n = Math.floor((x1 - x0) / pitch);
+          const n = fitsMm(x1 - x0);
           for (let k = 0; k < n; k += 1) {
-            rects.push(box(RectKind.BAY, r.index, x0 + k * pitch, b0, x0 + k * pitch + bayW, b1));
+            rects.push(box(RectKind.BAY, r.index, x0 + alongMm(k), b0, x0 + alongMm(k) + bayW, b1));
           }
         }
       }
@@ -1984,7 +2025,9 @@ function packField(o: FieldOptions): Packing {
     for (const b of bays) {
       const last = runs[runs.length - 1];
       const prev = last?.[last.length - 1];
-      if (prev && prev.y.eq(b.y) && b.x.minus(prev.x).eq(o.effectiveBayWidth)) last!.push(b);
+      // Side by side, or either side of a column gap: one run either way.
+      const step = prev ? b.x.minus(prev.x) : undefined;
+      if (prev && prev.y.eq(b.y) && step && (step.eq(o.effectiveBayWidth) || step.eq(o.effectiveBayWidth.plus(o.columnGapM)))) last!.push(b);
       else runs.push([b]);
     }
     const taken = new Set<PlacedRect>();
@@ -2236,6 +2279,35 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     );
   }
 
+  // --- the column gap between groups of bays --------------------------------
+  const columnGap = input.columnGap;
+  if (columnGap) {
+    if (input.structuralGridM !== undefined) {
+      throw new ParkingLayoutError(
+        'a level was given both a structural grid and a column gap between groups of bays. ' +
+          'They are two models of the same columns — one widens every bay, the other leaves a ' +
+          'gap between groups — and charging both would count the columns twice.',
+      );
+    }
+    if (!Number.isInteger(columnGap.everyBays) || columnGap.everyBays < 1 || columnGap.gapM.value.lt(0)) {
+      throw new ParkingLayoutError(
+        `a column gap of ${columnGap.gapM.value.toString()} m every ${columnGap.everyBays} bays ` +
+          'describes no run of bays: the group must be a whole number of bays and the gap not negative.',
+      );
+    }
+    const every = columnGap.everyBays;
+    const gap = columnGap.gapM.value;
+    notes.push(
+      `${gap.toFixed(2)} m is left clear after every ${every} bays along a run, for the columns: ` +
+        `${every} × ${bayWidth.toFixed(2)} m + ${gap.toFixed(2)} m = ` +
+        `${bayWidth.times(every).plus(gap).toFixed(2)} m to a group. No column is drawn in the gap ` +
+        'and none is sized. Table B.11 asks a further 300 mm for a bay beside a structural ' +
+        'element, which is not added: whether the gap already includes it is NOT ASSESSED.',
+    );
+  }
+  const columnEvery = columnGap ? columnGap.everyBays : 0;
+  const columnGapM = columnGap ? columnGap.gapM.value : ZERO;
+
   // --- pack it both ways round --------------------------------------------
   // The deduction is taken off the depth so the packing runs on a real
   // rectangle. Taking it off as an abstract area would leave rows placed where
@@ -2296,6 +2368,8 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     aisleWidth,
     moduleDepth: moduleDepthValue,
     effectiveBayWidth,
+    columnEvery,
+    columnGapM,
     includeRamp,
     rampWidthM: requirement ? requirement.widthM.value : ZERO,
     rampRunM: requirement ? requirement.runM.value : ZERO,
@@ -2506,7 +2580,9 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
       : chargedDeduction;
 
   // --- the three losses ---------------------------------------------------
-  const marginalAreaPerBay = moduleDepthValue.times(effectiveBayWidth).div(2);
+  // A bay's charged width, its share of the column gap after its group included.
+  const chargedBayWidth = columnEvery > 0 ? effectiveBayWidth.plus(columnGapM.div(columnEvery)) : effectiveBayWidth;
+  const marginalAreaPerBay = moduleDepthValue.times(chargedBayWidth).div(2);
   const losses: ParkingLosses = {
     marginalAreaPerBayM2: marginalAreaPerBay,
     reserved: {
@@ -2562,8 +2638,9 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     rule: { ruleId: 'DBC.B.7.2.4.TABLE_B11', citation: TABLE_B11 },
     formula:
       `${packing.rects.filter((r) => r.kind === RectKind.BAY).length} bays placed ` +
-      `with the runs ${chosen}, each served by an aisle that reaches the way in`,
-    uses: { moduleDepth, usableArea: chargedUsable, orientation },
+      `with the runs ${chosen}, each served by an aisle that reaches the way in` +
+      (columnGap ? `, ${columnGapM.toFixed(2)} m left after every ${columnEvery} bays for the columns` : ''),
+    uses: { moduleDepth, usableArea: chargedUsable, orientation, ...(columnGap ? { columnGap: columnGap.gapM } : {}) },
     unit: 'bays',
     detail: {
       note:

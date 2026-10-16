@@ -1,92 +1,124 @@
 {
-  "_": "Every public page, its title and description in both languages. Read by the pages (usePageMeta) AND by scripts/prerender.mjs, which writes them into each route's own index.html, so a crawler or a link preview that never runs JavaScript reads the same words the page shows. Pages that file work (the studio, the studies, sign-in) are not here: they are noindex.",
+  "_": "Every public page, its title and description in both languages. Read by the pages (usePageMeta) AND by scripts/prerender.mjs, which writes them into each route's own index.html, so a crawler or a link preview that never runs JavaScript reads the same words the page shows. Pages that file work (the studio, the studies, sign-in) are not here: they are noindex. A title is 'Page — what it covers — Plotlogic': the part before the first dash is the page's name in the breadcrumb data. No figure, no accuracy, no 'optimised': a head is a claim like any other.",
   "origin": "https://plotlogic.dev",
   "base": "",
   "siteName": "Plotlogic",
   "image": "/og-cover.png",
+  "app": {
+    "_": "The SoftwareApplication block on the home page. Every feature listed is one the studio has; no price, rating or review exists, so none is given.",
+    "areaServed": "Dubai",
+    "en": {
+      "category": "Development capacity and parking layout for Dubai plots",
+      "keywords": "Dubai plot development capacity, GFA calculation, affection plan, Dubai Building Code, parking layout, FAR, setbacks, building envelope, massing, DXF",
+      "features": [
+        "Reads the affection plan PDF and cites every value to the sheet",
+        "Draws the plot on a satellite map or from its corners",
+        "Computes regulatory, geometric and parking capacity separately",
+        "Lays out parking bay by bay to Dubai Building Code Table B.11 dimensions",
+        "Recommends or checks the vehicle entrance under B.7.2.1",
+        "Draws the building in 3D, every level and every car",
+        "Exports a report, an A3 drawing set, DXF, a .glb model, XLSX and JSON",
+        "Traces every figure to a cited rule, your entry or a stated assumption"
+      ]
+    },
+    "ar": {
+      "category": "السعة التطويرية وتوزيع المواقف لقطع الأرض في دبي",
+      "keywords": "السعة التطويرية لقطع الأرض في دبي، حساب إجمالي المساحة الطابقية، مخطط أفكشن، Affection Plan، كود دبي للمباني، توزيع المواقف، معامل البناء، الارتدادات، الغلاف البنائي، الكتلة البنائية، DXF",
+      "features": [
+        "يقرأ ملف PDF لمخطط أفكشن ويربط كل قيمة بمرجعها في المخطط",
+        "يرسم القطعة على خريطة الأقمار الصناعية أو من رؤوسها",
+        "يحسب السعة التنظيمية والهندسية وسعة المواقف كلا على حدة",
+        "يوزع المواقف موقفا موقفا بأبعاد الجدول B.11 من كود دبي للمباني",
+        "يوصي بمدخل المركبات أو يفحصه وفق البند B.7.2.1",
+        "يرسم المبنى بأبعاده الثلاثة، كل دور وكل سيارة",
+        "يصدر تقريرا ومجموعة لوحات A3 وملف DXF ونموذج glb وجدول بيانات وملف JSON",
+        "يربط كل رقم بقاعدة مستشهد بها أو بإدخالك أو بافتراض معلن"
+      ]
+    }
+  },
   "pages": [
     {
       "path": "/",
       "priority": "1.0",
       "en": {
-        "title": "Plotlogic — development capacity for Dubai plots, every figure traced",
-        "description": "A rule-based development platform for Dubai plots: land data, zoning rules and developer requirements become building configurations, capacity and parking calculations, and traced decisions. Regulatory validity is never claimed."
+        "title": "Plotlogic — development capacity, GFA and parking layout for Dubai plots",
+        "description": "Rule-based development platform for Dubai plots: the affection plan, Dubai Building Code and your brief become capacity, GFA, a parking layout and drawings, all traced."
       },
       "ar": {
-        "title": "Plotlogic — السعة التطويرية لقطع الأرض في دبي، وكل رقم بمصدره",
-        "description": "منصة تطوير عقاري قائمة على القواعد لقطع دبي: تحول بيانات الأرض واشتراطات التخطيط ومتطلبات المطور إلى تكوينات بنائية وحسابات للسعة والمواقف وقرارات موثقة المصدر. الصلاحية التنظيمية لا يؤكدها المنتج."
+        "title": "Plotlogic — السعة التطويرية وإجمالي المساحة الطابقية وتوزيع المواقف لقطع الأرض في دبي",
+        "description": "منصة تطوير عقاري قائمة على القواعد لقطع الأرض في دبي: مخطط أفكشن (Affection Plan) وكود دبي للمباني وموجزك تتحول إلى السعة وإجمالي المساحة الطابقية وتوزيع المواقف واللوحات، وكل رقم بمصدره."
       }
     },
     {
       "path": "/product",
       "priority": "0.9",
       "en": {
-        "title": "The studio — Plotlogic",
-        "description": "One studio from affection plan to drawing set: plot, rules, three capacity bands, parking, checks and export, with every value traced to its rule, your entry or a stated assumption."
+        "title": "The studio — from affection plan to drawing set — Plotlogic",
+        "description": "One studio for a Dubai plot: read the affection plan, draw the plot, answer what no rule decides, then capacity, parking, checks and export. Every value traced."
       },
       "ar": {
-        "title": "الاستوديو — Plotlogic",
-        "description": "استوديو واحد من مخطط أفكشن إلى مجموعة اللوحات: القطعة والقواعد ونطاقات السعة الثلاثة والمواقف والفحوصات والتصدير، وكل قيمة موثقة بقاعدتها أو بإدخالك أو بافتراض معلن."
+        "title": "الاستوديو — من مخطط أفكشن إلى مجموعة اللوحات — Plotlogic",
+        "description": "استوديو واحد لقطعة الأرض في دبي: اقرأ مخطط أفكشن، وارسم القطعة، وأجب عما لا تحسمه أي قاعدة، ثم السعة والمواقف والفحوصات والتصدير. وكل قيمة بمصدرها."
       }
     },
     {
       "path": "/parking",
       "priority": "0.9",
       "en": {
-        "title": "Parking laid out, not divided — Plotlogic",
-        "description": "Bays, aisles and the ramp placed as rectangles to Dubai Building Code Table B.11, a bay nobody can drive to not counted, losses reported in bays and m², and the vehicle entrance recommended under B.7.2.1."
+        "title": "Parking layout — every bay placed, Dubai Building Code B.11 — Plotlogic",
+        "description": "Parking laid out bay by bay for Dubai plots: Table B.11 dimensions, only reachable bays counted, accessible bays, losses in bays and m², and the entrance under B.7.2.1."
       },
       "ar": {
-        "title": "مواقف توزع ولا تقسم — Plotlogic",
-        "description": "المواقف وممرات المناورة والمنحدر توضع مستطيلات بأبعاد الجدول B.11 من كود دبي للمباني، والموقف الذي لا يصل إليه أحد لا يحتسب، والخسائر تعرض بالمواقف وبالمتر المربع، ومدخل المركبات موصى به وفق البند B.7.2.1."
+        "title": "توزيع المواقف — كل موقف في مكانه وفق الجدول B.11 من كود دبي للمباني — Plotlogic",
+        "description": "توزيع المواقف موقفا موقفا لقطع الأرض في دبي: أبعاد الجدول B.11، ولا يحتسب إلا الموقف الذي يوصل إليه، ومواقف أصحاب الهمم، والخسائر بالمواقف وبالمتر المربع، ومدخل المركبات وفق البند B.7.2.1."
       }
     },
     {
       "path": "/method",
       "priority": "0.8",
       "en": {
-        "title": "How a figure earns its place — Plotlogic method",
-        "description": "Rules that generate rather than judge, exact arithmetic on a millimetre grid, a derivation behind every value, and independent checks that block output. And the five things we claim, each answered separately."
+        "title": "Method — how every capacity figure is traced — Plotlogic",
+        "description": "How each figure is made: rules that generate the envelope, exact arithmetic on a millimetre grid, a derivation behind every value, and independent checks that block output."
       },
       "ar": {
-        "title": "كيف يستحق الرقم مكانه — منهجية Plotlogic",
-        "description": "قواعد تنتج الإجابة ولا تحكم عليها، وحساب دقيق على شبكة بالمليمتر، واشتقاق خلف كل قيمة، وفحوصات مستقلة توقف الناتج. ومعها الأمور الخمسة التي نؤكدها، كل منها بجواب مستقل."
+        "title": "المنهجية — كيف يربط كل رقم في السعة بمصدره — Plotlogic",
+        "description": "كيف يصنع كل رقم: قواعد تنتج الغلاف البنائي ولا تحكم عليه، وحساب دقيق على شبكة بالمليمتر، واشتقاق خلف كل قيمة، وفحوصات مستقلة توقف الناتج."
       }
     },
     {
       "path": "/exports",
       "priority": "0.8",
       "en": {
-        "title": "Report, A3 drawings, DXF, 3D model and spreadsheet — Plotlogic",
-        "description": "Six files from one building model: a report, an A3 drawing set, DXF of the building or any sheet, a .glb model, a workbook and JSON. The same cars in every one, behind two signed gates."
+        "title": "Exports — report, A3 drawings, DXF, 3D model and XLSX — Plotlogic",
+        "description": "Six files from one building model: report, A3 drawing set, DXF for CAD, .glb 3D model, XLSX and JSON. The same cars in each, released after two signed gates."
       },
       "ar": {
-        "title": "التقرير ولوحات A3 وملف DXF والنموذج ثلاثي الأبعاد — Plotlogic",
-        "description": "ستة ملفات من نموذج مبنى واحد: تقرير ومجموعة لوحات A3 وملف DXF للمبنى أو لأي لوحة ونموذج glb وجدول بيانات وملف JSON. السيارات نفسها في كل ملف، خلف بوابتين موقعتين."
+        "title": "النواتج — التقرير ولوحات A3 وملف DXF والنموذج ثلاثي الأبعاد — Plotlogic",
+        "description": "ستة ملفات من نموذج مبنى واحد: تقرير ومجموعة لوحات A3 وملف DXF لبرامج التصميم ونموذج glb وجدول بيانات XLSX وملف JSON. السيارات نفسها في كل ملف، ولا تصدر إلا بعد توقيع بوابتين."
       }
     },
     {
       "path": "/limits",
       "priority": "0.7",
       "en": {
-        "title": "What it does not do — Plotlogic",
-        "description": "It does not design a building, does not check a scheme for approval and does not fill a gap on an affection plan from a neighbouring plot. The full list, and where this deployment stands today."
+        "title": "What it does not do — limits and readiness — Plotlogic",
+        "description": "It does not design a building, check a scheme for approval, compute costs or returns, or borrow a missing limit from a neighbouring plot. The full list, and its readiness today."
       },
       "ar": {
-        "title": "ما لا يفعله — Plotlogic",
-        "description": "لا يصمم مبنى، ولا يفحص مشروعا لاعتماده، ولا يسد فجوة في مخطط أفكشن من قطعة مجاورة. القائمة كاملة، وأين يقف هذا الإصدار اليوم."
+        "title": "ما لا يفعله — الحدود والجاهزية — Plotlogic",
+        "description": "لا يصمم مبنى، ولا يفحص مشروعا لاعتماده، ولا يحسب التكاليف أو العوائد، ولا يستعير حدا غائبا عن مخطط أفكشن من قطعة مجاورة. القائمة كاملة، وأين يقف هذا الإصدار اليوم."
       }
     },
     {
       "path": "/faq",
       "priority": "0.7",
       "en": {
-        "title": "Questions — Plotlogic",
-        "description": "Where each number comes from, what amber means, how the parking is laid out, which files you can download and who can see your studies."
+        "title": "Questions — Dubai plot capacity, parking and files — Plotlogic",
+        "description": "What Plotlogic does, where each number comes from, what amber means, how parking and the entrance are laid out, which files you get and who can see your studies."
       },
       "ar": {
-        "title": "الأسئلة الشائعة — Plotlogic",
-        "description": "من أين يأتي كل رقم، وماذا يعني اللون الكهرماني، وكيف توزع المواقف، وما الملفات التي يمكنك تنزيلها، ومن يستطيع رؤية دراساتك."
+        "title": "الأسئلة الشائعة — السعة والمواقف والملفات — Plotlogic",
+        "description": "ماذا يفعل Plotlogic، ومن أين يأتي كل رقم، وماذا يعني اللون الكهرماني، وكيف توزع المواقف ويوضع المدخل، وما الملفات التي تحصل عليها، ومن يستطيع رؤية دراساتك."
       }
     }
   ]

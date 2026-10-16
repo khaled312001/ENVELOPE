@@ -22,7 +22,7 @@ export const SITE_EN = {
   },
 
   footer: {
-    blurb: 'Development capacity for Dubai plots, with the source of every figure.',
+    blurb: 'A rule-based development platform for Dubai plots: capacity, parking layout and drawings, with the source of every figure.',
     product: 'Product',
     trust: 'Trust',
     studio: 'Studio',
@@ -55,7 +55,7 @@ export const SITE_EN = {
 
   cta: {
     title: 'See a finished study',
-    body: 'Every figure opens to its source.',
+    body: 'Capacity, parking and drawings for one Dubai plot. Every figure opens to its source.',
     primary: 'Open the worked example',
     secondary: 'Start a study',
   },
@@ -66,28 +66,28 @@ export const SITE_EN = {
     pagesTitle: 'Everything behind the figures',
     pagesLede: 'How the studio works, how parking is placed, what you can export, and what it does not do.',
     cards: {
-      product: { title: 'The studio', body: 'Six steps from a plot to a drawing set.' },
-      parking: { title: 'Parking, laid out', body: 'Bays, aisles and the ramp, placed level by level.' },
+      product: { title: 'The studio', body: 'From the affection plan to a drawing set, step by step.' },
+      parking: { title: 'Parking, laid out', body: 'Bays, aisles, the ramp and the entrance, placed level by level to Table B.11’s dimensions.' },
       method: { title: 'The method', body: 'Cited rules, exact arithmetic and checks that block.' },
       exports: { title: 'Six files, one model', body: 'Report, A3 drawings, DXF, 3D model, workbook and JSON.' },
-      limits: { title: 'What it does not do', body: 'Everything it leaves to you.' },
-      faq: { title: 'Questions', body: 'Amber, accuracy, privacy and the vehicle entrance.' },
+      limits: { title: 'What it does not do', body: 'No design, no approval check, no costs. Everything it leaves to you.' },
+      faq: { title: 'Questions', body: 'Where numbers come from, amber, parking, files and privacy.' },
     },
   },
 
   product: {
     eyebrow: 'The studio',
     title: 'From affection plan to drawing set',
-    lede: 'Each step opens once the one before is answered. Every value opens to its derivation.',
+    lede: 'Land data, zoning rules and your brief go in. Capacity, a parking layout and drawings come out, and every value opens to its derivation.',
     modelCaption: 'The worked example in 3D. Turn it, isolate a level, click an element.',
     featuresEyebrow: 'What it does',
     featuresTitle: 'What the studio does',
     features: {
-      plot: { title: 'Files the plot', body: 'Corners and classified boundaries, with the area on an exact millimetre grid.' },
-      rules: { title: 'Resolves the rules', body: 'Setbacks, FAR, coverage and height come from recorded rules — a draft set, not yet approved. Where no rule decides, it asks you.' },
-      bands: { title: 'Computes three capacities', body: 'Code, envelope and parking, each computed separately. The answer is the smallest.' },
-      parking: { title: 'Lays out the parking', body: 'Bays, aisles and the ramp, level by level. Unreachable bays are not counted.' },
-      access: { title: 'Recommends the entrance', body: 'A vehicle entrance under B.7.2.1, with the rejected frontages — or your own choice.' },
+      plot: { title: 'Files the plot', body: 'From the affection plan, the satellite map or typed corners, with classified boundaries and the area on an exact millimetre grid.' },
+      rules: { title: 'Resolves the rules', body: 'Setbacks, FAR, coverage and height come from the plot’s sheet and recorded rules — a draft set, not yet approved. Where no rule decides, it asks you.' },
+      bands: { title: 'Computes three capacities', body: 'Regulatory, geometric and parking capacity, each computed separately. The governing GFA is the smallest.' },
+      parking: { title: 'Lays out the parking', body: 'Bays, aisles and the ramp, level by level, with accessible bays and the ground floor’s substation. Unreachable bays are not counted.' },
+      access: { title: 'Recommends the entrance', body: 'A vehicle entrance under B.7.2.1, with the rejected frontages — or your own point on the plan.' },
       core: { title: 'Draws the core', body: 'Sized, placed by a stated rule and drawn on every level. Never subtracted.' },
       massing: { title: 'Builds the massing', body: 'Every level and every car in 3D, coloured by source.' },
       sheets: { title: 'Draws the set', body: 'Site plan, parking levels, typical floor and two sections — the same drawing on screen, on paper and in the DXF.' },
@@ -101,13 +101,13 @@ export const SITE_EN = {
       ASSUMED: 'No rule decides it, so the engine filled it with a written basis. You may edit it. Exports wait until someone acknowledges it.',
     },
     stepsEyebrow: 'The flow',
-    stepsTitle: 'Six steps, each gated by the one before',
+    stepsTitle: 'From the sheet to the export, in order',
   },
 
   parking: {
     eyebrow: 'Parking',
     title: 'Parking laid out, not divided',
-    lede: 'The engine places every bay instead of dividing an area by a factor.',
+    lede: 'The engine places every bay, aisle and ramp with the dimensions of Dubai Building Code Table B.11, instead of dividing an area by a factor.',
     planCaption: 'A parking level from the worked example.',
     planLabel: 'Parking level plan: bays along the walls around one ring aisle, with the ramp in the middle',
     key: { bay: 'Bay', aisle: 'Aisle', ramp: 'Ramp', other: 'Reserved' },
@@ -134,9 +134,10 @@ export const SITE_EN = {
       footprint: { title: 'The unreachable corner', body: 'Podium area outside the largest rectangle.' },
       bays: (n: string): string => `${n} bays`,
     },
-    orientationEyebrow: 'Orientation',
-    orientationTitle: 'Every arrangement tried, the best kept',
-    orientationBody: 'Rows across, rows along and a ring aisle are each packed. The one with the most bays is kept. The engine’s note:',
+    // Not "the best": the default is the arrangement with the most bays, a count, and the reader may pick another.
+    orientationEyebrow: 'Arrangements',
+    orientationTitle: 'Every arrangement packed, and yours to pick',
+    orientationBody: 'Rows across, rows along, a ring aisle and the other arrangements are each packed, and each count is reported. The one with the most bays is drawn first; you can pick another in the studio. The engine’s note:',
     accessEyebrow: 'Vehicle entrance',
     accessTitle: 'Vehicle entrance under B.7.2.1',
     accessBody: 'The 15 m junction clearance is measured from the chamfered corner, and the secondary road comes from the road hierarchy. “Opposite a T junction” needs a road network, so it is not assessed.',
@@ -208,12 +209,29 @@ export const SITE_EN = {
     readinessTitle: 'Where this deployment stands',
     readinessBody:
       'A demonstration on draft rules. No rule is approved yet and the metric definitions are unsigned, so no figure is quotable to a third party. Every report says so.',
+    /*
+      Said here because the site now calls itself a development platform, and a
+      reader who searched "feasibility" may expect money. The classic list does
+      not carry these; they follow it on this site.
+    */
+    extra: [
+      {
+        id: 'money',
+        heading: 'It does not compute costs, prices or returns.',
+        body: 'Capacity here means what the plot can hold: GFA, levels, units and bays. No construction cost, land value, sales price or return is estimated, so it is not a financial feasibility study.',
+      },
+      {
+        id: 'scan',
+        heading: 'It does not read a scanned sheet.',
+        body: 'The affection plan is read from the text in the issued PDF. A scan has no text, so nothing is read from it, and the plot is drawn or typed by hand instead.',
+      },
+    ] as readonly { readonly id: string; readonly heading: string; readonly body: string }[],
   },
 
   faq: {
     eyebrow: 'Questions',
     title: 'What people ask first',
-    lede: 'Short answers to common questions.',
+    lede: 'Short answers about Dubai plot capacity, parking, the files you get and who sees your work.',
     more: 'Still unsure? See the method and limits pages.',
   },
 

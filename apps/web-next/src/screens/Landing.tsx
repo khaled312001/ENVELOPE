@@ -4,6 +4,7 @@ import {
   CircleSlash,
   FileCode2,
   FileJson,
+  FileScan,
   FileSpreadsheet,
   FileStack,
   FileText,
@@ -371,8 +372,10 @@ export function ClaimsList(): JSX.Element {
 /** "What it does not do" — the whole list, from the copy the current site carries. */
 export function LimitsList(): JSX.Element {
   const { locale } = useLocale();
+  const s = useSite();
   const L = locale === 'ar' ? LANDING_AR : LANDING_EN;
-  const limits = locale === 'ar' ? LIMITS_AR : LIMITS;
+  // The classic site's list, then this site's own: the limits its wider description makes worth saying.
+  const limits = [...(locale === 'ar' ? LIMITS_AR : LIMITS), ...s.limitsPage.extra];
   return (
     <>
       <Stagger as="ul" className="grid gap-3 md:grid-cols-2" gap={0.05}>
@@ -428,13 +431,14 @@ export function FileGrid(): JSX.Element {
 export function FlowLine(): JSX.Element {
   const { t } = useLocale();
   const reduce = useReducedMotion();
+  // The studio's own order. The refusal that used to close the line is now said where it happens: on the sheet.
   const flow = [
+    { icon: FileScan, ...t.landing.flow.sheet },
     { icon: Waypoints, ...t.landing.flow.plot },
     { icon: ScrollText, ...t.landing.flow.rules },
     { icon: Box, ...t.landing.flow.capacity },
     { icon: Layers, ...t.landing.flow.parking },
     { icon: FileStack, ...t.landing.flow.export },
-    { icon: CircleSlash, ...t.landing.flow.refuse },
   ];
   return (
     <div className="relative">

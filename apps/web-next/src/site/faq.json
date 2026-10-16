@@ -2,8 +2,20 @@
   "_": "Read by the FAQ page AND by scripts/prerender.mjs, which writes the same questions into the page's FAQPage JSON-LD. One source, so the structured data can never answer a question differently from the page.",
   "en": [
     {
+      "q": "What does Plotlogic do?",
+      "a": "It is a rule-based development platform for Dubai plots. It reads the plot's affection plan, applies the limits printed on it and the rules recorded from the Dubai Building Code, takes your brief — levels, unit mix, core — and returns the buildable envelope, the development capacity in GFA, a parking layout placed bay by bay, an A3 drawing set and a 3D model. Every figure is traced to where it came from."
+    },
+    {
       "q": "Is Plotlogic a compliance check?",
-      "a": "No, and it never claims to be. It reports what the rules recorded in the engine imply for a plot, and the derivation of every figure. Whether an authority would approve a scheme is not obtainable from any computation, so every screen, report and file carries “Regulatory validity: not assessed”."
+      "a": "No, and it never claims to be. It reports what the rules recorded in the engine imply for a plot, and the derivation of every figure. Whether an authority would approve a scheme is not obtainable from any computation, so every report and every exported file carries “Regulatory validity: not assessed”."
+    },
+    {
+      "q": "Is it a feasibility study? Does it calculate costs, prices or returns?",
+      "a": "It answers the capacity half of a feasibility study: what the plot can hold in GFA, levels, units and parking. It computes no construction cost, land value, sales price or return, so the financial half stays with you."
+    },
+    {
+      "q": "Which rules does it apply?",
+      "a": "The limits printed on the plot's own affection plan first, then rules recorded from the Dubai Building Code — for parking, the bay and driveway dimensions of Table B.11, the vehicle-entrance clause B.7.2.1 and the accessible-bay tables. The recorded set is a draft that nobody has approved yet, and every report says so."
     },
     {
       "q": "Where does each number come from?",
@@ -19,15 +31,15 @@
     },
     {
       "q": "How is the parking laid out?",
-      "a": "As rectangles: bays, aisles and a ramp placed level by level inside the largest rectangle the podium holds, to the dimensions of Dubai Building Code Table B.11. A bay that cannot be reached from the way in is not counted, and what the layout loses is reported in bays and in square metres."
+      "a": "As rectangles: bays, aisles and a ramp placed level by level inside the largest rectangle the podium holds, to the dimensions of Dubai Building Code Table B.11. Where the ground floor parks, it gives up the bays under the drive and the substation, and the accessible bays are placed nearest the core. A bay that cannot be reached from the way in is not counted, and what the layout loses is reported in bays and in square metres."
     },
     {
-      "q": "Does it choose the best position for the ramp or the core?",
-      "a": "No. Searching ramp and core positions for maximum yield is a trade-off between possible designs, and this phase refuses to emit one by construction. It sweeps one thing — whether the bays run along the level's width or its depth — and reports both counts."
+      "q": "Does it search ramp and core positions for the highest yield?",
+      "a": "No. That search is a trade-off between possible designs, and this phase refuses to emit one by construction. What it does is pack every fixed arrangement of bays — rows across, rows along, a ring aisle and the others — and report each count. The one with the most bays is drawn first, and you can pick another."
     },
     {
       "q": "Can I choose the vehicle entrance myself?",
-      "a": "Yes. The engine recommends a frontage under B.7.2.1 — away from junctions, on the more secondary road — and shows the frontages it rejected and why. You can place the entrance on another boundary, and the study is recomputed with your choice recorded under your name."
+      "a": "Yes. The engine recommends a frontage under B.7.2.1 — away from junctions, on the more secondary road — and shows the frontages it rejected and why. You can also click the point on a road boundary where the entrance goes; the engine checks it against B.7.2.1 and, if it is too near a junction, says so and where it may go."
     },
     {
       "q": "Which files can I download?",
@@ -43,13 +55,25 @@
     },
     {
       "q": "Is the interface available in Arabic?",
-      "a": "Yes, every page, written in Modern Standard Arabic with the trade's own terms. Text the engine itself wrote — a rule's basis, a formula — stays in its original English so it can be matched to the source."
+      "a": "Yes, every page, written in Modern Standard Arabic with the trade's own terms, and the engine's notes and refusals are shown in Arabic too. The drawings, DXF layer names and title blocks stay in English, as CAD files expect."
     }
   ],
   "ar": [
     {
+      "q": "ماذا يفعل Plotlogic؟",
+      "a": "هو منصة تطوير عقاري قائمة على القواعد لقطع الأرض في دبي. يقرأ مخطط أفكشن (Affection Plan) للقطعة، ويطبق الحدود المطبوعة عليه والقواعد المسجلة من كود دبي للمباني، ويأخذ موجزك، أي الأدوار وتوزيع الوحدات والنواة، ثم يعرض الغلاف البنائي والسعة التطويرية بإجمالي المساحة الطابقية وتوزيعا للمواقف موقفا موقفا ومجموعة لوحات A3 ونموذجا ثلاثي الأبعاد. وكل رقم موثق بمصدره."
+    },
+    {
       "q": "هل يحكم Plotlogic بأن الجهة المختصة ستعتمد المشروع؟",
-      "a": "لا، ولا يؤكد ذلك في أي موضع. فهو يعرض ما تقتضيه القواعد المسجلة في المحرك لقطعة الأرض، ومعه اشتقاق كل رقم. أما ما إذا كانت الجهة المختصة ستعتمد المشروع فلا يمكن الوصول إليه بأي حساب، ولذلك تحمل كل شاشة وكل تقرير وكل ملف عبارة «الصلاحية التنظيمية: لم يخضع للتقييم». فهو ليس فحص مطابقة."
+      "a": "لا، ولا يؤكد ذلك في أي موضع. فهو يعرض ما تقتضيه القواعد المسجلة في المحرك لقطعة الأرض، ومعه اشتقاق كل رقم. أما ما إذا كانت الجهة المختصة ستعتمد المشروع فلا يمكن الوصول إليه بأي حساب، ولذلك يحمل كل تقرير وكل ملف مصدر عبارة «الصلاحية التنظيمية: لم يخضع للتقييم». فهو ليس فحص مطابقة."
+    },
+    {
+      "q": "هل هو دراسة جدوى؟ وهل يحسب التكاليف أو الأسعار أو العوائد؟",
+      "a": "يجيب عن نصف السعة في دراسة الجدوى: ما تتسع له القطعة من إجمالي المساحة الطابقية والأدوار والوحدات والمواقف. ولا يحسب تكلفة إنشاء ولا قيمة أرض ولا سعر بيع ولا عائدا، فالنصف المالي يبقى لك."
+    },
+    {
+      "q": "ما القواعد التي يطبقها؟",
+      "a": "الحدود المطبوعة على مخطط أفكشن الخاص بالقطعة أولا، ثم قواعد مسجلة من كود دبي للمباني، ومنها للمواقف أبعاد المواقف وممرات المركبات في الجدول B.11، وبند مدخل المركبات B.7.2.1، وجداول مواقف أصحاب الهمم. والمجموعة المسجلة مسودة لم يعتمدها أحد بعد، وكل تقرير ينص على ذلك."
     },
     {
       "q": "من أين يأتي كل رقم؟",
@@ -65,15 +89,15 @@
     },
     {
       "q": "كيف توزع المواقف؟",
-      "a": "مستطيلات: المواقف وممرات المناورة والمنحدر (الرامب) توضع دورا دورا داخل أكبر مستطيل يتسع له البوديوم، بأبعاد الجدول B.11 من كود دبي للمباني. والموقف الذي لا يمكن الوصول إليه من المدخل لا يحتسب، وما يخسره التوزيع يعرض بعدد المواقف وبالمتر المربع."
+      "a": "مستطيلات: المواقف وممرات المناورة والمنحدر (الرامب) توضع دورا دورا داخل أكبر مستطيل يتسع له البوديوم، بأبعاد الجدول B.11 من كود دبي للمباني. وحين يكون الدور الأرضي للمواقف، يتنازل عن المواقف التي يشغلها ممر المدخل وغرفة المحول، وتوضع مواقف أصحاب الهمم في أقرب موضع إلى النواة. والموقف الذي لا يمكن الوصول إليه من المدخل لا يحتسب، وما يخسره التوزيع يعرض بعدد المواقف وبالمتر المربع."
     },
     {
-      "q": "هل يختار أفضل موضع للمنحدر أو للنواة؟",
-      "a": "لا. البحث عن موضع المنحدر والنواة الذي يعطي أكبر عائد هو ناتج مفاضلة بين بدائل ممكنة، وهذه المرحلة ترفض إنتاجه من أساس تصميمها. الشيء الوحيد الذي يجربه المحرك هو اتجاه صفوف المواقف، بعرض الدور أو بعمقه، ويعرض العددين معا."
+      "q": "هل يبحث عن موضع المنحدر والنواة الذي يعطي أكبر عائد؟",
+      "a": "لا. فهذا البحث ناتج مفاضلة بين بدائل ممكنة، وهذه المرحلة ترفض إنتاجه من أساس تصميمها. أما ما يفعله فهو تعبئة كل ترتيب ثابت للمواقف، صفوف بالعرض وصفوف بالعمق وممر دائري وغيرها، وعرض عدد المواقف في كل منها. ويرسم أولا الترتيب الذي يتسع لأكثر المواقف، ولك أن تختار غيره."
     },
     {
       "q": "هل أستطيع أن أختار مدخل المركبات بنفسي؟",
-      "a": "نعم. يوصي المحرك بواجهة وفق البند B.7.2.1، بعيدا عن التقاطعات وعلى الطريق الأدنى في التصنيف، ويعرض الواجهات التي رفضها وسبب رفضها. ولك أن تضع المدخل على حد آخر، فتعاد الدراسة ويسجل اختيارك باسمك."
+      "a": "نعم. يوصي المحرك بواجهة وفق البند B.7.2.1، بعيدا عن التقاطعات وعلى الطريق الأدنى في التصنيف، ويعرض الواجهات التي رفضها وسبب رفضها. ولك أيضا أن تنقر النقطة التي يقع فيها المدخل على حد مطل على طريق، فيفحصها المحرك وفق البند B.7.2.1، وإن كانت قريبة من تقاطع يقول ذلك ويبين أين يمكن وضعها."
     },
     {
       "q": "ما الملفات التي يمكنني تنزيلها؟",
@@ -89,7 +113,7 @@
     },
     {
       "q": "هل الواجهة متاحة بالعربية؟",
-      "a": "نعم، كل صفحة، بالعربية الفصحى وبمصطلحات المهنة نفسها. أما النص الذي كتبه المحرك نفسه، كأساس قاعدة أو معادلة، فيبقى بالإنجليزية كما هو حتى يمكن الرجوع به إلى مصدره."
+      "a": "نعم، كل صفحة، بالعربية الفصحى وبمصطلحات المهنة نفسها، وملاحظات المحرك وحالات رفضه تعرض بالعربية أيضا. أما اللوحات وأسماء طبقات ملف DXF وجداول العناوين فتبقى بالإنجليزية، كما تتوقعها برامج التصميم."
     }
   ]
 }

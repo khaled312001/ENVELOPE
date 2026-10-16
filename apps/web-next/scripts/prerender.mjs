@@ -50,12 +50,17 @@ function structured(page, locale) {
           { '@type': 'WebSite', '@id': `${SEO.origin}${SEO.base}/#site`, name: SEO.siteName, url: url('/', locale), inLanguage: locale, publisher: { '@id': org['@id'] } },
           {
             // No price, no rating, no review: none exists, and a structured-data field is still a claim.
+            // The features are seo.json's `app` list, in the page's language, each one the studio has.
             '@type': 'SoftwareApplication',
             name: SEO.siteName,
             applicationCategory: 'BusinessApplication',
+            applicationSubCategory: SEO.app[locale].category,
             operatingSystem: 'Web',
             url: url('/', locale),
             description: words.description,
+            keywords: SEO.app[locale].keywords,
+            featureList: SEO.app[locale].features,
+            areaServed: { '@type': 'City', name: SEO.app.areaServed },
             inLanguage: ['en', 'ar'],
             publisher: { '@id': org['@id'] },
           },

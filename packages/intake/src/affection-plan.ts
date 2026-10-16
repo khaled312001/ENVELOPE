@@ -69,6 +69,7 @@ import {
   type EdgeHint,
 } from './dm.js';
 import { readBoundaries, type EdgeReadings } from './edges.js';
+import { matchDrawnRing, type PagePlacement, placementFromGrid } from './on-page.js';
 import { readSitePlan, type SitePlanReading } from './site-plan.js';
 import {
   locate,
@@ -142,6 +143,8 @@ export interface CrossCheck {
 export interface SurveyReading {
   /** `DLTM`, read off the sheet's own footer. */
   readonly system: Traced<string>;
+  /** Where the drawn plot sits on the page, when a path matches the table. Places a picture; changes no figure. */
+  readonly onPage?: PagePlacement;
   readonly points: Traced<readonly SurveyPoint[]>;
   readonly legs: Traced<readonly SurveyLeg[]>;
   /** The shoelace area of the ring, which the caller cross-checks. */
@@ -168,6 +171,8 @@ export interface DrawnPlotReading {
   readonly areaM2: TracedDecimal;
   /** One per boundary, in ring order; null where the drawing labels nothing outside it. Suggestions, never answers. */
   readonly edgeHints: readonly (EdgeHint | null)[];
+  /** The page on the grid, from the same crosses. Places a picture; changes no figure. */
+  readonly onPage: PagePlacement;
   readonly notModelled: readonly string[];
 }
 
@@ -570,6 +575,12 @@ export async function parseAffectionPlan(
     ...(facts.totalAreaSqm ? { statedAreaSqm: facts.totalAreaSqm.value.toString() } : {}),
   });
 
+  // A DDA sheet draws the plot its table lists: matched, it places the page on the grid.
+  if (facts.survey) {
+    const { paths } = await readDmDrawing(bytes);
+    const onPage = matchDrawnRing(paths, facts.survey.points.value, [0, 0, page.width, page.height]);
+    if (onPage) return { ...facts, sitePlan, survey: { ...facts.survey, onPage } };
+  }
   return { ...facts, sitePlan };
 }
 
@@ -652,6 +663,7 @@ async function readDmFacts(
     legs: derived('drawn_legs', legs, plot.box, 'plane trigonometry between consecutive drawn corners on the grid'),
     areaM2: derived('drawn_area_sqm', qArea(area), plot.box, 'shoelace area of the drawn corners', 'm²'),
     edgeHints: plot.hints,
+    onPage: placementFromGrid(plot.grid, plot.box.bbox, [0, 0, page.width, page.height], paths),
     notModelled: [
       'Each corner is the drawing’s own vertex, not a surveyed coordinate: the sheet prints no coordinate table. It is checked against the printed area and the printed dimensions above.',
       'Bearings are clockwise from grid north; the convergence between grid north and true north is not applied.',

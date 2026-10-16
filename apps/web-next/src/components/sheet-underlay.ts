@@ -1,5 +1,9 @@
 import type { Map as MapLibreMap } from 'maplibre-gl';
 
+import type { SheetOnPage } from '@web/api/client.js';
+import type { UnderlayPlacement } from '@web/components/PlotMap.js';
+import { fromDltm, type LngLat, toUtm40 } from '@web/geo.js';
+
 /*
   THE AFFECTION PLAN UNDER THE MAP.
 
@@ -35,6 +39,83 @@ export interface SheetUnderlay {
   readonly pdfBase64: string;
   /** The part of page 1 to lay down; null is the whole page. */
   readonly region: BoxPt | null;
+  /**
+   * Where the drawing sits on the DLTM grid, when the intake could tell: the
+   * Municipality's grid crosses, or the DDA's drawn plot matched to its table.
+   * With it the sheet is laid exactly and cropped around the plot by itself.
+   */
+  readonly onPage?: SheetOnPage;
+}
+
+/*
+  THE SHEET LAID EXACTLY, AND CROPPED AROUND THE PLOT.
+
+  Eng. Mohamed, 16 Oct 2026: the picture should sit on the drawn plot by
+  itself, be cropped by itself, and still be adjustable. With `onPage` every
+  point of the page has a DLTM position, so the image's four corners are
+  computed rather than chosen, and the part laid down is the plot with a
+  margin round it — its neighbours and the road labels, not the title block
+  and the tables. The margin is the reader's to widen or narrow; moving the
+  sheet by hand is still offered, and so is putting it back.
+*/
+
+/** The `onPage` of a sheet's reading, only on the grid this module can project (DLTM). */
+export function onPageOf(facts: {
+  readonly survey?: { readonly system: { readonly value: string }; readonly onPage?: SheetOnPage };
+  readonly drawn?: { readonly system: { readonly value: string }; readonly onPage: SheetOnPage };
+}): SheetOnPage | undefined {
+  const reading = facts.survey?.onPage ? facts.survey : facts.drawn;
+  return reading?.onPage && reading.system.value === 'DLTM' ? reading.onPage : undefined;
+}
+
+/** Metres on the ground per point on the page. */
+const metresPerPoint = (p: SheetOnPage): number => Math.hypot(p.ax, p.ay);
+
+/**
+ * The plot's box on the page, widened by `marginM` metres on every side and
+ * kept inside the drawing's own frame — never the title block or the tables.
+ */
+export function cropAroundPlot(p: SheetOnPage, marginM: number): BoxPt {
+  const m = marginM / metresPerPoint(p);
+  const [x0, y0, x1, y1] = p.plotBoxPt;
+  const [px0, py0, px1, py1] = p.frameBoxPt;
+  return [Math.max(px0, x0 - m), Math.max(py0, y0 - m), Math.min(px1, x1 + m), Math.min(py1, y1 + m)];
+}
+
+/** A page point on the ground. */
+export function pageToGround(p: SheetOnPage, x: number, y: number): LngLat {
+  return fromDltm({ e: p.ax * x + p.bx * y + p.cx, n: p.ay * x + p.by * y + p.cy });
+}
+
+/**
+ * The four corners of `region` on the ground, top-left then clockwise — the
+ * order an image source takes. PDF y grows UP, so the top edge is the larger y.
+ */
+export function regionOnGround(p: SheetOnPage, region: BoxPt): readonly [LngLat, LngLat, LngLat, LngLat] {
+  const [ax, ay, bx, by] = region;
+  const left = Math.min(ax, bx);
+  const right = Math.max(ax, bx);
+  const top = Math.max(ay, by);
+  const bottom = Math.min(ay, by);
+  return [pageToGround(p, left, top), pageToGround(p, right, top), pageToGround(p, right, bottom), pageToGround(p, left, bottom)];
+}
+
+/**
+ * The same corners as a placement the hand tools understand — centre, width,
+ * rotation — so "fit to a dimension" and "place here" start from where the
+ * sheet already is. Only the tools read it; the sheet is drawn from the corners.
+ */
+export function placementOfCorners(corners: readonly [LngLat, LngLat, LngLat, LngLat], aspect: number): UnderlayPlacement {
+  const [tl, tr, br, bl] = corners;
+  const a = toUtm40(tl);
+  const b = toUtm40(tr);
+  return {
+    centre: { lng: (tl.lng + tr.lng + br.lng + bl.lng) / 4, lat: (tl.lat + tr.lat + br.lat + bl.lat) / 4 },
+    widthM: Math.hypot(b.e - a.e, b.n - a.n),
+    aspect,
+    // Clockwise from grid north, the sense `rotateIntoGrid` reads: the top edge's direction, turned.
+    rotationDeg: (Math.atan2(-(b.n - a.n), b.e - a.e) * 180) / Math.PI,
+  };
 }
 
 /** The longer side of the drawn underlay, in pixels: a printed dimension stays legible at plot zoom. */

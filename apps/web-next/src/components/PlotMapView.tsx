@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Hand, Info, Layers, MapPinned, MousePointerClick, Move, PenLine, Plus, Ruler, Search, Trash2, Undo2 } from 'lucide-react';
+import { CircleCheck, Eye, EyeOff, Hand, Info, Layers, MapPinned, MousePointerClick, Move, PenLine, Plus, Ruler, Search, Trash2, Undo2 } from 'lucide-react';
 import type { GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent, MapLayerTouchEvent, PointLike } from 'maplibre-gl';
 import MAPLIBRE_WORKER_URL from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { type FormEvent, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -41,7 +41,17 @@ import {
   withEdgeLength,
 } from './map-trace.js';
 import { rasterSheet } from '../lib/sheet-raster.js';
-import { hideUnderlay, type Quad, type SheetUnderlay, showUnderlay, UNDERLAY_LONG_SIDE_PX } from './sheet-underlay.js';
+import {
+  type BoxPt,
+  cropAroundPlot,
+  hideUnderlay,
+  placementOfCorners,
+  type Quad,
+  regionOnGround,
+  type SheetUnderlay,
+  showUnderlay,
+  UNDERLAY_LONG_SIDE_PX,
+} from './sheet-underlay.js';
 
 export { EMPTY_TRACE, type MapTrace } from './map-trace.js';
 export type { SheetUnderlay } from './sheet-underlay.js';
@@ -84,6 +94,8 @@ const OPENING_ZOOM = 6.6;
 const PLOT_ZOOM = 18;
 const CLOSE_PICK_PX = 14;
 const FALLBACK_SHEET_WIDTH_M = 200;
+/** How much of the sheet round the plot is laid down at first: its neighbours and the road labels, not the title block. */
+const CROP_DEFAULT_M = 40;
 /* Close enough that a plot fills a good part of the view. */
 const SHEET_ZOOM = 15;
 /* One arrow press moves the outline this far on the grid; with Shift, ten times as far. */
@@ -175,7 +187,15 @@ export function PlotMapView({
   const [hits, setHits] = useState<readonly PlaceHit[] | null>(null);
 
   // The sheet underlay.
-  const [underlay, setUnderlay] = useState<{ readonly canvas: HTMLCanvasElement; readonly aspect: number } | null>(null);
+  const [underlay, setUnderlay] = useState<{ readonly canvas: HTMLCanvasElement; readonly aspect: number; readonly region: BoxPt | null } | null>(null);
+  /*
+    Laid on the grid: while true, a sheet whose drawing the intake placed
+    (`sheet.onPage`) is drawn at its own corners and cropped round the plot by
+    `cropM`. Moving it by hand turns this off; "back on the grid" turns it on.
+  */
+  const [onGrid, setOnGrid] = useState(true);
+  const [cropDraft, setCropDraft] = useState(CROP_DEFAULT_M);
+  const [cropM, setCropM] = useState(CROP_DEFAULT_M);
   const [underlayState, setUnderlayState] = useState<'idle' | 'drawing' | 'failed'>('idle');
   const [sheetOn, setSheetOn] = useState(true);
   const [zoomedIn, setZoomedIn] = useState(trace.ring.length > 0);
@@ -759,7 +779,14 @@ export function PlotMapView({
 
   /* ── the sheet underlay ────────────────────────────────────────────── */
 
-  const regionKey = sheet?.region ? sheet.region.join(',') : 'page';
+  const onPage = sheet?.onPage;
+  // The slider moves the figure at once and redraws the sheet once it rests.
+  useEffect(() => {
+    const id = setTimeout(() => setCropM(cropDraft), 300);
+    return () => clearTimeout(id);
+  }, [cropDraft]);
+  const region: BoxPt | null = onPage ? cropAroundPlot(onPage, cropM) : (sheet?.region ?? null);
+  const regionKey = region ? region.map((v) => v.toFixed(2)).join(',') : 'page';
   useEffect(() => {
     if (!sheet) {
       setUnderlay(null);
@@ -768,10 +795,11 @@ export function PlotMapView({
     }
     let live = true;
     setUnderlayState('drawing');
-    void rasterSheet(sheet.pdfBase64, sheet.region, UNDERLAY_LONG_SIDE_PX)
+    void rasterSheet(sheet.pdfBase64, region, UNDERLAY_LONG_SIDE_PX)
       .then((canvas) => {
         if (!live) return;
-        setUnderlay({ canvas, aspect: canvas.height / canvas.width });
+        // With the region it was drawn from, so its corners are never another crop's.
+        setUnderlay({ canvas, aspect: canvas.height / canvas.width, region });
         setUnderlayState('idle');
       })
       .catch(() => live && setUnderlayState('failed'));
@@ -796,12 +824,23 @@ export function PlotMapView({
     }
     setPlacement(assumedPlacement({ lng: c.lng, lat: c.lat }, widthM, aspect));
     setFit(null);
+    setOnGrid(false);
   }, [aspect]);
+
+  // The sheet's own corners on the ground, while it is laid on the grid.
+  const gridCorners = onPage && onGrid && underlay?.region ? regionOnGround(onPage, underlay.region) : null;
+  useEffect(() => {
+    if (!gridCorners || !underlay) return;
+    setPlacement(placementOfCorners(gridCorners, underlay.aspect));
+    setFit(null);
+    // The corners are a function of the drawn region; nothing else moves them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [underlay, onGrid, onPage]);
 
   // Only once the reader is looking at a plot: a sheet laid over seven emirates would be a speck nobody finds.
   useEffect(() => {
-    if (mapState === 'ready' && underlay && !placement && zoomedIn) placeAtView();
-  }, [mapState, underlay, placement, placeAtView, zoomedIn]);
+    if (mapState === 'ready' && underlay && !placement && zoomedIn && !onPage) placeAtView();
+  }, [mapState, underlay, placement, placeAtView, zoomedIn, onPage]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -812,13 +851,15 @@ export function PlotMapView({
       void edge?.setData(EMPTY_FC);
       return;
     }
-    const corners = underlayCorners(placement).map((p) => [p.lng, p.lat] as [number, number]);
+    const corners = (gridCorners ?? underlayCorners(placement)).map((p) => [p.lng, p.lat] as [number, number]);
     const quad: Quad = [corners[0]!, corners[1]!, corners[2]!, corners[3]!];
     // Over the imagery, under the trace: a corner dropped on the sheet stays visible on top of it.
     showUnderlay(map, underlay.canvas, quad, opacity / 100, ID.shape);
     void edge?.setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [...corners, corners[0]!] } });
-    map.setPaintProperty(ID.sheetEdge, 'line-dasharray', fit ? [1, 0] : [3, 2]);
-  }, [underlay, placement, sheetOn, opacity, fit, mapState]);
+    map.setPaintProperty(ID.sheetEdge, 'line-dasharray', fit || gridCorners ? [1, 0] : [3, 2]);
+    // `gridCorners` is derived from these; listing it would redraw on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [underlay, placement, sheetOn, opacity, fit, mapState, onGrid]);
 
   const startFit = (): void => {
     setSheetOn(true);
@@ -842,6 +883,7 @@ export function PlotMapView({
     }
     setPlacement(r.fit.placement);
     setFit(r.fit);
+    setOnGrid(false);
     setStage(null);
     setFitRefusal(null);
   };
@@ -1150,7 +1192,29 @@ export function PlotMapView({
             </span>
             <input type="range" min={10} max={100} step={5} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} className="accent-[var(--accent)]" />
           </label>
-          {!placement ? (
+          {onPage && gridCorners ? (
+            <>
+              <p className="flex items-start gap-1.5 text-secondary">
+                <CircleCheck className="mt-0.5 size-3.5 shrink-0 text-derived" aria-hidden="true" />
+                <span>{onPage.residualM > 0 ? t.map.onGridMatched(onPage.residualM.toFixed(3)) : t.map.onGridCrosses}</span>
+              </p>
+              <label className="grid gap-1 text-secondary">
+                <span className="flex justify-between">
+                  {t.map.crop}
+                  <span className="figure text-fg" dir="ltr">{cropDraft} m</span>
+                </span>
+                <input type="range" min={5} max={200} step={5} value={cropDraft} onChange={(e) => setCropDraft(Number(e.target.value))} className="accent-[var(--accent)]" aria-describedby="pm-crop-hint" />
+                <span id="pm-crop-hint" className="text-[11.5px] text-tertiary">{t.map.cropHint}</span>
+              </label>
+            </>
+          ) : null}
+          {onPage && !onGrid ? (
+            <Button variant="secondary" size="sm" onClick={() => { setOnGrid(true); setStage(null); }}>
+              <CircleCheck aria-hidden="true" />
+              {t.map.backOnGrid}
+            </Button>
+          ) : null}
+          {onPage && gridCorners ? null : !placement ? (
             <>
               <p className="text-secondary">{t.map.findFirst}</p>
               <Button variant="secondary" size="sm" disabled={!zoomedIn || !underlay} onClick={placeAtView}>

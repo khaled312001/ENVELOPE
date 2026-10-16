@@ -481,6 +481,22 @@ export async function encodeAttachment(file: File): Promise<Attachment> {
   return { content: btoa(binary), filename: file.name };
 }
 
+/** Where a sheet's drawing sits on its grid: page points (y up) to grid metres. Mirrors `PagePlacement` in `@envelope/intake`. */
+export interface SheetOnPage {
+  readonly ax: number;
+  readonly bx: number;
+  readonly cx: number;
+  readonly ay: number;
+  readonly by: number;
+  readonly cy: number;
+  readonly plotBoxPt: readonly [number, number, number, number];
+  readonly pageBoxPt: readonly [number, number, number, number];
+  /** The drawing's own frame round the plot; no crop goes past it. */
+  readonly frameBoxPt: readonly [number, number, number, number];
+  readonly residualM: number;
+  readonly basis: string;
+}
+
 export interface AffectionPlanRead {
   readonly filename: string;
   readonly disclaimer: string;
@@ -670,6 +686,12 @@ export interface AffectionPlanRead {
         readonly value: string;
         readonly provenanceClass: string;
       } | null;
+      /**
+       * Page points (y up) to grid metres, `e = ax·x + bx·y + cx`, `n = ay·x + by·y + cy`,
+       * when the drawn plot matched the table. It places the sheet under the map and
+       * changes no figure. See `packages/intake/src/on-page.ts`.
+       */
+      readonly onPage?: SheetOnPage;
       readonly notModelled: readonly string[];
     };
     /**
@@ -681,6 +703,7 @@ export interface AffectionPlanRead {
      * it — a suggestion for the edge class, never an answer.
      */
     readonly drawn?: NonNullable<AffectionPlanRead['facts']['survey']> & {
+      readonly onPage: SheetOnPage;
       readonly edgeHints: readonly ({
         readonly classification: 'ROAD' | 'ADJACENT_PLOT';
         readonly verbatim: string;

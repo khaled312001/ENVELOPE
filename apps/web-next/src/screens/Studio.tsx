@@ -19,7 +19,7 @@ import {
 
 import { DerivationDrawer } from '../components/Derivation.js';
 import type { MapTrace } from '../components/PlotMapView.js';
-import { type SheetUnderlay, underlayRegion } from '../components/sheet-underlay.js';
+import { onPageOf, type SheetUnderlay, underlayRegion } from '../components/sheet-underlay.js';
 import { TopBar } from '../components/Shell.js';
 import { InspectProvider } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
@@ -338,10 +338,11 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
     picture only when it read the plot out of it, otherwise the page. Held in a
     memo so a re-render is not a new sheet to draw.
   */
-  const sheetUnderlay = useMemo<SheetUnderlay | null>(
-    () => (sheet && sheetUsed ? { pdfBase64: sheet.attachment.content, region: underlayRegion(sheet.read.facts.sitePlan) } : null),
-    [sheet, sheetUsed],
-  );
+  const sheetUnderlay = useMemo<SheetUnderlay | null>(() => {
+    if (!sheet || !sheetUsed) return null;
+    const onPage = onPageOf(sheet.read.facts);
+    return { pdfBase64: sheet.attachment.content, region: underlayRegion(sheet.read.facts.sitePlan), ...(onPage ? { onPage } : {}) };
+  }, [sheet, sheetUsed]);
 
   const reachable: Record<StepId, boolean> = {
     sheet: true,

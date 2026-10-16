@@ -4,3 +4,4 @@ export * from './edges.js';
 export * from './site-plan.js';
 export * from './dda.js';
 export * from './dm.js';
+export * from './on-page.js';

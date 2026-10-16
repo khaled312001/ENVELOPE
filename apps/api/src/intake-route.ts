@@ -146,6 +146,8 @@ function present(facts: AffectionPlanFacts): unknown {
             points: traced(facts.survey.points),
             legs: traced(facts.survey.legs),
             areaM2: fieldOf(facts.survey.areaM2),
+            // Where the drawn plot sits on the page, when a path matched the table: plain numbers, a picture's placement.
+            ...(facts.survey.onPage ? { onPage: facts.survey.onPage } : {}),
             notModelled: facts.survey.notModelled,
           },
         }
@@ -165,6 +167,7 @@ function present(facts: AffectionPlanFacts): unknown {
             legs: traced(facts.drawn.legs),
             areaM2: fieldOf(facts.drawn.areaM2),
             edgeHints: facts.drawn.edgeHints,
+            onPage: facts.drawn.onPage,
             notModelled: facts.drawn.notModelled,
           },
         }

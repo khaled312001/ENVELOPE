@@ -389,6 +389,19 @@ is a defect even when it makes something easier.
   refills one the reader cleared, and filing is the reader's confirmation. Roads
   are asked for only while the closed trace *is* the corner table, side for side
   within half a metre. Otherwise a road would land on the wrong boundary.
+- **The sheet lies under the map where its own drawing says, cropped to its own
+  frame** (16 Oct 2026, «متطابق … واقتصاصها بالظبط تلقائي»). Two sheets carry
+  their own placement. The Municipality's grid crosses (`readDmGrid`, once used
+  and then thrown away) are one. The DDA's plot is drawn as a path that fits its
+  own coordinate table to 3.8 mm under one similarity; it is found by trying
+  every path with that many corners, and kept only within 10 cm RMS, so a
+  lookalike is refused. `PagePlacement` (`packages/intake/src/on-page.ts`) is an
+  affine from page points to DLTM metres. It **places a picture and changes no
+  figure**. The crop is the plot plus a margin the reader sets, clipped to the
+  drawing's frame: on each side, the nearest long axis-parallel line spanning
+  the plot. That keeps the title block and the tables off the imagery. Moving
+  it by hand is still offered, and so is putting it back. A sheet with neither
+  a grid nor a table is still placed by eye, in amber, as before.
 - **A chamfer its neighbours' setbacks swallow is dropped, not a refusal.** Plot
   6468096 (the reference drawings) was refused as "over-consumed": 6 m off the
   street and 4.5 m off the side put the 5 m chamfer's own line outside their

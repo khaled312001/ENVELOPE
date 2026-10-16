@@ -1889,5 +1889,6 @@ describe('a plot whose frontage curves', () => {
     const footprint = Number(run.json().envelope.setbackPermittedFootprint.value);
     expect(footprint).toBeLessThan(3415.95);
     expect(footprint).toBeGreaterThan(0);
-  });
+    // A whole run over a sixty-piece ring: 1.5 s alone, past vitest's 5 s default when the suite runs in parallel.
+  }, 30_000);
 });

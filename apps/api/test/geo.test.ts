@@ -132,18 +132,28 @@ describe('roadsBesideEdges', () => {
     { osmClass: 'primary', line: [at(-30, -5), at(-30, 45)] },
   ];
 
-  it('finds the road alongside each boundary, outside it, and the nearer of two', () => {
+  it('finds the road alongside each boundary, outside it, and names a frontage by its main road', () => {
     const out = roadsBesideEdges(RING, ROADS);
-    expect(out.map((e) => e.road?.hierarchy ?? null)).toEqual(['COLLECTOR', null, null, 'ACCESS']);
+    // West: a service road at 6 m and a primary at 30 m are one corridor, and the primary names it.
+    expect(out.map((e) => e.road?.hierarchy ?? null)).toEqual(['COLLECTOR', null, null, 'ARTERIAL']);
     expect(out[0]!.road).toMatchObject({ osmClass: 'secondary', name: 'Test Street', distanceM: 12 });
-    expect(out[3]!.road?.distanceM).toBe(6);
+    expect(out[3]!.road).toMatchObject({ osmClass: 'primary', distanceM: 30 });
+  });
+
+  it('does not reach past the nearest road’s corridor for a bigger one', () => {
+    // A local road at 5 m; a primary 38 m out is more than 30 m beyond it, behind something else.
+    const out = roadsBesideEdges(RING, [
+      { osmClass: 'minor', line: [at(-10, -5), at(70, -5)] },
+      { osmClass: 'primary', line: [at(-10, -38), at(70, -38)] },
+    ]);
+    expect(out[0]!.road).toMatchObject({ osmClass: 'minor', hierarchy: 'LOCAL', distanceM: 5 });
   });
 
   it('gives the same answer for the ring walked the other way', () => {
     const reversed = [...RING].reverse();
     // Reversed, the ring starts at the north-west corner: 0 is north, 1 east, 2 south, 3 west.
     const out = roadsBesideEdges(reversed, ROADS);
-    expect(out.map((e) => e.road?.hierarchy ?? null)).toEqual([null, null, 'COLLECTOR', 'ACCESS']);
+    expect(out.map((e) => e.road?.hierarchy ?? null)).toEqual([null, null, 'COLLECTOR', 'ARTERIAL']);
   });
 
   it('maps OSM ranks to the four hierarchies by a stated table, and leaves a footway out', () => {

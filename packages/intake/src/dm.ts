@@ -246,7 +246,7 @@ export function readDmRequest(page: PdfPageText): { ref: string; date: string; i
 type Pt = readonly [number, number];
 type Matrix = readonly [number, number, number, number, number, number];
 
-interface Path {
+export interface Path {
   readonly paint: number;
   readonly fill: string | null;
   readonly points: readonly Pt[];

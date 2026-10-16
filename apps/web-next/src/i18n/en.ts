@@ -430,6 +430,11 @@ export const EN = {
     apply: 'Fit',
     cancel: 'Cancel',
     placedByEye: 'Placed by eye. Fit it to a printed dimension before tracing from it.',
+    onGridCrosses: 'Placed exactly, from the grid crosses printed on the sheet.',
+    onGridMatched: (m: string): string => `Placed exactly: the drawn plot matches the sheet’s coordinate table to ${m} m.`,
+    crop: 'Crop round the plot',
+    cropHint: 'How many metres of the sheet around the plot show on the map.',
+    backOnGrid: 'Put it back where the sheet places it',
     fitted: (m: string, pct: string): string => `Fitted: measures ${m} m, ${pct}% from the printed dimension.`,
     refusal: {
       'same-sheet-point': 'The two sheet points are the same. Pick two different ones.',

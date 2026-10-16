@@ -276,8 +276,9 @@ export async function footprintFromTiles(lat: number, lng: number, fetchImpl: ty
   So a boundary is matched to a road that runs alongside it — within 30° of
   parallel, on the OUTSIDE of the plot, its centreline within 40 m (a 23.5 m
   road's centreline is about 12 m off the plot line; an arterial's carriageway
-  can be farther), for at least a third of the boundary's length — and the
-  nearest such road wins. Nothing here is engine work and nothing is traced: it
+  can be farther), for at least a third of the boundary's length — and of
+  those, the highest-ranked within 30 m of the nearest wins (a carriageway and
+  its service road are one frontage). Nothing here is engine work and nothing is traced: it
   is a suggestion the screen puts in the boundary's field with its source
   written beside it, and the reader files the plot or changes it.
 
@@ -303,6 +304,9 @@ const ROAD_REACH_M = 40;
 const ROAD_MIN_OVERLAP = 1 / 3;
 /** Within 30° of parallel. */
 const ROAD_MAX_SKEW = Math.sin((30 * Math.PI) / 180);
+/** How far beyond the nearest road another may lie and still be the same frontage: a carriageway and its service road. */
+const CORRIDOR_M = 30;
+const RANK = { ARTERIAL: 4, COLLECTOR: 3, LOCAL: 2, ACCESS: 1 } as const;
 
 export interface MapRoad {
   readonly osmClass: string;
@@ -356,7 +360,7 @@ export function roadsBesideEdges(
     // The outward normal: the direction a step off the plot goes.
     const nx = uy * outward;
     const ny = -ux * outward;
-    let best: { road: MapRoad; distance: number } | null = null;
+    const found: { road: MapRoad; distance: number }[] = [];
     for (const { road, pts: line } of lines) {
       let overlap = 0;
       let weighted = 0;
@@ -380,10 +384,21 @@ export function roadsBesideEdges(
         weighted += off * (hi - lo);
       }
       if (overlap < len * ROAD_MIN_OVERLAP) continue;
-      const distance = weighted / overlap;
-      if (best === null || distance < best.distance) best = { road, distance };
+      found.push({ road, distance: weighted / overlap });
     }
-    if (best === null) return { seq, road: null };
+    /*
+      THE CORRIDOR, NOT THE NEAREST LINE. Dubai's main roads run with a service
+      road alongside, and the nearest line beside plot 1341556's frontage is that
+      service road (13 m), with Baghdad Street — the road the sheet labels
+      "ROAD 79.25" — at 32 m. So every road within CORRIDOR_M beyond the nearest
+      counts as the same frontage, and the highest-ranked of them names it; a road
+      farther than that is behind something else and does not.
+    */
+    const nearest = Math.min(...found.map((f) => f.distance));
+    const best = found
+      .filter((f) => f.distance <= nearest + CORRIDOR_M)
+      .sort((p, q) => RANK[ROAD_HIERARCHY_OF_OSM[q.road.osmClass]!] - RANK[ROAD_HIERARCHY_OF_OSM[p.road.osmClass]!] || p.distance - q.distance)[0];
+    if (best === undefined) return { seq, road: null };
     return {
       seq,
       road: {

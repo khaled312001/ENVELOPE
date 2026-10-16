@@ -1,8 +1,8 @@
 [
   {
     "path": "/",
-    "title": "TOP.ai — development capacity",
-    "description": "TOP.ai reports what a plot's encoded rules imply, and the derivation of every figure that says so. Regulatory validity is never assessed and never claimed.",
+    "title": "Plotlogic — development capacity",
+    "description": "Plotlogic reports what a plot's encoded rules imply, and the derivation of every figure that says so. Regulatory validity is never assessed and never claimed.",
     "navLabel": null,
     "footerLabel": "The answer",
     "nav": "footer-only",
@@ -13,7 +13,7 @@
   },
   {
     "path": "/parking",
-    "title": "Parking — TOP.ai",
+    "title": "Parking — Plotlogic",
     "description": "How the parking number is actually made: an assumed area factor first, a placed level second, and the gap between them measured rather than hidden.",
     "navLabel": "Parking",
     "footerLabel": "Parking",
@@ -25,7 +25,7 @@
   },
   {
     "path": "/exports",
-    "title": "What comes out — TOP.ai",
+    "title": "What comes out — Plotlogic",
     "description": "The files the engine writes — the drawing, the model file, the workbook, the run as data and the report — and what each one carries. Every name on the page is read out of a file, and none of the files leaves before two gates are signed.",
     "navLabel": null,
     "footerLabel": "What comes out",
@@ -37,7 +37,7 @@
   },
   {
     "path": "/refusals",
-    "title": "What it refuses — TOP.ai",
+    "title": "What it refuses — Plotlogic",
     "description": "Everything this engine will not do, opening with the refusals it performs at runtime. If you are looking for the overclaim, start here.",
     "navLabel": "What it refuses",
     "footerLabel": "What it refuses",
@@ -49,7 +49,7 @@
   },
   {
     "path": "/app",
-    "title": "The engine — TOP.ai",
+    "title": "The engine — Plotlogic",
     "description": "Run a plot through the engine and watch each step refuse, assume or derive in the open.",
     "navLabel": null,
     "footerLabel": "Run a plot",
@@ -61,7 +61,7 @@
   },
   {
     "path": "/work",
-    "title": "Your work — TOP.ai",
+    "title": "Your work — Plotlogic",
     "description": "Every run this account authored, kept exactly as it was computed, with what governed it and what it assumed. No totals and no averages: a mean of two governing capacities from two plots is not a fact about anything.",
     "navLabel": null,
     "footerLabel": "Your work",
@@ -73,7 +73,7 @@
   },
   {
     "path": "/sign-in",
-    "title": "Sign in — TOP.ai",
+    "title": "Sign in — Plotlogic",
     "description": "Sign in to keep your runs exactly as they were computed. An account changes two things and reviews nothing: regulatory validity is never assessed, with an account or without one.",
     "navLabel": null,
     "footerLabel": "Sign in",
@@ -85,7 +85,7 @@
   },
   {
     "path": "/sign-up",
-    "title": "Create an account — TOP.ai",
+    "title": "Create an account — Plotlogic",
     "description": "Create an account to keep your runs. It does not make a run reviewed, verified, approved or compliant, and the licence number it records is never checked against any registry.",
     "navLabel": null,
     "footerLabel": "Create an account",
@@ -97,7 +97,7 @@
   },
   {
     "path": "/settings",
-    "title": "Settings — TOP.ai",
+    "title": "Settings — Plotlogic",
     "description": "Your name, your licence and your password — and what each one does to a run you sign. The licence is recorded and never verified; this page says so where the number is typed.",
     "navLabel": null,
     "footerLabel": "Settings",
@@ -109,7 +109,7 @@
   },
   {
     "path": "/workspace",
-    "title": "Workspace — TOP.ai",
+    "title": "Workspace — Plotlogic",
     "description": "A firm, the people in it and what each of them may do. Nothing here is verified by anybody: the name is a label its members chose, and a licence on a review is recorded and never checked.",
     "navLabel": null,
     "footerLabel": "Workspace",
@@ -121,7 +121,7 @@
   },
   {
     "path": "/accept-invite",
-    "title": "An invitation — TOP.ai",
+    "title": "An invitation — Plotlogic",
     "description": "The other end of a workspace invitation. The link works for one account and says nothing about why it was refused.",
     "navLabel": null,
     "footerLabel": "An invitation",
@@ -133,7 +133,7 @@
   },
   {
     "path": "/readiness",
-    "title": "Deployment readiness — TOP.ai",
+    "title": "Deployment readiness — Plotlogic",
     "description": "What is not ready in this deployment, and the human action that would change each figure. Readiness, not uptime — nothing here monitors availability.",
     "navLabel": "Readiness",
     "footerLabel": "Deployment readiness",

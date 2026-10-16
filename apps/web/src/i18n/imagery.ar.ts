@@ -17,7 +17,7 @@ import type { ImageName } from '../img.js';
 export const AR: Readonly<Record<ImageName, string>> = {
 
   'og-cover': 'حدود قطعة أرض، وبداخلها الغلاف البنائي مزاحا إلى الداخل.',
-  'mark': 'TOP.ai',
+  'mark': 'Plotlogic.dev',
   'lp-capacities':
     'ثلاثة نطاقات بارتفاعات مختلفة؛ أقصرها مميز، وخط يمد ارتفاعه عبر الاثنين الآخرين.',
   'lp-parking': 'دور مواقف في المسقط: صفا مواقف على جانبي ممر، ومنحدر يعبره بزاوية ضحلة.',

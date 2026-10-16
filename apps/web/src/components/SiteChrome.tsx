@@ -290,7 +290,7 @@ function Nav({
         <div className="shell nav__inner">
           <Link to="/" navigate={navigate} className="nav__brand">
             <Mark size={26} />
-            <span className="nav__wordmark">TOP.ai</span>
+            <span className="nav__wordmark">Plotlogic.dev</span>
           </Link>
 
           <button

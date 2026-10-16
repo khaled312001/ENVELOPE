@@ -462,7 +462,7 @@ function itemsToEntities(
 function titleLines(sheetTitle: string, meta: DxfMeta): string[] {
   return [
     `${sheetTitle} - plot ${meta.plotNumber}, ${meta.community} - run ${meta.runId}`,
-    `Issued ${issueDate(meta.issuedAt)}. Drawn by the TOP.ai engine. ` +
+    `Issued ${issueDate(meta.issuedAt)}. Drawn by the Plotlogic engine.` +
       `Checked by: ${meta.checkedBy ?? NOT_CHECKED}.`,
     'Revision 0 - first issue. No revision history is kept: a recomputation is a new run.',
     'NOT FOR CONSTRUCTION. REGULATORY VALIDITY: NOT ASSESSED.',

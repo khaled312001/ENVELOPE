@@ -109,8 +109,8 @@ is pasted into WhatsApp, Slack or LinkedIn. **Size:** 1200 × 630. **dark:** no.
 **Why amber is forbidden here in particular:** a logo is the most-repeated element on a site.
 The brand mark used `--uncertain` once already and it was removed for exactly this reason.
 
-**alt (en):** TOP.ai
-**alt (ar):** TOP.ai
+**alt (en):** Plotlogic.dev
+**alt (ar):** Plotlogic.dev
 
 ---
 

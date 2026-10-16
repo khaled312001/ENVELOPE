@@ -95,7 +95,7 @@ export const EN = {
    */
   gate: {
     /** The product's name. Not copy — it is the same word in both languages. */
-    mark: 'TOP.ai',
+    mark: 'Plotlogic.dev',
     headline: 'Everything it works out, and everywhere the figure came from.',
     points: [
       'Reads the affection plan and cites every figure to the box it was printed in.',

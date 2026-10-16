@@ -357,7 +357,7 @@ export function registerOrgRoutes(app: FastifyInstance, repo: AccountRepository)
          must not guess it from a header an attacker can set. */
       path: `/accept-invite?token=${encodeURIComponent(token)}`,
       note:
-        'This link is shown once. Send it to the person yourself — TOP.ai does not ' +
+        'This link is shown once. Send it to the person yourself — Plotlogic does not ' +
         'send email, and does not claim to.',
     });
   });
@@ -517,7 +517,7 @@ export function registerOrgRoutes(app: FastifyInstance, repo: AccountRepository)
     if (target.role === 'owner' && (await repo.countMembersWithRole(orgId, 'owner')) <= 1) {
       throw refuse(409, 'this is the last owner of the workspace. Make somebody else an owner first — ' +
           'a workspace with no owner cannot be renamed, cannot invite anybody, and ' +
-          'cannot be repaired from inside TOP.ai.');
+          'cannot be repaired from inside Plotlogic.');
     }
 
     await repo.removeMembership(orgId, accountId);

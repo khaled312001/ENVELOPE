@@ -33,7 +33,7 @@ import type { ImageName } from '../img.js';
 export const EN: Readonly<Record<ImageName, string>> = {
 
   'og-cover': 'A plot outline with the buildable envelope offset inside it.',
-  'mark': 'TOP.ai',
+  'mark': 'Plotlogic.dev',
   'lp-capacities':
     'Three bands of different heights; the shortest one is picked out, and a line carries its height across the other two.',
   'lp-parking':

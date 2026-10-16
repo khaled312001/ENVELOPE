@@ -242,7 +242,7 @@ export const EN = {
   >,
 
   notFound: {
-    title: 'Not found — TOP.ai',
+    title: 'Not found — Plotlogic',
     footerLabel: 'Not found',
   },
 };

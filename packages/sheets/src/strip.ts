@@ -243,7 +243,7 @@ export function paperFurniture(input: StripInput): PaperItem[] {
 
   // --- top: what this is and which run ---------------------------------------------
   let y = FRAME.y0 + 8;
-  items.push(keyed(text('heading', { x: left, y }, 'TOP.ai', 4, true), TitleField.PROJECT));
+  items.push(keyed(text('heading', { x: left, y }, 'Plotlogic.dev', 4, true), TitleField.PROJECT));
   y += 5;
   items.push(text('label', { x: left, y }, 'DEVELOPMENT CAPACITY STUDY', 2.2));
   y += 4;
@@ -365,7 +365,7 @@ export function paperFurniture(input: StripInput): PaperItem[] {
   // the set knows how big it is, so `composeSheets` fills this field by its key.
   items.push(...fieldRows(TitleField.SHEET_OF, 'SHEET', UNFILLED, col, f, colWidth));
   f += FIELD_ROW;
-  items.push(...fieldRows(TitleField.DRAWN, 'DRAWN', 'TOP.ai ENGINE', left, f, 42));
+  items.push(...fieldRows(TitleField.DRAWN, 'DRAWN', 'PLOTLOGIC ENGINE', left, f, 42));
   items.push(...fieldRows(TitleField.REVISION, 'REVISION', '0 - FIRST ISSUE', col, f, colWidth));
   f += FIELD_ROW;
   items.push(...fieldRows(TitleField.CHECKED, 'CHECKED', checked, left, f, width));

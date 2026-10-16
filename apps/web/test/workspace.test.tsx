@@ -289,8 +289,8 @@ describe('/workspace', () => {
 
   it('says an invitation is a link this product does not email', () => {
     const t = text(panels());
-    expect(t).toMatch(/TOP\.ai sends no email and does not claim to/i);
-    expect(arabicReadingText(panelsAr())).toMatch(/لا يرسل TOP\.ai بريدا ولا يقول إنه يرسله/);
+    expect(t).toMatch(/Plotlogic sends no email and does not claim to/i);
+    expect(arabicReadingText(panelsAr())).toMatch(/لا يرسل Plotlogic بريدا ولا يقول إنه يرسله/);
   });
 
   it('says the link is shown once — over the dictionary, where the sentence lives', () => {

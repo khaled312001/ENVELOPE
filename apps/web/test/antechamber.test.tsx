@@ -343,7 +343,7 @@ describe('/app — the antechamber', () => {
   });
 
   it('calls the site by its public name and never by the engine name', () => {
-    // TOP.ai is the site; ENVELOPE is the engine, and it belongs in a package name,
+    // Plotlogic is the site; ENVELOPE is the engine, and it belongs in a package name,
     // a file path and a code comment. A page that used it as the product name would
     // be a second name for the same thing on the page a visitor arrives at first.
     for (const [label, search] of RENDERS) {

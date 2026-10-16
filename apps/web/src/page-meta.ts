@@ -151,7 +151,7 @@ export const PAGE_META: Record<Route, PageMeta> = Object.fromEntries(
  * which is one line and keeps the sentinel a sentinel.
  */
 export const NOT_FOUND_META: PageMeta = {
-  title: 'That page is not here — TOP.ai',
+  title: 'That page is not here — Plotlogic',
   description: 'There is no page at this address, and nothing has been substituted for it.',
   navLabel: null,
   footerLabel: 'That page is not here',

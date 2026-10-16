@@ -84,7 +84,7 @@ export const AR: AuthDictionary = {
    */
   gate: {
     /* اسم المنتج. ليس نصا يترجم. */
-    mark: 'TOP.ai',
+    mark: 'Plotlogic.dev',
     headline: 'كل ما يحسبه، ومن أين جاء كل رقم فيه.',
     points: [
       'يقرأ مخطط أفكشن (Affection Plan) ويسند كل رقم إلى الخانة التي طبع فيها.',

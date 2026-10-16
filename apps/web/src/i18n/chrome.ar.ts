@@ -116,7 +116,7 @@ export const AR: ChromeDictionary = {
   },
 
   disclaimer: {
-    lead: 'TOP.ai · المرحلة 0 · ',
+    lead: 'Plotlogic · المرحلة 0 · ',
     /*
       Present tense and إطلاقًا rather than أبدًا.
 
@@ -158,42 +158,42 @@ export const AR: ChromeDictionary = {
 
   routes: {
     '/': {
-      title: 'TOP.ai — السعة التطويرية',
+      title: 'Plotlogic — السعة التطويرية',
       description:
-        'يعرض TOP.ai ما تقتضيه القواعد المسجلة فيه لقطعة أرض، ومعه اشتقاق كل رقم. الصلاحية التنظيمية لا تخضع للتقييم إطلاقا ولا يؤكدها هذا النظام.',
+        'يعرض Plotlogic ما تقتضيه القواعد المسجلة فيه لقطعة أرض، ومعه اشتقاق كل رقم. الصلاحية التنظيمية لا تخضع للتقييم إطلاقا ولا يؤكدها هذا النظام.',
       navLabel: null,
       footerLabel: 'الإجابة',
     },
     '/parking': {
-      title: 'المواقف — TOP.ai',
+      title: 'المواقف — Plotlogic',
       description:
         'كيف يتكون رقم المواقف فعليا: معامل مساحة مفترض أولا، ثم دور مرسوم بمواقفه، والفارق بين الاثنين يقاس ولا يخفى.',
       navLabel: 'المواقف',
       footerLabel: 'المواقف',
     },
     '/exports': {
-      title: 'المخرجات — TOP.ai',
+      title: 'المخرجات — Plotlogic',
       description:
         'الملفات التي يكتبها المحرك — اللوحات، والنموذج ثلاثي الأبعاد، وجدول الكميات، وبيانات الدراسة، والتقرير — وما يحمله كل منها. كل اسم في الصفحة مقروء من ملف حقيقي، ولا يخرج أي ملف قبل استيفاء بوابتين.',
       navLabel: null,
       footerLabel: 'المخرجات',
     },
     '/refusals': {
-      title: 'ما يرفضه — TOP.ai',
+      title: 'ما يرفضه — Plotlogic',
       description:
         'كل ما لن يفعله هذا المحرك، بدءا بما يرفضه أثناء الحساب. إن كنت تبحث عن المبالغة في الادعاء، فابدأ من هنا.',
       navLabel: 'ما يرفضه',
       footerLabel: 'ما يرفضه',
     },
     '/app': {
-      title: 'المحرك — TOP.ai',
+      title: 'المحرك — Plotlogic',
       description:
         'أدخل قطعة أرض في المحرك، وتابع كل خطوة وهي ترفض أو تفترض أو تشتق أمامك.',
       navLabel: null,
       footerLabel: 'ابدأ دراسة',
     },
     '/work': {
-      title: 'أعمالك — TOP.ai',
+      title: 'أعمالك — Plotlogic',
       /*
         «لا مجاميع ولا متوسّطات» is not modesty about the feature; it is the page's
         design, and the description says so because a reader arriving from a search
@@ -205,14 +205,14 @@ export const AR: ChromeDictionary = {
       footerLabel: 'أعمالك',
     },
     '/sign-in': {
-      title: 'تسجيل الدخول — TOP.ai',
+      title: 'تسجيل الدخول — Plotlogic',
       description:
         'سجل الدخول لتحفظ دراساتك كما حسبت تماما. الحساب يغير شيئين ولا يراجع شيئا: فالصلاحية التنظيمية لا تخضع للتقييم إطلاقا، بحساب أو بغير حساب.',
       navLabel: null,
       footerLabel: 'تسجيل الدخول',
     },
     '/sign-up': {
-      title: 'إنشاء حساب — TOP.ai',
+      title: 'إنشاء حساب — Plotlogic',
       /* The description carries the refusal, not the invitation. A sign-up page
          is where a translation is most tempted to promise. */
       description:
@@ -221,7 +221,7 @@ export const AR: ChromeDictionary = {
       footerLabel: 'إنشاء حساب',
     },
     '/settings': {
-      title: 'الإعدادات — TOP.ai',
+      title: 'الإعدادات — Plotlogic',
       /*
         The description carries the disclosure, not only the feature list. A reader
         arriving from a search result is entitled to know that the licence field
@@ -234,21 +234,21 @@ export const AR: ChromeDictionary = {
       footerLabel: 'الإعدادات',
     },
     '/workspace': {
-      title: 'مساحة العمل — TOP.ai',
+      title: 'مساحة العمل — Plotlogic',
       description:
         'المكتب ومن فيه وصلاحية كل منهم. لا يتم التحقق من شيء هنا: الاسم لافتة اختارها الأعضاء، ورقم الرخصة على المراجعة يسجل ولا يتم التحقق منه.',
       navLabel: null,
       footerLabel: 'مساحة العمل',
     },
     '/accept-invite': {
-      title: 'دعوة — TOP.ai',
+      title: 'دعوة — Plotlogic',
       description:
         'الطرف الآخر من دعوة مساحة العمل. الرابط يصلح لحساب واحد، ولا يذكر سبب الرفض إن رفض.',
       navLabel: null,
       footerLabel: 'دعوة',
     },
     '/readiness': {
-      title: 'جاهزية النظام — TOP.ai',
+      title: 'جاهزية النظام — Plotlogic',
       description:
         'ما ليس جاهزا في هذا الإصدار، والإجراء البشري الذي يغير كل رقم منه. جاهزية النظام، لا زمن التشغيل — لا شيء هنا يراقب توفر الخدمة.',
       navLabel: 'الجاهزية',
@@ -257,7 +257,7 @@ export const AR: ChromeDictionary = {
   },
 
   notFound: {
-    title: 'غير موجودة — TOP.ai',
+    title: 'غير موجودة — Plotlogic',
     footerLabel: 'غير موجودة',
   },
 };

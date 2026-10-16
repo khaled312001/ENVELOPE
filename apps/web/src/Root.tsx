@@ -111,7 +111,7 @@ export default function Root(): JSX.Element {
    * engine wrote to `localStorage` and set its own state while this component's
    * copy stayed null, so the status page asked for a name the browser already had.
    *
-   * The key stays `envelope.actor`. TOP.ai is the public name; ENVELOPE is the
+   * The key stays `envelope.actor`. Plotlogic is the public name; ENVELOPE is the
    * engine, and renaming a storage key would sign every returning reader out for a
    * change that is a wordmark rather than a migration.
    */

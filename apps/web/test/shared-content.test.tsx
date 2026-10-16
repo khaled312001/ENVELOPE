@@ -133,12 +133,14 @@ describe('the site chrome', () => {
     }
   });
 
-  it('names TOP.ai and never ENVELOPE as the site', () => {
+  it('names Plotlogic and never ENVELOPE or the old name as the site', () => {
     // ENVELOPE is the engine: a package name, a directory, a storage key, a code
     // comment. It is never the name of the site, and the wordmark is the one place
-    // that distinction is visible to a reader.
+    // that distinction is visible to a reader. TOP.ai was the site's name until
+    // 14 Oct 2026; a page still wearing it is a page the rename missed.
     const markup = page('/parking');
-    expect(markup).toContain('TOP.ai');
+    expect(markup).toContain('Plotlogic');
+    expect(stripTags(markup)).not.toContain('TOP.ai');
     expect(stripTags(markup)).not.toMatch(/\bENVELOPE\b/);
   });
 });

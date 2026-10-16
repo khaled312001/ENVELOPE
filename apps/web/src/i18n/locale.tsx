@@ -27,7 +27,7 @@ export type Locale = 'en' | 'ar';
 /**
  * `envelope.` and not `topai.`, matching `envelope.theme`.
  *
- * `index.html` states the rule: TOP.ai is the public name, ENVELOPE stays the name
+ * `index.html` states the rule: Plotlogic is the public name, ENVELOPE stays the name
  * of the packages, the directories and the storage keys, because renaming a key
  * signs every returning reader out of their own setting for a change that is a
  * wordmark rather than a migration.

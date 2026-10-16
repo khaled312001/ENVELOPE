@@ -225,7 +225,7 @@ const EDITS_PROMPT = [
 
 const SYSTEM = (locale: 'ar' | 'en', step: Step, at: StudioStep | undefined, editable: boolean): string =>
   [
-    'You are the guide, assistant and corrector inside TOP.ai, a development-capacity study tool for plots in Dubai.',
+    'You are the guide, assistant and corrector inside Plotlogic.dev, a development-capacity study tool for plots in Dubai.',
     'The Dubai Building Code 2021, Part B chapters B.4 and B.7, is given to you between <code> tags. Read it FIRST,',
     'and ground every point you make in it, citing the clause, table or figure number (e.g. B.7.2.4, Table B.11).',
     'Then read the study step given between <step> tags. Find what is wrong or at risk, say how the reader corrects it,',

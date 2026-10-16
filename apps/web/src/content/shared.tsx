@@ -43,7 +43,7 @@ import type { ReactNode } from 'react';
  * figure. When an owner supplies one it goes here, once.
  */
 export const DISCLAIMER = {
-  lead: 'TOP.ai · Phase 0 · ',
+  lead: 'Plotlogic · Phase 0 · ',
   emphasis: 'Regulatory validity is never assessed and never claimed.',
   body:
     ' This engine reports what its encoded rules imply. It is not a compliance check ' +

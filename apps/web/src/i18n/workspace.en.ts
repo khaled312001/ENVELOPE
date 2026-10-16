@@ -127,7 +127,7 @@ export const EN = {
       can: 'Reads everything in the workspace and exports it. Cannot enter a plot or start a run.',
     },
     lastOwner:
-      'The last owner cannot leave or be removed. A workspace with no owner cannot be renamed, cannot invite anybody, and cannot be repaired from inside TOP.ai.',
+      'The last owner cannot leave or be removed. A workspace with no owner cannot be renamed, cannot invite anybody, and cannot be repaired from inside Plotlogic.',
     /* Disclosures 3 and 4, at the moment somebody is choosing who reviews. */
     reviewNote:
       'Anybody in the workspace can sign the review gate on a run, if they have put a licence number on their account. That number is recorded and never verified — no registry is connected — and nothing here stops the person who computed a run from signing it themselves. A role is not a second pair of eyes; it only says who is allowed to be one.',
@@ -136,10 +136,10 @@ export const EN = {
   /* -------------------------------------------------------------- invitations */
   invites: {
     heading: 'Invitations',
-    lede: 'An invitation is a link. TOP.ai sends no email and does not claim to, so you carry the link to the person yourself.',
+    lede: 'An invitation is a link. Plotlogic sends no email and does not claim to, so you carry the link to the person yourself.',
     emailLabel: 'Their email address',
     emailHelp:
-      'It has to be the address on their TOP.ai account. The link only works for that account — otherwise anybody who opened it would be in.',
+      'It has to be the address on their Plotlogic account. The link only works for that account — otherwise anybody who opened it would be in.',
     roleLabel: 'Role',
     submit: 'Make an invitation',
     submitting: 'Making the link…',
@@ -176,7 +176,7 @@ export const EN = {
   /* ------------------------------------------------------------------ renaming */
   rename: {
     heading: 'The workspace name',
-    lede: 'A label your members chose. Nothing checked that a firm by this name exists, or that the people here work there — and no output from TOP.ai says otherwise.',
+    lede: 'A label your members chose. Nothing checked that a firm by this name exists, or that the people here work there — and no output from Plotlogic says otherwise.',
     label: 'Name',
     submit: 'Save the name',
     saving: 'Saving…',

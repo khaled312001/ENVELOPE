@@ -1,7 +1,7 @@
 import { Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import type { RunRequestBody } from '@web/api/client.js';
+import type { AdviseStudioStep, RunRequestBody } from '@web/api/client.js';
 
 import { EngineMessage, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
@@ -18,11 +18,17 @@ export function RefusalNotice({
   message,
   refused,
   onApply,
+  at,
+  inputs,
 }: {
   readonly message: string;
   /** The request the engine refused, when it was a run; null for any other failure. */
   readonly refused: RunRequestBody | null;
   readonly onApply: (body: RunRequestBody) => void;
+  /** The step the message is shown on, so Claude's correction can say where to go back to. */
+  readonly at: AdviseStudioStep;
+  /** What the reader had entered when it failed, for a failure that was not a run (the plot being filed). */
+  readonly inputs?: unknown;
 }): JSX.Element {
   const { t } = useLocale();
   const fix = autoFixFor(message, refused);
@@ -32,8 +38,8 @@ export function RefusalNotice({
         <EngineMessage text={message} />
         {fix ? <FixButton key={message} fix={fix} onApply={onApply} /> : null}
       </Notice>
-      {/* What the engine's sentence cannot name — which input to change — Claude reads against the code. Words only. */}
-      {refused ? <AdvisorBox ask={{ step: 'refusal', refusal: message, request: refused }} /> : null}
+      {/* What the sentence cannot name — which input to change — Claude reads against the code, under every error. Words only. */}
+      <AdvisorBox ask={{ step: 'refusal', at, refusal: message, ...((refused ?? inputs) !== undefined ? { request: refused ?? inputs } : {}) }} />
     </div>
   );
 }

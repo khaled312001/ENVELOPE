@@ -8,7 +8,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { SqliteAccountRepository } from '../src/account-store.js';
-import { compactStep, dubaiBuildingCode } from '../src/advisor.js';
+import { compactStep, dubaiBuildingCode, takeEdits } from '../src/advisor.js';
 import { optionsFromEnv } from '../src/main.js';
 import { build } from '../src/server.js';
 import { SqliteRunRepository } from '../src/store.js';
@@ -167,6 +167,86 @@ describe('POST /api/advise', () => {
     const res = await app!.inject({ method: 'POST', url: '/api/advise', headers: ALICE, payload: { step: 'capacity', locale: 'en', runId } });
     expect(res.statusCode).toBe(502);
     expect(res.body).not.toContain(KEY);
+  });
+});
+
+describe('every step, and every error', () => {
+  it('reads a step before the run from the reader’s inputs, with no run, and never the sheet’s file', async () => {
+    const sent = await start({ status: 200, json: SAID });
+    const res = await app!.inject({
+      method: 'POST',
+      url: '/api/advise',
+      headers: ALICE,
+      payload: { step: 'sheet', locale: 'en', request: { facts: { far: { value: '3.5', provenanceClass: 'DERIVED' }, sitePlan: { pngBase64: 'iVBORw0KGgo' } } } },
+    });
+    expect(res.statusCode).toBe(200);
+    const user = sent[0]!.body.messages[0]!.content;
+    expect(user).toContain('<step name="sheet">');
+    expect(user).toContain('3.5 (DERIVED)');
+    expect(user).not.toContain('iVBORw0KGgo');
+    expect(sent[0]!.body.system).toMatch(/guide, assistant and corrector/);
+  });
+
+  it('refuses a step before the run that brings no inputs', async () => {
+    const sent = await start({ status: 200, json: SAID });
+    const res = await app!.inject({ method: 'POST', url: '/api/advise', headers: ALICE, payload: { step: 'rules', locale: 'en' } });
+    expect(res.statusCode).toBe(400);
+    expect(sent).toHaveLength(0);
+  });
+
+  it('reads any error with the step it was shown on, run or not', async () => {
+    const sent = await start({ status: 200, json: SAID });
+    const res = await app!.inject({
+      method: 'POST',
+      url: '/api/advise',
+      headers: ALICE,
+      payload: { step: 'refusal', at: 'plot', locale: 'ar', refusal: 'The ring is self-intersecting.' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(sent[0]!.body.messages[0]!.content).toContain('"shownOn":"plot"');
+    expect(sent[0]!.body.system).toMatch(/an error shown on the القطعة step/);
+  });
+});
+
+describe('edits Claude proposes to the inputs', () => {
+  const EDITABLE = { 'rules.basements': '0', 'boundary.1.road': '', 'boundary.1.class': 'ROAD' };
+  const answerWith = (edits: unknown): { content: { type: string; text: string }[] } => ({
+    content: [{ type: 'text', text: `From the Dubai code\n- B.7.2.1\n<edits>${JSON.stringify(edits)}</edits>` }],
+  });
+
+  it('returns the ones that rest on a clause in the code text, and cuts the block out of the words', async () => {
+    const sent = await start({
+      status: 200,
+      json: answerWith([
+        { field: 'boundary.1.road', value: 'LOCAL', clause: 'B.7.2.1', why: 'Access is taken from the lower-ranked road.' },
+        { field: 'rules.basements', value: '2', clause: 'B.99.1', why: 'A clause the code does not have.' },
+        { field: 'rules.fakeField', value: '1', clause: 'B.7.2.1', why: 'Not offered.' },
+        { field: 'boundary.1.class', value: 'ROAD', clause: 'B.7.2.1', why: 'No change.' },
+      ]),
+    });
+    const res = await app!.inject({
+      method: 'POST',
+      url: '/api/advise',
+      headers: ALICE,
+      payload: { step: 'plot', locale: 'en', request: { plot: {} }, editable: EDITABLE },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().text).not.toContain('<edits>');
+    expect(res.json().edits).toEqual([{ field: 'boundary.1.road', value: 'LOCAL', clause: 'B.7.2.1', why: 'Access is taken from the lower-ranked road.' }]);
+    expect(sent[0]!.body.messages[0]!.content).toContain('<editable>');
+    expect(sent[0]!.body.system).toMatch(/An edit whose clause is not in the code text is discarded/);
+  });
+
+  it('proposes nothing where the screen offered nothing to change', async () => {
+    const sent = await start({ status: 200, json: answerWith([{ field: 'rules.basements', value: '1', clause: 'B.7.2.1', why: 'x' }]) });
+    const runId = await aRun(ALICE);
+    const res = await app!.inject({ method: 'POST', url: '/api/advise', headers: ALICE, payload: { step: 'export', locale: 'en', runId } });
+    expect(res.json().edits).toEqual([]);
+    expect(sent[0]!.body.system).not.toMatch(/<editable>/);
+  });
+
+  it('survives a block that is not JSON', () => {
+    expect(takeEdits('text <edits>not json</edits>', EDITABLE, dubaiBuildingCode()!)).toEqual({ text: 'text', edits: [] });
   });
 });
 

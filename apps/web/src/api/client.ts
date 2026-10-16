@@ -1163,8 +1163,14 @@ export const api = {
    * document is produced by the server and is the same bytes the JSON export
    * describes, so there is no second rendering path to drift.
    */
-  exportRunHtml: async (actor: Actor, runId: string, format: 'html' | 'sheets' = 'html'): Promise<string> => {
-    const res = await fetch(`/api/runs/${runId}/export?format=${format}`, {
+  exportRunHtml: async (
+    actor: Actor,
+    runId: string,
+    format: 'html' | 'sheets' | 'audit' = 'html',
+    /** The language the study report is written in; the drawing set and the audit are English. */
+    lang: 'en' | 'ar' = 'en',
+  ): Promise<string> => {
+    const res = await fetch(`/api/runs/${runId}/export?format=${format}&lang=${lang}`, {
       method: 'POST',
       headers: headers(actor, false),
     });
@@ -1227,16 +1233,32 @@ export const api = {
     call<AdviseResult>('/api/advise', { actor, method: 'POST', body: JSON.stringify(body) }),
 };
 
+export type AdviseStudioStep = 'sheet' | 'plot' | 'rules' | 'capacity' | 'parking' | 'checks' | 'export';
+
 export interface AdviseBody {
-  readonly step: 'capacity' | 'parking' | 'checks' | 'refusal';
+  /** A studio step, or `refusal` for any error shown on one (`at` says which). */
+  readonly step: AdviseStudioStep | 'refusal';
   readonly locale: 'ar' | 'en';
   readonly runId?: string;
+  readonly at?: AdviseStudioStep;
+  /** The inputs Claude may propose to change, with their values now; absent, it proposes nothing. */
+  readonly editable?: Readonly<Record<string, string>>;
   readonly refusal?: string;
   readonly request?: unknown;
 }
 
+/** A change Claude proposes to one input, on a clause of the code. The reader applies it, or does not. */
+export interface AdvisorEdit {
+  readonly field: string;
+  readonly value: string;
+  readonly clause: string;
+  readonly why: string;
+}
+
 export interface AdviseResult {
   readonly text: string;
+  /** Proposals only; absent on a deployment that predates them. */
+  readonly edits?: readonly AdvisorEdit[];
   readonly model: string;
   readonly consulted: readonly string[];
 }

@@ -77,7 +77,7 @@ export const EN = {
   },
 
   landing: {
-    eyebrow: 'Development capacity · Dubai',
+    eyebrow: 'Development capacity · Parking layout · Dubai',
     // The owner's description of the platform (16 Oct 2026), as the headline. "Optimized"
     // is left out: Phase 0 refuses the optimiser by construction, so the page may not claim one.
     titleA: 'A rule-based development platform that turns land data, zoning rules and developer requirements into',
@@ -92,7 +92,8 @@ export const EN = {
     parity: (n: string): string => `${n} cars in the worked example — the same in the sheets, the DXF and the 3D model.`,
     claimsEyebrow: 'What it claims',
     limitsEyebrow: 'Limits',
-    lede: 'Draw the plot, answer the open questions, and get the envelope, the parking and the building in 3D. Every number shows its source.',
+    // The hero's three inputs, said as the reader meets them. "Feasibility" stays out: no cost, price or return is computed.
+    lede: 'Upload the affection plan or draw the plot, answer what no rule decides, and get the envelope, the GFA, a parking layout placed bay by bay, the drawing set and the building in 3D. Every number shows its source.',
     ctaExample: 'Open the worked example',
     ctaStudio: 'Start a study',
     noWebgl: 'This browser cannot show the 3D view. The figures and drawings still work.',
@@ -105,21 +106,25 @@ export const EN = {
     bandsTitle: 'Three limits, computed separately',
     bandsLede: 'The governing capacity is the smallest of the three, never an average.',
     governs: 'Governs',
-    flowTitle: 'From a plot to a drawing set',
-    flowLede: 'Six steps. Each opens when the one before is done.',
+    flowTitle: 'From the affection plan to a drawing set',
+    // The sheet is not a gate: a plot whose sheet is not to hand is still a plot.
+    flowLede: 'Start from the sheet, or draw the plot without it. Each step after that opens when the one before is done.',
     flow: {
-      plot: { title: 'Draw the plot', body: 'Enter the corners and classify each boundary.' },
+      sheet: {
+        title: 'Read the affection plan',
+        body: 'Plot number, area, limits and corners, each cited to the sheet. A limit it leaves out is reported, never borrowed from a neighbouring plot.',
+      },
+      plot: { title: 'Draw the plot', body: 'On the satellite map or from the corners. Classify each boundary: road, neighbour or open space.' },
       rules: {
         title: 'Answer what no rule answers',
-        body: 'Basements, ground floor, podium and the unit mix. Parking is not counted in FAR.',
+        body: 'Your brief: basements, ground floor, podium and the unit mix. Parking is not counted in FAR.',
       },
-      capacity: { title: 'Read the capacity', body: 'Three bands, the governing one marked, and the building in 3D.' },
+      capacity: { title: 'Read the capacity', body: 'Three bands, the governing GFA marked, and the building in 3D.' },
       parking: {
         title: 'Lay out the parking',
-        body: 'Bays, aisles and the ramp, level by level, with a recommended vehicle entrance.',
+        body: 'Bays, aisles and the ramp, level by level, and the vehicle entrance: recommended, or placed by you.',
       },
-      export: { title: 'Sign and export', body: 'Report, A3 drawings, DXF, 3D model and spreadsheet, after two signed gates.' },
-      refuse: { title: 'Refuse what it cannot know', body: 'A gap in the affection plan is reported, never borrowed from a neighbouring plot.' },
+      export: { title: 'Check, sign and export', body: 'Independent checks, two signed gates, then the report, A3 drawings, DXF, 3D model and spreadsheet.' },
     },
   },
 
@@ -655,14 +660,25 @@ export const EN = {
 
   // Claude's reading of a step against the Dubai Building Code (`studio/AdvisorBox.tsx`).
   advisor: {
-    title: 'Claude’s reading, from the Dubai Building Code',
+    title: 'Claude’s review, from the Dubai Building Code',
     asking: 'Claude is reading the Dubai Building Code and this step…',
     failed: 'Claude could not be reached just now.',
     busy: 'Too many analyses in the last minute. Try again shortly.',
     again: 'Ask again',
-    ask: 'Analyse this step',
-    offer: 'Claude reads this step against the Dubai Building Code when you ask.',
-    note: 'Guidance from Claude Opus 5.5. It changes no figure in the study.',
+    ask: 'Review this step',
+    offer: 'When you ask, Claude checks this step against the Dubai Building Code: what to correct, and what to do next.',
+    askError: 'Ask Claude how to fix this',
+    offerError: 'Claude reads this message against the Dubai Building Code and says which field to change.',
+    note: 'Guidance from Claude Opus 5.5. It changes nothing; you make any correction.',
+    proposed: 'Proposed changes to your inputs, each on a clause of the code',
+    apply: 'Apply',
+    applyAll: (n: number): string => `Apply all ${n}`,
+    applied: 'Applied, as your own input',
+    appliedNote: (step: string): string => `Applied as your input. It counts once you compute again from the ${step} step.`,
+    goTo: (step: string): string => `Go to ${step}`,
+    stale: 'Your inputs changed after this review.',
+    boundaryKind: (n: number): string => `What is beyond boundary ${n}`,
+    blank: 'blank',
   },
 
   checks: {

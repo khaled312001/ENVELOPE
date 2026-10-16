@@ -8,6 +8,7 @@ import { legBetween } from '@web/geo.js';
 
 import {
   type Actor,
+  type AdvisorEdit,
   api,
   ApiError,
   encodeAttachment,
@@ -47,7 +48,8 @@ import { fetchRoadsBeside, type RoadBeside } from '../studio/edge-suggest.js';
 import { pointsToDraft, pointsToRing, ringToDraft } from '../studio/geometry.js';
 import { ParkingCanvas, ParkingPanel, type VehicleAccessBody } from '../studio/ParkingStep.js';
 import { PlotCanvas, PlotPanel, type PlotViewMode } from '../studio/PlotStep.js';
-import { AdvisorProvider } from '../studio/AdvisorBox.js';
+import { AdvisorBox, AdvisorProvider } from '../studio/AdvisorBox.js';
+import { applyEdits, editableFields, refilesPlot } from '../studio/advisor-edits.js';
 import { RefusalNotice } from '../studio/RefusalNotice.js';
 import { RulesPanel } from '../studio/RulesStep.js';
 import { SHEET_MAX_BYTES, SheetCanvas, SheetPanel, type SheetState } from '../studio/SheetStep.js';
@@ -402,6 +404,23 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
     [entrance, placeEntrance, run, request],
   );
 
+  /*
+    Claude's proposed edits, once the reader presses Apply: written into the same
+    form state the reader types into, so an applied edit is in every way the
+    reader's own input — a changed boundary class un-files the plot exactly as
+    choosing it would, and nothing reaches the engine until the reader computes.
+  */
+  const advisorFields = useMemo(() => editableFields(draft, rules), [draft, rules]);
+  const applyAdvice = (edits: readonly AdvisorEdit[]): StepId => {
+    const next = applyEdits(draft, rules, edits);
+    setRules(next.rules);
+    editPlot(next.draft);
+    return edits.some(refilesPlot) ? 'plot' : 'rules';
+  };
+  // What the reader had entered, for Claude to read on the steps before a run. Never the sheet's PDF or picture.
+  const plotInputs = { plot: draft, statedAreaM2: statedArea, filed: plotId !== null, sheetUsed };
+  const sheetFacts = sheet && sheetUsed ? sheet.read.facts : null;
+
   const canvas: ReactNode = useMemo(() => {
     // The mark over the canvas says it; an empty canvas under it, not a second message.
     if (busy === 'load') return <div className="h-full" />;
@@ -456,7 +475,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   }, [busy, step, draft, plot, created, run, t, sheetUnderlay, sheet, plotView, trace, statedArea, entranceTool]);
 
   return (
-    <AdvisorProvider actor={actor}>
+    <AdvisorProvider actor={actor} fields={advisorFields} apply={applyAdvice} goTo={setStep}>
     <InspectProvider value={run ? setNode : null}>
       <div className="flex h-dvh flex-col bg-base">
         <TopBar>
@@ -574,7 +593,13 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
             >
             {error ? (
               <div className="p-4 pb-0">
-                <RefusalNotice message={error} refused={refusedBody} onApply={(body) => void compute(body)} />
+                <RefusalNotice
+                  message={error}
+                  refused={refusedBody}
+                  onApply={(body) => void compute(body)}
+                  at={step}
+                  {...(step === 'plot' ? { inputs: plotInputs } : step === 'rules' ? { inputs: { rules, sheetFacts } } : {})}
+                />
               </div>
             ) : null}
             {step === 'sheet' ? (
@@ -639,6 +664,29 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
               <ChecksPanel run={run} onNext={() => setStep('export')} />
             ) : step === 'export' && run ? (
               <ExportPanel actor={actor} run={run} onSigned={refresh} />
+            ) : null}
+            {/*
+              Claude on the steps whose panels do not carry it: the sheet as read (or
+              the failure to read it), the plot and the rules as entered, the export
+              before signing. Capacity, parking and checks carry their own.
+            */}
+            {step === 'sheet' && (sheet || sheetError) ? (
+              <div className="grid gap-3 p-4 pt-0">
+                {sheetError ? <AdvisorBox ask={{ step: 'refusal', at: 'sheet', refusal: sheetError }} edits={false} /> : null}
+                {sheet ? <AdvisorBox ask={{ step: 'sheet', request: { facts: sheet.read.facts, using: sheetUsed } }} edits={false} /> : null}
+              </div>
+            ) : step === 'plot' ? (
+              <div className="p-4 pt-0">
+                <AdvisorBox ask={{ step: 'plot', request: plotInputs }} />
+              </div>
+            ) : step === 'rules' && plotId ? (
+              <div className="p-4 pt-0">
+                <AdvisorBox ask={{ step: 'rules', request: { rules, plot: draft, sheetFacts } }} />
+              </div>
+            ) : step === 'export' && run ? (
+              <div className="p-4 pt-0">
+                <AdvisorBox ask={{ step: 'export', runId: run.runId }} edits={false} />
+              </div>
             ) : null}
             </motion.div>
           </aside>

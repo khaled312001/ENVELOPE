@@ -8,6 +8,7 @@ import { cn } from '../lib/cn.js';
 import { EngineMessage, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Notice, PanelHeader, Spinner } from '../ui/primitives.js';
+import { AdvisorBox } from './AdvisorBox.js';
 
 /*
   EXPORT, BEHIND THE SAME TWO GATES THE SERVER ENFORCES.
@@ -23,7 +24,7 @@ import { Notice, PanelHeader, Spinner } from '../ui/primitives.js';
 type Format = 'html' | 'sheets' | 'dxf' | 'xlsx' | 'glb' | 'json';
 
 export function ExportPanel({ actor, run, onSigned }: { readonly actor: Actor; readonly run: RunView; readonly onSigned: () => Promise<void> }): JSX.Element {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const gates = run.gates ?? {};
   const g3 = gates['G3_ASSUMPTIONS_ACKNOWLEDGED'];
   const g4 = gates['G4_REVIEWER_NAMED'];
@@ -51,7 +52,8 @@ export function ExportPanel({ actor, run, onSigned }: { readonly actor: Actor; r
       const name = `topai-${run.plot.plotNumber}-${run.runId.slice(0, 8)}`;
       if (format === 'html' || format === 'sheets') {
         // The report is print-first HTML; the browser makes the PDF from it, and says so.
-        const html = await api.exportRunHtml(actor, run.runId, format);
+        // The study report is written in the page's language; the drawing set stays English.
+        const html = await api.exportRunHtml(actor, run.runId, format, locale);
         const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
         window.open(url, '_blank', 'noopener');
         setTimeout(() => URL.revokeObjectURL(url), 60_000);
@@ -168,9 +170,12 @@ export function ExportPanel({ actor, run, onSigned }: { readonly actor: Actor; r
           {open ? t.exports.files : t.exports.locked}
         </p>
         {error ? (
-          <Notice>
-            <EngineMessage text={error} />
-          </Notice>
+          <>
+            <Notice>
+              <EngineMessage text={error} />
+            </Notice>
+            <AdvisorBox ask={{ step: 'refusal', at: 'export', refusal: error }} edits={false} />
+          </>
         ) : null}
         {open ? (
           <>

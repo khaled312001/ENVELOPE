@@ -1,5 +1,5 @@
 import type { RunRequestBody } from '@web/api/client.js';
-import worked from '@web/screens/worked-example.json';
+import worked from '@web/screens/worked-example.json' with { type: 'json' };
 
 /*
   THE STUDY AS THE STUDIO HOLDS IT BEFORE THE ENGINE HAS SEEN IT.

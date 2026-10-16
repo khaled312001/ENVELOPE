@@ -1,7 +1,7 @@
-import { Eye, EyeOff, Hand, Info, Layers, Loader2, MapPinned, MousePointerClick, PenLine, Ruler, Search, Trash2, Undo2 } from 'lucide-react';
-import type { GeoJSONSource, ImageSource, Map as MapLibreMap, MapLayerMouseEvent, MapLayerTouchEvent } from 'maplibre-gl';
+import { Eye, EyeOff, Hand, Info, Layers, Loader2, MapPinned, MousePointerClick, Move, PenLine, Plus, Ruler, Search, Trash2, Undo2 } from 'lucide-react';
+import type { GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent, MapLayerTouchEvent, PointLike } from 'maplibre-gl';
 import MAPLIBRE_WORKER_URL from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type FormEvent, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   admitVertex,
@@ -27,6 +27,24 @@ import { grouped } from '../lib/figures.js';
 import { useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/primitives.js';
+import {
+  deleteCorner,
+  EMPTY_TRACE,
+  insertCorner,
+  type LengthRefusal,
+  liveLength,
+  type MapTrace,
+  parseLength,
+  translateBy,
+  translateTrace,
+  withCornerAt,
+  withEdgeLength,
+} from './map-trace.js';
+import { rasterSheet } from '../lib/sheet-raster.js';
+import { hideUnderlay, type Quad, type SheetUnderlay, showUnderlay, UNDERLAY_LONG_SIDE_PX } from './sheet-underlay.js';
+
+export { EMPTY_TRACE, type MapTrace } from './map-trace.js';
+export type { SheetUnderlay } from './sheet-underlay.js';
 
 /*
   DRAWING THE PLOT ON THE GROUND.
@@ -34,14 +52,19 @@ import { Input } from '../ui/primitives.js';
   The classic studio's map, rebuilt for this one: satellite imagery, a corner per
   click, the first corner clicked again to close, every corner draggable, a
   place search, a building outline picked off OpenStreetMap, and the affection
-  plan's own site plan laid over the imagery and fitted to a printed dimension.
+  plan's own page laid over the imagery and fitted to a printed dimension.
 
   EVERY NUMBER HERE IS COMPUTED BY THE CLASSIC STUDIO'S OWN FUNCTIONS — the ring
-  readout, the area check against the sheet, the calibration, the footprint and
-  the search are imported from `@web/components/PlotMap`, not rewritten. Two
-  front ends that measured one trace two ways would sooner or later disagree,
-  and the disagreement would be found on a submission. What is new is only the
-  screen around them.
+  readout, the area check against the sheet, the calibration, the footprint, the
+  search and a boundary set to a typed length are imported from
+  `@web/components/PlotMap`, not rewritten. Two front ends that measured one
+  trace two ways would sooner or later disagree, and the disagreement would be
+  found on a submission. What is new is only the screen around them, and the
+  edits in `map-trace.ts`, which measure through the same `legBetween`.
+
+  EVERY EDIT CAN BE UNDONE. A typed length, a moved outline, a deleted or added
+  corner, a dragged one, a placed one and a cleared outline each push the trace
+  they replaced; Undo takes the last one back.
 
   NOTHING HERE IS SUBMITTED. "Use this outline" copies the corners into the
   table, as metres on the UTM 40N grid, where the reader classifies every
@@ -49,27 +72,7 @@ import { Input } from '../ui/primitives.js';
   what was filed, never from this trace.
 */
 
-export interface MapTrace {
-  readonly ring: readonly LngLat[];
-  readonly closed: boolean;
-  /**
-   * Placed from the affection plan's own grid rather than drawn. The corner
-   * table already holds the sheet's corners, exactly; copying this ring back
-   * would replace them with the same plot measured through a projection, so
-   * the map offers no "use" for it. Any edit makes a fresh trace without it.
-   */
-  readonly fromSheet?: true;
-}
-
-export const EMPTY_TRACE: MapTrace = { ring: [], closed: false };
-
-export interface SheetImage {
-  readonly pngBase64: string;
-  readonly widthPx: number;
-  readonly heightPx: number;
-}
-
-type Tool = 'draw' | 'pan' | 'pick';
+type Tool = 'draw' | 'pan' | 'move' | 'pick';
 type Stage = 'sheet-a' | 'ground-a' | 'sheet-b' | 'ground-b' | 'distance';
 
 /* Esri's path is {z}/{y}/{x} — row before column. See the classic map for the warning. */
@@ -83,14 +86,21 @@ const CLOSE_PICK_PX = 14;
 const FALLBACK_SHEET_WIDTH_M = 200;
 /* Close enough that a plot fills a good part of the view. */
 const SHEET_ZOOM = 15;
+/* One arrow press moves the outline this far on the grid; with Shift, ten times as far. */
+const NUDGE_M = 0.5;
+/* Undo remembers this many edits. Enough for a session's corrections, not a memory leak. */
+const HISTORY = 200;
+/* Half a length chip — figure and + — in page pixels, to set it clear of its boundary. */
+const LABEL_HALF_W = 40;
+const LABEL_HALF_H = 12;
 
 const ID = {
   imagery: 'pm-imagery',
   osm: 'pm-osm',
   shape: 'pm-shape',
   ring: 'pm-ring',
+  rubber: 'pm-rubber',
   points: 'pm-points',
-  sheet: 'pm-sheet',
   sheetEdge: 'pm-sheet-edge',
 } as const;
 
@@ -102,28 +112,22 @@ function inkOf(token: string): string | null {
   return v === '' ? null : v;
 }
 
-/** The sheet, flattened onto white so its transparent ground does not show the imagery through the drawing. */
-async function flatten(pngBase64: string): Promise<string> {
-  const img = new Image();
-  img.src = `data:image/png;base64,${pngBase64}`;
-  await img.decode();
-  const canvas = document.createElement('canvas');
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return img.src;
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(img, 0, 0);
-  return canvas.toDataURL('image/png');
-}
-
-interface Label {
-  readonly id: string;
+interface EdgeLabel {
+  readonly i: number;
   readonly x: number;
   readonly y: number;
   readonly text: string;
 }
+
+interface Screen {
+  readonly edges: readonly EdgeLabel[];
+  readonly corners: readonly { readonly i: number; readonly x: number; readonly y: number }[];
+  readonly centre: { readonly x: number; readonly y: number } | null;
+}
+
+const NO_SCREEN: Screen = { edges: [], corners: [], centre: null };
+
+const metresText = (m: number): string => `${grouped(m.toFixed(2))} m`;
 
 export function PlotMapView({
   trace,
@@ -136,10 +140,12 @@ export function PlotMapView({
   readonly onTrace: (next: MapTrace) => void;
   /** The area the sheet prints, for the 2% check. Blank is honest. */
   readonly statedAreaM2: string;
-  readonly sheet: SheetImage | null;
-  readonly onUse: (ring: readonly LngLat[]) => void;
+  /** The affection plan in use, to lay under the imagery. */
+  readonly sheet: SheetUnderlay | null;
+  readonly onUse: (trace: MapTrace) => void;
 }): JSX.Element {
   const { t, dir } = useLocale();
+  const rootRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const [mapState, setMapState] = useState<'pending' | 'ready' | 'unavailable'>('pending');
@@ -150,13 +156,26 @@ export function PlotMapView({
   const [streets, setStreets] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [labels, setLabels] = useState<readonly Label[]>([]);
+  const [screen, setScreen] = useState<Screen>(NO_SCREEN);
+
+  // Edits: the history Undo walks back, the corner in hand, the boundary being typed.
+  const history = useRef<MapTrace[]>([]);
+  const [historySize, setHistorySize] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [cornerRefusal, setCornerRefusal] = useState(false);
+  const [editing, setEditing] = useState<{ readonly edge: number; readonly text: string; readonly refusal: LengthRefusal | null } | null>(null);
+  const [refocusEdge, setRefocusEdge] = useState<number | null>(null);
+  // The segment being drawn: where the pointer is, and what it measures from the last corner.
+  const pointer = useRef<LngLat | null>(null);
+  const rubberShown = useRef(false);
+  const [live, setLive] = useState<{ readonly x: number; readonly y: number; readonly text: string } | null>(null);
 
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<readonly PlaceHit[] | null>(null);
 
   // The sheet underlay.
-  const [sheetUrl, setSheetUrl] = useState<string | null>(null);
+  const [underlay, setUnderlay] = useState<{ readonly canvas: HTMLCanvasElement; readonly aspect: number } | null>(null);
+  const [underlayState, setUnderlayState] = useState<'idle' | 'drawing' | 'failed'>('idle');
   const [sheetOn, setSheetOn] = useState(true);
   const [zoomedIn, setZoomedIn] = useState(trace.ring.length > 0);
   const [opacity, setOpacity] = useState(60);
@@ -168,14 +187,59 @@ export function PlotMapView({
   const [distance, setDistance] = useState('');
   const [fitRefusal, setFitRefusal] = useState<CalibrationRefusal | null>(null);
 
-  const aspect = sheet ? sheet.heightPx / sheet.widthPx : 1;
+  const aspect = underlay?.aspect ?? 1;
+
+  // The latest state, for handlers the map calls: the map is mounted once and never rebuilt.
+  const traceRef = useRef(trace);
+  traceRef.current = trace;
+  const toolRef = useRef(tool);
+  toolRef.current = tool;
+  const stageRef = useRef(stage);
+  stageRef.current = stage;
+
+  /* ── the one way the trace changes, so every change can be undone ──── */
+
+  const commit = useCallback(
+    (next: MapTrace) => {
+      if (next === traceRef.current) return;
+      history.current = [...history.current, traceRef.current].slice(-HISTORY);
+      setHistorySize(history.current.length);
+      onTrace(next);
+    },
+    [onTrace],
+  );
+  /** A drag records the trace it started from once, on its first move, so a click that moved nothing leaves no step. */
+  const remember = (): void => {
+    history.current = [...history.current, traceRef.current].slice(-HISTORY);
+    setHistorySize(history.current.length);
+  };
+
+  const undo = (): void => {
+    setSelected(null);
+    setEditing(null);
+    setCornerRefusal(false);
+    const previous = history.current[history.current.length - 1];
+    if (previous) {
+      history.current = history.current.slice(0, -1);
+      setHistorySize(history.current.length);
+      onTrace(previous);
+      setTool(previous.closed ? (tool === 'draw' ? 'pan' : tool) : 'draw');
+      return;
+    }
+    /* Nothing recorded — the map was reopened on a trace drawn before: undo the drawing, reopening it
+       or taking its last corner back. A trace placed from the sheet was never drawn, so there is nothing to undo. */
+    if (trace.fromSheet) return;
+    onTrace(trace.closed ? { ring: trace.ring, closed: false } : { ring: trace.ring.slice(0, -1), closed: false });
+  };
 
   /* ── the map, mounted once ─────────────────────────────────────────── */
 
-  // Handlers the map calls read the latest state through refs, so the map is never rebuilt.
-  const clickRef = useRef<(p: LngLat, onFirst: boolean) => void>(() => {});
+  const clickRef = useRef<(p: LngLat, hit: number | null) => void>(() => {});
   const moveRef = useRef<(i: number, p: LngLat) => void>(() => {});
+  const hoverRef = useRef<(p: LngLat | null) => void>(() => {});
   const relabelRef = useRef<() => void>(() => {});
+  const rememberRef = useRef(remember);
+  rememberRef.current = remember;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -188,14 +252,15 @@ export function PlotMapView({
         if (cancelled) return;
         // The bundled worker's real url; maplibre's own guess at a sibling file 404s once Vite hashes it.
         mod.setWorkerUrl(MAPLIBRE_WORKER_URL);
-        const first = trace.ring[0];
+        const ring0 = traceRef.current.ring;
+        const first = ring0[0];
         // A whole plot already on the map opens framed, so the reader sees all of it and where it is.
         const frame =
-          trace.ring.length >= 3
+          ring0.length >= 3
             ? {
                 bounds: [
-                  [Math.min(...trace.ring.map((p) => p.lng)), Math.min(...trace.ring.map((p) => p.lat))],
-                  [Math.max(...trace.ring.map((p) => p.lng)), Math.max(...trace.ring.map((p) => p.lat))],
+                  [Math.min(...ring0.map((p) => p.lng)), Math.min(...ring0.map((p) => p.lat))],
+                  [Math.max(...ring0.map((p) => p.lng)), Math.max(...ring0.map((p) => p.lat))],
                 ] as [[number, number], [number, number]],
                 // Clear of the search and tools above and the readout below, which sit over the map.
                 fitBoundsOptions: { padding: { top: 84, bottom: 180, left: 56, right: 56 }, maxZoom: PLOT_ZOOM + 1 },
@@ -226,45 +291,53 @@ export function PlotMapView({
           },
         });
         mapRef.current = map;
+        const m = map;
         // One aborted tile is not a failed basemap: claimed only while no tile has ever drawn.
-        map.on('error', () => {
+        m.on('error', () => {
           if (!cancelled && !tilesSeen.current) setTilesFailed(true);
         });
-        map.on('data', (e) => {
+        m.on('data', (e) => {
           if (!cancelled && e.dataType === 'source' && 'tile' in e && e.tile !== undefined) {
             tilesSeen.current = true;
             setTilesFailed(false);
           }
         });
-        map.on('load', () => {
-          if (cancelled || !map) return;
+        m.on('load', () => {
+          if (cancelled) return;
           const accent = inkOf('--accent');
           const ink = inkOf('--text-primary');
           const plate = inkOf('--surface-panel');
           const uncertain = inkOf('--uncertain');
-          for (const id of [ID.shape, ID.ring, ID.points, ID.sheetEdge]) map.addSource(id, { type: 'geojson', data: EMPTY_FC });
-          map.addLayer({ id: ID.shape, type: 'fill', source: ID.shape, paint: { 'fill-opacity': 0.2, ...(accent ? { 'fill-color': accent } : {}) } });
-          map.addLayer({
+          for (const id of [ID.shape, ID.ring, ID.rubber, ID.points, ID.sheetEdge]) m.addSource(id, { type: 'geojson', data: EMPTY_FC });
+          m.addLayer({ id: ID.shape, type: 'fill', source: ID.shape, paint: { 'fill-opacity': 0.2, ...(accent ? { 'fill-color': accent } : {}) } });
+          m.addLayer({
             id: ID.ring,
             type: 'line',
             source: ID.ring,
             layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: { 'line-width': 3, ...(accent ? { 'line-color': accent } : {}) },
           });
-          map.addLayer({
+          // The segment being drawn, dashed: it is where the next corner would go, not a boundary yet.
+          m.addLayer({
+            id: ID.rubber,
+            type: 'line',
+            source: ID.rubber,
+            paint: { 'line-width': 2, 'line-dasharray': [2, 2], ...(accent ? { 'line-color': accent } : {}) },
+          });
+          m.addLayer({
             id: ID.points,
             type: 'circle',
             source: ID.points,
-            // The first corner is larger: it is the close-the-ring target.
+            // The first corner is larger: it is the close-the-ring target. The selected one is larger still, and inked.
             paint: {
-              'circle-radius': ['case', ['==', ['get', 'i'], 0], 9, 6],
-              'circle-stroke-width': 2,
+              'circle-radius': ['case', ['get', 'sel'], 10, ['==', ['get', 'i'], 0], 9, 6],
+              'circle-stroke-width': ['case', ['get', 'sel'], 4, 2],
               ...(plate ? { 'circle-color': plate } : {}),
-              ...(ink ? { 'circle-stroke-color': ink } : {}),
+              ...(ink && accent ? { 'circle-stroke-color': ['case', ['get', 'sel'], accent, ink] } : ink ? { 'circle-stroke-color': ink } : {}),
             },
           });
           // The sheet's outline: dashed while it is placed by eye, an assumption, and amber like one.
-          map.addLayer({
+          m.addLayer({
             id: ID.sheetEdge,
             type: 'line',
             source: ID.sheetEdge,
@@ -272,43 +345,101 @@ export function PlotMapView({
           });
           setMapState('ready');
         });
-        map.on('move', () => relabelRef.current());
-        map.on('moveend', () => {
-          if (map) setZoomedIn(map.getZoom() >= SHEET_ZOOM);
-        });
-        map.on('click', (e) => {
-          const box: [[number, number], [number, number]] = [
-            [e.point.x - CLOSE_PICK_PX, e.point.y - CLOSE_PICK_PX],
-            [e.point.x + CLOSE_PICK_PX, e.point.y + CLOSE_PICK_PX],
-          ];
-          const found = map && map.getLayer(ID.points) ? map.queryRenderedFeatures(box, { layers: [ID.points] }) : [];
-          clickRef.current({ lng: e.lngLat.lng, lat: e.lngLat.lat }, found.some((f) => f.properties?.['i'] === 0));
-        });
-        // Dragging a corner, as a gesture on the circle layer: no DOM marker, no second stylesheet.
-        let dragging: number | null = null;
-        const begin = (e: MapLayerMouseEvent | MapLayerTouchEvent): void => {
-          const i: unknown = e.features?.[0]?.properties?.['i'];
-          if (typeof i !== 'number' || !map) return;
-          dragging = i;
-          map.getCanvas().style.cursor = 'grabbing';
-          map.dragPan.disable();
+        m.on('move', () => relabelRef.current());
+        m.on('moveend', () => setZoomedIn(m.getZoom() >= SHEET_ZOOM));
+
+        /** The corner under a point on the screen, nearest first; null where there is none. */
+        const cornerAt = (pt: PointLike): number | null => {
+          if (!m.getLayer(ID.points)) return null;
+          const [x, y] = Array.isArray(pt) ? pt : [pt.x, pt.y];
+          const found = m.queryRenderedFeatures(
+            [
+              [x - CLOSE_PICK_PX, y - CLOSE_PICK_PX],
+              [x + CLOSE_PICK_PX, y + CLOSE_PICK_PX],
+            ],
+            { layers: [ID.points] },
+          );
+          let best: number | null = null;
+          let bestD = Infinity;
+          for (const f of found) {
+            const i: unknown = f.properties?.['i'];
+            const c = traceRef.current.ring[typeof i === 'number' ? i : -1];
+            if (typeof i !== 'number' || !c) continue;
+            const s = m.project([c.lng, c.lat]);
+            const d = Math.hypot(s.x - x, s.y - y);
+            if (d < bestD) {
+              bestD = d;
+              best = i;
+            }
+          }
+          return best;
+        };
+        const restingCursor = (): string => (stageRef.current === null && (toolRef.current === 'pan' || toolRef.current === 'move') ? '' : 'crosshair');
+
+        m.on('click', (e) => clickRef.current({ lng: e.lngLat.lng, lat: e.lngLat.lat }, cornerAt(e.point)));
+
+        // Dragging a corner, or the whole outline: gestures on the layers, no DOM marker, no second stylesheet.
+        let dragging: { readonly i: number; moved: boolean } | null = null;
+        let shifting: { readonly from: LngLat; readonly base: MapTrace; moved: boolean } | null = null;
+        const beginCorner = (e: MapLayerMouseEvent | MapLayerTouchEvent): void => {
+          const i = cornerAt(e.point);
+          if (i === null || stageRef.current !== null) return;
+          e.preventDefault();
+          dragging = { i, moved: false };
+          m.getCanvas().style.cursor = 'grabbing';
+          m.dragPan.disable();
+        };
+        const beginShift = (e: MapLayerMouseEvent | MapLayerTouchEvent): void => {
+          if (toolRef.current !== 'move' || stageRef.current !== null || dragging || cornerAt(e.point) !== null) return;
+          // Two fingers inside the outline are a pinch to zoom, not a move.
+          if ('points' in e && e.points.length > 1) return;
+          e.preventDefault();
+          shifting = { from: { lng: e.lngLat.lng, lat: e.lngLat.lat }, base: traceRef.current, moved: false };
+          m.getCanvas().style.cursor = 'grabbing';
+          m.dragPan.disable();
+        };
+        const follow = (p: LngLat, at: { x: number; y: number }): void => {
+          if (dragging) {
+            if (!dragging.moved) {
+              rememberRef.current();
+              dragging.moved = true;
+            }
+            moveRef.current(dragging.i, p);
+            return;
+          }
+          if (shifting) {
+            if (!shifting.moved) {
+              rememberRef.current();
+              shifting.moved = true;
+            }
+            shiftRef.current(shifting.base, shifting.from, p);
+            return;
+          }
+          hoverRef.current(p);
+          // What a press here would do, said by the cursor before it is done.
+          const overCorner = cornerAt([at.x, at.y]) !== null;
+          const overShape =
+            toolRef.current === 'move' && stageRef.current === null && m.getLayer(ID.shape) ? m.queryRenderedFeatures([at.x, at.y], { layers: [ID.shape] }).length > 0 : false;
+          m.getCanvas().style.cursor = overCorner && stageRef.current === null ? 'grab' : overShape ? 'move' : restingCursor();
         };
         const end = (): void => {
-          if (dragging === null || !map) return;
+          if (!dragging && !shifting) return;
           dragging = null;
-          map.getCanvas().style.cursor = '';
-          map.dragPan.enable();
+          shifting = null;
+          m.getCanvas().style.cursor = restingCursor();
+          m.dragPan.enable();
         };
-        map.on('mousedown', ID.points, begin);
-        map.on('touchstart', ID.points, begin);
-        map.on('mousemove', (e) => {
-          if (dragging !== null) moveRef.current(dragging, { lng: e.lngLat.lng, lat: e.lngLat.lat });
+        m.on('mousedown', ID.points, beginCorner);
+        m.on('touchstart', ID.points, beginCorner);
+        m.on('mousedown', ID.shape, beginShift);
+        m.on('touchstart', ID.shape, beginShift);
+        m.on('mousemove', (e) => follow({ lng: e.lngLat.lng, lat: e.lngLat.lat }, e.point));
+        m.on('touchmove', (e) => {
+          if (dragging || shifting) follow({ lng: e.lngLat.lng, lat: e.lngLat.lat }, e.point);
         });
-        map.on('touchmove', (e) => {
-          if (dragging !== null) moveRef.current(dragging, { lng: e.lngLat.lng, lat: e.lngLat.lat });
-        });
-        map.on('mouseup', end);
-        map.on('touchend', end);
+        m.on('mouseup', end);
+        m.on('touchend', end);
+        m.getCanvas().addEventListener('mouseleave', () => hoverRef.current(null));
       } catch {
         // No WebGL is a real state on a site laptop; the table still works.
         if (!cancelled) setMapState('unavailable');
@@ -325,7 +456,11 @@ export function PlotMapView({
 
   /* ── clicks, drags and labels, reading the latest state ─────────────── */
 
-  clickRef.current = (p, onFirst) => {
+  const shiftRef = useRef<(base: MapTrace, from: LngLat, to: LngLat) => void>(() => {});
+  shiftRef.current = (base, from, to) => onTrace(translateTrace(base, from, to));
+
+  clickRef.current = (p, hit) => {
+    setCornerRefusal(false);
     if (stage === 'sheet-a' || stage === 'sheet-b') {
       if (!placement) return;
       setSheetPicks((s) => [...s, groundToSheetPoint(placement, p)]);
@@ -344,18 +479,24 @@ export function PlotMapView({
       void fetchFootprint(p).then((r) => {
         setBusy(false);
         if (r.ring) {
-          onTrace({ ring: r.ring, closed: true });
+          commit({ ring: r.ring, closed: true });
           setNotice(t.map.footprintNote);
-          setTool('pan');
+          setTool('move');
         } else {
           setNotice(t.map.footprint[r.refusal as FootprintRefusal]);
         }
       });
       return;
     }
+    // A finished outline's corner is picked up to be deleted; while drawing, the first one closes the ring.
+    if (hit !== null && (trace.closed || tool !== 'draw')) {
+      setSelected(hit);
+      return;
+    }
+    setSelected(null);
     if (tool !== 'draw' || trace.closed) return;
-    if (onFirst && trace.ring.length >= 3) {
-      onTrace({ ring: trace.ring, closed: true });
+    if (hit === 0 && trace.ring.length >= 3) {
+      commit({ ring: trace.ring, closed: true });
       setTool('pan');
       setNotice(null);
       return;
@@ -366,32 +507,95 @@ export function PlotMapView({
       return;
     }
     setNotice(null);
-    onTrace({ ring: admitted.ring, closed: false });
+    commit({ ring: admitted.ring, closed: false });
   };
 
   moveRef.current = (i, p) => {
-    const admitted = admitVertex([], p);
-    if (admitted.refusal) return;
-    onTrace({ ring: trace.ring.map((q, j) => (j === i ? p : q)), closed: trace.closed });
+    setSelected(i);
+    onTrace(withCornerAt(trace, i, p));
   };
+
+  /** Where the pointer is while drawing, and the length of the segment it would end. */
+  const updateLive = useCallback(() => {
+    const map = mapRef.current;
+    const p = pointer.current;
+    const rubber = map?.getSource(ID.rubber) as GeoJSONSource | undefined;
+    const lengthM = tool === 'draw' && stage === null ? liveLength(trace, p) : null;
+    const last = trace.ring[trace.ring.length - 1];
+    if (!map || !p || !last || lengthM === null) {
+      // Cleared once, not on every move of a pointer that is not drawing.
+      if (rubberShown.current) void rubber?.setData(EMPTY_FC);
+      rubberShown.current = false;
+      setLive(null);
+      return;
+    }
+    rubberShown.current = true;
+    void rubber?.setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[last.lng, last.lat], [p.lng, p.lat]] } });
+    const at = map.project([(last.lng + p.lng) / 2, (last.lat + p.lat) / 2]);
+    setLive({ x: at.x, y: at.y, text: metresText(lengthM) });
+  }, [trace, tool, stage]);
+  hoverRef.current = (p) => {
+    pointer.current = p;
+    updateLive();
+  };
+  useEffect(() => {
+    if (mapState === 'ready') updateLive();
+  }, [updateLive, mapState]);
 
   const relabel = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
     const ring = trace.ring;
     const count = trace.closed ? ring.length : ring.length - 1;
-    const next: Label[] = [];
+    const corners = ring.map((p, i) => {
+      const at = map.project([p.lng, p.lat]);
+      return { i, x: at.x, y: at.y };
+    });
+    const centre =
+      trace.closed && ring.length >= 3
+        ? map.project([ring.reduce((s, p) => s + p.lng, 0) / ring.length, ring.reduce((s, p) => s + p.lat, 0) / ring.length])
+        : null;
+    const edges: EdgeLabel[] = [];
     for (let i = 0; i < count; i += 1) {
       const a = ring[i]!;
       const b = ring[(i + 1) % ring.length]!;
-      const at = map.project([(a.lng + b.lng) / 2, (a.lat + b.lat) / 2]);
-      next.push({ id: `leg-${i}`, x: at.x, y: at.y, text: `${grouped(legBetween(a, b).lengthM.toFixed(2))} m` });
+      const p = corners[i]!;
+      const q = corners[(i + 1) % corners.length]!;
+      let x = (p.x + q.x) / 2;
+      let y = (p.y + q.y) / 2;
+      /*
+        Outside the boundary, as a drafted dimension sits: on the line, a label
+        on a short boundary covers both of its corners and a click meant for a
+        corner opens the length instead. Pushed clear by its own half-size
+        along the outward normal, so it never touches the line it measures.
+      */
+      const len = Math.hypot(q.x - p.x, q.y - p.y);
+      if (centre && len > 0) {
+        let nx = (q.y - p.y) / len;
+        let ny = -(q.x - p.x) / len;
+        if (nx * (x - centre.x) + ny * (y - centre.y) < 0) {
+          nx = -nx;
+          ny = -ny;
+        }
+        const clear = 8 + Math.abs(nx) * LABEL_HALF_W + Math.abs(ny) * LABEL_HALF_H;
+        x += nx * clear;
+        y += ny * clear;
+      }
+      edges.push({ i, x, y, text: metresText(legBetween(a, b).lengthM) });
     }
-    setLabels(next);
+    setScreen({ edges, corners, centre: centre ? { x: centre.x, y: centre.y } : null });
   }, [trace]);
-  relabelRef.current = relabel;
+  relabelRef.current = () => {
+    relabel();
+    updateLive();
+  };
 
   /* ── the trace, pushed to the canvas ───────────────────────────────── */
+
+  // A selection or an edit that no longer names a corner or a boundary of this trace is dropped.
+  const sel = selected !== null && selected < trace.ring.length ? selected : null;
+  const edgeCount = trace.closed ? trace.ring.length : Math.max(0, trace.ring.length - 1);
+  const edit = editing && editing.edge < edgeCount ? editing : null;
 
   useEffect(() => {
     const map = mapRef.current;
@@ -408,10 +612,10 @@ export function PlotMapView({
     );
     void (map.getSource(ID.points) as GeoJSONSource | undefined)?.setData({
       type: 'FeatureCollection',
-      features: trace.ring.map((p, i) => ({ type: 'Feature', properties: { i }, geometry: { type: 'Point', coordinates: [p.lng, p.lat] } })),
+      features: trace.ring.map((p, i) => ({ type: 'Feature', properties: { i, sel: i === sel }, geometry: { type: 'Point', coordinates: [p.lng, p.lat] } })),
     });
     relabel();
-  }, [trace, mapState, relabel]);
+  }, [trace, mapState, relabel, sel]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -422,24 +626,109 @@ export function PlotMapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || mapState !== 'ready') return;
-    map.getCanvas().style.cursor = tool === 'pan' && stage === null ? '' : 'crosshair';
+    map.getCanvas().style.cursor = (tool === 'pan' || tool === 'move') && stage === null ? '' : 'crosshair';
   }, [tool, stage, mapState]);
+
+  // A boundary whose length was just typed gets the focus back, so a keyboard reader is where he was.
+  useEffect(() => {
+    if (refocusEdge === null) return;
+    rootRef.current?.querySelector<HTMLButtonElement>(`[data-edge="${refocusEdge}"]`)?.focus();
+    setRefocusEdge(null);
+  }, [refocusEdge, screen]);
+
+  /* ── the edits ─────────────────────────────────────────────────────── */
+
+  const startLength = (i: number, text: string): void => {
+    setSelected(null);
+    setEditing({ edge: i, text: text.replace(/\s*m$/, '').replace(/,/g, ''), refusal: null });
+  };
+  const applyLength = (e: FormEvent): void => {
+    e.preventDefault();
+    if (!edit) return;
+    const typed = parseLength(edit.text);
+    if (typed.refusal) {
+      setEditing({ ...edit, refusal: typed.refusal });
+      return;
+    }
+    const r = withEdgeLength(trace, edit.edge, typed.lengthM);
+    if (r.refusal) {
+      setEditing({ ...edit, refusal: r.refusal });
+      return;
+    }
+    commit(r.trace);
+    setEditing(null);
+    setRefocusEdge(edit.edge);
+  };
+
+  /**
+   * From the keyboard the focus stays on the corner button at the same place in
+   * the Tab order, which now names the next corner — so that corner is the one
+   * selected, and Delete pressed again deletes it rather than nothing.
+   */
+  const removeCorner = (i: number, fromKeyboard = false): void => {
+    const r = deleteCorner(trace, i);
+    if (r.refusal) {
+      setCornerRefusal(true);
+      return;
+    }
+    setCornerRefusal(false);
+    setSelected(fromKeyboard ? Math.min(i, r.trace.ring.length - 1) : null);
+    commit(r.trace);
+  };
+  const addCorner = (i: number): void => {
+    const next = insertCorner(trace, i);
+    if (next === trace) return;
+    commit(next);
+    // The new corner is the one after the split boundary's start: picked up, ready to drag or delete.
+    setSelected(i + 1);
+  };
+  const nudge = (e: ReactKeyboardEvent): void => {
+    const step = e.shiftKey ? NUDGE_M * 10 : NUDGE_M;
+    const by: Record<string, readonly [number, number]> = { ArrowUp: [0, step], ArrowDown: [0, -step], ArrowLeft: [-step, 0], ArrowRight: [step, 0] };
+    const d = by[e.key];
+    if (!d) return;
+    e.preventDefault();
+    e.stopPropagation();
+    commit(translateBy(trace, d[0], d[1]));
+  };
+  const onKeys = (e: ReactKeyboardEvent): void => {
+    if (e.target instanceof HTMLInputElement) return;
+    if ((e.key === 'Delete' || e.key === 'Backspace') && sel !== null && trace.closed) {
+      e.preventDefault();
+      removeCorner(sel, e.target instanceof HTMLButtonElement && e.target.getAttribute('aria-describedby') === 'pm-corner-help');
+    } else if (e.key === 'Escape' && (sel !== null || cornerRefusal)) {
+      setSelected(null);
+      setCornerRefusal(false);
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      undo();
+    }
+  };
 
   /* ── the sheet underlay ────────────────────────────────────────────── */
 
+  const regionKey = sheet?.region ? sheet.region.join(',') : 'page';
   useEffect(() => {
     if (!sheet) {
-      setSheetUrl(null);
+      setUnderlay(null);
+      setUnderlayState('idle');
       return;
     }
     let live = true;
-    void flatten(sheet.pngBase64)
-      .then((url) => live && setSheetUrl(url))
-      .catch(() => live && setSheetUrl(`data:image/png;base64,${sheet.pngBase64}`));
+    setUnderlayState('drawing');
+    void rasterSheet(sheet.pdfBase64, sheet.region, UNDERLAY_LONG_SIDE_PX)
+      .then((canvas) => {
+        if (!live) return;
+        setUnderlay({ canvas, aspect: canvas.height / canvas.width });
+        setUnderlayState('idle');
+      })
+      .catch(() => live && setUnderlayState('failed'));
     return () => {
       live = false;
     };
-  }, [sheet]);
+    // The page and the part of it, not the object carrying them: a re-render is not a new sheet.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheet?.pdfBase64, regionKey]);
 
   // The opening placement: the middle of the view, at most of its width. An assumption, drawn dashed.
   const placeAtView = useCallback(() => {
@@ -459,33 +748,25 @@ export function PlotMapView({
 
   // Only once the reader is looking at a plot: a sheet laid over seven emirates would be a speck nobody finds.
   useEffect(() => {
-    if (mapState === 'ready' && sheetUrl && !placement && zoomedIn) placeAtView();
-  }, [mapState, sheetUrl, placement, placeAtView, zoomedIn]);
+    if (mapState === 'ready' && underlay && !placement && zoomedIn) placeAtView();
+  }, [mapState, underlay, placement, placeAtView, zoomedIn]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || mapState !== 'ready') return;
-    const existing = map.getSource(ID.sheet);
     const edge = map.getSource(ID.sheetEdge) as GeoJSONSource | undefined;
-    if (!sheetUrl || !placement || !sheetOn) {
-      if (map.getLayer(ID.sheet)) map.removeLayer(ID.sheet);
-      if (existing) map.removeSource(ID.sheet);
+    if (!underlay || !placement || !sheetOn) {
+      hideUnderlay(map);
       void edge?.setData(EMPTY_FC);
       return;
     }
     const corners = underlayCorners(placement).map((p) => [p.lng, p.lat] as [number, number]);
-    const quad = [corners[0]!, corners[1]!, corners[2]!, corners[3]!] as [[number, number], [number, number], [number, number], [number, number]];
-    if (!existing) {
-      map.addSource(ID.sheet, { type: 'image', url: sheetUrl, coordinates: quad });
-      // Over the imagery, under the trace: a corner dropped on the sheet stays visible on top of it.
-      map.addLayer({ id: ID.sheet, type: 'raster', source: ID.sheet, paint: { 'raster-opacity': opacity / 100, 'raster-fade-duration': 0 } }, ID.shape);
-    } else {
-      (existing as ImageSource).setCoordinates(quad);
-      map.setPaintProperty(ID.sheet, 'raster-opacity', opacity / 100);
-    }
+    const quad: Quad = [corners[0]!, corners[1]!, corners[2]!, corners[3]!];
+    // Over the imagery, under the trace: a corner dropped on the sheet stays visible on top of it.
+    showUnderlay(map, underlay.canvas, quad, opacity / 100, ID.shape);
     void edge?.setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [...corners, corners[0]!] } });
     map.setPaintProperty(ID.sheetEdge, 'line-dasharray', fit ? [1, 0] : [3, 2]);
-  }, [sheetUrl, placement, sheetOn, opacity, fit, mapState]);
+  }, [underlay, placement, sheetOn, opacity, fit, mapState]);
 
   const startFit = (): void => {
     setSheetOn(true);
@@ -515,7 +796,7 @@ export function PlotMapView({
 
   /* ── search ────────────────────────────────────────────────────────── */
 
-  const search = async (e: React.FormEvent): Promise<void> => {
+  const search = async (e: FormEvent): Promise<void> => {
     e.preventDefault();
     setHits(await searchPlaces(query));
   };
@@ -531,30 +812,191 @@ export function PlotMapView({
   const against = useMemo(() => (trace.closed ? compareArea(trace.ring, statedAreaM2) : null), [trace, statedAreaM2]);
 
   const how =
-    stage !== null ? t.map.fitStep[stage] : tool === 'pick' ? t.map.howPick : trace.closed ? t.map.howClosed : tool === 'draw' ? t.map.howStart : t.map.howPan;
+    stage !== null
+      ? t.map.fitStep[stage]
+      : tool === 'pick'
+        ? t.map.howPick
+        : tool === 'move' && trace.closed
+          ? t.map.howMove
+          : trace.closed
+            ? t.map.howClosed
+            : tool === 'draw'
+              ? t.map.howStart
+              : t.map.howPan;
 
   const tools: readonly { id: Tool; icon: typeof PenLine; label: string }[] = [
     { id: 'draw', icon: PenLine, label: t.map.draw },
     { id: 'pan', icon: Hand, label: t.map.pan },
+    { id: 'move', icon: Move, label: t.map.moveOutline },
     { id: 'pick', icon: MousePointerClick, label: t.map.pick },
   ];
 
+  const editable = stage === null && mapState === 'ready';
+  const canEditShape = editable && trace.closed && trace.ring.length >= 3;
+  const selectedAt = sel !== null ? screen.corners[sel] : undefined;
+
   return (
     // The map does not mirror: north does not move with the language. The controls around it do.
-    <div className="relative h-full w-full overflow-hidden bg-sunken">
+    <div ref={rootRef} className="relative h-full w-full overflow-hidden bg-sunken" onKeyDown={onKeys}>
       <div ref={hostRef} dir="ltr" className="absolute inset-0" aria-describedby="pm-how" />
 
-      {/* Lengths along each boundary, from the classic studio's own measure. */}
-      <div aria-hidden="true" dir="ltr" className="pointer-events-none absolute inset-0">
-        {labels.map((l) => (
-          <span
-            key={l.id}
-            className="figure absolute -translate-x-1/2 -translate-y-1/2 rounded-sm bg-panel/90 px-1.5 py-0.5 text-[11px] text-fg shadow-soft"
-            style={{ left: l.x, top: l.y }}
+      {/*
+        What sits on the drawing, in page pixels: each boundary's length — a
+        button that turns into a box to type it — a + to split it, a focusable
+        ring on each corner so Delete reaches a corner from the keyboard, and the
+        length of the segment being drawn. The layer lets the pointer through;
+        only the controls in it take it.
+      */}
+      <div dir="ltr" className="pointer-events-none absolute inset-0">
+        {screen.edges.map((l) =>
+          edit?.edge === l.i ? null : editable ? (
+            <span
+              key={`leg-${l.i}`}
+              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-stretch overflow-visible rounded-sm bg-panel/95 text-fg shadow-soft"
+              style={{ left: l.x, top: l.y }}
+            >
+              <button
+                type="button"
+                data-edge={l.i}
+                aria-label={t.map.editLength(l.i, (l.i + 1) % trace.ring.length, l.text)}
+                onClick={() => startLength(l.i, l.text)}
+                className="figure pointer-events-auto relative cursor-text rounded-sm px-1.5 py-1 text-[11px] underline decoration-dotted decoration-1 underline-offset-2 before:absolute before:-inset-x-1 before:-inset-y-1 before:content-[''] hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+              >
+                {l.text}
+              </button>
+              {canEditShape ? (
+                <button
+                  type="button"
+                  aria-label={t.map.addCornerOn(l.i, (l.i + 1) % trace.ring.length)}
+                  title={t.map.addCornerOn(l.i, (l.i + 1) % trace.ring.length)}
+                  onClick={() => addCorner(l.i)}
+                  className="pointer-events-auto relative grid w-7 place-items-center rounded-e-sm border-s border-line text-secondary before:absolute before:-inset-x-0.5 before:-inset-y-1 before:content-[''] hover:bg-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                >
+                  <Plus className="size-3.5" aria-hidden="true" />
+                </button>
+              ) : null}
+            </span>
+          ) : (
+            <span
+              key={`leg-${l.i}`}
+              aria-hidden="true"
+              className="figure absolute -translate-x-1/2 -translate-y-1/2 rounded-sm bg-panel/90 px-1.5 py-0.5 text-[11px] text-fg shadow-soft"
+              style={{ left: l.x, top: l.y }}
+            >
+              {l.text}
+            </span>
+          ),
+        )}
+
+        {edit
+          ? (() => {
+              const at = screen.edges.find((l) => l.i === edit.edge);
+              if (!at) return null;
+              const j = (edit.edge + 1) % trace.ring.length;
+              return (
+                <form
+                  key="length-edit"
+                  onSubmit={applyLength}
+                  dir={dir}
+                  className="pointer-events-auto absolute z-10 grid w-max max-w-64 -translate-x-1/2 -translate-y-5 gap-1"
+                  style={{ left: at.x, top: at.y }}
+                >
+                  <span className="flex items-center gap-1.5 justify-self-start rounded-md border border-accent bg-panel p-1 shadow-lifted" dir="ltr">
+                    <Input
+                      autoFocus
+                      aria-label={t.map.lengthInput(edit.edge, j)}
+                      aria-invalid={edit.refusal !== null || undefined}
+                      aria-describedby="pm-length-help"
+                      inputMode="decimal"
+                      value={edit.text}
+                      onChange={(e) => setEditing({ ...edit, text: e.target.value, refusal: null })}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setEditing(null);
+                          setRefocusEdge(edit.edge);
+                        }
+                      }}
+                      onBlur={() => setEditing(null)}
+                      className="figure h-8 w-24 px-2 text-[13px]"
+                    />
+                    <span className="pe-1 text-[12px] text-secondary">m</span>
+                  </span>
+                  <p
+                    id="pm-length-help"
+                    role={edit.refusal ? 'alert' : undefined}
+                    className={cn('rounded-sm bg-panel/95 px-2 py-1 text-[11.5px] shadow-soft', edit.refusal ? 'text-variance' : 'text-secondary')}
+                  >
+                    {edit.refusal ? (edit.refusal === 'outside-zone-40' ? t.map.outsideZone : t.map.lengthRefusal[edit.refusal]) : t.map.lengthKeys}
+                  </p>
+                </form>
+              );
+            })()
+          : null}
+
+        {canEditShape
+          ? screen.corners.map((c) => (
+              // Not under the pointer — a corner is dragged on the canvas — but on the Tab order, for Delete.
+              <button
+                key={`corner-${c.i}`}
+                type="button"
+                tabIndex={0}
+                aria-label={t.map.cornerLabel(c.i)}
+                aria-describedby="pm-corner-help"
+                onFocus={() => setSelected(c.i)}
+                className="absolute size-11 -translate-x-1/2 -translate-y-1/2 rounded-full focus-visible:outline-3 focus-visible:outline-offset-0 focus-visible:outline-accent"
+                style={{ left: c.x, top: c.y }}
+              />
+            ))
+          : null}
+        <span id="pm-corner-help" className="sr-only">
+          {t.map.cornerHelp}
+        </span>
+
+        {canEditShape && selectedAt ? (
+          <div
+            dir={dir}
+            className="pointer-events-auto absolute z-10 grid w-max max-w-60 gap-1 rounded-md border border-line bg-panel/95 p-1 shadow-lifted backdrop-blur"
+            style={{ left: selectedAt.x + 18, top: selectedAt.y - 58 }}
           >
-            {l.text}
+            <Button variant="secondary" size="sm" className="h-9" aria-label={t.map.deleteCornerOf(selectedAt.i)} onClick={() => removeCorner(selectedAt.i)}>
+              <Trash2 aria-hidden="true" />
+              {t.map.deleteCorner}
+            </Button>
+            {cornerRefusal ? (
+              <p role="alert" className="px-1.5 pb-1 text-[11.5px] text-variance">
+                {t.map.tooFewCorners}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {canEditShape && tool === 'move' && screen.centre ? (
+          // The visible handle for moving the outline; the pointer drags the shape itself, the keyboard uses this.
+          <button
+            type="button"
+            aria-label={t.map.moveHandle}
+            title={t.map.moveHandle}
+            onKeyDown={nudge}
+            // Small and see-through: on a villa-sized outline a larger mark would hide the shape it moves.
+            className="absolute grid size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-accent bg-panel/75 text-accent shadow-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            style={{ left: screen.centre.x, top: screen.centre.y }}
+          >
+            <Move className="size-4" aria-hidden="true" />
+          </button>
+        ) : null}
+
+        {live ? (
+          <span
+            aria-hidden="true"
+            className="figure absolute -translate-x-1/2 -translate-y-[140%] rounded-sm border border-accent bg-panel px-1.5 py-0.5 text-[12px] font-medium text-fg shadow-soft"
+            style={{ left: live.x, top: live.y }}
+          >
+            {live.text}
           </span>
-        ))}
+        ) : null}
       </div>
 
       {mapState === 'unavailable' ? (
@@ -589,15 +1031,24 @@ export function PlotMapView({
           ) : null}
         </form>
 
-        <div role="toolbar" aria-label={t.plot.view} className="pointer-events-auto ms-auto flex items-center gap-1 rounded-lg border border-line bg-panel/95 p-1 shadow-soft backdrop-blur">
+        {/*
+          The tools and the sheet's panel are one column: when the search and
+          the tools do not fit on one line, the tools wrap below it and the
+          panel goes down with them instead of covering them.
+        */}
+        <div className="ms-auto grid justify-items-end gap-2">
+        <div role="toolbar" aria-label={t.plot.view} className="pointer-events-auto flex items-center gap-1 rounded-lg border border-line bg-panel/95 p-1 shadow-soft backdrop-blur">
           {tools.map(({ id, icon: Icon, label }) => (
             <button
               key={id}
               type="button"
               aria-pressed={tool === id}
+              aria-label={label}
+              title={label}
               onClick={() => {
                 setTool(id);
                 setStage(null);
+                setSelected(null);
               }}
               className={cn(
                 'inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-medium transition-colors',
@@ -612,6 +1063,7 @@ export function PlotMapView({
           <button
             type="button"
             aria-pressed={streets}
+            aria-label={t.map.streets}
             onClick={() => setStreets((s) => !s)}
             className={cn('inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-medium', streets ? 'bg-accent-subtle text-accent-strong' : 'text-secondary hover:bg-hover hover:text-fg')}
           >
@@ -619,17 +1071,26 @@ export function PlotMapView({
             <span className="hidden sm:inline">{t.map.streets}</span>
           </button>
         </div>
-      </div>
 
-      {/* ── the sheet overlay, when the affection plan carried a site plan ── */}
+      {/* ── the sheet overlay, when an affection plan is in use ── */}
       {sheet ? (
-        <div className="absolute end-3 top-16 grid w-64 gap-2 rounded-lg border border-line bg-panel/95 p-3 text-[12.5px] shadow-soft backdrop-blur">
+        <div className="pointer-events-auto grid w-64 gap-2 rounded-lg border border-line bg-panel/95 p-3 text-[12.5px] shadow-soft backdrop-blur">
           <div className="flex items-center justify-between gap-2">
             <p className="font-medium text-fg">{t.map.sheet}</p>
             <Button variant="ghost" size="icon" className="size-7" aria-pressed={sheetOn} aria-label={t.map.sheetShow} onClick={() => setSheetOn((s) => !s)}>
               {sheetOn ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}
             </Button>
           </div>
+          {underlayState === 'drawing' ? (
+            <p className="flex items-center gap-2 text-secondary" role="status">
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              {t.sheet.drawing}
+            </p>
+          ) : underlayState === 'failed' ? (
+            <p className="text-variance" role="alert">
+              {t.map.sheetFailed}
+            </p>
+          ) : null}
           <label className="grid gap-1 text-secondary">
             <span className="flex justify-between">
               {t.map.opacity}
@@ -640,7 +1101,7 @@ export function PlotMapView({
           {!placement ? (
             <>
               <p className="text-secondary">{t.map.findFirst}</p>
-              <Button variant="secondary" size="sm" disabled={!zoomedIn} onClick={placeAtView}>
+              <Button variant="secondary" size="sm" disabled={!zoomedIn || !underlay} onClick={placeAtView}>
                 {t.map.placeHere}
               </Button>
             </>
@@ -683,6 +1144,8 @@ export function PlotMapView({
           )}
         </div>
       ) : null}
+        </div>
+      </div>
 
       {/* ── bottom: what to do, what was drawn, and the one action ── */}
       <div className="absolute inset-x-3 bottom-3 grid gap-2" dir={dir}>
@@ -712,12 +1175,7 @@ export function PlotMapView({
             ) : null}
           </div>
           <div className="flex items-center gap-1 rounded-lg border border-line bg-panel/95 p-1 shadow-soft backdrop-blur">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={trace.ring.length === 0}
-              onClick={() => onTrace(trace.closed ? { ring: trace.ring, closed: false } : { ring: trace.ring.slice(0, -1), closed: false })}
-            >
+            <Button variant="ghost" size="sm" disabled={historySize === 0 && (trace.ring.length === 0 || trace.fromSheet === true)} onClick={undo}>
               <Undo2 aria-hidden="true" />
               {t.map.undo}
             </Button>
@@ -726,9 +1184,10 @@ export function PlotMapView({
               size="sm"
               disabled={trace.ring.length === 0}
               onClick={() => {
-                onTrace({ ring: [], closed: false });
+                commit(EMPTY_TRACE);
                 setTool('draw');
                 setNotice(null);
+                setSelected(null);
               }}
             >
               <Trash2 aria-hidden="true" />
@@ -746,7 +1205,7 @@ export function PlotMapView({
           ) : trace.closed && trace.ring.length >= 3 ? (
             <div className="flex items-center gap-2">
               <p className="hidden rounded-sm bg-panel/85 px-2 py-0.5 text-[11px] text-secondary backdrop-blur md:block">{t.map.precision}</p>
-              <Button variant="brand" size="lg" onClick={() => onUse(trace.ring)}>
+              <Button variant="brand" size="lg" onClick={() => onUse(trace)}>
                 {t.map.use}
               </Button>
             </div>

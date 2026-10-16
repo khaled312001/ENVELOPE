@@ -1,6 +1,7 @@
 import { fromDltm, type LngLat, toUtm40 } from '@web/geo.js';
 import { walkTraverse } from '@web/traverse.js';
 
+import type { TraceLineage } from '../components/map-trace.js';
 import type { DraftPlot } from './model.js';
 
 /*
@@ -11,8 +12,10 @@ import type { DraftPlot } from './model.js';
   None of them classifies a boundary. A photograph, a fitted outline and a
   coordinate table all say where the corners are and nothing about what lies
   beyond each edge, and FR-PLT-001 AC3 gives that field no default. A boundary
-  the reader had already classified keeps its answer only while the ring still
-  has the same number of sides; otherwise every boundary is asked again.
+  the reader had already classified keeps its answer while the ring still has
+  the same number of sides, or when the map recorded which boundary each edge
+  came from as it inserted or deleted a corner; otherwise every boundary is
+  asked again.
 */
 
 const MM = 3;
@@ -23,12 +26,24 @@ function metres(v: number): string {
   return /^-0\.0+$/.test(s) ? (0).toFixed(MM) : s;
 }
 
-function withVertices(prev: DraftPlot, vertices: readonly { x: string; y: string }[]): DraftPlot {
+const UNASKED = { classification: '' as const, roadHierarchy: '' as const };
+
+function withVertices(prev: DraftPlot, vertices: readonly { x: string; y: string }[], lineage?: TraceLineage): DraftPlot {
+  /*
+    A ring the map edited by inserting or deleting a corner says which of the
+    table's boundaries each of its edges descends from, so a split boundary's
+    two halves both keep its answer and a merged one keeps the answer of the
+    boundary that entered the deleted corner. Only while the table still has
+    the sides that record started from — otherwise it describes another ring.
+  */
+  if (lineage && lineage.sides === prev.edges.length && lineage.edges.length === vertices.length) {
+    return { ...prev, vertices, edges: lineage.edges.map((k) => prev.edges[k] ?? UNASKED) };
+  }
   const keep = prev.edges.length === vertices.length;
   return {
     ...prev,
     vertices,
-    edges: vertices.map((_, i) => (keep ? prev.edges[i]! : { classification: '' as const, roadHierarchy: '' as const })),
+    edges: vertices.map((_, i) => (keep ? prev.edges[i]! : UNASKED)),
   };
 }
 
@@ -40,12 +55,13 @@ function withVertices(prev: DraftPlot, vertices: readonly { x: string; y: string
  * would draw a different plot. The ring's orientation is left as traced — the API
  * stores every ring counter-clockwise and turns the edges with it.
  */
-export function ringToDraft(ring: readonly LngLat[], prev: DraftPlot): DraftPlot {
+export function ringToDraft(ring: readonly LngLat[], prev: DraftPlot, lineage?: TraceLineage): DraftPlot {
   const grid = ring.map(toUtm40);
   const origin = grid[0]!;
   return withVertices(
     prev,
     grid.map((g) => ({ x: metres(g.e - origin.e), y: metres(g.n - origin.n) })),
+    lineage,
   );
 }
 

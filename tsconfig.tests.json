@@ -44,7 +44,9 @@
       rendering of it, and the package moved into `apps/web`'s dependencies.
     */
     "paths": {
-      "@envelope/*": ["./packages/*/dist/index.d.ts"]
+      "@envelope/*": ["./packages/*/dist/index.d.ts"],
+      // The site's own alias for the classic app's helpers, as its vite.config.ts and Vitest resolve it.
+      "@web/*": ["./apps/web/src/*"]
     }
   },
   /*

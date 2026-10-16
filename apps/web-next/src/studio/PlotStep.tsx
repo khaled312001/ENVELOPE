@@ -2,9 +2,8 @@ import { CircleCheck, FileCheck2, Map as MapIcon, PenSquare, Plus, Trash2 } from
 import { lazy, Suspense, useMemo } from 'react';
 
 import type { PlotCreated, PlotView } from '@web/api/client.js';
-import type { LngLat } from '@web/geo.js';
 
-import type { MapTrace, SheetImage } from '../components/PlotMapView.js';
+import type { MapTrace, SheetUnderlay } from '../components/PlotMapView.js';
 import { PlotSketch } from '../components/PlotSketch.js';
 import { grouped } from '../lib/figures.js';
 import { EngineText, useLocale } from '../lib/locale.js';
@@ -29,7 +28,7 @@ export function PlotCanvas({
   trace,
   onTrace,
   statedArea,
-  sheetImage,
+  sheetUnderlay,
   onUseTrace,
 }: {
   readonly draft: DraftPlot;
@@ -39,8 +38,9 @@ export function PlotCanvas({
   readonly trace: MapTrace;
   readonly onTrace: (next: MapTrace) => void;
   readonly statedArea: string;
-  readonly sheetImage: SheetImage | null;
-  readonly onUseTrace: (ring: readonly LngLat[]) => void;
+  /** The affection plan in use, to lay under the imagery; null when none is. */
+  readonly sheetUnderlay: SheetUnderlay | null;
+  readonly onUseTrace: (trace: MapTrace) => void;
 }): JSX.Element {
   const { t } = useLocale();
   const vertices = plot?.vertices ?? draft.vertices;
@@ -85,7 +85,7 @@ export function PlotCanvas({
               </p>
             }
           >
-            <PlotMapView trace={trace} onTrace={onTrace} statedAreaM2={statedArea} sheet={sheetImage} onUse={onUseTrace} />
+            <PlotMapView trace={trace} onTrace={onTrace} statedAreaM2={statedArea} sheet={sheetUnderlay} onUse={onUseTrace} />
           </Suspense>
         </div>
       ) : (

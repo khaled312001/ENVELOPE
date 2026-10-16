@@ -39,6 +39,8 @@ export default defineConfig({
       '@envelope/exports': pkg('exports'),
       '@envelope/sheets': pkg('sheets'),
       '@envelope/massing': pkg('massing'),
+      // The site reaches into the classic app's helpers under this name (see apps/web-next/vite.config.ts).
+      '@web': new URL('./apps/web/src', import.meta.url).pathname,
     },
   },
 });

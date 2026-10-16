@@ -111,7 +111,7 @@ export function Landing(): JSX.Element {
               </span>
             </Item>
             <Item variants={arrive}>
-              <h1 className="heading-display text-[42px] font-light tracking-[-0.035em] text-fg sm:text-[58px]">
+              <h1 className="heading-display text-[28px] font-light tracking-[-0.025em] text-fg sm:text-[38px]">
                 {t.landing.titleA} <span className="text-brand font-normal">{t.landing.titleB}</span>
               </h1>
             </Item>

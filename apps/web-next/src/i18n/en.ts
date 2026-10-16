@@ -78,8 +78,10 @@ export const EN = {
 
   landing: {
     eyebrow: 'Development capacity · Dubai',
-    titleA: 'Every figure on a plot,',
-    titleB: 'with the rule that produced it.',
+    // The owner's description of the platform (16 Oct 2026), as the headline. "Optimized"
+    // is left out: Phase 0 refuses the optimiser by construction, so the page may not claim one.
+    titleA: 'A rule-based development platform that turns land data, zoning rules and developer requirements into',
+    titleB: 'building configurations, capacity calculations and development decisions, starting with Dubai.',
     live: 'Engine output',
     carsTitle: 'Cars in bays',
     bandsEyebrow: 'Capacity',

@@ -522,11 +522,11 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 run={run}
                 busy={busy === 'run'}
                 canChoose={request !== null}
-                onChoose={(seq) => {
+                onPlace={(placed) => {
                   if (!request) return;
                   // The same request, with only the entrance changed — or the choice taken back.
-                  const { chosenAccessEdgeSeq: _previous, ...rest } = request;
-                  void compute(seq === null ? rest : { ...rest, chosenAccessEdgeSeq: seq });
+                  const { chosenAccessEdgeSeq: _older, vehicleAccess: _previous, ...rest } = request;
+                  void compute(placed === null ? rest : { ...rest, vehicleAccess: placed });
                 }}
                 onNext={() => setStep('checks')}
               />

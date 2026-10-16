@@ -21,6 +21,7 @@ import {
   toWire,
 } from '@envelope/core';
 import {
+  type AccessCandidate,
   type buildAssumptionRegister,
   explainGoverningBand,
   type GfaStatement,
@@ -51,23 +52,31 @@ function point(p: { readonly x: number; readonly y: number }): {
  * screen that shows one answer with no alternatives cannot be overruled, only
  * obeyed.
  */
-function candidate(c: {
-  readonly edgeSeq: number;
-  readonly hierarchy: string | undefined;
-  readonly usableWindowM: Decimal;
-  readonly centreOffsetM: Decimal;
-  readonly widthM: Decimal;
-  readonly opening: { readonly start: { x: number; y: number }; readonly end: { x: number; y: number } };
-  readonly rank: number;
-  readonly rationale: string;
-}) {
+function candidate(c: AccessCandidate) {
   return {
     edgeSeq: c.edgeSeq,
     hierarchy: c.hierarchy ?? null,
     usableWindowM: c.usableWindowM.toFixed(2),
+    // Where B.7.2.1 lets an opening stand on this boundary, from its first corner —
+    // what the placement control is bounded by, so the screen never invents it.
+    window: { fromM: c.window.fromM.toFixed(2), toM: c.window.toM.toFixed(2) },
+    junctionAt: c.junctionAt,
+    centreRange: {
+      sixM: c.centreRange.sixM && { fromM: c.centreRange.sixM.fromM.toFixed(2), toM: c.centreRange.sixM.toM.toFixed(2) },
+      threeM: c.centreRange.threeM && { fromM: c.centreRange.threeM.fromM.toFixed(2), toM: c.centreRange.threeM.toM.toFixed(2) },
+    },
     centreOffsetM: c.centreOffsetM.toFixed(2),
     widthM: c.widthM.toFixed(2),
     opening: { start: point(c.opening.start), end: point(c.opening.end) },
+    arrangement: c.arrangement,
+    openings: c.openings.map((o) => ({
+      role: o.role,
+      edgeSeq: o.edgeSeq,
+      centreOffsetM: o.centreOffsetM.toFixed(2),
+      widthM: o.widthM.toFixed(2),
+      start: point(o.start),
+      end: point(o.end),
+    })),
     rank: c.rank,
     rationale: c.rationale,
   };

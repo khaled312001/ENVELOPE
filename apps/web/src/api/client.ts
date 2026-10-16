@@ -318,8 +318,42 @@ export interface AccessCandidateView {
   readonly centreOffsetM: string;
   readonly widthM: string;
   readonly opening: { readonly start: WirePoint; readonly end: WirePoint };
+  /*
+    The four below arrived on 16 Oct 2026, when the reader began placing the
+    entrance along a boundary. Optional because a run stored before then does not
+    carry them — and a screen that read them as present would place nothing there.
+  */
+  /** Where on the boundary B.7.2.1 lets an opening stand, metres from its first corner. */
+  readonly window?: { readonly fromM: string; readonly toM: string };
+  /** Whether each end of the boundary is a road junction, so the 15 m applies there. */
+  readonly junctionAt?: { readonly start: boolean; readonly end: boolean };
+  /** Where an opening's centre may stand: a 6 m gap, or a 3 m lane alone. Null where it does not fit. */
+  readonly centreRange?: {
+    readonly sixM: { readonly fromM: string; readonly toM: string } | null;
+    readonly threeM: { readonly fromM: string; readonly toM: string } | null;
+  };
+  readonly arrangement?: VehicleAccessArrangement;
+  readonly openings?: readonly AccessOpeningView[];
   readonly rank: number;
   readonly rationale: string;
+}
+
+export type VehicleAccessArrangement = 'TWO_WAY' | 'ONE_WAY_PAIR' | 'ONE_WAY_SEPARATE';
+
+/** One gap in the boundary, and which way its cars cross it. */
+export interface AccessOpeningView {
+  readonly role: 'ENTRY_EXIT' | 'ENTRY' | 'EXIT';
+  readonly edgeSeq: number;
+  readonly centreOffsetM: string;
+  readonly widthM: string;
+  readonly start: WirePoint;
+  readonly end: WirePoint;
+}
+
+/** Where a reader put one opening: a boundary, and its centre in metres from that boundary's first corner. */
+export interface OpeningPlacementBody {
+  readonly edgeSeq: number;
+  readonly centreOffsetM?: string;
 }
 
 /**
@@ -916,6 +950,16 @@ export interface RunRequestBody {
    * with the recommendation reported beside it.
    */
   readonly chosenAccessEdgeSeq?: number;
+  /**
+   * The entrance the reader placed: one two-way opening, or an entry and an
+   * exit side by side or apart, each at a point along its boundary. Never sent
+   * with `chosenAccessEdgeSeq` — the server refuses two answers to one question.
+   */
+  readonly vehicleAccess?: {
+    readonly arrangement: VehicleAccessArrangement;
+    readonly entry: OpeningPlacementBody;
+    readonly exit?: OpeningPlacementBody;
+  };
   readonly parkingUsableFraction: {
     readonly value: string;
     readonly source: 'DERIVED' | 'ASSUMED';

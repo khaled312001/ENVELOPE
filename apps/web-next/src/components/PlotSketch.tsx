@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'motion/react';
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, MouseEvent } from 'react';
 
 import { cn } from '../lib/cn.js';
 import { EASE } from '../ui/motion.js';
@@ -23,6 +23,13 @@ import { EASE } from '../ui/motion.js';
   would replace their dash, and the dash is how a boundary's class reads without
   colour. Every boundary is at full ink from the first frame.
 */
+
+/** A vehicle opening on the boundary, in the vertices' metres, and which way its cars go. */
+export interface SketchOpening {
+  readonly start: { readonly x: string; readonly y: string };
+  readonly end: { readonly x: string; readonly y: string };
+  readonly role: 'ENTRY_EXIT' | 'ENTRY' | 'EXIT';
+}
 
 export interface SketchEdge {
   readonly seq: number;
@@ -50,6 +57,8 @@ export function PlotSketch({
   compact = false,
   onPick,
   pickLabel,
+  onPickAt,
+  openings = [],
 }: {
   readonly vertices: readonly { readonly x: string; readonly y: string }[];
   readonly edges: readonly SketchEdge[];
@@ -63,6 +72,13 @@ export function PlotSketch({
   readonly onPick?: (seq: number) => void;
   /** The accessible name of boundary `seq`'s button. Required with `onPick`. */
   readonly pickLabel?: (seq: number) => string;
+  /**
+   * A click ON a boundary (not its number) reports where along it, 0 at its
+   * first corner and 1 at its second. The number stays the keyboard's way in.
+   */
+  readonly onPickAt?: (seq: number, fraction: number) => void;
+  /** Vehicle openings, each drawn as a gap in the boundary with the way its cars go. */
+  readonly openings?: readonly SketchOpening[];
 }): JSX.Element {
   const reduce = useReducedMotion();
   const pts = vertices.map((v) => ({ x: Number(v.x), y: Number(v.y) })).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
@@ -120,9 +136,22 @@ export function PlotSketch({
         const hot = highlight === i || chosenEdge === i;
         const unanswered = (e?.classification ?? '') === '';
         const pick = onPick ? (): void => onPick(i) : undefined;
+        // Where on this boundary the pointer landed, as a fraction of its length.
+        const pickAt = onPickAt
+          ? (ev: MouseEvent<SVGLineElement>): void => {
+              const svg = ev.currentTarget.ownerSVGElement;
+              const m = svg?.getScreenCTM();
+              if (!svg || !m) return onPickAt(i, 0.5);
+              const at = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(m.inverse());
+              const dx = x2 - x1;
+              const dy = y2 - y1;
+              const t = ((at.x - x1) * dx + (at.y - y1) * dy) / (dx * dx + dy * dy || 1);
+              onPickAt(i, Math.min(1, Math.max(0, t)));
+            }
+          : undefined;
         return (
           <g key={i}>
-            {pick ? (
+            {pick || pickAt ? (
               // A wide, unpainted stroke over the boundary: the line itself is a target too.
               <line
                 x1={x1}
@@ -134,7 +163,7 @@ export function PlotSketch({
                 vectorEffect="non-scaling-stroke"
                 className="cursor-pointer"
                 aria-hidden="true"
-                onClick={pick}
+                onClick={pickAt ?? pick}
               />
             ) : null}
             <line
@@ -255,6 +284,54 @@ export function PlotSketch({
             );
           })
         : null}
+      {openings.map((o, k) => {
+        /*
+          A gap in the boundary, and an arrow across it the way the cars go: in at
+          an entry, out at an exit, both ways through a two-way opening. The arrow
+          is ink, not colour, so the direction reads in any theme and without hue.
+        */
+        const a = P({ x: Number(o.start.x), y: Number(o.start.y) });
+        const b = P({ x: Number(o.end.x), y: Number(o.end.y) });
+        if (![...a, ...b].every(Number.isFinite)) return null;
+        const [ccx, ccy] = P({ x: cx, y: cy });
+        const mx = (a[0] + b[0]) / 2;
+        const my = (a[1] + b[1]) / 2;
+        let nx = -(b[1] - a[1]);
+        let ny = b[0] - a[0];
+        const nl = Math.hypot(nx, ny) || 1;
+        nx /= nl;
+        ny /= nl;
+        if ((ccx - mx) * nx + (ccy - my) * ny < 0) {
+          nx = -nx;
+          ny = -ny;
+        }
+        const L = unit * 9;
+        const tail: [number, number] = [mx - nx * L * 0.35, my - ny * L * 0.35];
+        const tip: [number, number] = [mx + nx * L * 0.65, my + ny * L * 0.65];
+        const head = (to: [number, number], from: [number, number]): string => {
+          const ux = to[0] - from[0];
+          const uy = to[1] - from[1];
+          const ul = Math.hypot(ux, uy) || 1;
+          const [px, py] = [(ux / ul) * unit * 2.4, (uy / ul) * unit * 2.4];
+          return `M${to[0] - px - py * 0.6} ${to[1] - py + px * 0.6} L${to[0]} ${to[1]} L${to[0] - px + py * 0.6} ${to[1] - py - px * 0.6}`;
+        };
+        const [from, to] = o.role === 'EXIT' ? [tip, tail] : [tail, tip];
+        return (
+          <g key={`o${k}`} aria-hidden="true" pointerEvents="none">
+            <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="var(--surface-panel)" strokeWidth={7} vectorEffect="non-scaling-stroke" />
+            <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="var(--text-primary)" strokeWidth={1.5} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+            <path
+              d={`M${from[0]} ${from[1]} L${to[0]} ${to[1]} ${head(to, from)}${o.role === 'ENTRY_EXIT' ? ` ${head(from, to)}` : ''}`}
+              fill="none"
+              stroke="var(--text-primary)"
+              strokeWidth={1.75}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          </g>
+        );
+      })}
       {!compact ? (
         <g transform={`translate(${w - pad * 0.55} ${pad * 0.6})`} aria-hidden="true">
           <path d={`M0 ${-unit * 4} L${unit * 2} ${unit * 2} L0 ${unit * 0.8} L${-unit * 2} ${unit * 2} Z`} fill="var(--text-secondary)" />

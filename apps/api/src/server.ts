@@ -1863,10 +1863,43 @@ function runInputFrom(
       placement an assumption.
     */
     ...(body.levels ? { levelSchedule: body.levels } : {}),
-    ...(body.chosenAccessEdgeSeq === undefined
-      ? {}
-      : { levelPlan: { chosenAccessEdgeSeq: body.chosenAccessEdgeSeq } }),
+    ...vehicleAccessOf(body),
   };
+}
+
+/**
+ * The entrance the actor placed. `chosenAccessEdgeSeq` is the older, narrower
+ * form of the same answer — a boundary, centred, two-way — and is read as that.
+ */
+function vehicleAccessOf(body: RunRequest): Pick<RunInput, 'levelPlan'> {
+  const placed = body.vehicleAccess;
+  if (placed !== undefined && body.chosenAccessEdgeSeq !== undefined) {
+    throw Object.assign(
+      new Error(
+        'both chosenAccessEdgeSeq and vehicleAccess were sent. They answer the same question — ' +
+          'where the vehicle entrance goes — so send one.',
+      ),
+      { statusCode: 400 },
+    );
+  }
+  const at = (p: { edgeSeq: number; centreOffsetM?: string | undefined }) => ({
+    edgeSeq: p.edgeSeq,
+    ...(p.centreOffsetM === undefined ? {} : { centreOffsetM: new Decimal(p.centreOffsetM) }),
+  });
+  if (placed !== undefined) {
+    return {
+      levelPlan: {
+        vehicleAccess: {
+          arrangement: placed.arrangement,
+          entry: at(placed.entry),
+          ...(placed.exit === undefined ? {} : { exit: at(placed.exit) }),
+        },
+      },
+    };
+  }
+  return body.chosenAccessEdgeSeq === undefined
+    ? {}
+    : { levelPlan: { vehicleAccess: { entry: { edgeSeq: body.chosenAccessEdgeSeq } } } };
 }
 
 /**

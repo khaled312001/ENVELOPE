@@ -1756,7 +1756,25 @@
         "recommended": {
           "edgeSeq": 0,
           "hierarchy": "LOCAL",
-          "usableWindowM": "50.00",
+          "usableWindowM": "80.00",
+          "window": {
+            "fromM": "0.00",
+            "toM": "80.00"
+          },
+          "junctionAt": {
+            "start": false,
+            "end": false
+          },
+          "centreRange": {
+            "sixM": {
+              "fromM": "3.00",
+              "toM": "77.00"
+            },
+            "threeM": {
+              "fromM": "1.50",
+              "toM": "78.50"
+            }
+          },
           "centreOffsetM": "40.00",
           "widthM": "6.00",
           "opening": {
@@ -1769,6 +1787,23 @@
               "y": "0.000"
             }
           },
+          "arrangement": "TWO_WAY",
+          "openings": [
+            {
+              "role": "ENTRY_EXIT",
+              "edgeSeq": 0,
+              "centreOffsetM": "40.00",
+              "widthM": "6.00",
+              "start": {
+                "x": "37.000",
+                "y": "0.000"
+              },
+              "end": {
+                "x": "43.000",
+                "y": "0.000"
+              }
+            }
+          ],
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
           "node": "n126",
@@ -1779,7 +1814,25 @@
           {
             "edgeSeq": 0,
             "hierarchy": "LOCAL",
-            "usableWindowM": "50.00",
+            "usableWindowM": "80.00",
+            "window": {
+              "fromM": "0.00",
+              "toM": "80.00"
+            },
+            "junctionAt": {
+              "start": false,
+              "end": false
+            },
+            "centreRange": {
+              "sixM": {
+                "fromM": "3.00",
+                "toM": "77.00"
+              },
+              "threeM": {
+                "fromM": "1.50",
+                "toM": "78.50"
+              }
+            },
             "centreOffsetM": "40.00",
             "widthM": "6.00",
             "opening": {
@@ -1792,13 +1845,48 @@
                 "y": "0.000"
               }
             },
+            "arrangement": "TWO_WAY",
+            "openings": [
+              {
+                "role": "ENTRY_EXIT",
+                "edgeSeq": 0,
+                "centreOffsetM": "40.00",
+                "widthM": "6.00",
+                "start": {
+                  "x": "37.000",
+                  "y": "0.000"
+                },
+                "end": {
+                  "x": "43.000",
+                  "y": "0.000"
+                }
+              }
+            ],
             "rank": 1,
             "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one"
           },
           {
             "edgeSeq": 2,
             "hierarchy": "COLLECTOR",
-            "usableWindowM": "50.00",
+            "usableWindowM": "80.00",
+            "window": {
+              "fromM": "0.00",
+              "toM": "80.00"
+            },
+            "junctionAt": {
+              "start": false,
+              "end": false
+            },
+            "centreRange": {
+              "sixM": {
+                "fromM": "3.00",
+                "toM": "77.00"
+              },
+              "threeM": {
+                "fromM": "1.50",
+                "toM": "78.50"
+              }
+            },
             "centreOffsetM": "40.00",
             "widthM": "6.00",
             "opening": {
@@ -1811,6 +1899,23 @@
                 "y": "40.000"
               }
             },
+            "arrangement": "TWO_WAY",
+            "openings": [
+              {
+                "role": "ENTRY_EXIT",
+                "edgeSeq": 2,
+                "centreOffsetM": "40.00",
+                "widthM": "6.00",
+                "start": {
+                  "x": "43.000",
+                  "y": "40.000"
+                },
+                "end": {
+                  "x": "37.000",
+                  "y": "40.000"
+                }
+              }
+            ],
             "rank": 2,
             "rationale": "COLLECTOR road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one"
           }
@@ -1844,7 +1949,25 @@
       "recommended": {
         "edgeSeq": 0,
         "hierarchy": "LOCAL",
-        "usableWindowM": "50.00",
+        "usableWindowM": "80.00",
+        "window": {
+          "fromM": "0.00",
+          "toM": "80.00"
+        },
+        "junctionAt": {
+          "start": false,
+          "end": false
+        },
+        "centreRange": {
+          "sixM": {
+            "fromM": "3.00",
+            "toM": "77.00"
+          },
+          "threeM": {
+            "fromM": "1.50",
+            "toM": "78.50"
+          }
+        },
         "centreOffsetM": "40.00",
         "widthM": "6.00",
         "opening": {
@@ -1857,6 +1980,23 @@
             "y": "0.000"
           }
         },
+        "arrangement": "TWO_WAY",
+        "openings": [
+          {
+            "role": "ENTRY_EXIT",
+            "edgeSeq": 0,
+            "centreOffsetM": "40.00",
+            "widthM": "6.00",
+            "start": {
+              "x": "37.000",
+              "y": "0.000"
+            },
+            "end": {
+              "x": "43.000",
+              "y": "0.000"
+            }
+          }
+        ],
         "rank": 1,
         "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
         "node": "n126",
@@ -1867,7 +2007,25 @@
         {
           "edgeSeq": 0,
           "hierarchy": "LOCAL",
-          "usableWindowM": "50.00",
+          "usableWindowM": "80.00",
+          "window": {
+            "fromM": "0.00",
+            "toM": "80.00"
+          },
+          "junctionAt": {
+            "start": false,
+            "end": false
+          },
+          "centreRange": {
+            "sixM": {
+              "fromM": "3.00",
+              "toM": "77.00"
+            },
+            "threeM": {
+              "fromM": "1.50",
+              "toM": "78.50"
+            }
+          },
           "centreOffsetM": "40.00",
           "widthM": "6.00",
           "opening": {
@@ -1880,13 +2038,48 @@
               "y": "0.000"
             }
           },
+          "arrangement": "TWO_WAY",
+          "openings": [
+            {
+              "role": "ENTRY_EXIT",
+              "edgeSeq": 0,
+              "centreOffsetM": "40.00",
+              "widthM": "6.00",
+              "start": {
+                "x": "37.000",
+                "y": "0.000"
+              },
+              "end": {
+                "x": "43.000",
+                "y": "0.000"
+              }
+            }
+          ],
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one"
         },
         {
           "edgeSeq": 2,
           "hierarchy": "COLLECTOR",
-          "usableWindowM": "50.00",
+          "usableWindowM": "80.00",
+          "window": {
+            "fromM": "0.00",
+            "toM": "80.00"
+          },
+          "junctionAt": {
+            "start": false,
+            "end": false
+          },
+          "centreRange": {
+            "sixM": {
+              "fromM": "3.00",
+              "toM": "77.00"
+            },
+            "threeM": {
+              "fromM": "1.50",
+              "toM": "78.50"
+            }
+          },
           "centreOffsetM": "40.00",
           "widthM": "6.00",
           "opening": {
@@ -1899,6 +2092,23 @@
               "y": "40.000"
             }
           },
+          "arrangement": "TWO_WAY",
+          "openings": [
+            {
+              "role": "ENTRY_EXIT",
+              "edgeSeq": 2,
+              "centreOffsetM": "40.00",
+              "widthM": "6.00",
+              "start": {
+                "x": "43.000",
+                "y": "40.000"
+              },
+              "end": {
+                "x": "37.000",
+                "y": "40.000"
+              }
+            }
+          ],
           "rank": 2,
           "rationale": "COLLECTOR road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one"
         }

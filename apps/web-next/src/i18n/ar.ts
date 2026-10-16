@@ -501,6 +501,41 @@ export const AR: Dict = {
     useRecommendation: 'اعتماد التوصية',
     rejected: (n: number): string => `${n} حدود مستبعدة، مع الأسباب`,
     notAssessed: 'لم يخضع للتقييم في هذا الدور',
+    planLabel: 'مسقط القطعة. النقر على حد مصنف طريقا يضع المدخل عند تلك النقطة.',
+    planHint: 'انقر على المسقط موضع المدخل من حد مصنف طريقا، أو اختر الحد أدناه.',
+    pickBoundary: (n: number): string => `الحد ${n}`,
+    arrangement: 'طريقة الدخول والخروج',
+    arrangements: {
+      TWO_WAY: 'فتحة واحدة باتجاهين',
+      ONE_WAY_PAIR: 'مدخل ومخرج متجاوران',
+      ONE_WAY_SEPARATE: 'مدخل ومخرج منفصلان',
+    },
+    arrangementWidth: {
+      TWO_WAY: '6 m',
+      ONE_WAY_PAIR: '3 m + 3 m',
+      ONE_WAY_SEPARATE: '3 m لكل منهما',
+    },
+    entrance: 'مدخل المركبات',
+    entry: 'المدخل',
+    exit: 'المخرج',
+    placing: 'النقر على المسقط يضع',
+    boundaryOf: (what: string): string => `${what}: الحد`,
+    boundaryOption: (n: number, to: number, road: string): string => `الحد ${n}، من P${n} إلى P${to} · ${road}`,
+    centre: (what: string, k: number): string => `${what}: المركز، بالأمتار من P${k}`,
+    centreBlank: 'اتركه فارغا ليتوسط المسافة التي يسمح بها الكود.',
+    range: (lo: string, hi: string, k: number): string => `بين ${lo} و${hi} m من P${k}.`,
+    rangeWhy: (corners: readonly string[]): string =>
+      corners.length === 0
+        ? 'لا يقع أي من طرفي هذا الحد على تقاطع طرق، فلا يشترط البند B.7.2.1 مسافة 15 m هنا.'
+        : `يبقي البند B.7.2.1 الفتحة على بعد 15 m من التقاطع عند ${corners.join(' و')}.`,
+    notNumber: 'أدخل المسافة بالأمتار، مثل 12.50.',
+    outOfRange: (lo: string, hi: string): string => `أدخل مركزا بين ${lo} و${hi} m.`,
+    tooShortFor: 'هذا الحد لا يتسع لفتحة بهذا العرض. اختر حدا آخر.',
+    moved: (v: string): string => `نقل إلى ${v} m، وهي أقرب نقطة يسمح بها البند B.7.2.1 على هذا الحد.`,
+    notRoad: (n: number): string => `الحد ${n} لا يتسع لمدخل:`,
+    place: 'اعتماد موضع المدخل',
+    role: { ENTRY_EXIT: 'مدخل ومخرج', ENTRY: 'مدخل', EXIT: 'مخرج' },
+    openingAt: (n: number, c: string, w: string): string => `الحد ${n}، بعرض ${w} m، ومركزه على بعد ${c} m من P${n}`,
   },
 
   checks: {

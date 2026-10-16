@@ -503,6 +503,42 @@ export const EN = {
     useRecommendation: 'Use the recommendation',
     rejected: (n: number): string => `${n} boundaries ruled out, with reasons`,
     notAssessed: 'Not assessed on this level',
+    // The entrance, placed by the reader (Eng. Mohamed, 16 Oct 2026).
+    planLabel: 'Plot plan. A click on a road boundary puts the entrance at that point.',
+    planHint: 'Click a road boundary on the plan where the entrance goes, or choose the boundary below.',
+    pickBoundary: (n: number): string => `Boundary ${n}`,
+    arrangement: 'How cars get in and out',
+    arrangements: {
+      TWO_WAY: 'One opening, two-way',
+      ONE_WAY_PAIR: 'Entry and exit side by side',
+      ONE_WAY_SEPARATE: 'Entry and exit apart',
+    },
+    arrangementWidth: {
+      TWO_WAY: '6 m',
+      ONE_WAY_PAIR: '3 m + 3 m',
+      ONE_WAY_SEPARATE: '3 m each',
+    },
+    entrance: 'Entrance',
+    entry: 'Entry',
+    exit: 'Exit',
+    placing: 'A click on the plan places',
+    boundaryOf: (what: string): string => `${what}: boundary`,
+    boundaryOption: (n: number, to: number, road: string): string => `Boundary ${n}, P${n} to P${to} · ${road}`,
+    centre: (what: string, k: number): string => `${what}: centre, metres from P${k}`,
+    centreBlank: 'Leave it empty to centre it in what the code allows.',
+    range: (lo: string, hi: string, k: number): string => `Between ${lo} and ${hi} m from P${k}.`,
+    rangeWhy: (corners: readonly string[]): string =>
+      corners.length === 0
+        ? 'Neither end of this boundary is a road junction, so B.7.2.1 asks no 15 m here.'
+        : `B.7.2.1 keeps an opening 15 m from the junction at ${corners.join(' and ')}.`,
+    notNumber: 'Enter the distance in metres, like 12.50.',
+    outOfRange: (lo: string, hi: string): string => `Enter a centre between ${lo} and ${hi} m.`,
+    tooShortFor: 'This boundary cannot hold an opening this wide. Choose another boundary.',
+    moved: (v: string): string => `Moved to ${v} m, the nearest point B.7.2.1 allows on this boundary.`,
+    notRoad: (n: number): string => `Boundary ${n} cannot take an entrance:`,
+    place: 'Place the entrance',
+    role: { ENTRY_EXIT: 'Entry and exit', ENTRY: 'Entry', EXIT: 'Exit' },
+    openingAt: (n: number, c: string, w: string): string => `boundary ${n}, ${w} m, centred ${c} m from P${n}`,
   },
 
   checks: {

@@ -43,7 +43,7 @@ import {
   type Ring,
 } from '@envelope/geometry';
 
-import { placeVehicleAccess, type AccessResult } from './access.js';
+import { placeVehicleAccess, type AccessChoice, type AccessResult } from './access.js';
 import type { RampHeadroom } from './ramp-rules.js';
 import {
   layoutParkingLevel,
@@ -219,8 +219,8 @@ export interface LevelPlanInput {
   readonly structuralGridM?: Decimal;
   /** Passed through to `placeVehicleAccess` — the sheet's stated access side. */
   readonly affectionPlanAccessEdgeSeq?: number;
-  /** Passed through to `placeVehicleAccess` — the entrance a person chose. */
-  readonly chosenAccess?: { readonly edgeSeq: number; readonly actor: Actor };
+  /** Passed through to `placeVehicleAccess` — the entrance a person placed. */
+  readonly chosenAccess?: AccessChoice;
   /**
    * The core's footprint in plot coordinates, and its area. It is a shaft through
    * every parking level: the layout places no bay inside it and cuts any aisle

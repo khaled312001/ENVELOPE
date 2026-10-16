@@ -335,6 +335,19 @@ is a defect even when it makes something easier.
   reachability check that cannot fail is worth nothing, two tests delete the cross
   aisle and assert the level falls apart: once in the engine, once in the model the
   renderers draw.
+- **The 15 m is from a junction, and the reader places the entrance.** B.7.2.1 ¶4
+  separates access from "local road intersection or minor T junctions", measured
+  from the chamfered corner. A corner where the frontage meets a *neighbour* is
+  not a junction, so `access.ts` takes 15 m only off ends that meet another road
+  (or an `OTHER` boundary, said in the reason). It used to take 15 m off both
+  ends of every frontage, and refused a 32 m frontage between two neighbours
+  that the code allows. Eng. Mohamed places the entrance himself (16 Oct 2026):
+  the boundary, the point along it, and one 6 m two-way opening or 3 m entry and
+  exit lanes, side by side or apart. Each opening is checked against the engine's
+  own `centreRange` and refused in a sentence naming where it may go. The entry lane
+  of a pair is on a driver's right as they turn in (the UAE drives on the right),
+  a drafting rule rather than a clause, and every opening is drawn with its own
+  arrow on the screen, the sheets, the DXF and the 3D view.
 - **The orientation is swept; the design is not.** Runs along a level's width and runs
   along its depth place different numbers of bays in the same rectangle. Both are
   packed, the better is kept, and the loser's count is in the formula. Two candidates,

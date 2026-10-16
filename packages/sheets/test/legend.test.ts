@@ -55,6 +55,44 @@ describe('the symbol key', () => {
     }
   });
 
+  /*
+    16 Oct 2026: an entry and an exit of 3 m each. Each opening is drawn, each
+    carries one head pointing the way its cars go, and the one-way head is keyed
+    on every sheet that draws it.
+  */
+  it('draws an entry and an exit as two openings, one head in and one out, and keys the head', () => {
+    const set = composeSheets(
+      runPipeline(
+        runInput(RECT_80x40, {
+          levelPlan: {
+            vehicleAccess: {
+              arrangement: 'ONE_WAY_SEPARATE',
+              entry: { edgeSeq: 0 },
+              exit: { edgeSeq: 2 },
+            },
+          },
+        }),
+      ).building,
+      META,
+    );
+    const site = set.find((s) => s.kind === 'SITE')!;
+    const openings = site.items.filter((i): i is ShapeItem => i.kind === 'shape' && i.role === Role.ACCESS);
+    expect(openings.map((o) => o.name)).toEqual([
+      'VEHICLE ENTRY - ONE WAY - 3.00M',
+      'VEHICLE EXIT - ONE WAY - 3.00M',
+    ]);
+    const heads = site.items.filter((i): i is SymbolItem => i.kind === 'symbol' && i.role === Role.ACCESS_ARROW);
+    expect(heads.map((h) => h.symbol)).toEqual([SymbolName.ARROW, SymbolName.ARROW]);
+    // Edge 0 runs along y = 0 with the plot to the north, edge 2 along y = 40 with
+    // it to the south. In at the entry: north, 90°. Out at the exit: north again.
+    expect(heads.map((h) => Math.round(h.rotationDeg))).toEqual([90, 90]);
+    for (const sheet of set) {
+      if (sheet.items.some((i) => i.kind === 'symbol' && i.role === Role.ACCESS_ARROW && i.symbol === SymbolName.ARROW)) {
+        expect(sheet.legend.some((e) => e.symbol === SymbolName.ARROW), sheet.number).toBe(true);
+      }
+    }
+  });
+
   it('draws a parking sheet a car, and therefore keys one', () => {
     // Guards the test above from passing vacuously on a set that draws no symbol.
     const parking = sheets(RECT_120x80).find((s) => s.kind === 'PARKING')!;

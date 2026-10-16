@@ -1,16 +1,21 @@
 import type { Sheet } from '@envelope/sheets';
 import { Check } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 
-import type { AccessCandidateView, RunView } from '@web/api/client.js';
+import type { AccessCandidateView, RunRequestBody, RunView, VehicleAccessArrangement } from '@web/api/client.js';
 
+import { PlotSketch } from '../components/PlotSketch.js';
 import { SheetViewer, useSheets } from '../components/SheetViewer.js';
 import { Traced } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
 import { EngineNote, EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
-import { Badge, Notice, PanelHeader, Spinner } from '../ui/primitives.js';
+import { Badge, Field, Input, Notice, PanelHeader, Select, Spinner } from '../ui/primitives.js';
+import { Segmented } from '../ui/radix.js';
 import { assumedFirst, Footer, Heading, More, NextStep, Row } from './parts.js';
+
+export type VehicleAccessBody = NonNullable<RunRequestBody['vehicleAccess']>;
 
 /*
   THE SCREEN THE 30 AUG MEETING WAS ABOUT.
@@ -38,13 +43,14 @@ export function ParkingPanel({
   run,
   busy,
   canChoose,
-  onChoose,
+  onPlace,
   onNext,
 }: {
   readonly run: RunView;
   readonly busy: boolean;
   readonly canChoose: boolean;
-  readonly onChoose: (edgeSeq: number | null) => void;
+  /** The entrance the reader placed, or null to take the recommendation back. */
+  readonly onPlace: (access: VehicleAccessBody | null) => void;
   /** Optional so a caller that does not wire it keeps working; when given, it is the panel's one primary action. */
   readonly onNext?: () => void;
 }): JSX.Element {
@@ -98,6 +104,16 @@ export function ParkingPanel({
                 <Badge tone={chosen ? 'accent' : 'neutral'}>{chosen ? t.parking.chosen : t.parking.recommended}</Badge>
                 <span className="text-[14px] font-medium text-fg">{t.parking.onBoundary(inUse.edgeSeq)}</span>
               </p>
+              {/* Every opening, signed, from the engine's own figures. */}
+              {inUse.openings ? (
+                <ul className="grid gap-0.5 text-[12px] text-fg">
+                  {inUse.openings.map((o) => (
+                    <li key={`${o.role}-${o.edgeSeq}`}>
+                      <span className="font-medium">{t.parking.role[o.role]}</span> · <span className="figure !whitespace-normal">{t.parking.openingAt(o.edgeSeq, o.centreOffsetM, o.widthM)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               <EngineNote className="text-[12px] leading-relaxed text-secondary" text={inUse.rationale} />
               {chosen && recommended && recommended.edgeSeq !== chosen.edgeSeq ? (
                 <p className="text-[12px] text-secondary">{t.parking.recommendedWas(recommended.edgeSeq)}</p>
@@ -107,6 +123,9 @@ export function ParkingPanel({
             <Notice tone="neutral">{t.parking.noAccess}</Notice>
           )}
           {!canChoose ? <p className="text-[12px] text-secondary">{t.parking.cannotChoose}</p> : null}
+          {lp.access.candidates.length > 0 ? (
+            <EntranceEditor key={run.runId} run={run} busy={busy} canChoose={canChoose} onPlace={onPlace} />
+          ) : null}
           <ul className="grid min-w-0 divide-y divide-subtle border-y border-subtle">
             {lp.access.candidates.map((cand: AccessCandidateView) => {
               const isOn = inUse?.edgeSeq === cand.edgeSeq;
@@ -133,7 +152,13 @@ export function ParkingPanel({
                       {t.parking.inUse}
                     </span>
                   ) : (
-                    <Button size="sm" variant="secondary" disabled={!canChoose || busy} aria-busy={busy || undefined} onClick={() => onChoose(cand.edgeSeq)}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!canChoose || busy}
+                      aria-busy={busy || undefined}
+                      onClick={() => onPlace({ arrangement: 'TWO_WAY', entry: { edgeSeq: cand.edgeSeq } })}
+                    >
                       {busy ? <Spinner /> : null}
                       {t.parking.useThis}
                     </Button>
@@ -143,7 +168,7 @@ export function ParkingPanel({
             })}
           </ul>
           {chosen ? (
-            <Button variant="ghost" size="sm" className="justify-self-start" disabled={!canChoose || busy} onClick={() => onChoose(null)}>
+            <Button variant="ghost" size="sm" className="justify-self-start" disabled={!canChoose || busy} onClick={() => onPlace(null)}>
               {t.parking.useRecommendation}
             </Button>
           ) : null}
@@ -215,6 +240,246 @@ export function ParkingPanel({
           </Footer>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/*
+  THE ENTRANCE, PLACED BY THE READER (Eng. Mohamed, 16 Oct 2026): «انا دوست علي
+  ضلع رقم ١ و بعدين بختار ال جزء الي هيكون فيه المدخل». The boundary, the point
+  along it, and the arrangement: one two-way opening of 6 m, or an entry and an
+  exit of 3 m each, side by side or apart.
+
+  Every bound on the controls is the engine's (`centreRange`), and the engine
+  checks the placement again on the run: a figure typed outside the range is
+  said here before it is sent, and refused there in a sentence if it is sent
+  anyway. The plan shows the entrance the engine drew, never a preview the
+  browser worked out — a preview would be geometry nobody computed.
+*/
+interface Spot {
+  readonly edgeSeq: number;
+  /** Metres from the boundary's first corner to the opening's centre; empty centres it. */
+  readonly at: string;
+}
+
+const METRES = /^\d+(\.\d+)?$/;
+
+function EntranceEditor({
+  run,
+  busy,
+  canChoose,
+  onPlace,
+}: {
+  readonly run: RunView;
+  readonly busy: boolean;
+  readonly canChoose: boolean;
+  readonly onPlace: (access: VehicleAccessBody | null) => void;
+}): JSX.Element {
+  const { t } = useLocale();
+  const access = run.levelPlan!.access;
+  const cands = access.candidates;
+  const chosen = access.chosen ?? null;
+  const inUse = chosen ?? access.recommended;
+  const model = run.building;
+  const sides = model?.plot.edges.length ?? 0;
+
+  const exitOpening = chosen?.openings?.find((o) => o.role === 'EXIT');
+  const [arrangement, setArrangement] = useState<VehicleAccessArrangement>(chosen?.arrangement ?? 'TWO_WAY');
+  const [entry, setEntry] = useState<Spot>({ edgeSeq: inUse?.edgeSeq ?? cands[0]!.edgeSeq, at: chosen ? chosen.centreOffsetM : '' });
+  const [exit, setExit] = useState<Spot>(
+    chosen?.arrangement === 'ONE_WAY_SEPARATE' && exitOpening
+      ? { edgeSeq: exitOpening.edgeSeq, at: exitOpening.centreOffsetM }
+      : { edgeSeq: (cands[1] ?? cands[0])!.edgeSeq, at: '' },
+  );
+  const [target, setTarget] = useState<'entry' | 'exit'>('entry');
+  const [note, setNote] = useState<ReactNode>(null);
+
+  const separate = arrangement === 'ONE_WAY_SEPARATE';
+  const gap = separate ? 'threeM' : 'sixM';
+  const candOf = (seq: number): AccessCandidateView | undefined => cands.find((c) => c.edgeSeq === seq);
+  /** The engine's range for this width; null where it does not fit, undefined on a run stored before ranges. */
+  const rangeOf = (seq: number) => {
+    const c = candOf(seq);
+    return c?.centreRange ? c.centreRange[gap] : undefined;
+  };
+  const problemOf = (s: Spot): ReactNode => {
+    const r = rangeOf(s.edgeSeq);
+    if (r === null) return t.parking.tooShortFor;
+    const v = s.at.trim();
+    if (v === '') return null;
+    if (!METRES.test(v)) return t.parking.notNumber;
+    if (r && (Number(v) < Number(r.fromM) || Number(v) > Number(r.toM))) return t.parking.outOfRange(r.fromM, r.toM);
+    return null;
+  };
+
+  const pickAt = (seq: number, fraction: number | null): void => {
+    const set = separate && target === 'exit' ? setExit : setEntry;
+    const cand = candOf(seq);
+    if (!cand) {
+      const why = access.rejected.find((r) => r.edgeSeq === seq);
+      setNote(
+        <>
+          {t.parking.notRoad(seq)} {why ? <EngineNote text={why.reason} /> : null}
+        </>,
+      );
+      return;
+    }
+    const length = model?.plot.edges.find((e) => e.seq === seq)?.lengthMm;
+    if (fraction === null || length === undefined) {
+      set({ edgeSeq: seq, at: '' });
+      setNote(null);
+      return;
+    }
+    // A click is not finer than a decimetre; the field takes any figure typed.
+    let v = Math.round((fraction * length) / 100) / 10;
+    const r = cand.centreRange?.[gap];
+    let moved = false;
+    if (r) {
+      const lo = Number(r.fromM);
+      const hi = Number(r.toM);
+      if (v < lo || v > hi) {
+        v = v < lo ? lo : hi;
+        moved = true;
+      }
+    }
+    const at = v.toFixed(2);
+    set({ edgeSeq: seq, at });
+    setNote(moved ? t.parking.moved(at) : null);
+  };
+
+  const body = (s: Spot) => ({ edgeSeq: s.edgeSeq, ...(s.at.trim() === '' ? {} : { centreOffsetM: s.at.trim() }) });
+  const blocked = problemOf(entry) !== null || (separate && problemOf(exit) !== null);
+  const roadWords = (c: AccessCandidateView): string =>
+    c.hierarchy ? t.plot.road[c.hierarchy as 'LOCAL'] ?? c.hierarchy : t.parking.noHierarchy;
+
+  const spotFields = (what: string, s: Spot, set: (s: Spot) => void): JSX.Element => {
+    const c = candOf(s.edgeSeq);
+    const r = rangeOf(s.edgeSeq);
+    const corners = c?.junctionAt
+      ? [c.junctionAt.start ? `P${s.edgeSeq}` : null, c.junctionAt.end ? `P${(s.edgeSeq + 1) % Math.max(sides, 1)}` : null].filter(
+          (x): x is string => x !== null,
+        )
+      : null;
+    return (
+      <div className="grid gap-2">
+        <Field label={t.parking.boundaryOf(what)}>
+          {({ id }) => (
+            <Select id={id} value={String(s.edgeSeq)} onChange={(e) => set({ edgeSeq: Number(e.target.value), at: '' })}>
+              {cands.map((o) => (
+                <option key={o.edgeSeq} value={o.edgeSeq}>
+                  {t.parking.boundaryOption(o.edgeSeq, (o.edgeSeq + 1) % Math.max(sides, 1), roadWords(o))}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+        <Field
+          label={t.parking.centre(what, s.edgeSeq)}
+          hint={
+            <>
+              {r ? `${t.parking.range(r.fromM, r.toM, s.edgeSeq)} ` : null}
+              {corners ? `${t.parking.rangeWhy(corners)} ` : null}
+              {t.parking.centreBlank}
+            </>
+          }
+          error={problemOf(s)}
+        >
+          {({ id, describedBy, invalid }) => (
+            <Input
+              id={id}
+              dir="ltr"
+              inputMode="decimal"
+              className="figure"
+              value={s.at}
+              aria-describedby={describedBy}
+              aria-invalid={invalid || undefined}
+              onChange={(e) => set({ ...s, at: e.target.value })}
+            />
+          )}
+        </Field>
+      </div>
+    );
+  };
+
+  return (
+    <div className="grid min-w-0 gap-3 rounded-md border border-line p-3">
+      {model ? (
+        <div className="grid gap-1.5">
+          <div className="aspect-[4/3] w-full rounded-md border border-subtle bg-sunken">
+            <PlotSketch
+              vertices={model.plot.outline.map((p) => ({ x: String(p.x / 1000), y: String(p.y / 1000) }))}
+              edges={model.plot.edges.map((e) => ({ seq: e.seq, classification: e.classification, roadHierarchy: e.roadHierarchy }))}
+              label={t.parking.planLabel}
+              highlight={separate && target === 'exit' ? exit.edgeSeq : entry.edgeSeq}
+              {...(canChoose ? { onPick: (seq: number) => pickAt(seq, null), onPickAt: pickAt, pickLabel: t.parking.pickBoundary } : {})}
+              openings={(inUse?.openings ?? (inUse ? [{ ...inUse.opening, role: 'ENTRY_EXIT' as const }] : [])).map((o) => ({
+                start: o.start,
+                end: o.end,
+                role: o.role,
+              }))}
+            />
+          </div>
+          <p className="text-[12px] text-secondary">{t.parking.planHint}</p>
+          {note ? (
+            <p role="status" className="text-[12px] text-fg">
+              {note}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <fieldset className="grid gap-1.5">
+        <legend className="mb-1 text-[12.5px] font-medium text-fg">{t.parking.arrangement}</legend>
+        {(['TWO_WAY', 'ONE_WAY_PAIR', 'ONE_WAY_SEPARATE'] as const).map((a) => (
+          <label
+            key={a}
+            className={cn(
+              'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-[13px]',
+              arrangement === a ? 'border-accent bg-accent-subtle text-fg' : 'border-line text-fg hover:border-strong',
+            )}
+          >
+            <input
+              type="radio"
+              name={`arrangement-${run.runId}`}
+              value={a}
+              checked={arrangement === a}
+              onChange={() => {
+                setArrangement(a);
+                setTarget('entry');
+                setNote(null);
+              }}
+              className="size-4 accent-[var(--accent)]"
+            />
+            <span className="flex-1">{t.parking.arrangements[a]}</span>
+            <span className="figure text-[12px] text-secondary">{t.parking.arrangementWidth[a]}</span>
+          </label>
+        ))}
+      </fieldset>
+
+      {separate ? (
+        <Segmented
+          label={t.parking.placing}
+          value={target}
+          onChange={setTarget}
+          options={[
+            { value: 'entry', label: t.parking.entry },
+            { value: 'exit', label: t.parking.exit },
+          ]}
+        />
+      ) : null}
+
+      {spotFields(separate ? t.parking.entry : t.parking.entrance, entry, setEntry)}
+      {separate ? spotFields(t.parking.exit, exit, setExit) : null}
+
+      <Button
+        className="justify-self-start"
+        disabled={!canChoose || busy || blocked}
+        aria-busy={busy || undefined}
+        onClick={() => onPlace({ arrangement, entry: body(entry), ...(separate ? { exit: body(exit) } : {}) })}
+      >
+        {busy ? <Spinner /> : null}
+        {t.parking.place}
+      </Button>
     </div>
   );
 }

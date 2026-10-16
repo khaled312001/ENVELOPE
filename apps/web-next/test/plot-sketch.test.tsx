@@ -61,6 +61,33 @@ describe('the plan view numbers its boundaries', () => {
     expect(buttons[0]).toContain('aria-pressed="false"');
   });
 
+  /* 16 Oct 2026: the entrance on the plan — a gap, and an arrow the way the cars go. */
+  it('draws each vehicle opening with one head for a lane and two for a two-way gap', () => {
+    const at = (x: string) => ({ x, y: '0' });
+    const svg = renderToStaticMarkup(
+      <PlotSketch
+        vertices={SQUARE}
+        edges={EDGES}
+        label="plan"
+        openings={[
+          { start: at('5'), end: at('8'), role: 'ENTRY' },
+          { start: at('8'), end: at('11'), role: 'EXIT' },
+          { start: at('20'), end: at('26'), role: 'ENTRY_EXIT' },
+        ]}
+      />,
+    );
+    const arrows = [...svg.matchAll(/<path d="([^"]*)" fill="none" stroke="var\(--text-primary\)"/g)].map((m) => m[1]!);
+    expect(arrows).toHaveLength(3);
+    // The shaft, then one head (a lane) or two (both ways).
+    expect(arrows.map((d) => d.match(/M/g)!.length)).toEqual([2, 2, 3]);
+    // An entry points into the plot and an exit out of it: the plot is above y = 0
+    // here, which the drawing flips to smaller y, so an entry's tip is higher up the page.
+    const tipY = (d: string): number => Number(d.split(' L')[1]!.split(' ')[1]);
+    const tailY = (d: string): number => Number(d.split(' ')[1]);
+    expect(tipY(arrows[0]!)).toBeLessThan(tailY(arrows[0]!));
+    expect(tipY(arrows[1]!)).toBeGreaterThan(tailY(arrows[1]!));
+  });
+
   it('draws no marker on the compact thumbnail', () => {
     const svg = renderToStaticMarkup(<PlotSketch vertices={SQUARE} edges={EDGES} label="plan" compact />);
     expect(texts(svg)).toEqual([]);

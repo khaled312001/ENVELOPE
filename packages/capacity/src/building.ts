@@ -26,6 +26,7 @@
  */
 
 import {
+  type AccessOpeningRole,
   type BuildingModel,
   Decimal,
   EDGE_LABEL,
@@ -65,6 +66,13 @@ import { CROSS_AISLE_ROW } from './layout.js';
 import type { EnvelopeSolution } from './envelope.js';
 import type { LevelPlan, WorldRect } from './level-plan.js';
 import type { MassingResult } from './massing.js';
+
+/** What each opening's label says, in the drawings' ASCII. */
+const OPENING_WORDS: Readonly<Record<AccessOpeningRole, string>> = {
+  ENTRY_EXIT: 'VEHICLE ENTRY / EXIT',
+  ENTRY: 'VEHICLE ENTRY - ONE WAY',
+  EXIT: 'VEHICLE EXIT - ONE WAY',
+};
 
 export interface BuildingModelInput {
   readonly tracer: Tracer;
@@ -635,6 +643,12 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
           opening: [pt(recommended.value.opening.start), pt(recommended.value.opening.end)],
           source: source(recommended),
           label: `VEHICLE ENTRY / EXIT - ${recommended.value.widthM.toFixed(2)}M`,
+          openings: recommended.value.openings.map((o) => ({
+            role: o.role,
+            edgeSeq: o.edgeSeq,
+            opening: [pt(o.start), pt(o.end)] as const,
+            label: `${OPENING_WORDS[o.role]} - ${o.widthM.toFixed(2)}M`,
+          })),
         }
       : null,
     drawnBays: toWire(drawnBays),

@@ -34,6 +34,7 @@
  * Node, the same way it counts them on the sheets and in the DXF.
  */
 
+import { accessOpenings } from '@envelope/core';
 import type { BuildingModel, ModelLevel, ModelPoint, ModelRing, ProvenanceClass } from '@envelope/core';
 import { placeCars, signedLevel, SYMBOLS } from '@envelope/sheets';
 import * as THREE from 'three';
@@ -188,25 +189,33 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
   }
 
   if (model.access) {
-    const [a, b] = model.access.opening;
-    const pa = at(a);
-    const pb = at(b);
-    const arrow = new THREE.Mesh(track(accessArrow(pa, pb, model.plot.outline, at)), surface(colourOf(model.access.source.provenanceClass, palette), 0.9));
-    arrow.name = 'vehicle access';
-    arrow.position.z = 0.03;
-    pickable(arrow, { node: model.access.source.node, rank: 3, name: model.access.label });
-    site.add(arrow);
-    // Inside the plot, past the arrow: outside it is where the edge's own label sits.
-    const mid = pa.clone().add(pb).multiplyScalar(0.5).addScaledVector(outwardNormal(model.plot.outline, pa, pb, at), -6);
-    labels.push({
-      key: 'access',
-      text: model.access.label,
-      at: [mid.x, mid.y, 0.2],
-      levelId: null,
-      kind: 'access',
-      provenanceClass: model.access.source.provenanceClass,
-      always: true,
-    });
+    const access = model.access;
+    // One arrow per opening: in for an entry, out for an exit, in for a two-way gap.
+    for (const [i, o] of accessOpenings(access).entries()) {
+      const [a, b] = o.opening;
+      const pa = at(a);
+      const pb = at(b);
+      const arrow = new THREE.Mesh(
+        track(accessArrow(pa, pb, model.plot.outline, at, o.role === 'EXIT')),
+        surface(colourOf(access.source.provenanceClass, palette), 0.9),
+      );
+      arrow.name = i === 0 ? 'vehicle access' : `vehicle access ${i + 1}`;
+      arrow.position.z = 0.03;
+      pickable(arrow, { node: access.source.node, rank: 3, name: o.label });
+      site.add(arrow);
+      // Inside the plot, past the arrow: outside it is where the edge's own label
+      // sits. A second lane beside the first steps further in, off its label.
+      const mid = pa.clone().add(pb).multiplyScalar(0.5).addScaledVector(outwardNormal(model.plot.outline, pa, pb, at), -6 - 3 * i);
+      labels.push({
+        key: i === 0 ? 'access' : `access-${i}`,
+        text: o.label,
+        at: [mid.x, mid.y, 0.2],
+        levelId: null,
+        kind: 'access',
+        provenanceClass: access.source.provenanceClass,
+        always: true,
+      });
+    }
   }
 
   // --- the envelope: what the rules permit, as a glass case round the building ----------
@@ -763,10 +772,11 @@ function outwardNormal(ring: ModelRing, a: THREE.Vector2, b: THREE.Vector2, at: 
 }
 
 /** A flat arrow across the opening, pointing into the plot. */
-function accessArrow(a: THREE.Vector2, b: THREE.Vector2, ring: ModelRing, at: At): THREE.BufferGeometry {
+function accessArrow(a: THREE.Vector2, b: THREE.Vector2, ring: ModelRing, at: At, out = false): THREE.BufferGeometry {
   const width = a.distanceTo(b);
   const along = b.clone().sub(a).normalize();
-  const inward = outwardNormal(ring, a, b, at).negate();
+  // An exit's arrow points off the plot; everything else points onto it.
+  const inward = out ? outwardNormal(ring, a, b, at) : outwardNormal(ring, a, b, at).negate();
   const mid = a.clone().add(b).multiplyScalar(0.5);
   const half = width * 0.18;
   const length = Math.max(width * 0.9, 3);

@@ -155,7 +155,7 @@ describe('the run carries a parking level', () => {
   with the recommendation still beside it, and on the drawing.
 */
 describe('a chosen vehicle entrance', () => {
-  const post = async (chosenAccessEdgeSeq: number) => {
+  const send = async (extra: Record<string, unknown>) => {
     const plot = (
       await app.inject({ method: 'POST', url: '/api/plots', headers: ACTOR, payload: PLOT })
     ).json();
@@ -163,9 +163,52 @@ describe('a chosen vehicle entrance', () => {
       method: 'POST',
       url: '/api/runs',
       headers: ACTOR,
-      payload: { ...RUN_BODY, plotId: plot.plotId, chosenAccessEdgeSeq },
+      payload: { ...RUN_BODY, plotId: plot.plotId, ...extra },
     });
   };
+  const post = (chosenAccessEdgeSeq: number) => send({ chosenAccessEdgeSeq });
+
+  /* 16 Oct 2026: the boundary, the point along it, and one gap or two lanes. */
+  it('carries an entry and an exit apart onto the drawing model, each signed', async () => {
+    const res = await send({
+      vehicleAccess: {
+        arrangement: 'ONE_WAY_SEPARATE',
+        entry: { edgeSeq: 0, centreOffsetM: '20' },
+        exit: { edgeSeq: 2, centreOffsetM: '60' },
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as {
+      levelPlan: { access: { chosen: { arrangement: string; openings: { role: string; edgeSeq: number; widthM: string }[] } } };
+      building: { access: { openings: { role: string; edgeSeq: number; label: string }[] } };
+    };
+    expect(body.levelPlan.access.chosen.arrangement).toBe('ONE_WAY_SEPARATE');
+    expect(body.levelPlan.access.chosen.openings.map((o) => [o.role, o.edgeSeq, o.widthM])).toEqual([
+      ['ENTRY', 0, '3.00'],
+      ['EXIT', 2, '3.00'],
+    ]);
+    expect(body.building.access.openings.map((o) => o.label)).toEqual([
+      'VEHICLE ENTRY - ONE WAY - 3.00M',
+      'VEHICLE EXIT - ONE WAY - 3.00M',
+    ]);
+  });
+
+  it('refuses an opening placed past the end of its boundary, naming where it may go', async () => {
+    const res = await send({
+      vehicleAccess: { arrangement: 'TWO_WAY', entry: { edgeSeq: 0, centreOffsetM: '79' } },
+    });
+    expect(res.statusCode).toBe(422);
+    expect(JSON.stringify(res.json())).toMatch(/must be centred between 3\.00 m and 77\.00 m from P0/);
+  });
+
+  it('refuses two answers to one question', async () => {
+    const res = await send({
+      chosenAccessEdgeSeq: 0,
+      vehicleAccess: { arrangement: 'TWO_WAY', entry: { edgeSeq: 0 } },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(JSON.stringify(res.json())).toMatch(/send one/);
+  });
 
   it('is USER_SET, drawn, and reported beside the recommendation', async () => {
     const res = await post(2);
@@ -188,7 +231,9 @@ describe('a chosen vehicle entrance', () => {
   it('refuses a boundary shared with a neighbour, in a sentence', async () => {
     const res = await post(1);
     expect(res.statusCode).toBe(422);
-    expect(JSON.stringify(res.json())).toMatch(/Edge 2 was chosen for the vehicle entrance/);
+    expect(JSON.stringify(res.json())).toMatch(
+      /The vehicle entrance was placed on boundary 1 \(P1 → P2\), which cannot take one/,
+    );
   });
 });
 

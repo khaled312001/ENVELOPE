@@ -249,6 +249,25 @@ export const runRequest = z.object({
    * code refuses comes back 422 with the reason, never redrawn elsewhere.
    */
   chosenAccessEdgeSeq: z.number().int().min(0).max(999).optional(),
+  /**
+   * The vehicle entrance the actor placed (Eng. Mohamed, 16 Oct 2026): the
+   * arrangement — one two-way 6 m opening, or an entry and an exit of 3 m each,
+   * side by side or apart — and where each stands, as a boundary and a distance
+   * from that boundary's first corner to the opening's centre. An absent distance
+   * centres it in what B.7.2.1 allows. Sent with `chosenAccessEdgeSeq` it is
+   * refused: two answers to one question.
+   */
+  vehicleAccess: z
+    .object({
+      arrangement: z.enum(['TWO_WAY', 'ONE_WAY_PAIR', 'ONE_WAY_SEPARATE']),
+      entry: z.object({ edgeSeq: z.number().int().min(0).max(999), centreOffsetM: decimalString.optional() }).strict(),
+      exit: z
+        .object({ edgeSeq: z.number().int().min(0).max(999), centreOffsetM: decimalString.optional() })
+        .strict()
+        .optional(),
+    })
+    .strict()
+    .optional(),
   parkingUsableFraction: z.object({
     value: decimalString,
     source: z.enum(['DERIVED', 'ASSUMED']),

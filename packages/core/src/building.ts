@@ -344,12 +344,39 @@ export interface ModelEdge {
   readonly lengthMm: Mm;
 }
 
+/** Which way cars cross one opening: both ways, in only, or out only. */
+export type AccessOpeningRole = 'ENTRY_EXIT' | 'ENTRY' | 'EXIT';
+
+/** One gap in the boundary that cars cross. */
+export interface ModelAccessOpening {
+  readonly role: AccessOpeningRole;
+  readonly edgeSeq: number;
+  readonly opening: readonly [ModelPoint, ModelPoint];
+  readonly label: string;
+}
+
 export interface ModelAccess {
   readonly edgeSeq: number;
-  /** The stretch of boundary the driveway crosses. */
+  /** The stretch of boundary the driveway crosses — on the entry's boundary. */
   readonly opening: readonly [ModelPoint, ModelPoint];
   readonly source: ElementSource;
   readonly label: string;
+  /**
+   * Every opening, signed: one two-way gap, or an entry and an exit (16 Oct 2026),
+   * side by side or apart. Absent on a model stored before an entrance could be
+   * more than one gap; read it through `accessOpenings`, which says what that
+   * model meant rather than leaving every renderer to guess.
+   */
+  readonly openings?: readonly ModelAccessOpening[];
+}
+
+/** The openings of an entrance: its own list, or the one two-way gap an older model drew. */
+export function accessOpenings(access: ModelAccess): readonly ModelAccessOpening[] {
+  return (
+    access.openings ?? [
+      { role: 'ENTRY_EXIT', edgeSeq: access.edgeSeq, opening: access.opening, label: access.label },
+    ]
+  );
 }
 
 /** A stretch of the section line: millimetres from its first end, start then end. */

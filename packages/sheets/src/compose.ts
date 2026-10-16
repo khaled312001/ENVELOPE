@@ -18,6 +18,7 @@
  */
 
 import {
+  accessOpenings,
   asMm,
   type BuildingModel,
   type ElementSource,
@@ -569,24 +570,54 @@ function coreRoomItems(room: ModelCoreRoom, source: ElementSource | undefined): 
   return items;
 }
 
+/*
+  EVERY OPENING, SIGNED. One two-way gap carries the two-headed arrow; an entry
+  and an exit carry one head each, pointing in and pointing out (16 Oct 2026).
+  Two lanes side by side are 3 m apart, closer than a label is long, so the
+  second label on a boundary steps further out instead of printing over the first.
+*/
 function accessItems(model: BuildingModel, s: number): ModelItem[] {
   const access = model.access;
   if (!access) return [];
-  const [a, b] = access.opening;
-  const n = inwardNormal(a, b, model.plot.outline);
-  const mid = midpointOf(a, b);
   const arrowLength = Math.max(4000, 10 * s);
+  const items: ModelItem[] = [];
+  const onEdge = new Map<number, number>();
+  for (const o of accessOpenings(access)) {
+    const [a, b] = o.opening;
+    const n = inwardNormal(a, b, model.plot.outline);
+    const mid = midpointOf(a, b);
+    const outward = o.role === 'EXIT';
+    const step = onEdge.get(o.edgeSeq) ?? 0;
+    onEdge.set(o.edgeSeq, step + 1);
+    items.push(
+      shape(Role.ACCESS, [a, b], false, { source: access.source, name: o.label }),
+      {
+        kind: 'symbol',
+        role: Role.ACCESS_ARROW,
+        symbol: o.role === 'ENTRY_EXIT' ? SymbolName.ARROW_2WAY : SymbolName.ARROW,
+        at: offsetPoint(mid, n, arrowLength / 2),
+        rotationDeg: round2(angleOf(mid, offsetPoint(mid, n, outward ? -1000 : 1000))),
+        scale: arrowLength,
+      },
+      label(Role.ACCESS, offsetPoint(mid, n, -(6.5 + 3 * step) * 2.4 * s), o.label, 2.2, angleOf(a, b), 'middle', access.source),
+    );
+  }
+  return items;
+}
+
+/** The key to the entrance this model draws: the arrows it actually used, and no others. */
+function accessLegend(model: BuildingModel): LegendEntry[] {
+  if (!model.access) return [];
+  const roles = new Set(accessOpenings(model.access).map((o) => o.role));
+  const oneWay = roles.has('ENTRY') || roles.has('EXIT');
   return [
-    shape(Role.ACCESS, [a, b], false, { source: access.source, name: access.label }),
-    {
-      kind: 'symbol',
-      role: Role.ACCESS_ARROW,
-      symbol: SymbolName.ARROW_2WAY,
-      at: offsetPoint(mid, n, arrowLength / 2),
-      rotationDeg: round2(angleOf(mid, offsetPoint(mid, n, 1000))),
-      scale: arrowLength,
-    },
-    label(Role.ACCESS, offsetPoint(mid, n, -6.5 * 2.4 * s), access.label, 2.2, angleOf(a, b), 'middle', access.source),
+    { role: Role.ACCESS, label: oneWay ? 'Vehicle entry and exit, one way each' : 'Vehicle entry / exit' },
+    ...(roles.has('ENTRY_EXIT')
+      ? [{ role: Role.ACCESS_ARROW, symbol: SymbolName.ARROW_2WAY, label: 'Direction of travel, in and out' }]
+      : []),
+    ...(oneWay
+      ? [{ role: Role.ACCESS_ARROW, symbol: SymbolName.ARROW, label: 'Direction of travel: in at the entry, out at the exit' }]
+      : []),
   ];
 }
 
@@ -645,16 +676,7 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
     { role: Role.SETBACK, provenanceClass: model.setbackSource.provenanceClass, label: 'Setback line, from each cited setback' },
     ...(ground ? [{ role: Role.PODIUM, provenanceClass: ground.outlineSource.provenanceClass, label: 'Podium footprint' }] : []),
     ...(tower ? [{ role: Role.TOWER, provenanceClass: tower.outlineSource.provenanceClass, label: 'Tower plate' }] : []),
-    ...(model.access
-      ? [
-          { role: Role.ACCESS, label: 'Vehicle entry / exit' },
-          {
-            role: Role.ACCESS_ARROW,
-            symbol: SymbolName.ARROW_2WAY,
-            label: 'Direction of travel, in and out',
-          },
-        ]
-      : []),
+    ...accessLegend(model),
     ...(model.sections.length > 0 ? [{ role: Role.CUT_LINE, label: 'Section cut line' }] : []),
   ];
 
@@ -1022,6 +1044,18 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       ? [{ role: Role.RAMP_ARROW, symbol: SymbolName.ARROW, label: 'Ramped floor rises this way, one level a lap' }]
       : []),
   ];
+  /*
+    The ground level draws the entrance, and its words are printed beside it on
+    the drawing (VEHICLE ENTRY - ONE WAY). The key on this sheet is already full,
+    so it gains one row only when an arrow the entrance draws is keyed nowhere
+    else here — a one-way head on a level with no ramp and no one-way aisle.
+  */
+  if (level.elevationMm === 0) {
+    const keyed = new Set(legend.map((e) => e.symbol).filter(Boolean));
+    for (const entry of accessLegend(model)) {
+      if (entry.symbol !== undefined && !keyed.has(entry.symbol)) legend.push(entry);
+    }
+  }
   /*
     THE MODULE, DIMENSIONED ACROSS ONE AISLE: bay, aisle, bay. It is the figure
     an architect checks first and the one the client's own drawings carry

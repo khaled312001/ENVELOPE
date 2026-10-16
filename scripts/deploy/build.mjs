@@ -215,18 +215,28 @@ const NEW_OWNS = new Set(['/', '/parking', '/exports', '/refusals']);
   innocent import at a time — the next screen that reaches into `App.tsx` for a
   hook pulls the whole engine back in — so the number is checked here, where a
   regression stops a release instead of being found in a waterfall chart.
+
+  What is measured is everything the shell loads before it draws — the entry
+  AND every chunk it preloads — never the entry file alone. Rollup decides for
+  itself whether a module shared by the entry and a lazy screen sits in the
+  entry or in a chunk beside it, and on 16 Oct 2026 adding the report route
+  moved Shell, the menus and the router out of four preloaded chunks into the
+  entry: the entry grew 84 KB and the front page loaded 3 KB more (0.5 KB less
+  gzipped). A budget on one file failed a release over a regrouping and would
+  pass one where a screen arrived as a preloaded chunk of its own.
 */
-const ENTRY_BUDGET = 400 * 1024;
-for (const shell of ['index.html', 'classic.html']) {
-  const entry = /<script[^>]*type="module"[^>]*src="\/?(assets\/index-[^"]+\.js)"/.exec(
-    readFileSync(join(WEB, shell), 'utf8'),
-  );
-  if (!entry) throw new Error(`${shell} names no entry chunk; the budget cannot be measured`);
-  const bytes = statSync(join(WEB, entry[1])).size;
-  console.log(`${shell} entry chunk ${entry[1]}: ${(bytes / 1024).toFixed(0)} KB (budget ${ENTRY_BUDGET / 1024} KB)`);
-  if (bytes > ENTRY_BUDGET) {
+const STARTUP_BUDGET = { 'index.html': 950 * 1024, 'classic.html': 650 * 1024 };
+for (const [shell, budget] of Object.entries(STARTUP_BUDGET)) {
+  const html = readFileSync(join(WEB, shell), 'utf8');
+  if (!/<script[^>]*type="module"[^>]*src="\/?assets\/index-[^"]+\.js"/.test(html)) {
+    throw new Error(`${shell} names no entry chunk; the budget cannot be measured`);
+  }
+  const chunks = [...new Set([...html.matchAll(/(?:src|href)="\/?(assets\/[^"]+\.js)"/g)].map((m) => m[1]))];
+  const bytes = chunks.reduce((sum, c) => sum + statSync(join(WEB, c)).size, 0);
+  console.log(`${shell} loads ${chunks.length} chunks at startup: ${(bytes / 1024).toFixed(0)} KB (budget ${budget / 1024} KB)`);
+  if (bytes > budget) {
     console.error(
-      `The entry chunk is ${(bytes / 1024).toFixed(0)} KB, over its ${ENTRY_BUDGET / 1024} KB budget. ` +
+      `${shell} loads ${(bytes / 1024).toFixed(0)} KB of script before it draws, over its ${budget / 1024} KB budget. ` +
         'Something the front page loads now imports a screen; find it before shipping.',
     );
     process.exit(1);

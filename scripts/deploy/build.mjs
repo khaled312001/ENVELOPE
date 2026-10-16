@@ -32,6 +32,8 @@ import { createRequire } from 'node:module';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { movedPaths } from './moved-paths.mjs';
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'out', 'deploy');
 const APP = join(OUT, 'app');
@@ -256,28 +258,9 @@ const routes =JSON.parse(readFileSync(join(ROOT, 'apps', 'web', 'src', 'routes.j
 
   Emitted BEFORE the page rules below, because those rewrite every known path to
   `index.html` with `[L]` and a redirect placed after them would never be reached.
+  The list itself is `moved-paths.mjs`, which `pnpm smoke:next` reads too.
 */
-const redirects = JSON.parse(
-  readFileSync(join(ROOT, 'apps', 'web', 'src', 'redirects.json'), 'utf8'),
-);
-// The classic site's "what it refuses" is this site's "what it does not do".
-redirects['/refusals'] = '/limits';
-/*
-  THE CLASSIC STUDIO'S DOORS LEAD INTO THIS ONE. The owner, 14 Oct 2026: nothing
-  of the old site is to be seen. Its engine, its studies, its sign-in and its
-  readiness page each have a page here now, so their addresses — bookmarked,
-  shared, printed in an old report — land on it rather than on the previous
-  front end. What is left on the classic shell (settings, workspace, an
-  invitation link) has no page here yet and is linked from nowhere on this site.
-*/
-Object.assign(redirects, {
-  '/app': '/studio',
-  '/work': '/studies',
-  '/sign-in': '/enter',
-  '/sign-up': '/enter?mode=up',
-  '/readiness': '/limits',
-  '/dashboard': '/limits',
-});
+const redirects = movedPaths(ROOT);
 const redirectRules = Object.entries(redirects)
   .map(([from, to]) => `  RewriteRule ^${from.replace(/^\//, '')}/?$ ${to} [R=301,L]`)
   .join('\n');

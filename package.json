@@ -14,6 +14,7 @@
     "contrast": "node scripts/contrast.mjs",
     "check": "pnpm boundaries && pnpm contrast && pnpm typecheck && pnpm test && pnpm example && pnpm dxf",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:next": "node scripts/smoke-next.mjs",
     "shots": "node scripts/shoot.mjs",
     "dev": "pnpm build && pnpm --parallel --filter \"./apps/*\" dev",
     "dev:engine": "tsc -b --watch --preserveWatchOutput",

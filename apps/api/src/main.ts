@@ -108,8 +108,13 @@ export function optionsFromEnv(env: Env = process.env): BuildOptions {
     throw new Error(`MOUNTED_AT must be a path like /api — not "${mountedAt}".`);
   }
 
+  // Claude's reading of a step (`advisor.ts`): on only where the operator put a key in the environment.
+  const apiKey = env['ANTHROPIC_API_KEY']?.trim();
+  const advisor = apiKey ? { apiKey, model: env['ADVISOR_MODEL']?.trim() || 'claude-opus-5-5' } : null;
+
   return {
     guests,
+    ...(advisor ? { advisor } : {}),
     developerStandards: flag(env['DEVELOPER_STANDARDS'], !production),
     computationsPerMinute,
     trustProxy: proxyHops(env['TRUST_PROXY'], production),

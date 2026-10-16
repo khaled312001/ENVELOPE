@@ -4,6 +4,7 @@ import { Maximize2, Minus, Plus } from 'lucide-react';
 import { type PointerEvent as ReactPointerEvent, useMemo, useRef, useState, type WheelEvent as ReactWheelEvent } from 'react';
 
 import { cn } from '../lib/cn.js';
+import { engineNote } from '../lib/engine-notes.js';
 import { EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Tab, Tabs, TabsList } from '../ui/radix.js';
@@ -38,7 +39,7 @@ export function SheetViewer({
   readonly initialKind?: Sheet['kind'];
   readonly className?: string;
 }): JSX.Element {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const first = sheets.find((s) => s.kind === initialKind) ?? sheets[0];
   const [id, setId] = useState(first?.id ?? '');
   const sheet = sheets.find((s) => s.id === id) ?? first;
@@ -87,7 +88,7 @@ export function SheetViewer({
             {sheets.map((s) => (
               <Tab key={s.id} value={s.id}>
                 <span className="figure me-1.5 text-tertiary">{s.number}</span>
-                {s.title}
+                {engineNote(s.title, locale) ?? s.title}
               </Tab>
             ))}
           </TabsList>

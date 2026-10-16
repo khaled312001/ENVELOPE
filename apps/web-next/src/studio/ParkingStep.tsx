@@ -2,20 +2,109 @@ import type { Sheet } from '@envelope/sheets';
 import { Check } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
-import type { AccessCandidateView, RunRequestBody, RunView, VehicleAccessArrangement } from '@web/api/client.js';
+import type {
+  AccessCandidateView,
+  LevelPlanView,
+  ParkingArrangementId,
+  RunRequestBody,
+  RunView,
+  VehicleAccessArrangement,
+} from '@web/api/client.js';
 
 import { PlotSketch } from '../components/PlotSketch.js';
 import { SheetViewer, useSheets } from '../components/SheetViewer.js';
 import { Traced } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
+import { ARRANGEMENT_NAME, engineNote } from '../lib/engine-notes.js';
 import { grouped } from '../lib/figures.js';
-import { EngineNote, EngineText, useLocale } from '../lib/locale.js';
+import { EngineMessage, EngineNote, EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, Field, Input, Notice, PanelHeader, Select, Spinner } from '../ui/primitives.js';
 import { Segmented } from '../ui/radix.js';
+import { AdvisorBox } from './AdvisorBox.js';
 import { assumedFirst, Footer, Heading, More, NextStep, Row } from './parts.js';
 
 export type VehicleAccessBody = NonNullable<RunRequestBody['vehicleAccess']>;
+
+/*
+  THE OPTIONS, EACH ONE A WHOLE LAYOUT (16 Oct 2026: «كذا اوبشن واكتر من رسمه …
+  وله حرية الاختيار»). The engine packs every arrangement on every run; this lists
+  them with the bays each placed, and picking one recomputes the run with it, so
+  every sheet, the DXF and the 3D view are redrawn by the engine — never a second
+  drawing made here. The list is the same fixed candidates each time: nothing
+  moves a ramp or a core to look for more bays.
+*/
+function ParkingOptions({
+  options,
+  drawn,
+  picked,
+  busy,
+  canChoose,
+  onArrange,
+}: {
+  readonly options: NonNullable<LevelPlanView['arrangements']>;
+  readonly drawn: ParkingArrangementId | null;
+  readonly picked: ParkingArrangementId | null;
+  readonly busy: boolean;
+  readonly canChoose: boolean;
+  readonly onArrange: (id: ParkingArrangementId | null) => void;
+}): JSX.Element {
+  const { t, locale } = useLocale();
+  const most = Math.max(...options.map((o) => o.bayCount));
+  return (
+    <section className="grid min-w-0 gap-2" aria-labelledby="options">
+      <Heading id="options">{t.parking.options.title}</Heading>
+      <p className="text-[12px] text-secondary">{t.parking.options.hint}</p>
+      <ul className="grid min-w-0 divide-y divide-subtle border-y border-subtle">
+        {options.map((o, i) => {
+          const name = ARRANGEMENT_NAME[o.id] ?? o.id;
+          const isDrawn = o.id === drawn;
+          return (
+            <li key={o.id} className="flex items-center gap-3 py-2">
+              <span
+                className={cn(
+                  'figure grid size-6 shrink-0 place-items-center rounded border text-[11px]',
+                  isDrawn ? 'border-accent text-accent-strong' : 'border-strong text-fg',
+                )}
+              >
+                {i + 1}
+              </span>
+              <div className="min-w-0 flex-1 text-[12px]">
+                <p className="text-fg">{engineNote(name, locale) ?? name}</p>
+                <p className="figure !whitespace-normal text-tertiary">
+                  {o.bayCount > 0 ? t.parking.options.perLevel(o.bayCount) : t.parking.options.none}
+                  {o.bayCount > 0 && o.bayCount === most ? ` · ${t.parking.options.best}` : ''}
+                </p>
+              </div>
+              {isDrawn ? (
+                <span className="flex items-center gap-1 text-[12px] text-accent-strong">
+                  <Check className="size-3.5" aria-hidden="true" />
+                  {t.parking.options.inUse}
+                </span>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!canChoose || busy || o.bayCount === 0}
+                  aria-busy={busy || undefined}
+                  onClick={() => onArrange(o.id)}
+                >
+                  {busy ? <Spinner /> : null}
+                  {t.parking.options.use}
+                </Button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {picked ? (
+        <Button variant="ghost" size="sm" className="justify-self-start" disabled={!canChoose || busy} onClick={() => onArrange(null)}>
+          {t.parking.options.back}
+        </Button>
+      ) : null}
+    </section>
+  );
+}
 
 /*
   THE SCREEN THE 30 AUG MEETING WAS ABOUT.
@@ -44,6 +133,8 @@ export function ParkingPanel({
   busy,
   canChoose,
   onPlace,
+  onArrange,
+  picked = null,
   onNext,
 }: {
   readonly run: RunView;
@@ -51,6 +142,10 @@ export function ParkingPanel({
   readonly canChoose: boolean;
   /** The entrance the reader placed, or null to take the recommendation back. */
   readonly onPlace: (access: VehicleAccessBody | null) => void;
+  /** The arrangement the reader picked, or null to go back to the most bays. Absent: the options are listed without buttons. */
+  readonly onArrange?: (id: ParkingArrangementId | null) => void;
+  /** The arrangement this run was asked for, if one was picked. */
+  readonly picked?: ParkingArrangementId | null;
   /** Optional so a caller that does not wire it keeps working; when given, it is the panel's one primary action. */
   readonly onNext?: () => void;
 }): JSX.Element {
@@ -62,8 +157,11 @@ export function ParkingPanel({
         <PanelHeader title={t.parking.title} />
         <div className="p-4">
           <Notice tone="neutral" title={t.parking.noPlan}>
-            {run.levelPlanRefusal ? <EngineText>{run.levelPlanRefusal}</EngineText> : null}
+            {run.levelPlanRefusal ? <EngineMessage text={run.levelPlanRefusal} /> : null}
           </Notice>
+          <div className="mt-4">
+            <AdvisorBox ask={{ step: 'parking', runId: run.runId }} />
+          </div>
         </div>
       </div>
     );
@@ -82,6 +180,7 @@ export function ParkingPanel({
     [
       { key: 'orientation', label: t.parking.orientation, value: lp.orientation },
       { key: 'module', label: t.parking.module, value: lp.moduleDepthM },
+      ...(lp.turning ? [{ key: 'turns', label: t.parking.turns(lp.turning.total), value: lp.turning.fitting }] : []),
     ],
   );
   return (
@@ -96,6 +195,17 @@ export function ParkingPanel({
           ))}
         </dl>
 
+        {lp.arrangements && lp.arrangements.length > 1 ? (
+          <ParkingOptions
+            options={lp.arrangements}
+            drawn={lp.arrangement ?? null}
+            picked={picked}
+            busy={busy}
+            canChoose={canChoose && onArrange !== undefined}
+            onArrange={(id) => onArrange?.(id)}
+          />
+        ) : null}
+
         {/* The level at grade: its own count, and what the drive and the plant cost it, by cause. */}
         {lp.grade ? (
           <section className="grid min-w-0 gap-2" aria-labelledby="grade">
@@ -103,7 +213,8 @@ export function ParkingPanel({
             <p className="text-[12px] text-secondary">{t.parking.grade.hint}</p>
             <dl className="grid grid-cols-2 gap-x-4">
               <Row label={t.parking.grade.bays}>
-                <Traced value={lp.grade.bayCount} />
+                {/* The count the sheet draws: less the access aisles too, where the accessible bays stand here. */}
+                <Traced value={lp.accessible?.onGrade ? lp.accessible.bayCount : lp.grade.bayCount} />
               </Row>
             </dl>
             <ul className="grid gap-0.5 text-[12px] text-fg">
@@ -124,6 +235,53 @@ export function ParkingPanel({
             ) : null}
           </section>
         ) : null}
+
+        {/* The bays set aside on the level the street reaches, and what their access aisles cost. */}
+        {lp.accessible ? (
+          <section className="grid min-w-0 gap-2" aria-labelledby="accessible">
+            <Heading id="accessible">{t.parking.accessible.title}</Heading>
+            <p className="text-[12px] text-secondary">{t.parking.accessible.hint(lp.accessible.onGrade)}</p>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <Row label={t.parking.accessible.placed}>
+                <Traced value={lp.accessible.placed} />
+              </Row>
+              <Row label={t.parking.accessible.required}>
+                <Traced value={lp.accessible.required} />
+              </Row>
+              {lp.accessible.preferred ? (
+                <Row label={t.parking.accessible.preferred}>
+                  <Traced value={lp.accessible.preferred.required} />
+                </Row>
+              ) : null}
+              {lp.grade && lp.accessible.onGrade ? null : (
+                <Row label={t.parking.accessible.level(lp.accessible.onGrade)}>
+                  <Traced value={lp.accessible.bayCount} />
+                </Row>
+              )}
+            </dl>
+            <ul className="grid gap-0.5 text-[12px] text-fg">
+              <li>{t.parking.accessible.lost(lp.accessible.lost)}</li>
+              {lp.accessible.vans > 0 ? <li>{t.parking.accessible.vans(lp.accessible.vans)}</li> : null}
+              {lp.accessible.farthestM ? <li>{t.parking.accessible.farthest(lp.accessible.farthestM.value)}</li> : null}
+            </ul>
+            {lp.accessible.notes.length > 0 ? (
+              <ul className="grid gap-1 text-[12px] text-secondary">
+                {lp.accessible.notes.map((n, i) => (
+                  <li key={i}>
+                    <EngineNote text={n} />
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+        ) : null}
+
+        {(() => {
+          const over = (lp.deadEnds ?? []).filter((n) => n > 8);
+          return over.length > 0 ? (
+            <p className="text-[12px] text-secondary">{t.parking.deadEnds(over.length, Math.max(...over))}</p>
+          ) : null;
+        })()}
 
         <section className="grid min-w-0 gap-2.5" aria-labelledby="access">
           <Heading id="access">{t.parking.access}</Heading>
@@ -262,6 +420,8 @@ export function ParkingPanel({
             </More>
           ) : null}
         </div>
+
+        <AdvisorBox ask={{ step: 'parking', runId: run.runId }} />
 
         {onNext ? (
           <Footer>

@@ -7,14 +7,16 @@ import type { TracedWire } from '@web/components/TracedValue.js';
 import { Massing3D, type MassingControls } from '../components/Massing3D.js';
 import { ClassMark, Legend, Traced, useInspect } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
+import { engineNote } from '../lib/engine-notes.js';
 import { grouped, percent } from '../lib/figures.js';
-import { EngineText, useLocale } from '../lib/locale.js';
+import { EngineMessage, EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Notice, PanelHeader, Select } from '../ui/primitives.js';
+import { AdvisorBox } from './AdvisorBox.js';
 import { assumedFirst, Footer, Heading, More, NextStep, Row } from './parts.js';
 
 export function CapacityCanvas({ run }: { readonly run: RunView }): JSX.Element {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const inspect = useInspect();
   const [controls, setControls] = useState<MassingControls>({ levelId: null, spread: 0, envelope: true });
   const [failed, setFailed] = useState(false);
@@ -29,7 +31,7 @@ export function CapacityCanvas({ run }: { readonly run: RunView }): JSX.Element 
             <option value="">{t.capacity.allLevels}</option>
             {model.levels.map((l) => (
               <option key={l.id} value={l.id}>
-                {l.id} · {l.name}
+                {l.id} · {engineNote(l.name, locale) ?? l.name}
               </option>
             ))}
           </Select>
@@ -118,7 +120,7 @@ export function CapacityPanel({
   /** Optional so a caller that does not wire it keeps working; when given, it is the panel's one primary action. */
   readonly onNext?: () => void;
 }): JSX.Element {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const c = run.capacity;
   // A bar's width is the one place a figure becomes a JS number, and only for drawing the bar.
   const max = Math.max(...BANDS.map((b) => Number(c[b.key].value)), 1);
@@ -142,7 +144,11 @@ export function CapacityPanel({
     <div>
       <PanelHeader title={t.capacity.title} hint={t.capacity.hint2} />
       <div className="grid grid-cols-1 gap-6 p-4">
-        {run.warning ? <Notice tone="neutral">{run.warning}</Notice> : null}
+        {run.warning ? (
+          <Notice tone="neutral">
+            <EngineMessage text={run.warning} />
+          </Notice>
+        ) : null}
 
         {/* The answer: one figure, and the band and constraint that set it. */}
         <section className="grid gap-2" aria-labelledby="governing">
@@ -150,8 +156,8 @@ export function CapacityPanel({
           <Traced value={c.governingGfa} size="xl" places={2} />
           <p className="text-[13px] font-medium text-fg">{t.capacity.governedBy(governing?.letter ?? '?', t.bands[governing?.key ?? 'bandA'].name)}</p>
           <p className="text-[12px] text-secondary">
-            {t.capacity.binding} <EngineText className="text-fg">{c.governingConstraint.label}</EngineText>{' '}
-            <span className="figure text-tertiary">{c.governingConstraint.ruleId}</span>
+            {/* The rule id stays in the derivation a click away; on the page it is a code nobody reads (16 Oct 2026). */}
+            {t.capacity.binding} <EngineText className="text-fg">{c.governingConstraint.label}</EngineText>
           </p>
         </section>
 
@@ -212,8 +218,10 @@ export function CapacityPanel({
                       <span className="grid min-w-0 flex-1 gap-0.5">
                         <EngineText className="text-[12.5px] font-medium text-fg">{a.label}</EngineText>
                         <span className="figure text-[13px] text-assumed">
-                          {grouped(a.value)}
-                          {a.unit ? <span className="ms-1 text-secondary">{a.unit}</span> : null}
+                          {engineNote(a.value, locale) ?? grouped(a.value)}
+                          {a.unit && (t.traced.unitWord[a.unit] ?? a.unit) ? (
+                            <span className="ms-1 text-secondary">{t.traced.unitWord[a.unit] ?? a.unit}</span>
+                          ) : null}
                         </span>
                       </span>
                       <ClassMark cls="ASSUMED" />
@@ -259,6 +267,8 @@ export function CapacityPanel({
             </More>
           ) : null}
         </div>
+
+        <AdvisorBox ask={{ step: 'capacity', runId: run.runId }} />
 
         {onNext ? (
           <Footer>

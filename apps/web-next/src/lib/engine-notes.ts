@@ -1,3 +1,4 @@
+import { RUN_READERS } from './engine-run-notes.js';
 import type { Locale } from './locale.js';
 
 /*
@@ -15,14 +16,24 @@ import type { Locale } from './locale.js';
   stands: a new note from the engine arrives in English rather than not at all.
 */
 
-type Said = Readonly<Record<Locale, string>>;
-type Reader = (text: string) => Said | null;
+export type Said = Readonly<Record<Locale, string>>;
+export type Reader = (text: string) => Said | null;
 
 const ROAD: Readonly<Record<string, Said>> = {
   ARTERIAL: { en: 'Arterial road', ar: 'طريق شرياني' },
   COLLECTOR: { en: 'Collector road', ar: 'طريق تجميعي' },
   LOCAL: { en: 'Local road', ar: 'طريق محلي' },
   ACCESS: { en: 'Access road', ar: 'طريق خدمة' },
+};
+
+/** The six arrangements by the engine's id, in the engine's own words — the parking options list reads them. */
+export const ARRANGEMENT_NAME: Readonly<Record<string, string>> = {
+  WIDTH: 'modules along the width',
+  DEPTH: 'modules along the depth',
+  PERIMETER: 'bays to the walls, one ring aisle',
+  SLOPED: 'bays to the walls, the ring aisle sloped as the ramp',
+  FIELD_WIDTH: 'rows across the whole footprint, along the width',
+  FIELD_DEPTH: 'rows across the whole footprint, along the depth',
 };
 
 const ORIENTATION: Readonly<Record<string, Said>> = {
@@ -66,6 +77,8 @@ function rampLabel(label: string): Said | null {
 }
 
 const READERS: readonly Reader[] = [
+  // An arrangement's name on its own — the level plan's traced orientation.
+  (t) => ORIENTATION[t] ?? null,
   (t) => {
     const m = /^A ([\d.]+) × ([\d.]+) m straight ramp (runs down one edge|runs along the island the ring encloses|continues the longest drive aisle from its end): 12% with a 3\.6 m transition at 6% at each end/.exec(t);
     if (!m) return null;
@@ -163,12 +176,10 @@ const READERS: readonly Reader[] = [
   (t) => {
     const m = /^([\d.]+) m is left clear after every (\d+) bays along a run, for the columns: .*= ([\d.]+) m to a group\./.exec(t);
     if (!m) return null;
+    // Said briefly (Eng. Mohamed, 16 Oct 2026: no sources narrated on screen); the drawings' notes keep the rest.
     return {
-      en: t,
-      ar:
-        `تترك ${m[1]} م خالية بعد كل ${m[2]} مواقف على امتداد الصف، لمواضع الأعمدة، فطول المجموعة ${m[3]} م. ` +
-        'لا يرسم عمود في هذه المسافة ولا يحدد مقاسه. ويطلب الجدول B.11 مسافة إضافية قدرها 300 مم للموقف المجاور ' +
-        'لعنصر إنشائي، ولم تضف هنا، وكون المسافة تشملها أم لا لم يقيم.',
+      en: `${m[1]} m is left clear after every ${m[2]} bays for the columns: ${m[3]} m to a group.`,
+      ar: `تترك ${m[1]} م بعد كل ${m[2]} مواقف لمواضع الأعمدة، فطول المجموعة ${m[3]} م.`,
     };
   },
   (t) => {
@@ -180,7 +191,7 @@ const READERS: readonly Reader[] = [
     };
   },
   (t) => {
-    const head = /^Laid out as (.+?): (\d+) bays, against /.exec(t);
+    const head = /^Laid out as (.+?)(, as picked)?: (\d+) bays, against /.exec(t);
     const total = /All (\d+) were packed\.$/.exec(t)?.[1];
     const chosen = head ? ORIENTATION[head[1] ?? ''] : undefined;
     if (!head || !total || !chosen) return null;
@@ -189,10 +200,16 @@ const READERS: readonly Reader[] = [
       .map((m) => ({ n: m[1] ?? '', name: ORIENTATION[m[2] ?? ''] }))
       .filter((o): o is { n: string; name: Said } => o.name !== undefined);
     if (others.length === 0) return null;
-    return {
-      en: `Best of ${total}: ${head[2]} bays as ${chosen.en}, against ${others.map((o) => `${o.n} as ${o.name.en}`).join(', ')}.`,
-      ar: `الأفضل من ${total} ترتيبات: ${head[2]} موقفا (${chosen.ar})، مقابل ${others.map((o) => `${o.n} (${o.name.ar})`).join('، ')}.`,
-    };
+    const vs = { en: others.map((o) => `${o.n} as ${o.name.en}`).join(', '), ar: others.map((o) => `${o.n} (${o.name.ar})`).join('، ') };
+    return head[2]
+      ? {
+          en: `As you picked, of ${total}: ${head[3]} bays as ${chosen.en}, against ${vs.en}.`,
+          ar: `بحسب اختيارك من ${total} ترتيبات: ${head[3]} موقفا (${chosen.ar})، مقابل ${vs.ar}.`,
+        }
+      : {
+          en: `Best of ${total}: ${head[3]} bays as ${chosen.en}, against ${vs.en}.`,
+          ar: `الأفضل من ${total} ترتيبات: ${head[3]} موقفا (${chosen.ar})، مقابل ${vs.ar}.`,
+        };
   },
   (t) => {
     const m = /^The setback-permitted footprint is not a rectangle, so the level was packed into the largest rectangle inside it — ([\d.]+ × [\d.]+) m, ([\d.]+)% of the footprint\. ([\d,.]+) m² was left unpacked, about (\d+) bays/.exec(t);
@@ -327,11 +344,13 @@ const READERS: readonly Reader[] = [
       ? { en: 'Shared with a neighbouring plot: no vehicle can enter here.', ar: 'حد مشترك مع قطعة مجاورة: لا تدخل منه السيارات.' }
       : null,
   (t) => {
-    const m = /^road frontage is ([\d.]+) m\. After ([\d.]+) m of junction clearance at each corner \(B\.7\.2\.1\) only ([\d.-]+) m remains, which cannot hold a ([\d.]+) m opening/.exec(t);
+    // "at each corner" or, since the 15 m is taken only off a junction, "at P3 and at P0" / "at P3".
+    const m = /^road frontage is ([\d.]+) m\. After ([\d.]+) m of junction clearance at (each corner|P\d+(?: and at P\d+)?)(?: \(B\.7\.2\.1\))? only ([\d.-]+) m remains, which cannot hold a ([\d.]+) m opening/.exec(t);
     if (!m) return null;
+    const at = m[3] === 'each corner' ? { en: 'each corner', ar: 'كل ركن' } : { en: m[3] ?? '', ar: (m[3] ?? '').replace(' and at ', ' و') };
     return {
-      en: `${m[1]} m of frontage. After ${m[2]} m of junction clearance at each corner (B.7.2.1), ${m[3]} m is left, too short for a ${m[4]} m opening.`,
-      ar: `واجهة بطول ${m[1]} م. بعد ${m[2]} م ابتعاد عن التقاطع عند كل ركن (B.7.2.1) يتبقى ${m[3]} م، وهذا لا يتسع لمدخل بعرض ${m[4]} م.`,
+      en: `${m[1]} m of frontage. After ${m[2]} m clear of the junction at ${at.en}, ${m[4]} m is left, too short for a ${m[5]} m opening.`,
+      ar: `واجهة بطول ${m[1]} م. بعد ${m[2]} م ابتعاد عن التقاطع عند ${at.ar} يتبقى ${m[4]} م، وهذا لا يتسع لمدخل بعرض ${m[5]} م.`,
     };
   },
   /* What the affection plan does not print (`packages/intake`). The sheet step lists these
@@ -393,7 +412,7 @@ const READERS: readonly Reader[] = [
 
 /** The engine's sentence, short and in `locale`; null when its wording is not one this file knows. */
 export function engineNote(text: string, locale: Locale): string | null {
-  for (const read of READERS) {
+  for (const read of [...READERS, ...RUN_READERS]) {
     const said = read(text);
     if (said) return said[locale];
   }

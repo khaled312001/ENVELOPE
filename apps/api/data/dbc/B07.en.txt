@@ -1,0 +1,759 @@
+
+==== EN PDF p78 (printed B 58) — 2 column(s) ====
+--- column 1 (from left)
+B.7 Building access and vehicular requirements
+B.7.1 Building access
+The following provisions shall be included when setting the building access strategy
+during the design process.
+a) Public and service entrances shall be clearly located and identified with signage
+as in accordance with B.11. The location of car parking and the main entrance
+shall be clearly identified with signage in accordance with B.11.
+b) Buildings shall allow for smooth pedestrian access with crossings and pathways.
+Pathways shall be provided for building entries from surrounding streets, parking
+bays and external sidewalk.
+c) Accessible routes shall be provided in accordance with C.5.
+d) Buildings providing pick-up and drop-off areas shall conform to Chapter 7.2
+of Dubai access management manual requirements [Ref. B.37].
+e) For mixed-use buildings containing residential occupancy and other public
+or business occupancies, the residential pedestrian access point and lobbies shall
+be separated from those serving public/business occupancies. For other mixed-
+use buildings, the segregation of pedestrian access points for different building
+occupancies is recommended for privacy and security.
+f) The number and location of exits discharging directly from the building to outside
+shall be in accordance with B.4.3.1.
+g) Access routes and accessways for fire trucks shall be provided in accordance
+with Ch. 2 of UAE FLSC [Ref. B.1]. Fire trucks shall be able to reach, within the
+required distances and as applicable, the building entry points, breeching inlets
+and the perimeter façade of the building.
+h) Public roadways carrying heavy volumes of traffic shall not be used for access
+unless an alternative access point cannot be provided, and it is agreed with RTA
+and the Authority.
+--- column 2 (from left)
+B.7.2 Vehicle access and movement
+B.7.2.1 General requirements
+Vehicle access shall be located away from any traffic intersections depending on road
+type, vehicle type and other factors as approved by RTA.
+Vehicle access shall conform to RTA requirements. Public rights of way shall be
+designed in accordance with the RTA Dubai access management manual [Ref. B.37]
+and RTA Geometric design manual for Dubai roads [Ref. B.38].
+Building developments which are deemed by the Authority to have an impact on the
+traffic generation for the surrounding roads and properties shall submit a traffic
+impact assessment (TIA) or traffic impact study (TIS) to the Authorities.
+Vehicle access shall be separated from local road intersection or minor T junctions by
+not less than 15 m from the chamfered edge of the plot (see Figure B.49 and
+Figure B.50). For other road intersections, Dubai access management manual
+requirements [Ref. B.37] shall be followed.
+If the building is facing more than one road, the vehicle access point should be from
+the secondary road, or as specified on the affection plan, as shown in Figure B.49.
+Segregation between light and heavy vehicle parking areas inside plots shall
+be provided in accordance with B.7.3.
+Vehicle access shall not be located opposite a T junction, as shown in Figure B.50.
+
+==== EN PDF p79 (printed B 59) — 2 column(s) ====
+--- column 1 (from left)
+≥15 m
+Figure B.49 Building vehicle access
+Key
+Plot limit
+--- column 2 (from left)
+≥15 m
+Figure B.50 T junction vehicle access
+Key
+Plot limit
+
+==== EN PDF p80 (printed B 60) — 2 column(s) ====
+--- column 1 (from left)
+Internal roads within plot limits shall be not less than:
+a) 3 m clear width road or pavement for one-way traffic;
+b) 6 m clear width road or pavement for two-way traffic.
+All vehicular roadways and parking areas shall be provided with exterior lighting to
+illuminate the surface area in accordance with H.7. All internal roads or access to
+2
+plots shall be lit to a CIE 115 (lighting class M5, Lav ≥ 0.5 cd/m with uniformity
+U0 ≥ 0.35) [Ref. B.39]. Lighting shall be designed, arranged and installed to confine
+direct rays onto the plots and to direct light away from adjacent structures or streets.
+All parts of the site to which vehicles might have access shall be hard surfaced and
+drained.
+All vehicular manoeuvring to take place within plot limits without impacting ROW
+B.7.2.2 Vehicular ramps
+Ramps allocated for vehicular access shall conform to Table B.9 and the following.
+a) Curved and helical vehicular ramps are not preferred.
+b) Any curved portion of vehicular ramps shall conform to the requirements for
+curved ramps.
+c) Lane separation for ramps shall be provided through curbs, walls or other
+structural segregation.
+d) Where a curb is used between lanes to separate traffic flows, each lane shall meet
+the minimum width requirement. Curbs shall be not less than 300 mm in width,
+and not less than 150 mm in height.
+--- column 2 (from left)
+Ramp type Maximum slope Minimum single Minimum inner Minimum vertical
+percentage ‖ lane width (m) ‖ circle radius (m) clear height above
+any point (m)
+Straight ‖ 12% 3 - 2.4
+See Figure B.51
+Curved ‖ 12% 3.5 4 2.4
+See Figure B.52
+Helical ‖ 8% 5 6 2.4
+See Figure B.53
+Table B.9 Ramp slope and width
+01
+3.0 m
+≥
+02
+3.0 m
+≥
+01
+Figure B.51 Straight ramp
+Key
+01: Curb or structure
+02: Lane separation
+
+==== EN PDF p81 (printed B 61) — 2 column(s) ====
+--- column 1 (from left)
+≥
+3.5 m
+≥
+3.5 m
+≥
+4.0 m
+Figure B.52 Curved ramp
+Vehicular ramps shall meet the following requirements.
+1) Floor surfaces shall be of broom finish texture or provided with anti-slip
+treatment.
+2) Ramps shall be free from any projections or obstacles that could obstruct safe
+movement or use.
+3) Corners of structural elements adjacent to ramps shall be covered with
+protective materials.
+4) Ramps shall be provided with reflective mirrors that are appropriately sized
+to enhance visibility at directional changes, turns and in areas where visibility
+is difficult.
+--- column 2 (from left)
+5) Ramps shall be equipped with all necessary connections for rainwater drainage.
+6) Floor surfaces shall be non-combustible, graded and equipped with drainage
+in accordance with Table 3.37, Ch. 3 of UAE FLSC [Ref. B.1].
+Vehicular ramps shall not be used for means of egress, as specified in Table 3.37,
+Ch. 3 of UAE FLSC [Ref. B.1], with the following exception. For one level below
+or one level above discharge level of parking, vehicular ramps may be used as one of
+the means of egress, provided that no shutters or doors are installed in such ramps.
+< 8%
+Figure B.53 Helical ramp
+
+==== EN PDF p82 (printed B 62) — 2 column(s) ====
+--- column 1 (from left)
+Ramp design should provide blended transitions to horizontal parking levels.
+The transition should be equal to half the percentage of ramp’s slope, according
+to the dimensions given in Table B.10 and Figure B.54.
+Ramp slope, *R Transition slope, *T Transition length, *L
+(minimum) (m)
+12% 6% 3.6
+10% 5% 3
+8% 4% 2.4
+Table B.10 Transition and ramp slopes recommendations
+2.4 m
+*T ‖ ≥
+2.4 m
+≥ ‖ *R
+*T
+*L
+*L
+Figure B.54 Vehicle ramp slope transition
+--- column 2 (from left)
+Mechanical parking can substitute for vehicular ramps, provided that following
+requirements are met.
+i) A TIA shall be submitted.
+ii) The system used shall be provided with an inspection certificate for installation
+and safety in accordance with BS EN 14010:2003+A1:2009.
+iii) Building occupants shall not be able to access the structure. A suitable and
+airconditioned waiting area shall be provided adjacent to the parking exits.
+iv) An emergency auto response system shall be provided, to enable continuity
+of use and avoid impact on ROW and traffic flow in the event of system failure.
+v) The system shall be capable of operating at 25% minimum capacity through
+a standby generator in case of electrical outage.
+vi) The net floor height of the parking levels shall match the system specification
+requirements, and may be less than the minimum clear heights given in B.5.3.
+vii) The mechanical parking shall meet the fire safety requirements of
+UAE FLSC [Ref. B.1].
+
+==== EN PDF p83 (printed B 63) — 2 column(s) ====
+--- column 1 (from left)
+B.7.2.3 Parking floors and structures
+B.7.2.3.1 General
+Parking areas within a building shall be separated from other occupancies.
+Occupiable spaces adjacent to or within parking areas shall be provided with
+thermal and acoustic treatment. Ventilation separation conforming to Part H,
+and fire separation conforming to Table 1.9, Ch. 1 of UAE FLSC [Ref. B.1], shall be
+provided.
+Parking areas clear height shall conform to B.5.3.
+Floor surfaces shall be non-absorbent, non-combustible, graded and equipped
+with drainage in accordance with Table 3.37, Ch. 3 of UAE FLSC [Ref. B.1].
+The area of floor used for parking of cars or other vehicles shall be sloped to facilitate
+the movement of liquids to a drain or toward the main vehicle entry doorway.
+The slope in areas where vehicles are parked shall be not more than 4% (as shown
+in Figure B.55). Accessible parking slopes shall be limited to a maximum of 2%.
+≤4% ≤4%
+Figure B.55 Parking at slope
+--- column 2 (from left)
+Vehicle guards not less than 1,200 mm in height shall be placed where the vertical
+distance from the floor of a drive lane or parking bay to the ground or surface directly
+below is greater than 300 mm, such as parking on podiums roof or adjacent to ramps.
+The guards shall conform to Clause 4.5.3 of ASCE/SEI 7-16. Mechanical parking
+facilities are exempt from this requirement.
+B.7.2.3.2 Open versus enclosed parking
+Open parking has permanent wall openings for natural ventilation at each parking
+level. The exterior sides of the structure shall have uniformly distributed openings
+on two or more sides. The area of such openings in external walls on a level shall
+be not less than 20% of the total perimeter wall area of each level. The aggregate
+length (i.e. total of widths) of the openings deemed to be providing natural
+ventilation shall be not less than 40% of the perimeter of the level. Open parking
+facilities shall conform to NFPA 88A for natural ventilation.
+Parking facilities that do not meet the definition of open parking shall be designed
+as enclosed parking with mechanical ventilation as required by H.4.12.11.
+
+==== EN PDF p84 (printed B 64) — 2 column(s) ====
+--- column 1 (from left)
+B.7.2.3.3 Parking areas technical requirements
+Parking areas (covered or uncovered) shall be provided for vehicles within
+the plot limits.
+Parking shall not impede fire exit doors, their access and exit discharge path.
+Wheel stoppers of a maximum height of 120 mm and a minimum width of 200 mm
+shall be installed as shown in Figure B.56 where parking bays are adjacent to fences,
+walls, buildings or walkways. Wheel stops should be avoided where they might
+be in the path of pedestrians moving to or from parked vehicles.
+01
+120
+02
+750
+Figure B.56 Vehicle wheel stopper
+Key
+01: Wall/obstruction
+02: Wheel stopper
+--- column 2 (from left)
+For parking entry and exit, a straight, and preferably level, 6 m long access should be
+provided before vehicle access barriers as shown in Figure B.57. Parking areas shall
+be provided with directional arrows and traffic signs, as described in B.11.
+A fixed mirror shall be provided for blind corners.
+No parking area shall be allowed to be utilized as both a parking bay and a loading
+space.
+Basement parking areas shall account for the presence of columns and adjacent
+walls, which shall be covered with protective angle guards of suitable material. Round
+columns do not require protective angle guards.
+01
+03
+02
+Figure B.57 Vehicle access barriers≥6.0 m
+Key
+01: Entry or exit barrier
+02: Entry or exit
+03: Road
+
+==== EN PDF p85 (printed B 65) — 2 column(s) ====
+--- column 1 (from left)
+Dead-end driveways should be avoided. If they are to be included in design,
+they should serve a maximum of eight spaces with manoeuvring space provided
+(see Figure B.58). Tandem parking may be used in the following situations:
+a) residential parking provision of the same residential unit, when the unit requires
+two parking bays according to B.7.2.6.1. Tandem parking shall be limited to two
+bays.
+b) hotel facilities, for parking operated solely through a valet parking service.
+Tandem parking shall be limited to three bays.
+--- column 2 (from left)
+01
+1.8 m
+8
+7
+6
+5
+4 ‖ 02
+3
+2
+1
+≥5.5 m ≥6.0 m ‖ ≥5.5 m
+Figure B.58 Dead end parking
+Key
+01: Turning bay
+02: Maximum eight parking spaces to dead end
+
+==== EN PDF p86 (printed B 66) — 2 column(s) ====
+--- column 1 (from left)
+B.7.2.4 Car parking bay dimensions
+The dimension of car parking bays and driveways shall be not less than the minimum
+values given in Table B.11.
+Parking type Driveway type Bay width (m) Bay length (m) Driveway width
+(m)
+Parallel ‖ One way 2.5 6 3
+(See Figure B.59)
+45° ‖ One way 2.5 5.5 3.3
+(See Figure B.60)
+60° ‖ One way 2.5 5.5 3.8
+(See Figure B.61)
+75° ‖ One way 2.5 5.5 5.5
+(See Figure B.62)
+90° One way 2.5 5.5 5.5
+90° ‖ Two way 2.5 5.5* 6
+(See Figure B.63)
+* For perpendicular (90°) parking bays, the dimensions may be reduced to 5 m × 2.5 m in the following
+circumstances:
+a) all perpendicular bays in plots less than 30 m in length;
+b) up to 10% of perpendicular bays in plots of 30 m length or greater.
+Table B.11 Minimum dimensions for parking
+In designing parking spaces, bays bounded by building structural elements or walls
+shall have an additional space of 300 mm from the structural element if it interrupts
+the opening of vehicle doors or manoeuvring or at the end of the driveway.
+--- column 2 (from left)
+6.0 m
+2.5 m
+≥3.0 m
+2.5 m
+Figure B.59 Parallel parking
+≥3.3 m
+2.5 m
+45°
+01
+5.5 m
+02
+≥2.8 m
+Key
+03
+01: Typical width
+02: Typical length
+03: Width of bays bounded by
+structural elements
+≥3.0 m
+Figure B.60 45° angle parking
+
+==== EN PDF p87 (printed B 67) — 3 column(s) ====
+--- column 1 (from left)
+≥3.8 m
+60°
+2.5 m
+5.5 m
+≥3.0 m
+Figure B.61 60° angle parking
+--- column 2 (from left)
+≥5.5 m
+75°
+01
+2.5 m
+02
+5.5 m
+≥3.0 m
+Figure B.62 75° angle parking
+Key
+01: Typical width
+02: Typical length
+--- column 3 (from left)
+5.5 m ≥6.0 m ‖ 5.5 m
+90°
+2.5 m
+01
+5.5 m
+02
+≥2.8 m ‖ 03
+Figure B.63 90° angle parking
+Key
+01: Typical width
+02: Typical length
+03: Width of bays bounded by structural elements
+
+==== EN PDF p88 (printed B 68) — 2 column(s) ====
+--- column 1 (from left)
+B.7.2.5 Bus parking bays
+Bus parking provisions within plot limits shall conform to Table B.12, Figure B.64
+and Figure B.65.
+The parking dimensions and manoeuvring clearances are based on a 12 m long bus.
+A vehicular manoeuvring analysis shall be conducted to determine requirements
+for alternative bus sizes and other parking angles.
+Angle of parking Bay width (m) Bay length (m) Transition length Manoeuvring
+(m) ‖ width minimum
+(m)
+Parallel to the ‖ 4 13 16 4.5
+road
+Angular – 45° 4 13 - 8
+Perpendicular 4 13 - 15
+Table B.12 Bus parking dimensions
+≥16.0 m ‖ ≥13.0 m ‖ ≥16.0 m
+04 ‖ 04
+01 02 03
+4.5 m
+≥
+≥4.0 m
+Figure B.64 Parallel bus parking
+Key
+01: Driveway curb line
+02: One way
+03: Driveway
+04: Transition length
+--- column 2 (from left)
+4.5 m
+8.0 m
+R 2 m
+R 2 m
+13.0 m
+13.0 m
+4.0 m
+15.0 m
+45°
+45°
+R 12 m ‖ R 12 m
+R 12 m
+Figure B.65 Perpendicular and angular bus parking
+
+==== EN PDF p89 (printed B 69) — 2 column(s) ====
+--- column 1 (from left)
+B.7.2.6 Parking provisions in buildings
+B.7.2.6.1 Parking ratios
+Parking ratios shall be determined in accordance with Table B.13 for the relevant
+building occupancy. Parking requirements set out in the affection plan or DCR shall
+take precedent over Table B.13.
+Occupancy Use Parking ratio
+Assembly Cinema 1 bay for every 50 m2 of NA for staff
+office and food and beverage use
+1 bay for every 70 m2 of retail NA
+1 bay for every 3 seats or 20 m2 of NA of
+cinema screen viewing area, whichever is
+greater
+Exhibition/conference centre 1 bay for every 50 m2 of exhibition/
+conference NA
+Mosques – residential areas and suburbs 1 bay for every 18 worshippers
+Mosques – town centres, industrial areas 1 bay for every 15 worshippers
+and public spaces
+Library 1 bay for every 50 m2 of library NA
+Business Office 1 bay for every 50 m2 of office NA
+Government centre 1 bay for each 50 m2 of office NA
+Retail, malls Retail shops 1 bay for every 70 m2 of retail NA
+Mall 1 bay for every 50 m2 of retail NA
+Motor fuel ‖ Petrol/gas station 2 bays for petrol station
+dispensing ‖ 1 additional bay for every 70 m2 of
+facilities ‖ supporting services NA
+Educational Children nursery 1 bay per classroom
+1 bay for every 50 m2 of staff office NA
+1 bus parking
+Table B.13 Parking ratios
+--- column 2 (from left)
+Occupancy Use Parking ratio
+Educational Kindergarten 1 bay per classroom
+1 bay for every 50 m2 of staff office NA
+1 bus parking for every 3 classrooms
+School 1 bay per classroom
+1 bay for every 50 m2 of staff office NA
+1 bus parking for every 3 classrooms
+University 1 bay for every 50 m2 of classroom NA
+excluding sports hall
+1 bus parking for every 200 students
+10% additional parking for visitors
+Educational institute 1 bay for every 50 m2 of classroom NA
+Residential Studio 1 bay per unit
+1 Bedroom 1 bay per unit
+2 Bedroom 1 bay per unit
+3 Bedroom 2 bays per unit
+4 Bedroom 2 bays per unit
+5 Bedroom, duplex, penthouse 3 bays per unit
+Staff accommodation 1 bay for every 450m2 of residential unit
+NA
+1 bus parking for every 650 m2 of
+residential unit NA
+Labour accommodation Bus calculation based on total number
+of labours/2 shifts (depends on bus
+capacity)
+Student accommodation 1 bay for every 40 residents
+Bus parking for 50% of staff residing
+within complex
+
+==== EN PDF p90 (printed B 70) — 2 column(s) ====
+--- column 1 (from left)
+Occupancy Use Parking ratio
+Hotel ‖ Hotel – Standard room 1 bay for every 5 rooms
+establishment
+Hotel – Suite room 1 bay for every 2 suites
+Hotel apartment 1 bay for every 1 apartment up to 150 m2
+2 bays for every 1 apartment above
+150 m2
+Hotel food and beverage, management 1 bay for every 50 m2 of related space NA
+office, retail
+Hotel meeting, ballroom, function hall 1 bay for every 20 m2 of related space NA
+Healthcare Refer to DHA guidelines, Part B [Ref. B.3
+to Ref. B.18]
+Healthcare centres 1 bay per each patient bed
+1 bay per each 50 m2 of NA for internal
+clinics, staff offices and all occupiable
+spaces
+Industrial Light medium industry 1 bay for every 70 m2 of management
+office NA
+Heavy industry 1 bay for every 70 m2 for office if area
+exceeds 10%
+Warehouse 1 bay for every 70 m2 of management
+office NA
+Table B.13 Parking ratios (continued)
+--- column 2 (from left)
+Parking ratios for any building occupancy not listed in Table B.13 should
+be determined in accordance with RTA parking rates requirements [Ref. B.40].
+When the building includes a mix of occupancies, the parking provided should
+conform to the requirement for each specific occupancy.
+Parking for sport stadiums and event arenas shall be determined according
+to a transport study of the type of sport or event, the number of seats, visitors
+and the public parking and transportation network.
+B.7.2.6.2 Preferred parking
+For buildings that have more than 20 parking bays, designated preferred parking
+shall be provided for a combination of hybrid vehicles, electrical vehicles and carpool
+vehicles.
+The number of preferred parking bays shall be calculated based on the total
+vehicle parking bays required for the building, as defined in B.7.2.6.1.
+The percentage required for preferred parking is 5%. This percentage does
+not include parking bays provided for people of determination (see C.6.4).
+B.7.2.6.3 Charging equipment for electrical vehicles in malls
+For shopping malls, where preferred parking bays are provided in accordance with
+B.7.2.6.2, necessary charging equipment for electrical vehicles shall be provided for
+20% of the total preferred parking bays. Charging equipment shall conform to G.5.
+
+==== EN PDF p91 (printed B 71) — 2 column(s) ====
+--- column 1 (from left)
+B.7.2.7 Bicycle parking provision in building
+Bicycle parking should be located within the building or within a shaded area at
+ground level (see Figure B.66) in easily accessible locations within the plot limit and
+no more than 30 m from the building entrance.
+Parking shall not impede fire exit doors, their access and exit discharge path.
+Figure B.66 Shaded bike areas and indoor bike rack area
+For student accommodation and labour accommodation buildings, bicycle parking
+facilities shall be provided for 10% of building occupants.
+Other buildings shall be provided with bicycle parking equivalent to 5% of the
+building car parking requirement as specified in B.7.2.6.1.
+The dimensions for cycle stands shall be not less than the minimum values given
+in Table B.14 and Figure B.67.
+--- column 2 (from left)
+Parking angle Inclined stand width Distance between two Inclined stand depth
+(X) (m) ‖ stands (D) (m) ‖ (Y) (m)
+25° 1.60 0.85 0.80
+45° 1.45 0.60 1.45
+90° — 0.65 1.90
+Table B.14 Bicycle stand minimum dimensions
+D
+Y
+X
+Figure B.67 Bicycle stand minimum dimensions
+
+==== EN PDF p92 (printed B 72) — 2 column(s) ====
+--- column 1 (from left)
+B.7.3 Service and maintenance access to buildings
+B.7.3.1 Loading and unloading areas
+B.7.3.1.1 General
+The site layout shall allow for loading and unloading of vehicles to take place within
+the plot boundaries. Loading areas shall be located and designed such that the
+vehicle intended to use them can manoeuvre safely and conveniently to and from
+a ROW and can complete loading and unloading without obstructing or interfering
+with any ROW or any parking bay.
+Loading and unloading spaces shall be provided for service vehicles within
+the plot limits off the public street/area.
+The access driveway width for heavy vehicles shall be not less than 9 m two way. One
+way driveway and gates for truck access shall be not less than 4.5 m wide.
+In general, off-street loading areas shall not be located in front of any type
+of building, including industrial buildings. Off-street loading areas shall be located
+on rear or side of buildings in accordance with the plot-defined access in the affection
+plan and DCRs.
+All off-street loading areas shall be drained. They shall be lit in accordance with
+Part H.
+Loading and offloading areas may be located in the facility basement levels, provided
+that appropriate clear height and manoeuvring clearances are maintained to suit the
+size of vehicles accessing the facility.
+--- column 2 (from left)
+B.7.3.1.2 Minimum bays and areas clearances
+The clearances for off-street loading and unloading shall be not less than
+the minimum values given in Table B.15 and shown in Figure B.68
+Truck length (m) Loading area width (m) Loading bay size (m) Height clearance (m)
+12 4 4 x 4 4.5
+15 4 4 x 4 5
+20 4 4 x 4 5
+Table B.15 Required clearances
+03
+01 02
+≥4.0
+Figure B.68 Clearance requirements for loading areas
+Key
+01: Dock leveller
+02: Loading area (Truck length)
+03: Height clearance
+
+==== EN PDF p93 (printed B 73) — 2 column(s) ====
+--- column 1 (from left)
+B.7.3.1.3 Building types requirements
+Space for loading and unloading should be provided for buildings based on the
+building occupancy and operations.
+The off-street loading and unloading area provided for specific uses shall be
+determined according to the truck sizes as shown in Table B.16.
+Use Minimum loading area/truck size provision
+required
+Hotels, malls 1 loading area for a 12 m truck
+Industrial 1 loading area for a 15 m truck
+Any other required off-street loading area 1 loading area for a 9 m truck
+Table B.16 Loading truck size requirement based on use
+B.7.3.1.4 Truck turning radii and clearances
+For trucks and other heavy vehicles, shallow parking angles of 10° to 45° are
+generally appropriate. Aisle widths are dependent on the design of vehicles but
+typically around 15 m to 20 m.
+The clearances for loading and unloading bays for 12 m and 15 m long vehicles
+shall conform to:
+a) Figure B.69 and Figure B.70 for 90° loading and unloading bays; and
+b) Figure B.71 and Figure B.72 for 10° and 45° loading and unloading bays.
+If a vehicular manoeuvring analysis has been conducted, manoeuvring requirements
+based on analysis results can be used instead. For other types of vehicles, minimum
+turning radii shall be determined using a vehicular manoeuvring analysis.
+--- column 2 (from left)
+01
+≥4.0 m
+≥4.0 m
+≥4.0 m
+≥4.0 m
+04 ‖ ≥4.0 m
+≥12.0 m ‖ 12.0 m
+02
+≥4.0 m
+03
+Figure B.69 Loading/unloading area with (90°) manoeuvring for 12 m long trucks
+Key
+01: Dock leveller
+02: Loading area (Truck length)
+03: Loading bay
+04: Draw forward before turning
+
+==== EN PDF p94 (printed B 74) — 2 column(s) ====
+--- column 1 (from left)
+01
+4.0 m
+≥
+4.0 m
+≥
+4.0 m
+≥
+4.0 m
+≥
+4.0 m
+≥
+≥13.7 m 15.0 m
+02
+≥4.0 m
+03
+Figure B.70 Loading/unloading area with (90°) manoeuvring for 15 m long trucks
+Key
+01: Dock leveller
+02: Loading area (Truck length)
+03: Loading bay
+--- column 2 (from left)
+01
+≥4.0 m
+02
+≥4.0 m
+≥4.0 m
+12.0 m ‖ 04
+≥4.0 m
+10°
+≥4.0 m
+12.0 m
+≥4.0 m
+≥4.0 m
+45°
+03
+12.0 m ≥4.0 m ‖ ≥15.0 m
+Figure B.71 Loading/unloading area with (10° and 45°) manoeuvring for 12 m long trucks
+Key
+01: Dock leveller
+02: Side loading
+03: End loading
+04: Draw forward before turning
+
+==== EN PDF p95 (printed B 75) — 1 column(s) ====
+01
+≥4.0 m
+02
+≥4.0 m
+≥4.0 m
+15.0 m
+≥4.0 m
+04
+10° ‖ ≥4.0 m
+15.0 m
+≥4.0 m
+≥4.0 m ‖ 45°
+03
+≥12.0 m ≥4.0 m ‖ ≥18.0 m
+Figure B.72 Loading/unloading area with (10° and 45°) manoeuvring for 15 m long trucks
+Key
+01: Dock leveller
+02: Side loading
+03: End loading
+04: Draw forward before turning
+
+==== EN PDF p96 (printed B 76) — 1 column(s) ====
+B.7.3.2 Service ramps
+Service ramps shall have a width of not less than 1.2 m and a slope of not more than
+8%. Service ramps used by waste containers shall be sized to allow for clear passage
+and manoeuvring of containers.
+At the building entrance door, the ramp landing shall be level, with a 2% maximum
+slope where drainage is required.
+Landing platforms shall be at least 1.2 m deep if doors swing inwards, and 1.5 m
+deep if doors swing outwards, as shown in Figure B.73.
+If the vertical height requires two ramps to achieve the properly graded slope,
+the ramps shall be not longer than 10 m or provided with an intermediate landing.
+The two ramps shall be separated by a level-landing platform of at least 1.2 m long
+with 90° or 180° turns.
+The ramp surface should be hard surfaced and anti-slip.
+Handrails and fall protection shall be provided in accordance with B.6.4.1.7
+and B.6.4.1.8.
+Figure B.73 Service ramp
+
+==== EN PDF p97 (printed B 77) — 2 column(s) ====
+--- column 1 (from left)
+B.7.3.3 Maintenance ladders
+When a building space requires access by ladder, the ladder shall meet the following
+requirements.
+a) Ladders inclined at an angle of 75° to 90° shall be provided with handrails
+on each side. The handrail shall extend not less than 900 mm above the platform,
+parapet wall or roof edge.
+b) There shall be a clear width between handrails of not less than 500 mm.
+c) Ladders with a climbing height of more than 6 m shall be provided with back
+guards, cages or self-retracting lifelines. The climbing height shall be measured
+to the top of the parapet wall or roof.
+d) When cages are provided, they shall encircle the ladder entirely and have clear
+width of not less than 800 mm.
+e) Ladders shall be protected from corrosion.
+f) Ladders shall be provided with a clear bottom landing that is not less than
+900 mm × 900 mm.
+g) Ladders dimensions shall be not less than the minimum values given
+in Table B.17 and Figure B.74.
+Maximum riser Minimum rung ‖ Minimum ladder Minimum toe ‖ Minimum side
+height, R (mm) radius (mm) ‖ width, W (mm) clearance (mm) clearance (mm)
+350 20 800 150 400
+Table B.17 Service ladder minimum dimensions
+Figure B.74
+--- column 2 (from left)
+W
+900
+≥
+01
+R
+6,000
+≤
+Key
+Service ladder requirements ‖ 01: Maximum height without cage
+
+==== EN PDF p98 (printed B 78) — 1 column(s) ====
+Ladders are permitted to provide access to the following areas only:
+1) spaces frequented by personnel for maintenance, repair or monitoring
+of equipment;
+2) non-occupiable spaces accessed only by catwalks and crawl spaces;
+3) raised areas used primarily for purposes of security, life safety or fire safety
+including, but not limited to, observation galleries, prison guard towers, fire
+lookout towers or lifeguard stands; and
+4) non-occupied roofs that are not required to have stairway access.
+B.7.3.4 Access to utilities
+UAE FLSC [Ref. B.1] does not permit ladder access in lieu of stairs to roofs, to
+liquefied petroleum gas (LPG) tanks on roofs, solar power generation systems on
+roofs or fire pump rooms.
+At least one RCC protected exit stairway shall extend to all roofs.
+At least one RCC protected exit stairway shall reach the level of an LPG tank
+installation. Cat ladders, alternate stairs and temporary stairs are not permitted
+(see Ch. 11 of UAE FLSC [Ref. B.1]).
+Solar power generation systems on roofs shall be accessed by one RCC protected exit
+stairway in accordance with Ch. 14 of UAE FLSC [Ref. B.1].
+A fire pump room shall be in the basements or the ground floor, within 6 m visibility
+of a protected exit stair leading to ground floor in accordance with Table 1.9, Ch. 1
+of UAE FLSC [Ref. B.1]. Hatch entry, cat ladders, spiral stairs, winding stairs are not
+allowed to access the fire pump room.

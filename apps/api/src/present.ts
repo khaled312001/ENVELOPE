@@ -191,6 +191,46 @@ export function presentRun(
           moduleDepthM: toWire(levelPlan.layout.moduleDepthM),
           usableAreaM2: toWire(levelPlan.layout.usableAreaM2),
           orientation: toWire(levelPlan.layout.orientation),
+          /* Every turn between perpendicular aisles, checked at an assumed radius and lane. */
+          turning: {
+            innerRadiusM: toWire(levelPlan.turning.innerRadiusM),
+            laneM: toWire(levelPlan.turning.laneM),
+            fitting: toWire(levelPlan.turning.fitting),
+            total: levelPlan.turning.total,
+          },
+          /* Every arrangement packed on the level, with its count: the options a reader picks from. */
+          arrangement: levelPlan.layout.arrangement,
+          arrangements: levelPlan.layout.arrangements.map((a) => ({
+            id: a.id,
+            bayCount: a.bayCount,
+            ...(a.refusal ? { refusal: a.refusal } : {}),
+          })),
+          /*
+            The bays set aside on the level the street reaches (DBC C.6.4, B.7.2.6.2),
+            what the access aisles cost, and every dead-end driveway's bays
+            (B.7.2.3.3 ¶8). Absent on runs stored before 16 Oct 2026.
+          */
+          ...(levelPlan.accessible
+            ? {
+                accessible: {
+                  onGrade: levelPlan.accessible.onGrade,
+                  required: toWire(levelPlan.accessible.required),
+                  placed: toWire(levelPlan.accessible.placed),
+                  vans: levelPlan.accessible.vans,
+                  lost: levelPlan.accessible.lost,
+                  bayCount: toWire(levelPlan.accessible.bayCount),
+                  farthestM: levelPlan.accessible.farthestM ? toWire(levelPlan.accessible.farthestM) : null,
+                  preferred: levelPlan.accessible.preferred
+                    ? {
+                        required: toWire(levelPlan.accessible.preferred.required),
+                        placed: levelPlan.accessible.preferred.placed,
+                      }
+                    : null,
+                  notes: levelPlan.accessible.notes,
+                },
+              }
+            : {}),
+          deadEnds: levelPlan.deadEnds.map((d) => d.bays),
           /*
             Three losses, never one efficiency. A reader who is short of parking
             needs to know which of the three to argue with, and "84% efficient"

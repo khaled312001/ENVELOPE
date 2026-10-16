@@ -3,8 +3,10 @@ import { CircleCheck, CircleDashed, CircleX } from 'lucide-react';
 import type { RunView } from '@web/api/client.js';
 
 import { cn } from '../lib/cn.js';
+import { engineNote } from '../lib/engine-notes.js';
 import { EngineText, useLocale } from '../lib/locale.js';
 import { Badge, PanelHeader } from '../ui/primitives.js';
+import { AdvisorBox } from './AdvisorBox.js';
 import { Footer, Heading, More, NextStep } from './parts.js';
 
 /*
@@ -16,7 +18,7 @@ import { Footer, Heading, More, NextStep } from './parts.js';
   its own words, with regulatory validity last and never assessed.
 */
 export function ChecksCanvas({ run }: { readonly run: RunView }): JSX.Element {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const inv = run.checks.invariants;
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6">
@@ -53,8 +55,8 @@ export function ChecksCanvas({ run }: { readonly run: RunView }): JSX.Element {
               <EngineText className="text-[12px] leading-relaxed text-secondary">{r.statement}</EngineText>
               {r.observed !== null ? (
                 <p className="figure text-[11px] !whitespace-normal break-words text-tertiary">
-                  {r.observed}
-                  {r.expected !== null ? ` / ${r.expected}` : ''}
+                  {engineNote(r.observed, locale) ?? r.observed}
+                  {r.expected !== null ? ` / ${engineNote(r.expected, locale) ?? r.expected}` : ''}
                 </p>
               ) : null}
             </li>
@@ -138,6 +140,8 @@ export function ChecksPanel({
           <EngineText className="block text-[12px] leading-relaxed text-secondary">{v.selfConsistencyNotice}</EngineText>
           <EngineText className="block text-[11.5px] leading-relaxed text-tertiary">{v.independenceLimit}</EngineText>
         </More>
+
+        <AdvisorBox ask={{ step: 'checks', runId: run.runId }} />
 
         {onNext ? (
           <Footer>

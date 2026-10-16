@@ -7,7 +7,7 @@ import type { TracedWire } from '@web/components/TracedValue.js';
 import { Traced } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
-import { EngineNote, EngineText, useLocale } from '../lib/locale.js';
+import { EngineMessage, EngineNote, EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, EmptyState, Notice, PanelHeader, Spinner } from '../ui/primitives.js';
 import { IconTile } from '../ui/tile.js';
@@ -199,7 +199,11 @@ export function SheetPanel({
           </>
         )}
 
-        {error ? <Notice>{error}</Notice> : null}
+        {error ? (
+          <Notice>
+            <EngineMessage text={error} />
+          </Notice>
+        ) : null}
 
         <Footer>
           {read ? (

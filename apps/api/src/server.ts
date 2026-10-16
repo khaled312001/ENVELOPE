@@ -115,6 +115,7 @@ import {
 } from './org-routes.js';
 import { ANY_ROLE, requirePlotFor, requireRunFor, visibleRuns } from './access.js';
 import { createThrottle } from './throttle.js';
+import { type AdvisorConfig, registerAdvisorRoutes } from './advisor.js';
 import { SqliteRunRepository, type RunRepository, type StoredRun } from './store.js';
 
 const DEV_ACK = 'I understand these rules are not approved';
@@ -164,6 +165,8 @@ export interface BuildOptions {
    * routes answer the same whichever the app server does.
    */
   readonly mountedAt?: string;
+  /** Claude's reading of a step against the Dubai Building Code; null or absent switches it off. See `advisor.ts`. */
+  readonly advisor?: AdvisorConfig | null;
 }
 
 /**
@@ -378,6 +381,15 @@ export async function build(
 
   registerIntakeRoutes(app, costly);
   registerGeoRoutes(app, costly);
+  registerAdvisorRoutes(app, {
+    config: options.advisor ?? null,
+    // Its own, tighter limit: one analysis is a paid call to Claude, not a computation on this host.
+    costly: { preHandler: createThrottle(6) },
+    loadRun: async (request, runId) => {
+      const { run } = await requireRunFor(repo, accounts, runId, await who(request), ANY_ROLE);
+      return JSON.parse(run.output) as Record<string, unknown>;
+    },
+  });
   if (accounts) registerAuthRoutes(app, accounts);
   if (accounts) registerOrgRoutes(app, accounts);
 
@@ -1888,7 +1900,19 @@ function runInputFrom(
       placement an assumption.
     */
     ...(body.levels ? { levelSchedule: body.levels } : {}),
-    ...vehicleAccessOf(body),
+    ...levelPlanOf(body),
+  };
+}
+
+/** What the actor stated about the parking level: the entrance, and the arrangement picked. */
+function levelPlanOf(body: RunRequest): Pick<RunInput, 'levelPlan'> {
+  const access = vehicleAccessOf(body).levelPlan;
+  if (access === undefined && body.parkingArrangement === undefined) return {};
+  return {
+    levelPlan: {
+      ...access,
+      ...(body.parkingArrangement === undefined ? {} : { arrangement: body.parkingArrangement }),
+    },
   };
 }
 

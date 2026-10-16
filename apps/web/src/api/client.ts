@@ -362,6 +362,8 @@ export interface OpeningPlacementBody {
  * This is the screen the 30 Aug 2026 meeting was about. Every rectangle here was
  * placed by the engine; the drawing code below adds a colour and nothing else.
  */
+export type ParkingArrangementId = 'WIDTH' | 'DEPTH' | 'PERIMETER' | 'SLOPED' | 'FIELD_WIDTH' | 'FIELD_DEPTH';
+
 export interface LevelPlanView {
   readonly bayCount: TracedWire;
   readonly areaPerBayM2: TracedWire;
@@ -370,6 +372,46 @@ export interface LevelPlanView {
   readonly usableAreaM2: TracedWire;
   /** Which way round the runs were laid, of the two the engine packed. */
   readonly orientation: TracedWire;
+  /**
+   * The arrangement laid out, and every one the level was packed in with its
+   * count — the options a reader may pick from. Optional: runs stored before
+   * 16 Oct 2026 carry neither.
+   */
+  readonly arrangement?: ParkingArrangementId;
+  /**
+   * Every turn between perpendicular aisles, checked at Table B.9's curved-ramp
+   * radius and lane — both assumed, since the code states none for an aisle.
+   * Optional: runs stored before 16 Oct 2026 carry none.
+   */
+  readonly turning?: {
+    readonly innerRadiusM: TracedWire;
+    readonly laneM: TracedWire;
+    readonly fitting: TracedWire;
+    readonly total: number;
+  };
+  readonly arrangements?: readonly {
+    readonly id: ParkingArrangementId;
+    readonly bayCount: number;
+    readonly refusal?: string;
+  }[];
+  /**
+   * The bays set aside on the level the street reaches: accessible ones under
+   * DBC C.6.4 with their access aisles, and preferred ones under B.7.2.6.2.
+   * Optional: runs stored before 16 Oct 2026 carry none.
+   */
+  readonly accessible?: {
+    readonly onGrade: boolean;
+    readonly required: TracedWire;
+    readonly placed: TracedWire;
+    readonly vans: number;
+    readonly lost: number;
+    readonly bayCount: TracedWire;
+    readonly farthestM: TracedWire | null;
+    readonly preferred: { readonly required: TracedWire; readonly placed: number } | null;
+    readonly notes: readonly string[];
+  };
+  /** Bays on each dead-end stretch of driveway, B.7.2.3.3 ¶8 (eight advised). Optional likewise. */
+  readonly deadEnds?: readonly number[];
   /** Three separate losses, in bays and in square metres. Never one efficiency. */
   readonly losses: {
     readonly reserved: { readonly areaM2: string; readonly bays: number };
@@ -992,6 +1034,8 @@ export interface RunRequestBody {
    * with the recommendation reported beside it.
    */
   readonly chosenAccessEdgeSeq?: number;
+  /** The parking arrangement the reader picked from a run's `levelPlan.arrangements`. USER_SET. */
+  readonly parkingArrangement?: ParkingArrangementId;
   /**
    * The entrance the reader placed: one two-way opening, or an entry and an
    * exit side by side or apart, each at a point along its boundary. Never sent
@@ -1173,7 +1217,29 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(attachment),
     }),
+
+  /** Whether Claude's reading of a step is switched on for this deployment. */
+  advisorStatus: (actor: Actor): Promise<{ readonly enabled: boolean }> =>
+    call<{ readonly enabled: boolean }>('/api/advisor', { actor, method: 'GET' }),
+
+  /** Claude's reading of one step against the Dubai Building Code. Text beside the figures; it changes none of them. */
+  advise: (actor: Actor, body: AdviseBody): Promise<AdviseResult> =>
+    call<AdviseResult>('/api/advise', { actor, method: 'POST', body: JSON.stringify(body) }),
 };
+
+export interface AdviseBody {
+  readonly step: 'capacity' | 'parking' | 'checks' | 'refusal';
+  readonly locale: 'ar' | 'en';
+  readonly runId?: string;
+  readonly refusal?: string;
+  readonly request?: unknown;
+}
+
+export interface AdviseResult {
+  readonly text: string;
+  readonly model: string;
+  readonly consulted: readonly string[];
+}
 
 /**
  * The deployment status, as `/api/dashboard` returns it.

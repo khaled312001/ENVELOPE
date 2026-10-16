@@ -5,7 +5,7 @@ import { type Actor, api, ApiError, type RunView } from '@web/api/client.js';
 import { hashOf } from '@web/gateHash.js';
 
 import { cn } from '../lib/cn.js';
-import { useLocale } from '../lib/locale.js';
+import { EngineMessage, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Notice, PanelHeader, Spinner } from '../ui/primitives.js';
 
@@ -167,7 +167,11 @@ export function ExportPanel({ actor, run, onSigned }: { readonly actor: Actor; r
           {open ? <Check className="size-4 text-accent-strong" aria-hidden="true" /> : <Lock className="size-4 text-secondary" aria-hidden="true" />}
           {open ? t.exports.files : t.exports.locked}
         </p>
-        {error ? <Notice>{error}</Notice> : null}
+        {error ? (
+          <Notice>
+            <EngineMessage text={error} />
+          </Notice>
+        ) : null}
         {open ? (
           <>
             {filesBlock}

@@ -161,16 +161,16 @@
     "bayAreaFactorClass": "ASSUMED",
     "bandAM2": "16000",
     "bandBM2": "17920",
-    "bandCM2": "10451.6136",
+    "bandCM2": "10258.0652",
     "governingBand": "PARKING",
-    "governingGfaM2": "10451.6136",
-    "headroomToNextM2": "5548.39",
+    "governingGfaM2": "10258.0652",
+    "headroomToNextM2": "5741.93",
     "nextBindingBand": "REGULATORY",
     "levels": "8",
     "formulas": {
       "bandA": "FAR 5 × plot area 3200.00 m² (parking excluded from FAR)",
       "bandB": "tower plate 1280.00 m² × 14 level(s)",
-      "bandC": "108 unit(s) supportable by parking × 96.77 m² GFA per unit",
+      "bandC": "106 unit(s) supportable by parking × 96.77 m² GFA per unit",
       "governingGfa": "min(band A, band B, band C)",
       "levels": "floor(min(14, governing GFA ÷ tower plate))"
     },
@@ -222,6 +222,109 @@
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION"
       },
+      "turning": {
+        "innerRadiusM": {
+          "value": "4",
+          "node": "n142",
+          "parameterId": "parking.turning_inner_radius_m",
+          "provenanceClass": "ASSUMED",
+          "renderHint": "AMBER_DOTTED_EDITABLE",
+          "unit": "m"
+        },
+        "laneM": {
+          "value": "3.5",
+          "node": "n145",
+          "parameterId": "parking.turning_lane_m",
+          "provenanceClass": "ASSUMED",
+          "renderHint": "AMBER_DOTTED_EDITABLE",
+          "unit": "m"
+        },
+        "fitting": {
+          "value": "9",
+          "node": "n147",
+          "parameterId": "parking.turns_fitting",
+          "provenanceClass": "ASSUMED",
+          "renderHint": "AMBER_DOTTED_EDITABLE",
+          "unit": "turns"
+        },
+        "total": 9
+      },
+      "arrangement": "SLOPED",
+      "arrangements": [
+        {
+          "id": "WIDTH",
+          "bayCount": 0,
+          "refusal": "a straight ramp climbing a 3.2 m storey needs 6.30 × 30.27 m (DBC Tables B.9 and B.10) and this packing has 65.00 × 26.36 m"
+        },
+        {
+          "id": "DEPTH",
+          "bayCount": 18
+        },
+        {
+          "id": "PERIMETER",
+          "bayCount": 0,
+          "refusal": "a straight ramp climbing a 3.2 m storey needs 6.30 × 30.27 m (DBC Tables B.9 and B.10), reached from the ring at one end of the island, and the 42.00 × 6.50 m island does not have it clear of the core"
+        },
+        {
+          "id": "SLOPED",
+          "bayCount": 56
+        }
+      ],
+      "accessible": {
+        "onGrade": true,
+        "required": {
+          "value": "3",
+          "node": "n160",
+          "parameterId": "parking.accessible_required",
+          "provenanceClass": "ASSUMED",
+          "renderHint": "AMBER_DOTTED_EDITABLE",
+          "unit": "bays"
+        },
+        "placed": {
+          "value": "3",
+          "node": "n166",
+          "parameterId": "parking.accessible_bays",
+          "provenanceClass": "ASSUMED",
+          "renderHint": "AMBER_DOTTED_EDITABLE",
+          "unit": "bays"
+        },
+        "vans": 1,
+        "lost": 2,
+        "bayCount": {
+          "value": "50",
+          "node": "n168",
+          "parameterId": "parking.entry_level_bays",
+          "provenanceClass": "ASSUMED",
+          "renderHint": "AMBER_DOTTED_EDITABLE",
+          "unit": "bays"
+        },
+        "farthestM": {
+          "value": "9.4",
+          "node": "n170",
+          "parameterId": "parking.accessible_farthest_m",
+          "provenanceClass": "ASSUMED",
+          "renderHint": "AMBER_DOTTED_EDITABLE",
+          "unit": "m"
+        },
+        "preferred": {
+          "required": {
+            "value": "6",
+            "node": "n246",
+            "parameterId": "parking.preferred_required",
+            "provenanceClass": "ASSUMED",
+            "renderHint": "AMBER_DOTTED_EDITABLE",
+            "unit": "bays"
+          },
+          "placed": 6
+        },
+        "notes": [
+          "The accessible route from each access aisle to the core (C.6.4.2 f) and the sign at 2,100 mm (C.6.4.2 h) are not drawn, and walking distance is NOT ASSESSED: only the straight line to the core is measured."
+        ]
+      },
+      "deadEnds": [
+        2,
+        2
+      ],
       "losses": {
         "reserved": {
           "areaM2": "288",
@@ -1947,7 +2050,7 @@
       "grade": {
         "bayCount": {
           "value": "52",
-          "node": "n141",
+          "node": "n149",
           "parameterId": "parking.grade_bays",
           "provenanceClass": "DERIVED",
           "renderHint": "NEUTRAL_WITH_CITATION",
@@ -2175,12 +2278,12 @@
     "parkingInFar": {
       "countsTowardFar": {
         "regulatoryGfaM2": "10644.70",
-        "governingGfaM2": "10451.61",
+        "governingGfaM2": "10258.07",
         "governingBand": "PARKING"
       },
       "excludedFromFar": {
         "regulatoryGfaM2": "16000.00",
-        "governingGfaM2": "10451.61",
+        "governingGfaM2": "10258.07",
         "governingBand": "PARKING"
       },
       "regulatorySpreadM2": "5355.30",
@@ -2209,10 +2312,10 @@
         }
       ],
       "cars": {
-        "engine": 108,
-        "drawingSet": 108,
-        "dxf": 108,
-        "modelFile": 108
+        "engine": 106,
+        "drawingSet": 106,
+        "dxf": 106,
+        "modelFile": 106
       },
       "stampedIn": [
         "json",
@@ -2290,6 +2393,10 @@
             "assumedInk": false
           },
           {
+            "name": "ENV-B1-TURN",
+            "assumedInk": true
+          },
+          {
             "name": "ENV-B1-RAMP-ARROW",
             "assumedInk": false
           },
@@ -2338,11 +2445,19 @@
             "assumedInk": false
           },
           {
+            "name": "ENV-G-TURN",
+            "assumedInk": true
+          },
+          {
             "name": "ENV-G-RAMP-ARROW",
             "assumedInk": false
           },
           {
             "name": "ENV-G-RAMP",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-G-ACCESS-AISLE",
             "assumedInk": false
           },
           {
@@ -2355,6 +2470,14 @@
           },
           {
             "name": "ENV-G-BAY-NUMBER",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-G-BAY-ACCESSIBLE",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-G-BAY-PREFERRED",
             "assumedInk": false
           },
           {

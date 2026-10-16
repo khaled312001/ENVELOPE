@@ -1,0 +1,569 @@
+
+==== EN PDF p38 (printed B 18) — 2 column(s) ====
+--- column 1 (from left)
+B.4 General architectural provisions
+B.4.1 General requirements
+Buildings shall be designed according to the planning limitations and provisions
+required by the Authorities, as stipulated in development control regulations (DCR)
+and/or affection plans. Limitations on development include, but are not limited to:
+a) authorized use of the building;
+b) building setbacks;
+c) floor to area ratio;
+d) access locations;
+e) the gate level;
+f) building service lines.
+Buildings located in heritage areas shall respect the identity of these areas and shall
+adhere to any conservation requirements imposed by the Authorities.
+The building or development should take the following into account:
+1) Arabic and Islamic cultural identity;
+2) local architectural character, especially for buildings of cultural significance;
+3) the building’s relationship with the surrounding environment;
+4) the building’s compatibility with the planning limitations and urban planning
+themes of surrounding developments.
+The massing of the proposed building should take into account the visual privacy of
+adjacent structures and buildings in the surrounding properties and neighbourhoods,
+as well as the privacy of different uses and occupancies within the same development.
+--- column 2 (from left)
+B.4.2 Development limitation
+B.4.2.1 Gate level
+The gate level is a defined height on the plot boundary at the vehicular or pedestrian
+access point to the plot. It is an elevation difference between the road level (existing
+or future) and the level of the plot’s access point.
+The gate level of a plot shall be a minimum height of +300 mm from the edge of the
+road or a slope of between 2-5% from the edge of the road to the plot’s access point.
+The gate level, and the levels of the plot’s corners, are calculated based on Dubai
+Roads and Transport Authority’s (RTA) standard cross-section of road right of way
+(ROW), next to the plot.
+
+==== EN PDF p39 (printed B 19) — 2 column(s) ====
+--- column 1 (from left)
+B.4.2.2 Building height
+Building heights shall follow the DCRs and affection plans.
+Buildings plots located in areas requiring Dubai Civil Aviation Authority (DCAA)
+approval (as noted in the affection plan, DCR or DCAA map) shall meet the
+Authority’s requirements and the height limitation imposed.
+Building height shall be calculated from the approved road edge level at the main plot
+access to the average finished floor level (FFL) of the roof as shown in Figure B.6.
+The total building height is the vertical distance measured from the approved road
+edge level at the main plot access to the highest roof surface or element.
+Building ground should be elevated from adjacent roads to protect from flooding.
+Elevated access points shall also meet the requirements in C.5.
+--- column 2 (from left)
+08
+09
+2%-5%
+10
+Figure B.6 Building height
+Key
+01: Plot limit ‖ 06: Gate level
+02: Roof level ‖ 07: Road edge level
+03: Last floor ‖ 08: Roof structure
+04: Total building height ‖ 09: Ground floor
+05: Building height ‖ 10: Basement
+
+==== EN PDF p40 (printed B 20) — 2 column(s) ====
+--- column 1 (from left)
+To calculate the total allowable building height, the allowable number of floors,
+as defined by the affection plan or DCR, shall be multiplied by 6 m per floor.
+This does not impose restrictions on single floor heights.
+Example: For a building with G+10 floors limit, the maximum allowable height shall be
+calculated as 11 (the number of floors) × 6 m (the factor) = 66 m maximum building
+height. See Figure B.7.
+Parts of buildings and installations may exceed the maximum allowable height
+provided that this increase does not conflict with DCAA or DCR requirements. These
+parts include:
+a) ornamental elements such as minarets, dome and towers that are embellished
+in traditional and aesthetic patterns;
+b) chimneys and smokestacks, water reservoirs, elevator shafts, stairways, radio
+and television aerials, wind towers, pergolas, helipads and roof shading devices;
+c) advertisement boards conforming to Authority regulations for advertising
+(see E.10.9 for restrictions on advertising within façades).
+When helipads are provided on buildings, they shall conform to standard
+specifications approved by DCAA.
+--- column 2 (from left)
+11
+10
+9
+8
+7
+6
+5
+4
+3
+≤66 m 01
+2
+1
+Figure B.7 Example of allowable building height calculation
+Key
+01: Maximum allowable total building height
+
+==== EN PDF p41 (printed B 21) — 2 column(s) ====
+--- column 1 (from left)
+B.4.2.3 Building setbacks
+The building setback requirements in the affection plan or DCR shall take precedence
+over the setback requirements in this section.
+When setback limitations for the plot or development are not defined, setbacks shall
+be calculated from the plot limit to the face of buildings in accordance with Table B.1.
+Building height by number ‖ Setback from neighbour (X) ‖ Setback from road
+of floors ‖ (see Figure B.8) (m) ‖ (see Figure B.9) (m)
+Basement 0 0
+Ground (G) 3 0
+G+1 to G+3 3 0
+G+4 3.75 0
+G+5 4.50 0
+G+6 5.25 0
+G+7 6 0
+G+8 6.75 0
+G+9 7.50 0
+G+10 and above 7.50 0
+Table B.1 Setback calculation table
+Setbacks shall be calculated from ground floor and above.
+Allowance for zero setback from neighbours shall be according to each affection plan
+or development DCR. Zero setback between two neighbouring retail plots is allowed
+unless otherwise defined in the affection plan or DCR. This only applies when both
+plots have retail use classification and for dedicated retail occupancy floors.
+--- column 2 (from left)
+01 01 01
+x x
+Figure B.8 Setback from neighbours ‖ Figure B.9 Zero setback facing road
+Key ‖ Key
+01: Plot ‖ 01: Plot
+X: Setback from neighbour (see Table B.1) ‖ Plot limit
+Plot limit
+
+==== EN PDF p42 (printed B 22) — 2 column(s) ====
+--- column 1 (from left)
+Setbacks are shown in plan view in Figure B.10.
+Y
+Setbacks shall also allow for fire separation between
+buildings and fire truck access routes. To prevent
+external fire spread, the building, shall be physically
+separated from adjacent plots/buildings or external
+walls and openings of the building shall be fire
+resistance rated (see Sections 2.7 and 2.8, Ch. 1 of
+UAE FLSC [Ref. B.1]).
+Fire truck access shall be provided between buildings
+and around buildings as required by Ch. 2 of UAE
+FLSC [Ref. B.1]. This vehicle access might need to be
+accommodated within the plot limits. ‖ 02
+X
+Where high-rise and super high-rise buildings (as
+defined by UAE FLSC [Ref. B.1]) are built on a podium
+and the distance from fire truck accessway to the
+façade of the high-rise/super high-rise exceeds 30 m,
+fire truck access to the podium shall be provided as
+required by Section 2.8, Ch. 2 of UAE FLSC [Ref. B.1].
+Setbacks from sikkas shall be calculated from the
+centre of the sikka (see Figure B.11). When the sikka
+width is more than 6 m, the maximum applicable width
+from the centre of the sikka is 3 m. If the building
+setback from the plot limit is found to be 1.5 m or less, ‖ Figure B.10 Setback plan
+no setback is required.
+Key
+Plots neighbouring cemeteries shall provide a minimum ‖ 01: Building footprint
+setback of 3 m. ‖ 02: Neighbour
+03: Allowable projection
+Plots adjacent to metro stations or metro
+04: Road
+infrastructure shall conform to the RTA railway
+protection code for the emirate of Dubai [Ref. B.2].
+--- column 2 (from left)
+01 01
+02
+01 X
+03
+Y Y
+04
+Figure B.11 Setback from sikka
+Key
+X: Setback from neighbour (see Table B.1) ‖ 01: Plot
+Y: Setback from centre of sikka ‖ Y: Setback from centre of sikka
+Plot limit ‖ Plot limit
+Setback line
+
+==== EN PDF p43 (printed B 23) — 1 column(s) ====
+The distance between multiple buildings on the same plot shall be equal to the
+setback required for both buildings from a neighbouring building plot, identified as (X)
+in Figure B.12, measured from the least horizontal distance between buildings. This
+distance shall be not less than 3 m between buildings height of ground floor only.
+Y
+01
+X X
+02 02
+X ‖ X
+Key
+01: Building footprint
+02: Neighbour
+03
+01
+03: Allowable projection
+04: Road
+X: Setback from neighbour, internal setback between buildings
+Y: Setback from centre of sikka
+04 ‖ Plot limit
+Setback line
+Figure B.12 Setbacks between buildings in same plot
+
+==== EN PDF p44 (printed B 24) — 2 column(s) ====
+--- column 1 (from left)
+The following structures shall be allowed within
+setbacks up to the plot limit as shown in Figure B.13:
+a) plot boundary wall/fence;
+b) site enhancement landscape and hardscape;
+c) ring main unit (RMU) rooms and substations as
+required by service Authorities;
+d) basement and building substructure;
+e) pergolas and light weight parking shading
+structures;
+f) uncovered car parking and roadways;
+02
+g) security and/or guard rooms;
+h) retail structures on plots where the neighbour is
+also a retail occupancy.
+Such arrangements shall not obstruct exit discharge to ‖ 05
+fire vehicle access way/public road (if any).
+Figure B.13 Allowed construction within setback
+--- column 2 (from left)
+03
+Key
+01: Building footprint – above ground
+02: Basement & building substructure
+03: Sikka
+01
+04: Road
+05: RMU rooms substations
+06: Security or guard rooms
+Plot limit
+Setback line
+06
+04
+
+==== EN PDF p45 (printed B 25) — 2 column(s) ====
+--- column 1 (from left)
+B.4.2.4 Building areas
+B.4.2.4.1 Gross area (GA)
+Gross area (GA) is the floor area within the inside
+perimeter of the external walls of a building. The
+01
+measurement excludes shafts and courtyards, but
+includes corridors, stairways, ramps, closets, base of
+atria (or similar voids) and the thickness of interior
+walls, columns or other features.
+01
+GA is illustrated in Figure B.14. The highlighted areas
+are those included in the definition.
+01
+GA is used for occupant load calculations as defined in
+Table B.2, elevator exemptions in Part C, in addition to
+other requirements in the DBC.
+01
+Figure B.14 GA plan
+Key
+01: Residential unit
+02: Elevator lobby
+03: Corridor
+04: Balcony
+05: Service room
+06: Staircase
+--- column 2 (from left)
+01 ‖ 01
+01
+01
+02 ‖ 06
+01
+05
+03
+01
+01 ‖ 01
+04
+
+==== EN PDF p46 (printed B 26) — 2 column(s) ====
+--- column 1 (from left)
+B.4.2.4.2 Net area (NA)
+Net area (NA) is the actual occupied area, not
+including unoccupied accessory areas such as corridors,
+stairways, ramps, toilet rooms, mechanical rooms and ‖ 01 02
+closets.
+The calculation of NA is illustrated in the sample plan
+shown in Figure B.15.
+NA is used for occupant load calculations as defined
+04
+in Table B.2 and parking rates defined in B.7.2.6.1, in
+addition to other requirements in the DBC.
+05
+06
+Figure B.15 Example of net area for different occupancies
+Key
+01: Meeting room 1
+02: Lobby
+03: Ballroom
+04: Prayer room
+05: Toilets
+06: Meeting room 2
+07: Restaurant
+08: Kitchen
+--- column 2 (from left)
+03
+08
+07
+
+==== EN PDF p47 (printed B 27) — 2 column(s) ====
+--- column 1 (from left)
+B.4.2.5 Balconies, building projections and terraces
+B.4.2.5.1 Limitations
+A balcony, building projection or terrace (see Figure B.16 and Figure B.17) can be
+provided along the whole or part of the building façade constructed on the side of
+the plot that overlooks a road or neighbours. Balconies, building projections and
+terraces shall meet the following requirements and limitations.
+a) The affection plan or DCR shall take precedence over the provisions in this
+subclause.
+b) A balcony or projecting building element shall be situated at an elevated level
+from ground floor, not less than 3 m from FFL of sidewalks and footpaths as
+shown in Figure B.16.
+c) Projections from vehicle roads shall be set back a minimum of 0.6 m from
+the edge of vehicle road, or a height clearance of not less than 5.5 m shall be
+maintained from road level as shown in Figure B.16.
+d) Projections above fire truck accessways shall be not less than 4.5 m in height from
+road level in accordance with Section 2, Ch. 2 of UAE FLSC [Ref. B.1].
+e) Projections outside the plot boundary are permitted on the road-facing side when
+the width of road in which the balcony or projection protrudes exceeds 9 m.
+f) Balconies and building projections shall be limited to 10% of the facing street
+width beyond the plot limit and 1.8 m maximum projection into the ROW as
+shown in Figure B.16.
+g) The minimum horizontal distance of balconies and building projections from other
+adjacent buildings, structures or neighbouring plots shall maintain the minimum
+required setback (see Figure B.17).
+--- column 2 (from left)
+Plots adjacent to metro stations or metro infrastructure shall conform to the RTA
+railway protection code for the emirate of Dubai [Ref. B.2].
+Privacy of neighbouring plots should be taken into account when setting the location
+and orientation of balconies.
+A privacy partition shall be provided between connected balconies of different
+residential units.
+
+==== EN PDF p48 (printed B 28) — 2 column(s) ====
+--- column 1 (from left)
+≤10% of x
+≤1.8 m
+≥0.6 m
+5.5 m
+≥
+x
+3 m
+≥
+01
+03
+Figure B.16 Projection from ROW
+--- column 2 (from left)
+Key
+01: Road level
+02: Sidewalk level
+03: Plot limit
+X: Road width
+≤1.8 m
+3 m
+≥
+02
+
+==== EN PDF p49 (printed B 29) — 2 column(s) ====
+--- column 1 (from left)
+01
+03
+02
+3 m
+≥
+04
+Figure B.17 Projections within setbacks
+Key
+01: Plot limit, if applicable
+02: Neighbour
+03: Minimum required setback
+04: Ground level
+--- column 2 (from left)
+B.4.2.5.2 Guardrails for fall protection
+Guardrails are required for any space, walking or standing which is elevated 760 mm
+above the FFL, with the exception of:
+a) the loading side of loading docks;
+b) the audience side of stages and raised platforms, including stairs leading up to the
+stage and raised platforms;
+c) raised stage and platform floor areas, such as runways, ramps and side stages;
+d) vertical openings in the performance area of stages and platforms;
+e) elevated walking surfaces associated with stages and platforms for access/use of
+special lighting or equipment; and
+f) along vehicle service pits not accessible to the public.
+The guardrail height from FFL (or lowest stepping feature, A in Figure B.18) shall be
+not less than 1,200 mm.
+The separation distance between vertical posts or members (see Figure B.18), curved
+frames or design features, of balcony, guardrail or handrail shall not allow the passage
+of a 100 mm diameter sphere.
+Horizontal climbable elements are not permitted within 865 mm height of the
+bottom of the guardrail, i.e. (B) in Figure B.18.
+If the design requires any gap between finished floor surface and the bottommost
+horizontal component of the railing (see Figure B.18), the gap shall be not more than
+100 mm.
+The balcony, handrail, guardrail assembly shall be able to withstand the loads
+specified in ASCE/SEI 7-16.
+If the design demands usage of glass panels in the balcony construction, such glass
+shall provide containment and withstand the loads specified in ASCE/SEI 7-16
+(see E.9.2).
+
+==== EN PDF p50 (printed B 30) — 2 column(s) ====
+--- column 1 (from left)
+01
+≤100
+1,200
+≥
+865
+≤100 ‖ ≥ A
+B
+100
+≤
+02 ‖ 02
+(a) Guardrail with stepping feature within 865 mm from FFL
+Figure B.18 Guardrail specifications
+Key
+01: Gaps more than 100 mm not acceptable
+02: Stepping feature within 865 mm of base of guardrail not acceptable
+--- column 2 (from left)
+01
+≤100
+1,200
+≥
+865
+≥ A
+B
+100
+≤
+(b) Guardrail without stepping feature within 865 mm from FFL
+
+==== EN PDF p51 (printed B 31) — 2 column(s) ====
+--- column 1 (from left)
+B.4.2.5.3 Access doors
+Balconies and terraces shall not have self-closing, self-latching or self-locking doors,
+which can accidentally lock people outside in the balcony or terrace.
+Key
+01: Building
+02: Pergola
+03: Non-functional projection
+04: Parking canopy
+05: Parking
+06: Annex building
+07: Roof eaves
+Plot limit ‖ Figure B.19
+--- column 2 (from left)
+B.4.2.6 Plot coverage
+Plot coverage shall be calculated as the horizontal area occupied by all main and
+annex buildings on the same plot, calculated from the external surfaces of external
+walls or useful roofed balconies in the ground or upper floors, whichever have more
+floor projections.
+The following shall be excluded (see Figure B.19):
+a) lightweight structures such as a canopy, parking shade(s), pergola(s); and
+b) ornamental and non-accessible building projections such as roof eaves, window
+shades.
+03 ‖ 04
+02
+01
+01 05
+02
+06
+07
+Plot coverage
+
+==== EN PDF p52 (printed B 32) — 2 column(s) ====
+--- column 1 (from left)
+B.4.3 Building floors general requirements
+B.4.3.1 Ground floor
+Ground floor use allowance shall conform to planning regulations. A building
+or facility may have more than one ground floor where a split-level entrance
+has been provided and where a building plot has significant level difference.
+The ground floor shall be connected to the adjacent public ways by lobbies.
+The number and location of exits discharging directly from the building to outside
+shall conform to Section 3.10, Ch. 3 of UAE FLSC [Ref. B.1]. The points of exit
+discharge shall be separated from each other on plan by one third (sprinklered
+buildings) or one half (unsprinklered buildings) of the largest measurements
+of the building diagonal distance (see Figure B.20).
+An emergency command centre conforming to Table 1.9, Ch. 1 and Section 2.9,
+Ch. 2 of UAE FLSC [Ref. B.1] shall be provided in malls, amusement park, high-rise
+and super high-rise buildings. The emergency command centre may be shared with
+a security room, rest area or control room, provided that it meets emergency
+command centre specifications. ‖ Figure
+The emergency command centre shall be at ground floor and separated from the
+remainder of the building by a 1 h fire barrier constructed in accordance with Ch. 1
+of UAE FLSC [Ref. B.1]. The entrance to the emergency command centre shall
+be on the exterior of the building along the fire accessway or if this is not feasible,
+at the main entrance lobby of the building. Emergency command centres shall meet
+the minimum room sizes specified in B.5.2.
+--- column 2 (from left)
+B
+B
+A
+A
+Key
+A: Building diagonal distance
+B: Direct distance between exit doors
+NOTE:
+B = 1/3 A for sprinklerled buildings
+B = 1/2 A for unsprinklered buildings
+B.20 Building exit separation
+
+==== EN PDF p53 (printed B 33) — 2 column(s) ====
+--- column 1 (from left)
+B.4.3.2 Basements
+The space use shall conform to planning regulations.
+Basement floors shall not extend beyond the plot limits.
+The basement shall be connected to the building by means of vertical circulation
+(staircases/elevators) in accordance with Ch. 1 to Ch. 10 of UAE FLSC [Ref. B.1].
+The basement slab soffit level shall not extend 1.2 m above the building gate level as
+shown in Figure B.21.
+B.4.3.3 Podium
+Building podiums shall conform to planning regulations.
+When podium floors are used for habitable and occupiable spaces, these spaces
+shall be designed as indoor spaces with building envelope, acoustic treatment
+and ventilation/thermal comfort as required by Part E and Part H.
+--- column 2 (from left)
+01
+Key
+01: Upper floor
+02: Ground floor
+03: Basement floor
+04: Gate level
+02
+04
+1.2 m
+≤
+03
+Figure B.21 Basement height from gate level
+
+==== EN PDF p54 (printed B 34) — 3 column(s) ====
+--- column 1 (from left)
+B.4.3.4 Roof
+The space use shall conform to planning regulations.
+Accessible roofs shall be provided with life safety
+features such as fall protection and guardrails in
+accordance with B.4.2.5.2.
+Water proofing and thermal insulation material shall be
+fitted on the roof deck in order to protect it from water
+leaks (see E.7.3.2) and solar gain effects (see E.5.2.3).
+Structures at roof level shall not exceed 50% of the
+roof floor area as shown in Figure B.22.
+Roof structures shall be set back a minimum of
+1.5 m from the building envelope. Staircases and
+elevator rooms are excluded from the 1.5 m setback
+requirement, but they shall be calculated as part of the
+50% construction area.
+Roof structures occupying more than 50% of the roof
+floor area or not provided with setback shall be treated
+as a regular floor.
+--- column 2 (from left)
+≥1.5 m
+01
+≥1.5 m
+02
+Figure B.22 Roof coverage and setback
+Key
+01: Staircase or elevator room
+02: Roof structure not more than 50% of the roof area
+03: Roof
+--- column 3 (from left)
+03
+≥1.5 m

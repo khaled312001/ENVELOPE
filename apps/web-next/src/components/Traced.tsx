@@ -3,6 +3,7 @@ import { createContext, useContext } from 'react';
 import type { TracedWire } from '@web/components/TracedValue.js';
 
 import { cn } from '../lib/cn.js';
+import { engineNote } from '../lib/engine-notes.js';
 import { grouped, trimmed } from '../lib/figures.js';
 import { useLocale } from '../lib/locale.js';
 
@@ -45,10 +46,10 @@ export function Traced({
   readonly className?: string;
 }): JSX.Element {
   const inspect = useInspect();
-  const { t } = useLocale();
-  // Some traced values are words — an orientation, a treatment — and those wrap like words.
+  const { t, locale } = useLocale();
+  // Some traced values are words — an orientation, a treatment — and those wrap like words, in the page's language when known.
   const numeric = /^-?\d/.test(value.value);
-  const shown = numeric ? grouped(trimmed(value.value, places)) : value.value;
+  const shown = numeric ? grouped(trimmed(value.value, places)) : (engineNote(value.value, locale) ?? value.value);
   const sent = unit === undefined ? value.unit : unit;
   const u = sent ? (t.traced.unitWord[sent] ?? sent) : sent;
   const label = t.classLabel[value.provenanceClass as keyof typeof t.classLabel] ?? value.provenanceClass;

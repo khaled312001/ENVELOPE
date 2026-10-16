@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Box, Check, ClipboardCheck, FileDown, FileText, Layers, MapPinned, ScrollText } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 
 import { legBetween } from '@web/geo.js';
@@ -25,7 +25,6 @@ import { InspectProvider } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
 import { useLocale } from '../lib/locale.js';
 import { useNav } from '../lib/nav.js';
-import { Notice } from '../ui/primitives.js';
 import { toneAt } from '../ui/tile.js';
 import { CapacityCanvas, CapacityPanel } from '../studio/CapacityStep.js';
 import { ChecksCanvas, ChecksPanel } from '../studio/ChecksStep.js';
@@ -48,6 +47,8 @@ import { fetchRoadsBeside, type RoadBeside } from '../studio/edge-suggest.js';
 import { pointsToDraft, pointsToRing, ringToDraft } from '../studio/geometry.js';
 import { ParkingCanvas, ParkingPanel, type VehicleAccessBody } from '../studio/ParkingStep.js';
 import { PlotCanvas, PlotPanel, type PlotViewMode } from '../studio/PlotStep.js';
+import { AdvisorProvider } from '../studio/AdvisorBox.js';
+import { RefusalNotice } from '../studio/RefusalNotice.js';
 import { RulesPanel } from '../studio/RulesStep.js';
 import { SHEET_MAX_BYTES, SheetCanvas, SheetPanel, type SheetState } from '../studio/SheetStep.js';
 
@@ -94,6 +95,10 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   const [step, setStep] = useState<StepId>(() => (runId || params.get('example') === '1' ? 'plot' : 'sheet'));
   const [busy, setBusy] = useState<'plot' | 'run' | 'load' | 'sheet' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The run request the engine refused, so a fix its sentence names can resend it changed.
+  const [refusedBody, setRefusedBody] = useState<RunRequestBody | null>(null);
+  // The run `compute` is navigating to, so the address catching up is not read as a request to open another.
+  const navigatingTo = useRef<string | null>(null);
   const [node, setNode] = useState<string | null>(null);
 
   // Step 0: the sheet as read, and whether the reader chose to use it for this study.
@@ -148,9 +153,17 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   // A stored run, opened by its address.
   useEffect(() => {
     if (!runId || run?.runId === runId) return;
+    /*
+      A run just computed here is in state one render before its address is:
+      without this, the old address read as "open the old run", the load began,
+      the navigation cancelled it, and the canvas sat on "opening the study" for
+      good — on every recompute from inside a run (an option picked, an entrance moved).
+    */
+    if (run && run.runId === navigatingTo.current) return;
     let live = true;
     setBusy('load');
     setError(null);
+    setRefusedBody(null);
     (async () => {
       try {
         const loaded = await api.getRun(actor, runId);
@@ -185,6 +198,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   const fileplot = useCallback(async () => {
     setBusy('plot');
     setError(null);
+    setRefusedBody(null);
     try {
       const made = await api.createPlot(actor, {
         plotNumber: draft.plotNumber.trim(),
@@ -241,6 +255,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
     async (body: RunRequestBody) => {
       setBusy('run');
       setError(null);
+      setRefusedBody(null);
       try {
         const result = await api.createRun(actor, body);
         rememberRequest(result.runId, body);
@@ -249,9 +264,11 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
         setRun(result);
         setStep((s) => (s === 'rules' ? 'capacity' : s));
         void queries.invalidateQueries({ queryKey: ['runs'] });
+        navigatingTo.current = result.runId;
         navigate(`/studio/${result.runId}`, { replace: true });
       } catch (e) {
         setError(e instanceof ApiError ? e.message : t.studio.runFailed);
+        setRefusedBody(body);
       } finally {
         setBusy(null);
       }
@@ -439,6 +456,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   }, [busy, step, draft, plot, created, run, t, sheetUnderlay, sheet, plotView, trace, statedArea, entranceTool]);
 
   return (
+    <AdvisorProvider actor={actor}>
     <InspectProvider value={run ? setNode : null}>
       <div className="flex h-dvh flex-col bg-base">
         <TopBar>
@@ -556,7 +574,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
             >
             {error ? (
               <div className="p-4 pb-0">
-                <Notice title={t.studio.refused}>{error}</Notice>
+                <RefusalNotice message={error} refused={refusedBody} onApply={(body) => void compute(body)} />
               </div>
             ) : null}
             {step === 'sheet' ? (
@@ -608,6 +626,13 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 onPlace={(placed) => {
                   if (request) placeEntrance(placed);
                 }}
+                picked={request?.parkingArrangement ?? null}
+                onArrange={(id) => {
+                  if (!request) return;
+                  // The same request again with only the arrangement changed; the engine redraws every sheet from it.
+                  const { parkingArrangement: _previous, ...rest } = request;
+                  void compute(id === null ? rest : { ...rest, parkingArrangement: id });
+                }}
                 onNext={() => setStep('checks')}
               />
             ) : step === 'checks' && run ? (
@@ -621,5 +646,6 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
       </div>
       {run ? <DerivationDrawer actor={actor} runId={run.runId} nodeId={node} onClose={() => setNode(null)} /> : null}
     </InspectProvider>
+    </AdvisorProvider>
   );
 }

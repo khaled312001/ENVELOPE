@@ -184,6 +184,12 @@ export const runRequest = z.object({
    */
   columnGapStatementId: z.string().min(1).optional(),
   /**
+   * The parking arrangement the actor picked from a previous run's
+   * `levelPlan.arrangements` — USER_SET under the actor. Absent, the one placing
+   * the most bays is laid out. One this level cannot pack comes back 422.
+   */
+  parkingArrangement: z.enum(['WIDTH', 'DEPTH', 'PERIMETER', 'SLOPED', 'FIELD_WIDTH', 'FIELD_DEPTH']).optional(),
+  /**
    * Tower setbacks typed by the actor, by edge, in metres. USER_SET. An edge the
    * affection plan governs refuses a typed value (422, in a sentence).
    */

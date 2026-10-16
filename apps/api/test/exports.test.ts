@@ -201,6 +201,28 @@ describe('a chosen vehicle entrance', () => {
     expect(JSON.stringify(res.json())).toMatch(/must be centred between 3\.00 m and 77\.00 m from P0/);
   });
 
+  /* 16 Oct 2026: «كذا اوبشن … وله حرية الاختيار» — every option listed, any one drawn. */
+  it('lists every parking option with its count, and draws a picked one under the picker’s name', async () => {
+    type Options = { levelPlan: { arrangement: string; arrangements: { id: string; bayCount: number }[]; orientation: { provenanceClass: string } }; building: { levels: unknown[] } };
+    const first = (await send({})).json() as Options;
+    const options = first.levelPlan.arrangements.filter((a) => a.bayCount > 0);
+    expect(options.length).toBeGreaterThan(1);
+    expect(first.levelPlan.arrangement).toBe(options.reduce((a, b) => (b.bayCount > a.bayCount ? b : a)).id);
+    const other = options.find((a) => a.id !== first.levelPlan.arrangement)!;
+    const res = await send({ parkingArrangement: other.id });
+    expect(res.statusCode).toBe(201);
+    const picked = res.json() as Options;
+    expect(picked.levelPlan.arrangement).toBe(other.id);
+    expect(picked.levelPlan.orientation.provenanceClass).toBe('USER_SET');
+    expect(picked.levelPlan.arrangements).toEqual(first.levelPlan.arrangements);
+  });
+
+  it('refuses a parking option the level does not offer, naming the ones it does', async () => {
+    const res = await send({ parkingArrangement: 'FIELD_DEPTH' });
+    expect(res.statusCode).toBe(422);
+    expect(JSON.stringify(res.json())).toMatch(/This level offers WIDTH \(\d+ bays\)/);
+  });
+
   it('refuses two answers to one question', async () => {
     const res = await send({
       chosenAccessEdgeSeq: 0,
@@ -278,7 +300,8 @@ describe('DXF export', () => {
     // Counted as parsed entities, not as occurrences of a layer name: R12 repeats
     // the name on every VERTEX and on the SEQEND, so a string count would pass on
     // a file holding a sixth of the bays.
-    const bays = parsed.entities.filter((e) => e.type === 'POLYLINE' && /^ENV-[A-Z0-9]+-BAY(-ACCESSIBLE)?$/.test(e.layer));
+    // Every layer a bay is drawn on; the access aisle beside an accessible bay is not one.
+    const bays = parsed.entities.filter((e) => e.type === 'POLYLINE' && /^ENV-[A-Z0-9]+-BAY(-ACCESSIBLE|-PREFERRED)?$/.test(e.layer));
     expect(cars).toHaveLength(drawn);
     expect(bays).toHaveLength(drawn);
   });

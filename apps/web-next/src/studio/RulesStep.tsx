@@ -14,8 +14,8 @@ import { Footer } from './parts.js';
 
   Two, since 16 Oct 2026: what the building is made of, and the unit mix.
   Parking-in-FAR and the saleable share stopped being asked that day at Eng.
-  Mohamed's word; what is sent in their place is listed above the questions,
-  with whose word it is, so nothing the run rests on is out of sight. The
+  Mohamed's word; the one sent in their place that is an assumption is shown
+  above the questions in amber, and the run carries the rest by id. The
   Compute button stays disabled until both are answered, and the count of
   answers is shown above it so the reason is never a mystery.
 */
@@ -42,19 +42,14 @@ export function RulesPanel({
       <PanelHeader title={t.rules.title} hint={t.rules.hint} />
       <div className="grid grid-cols-1 gap-5 p-4">
         {/*
-          Not questions any more (Eng. Mohamed, 16 Oct 2026), and still said: what
-          the run is sent in their place, whose word it is, and the amber of the
-          one that is an assumption.
+          Not questions any more (Eng. Mohamed, 16 Oct 2026). On 16 Oct he also
+          asked that what the run is sent in their place — parking outside FAR,
+          the column gap — not be spelled out on this step: the studio works to
+          the Dubai Building Code without narrating its sources. Both still go
+          with the run under his statement's id, and the report and the drawings
+          still name them. The amber assumption stays: §13.1.
         */}
         <ul className="grid gap-1.5 text-[12px] leading-snug">
-          <li className="rounded-md border border-line bg-base px-3 py-2">
-            <span className="font-medium text-fg">{t.rules.farFixed}</span>{' '}
-            <span className="text-secondary">{t.rules.farFixedBy}</span>
-          </li>
-          <li className="rounded-md border border-line bg-base px-3 py-2">
-            <span className="font-medium text-fg">{t.rules.columnGap}</span>{' '}
-            <span className="text-secondary">{t.rules.columnGapBy}</span>
-          </li>
           <li className="flex items-start gap-2 rounded-md border border-dashed border-assumed/70 bg-assumed-surface px-3 py-2 text-fg">
             <Badge tone="assumed" className="shrink-0">
               {t.classLabel.ASSUMED}

@@ -19,6 +19,20 @@ const CLASS_LABEL: Dict['classLabel'] = {
   VARIANCE: 'استثناء',
 };
 
+/** OpenStreetMap's highway classes, as an Arabic reader names a road. Unknown ones stay as written. */
+const OSM_CLASS: Readonly<Record<string, string>> = {
+  motorway: 'طريق سريع',
+  trunk: 'طريق رئيسي سريع',
+  primary: 'طريق رئيسي',
+  secondary: 'طريق ثانوي',
+  tertiary: 'طريق فرعي',
+  minor: 'طريق فرعي صغير',
+  residential: 'شارع سكني',
+  living_street: 'شارع سكني',
+  service: 'طريق خدمة',
+  unclassified: 'طريق غير مصنف',
+};
+
 export const AR: Dict = {
   common: {
     close: 'إغلاق',
@@ -36,6 +50,7 @@ export const AR: Dict = {
       levels: 'دور',
       units: 'وحدة',
       transformers: 'محول',
+      turns: 'منعطف',
       'bays/unit': 'موقف/وحدة',
       'm²/bay': 'm²/موقف',
       // A ratio needs no word after it; «0.85 نسبة» reads as a mistake.
@@ -225,6 +240,14 @@ export const AR: Dict = {
     canvas: 'الرسم',
     inspector: 'الأرقام والمدخلات',
     refused: 'رفض المحرك',
+    untranslated: 'سبب الرفض كما كتبه المحرك (بالإنجليزية)',
+    fix: {
+      retry: (s: number): string => `أعد المحاولة تلقائيا بعد ${s} ثانية`,
+      retrying: (s: number): string => `إعادة المحاولة بعد ${s} ثانية…`,
+      moveEntrance: (m: string): string => `انقل المدخل إلى ${m} م، أقرب موضع مسموح`,
+      engineEntrance: 'دع المحرك يختار جانب المدخل',
+      cancel: 'إلغاء',
+    },
   },
 
   plot: {
@@ -259,7 +282,8 @@ export const AR: Dict = {
     sheetSays: 'يقول المخطط',
     suggest: {
       unnamed: 'طريق بلا اسم',
-      mapSays: (name: string, cls: string, m: number): string => `على الخريطة: ${name} (${cls} في OpenStreetMap)، على بعد ${m} م من الحد`,
+      mapSays: (name: string, cls: string, m: number): string =>
+        `على الخريطة: ${name} (${OSM_CLASS[cls] ?? cls} في OpenStreetMap)، على بعد ${m} م من الحد`,
       filled: {
         sheet: 'اختير تلقائيا من كتابات المخطط. غيره إن لم يكن صحيحا.',
         map: 'اختير تلقائيا من الطريق المرسوم على الخريطة، ومنه درجة الطريق. غيره إن لم يكن صحيحا.',
@@ -453,10 +477,6 @@ export const AR: Dict = {
   rules: {
     title: 'الأسئلة التي لا تجيب عنها القواعد',
     hint: 'أجب عن السؤالين ليبدأ الحساب.',
-    farFixed: 'المواقف لا تدخل في معامل البناء.',
-    farFixedBy: 'بحسب إفادة م. محمد في 28 سبتمبر 2026، وليست بندا من الكود.',
-    columnGap: 'تترك مسافة 0.50 م بعد كل 3 مواقف، لمواضع الأعمدة.',
-    columnGapBy: 'بحسب إفادة م. محمد في 16 أكتوبر 2026، وليست بندا من الكود.',
     saleableFixed: (share: string): string => `نسبة المساحة القابلة للبيع مفترضة ${share} من الإجمالي، ولا تطلب في هذه المرحلة.`,
     notDecimal: 'أدخل رقما، واستعمل النقطة للكسور العشرية.',
     increase: (label: string): string => `زيادة واحد: ${label}`,
@@ -547,6 +567,17 @@ export const AR: Dict = {
     required: 'المواقف المطلوبة',
     levelsRequired: 'أدوار المواقف المطلوبة',
     orientation: 'الاتجاه المعتمد',
+    turns: (n: number): string => `المنعطفات التي يتسع فيها دوران السيارة، من ${n}`,
+    options: {
+      title: 'خيارات توزيع المواقف',
+      hint: 'كل ترتيب رصه المحرك في هذا الدور، وعدد المواقف في كل منها. اختر ترتيبا فتعاد كل الرسومات عليه.',
+      perLevel: (n: number): string => `المواقف في الدور: ${n}`,
+      none: 'لا يتسع لأي موقف هنا',
+      inUse: 'المرسوم',
+      use: 'اعتماد هذا الخيار',
+      best: 'الأكثر مواقف',
+      back: 'العودة إلى الأكثر مواقف',
+    },
     module: 'عمق الوحدة',
     losses: 'المواقف المفقودة، بحسب السبب',
     loss: {
@@ -566,6 +597,24 @@ export const AR: Dict = {
       band: (edge: number): string => `غرفة المحول وغرفة الجهد المنخفض على الحد ${edge}، المطل على الطريق.`,
       noBand: 'لم يقتطع شريط على الطريق لغرفة المحول. السبب أدناه.',
     },
+    accessible: {
+      title: 'مواقف أصحاب الهمم والمواقف المفضلة',
+      hint: (onGrade: boolean): string =>
+        onGrade
+          ? 'في الدور الأرضي، الأقرب إلى النواة، كما يطلب كود دبي للمباني.'
+          : 'في البدروم الأول، الأقرب إلى النواة: الدور الأرضي بلا مواقف.',
+      placed: 'مواقف أصحاب الهمم الموزعة',
+      required: 'مواقف أصحاب الهمم المطلوبة',
+      preferred: 'المواقف المفضلة: الهجينة والكهربائية والمشتركة',
+      level: (onGrade: boolean): string => (onGrade ? 'المواقف في الدور الأرضي' : 'المواقف في البدروم الأول'),
+      // The count after a colon, as elsewhere: a figure is never reworded to agree with its noun.
+      lost: (n: number): string => `المواقف التي تحولت إلى ممرات وصول بجانبها: ${n}`,
+      vans: (n: number): string => `منها بعرض يتسع لشاحنة صغيرة: ${n}`,
+      farthest: (m: string): string => `أبعدها على ${m} m من النواة في خط مستقيم.`,
+    },
+    deadEnds: (n: number, worst: number): string =>
+      `الممرات المسدودة التي تخدم أكثر من 8 مواقف: ${n}، وأطولها يخدم ${worst}. ` +
+      'ينصح الكود بتجنبها، وكل منها معلم على الرسم.',
     access: 'مدخل المركبات',
     chosen: 'اختيارك',
     recommended: 'الموصى به',
@@ -616,6 +665,17 @@ export const AR: Dict = {
     place: 'اعتماد موضع المدخل',
     role: { ENTRY_EXIT: 'مدخل ومخرج', ENTRY: 'مدخل', EXIT: 'مخرج' },
     openingAt: (n: number, c: string, w: string): string => `الحد ${n}، بعرض ${w} m، ومركزه على بعد ${c} m من P${n}`,
+  },
+
+  advisor: {
+    title: 'قراءة Claude بالرجوع إلى كود دبي',
+    asking: 'Claude يراجع كود دبي ويحلل هذه الخطوة…',
+    failed: 'تعذر الوصول إلى Claude الآن.',
+    busy: 'تحليلات كثيرة في الدقيقة الأخيرة. حاول بعد قليل.',
+    again: 'اطلب التحليل مجددا',
+    ask: 'اطلب تحليل هذه الخطوة',
+    offer: 'يقرأ Claude هذه الخطوة مقابل كود دبي عند الطلب.',
+    note: 'إرشاد من Claude Opus 5.5. لا يغير أي رقم في الدراسة.',
   },
 
   checks: {

@@ -92,6 +92,10 @@ await esbuild.build({
   logLevel: 'warning',
 });
 
+/* The Dubai Building Code text Claude reads first (`apps/api/src/advisor.ts`), beside
+   the bundle where `dubaiBuildingCode()` looks for it. Read from disk, never served. */
+cpSync(join(ROOT, 'apps', 'api', 'data'), join(APP, 'api', 'data'), { recursive: true });
+
 /* ── 3. The two libraries that cannot be bundled ─────────────────────── */
 
 const packageDir = (name) => {

@@ -221,6 +221,15 @@ export const EN = {
     canvas: 'Drawing',
     inspector: 'Figures and inputs',
     refused: 'The engine refused',
+    // An engine sentence the screen has no reading for yet, and the refusals it can fix by itself.
+    untranslated: 'The engine’s reason, as it wrote it',
+    fix: {
+      retry: (s: number): string => `Try again automatically in ${s} s`,
+      retrying: (s: number): string => `Trying again in ${s} s…`,
+      moveEntrance: (m: string): string => `Move the entrance to ${m} m, the nearest point allowed`,
+      engineEntrance: 'Let the engine choose the entrance side',
+      cancel: 'Cancel',
+    },
   },
 
   plot: {
@@ -451,10 +460,6 @@ export const EN = {
   rules: {
     title: 'The questions no rule answers',
     hint: 'Answer both to compute.',
-    farFixed: 'Parking is not counted in FAR.',
-    farFixedBy: 'Eng. Mohamed’s statement of 28 Sep 2026. Not a clause of the code.',
-    columnGap: '0.50 m is left after every 3 parking bays, for the columns.',
-    columnGapBy: 'Eng. Mohamed’s statement of 16 Oct 2026. Not a clause of the code.',
     saleableFixed: (share: string): string => `Saleable share of GFA assumed at ${share}. Not asked in this phase.`,
     notDecimal: 'Enter a number, using a point for decimals.',
     increase: (label: string): string => `One more: ${label}`,
@@ -546,6 +551,17 @@ export const EN = {
     required: 'Bays required',
     levelsRequired: 'Parking levels required',
     orientation: 'Orientation kept',
+    turns: (n: number): string => `Turns a car gets round, of ${n}`,
+    options: {
+      title: 'Parking options',
+      hint: 'Every arrangement the engine packed on this level, with the bays each places. Pick one and every drawing is redrawn from it.',
+      perLevel: (n: number): string => `${n} bays per level`,
+      none: 'Places no bay here',
+      inUse: 'Drawn',
+      use: 'Use this option',
+      best: 'Most bays',
+      back: 'Back to the most bays',
+    },
     module: 'Module depth',
     losses: 'Bays lost, by cause',
     loss: {
@@ -565,6 +581,23 @@ export const EN = {
       band: (edge: number): string => `Substation and LV room against boundary ${edge}, on the road.`,
       noBand: 'No band on a road was cut for the substation. The reason is below.',
     },
+    accessible: {
+      title: 'Accessible and preferred bays',
+      hint: (onGrade: boolean): string =>
+        onGrade
+          ? 'On the ground floor, nearest the core, as the Dubai Building Code asks.'
+          : 'On the first basement, nearest the core: the ground floor holds no parking.',
+      placed: 'Accessible bays placed',
+      required: 'Accessible bays required',
+      preferred: 'Preferred bays: hybrid, electric, carpool',
+      level: (onGrade: boolean): string => (onGrade ? 'Bays on the ground floor' : 'Bays on the first basement'),
+      lost: (n: number): string => `${n} ${n === 1 ? 'bay' : 'bays'} given to the access aisles beside them`,
+      vans: (n: number): string => `${n} of them wide enough for a van`,
+      farthest: (m: string): string => `The farthest is ${m} m from the core in a straight line.`,
+    },
+    deadEnds: (n: number, worst: number): string =>
+      `${n} dead-end ${n === 1 ? 'driveway serves' : 'driveways serve'} more than 8 bays, the longest ${worst}. ` +
+      'The code advises avoiding them; each is marked on the drawing.',
     access: 'Vehicle entrance',
     chosen: 'Your choice',
     recommended: 'Recommended',
@@ -616,6 +649,18 @@ export const EN = {
     place: 'Place the entrance',
     role: { ENTRY_EXIT: 'Entry and exit', ENTRY: 'Entry', EXIT: 'Exit' },
     openingAt: (n: number, c: string, w: string): string => `boundary ${n}, ${w} m, centred ${c} m from P${n}`,
+  },
+
+  // Claude's reading of a step against the Dubai Building Code (`studio/AdvisorBox.tsx`).
+  advisor: {
+    title: 'Claude’s reading, from the Dubai Building Code',
+    asking: 'Claude is reading the Dubai Building Code and this step…',
+    failed: 'Claude could not be reached just now.',
+    busy: 'Too many analyses in the last minute. Try again shortly.',
+    again: 'Ask again',
+    ask: 'Analyse this step',
+    offer: 'Claude reads this step against the Dubai Building Code when you ask.',
+    note: 'Guidance from Claude Opus 5.5. It changes no figure in the study.',
   },
 
   checks: {

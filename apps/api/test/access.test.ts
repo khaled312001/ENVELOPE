@@ -239,6 +239,10 @@ const ROUTES: Readonly<Record<string, Reach>> = {
   'GET /api/geo/footprint': 'open',
   /* OpenStreetMap's roads beside a ring the caller sends. Public data, and the ring is the caller's own. */
   'GET /api/geo/roads': 'open',
+  /* Whether Claude's reading is switched on. Says nothing about anybody. */
+  'GET /api/advisor': 'open',
+  /* Claude's reading of a step names a run in its BODY, and is read under the run's own rule. */
+  'POST /api/advise': 'run',
   'POST /api/auth/register': 'open',
   'POST /api/auth/login': 'open',
   'POST /api/auth/logout': 'open',
@@ -329,6 +333,7 @@ describe('"from any route" — the router’s list, not this file’s', () => {
       }
       // The stranger trying to share the author's run with themselves.
       if (route.endsWith('/share')) return { method, url, payload: { email: 'stranger@example.com', role: 'reviewer' } };
+      if (route.endsWith('/advise')) return { method, url, payload: { step: 'capacity', locale: 'en', runId } };
       if (method === 'POST') return { method, url, payload: { ...RUN_BODY, plotId } };
       return { method, url };
     };

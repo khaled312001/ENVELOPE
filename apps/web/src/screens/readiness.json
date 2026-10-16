@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T11:06:48.956Z",
+  "generatedAt": "2026-10-16T14:54:34.308Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
@@ -28,7 +28,7 @@
     {
       "parameterId": "parking.usable_fraction",
       "runs": 1,
-      "maxRelativeEffect": "0.12963",
+      "maxRelativeEffect": "0.132075",
       "basis": "the usable fraction of a parking level after cores, ramps and plant"
     },
     {
@@ -48,6 +48,30 @@
       "runs": 1,
       "maxRelativeEffect": "0",
       "basis": "An indicative core for a residential tower, drawn so a reader can see where the lifts and stairs stand: two stairs of 5.6 × 2.8 m (two flights of about 1.2 m and a landing at each end), lift shafts of 2.4 × 2.4 m for a 13-person car, and a lift lobby 2.4 m deep across their front, entered at ground level through a 1.8 m pair of doors a quarter of the way along its open side. No clause of the Dubai Building Code on file is applied and no developer standard gives a core layout, so this is an assumption. Egress capacity, travel distance, lift traffic and fire-fighting provisions are NOT ASSESSED: the stairs drawn are not an egress design."
+    },
+    {
+      "parameterId": "parking.turning_inner_radius_m",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "DBC Part B states no turning radius for a car on a parking aisle. Table B.9 gives, for a curved ramp, a minimum inner circle radius of 4 m and a minimum lane of 3.5 m, the nearest figures the code gives for a car turning, so they are taken for every aisle turn: one car at a time, held against the two outer walls."
+    },
+    {
+      "parameterId": "parking.turning_lane_m",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "DBC Part B states no turning radius for a car on a parking aisle. Table B.9 gives, for a curved ramp, a minimum inner circle radius of 4 m and a minimum lane of 3.5 m, the nearest figures the code gives for a car turning, so they are taken for every aisle turn: one car at a time, held against the two outer walls."
+    },
+    {
+      "parameterId": "parking.accessible_reading",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "DBC Table C.17 gives 2% of a car park of 25 to 500 spaces, at least one, and 1% of the spaces over 500. It states no rounding, no count for the first 500 of a larger car park, and no row under 25. Each is read on the side that provides more: a fraction is rounded up, the first 500 count at the 2% row (10), and a car park under 25 gets the one bay C.6.4.1 ¶1 requires every car park associated with a building to have. The van share of C.6.4.1 ¶4 is rounded up the same way."
+    },
+    {
+      "parameterId": "parking.preferred_reading",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "DBC B.7.2.6.2 gives 5% of the bays the building requires (B.7.2.6.1) where it has more than 20, and states no rounding. A fraction is rounded up, the side that provides more."
     },
     {
       "parameterId": "building.tower_placement",

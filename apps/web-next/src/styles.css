@@ -626,6 +626,63 @@
   }
 }
 
+/*
+  The spark, one star at a time (the owner's call, 16 Oct 2026): the large star
+  turns in and overshoots, then the small one above, then the one below; the three
+  breathe together, then leave together, turning, and the cycle starts again. Three
+  keyframe sets rather than one with delays, so the exits stay together on every
+  loop. The large mark over the canvas is this same SVG, larger: played through
+  motion's keyframes, all three stars' opacity moved as one and fell to zero a
+  third of the way in, measured in the browser, while this version kept time.
+  With reduced motion the rule below plays each once in 0.01 ms and the path
+  returns to its own style: three still stars.
+*/
+.spark-path {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: 2.8s cubic-bezier(0.34, 1.2, 0.64, 1) infinite;
+}
+.spark-a { animation-name: spark-a; }
+.spark-b { animation-name: spark-b; }
+.spark-c { animation-name: spark-c; }
+
+/* The soft light behind the large mark, breathing with the stars and gone with them. */
+.spark-glow {
+  animation: spark-glow 2.8s ease-in-out infinite;
+}
+@keyframes spark-glow {
+  0% { opacity: 0; transform: scale(0.6); }
+  20% { opacity: 0.9; transform: scale(1.1); }
+  55% { opacity: 0.5; transform: scale(0.9); }
+  80% { opacity: 0.9; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(0.6); }
+}
+
+@keyframes spark-a {
+  0% { opacity: 0; transform: scale(0) rotate(-90deg); }
+  12% { opacity: 1; transform: scale(1.2) rotate(8deg); }
+  20% { opacity: 1; transform: scale(1) rotate(0deg); }
+  55% { opacity: 0.85; transform: scale(0.9) rotate(0deg); }
+  80% { opacity: 1; transform: scale(1) rotate(0deg); }
+  92%, 100% { opacity: 0; transform: scale(0.4) rotate(60deg); }
+}
+@keyframes spark-b {
+  0%, 18% { opacity: 0; transform: scale(0) rotate(-90deg); }
+  30% { opacity: 1; transform: scale(1.25) rotate(8deg); }
+  38% { opacity: 1; transform: scale(1) rotate(0deg); }
+  60% { opacity: 0.8; transform: scale(0.88) rotate(0deg); }
+  80% { opacity: 1; transform: scale(1) rotate(0deg); }
+  92%, 100% { opacity: 0; transform: scale(0.4) rotate(60deg); }
+}
+@keyframes spark-c {
+  0%, 32% { opacity: 0; transform: scale(0) rotate(-90deg); }
+  44% { opacity: 1; transform: scale(1.25) rotate(8deg); }
+  52% { opacity: 1; transform: scale(1) rotate(0deg); }
+  66% { opacity: 0.8; transform: scale(0.88) rotate(0deg); }
+  80% { opacity: 1; transform: scale(1) rotate(0deg); }
+  92%, 100% { opacity: 0; transform: scale(0.4) rotate(60deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

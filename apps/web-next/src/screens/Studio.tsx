@@ -330,6 +330,8 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
             statedArea={statedArea}
             sheetImage={sheetUsed ? (sheet?.read.facts.sitePlan?.image ?? null) : null}
             onUseTrace={applyTrace}
+            onEdit={editPlot}
+            created={created}
           />
         );
       case 'rules':
@@ -359,7 +361,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
         return run ? <ParkingCanvas run={run} initialKind="SITE" /> : null;
     }
     // `applyTrace` is rebuilt each render but reads only `draft`, which is listed.
-  }, [busy, step, draft, plot, run, t, sheet, sheetUsed, plotView, trace, statedArea]);
+  }, [busy, step, draft, plot, created, run, t, sheet, sheetUsed, plotView, trace, statedArea]);
 
   return (
     <InspectProvider value={run ? setNode : null}>

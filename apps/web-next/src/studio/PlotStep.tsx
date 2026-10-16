@@ -1,11 +1,12 @@
-import { CircleCheck, FileCheck2, Map as MapIcon, PenSquare, Plus, Trash2 } from 'lucide-react';
-import { lazy, Suspense, useMemo } from 'react';
+import { CircleCheck, FileCheck2, Map as MapIcon, PenSquare, Plus, Trash2, X } from 'lucide-react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 
 import type { PlotCreated, PlotView } from '@web/api/client.js';
 import type { LngLat } from '@web/geo.js';
 
 import type { MapTrace, SheetImage } from '../components/PlotMapView.js';
 import { PlotSketch } from '../components/PlotSketch.js';
+import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
 import { EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
@@ -31,6 +32,8 @@ export function PlotCanvas({
   statedArea,
   sheetImage,
   onUseTrace,
+  onEdit,
+  created = null,
 }: {
   readonly draft: DraftPlot;
   readonly plot: PlotView | null;
@@ -41,12 +44,19 @@ export function PlotCanvas({
   readonly statedArea: string;
   readonly sheetImage: SheetImage | null;
   readonly onUseTrace: (ring: readonly LngLat[]) => void;
+  /** With this, each boundary's number on the plan opens it for classifying, in place. */
+  readonly onEdit?: (next: DraftPlot) => void;
+  readonly created?: PlotCreated | null;
 }): JSX.Element {
   const { t } = useLocale();
+  const [picked, setPicked] = useState<number | null>(null);
   const vertices = plot?.vertices ?? draft.vertices;
   const edges = plot
     ? plot.edges.map((e) => ({ seq: e.seq, classification: e.classification, roadHierarchy: e.roadHierarchy, lengthM: e.lengthM }))
     : draft.edges.map((e, seq) => ({ seq, classification: e.classification, roadHierarchy: e.roadHierarchy }));
+  // Only while the drawing's boundaries ARE the draft's: boundary i on screen must be the one edited.
+  const pickable = onEdit !== undefined && vertices.length === draft.vertices.length && draft.edges.length === draft.vertices.length;
+  const open = pickable && picked !== null && picked < draft.edges.length ? picked : null;
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-center border-b border-line bg-panel/90 px-3 py-2 backdrop-blur">
@@ -90,8 +100,37 @@ export function PlotCanvas({
         </div>
       ) : (
         <>
-          <div className="min-h-0 flex-1 p-6 sm:p-10">
-            <PlotSketch vertices={vertices} edges={edges} label={t.plot.sketchLabel(draft.plotNumber || t.studio.untitled)} />
+          <div className="relative min-h-0 flex-1 p-6 sm:p-10">
+            <PlotSketch
+              vertices={vertices}
+              edges={edges}
+              highlight={open}
+              label={t.plot.sketchLabel(draft.plotNumber || t.studio.untitled)}
+              {...(pickable
+                ? {
+                    onPick: (seq: number) => setPicked((p) => (p === seq ? null : seq)),
+                    pickLabel: (seq: number) => {
+                      const c = draft.edges[seq]?.classification ?? '';
+                      return t.plot.edgeMarker(seq, c === '' ? null : t.plot.cls[c]);
+                    },
+                  }
+                : {})}
+            />
+            {pickable && open === null ? (
+              <p className="pointer-events-none absolute inset-x-0 top-2 text-center text-[12px] text-secondary">{t.plot.planPick}</p>
+            ) : null}
+            {open !== null && onEdit ? (
+              <EdgeEditor
+                key={open}
+                draft={draft}
+                seq={open}
+                created={created}
+                filed={plot !== null}
+                side={sideAwayFrom(vertices, open)}
+                onChange={onEdit}
+                onClose={() => setPicked(null)}
+              />
+            ) : null}
           </div>
           <ul aria-label={t.plot.keyLabel} className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-line bg-panel/90 px-4 py-2.5 text-[12px] text-secondary">
             <KeyItem dash={undefined} width={3} stroke="var(--accent)" label={t.plot.cls.ROAD} />
@@ -104,6 +143,140 @@ export function PlotCanvas({
         </>
       )}
     </div>
+  );
+}
+
+/** Is a typed tower setback a number of metres? Blank is allowed: the rule then governs. */
+const isMetres = (s: string): boolean => s.trim() === '' || /^\d+(\.\d+)?$/.test(s.trim());
+
+/** The setback the filed sheet binds for this kind of boundary, if it binds one. */
+const sheetSetbackOf = (created: PlotCreated | null, cls: Exclude<EdgeClass, ''>): string | undefined =>
+  created?.sheet.bound.find((b) => b.parameterId === `setback.${cls.toLowerCase()}`)?.value;
+
+/**
+ * Which side of the canvas the boundary card goes on: the one away from the
+ * boundary, so the card never covers the line it is asking about. Physical, not
+ * logical — the drawing is north up in both languages.
+ */
+const sideAwayFrom = (vertices: readonly { readonly x: string; readonly y: string }[], seq: number): 'left' | 'right' => {
+  const xs = vertices.map((v) => Number(v.x)).filter(Number.isFinite);
+  const a = Number(vertices[seq]?.x);
+  const b = Number(vertices[(seq + 1) % vertices.length]?.x);
+  if (xs.length === 0 || !Number.isFinite(a) || !Number.isFinite(b)) return 'left';
+  return (a + b) / 2 < (Math.min(...xs) + Math.max(...xs)) / 2 ? 'right' : 'left';
+};
+
+/** One boundary's answers changed, every other field of it and of the plot kept. */
+const patchEdge = (draft: DraftPlot, i: number, patch: Partial<DraftPlot['edges'][number]>): DraftPlot => ({
+  ...draft,
+  edges: draft.edges.map((e, j) => (j === i ? { ...e, ...patch } : e)),
+});
+
+/*
+  ONE BOUNDARY, OPENED FROM ITS NUMBER ON THE PLAN (Eng. Mohamed, 16 Oct 2026).
+
+  The same three answers the corner card in the panel holds — its kind, a road's
+  hierarchy, the tower setback — asked beside the drawing, so the reader looks at
+  the boundary while saying what is beyond it. Both write the one draft, so the
+  two can never disagree.
+*/
+function EdgeEditor({
+  draft,
+  seq,
+  created,
+  filed,
+  side,
+  onChange,
+  onClose,
+}: {
+  readonly draft: DraftPlot;
+  readonly seq: number;
+  readonly created: PlotCreated | null;
+  readonly filed: boolean;
+  readonly side: 'left' | 'right';
+  readonly onChange: (next: DraftPlot) => void;
+  readonly onClose: () => void;
+}): JSX.Element {
+  const { t } = useLocale();
+  const e = draft.edges[seq]!;
+  const j = (seq + 1) % draft.vertices.length;
+  const set = (patch: Partial<DraftPlot['edges'][number]>): void => onChange(patchEdge(draft, seq, patch));
+  const stated = e.classification === '' ? undefined : sheetSetbackOf(created, e.classification);
+  const titleId = `edge-editor-${seq}`;
+  return (
+    <section
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby={titleId}
+      onKeyDown={(ev) => {
+        if (ev.key === 'Escape') onClose();
+      }}
+      className={cn(
+        'absolute top-3 grid w-[min(22rem,calc(100%-1.5rem))] gap-3 rounded-lg border border-line bg-panel p-3 shadow-lg',
+        side === 'left' ? 'left-3' : 'right-3',
+      )}
+    >
+      <header className="flex items-center justify-between gap-2">
+        <h3 id={titleId} className="text-[13px] font-medium text-fg">
+          {t.plot.edgeEditor(seq, j)}
+        </h3>
+        <Button variant="ghost" size="icon" className="size-8" aria-label={t.plot.closeEditor} onClick={onClose}>
+          <X aria-hidden="true" />
+        </Button>
+      </header>
+      <fieldset className="grid gap-1.5">
+        <legend className="mb-1 text-[12px] text-secondary">{t.plot.edgeKind}</legend>
+        <div className="grid grid-cols-2 gap-1.5">
+          {CLASSES.map((c, k) => (
+            <Button
+              key={c}
+              size="sm"
+              variant={e.classification === c ? 'accent' : 'secondary'}
+              aria-pressed={e.classification === c}
+              // Focus lands on the first answer, so a keyboard reader is inside the boundary it opened.
+              autoFocus={k === 0}
+              onClick={() => set({ classification: c, roadHierarchy: e.classification === c ? e.roadHierarchy : '' })}
+            >
+              {t.plot.cls[c]}
+            </Button>
+          ))}
+        </div>
+      </fieldset>
+      {e.classification === 'ROAD' ? (
+        <fieldset className="grid gap-1.5">
+          <legend className="mb-1 text-[12px] text-secondary">{t.plot.hierarchyOf(seq)}</legend>
+          <div className="grid grid-cols-2 gap-1.5">
+            {HIERARCHIES.map((h) => (
+              <Button key={h} size="sm" variant={e.roadHierarchy === h ? 'accent' : 'secondary'} aria-pressed={e.roadHierarchy === h} onClick={() => set({ roadHierarchy: h })}>
+                {t.plot.road[h]}
+              </Button>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
+      {e.classification !== '' ? (
+        stated ? (
+          <p className="text-[12px] text-secondary">
+            {t.plot.towerSetbackFromSheet} <span className="figure text-fg">{stated} m</span>
+          </p>
+        ) : (
+          <label className="grid gap-1 text-[12px] text-secondary">
+            <span>{t.plot.towerSetback}</span>
+            <Input
+              aria-label={t.plot.towerSetbackOf(seq)}
+              inputMode="decimal"
+              placeholder={t.plot.towerSetbackBlank}
+              value={e.towerSetback ?? ''}
+              onChange={(ev) => set({ towerSetback: ev.target.value })}
+              aria-invalid={isMetres(e.towerSetback ?? '') ? undefined : true}
+              className="figure h-8 w-32 px-2"
+              dir="ltr"
+            />
+          </label>
+        )
+      ) : null}
+      {filed ? <p className="text-[11.5px] text-tertiary">{t.plot.refileNote}</p> : null}
+    </section>
   );
 }
 
@@ -159,11 +332,8 @@ export function PlotPanel({
 
   const setVertex = (i: number, key: 'x' | 'y', value: string): void =>
     onChange({ ...draft, vertices: draft.vertices.map((v, j) => (j === i ? { ...v, [key]: value } : v)) });
-  const setEdge = (i: number, patch: Partial<DraftPlot['edges'][number]>): void =>
-    onChange({ ...draft, edges: draft.edges.map((e, j) => (j === i ? { ...e, ...patch } : e)) });
-  /** The setback the filed sheet binds for this kind of boundary, if it binds one. */
-  const sheetSetback = (cls: Exclude<EdgeClass, ''>): string | undefined =>
-    created?.sheet.bound.find((b) => b.parameterId === `setback.${cls.toLowerCase()}`)?.value;
+  const setEdge = (i: number, patch: Partial<DraftPlot['edges'][number]>): void => onChange(patchEdge(draft, i, patch));
+  const sheetSetback = (cls: Exclude<EdgeClass, ''>): string | undefined => sheetSetbackOf(created, cls);
   const add = (): void =>
     onChange({ ...draft, vertices: [...draft.vertices, { x: '', y: '' }], edges: [...draft.edges, { classification: '', roadHierarchy: '' }] });
   const remove = (i: number): void =>
@@ -412,7 +582,7 @@ export function PlotPanel({
                               placeholder={t.plot.towerSetbackBlank}
                               value={e.towerSetback ?? ''}
                               onChange={(ev) => setEdge(i, { towerSetback: ev.target.value })}
-                              aria-invalid={(e.towerSetback ?? '').trim() !== '' && !/^\d+(\.\d+)?$/.test((e.towerSetback ?? '').trim()) ? true : undefined}
+                              aria-invalid={isMetres(e.towerSetback ?? '') ? undefined : true}
                               className="figure h-8 px-2"
                               dir="ltr"
                             />

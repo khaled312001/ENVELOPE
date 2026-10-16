@@ -1,4 +1,5 @@
 import { motion, useReducedMotion } from 'motion/react';
+import type { KeyboardEvent } from 'react';
 
 import { cn } from '../lib/cn.js';
 import { EASE } from '../ui/motion.js';
@@ -12,7 +13,10 @@ import { EASE } from '../ui/motion.js';
   the length the engine computed (`lengthM`), never one measured here.
 
   A boundary's class is carried by its dash and weight as well as its ink, and an
-  unclassified boundary is drawn as a question: thin, dotted, with a `?`.
+  unclassified boundary is drawn as a question: thin, dotted, its number in a
+  dashed ring. Every boundary carries its NUMBER — a `?` told the reader that
+  something was missing and not which boundary it was (Eng. Mohamed, 16 Oct
+  2026). With `onPick`, the number is a button that opens that boundary.
 
   The motion is a pen tracing the ring over the drawing, then lifting away. It is
   a separate line on top: animating `pathLength` on the boundaries themselves
@@ -44,6 +48,8 @@ export function PlotSketch({
   className,
   label,
   compact = false,
+  onPick,
+  pickLabel,
 }: {
   readonly vertices: readonly { readonly x: string; readonly y: string }[];
   readonly edges: readonly SketchEdge[];
@@ -53,6 +59,10 @@ export function PlotSketch({
   readonly className?: string;
   readonly label: string;
   readonly compact?: boolean;
+  /** Makes each boundary's number a button that reports its seq. */
+  readonly onPick?: (seq: number) => void;
+  /** The accessible name of boundary `seq`'s button. Required with `onPick`. */
+  readonly pickLabel?: (seq: number) => string;
 }): JSX.Element {
   const reduce = useReducedMotion();
   const pts = vertices.map((v) => ({ x: Number(v.x), y: Number(v.y) })).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
@@ -83,7 +93,8 @@ export function PlotSketch({
   const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
 
   return (
-    <svg role="img" aria-label={label} viewBox={`0 0 ${w} ${h}`} className={cn('h-full w-full', className)} preserveAspectRatio="xMidYMid meet">
+    // An image holds no controls; with buttons inside it, the drawing is a labelled group.
+    <svg role={onPick ? 'group' : 'img'} aria-label={label} viewBox={`0 0 ${w} ${h}`} className={cn('h-full w-full', className)} preserveAspectRatio="xMidYMid meet">
       <polygon points={ring} fill="var(--surface-raised)" fillOpacity={0.75} stroke="none" />
       {pts.map((p, i) => {
         const q = pts[(i + 1) % pts.length]!;
@@ -107,8 +118,25 @@ export function PlotSketch({
         const lx = mx + nx * unit * (compact ? 0 : 7);
         const ly = my + ny * unit * (compact ? 0 : 7);
         const hot = highlight === i || chosenEdge === i;
+        const unanswered = (e?.classification ?? '') === '';
+        const pick = onPick ? (): void => onPick(i) : undefined;
         return (
           <g key={i}>
+            {pick ? (
+              // A wide, unpainted stroke over the boundary: the line itself is a target too.
+              <line
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="transparent"
+                strokeWidth={18}
+                vectorEffect="non-scaling-stroke"
+                className="cursor-pointer"
+                aria-hidden="true"
+                onClick={pick}
+              />
+            ) : null}
             <line
               x1={x1}
               y1={y1}
@@ -120,21 +148,53 @@ export function PlotSketch({
               strokeDasharray={s.dash}
               strokeLinecap="round"
               vectorEffect="non-scaling-stroke"
+              pointerEvents="none"
             />
             {!compact ? (
               <g>
-                <circle cx={lx} cy={ly} r={unit * 3.4} fill="var(--surface-panel)" stroke={hot ? 'var(--accent-strong)' : 'var(--border-strong)'} strokeWidth={unit * 0.3} />
-                <text
-                  x={lx}
-                  y={ly}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize={unit * 3.2}
-                  fontFamily="var(--font-mono)"
-                  fill="var(--text-primary)"
+                <g
+                  {...(pick
+                    ? {
+                        role: 'button',
+                        tabIndex: 0,
+                        'aria-label': pickLabel?.(i) ?? String(i),
+                        'aria-pressed': hot,
+                        className: 'cursor-pointer outline-none [&:focus-visible>circle:nth-child(2)]:stroke-[var(--focus-ring)]',
+                        onClick: pick,
+                        onKeyDown: (ev: KeyboardEvent) => {
+                          if (ev.key === 'Enter' || ev.key === ' ') {
+                            ev.preventDefault();
+                            pick();
+                          }
+                        },
+                      }
+                    : {})}
                 >
-                  {e?.classification === '' ? '?' : i}
-                </text>
+                  {/* The target is wider than the ring it draws: a finger, not a cursor, sets its size. */}
+                  {pick ? <circle cx={lx} cy={ly} r={unit * 5.5} fill="transparent" /> : <g />}
+                  <circle
+                    cx={lx}
+                    cy={ly}
+                    r={unit * 3.4}
+                    fill={hot ? 'var(--accent-subtle)' : 'var(--surface-panel)'}
+                    stroke={hot ? 'var(--accent-strong)' : 'var(--border-strong)'}
+                    strokeWidth={unit * (hot ? 0.5 : 0.3)}
+                    // Unanswered reads without colour: a broken ring around the number.
+                    strokeDasharray={unanswered ? `${unit * 1.2} ${unit * 0.9}` : undefined}
+                  />
+                  <text
+                    x={lx}
+                    y={ly}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={unit * 3.2}
+                    fontFamily="var(--font-mono)"
+                    fill={unanswered ? 'var(--text-secondary)' : 'var(--text-primary)'}
+                    pointerEvents="none"
+                  >
+                    {i}
+                  </text>
+                </g>
                 {e?.lengthM ? (
                   <text
                     /*

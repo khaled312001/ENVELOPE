@@ -252,6 +252,13 @@ export const AR: Dict = {
     towerSetbackOf: (i: number): string => `ارتداد البرج على الحد ${i}، بالمتر`,
     towerSetbackBlank: 'من القاعدة',
     towerSetbackFromSheet: 'ارتداد البرج كما يذكره مخطط الأرض:',
+    planPick: 'اختر رقم الحد لتصنيفه هنا.',
+    edgeMarker: (i: number, cls: string | null): string =>
+      cls ? `الحد ${i}: ${cls}. اختره لتغييره.` : `الحد ${i}: لم يصنف بعد. اختره لتصنيفه.`,
+    edgeEditor: (i: number, j: number): string => `الحد ${i}، من P${i} إلى P${j}`,
+    edgeKind: 'ما الذي يقع خلف هذا الحد؟',
+    closeEditor: 'إغلاق',
+    refileNote: 'تغيير نوع الحد يلغي تسجيل القطعة، فسجلها مرة أخرى من اللوحة.',
     hierarchy: 'تصنيف الطريق…',
     road: {
       ARTERIAL: 'طريق شرياني',

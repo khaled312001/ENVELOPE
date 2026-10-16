@@ -253,6 +253,13 @@ export const EN = {
     towerSetbackOf: (i: number): string => `Tower setback on boundary ${i}, metres`,
     towerSetbackBlank: 'from the rule',
     towerSetbackFromSheet: 'Tower setback, as the affection plan states:',
+    planPick: 'Select a boundary’s number to classify it here.',
+    edgeMarker: (i: number, cls: string | null): string =>
+      cls ? `Boundary ${i}: ${cls}. Select to change it.` : `Boundary ${i}: not classified yet. Select to classify it.`,
+    edgeEditor: (i: number, j: number): string => `Boundary ${i}, P${i} → P${j}`,
+    edgeKind: 'What is beyond this boundary?',
+    closeEditor: 'Close',
+    refileNote: 'Changing a boundary’s kind takes the plot back to unfiled. File it again from the panel.',
     hierarchy: 'Road hierarchy…',
     road: {
       ARTERIAL: 'Arterial road',

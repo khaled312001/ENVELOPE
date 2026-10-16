@@ -636,11 +636,18 @@
   third of the way in, measured in the browser, while this version kept time.
   With reduced motion the rule below plays each once in 0.01 ms and the path
   returns to its own style: three still stars.
+
+  Longhands, not the shorthand: `animation: 2.8s … infinite` with no name was
+  minified to `animation:none` in the production build, and the live site drew
+  three still stars while the dev server drew them moving.
+  `test/spark-css.test.ts` builds this file the way the release does and reads it back.
 */
 .spark-path {
   transform-box: fill-box;
   transform-origin: center;
-  animation: 2.8s cubic-bezier(0.34, 1.2, 0.64, 1) infinite;
+  animation-duration: 2.8s;
+  animation-timing-function: cubic-bezier(0.34, 1.2, 0.64, 1);
+  animation-iteration-count: infinite;
 }
 .spark-a { animation-name: spark-a; }
 .spark-b { animation-name: spark-b; }

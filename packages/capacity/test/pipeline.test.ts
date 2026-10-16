@@ -530,13 +530,18 @@ describe('saleable efficiency', () => {
       cancels. What it does move is Band C itself: at a lower efficiency the same
       units consume *more* GFA, so the parking-limited band rises and can stop
       being the one that binds.
+
+      ONE parking level, not two. With two, the ground floor's drive and plant
+      band (16 Oct 2026) leave 103 bays: parking binds at 100%, and at 93% Band C
+      rises past regulation's 6,934 m² and stops binding — the case this comment
+      describes, which is not the case this assertion is about.
     */
-    expect(unitsAt('0.93', 2)).toBe(unitsAt('1', 2));
+    expect(unitsAt('0.93', 1)).toBe(unitsAt('1', 1));
 
     const bandCAt = (value: string): Decimal =>
       runPipeline(
         baseInput({
-          parkingLevelsAvailable: 2,
+          parkingLevelsAvailable: 1,
           saleableEfficiency: {
             value: new Decimal(value),
             source: 'USER_SET',

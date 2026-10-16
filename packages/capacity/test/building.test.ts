@@ -334,9 +334,16 @@ describe('the parking the sheets will draw', () => {
   it('draws the laid-out count on every parking level, and totals it once', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 2 }));
     const perLevel = out.levelPlan!.bayCount.value;
-    const drawn = out.building.levels.filter((l) => l.parking).map((l) => l.parking!.bays.length);
-    expect(drawn).toEqual([perLevel, perLevel]);
-    expect(Number(out.building.drawnBays.value)).toBe(perLevel * 2);
+    const atGrade = out.levelPlan!.grade!.bayCount.value;
+    const parking = out.building.levels.filter((l) => l.parking);
+    // Grade first: it gives up what the drive and the plant stand on; the level above does not.
+    expect(parking.map((l) => l.id)).toEqual(['G', 'P1']);
+    expect(parking.map((l) => l.parking!.bays.length)).toEqual([atGrade, perLevel]);
+    expect(parking.map((l) => Number(l.parking!.bayCount.value))).toEqual([atGrade, perLevel]);
+    expect(atGrade).toBeLessThan(perLevel);
+    expect(Number(out.building.drawnBays.value)).toBe(atGrade + perLevel);
+    // And the supply the answer rests on is that same sum, not perLevel × 2.
+    expect(out.parking.providedBays.value).toBe(atGrade + perLevel);
   });
 
   it('numbers the bays 1 to n on each level', () => {

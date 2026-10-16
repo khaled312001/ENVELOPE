@@ -426,6 +426,14 @@ export interface GroundProgramInput {
    */
   readonly edges?: readonly PlotEdge[];
   /**
+   * A band against a ROAD boundary, its first side on the boundary, cut by the
+   * caller for the substation and the LV room (see `grade.ts`). Given, both rooms
+   * stand there and the strip holds the typical rooms alone.
+   */
+  readonly roadZone?: readonly Pt[];
+  /** The boundary `roadZone` stands against. */
+  readonly roadEdgeSeq?: number;
+  /**
    * The transformer count §11.4.1's table is read with.
    *
    * Absent means nobody has said, and the count is `ASSUMED` at one with
@@ -468,6 +476,8 @@ interface SubstationEnd {
   /** The `ROAD` boundary laid toward. Absent where the plot classifies none. */
   readonly roadEdgeSeq?: number;
   readonly roadDistanceM?: Decimal;
+  /** Drawn on the boundary itself, in a band the caller cut against the road. */
+  readonly againstBoundary?: boolean;
 }
 
 /**
@@ -582,8 +592,32 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
   const coreOnFarSide = input.towards !== undefined && across(input.towards) > frame.depthMm / 2;
   const b0 = coreOnFarSide ? 0 : frame.depthMm - depth;
 
-  const substationEnd = chooseSubstationEnd(frame, input.edges ?? [], coreNearFarEnd);
-  const typicalEnd: 0 | 1 = substationEnd.at === 0 ? 1 : 0;
+  /*
+    AGAINST THE ROAD, WHEN THE CALLER CUT A BAND THERE (Eng. Mohamed, 16 Oct
+    2026: «لو عندي ضلع واحد فيه شارع هيكون ال مسطح بتاع ال محول من الضلع دا مش
+    من الضلع الي فيه جار»). The band's first side lies on a ROAD boundary, so the
+    substation and the LV room stand on the boundary itself — §11.3.1's "directly
+    located on" a road, reached rather than approximated by the strip's nearer
+    end. B.4.2.3 ¶12 lets a substation stand in the setback up to the plot limit.
+    Without a band the old placement stands, and says what it does not reach.
+  */
+  const road = input.roadZone ? frameOf(input.roadZone) : null;
+  const roadDepth = road ? Math.floor(Math.min(road.depthMm, MAX_DEPTH_MM)) : 0;
+  const substationEnd: SubstationEnd = road
+    ? {
+        at: 0,
+        ...(input.roadEdgeSeq === undefined ? {} : { roadEdgeSeq: input.roadEdgeSeq }),
+        roadDistanceM: new Decimal(0),
+        againstBoundary: true,
+      }
+    : chooseSubstationEnd(frame, input.edges ?? [], coreNearFarEnd);
+  // With the substation on the road, the strip is all the typical rooms': laid from
+  // the end nearer the core, so the entrance lobby lands by the lifts.
+  const typicalEnd: 0 | 1 = road ? (coreNearFarEnd ? 1 : 0) : substationEnd.at === 0 ? 1 : 0;
+  const atRoad = (a: number, b: number): { readonly x: Mm; readonly y: Mm } => ({
+    x: asMm(Math.round(road!.origin.x + a * road!.along.x + b * road!.across.x)),
+    y: asMm(Math.round(road!.origin.y + a * road!.along.y + b * road!.across.y)),
+  });
 
   const at = (a: number, b: number): { readonly x: Mm; readonly y: Mm } => ({
     x: asMm(Math.round(frame.origin.x + a * frame.along.x + b * frame.across.x)),
@@ -682,12 +716,18 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
   const substation = sizeSubstation({
     tracer,
     stated: input.substation,
-    depthMm: depth,
+    depthMm: road ? roadDepth : depth,
   });
 
   let substationDrawn: SubstationSizing['drawn'];
   const substationAt =
-    substation.refusal === undefined ? fit(substationEnd.at, substation.widthMm) : undefined;
+    substation.refusal !== undefined
+      ? undefined
+      : road
+        ? substation.widthMm <= road.lengthMm
+          ? 0
+          : undefined
+        : fit(substationEnd.at, substation.widthMm);
   if (substation.refusal !== undefined) {
     refused.push({ name: SUBSTATION_NAME, reason: substation.refusal });
   } else if (substationAt === undefined) {
@@ -696,9 +736,12 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
       reason:
         `DEWA §11.4.1 requires ${substation.requiredAreaM2.value.toString()} m² for ` +
         `${substation.transformers.value} transformer(s), which in a ` +
-        `${(depth / 1000).toFixed(2)} m deep strip is ${(substation.widthMm / 1000).toFixed(2)} m ` +
-        `along it. The strip is ${(frame.lengthMm / 1000).toFixed(2)} m long` +
-        (blocked.length === 0
+        `${((road ? roadDepth : depth) / 1000).toFixed(2)} m deep ${road ? 'band' : 'strip'} is ` +
+        `${(substation.widthMm / 1000).toFixed(2)} m along it. ` +
+        (road
+          ? `The band against the road boundary is ${(road.lengthMm / 1000).toFixed(2)} m long`
+          : `The strip is ${(frame.lengthMm / 1000).toFixed(2)} m long`) +
+        (blocked.length === 0 || road
           ? ''
           : ` and its longest stretch clear of the core and the ramp is ${(longestClear() / 1000).toFixed(2)} m`) +
         ', so the room was not drawn rather than drawn under the cited area.',
@@ -712,19 +755,23 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
     */
     const width = substation.widthMm;
     const a0 = substationAt;
+    const d = road ? roadDepth : depth;
     rooms.push({
       name: SUBSTATION_NAME,
-      outline: [at(a0, b0), at(a0 + width, b0), at(a0 + width, b0 + depth), at(a0, b0 + depth)],
+      outline: road
+        ? [atRoad(a0, 0), atRoad(a0 + width, 0), atRoad(a0 + width, d), atRoad(a0, d)]
+        : [at(a0, b0), at(a0 + width, b0), at(a0 + width, b0 + depth), at(a0, b0 + depth)],
     });
-    take(substationEnd.at, a0, width);
+    if (!road) take(substationEnd.at, a0, width);
 
+    const where = road ? 'the band against the road boundary' : 'the reserved strip';
     const drawnAreaM2 = tracer.computed(
       'plant.substation.drawn_area_m2',
-      qArea(new Decimal(width).times(depth).div(1_000_000)),
+      qArea(new Decimal(width).times(d).div(1_000_000)),
       {
         formula:
-          `${mmToM(width).toFixed(2)} m along the reserved strip × ` +
-          `${mmToM(depth).toFixed(2)} m of its depth — the smallest rectangle in this strip ` +
+          `${mmToM(width).toFixed(2)} m along ${where} × ` +
+          `${mmToM(d).toFixed(2)} m of its depth — the smallest rectangle there ` +
           `that holds §11.4.1's ${substation.requiredAreaM2.value.toString()} m²`,
         uses: { required: substation.requiredAreaM2 },
         unit: 'm²',
@@ -732,9 +779,9 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
     );
     substationDrawn = {
       widthMm: asMm(width),
-      depthMm: asMm(depth),
+      depthMm: asMm(d),
       areaM2: drawnAreaM2,
-      placement: placeOnRoad(tracer, substationEnd, frame.lengthMm),
+      placement: placeOnRoad(tracer, substationEnd, road ? road.lengthMm : frame.lengthMm),
     };
   }
 
@@ -746,7 +793,24 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
     one drawn with no substation beside it would be adjacent to nothing while
     carrying a clause that is about adjacency.
   */
-  if (substationDrawn && substationAt !== undefined) {
+  if (substationDrawn && substationAt !== undefined && road) {
+    // Beside it along the same boundary: §11.2.3's adjacency, on the road as well.
+    const a0 = substation.widthMm;
+    if (a0 + LV_ROOM.widthMm > road.lengthMm) {
+      refused.push({
+        name: LV_ROOM.name,
+        reason:
+          `DEWA §11.2.3 puts the LV room adjacent to the substation, and the band against the ` +
+          `road boundary has ${((road.lengthMm - a0) / 1000).toFixed(2)} m left beside it, under ` +
+          `the ${(LV_ROOM.widthMm / 1000).toFixed(2)} m the room is drawn at.`,
+      });
+    } else {
+      rooms.push({
+        name: LV_ROOM.name,
+        outline: [atRoad(a0, 0), atRoad(a0 + LV_ROOM.widthMm, 0), atRoad(a0 + LV_ROOM.widthMm, roadDepth), atRoad(a0, roadDepth)],
+      });
+    }
+  } else if (substationDrawn && substationAt !== undefined) {
     // Against the substation's inner side and nowhere else: §11.2.3 is an adjacency.
     const lvAt =
       substationEnd.at === 0 ? substationAt + substation.widthMm : substationAt - LV_ROOM.widthMm;
@@ -775,7 +839,24 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
   }
 
   // --- the typical rooms, from the other end ----------------------------------------
-  for (const room of TYPICAL_ROOMS) place(room.name, typicalEnd, room.widthMm);
+  /*
+    Where the band IS the only zone — the level reserved no strip, and the caller
+    passed the band as both — the band is the substation's and the LV room's, and
+    a typical room laid along it would stand on top of them.
+  */
+  const bandOnly = road !== null && input.roadZone === input.zone;
+  for (const room of TYPICAL_ROOMS) {
+    if (bandOnly) {
+      refused.push({
+        name: room.name,
+        reason:
+          `${room.name} has no strip to stand in: this level reserved none, and the band against ` +
+          'the road holds the substation and the LV room.',
+      });
+    } else {
+      place(room.name, typicalEnd, room.widthMm);
+    }
+  }
 
   /*
     WHAT THE STRIP HAD NO LENGTH FOR, IN THE OTHER RESERVED PIECES. The layout
@@ -829,11 +910,14 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
         (substationDrawn
           ? `, drawn ${mmToM(substationDrawn.widthMm).toFixed(2)} × ` +
             `${mmToM(substationDrawn.depthMm).toFixed(2)} m` +
-            (substationEnd.roadEdgeSeq === undefined
-              ? ', at an end of the strip this engine chose by convention because no ' +
-                'boundary of this plot is classified ROAD and §11.3.1 could not be applied.'
-              : `, at the end of the strip nearest boundary ${substationEnd.roadEdgeSeq}, ` +
-                'which is classified ROAD (§11.3.1).')
+            (substationEnd.againstBoundary
+              ? `, against boundary ${substationEnd.roadEdgeSeq}, which is classified ROAD ` +
+                '(§11.3.1), with the LV room beside it on the same boundary (§11.2.3).'
+              : substationEnd.roadEdgeSeq === undefined
+                ? ', at an end of the strip this engine chose by convention because no ' +
+                  'boundary of this plot is classified ROAD and §11.3.1 could not be applied.'
+                : `, at the end of the strip nearest boundary ${substationEnd.roadEdgeSeq}, ` +
+                  'which is classified ROAD (§11.3.1).')
           : '; it was not drawn, and the reason is reported with the room.'),
       label: 'indicative ground-floor rooms',
       detail: { notAssessed },
@@ -1051,6 +1135,25 @@ function placeOnRoad(
       },
     );
   }
+  if (end.againstBoundary) {
+    return tracer.derived('plant.substation.placement', `against boundary ${end.roadEdgeSeq}, on the road`, {
+      rule: { ruleId: ON_ROAD_RULE.ruleId, citation: ON_ROAD_RULE.citation },
+      formula:
+        `a band ${mmToM(stripLengthMm).toFixed(2)} m long cut against boundary ` +
+        `${end.roadEdgeSeq}, which is classified ROAD; the substation stands on the boundary`,
+      detail: {
+        statedBy:
+          'Eng. Mohamed, 16 Oct 2026: the transformer room is on the boundary with the ' +
+          'street, never on one shared with a neighbour.',
+        setback:
+          'Dubai Building Code B.4.2.3 ¶12 allows substations within the setbacks up to the ' +
+          'plot limit, so the room may stand in the setback strip.',
+        notAssessed:
+          'Ventilation, the transformer transport route and the door onto the road ' +
+          '(§11.5.1, §11.3.3) are NOT ASSESSED.',
+      },
+    });
+  }
   return tracer.derived(
     'plant.substation.placement',
     `at the ${which} end of the reserved strip, nearest boundary ${end.roadEdgeSeq}`,
@@ -1097,9 +1200,30 @@ function placeOnRoad(
  * second list that agrees with the first until somebody encodes one of them, and
  * then goes on publishing an absence that is no longer absent.
  */
+/**
+ * How far along a road boundary the substation and the LV room run together, in
+ * millimetres, at a band `depthMm` deep: the width §11.4.1 asks of the substation
+ * at that depth, then the LV room beside it. The same arithmetic `sizeSubstation`
+ * draws with, untraced, so the band can be cut before the rooms are laid in it.
+ * Null where §11.4.1's minimum width is deeper than the band, which `sizeSubstation`
+ * refuses in a sentence of its own.
+ */
+export function plantRunMm(depthMm: number, transformers: number = ASSUMED_TRANSFORMERS): number | null {
+  const minWidth = citedMinWidthM(transformers);
+  const minWidthMm = minWidth === undefined ? 0 : toMm(minWidth);
+  if (depthMm < minWidthMm) return null;
+  const width = Math.max(
+    new Decimal(singleRoomSubstationAreaM2(transformers)).times(1_000_000).div(depthMm).ceil().toNumber(),
+    minWidthMm,
+  );
+  return width + LV_ROOM.widthMm;
+}
+
 function notAssessedFor(end: SubstationEnd): readonly string[] {
   return [
-    ...(end.roadEdgeSeq === undefined
+    ...(end.againstBoundary
+      ? []
+      : end.roadEdgeSeq === undefined
       ? [
           'Whether the substation is on a road at all (DEWA §11.3.1). No boundary of ' +
             'this plot is classified ROAD, so the clause was not applied and the end of ' +

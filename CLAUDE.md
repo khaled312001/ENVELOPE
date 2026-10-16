@@ -348,6 +348,19 @@ is a defect even when it makes something easier.
   of a pair is on a driver's right as they turn in (the UAE drives on the right),
   a drafting rule rather than a clause, and every opening is drawn with its own
   arrow on the screen, the sheets, the DXF and the 3D view.
+- **The ground floor is its own level, and the transformer faces the street.**
+  Every parking level shares one layout except the one at grade (`grade.ts`), which
+  is the level the street reaches. Each opening is carried straight onto the plot
+  to the first drive aisle it lands on, and a bay the drive crosses is given up
+  *at grade only*. A band as deep as the bay row and as long as DEWA §11.4.1's
+  substation plus the LV room is cut against a `ROAD` boundary, never one shared
+  with a neighbour (Eng. Mohamed: «مش من الضلع الي فيه جار»). It stands at the end
+  farthest from the openings, by a stated rule, and is stepped clear of the drives,
+  the core, the ramp and **every aisle**: a bay is what the band may take, a lane is
+  not. Supply is `bays at grade + per level × (levels − 1)`, never `per level × levels`.
+  The placement is `DERIVED` "against boundary k" from §11.3.1, with B.4.2.3 ¶12
+  letting it stand in the setback. Searching positions for the fewest bays lost
+  would be the optimiser `PHASE_0_CLASSES` refuses.
 - **The orientation is swept; the design is not.** Runs along a level's width and runs
   along its depth place different numbers of bays in the same rectangle. Both are
   packed, the better is kept, and the loser's count is in the formula. Two candidates,

@@ -75,7 +75,15 @@ export interface ParkingInput {
    * COUNTED — drawn bays × parking levels — rather than divided out of an area
    * by an assumed factor. A bay count that cannot be laid out is not a bay count.
    */
-  readonly laidOut?: { readonly baysPerLevel: Traced<number> };
+  readonly laidOut?: {
+    readonly baysPerLevel: Traced<number>;
+    /**
+     * The ground floor's own count, where it parks and differs: the drive from
+     * the entrance and the substation on the road stand on it (`grade.ts`).
+     * Counted once, in place of one of the levels at `baysPerLevel`.
+     */
+    readonly groundBays?: Traced<number>;
+  };
 }
 
 export interface UsableFractionInput {
@@ -327,17 +335,31 @@ export function solveParking(input: ParkingInput): ParkingResult {
   });
 
   // --- Levels required -----------------------------------------------------
+  // The ground floor counts first where it has its own count: it is the level the street reaches.
+  const ground = measured?.groundBays;
   const levelsRequiredValue = measured
-    ? Math.ceil(totalBaysValue / measured.baysPerLevel.value)
+    ? ground
+      ? totalBaysValue <= ground.value
+        ? 1
+        : 1 + Math.ceil((totalBaysValue - ground.value) / measured.baysPerLevel.value)
+      : Math.ceil(totalBaysValue / measured.baysPerLevel.value)
     : availablePerLevelValue.isZero()
       ? 0
       : requiredAreaValue.div(availablePerLevelValue).ceil().toNumber();
   const levelsRequired = measured
-    ? tracer.computed('parking.levels_required', levelsRequiredValue, {
-        formula: `ceil(${totalBaysValue} bays required ÷ ${measured.baysPerLevel.value} bays laid out per level)`,
-        uses: { required: totalBays, perLevel: measured.baysPerLevel },
-        unit: 'levels',
-      })
+    ? ground
+      ? tracer.computed('parking.levels_required', levelsRequiredValue, {
+          formula:
+            `the ground floor's ${ground.value} bays, then ceil(${Math.max(0, totalBaysValue - ground.value)} ` +
+            `bays still required ÷ ${measured.baysPerLevel.value} bays per level): ${levelsRequiredValue} level(s)`,
+          uses: { required: totalBays, perLevel: measured.baysPerLevel, ground },
+          unit: 'levels',
+        })
+      : tracer.computed('parking.levels_required', levelsRequiredValue, {
+          formula: `ceil(${totalBaysValue} bays required ÷ ${measured.baysPerLevel.value} bays laid out per level)`,
+          uses: { required: totalBays, perLevel: measured.baysPerLevel },
+          unit: 'levels',
+        })
     : tracer.computed('parking.levels_required', levelsRequiredValue, {
         formula: `ceil(${requiredAreaValue.toFixed(2)} m² ÷ ${availablePerLevelValue.toFixed(2)} m² per level)`,
         uses: { required: requiredArea, perLevel: availableAreaPerLevel },
@@ -359,19 +381,26 @@ export function solveParking(input: ParkingInput): ParkingResult {
     detail: { metric: metric('PARKING_AREA').metricId },
   });
 
+  const groundLaid = laid?.groundBays !== undefined && input.levelsAvailable > 0 ? laid.groundBays : undefined;
   const suppliedBays = laid
-    ? new Decimal(laid.baysPerLevel.value).times(input.levelsAvailable)
+    ? groundLaid
+      ? new Decimal(laid.baysPerLevel.value).times(input.levelsAvailable - 1).plus(groundLaid.value)
+      : new Decimal(laid.baysPerLevel.value).times(input.levelsAvailable)
     : availableAreaValue.div(factor).floor();
   const providedBays = laid
     ? tracer.computed('parking.provided_bays', suppliedBays.toNumber(), {
-        formula: `${laid.baysPerLevel.value} bays laid out per level × ${input.levelsAvailable} parking level(s)`,
-        uses: { perLevel: laid.baysPerLevel, levels: levelsAvailable },
+        formula: groundLaid
+          ? `${groundLaid.value} bays on the ground floor + ${laid.baysPerLevel.value} bays laid out per ` +
+            `level × ${input.levelsAvailable - 1} other parking level(s)`
+          : `${laid.baysPerLevel.value} bays laid out per level × ${input.levelsAvailable} parking level(s)`,
+        uses: { perLevel: laid.baysPerLevel, levels: levelsAvailable, ...(groundLaid ? { ground: groundLaid } : {}) },
         unit: 'bays',
         detail: {
           note:
             'Counted on the drawn level, not divided out of an area: every bay is placed ' +
             'to Table B.11 and reachable from the way in. The same layout on every ' +
-            'parking level. When this is below the required count the scheme does not ' +
+            'parking level, less what the drive from the entrance and the substation take ' +
+            'on the ground floor. When this is below the required count the scheme does not ' +
             'park itself, and Band C is what that costs.',
         },
       })

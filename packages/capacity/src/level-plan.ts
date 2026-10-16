@@ -44,6 +44,7 @@ import {
 } from '@envelope/geometry';
 
 import { placeVehicleAccess, type AccessChoice, type AccessResult } from './access.js';
+import type { GradePlan } from './grade.js';
 import type { RampHeadroom } from './ramp-rules.js';
 import {
   layoutParkingLevel,
@@ -186,6 +187,12 @@ export interface LevelPlan {
    * checked will visit one of them.
    */
   readonly notAssessed: readonly string[];
+  /**
+   * The level at grade, where the ground floor holds parking: the shared layout
+   * less what the drive from the entrance and the substation on the road take.
+   * Set by the pipeline, which knows whether the ground floor parks; see `grade.ts`.
+   */
+  readonly grade?: GradePlan;
 }
 
 export interface LevelPlanInput {

@@ -201,4 +201,53 @@ describe('a parking level sheet', () => {
     expect(span).toBeLessThan(aisleWidth + 2 * bay + 10_000);
     expect(module.crossing).toBe(false);
   });
+
+  it('on a ring, measures a driveway and the bays beside it — nothing in the setback', () => {
+    /*
+      The first module aisle on a ring is a 6 × 5.5 m piece at one of its
+      corners, and the chain measured along it: "5.50 M" was printed across the
+      setback above the slab and the driveway's own figure a bay out of place, on
+      every ring sheet, including the worked example's. Held two ways: every stop
+      of the chain is on the slab, and a bay figure stands only where a bay run is.
+    */
+    const model = runPipeline(runInput(RECT_80x40, { podiumLevels: 2 })).building;
+    const level = model.levels.find((l) => l.parking?.rampedFloor)!;
+    expect(level, 'the fixture lays out no ring').toBeDefined();
+    const parking = level.parking!;
+    const sheet = composeSheets(model, META).find((s) => s.levelId === level.id)!;
+
+    // The longest aisle names the direction the chain is measured across.
+    const len = (o: readonly ModelPoint[]): number =>
+      Math.max(...o.map((q, i) => Math.hypot(o[(i + 1) % o.length]!.x - q.x, o[(i + 1) % o.length]!.y - q.y)));
+    const drive = parking.aisles.filter((a) => !a.crossing).sort((a, b) => len(b.outline) - len(a.outline))[0]!;
+    const xs = drive.outline.map((q) => q.x);
+    const alongX = Math.max(...xs) - Math.min(...xs) >= len(drive.outline) - 1;
+    const across = (q: ModelPoint): number => (alongX ? q.y : q.x);
+
+    const slab = level.outline.map(across);
+    const witnesses = shapes(sheet.items).filter(
+      (s) => s.role === Role.DIMENSION && s.points.length === 2 && across(s.points[0]!) === across(s.points[1]!),
+    );
+    expect(witnesses.length).toBeGreaterThanOrEqual(3);
+    for (const w of witnesses) {
+      expect(across(w.points[0]!)).toBeGreaterThanOrEqual(Math.min(...slab));
+      expect(across(w.points[0]!)).toBeLessThanOrEqual(Math.max(...slab));
+    }
+
+    // Every bay figure stands beside a bay run as deep as the figure says.
+    const figures = texts(sheet.items).filter((t) => t.role === Role.DIMENSION).map((t) => t.value);
+    const bay = `${Number(parking.module.bayLengthM).toFixed(2)} M`;
+    expect(figures).toContain(`${Number(parking.module.aisleWidthM).toFixed(2)} M`);
+    const stops = [...new Set(witnesses.map((w) => across(w.points[0]!)))].sort((a, b) => a - b);
+    const runs = stops.slice(1).map((hi, i) => ({ lo: stops[i]!, hi }));
+    const bayRuns = runs.filter((r) => Math.abs(r.hi - r.lo - Number(parking.module.bayLengthM) * 1000) <= 1);
+    expect(bayRuns.length).toBe(figures.filter((f) => f === bay).length);
+    for (const r of bayRuns) {
+      const covered = parking.bays.some((b) => {
+        const a = b.outline.map(across);
+        return Math.abs(Math.min(...a) - r.lo) <= 50 && Math.abs(Math.max(...a) - r.hi) <= 50;
+      });
+      expect(covered, `no bay run between ${r.lo} and ${r.hi}`).toBe(true);
+    }
+  });
 });

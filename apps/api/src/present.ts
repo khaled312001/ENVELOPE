@@ -263,6 +263,28 @@ export function presentRun(
             })),
           },
           notAssessed: levelPlan.notAssessed,
+          /*
+            The level at grade, where it parks: what the drive from the entrance
+            and the substation on the road cost it, in bays, beside the notes on
+            what was not drawn. Null where the ground floor does not park, and on
+            every run stored before 16 Oct 2026.
+          */
+          grade: levelPlan.grade
+            ? {
+                bayCount: toWire(levelPlan.grade.bayCount),
+                dropped: levelPlan.grade.dropped,
+                drives: levelPlan.grade.drives.map((d) => ({
+                  label: d.label,
+                  role: d.opening.role,
+                  edgeSeq: d.opening.edgeSeq,
+                  depthM: d.depthM.toFixed(2),
+                })),
+                plantBand: levelPlan.grade.plantBand
+                  ? { edgeSeq: levelPlan.grade.plantBand.edgeSeq, outline: levelPlan.grade.plantBand.world.map(point) }
+                  : null,
+                notes: levelPlan.grade.notes,
+              }
+            : null,
         }
       : null,
     levelPlanRefusal: output.levelPlanRefusal ?? null,

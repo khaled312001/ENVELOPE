@@ -161,23 +161,23 @@
     "bayAreaFactorClass": "ASSUMED",
     "bandAM2": "16000",
     "bandBM2": "17920",
-    "bandCM2": "7548.3876",
+    "bandCM2": "7258.065",
     "governingBand": "PARKING",
-    "governingGfaM2": "7548.3876",
-    "headroomToNextM2": "8451.61",
+    "governingGfaM2": "7258.065",
+    "headroomToNextM2": "8741.94",
     "nextBindingBand": "REGULATORY",
     "levels": "5",
     "formulas": {
       "bandA": "FAR 5 × plot area 3200.00 m² (parking excluded from FAR)",
       "bandB": "tower plate 1280.00 m² × 14 level(s)",
-      "bandC": "78 unit(s) supportable by parking × 96.77 m² GFA per unit",
+      "bandC": "75 unit(s) supportable by parking × 96.77 m² GFA per unit",
       "governingGfa": "min(band A, band B, band C)",
       "levels": "floor(min(14, governing GFA ÷ tower plate))"
     },
     "levelPlan": {
       "bayCount": {
         "value": "56",
-        "node": "n101",
+        "node": "n114",
         "parameterId": "parking.laid_out_bays",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -185,7 +185,7 @@
       },
       "areaPerBayM2": {
         "value": "34.24",
-        "node": "n103",
+        "node": "n116",
         "parameterId": "parking.area_per_bay_m2",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -193,7 +193,7 @@
       },
       "deductionsM2": {
         "value": "287.62",
-        "node": "n67",
+        "node": "n80",
         "parameterId": "parking.layout_deductions_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -201,7 +201,7 @@
       },
       "moduleDepthM": {
         "value": "17",
-        "node": "n71",
+        "node": "n84",
         "parameterId": "parking.module_depth_m",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -209,7 +209,7 @@
       },
       "usableAreaM2": {
         "value": "1629.88",
-        "node": "n73",
+        "node": "n86",
         "parameterId": "parking.layout_usable_area_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -217,7 +217,7 @@
       },
       "orientation": {
         "value": "bays to the walls, the ring aisle sloped as the ramp",
-        "node": "n97",
+        "node": "n110",
         "parameterId": "parking.module_orientation",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION"
@@ -1806,7 +1806,7 @@
           ],
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-          "node": "n126",
+          "node": "n139",
           "provenanceClass": "DERIVED"
         },
         "chosen": null,
@@ -1943,7 +1943,51 @@
         "Whether a T junction sits opposite the chosen opening (B.7.2.1: \"Vehicle access shall not be located opposite a T junction\"). That needs the surrounding road network, which no affection plan carries.",
         "RTA approval. B.7.2.1 defers the location to RTA requirements and the Dubai access management manual; nothing here substitutes for that.",
         "Whether a traffic impact study is required for this development."
-      ]
+      ],
+      "grade": {
+        "bayCount": {
+          "value": "52",
+          "node": "n141",
+          "parameterId": "parking.grade_bays",
+          "provenanceClass": "DERIVED",
+          "renderHint": "NEUTRAL_WITH_CITATION",
+          "unit": "bays"
+        },
+        "dropped": {
+          "drive": 4,
+          "plant": 0
+        },
+        "drives": [
+          {
+            "label": "ENTRY DRIVE - 6.00M",
+            "role": "ENTRY_EXIT",
+            "edgeSeq": 0,
+            "depthM": "10.50"
+          }
+        ],
+        "plantBand": {
+          "edgeSeq": 2,
+          "outline": [
+            {
+              "x": "80.000",
+              "y": "40.000"
+            },
+            {
+              "x": "69.000",
+              "y": "40.000"
+            },
+            {
+              "x": "69.000",
+              "y": "34.500"
+            },
+            {
+              "x": "80.000",
+              "y": "34.500"
+            }
+          ]
+        },
+        "notes": []
+      }
     },
     "access": {
       "recommended": {
@@ -1999,7 +2043,7 @@
         ],
         "rank": 1,
         "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-        "node": "n126",
+        "node": "n139",
         "provenanceClass": "DERIVED"
       },
       "chosen": null,
@@ -2131,12 +2175,12 @@
     "parkingInFar": {
       "countsTowardFar": {
         "regulatoryGfaM2": "8287.20",
-        "governingGfaM2": "7548.39",
+        "governingGfaM2": "7258.06",
         "governingBand": "PARKING"
       },
       "excludedFromFar": {
         "regulatoryGfaM2": "16000.00",
-        "governingGfaM2": "7548.39",
+        "governingGfaM2": "7258.06",
         "governingBand": "PARKING"
       },
       "regulatorySpreadM2": "7712.80",
@@ -2165,10 +2209,10 @@
         }
       ],
       "cars": {
-        "engine": 112,
-        "drawingSet": 112,
-        "dxf": 112,
-        "modelFile": 112
+        "engine": 108,
+        "drawingSet": 108,
+        "dxf": 108,
+        "modelFile": 108
       },
       "stampedIn": [
         "json",
@@ -2514,7 +2558,7 @@
           "Pedestrian entrance, refuse room and escape distances — NOT ASSESSED until their rules are encoded.",
           "The sloped ring is drawn level in 3D and in section. On plan the ring aisle and the bays on it climb one storey over each 121.00 m lap; the 3D view and the sections stand every parking level flat at its floor height, and where the core door meets the ring at each level is not drawn.",
           "The core, as a design. Its outline is the tower plate scaled to the core area, and only that area is a computed quantity. The stairs, lifts and lobby drawn inside it, and the door into it at ground level, are an indicative layout, assumed: egress, lift traffic and fire-fighting are NOT ASSESSED, no riser or core wall is placed, and no route from the street to the core's door is drawn.",
-          "The ground floor, as a services design. Every room in its reserved strip whose width is a typical figure is an assumption: it is not sized, ventilated or access-checked against a Civil Defence or municipality requirement. The substation and the LV room are sized from DEWA §11.4.1 and §11.2.3, and neither is ventilated or access-checked either — §11.5.1 is only partly mechanizable and is NOT ASSESSED. PUMP ROOM: PUMP ROOM needs 5.00 m along the strip and 2.92 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. WATER TANK: WATER TANK needs 6.00 m along the strip and 2.92 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. GARBAGE ROOM: GARBAGE ROOM needs 4.00 m along the strip and 2.92 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. MM ROOM: MM ROOM needs 2.50 m along the strip and 0.42 m of its 13.00 m is left, so it was not drawn rather than drawn narrow."
+          "The ground floor, as a services design. Every room in its reserved strip whose width is a typical figure is an assumption: it is not sized, ventilated or access-checked against a Civil Defence or municipality requirement. The substation and the LV room are sized from DEWA §11.4.1 and §11.2.3, and neither is ventilated or access-checked either — §11.5.1 is only partly mechanizable and is NOT ASSESSED. GARBAGE ROOM: GARBAGE ROOM needs 4.00 m along the strip and 2.00 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. TEL ROOM: TEL ROOM needs 2.50 m along the strip and 2.00 m of its 13.00 m is left, so it was not drawn rather than drawn narrow. MM ROOM: MM ROOM needs 2.50 m along the strip and 2.00 m of its 13.00 m is left, so it was not drawn rather than drawn narrow."
         ]
       },
       "jsonFields": [

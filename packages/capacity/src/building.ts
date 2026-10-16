@@ -64,8 +64,25 @@ import type { CoreLayout } from './core-layout.js';
 import { layoutGroundProgram } from './ground-program.js';
 import { CROSS_AISLE_ROW } from './layout.js';
 import type { EnvelopeSolution } from './envelope.js';
+import type { GradePlan } from './grade.js';
 import type { LevelPlan, WorldRect } from './level-plan.js';
 import type { MassingResult } from './massing.js';
+
+/**
+ * How many parking levels stand in the podium, from the ground up. One place,
+ * because the pipeline asks the same question before the model exists — does the
+ * ground floor park, and so carry the drive from the entrance — and two answers
+ * would be a ground floor counted with one layout and drawn with another.
+ */
+export function parkingInPodiumOf(
+  schedule: LevelSchedule | undefined,
+  parkingCount: number,
+  podiumLevels: number,
+): number {
+  return schedule
+    ? (schedule.groundIsParking ? 1 : 0) + schedule.podiumParkingLevels
+    : Math.min(parkingCount, podiumLevels);
+}
 
 /** What each opening's label says, in the drawings' ASCII. */
 const OPENING_WORDS: Readonly<Record<AccessOpeningRole, string>> = {
@@ -198,9 +215,7 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     rule stands: fill the podium first, put the rest below grade, and declare it.
   */
   const stated = input.schedule;
-  const parkingInPodium = stated
-    ? (stated.groundIsParking ? 1 : 0) + stated.podiumParkingLevels
-    : Math.min(parkingCount, podiumLevels.value);
+  const parkingInPodium = parkingInPodiumOf(stated, parkingCount, podiumLevels.value);
   const parkingBelow = stated ? stated.basements : parkingCount - parkingInPodium;
   // The answer's levels stand on the parking. Where the podium parking and the
   // answer together need more levels than the ceiling permits, the shortfall is said
@@ -272,6 +287,9 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   const climbs: 'UP' | 'DOWN' | null =
     parkingBelow > 0 && parkingInPodium <= 1 ? 'DOWN' : parkingBelow === 0 && parkingInPodium > 1 ? 'UP' : null;
   const parkingContent: ModelLevel['parking'] = levelPlan ? parkingOf(levelPlan, climbs) : null;
+  // The level at grade, when it parks: its own content, the drive and the plant on it.
+  const gradeContent: ModelLevel['parking'] =
+    levelPlan?.grade && parkingInPodium >= 1 ? parkingOf(levelPlan, climbs, levelPlan.grade) : parkingContent;
   if (parkingCount > 0 && !levelPlan) {
     notModelled.push(
       `Parking bays. The level could not be laid out: ${input.levelPlanRefusal ?? 'no reason was recorded'}`,
@@ -342,7 +360,7 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       outline: (inPodium ? envelope.podiumRing : envelope.plateRing).map(pt),
       outlineSource: inPodium ? podiumSource : towerSource,
       placed: isParking || i - parkingInPodium < placedAboveParking,
-      parking: isParking ? parkingContent : null,
+      parking: isParking ? (i === 0 ? gradeContent : parkingContent) : null,
     });
   }
 
@@ -441,17 +459,32 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
 
   // --- what is drawn, counted once -------------------------------------------------
   const perLevel = levelPlan?.bayCount;
+  const atGrade = gradeContent !== parkingContent ? levelPlan?.grade?.bayCount : undefined;
   const drawnBays = perLevel
-    ? tracer.computed('building.drawn_bays', perLevel.value * parkingCount, {
-        formula: `${perLevel.value} bays laid out per level × ${parkingCount} parking level(s)`,
-        uses: { perLevel, levels: input.parkingLevels },
-        unit: 'bays',
-        detail: {
-          note:
-            'Every bay the sheets, the massing and the DXF draw. The same layout on ' +
-            'each parking level, because the parking solver sized every level alike.',
-        },
-      })
+    ? atGrade
+      ? tracer.computed('building.drawn_bays', atGrade.value + perLevel.value * (parkingCount - 1), {
+          formula:
+            `${atGrade.value} bays at grade + ${perLevel.value} bays laid out per level × ` +
+            `${parkingCount - 1} other parking level(s)`,
+          uses: { atGrade, perLevel, levels: input.parkingLevels },
+          unit: 'bays',
+          detail: {
+            note:
+              'Every bay the sheets, the massing and the DXF draw. The levels other than ' +
+              'grade share one layout; the one at grade gives up the bays under the drive ' +
+              'from the entrance and under the substation on the road.',
+          },
+        })
+      : tracer.computed('building.drawn_bays', perLevel.value * parkingCount, {
+          formula: `${perLevel.value} bays laid out per level × ${parkingCount} parking level(s)`,
+          uses: { perLevel, levels: input.parkingLevels },
+          unit: 'bays',
+          detail: {
+            note:
+              'Every bay the sheets, the massing and the DXF draw. The same layout on ' +
+              'each parking level, because the parking solver sized every level alike.',
+          },
+        })
     : tracer.computed('building.drawn_bays', 0, {
         formula: 'no parking level could be laid out, so no bay is drawn',
         uses: { levels: input.parkingLevels },
@@ -526,15 +559,22 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     commonly made of, as one assumption, and names whatever did not fit.
   */
   const ground = levels.find((l) => l.parking && l.elevationMm === 0);
-  const zone = levelPlan?.reservedZone;
+  // The band against the road, where the level at grade parks and one was cut:
+  // the substation and the LV room stand there rather than in the strip.
+  const band = ground && ground.parking === gradeContent ? levelPlan?.grade?.plantBand : undefined;
+  const zone = levelPlan?.reservedZone ?? band?.world;
   let groundRooms: BuildingModel['groundRooms'];
   if (ground && zone) {
     // What already stands in the strip at grade, as the sheets draw it: the core
-    // (its shafts, where only they pass through a parking level) and the ramp.
+    // (its shafts, where only they pass through a parking level), the ramp, the
+    // drive from the entrance and, where the strip is not the band, the band.
     const coreHere = core && core.levelIds.includes(ground.id) ? (core.shaft?.outline ?? core.outline) : null;
-    const obstacles = [coreHere, ground.parking?.rampStrip ?? null].filter(
-      (ring): ring is NonNullable<typeof ring> => ring !== null,
-    );
+    const obstacles = [
+      coreHere,
+      ground.parking?.rampStrip ?? null,
+      ...(ground.parking?.drives ?? []).map((d) => d.outline),
+      band && band.world !== zone ? band.world.map(pt) : null,
+    ].filter((ring): ring is NonNullable<typeof ring> => ring !== null);
     const overflow = (levelPlan?.reservedZones ?? [])
       .filter((z) => z !== zone)
       .slice()
@@ -544,6 +584,8 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       zone,
       ...(overflow.length > 0 ? { overflow } : {}),
       obstacles,
+      edges: input.plot.edges,
+      ...(band ? { roadZone: band.world, roadEdgeSeq: band.edgeSeq } : {}),
       ...(core
         ? {
             towards: {
@@ -784,11 +826,18 @@ function cut(
 }
 
 /** One parking level's content, from the level plan. Numbered as a reader scans. */
-function parkingOf(plan: LevelPlan, climbs: 'UP' | 'DOWN' | null): NonNullable<ModelLevel['parking']> {
+function parkingOf(
+  plan: LevelPlan,
+  climbs: 'UP' | 'DOWN' | null,
+  grade?: GradePlan,
+): NonNullable<ModelLevel['parking']> {
   const byScan = (a: WorldRect, b: WorldRect): number =>
     a.yM.comparedTo(b.yM) || a.xM.comparedTo(b.xM);
+  // At grade the level is the shared layout less what the drive and the plant stand on.
+  const rects = grade?.rects ?? plan.rects;
+  const count = grade?.bayCount ?? plan.bayCount;
 
-  const bays: ModelBay[] = plan.rects
+  const bays: ModelBay[] = rects
     .filter((r) => r.kind === 'BAY' || r.kind === 'ACCESSIBLE_BAY')
     .slice()
     .sort(byScan)
@@ -801,7 +850,7 @@ function parkingOf(plan: LevelPlan, climbs: 'UP' | 'DOWN' | null): NonNullable<M
   const standard = plan.layout.standard;
   const twoWay = standard.driveway === 'TWO_WAY';
   const label = `${new Decimal(standard.drivewayWidthM).toFixed(2)}M WIDE ${twoWay ? '2 WAY' : '1 WAY'} DRIVEWAY`;
-  const aisles: ModelAisle[] = plan.rects
+  const aisles: ModelAisle[] = rects
     .filter((r) => r.kind === 'AISLE')
     .slice()
     .sort(byScan)
@@ -829,6 +878,9 @@ function parkingOf(plan: LevelPlan, climbs: 'UP' | 'DOWN' | null): NonNullable<M
   return {
     bays,
     aisles,
+    ...(grade && grade.drives.length > 0
+      ? { drives: grade.drives.map((d) => ({ outline: d.world.map(pt), label: d.label })) }
+      : {}),
     reserved: plan.reservedZone
       ? (() => {
           /*
@@ -879,7 +931,7 @@ function parkingOf(plan: LevelPlan, climbs: 'UP' | 'DOWN' | null): NonNullable<M
       bayLengthM: standard.bayLengthM,
       aisleWidthM: standard.drivewayWidthM,
     },
-    baysSource: source(plan.bayCount),
-    bayCount: toWire(plan.bayCount),
+    baysSource: source(count),
+    bayCount: toWire(count),
   };
 }

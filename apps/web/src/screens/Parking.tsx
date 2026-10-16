@@ -82,15 +82,18 @@ import example from './worked-example.json' with { type: 'json' };
 
 const IN = example.input;
 /**
- * The worked example's parking level at grade, in the building model.
+ * The worked example's parking level that the plan on this page IS, in the
+ * building model.
  *
- * `G`, because levels are named for what they are rather than for their index —
- * `B2, B1, G, P1, L03` is how a Dubai drawing is numbered, and `L00` named the
- * ground floor, a podium level and a typical floor alike. Checked in
- * `parking-page.test.tsx` against the model file, so a change to how the engine
- * stacks the parking cannot leave this figure framing a level that is not there.
+ * `B1`, not `G`, since 16 Oct 2026: the level at grade now gives up the bays the
+ * drive from the entrance and the substation on the road stand on, so it is no
+ * longer the layout this page draws — the 3D would frame 52 bays beside a plan of
+ * 56. Named for what it is (`B2, B1, G, P1, L03`, the way a Dubai drawing is
+ * numbered). Checked in `parking-page.test.tsx` against the model file, so a
+ * change to how the engine stacks the parking cannot leave this figure framing a
+ * level that is not there, or one that is not the plan beside it.
  */
-export const MODEL_LEVEL = 'G';
+export const MODEL_LEVEL = 'B1';
 const V = example.verified;
 
 /* -------------------------------------------------------------------------

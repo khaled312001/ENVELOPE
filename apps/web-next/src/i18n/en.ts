@@ -32,6 +32,11 @@ export const EN = {
     aria: (parameterId: string, figure: string, cls: string): string =>
       `${parameterId}: ${figure}, ${cls}. Show where this number came from.`,
     open: 'show where this number came from',
+    /*
+      The engine's unit WORDS, in this language. Symbols (m², m, %) are not words
+      and stay as sent; a word not listed here is shown as the engine sent it.
+    */
+    unitWord: {} as Readonly<Record<string, string>>,
   },
 
   legend: {
@@ -507,6 +512,16 @@ export const EN = {
     },
     lossValue: (bays: string, m2: string): string => `${bays} bays · ${m2} m²`,
     standard: (w: string, l: string, d: string): string => `Bay ${w} × ${l} m, driveway ${d} m, from Table B.11.`,
+    // The level at grade (Eng. Mohamed, 16 Oct 2026): the drive from the entrance, the substation on the road.
+    grade: {
+      title: 'Ground floor',
+      bays: 'Bays on the ground floor',
+      hint: 'The street reaches this level, so it gives up bays the other parking levels keep.',
+      drive: (n: number): string => `${n} ${n === 1 ? 'bay' : 'bays'} under the drive from the entrance`,
+      plant: (n: number): string => `${n} ${n === 1 ? 'bay' : 'bays'} under the substation and the LV room`,
+      band: (edge: number): string => `Substation and LV room against boundary ${edge}, on the road.`,
+      noBand: 'No band on a road was cut for the substation. The reason is below.',
+    },
     access: 'Vehicle entrance',
     chosen: 'Your choice',
     recommended: 'Recommended',

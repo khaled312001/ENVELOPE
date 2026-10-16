@@ -55,7 +55,7 @@ import { WorkedExampleModel } from '../components/WorkedExampleModel.js';
  * Parking.tsx), restated rather than imported: importing it would pull the whole
  * parking page into the sign-in chunk.
  */
-const WORKED_EXAMPLE_LEVEL = 'G';
+const WORKED_EXAMPLE_LEVEL = 'B1';
 import type { PageProps } from '../Root.js';
 import { Link } from '../router.js';
 import { useSession } from '../session.js';

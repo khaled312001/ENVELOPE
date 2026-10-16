@@ -228,10 +228,20 @@ export interface ModelLevel {
    * the ground; every level above them is permitted and not placed.
    */
   readonly placed: boolean;
-  /** Present on parking levels only. Identical on every one: see `parking.ts`. */
+  /**
+   * Present on parking levels only. Identical on every one (see `parking.ts`)
+   * except the one at grade, which also carries the drive from the entrance and
+   * gives up the bays that drive, and the substation on the road, stand on.
+   */
   readonly parking: {
     readonly bays: readonly ModelBay[];
     readonly aisles: readonly ModelAisle[];
+    /**
+     * At grade only: each opening carried onto the plot to the first drive aisle
+     * it lands on. Absent on every other level and on runs stored before
+     * 16 Oct 2026.
+     */
+    readonly drives?: readonly { readonly outline: ModelRing; readonly label: string }[];
     readonly reserved: ModelReservedZone | null;
     /** The ramp strip reserved on this level, whether or not a ramp uses it. */
     readonly rampStrip: ModelRing | null;

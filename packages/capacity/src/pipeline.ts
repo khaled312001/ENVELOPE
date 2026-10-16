@@ -53,7 +53,8 @@ import {
 import { fromLocal, largestInscribedRectangle } from '@envelope/geometry';
 
 import { computeBands, type BandSource } from './bands.js';
-import { buildBuildingModel } from './building.js';
+import { buildBuildingModel, parkingInPodiumOf } from './building.js';
+import { planGrade } from './grade.js';
 import { buildGfaStatement, type GfaStatement } from './gfa-statement.js';
 import { layoutCore } from './core-layout.js';
 import { DrivewayType, ParkingAngle, standardFor, type RampType } from './layout.js';
@@ -827,6 +828,22 @@ export function runPipeline(input: RunInput): RunOutput {
   // replace a finding with an outage — the supply then falls back to an area
   // estimate, and says so.
   const usableTraced = traceUsableFraction(tracer, input.parkingUsableFraction);
+
+  // Before the level plan, because it settles whether the ground floor parks —
+  // and the ground floor is where the drive from the entrance stands.
+  const massing = buildMassing({
+    tracer,
+    podiumRing: envelope.podiumRing,
+    plateRing: envelope.plateRing,
+    floorToFloorM: envelope.floorToFloorM,
+    maxLevelsByHeight: envelope.maxLevelsByHeight,
+    ...(podiumFootprint === undefined
+      ? {}
+      : { podiumLevels: { value: podiumFootprint, actor: input.actor } }),
+  });
+  const podiumMassLevels = massing.masses.find((m) => m.id === 'podium')?.levels.value ?? 0;
+  const groundParks = parkingInPodiumOf(schedule, parkingLevelsAvailable, podiumMassLevels) >= 1;
+
   let levelPlan: LevelPlan | undefined;
   let levelPlanRefusal: string | undefined;
   try {
@@ -855,6 +872,24 @@ export function runPipeline(input: RunInput): RunOutput {
         ? {}
         : { chosenAccess: { ...input.levelPlan.vehicleAccess, actor: input.actor } }),
     });
+    if (groundParks) {
+      const plan = levelPlan;
+      levelPlan = {
+        ...plan,
+        grade: planGrade({
+          tracer,
+          plot: input.plot,
+          rects: plan.rects,
+          perLevel: plan.bayCount,
+          access: plan.access,
+          bayLengthM: new Decimal(plan.layout.standard.bayLengthM),
+          obstacles: [
+            ...(input.levelPlan?.avoidCore === false ? [] : [{ ring: parkingObstruction.ring, what: 'core' }]),
+            ...(plan.rampStrip ? [{ ring: plan.rampStrip.world, what: 'ramp' }] : []),
+          ],
+        }),
+      };
+    }
   } catch (error) {
     /*
       A refused CHOICE is not a finding about the plot, it is a request the
@@ -882,7 +917,14 @@ export function runPipeline(input: RunInput): RunOutput {
     levelsAvailable: parkingLevelsAvailable,
     usableFraction: input.parkingUsableFraction,
     usableTraced,
-    ...(levelPlan ? { laidOut: { baysPerLevel: levelPlan.bayCount } } : {}),
+    ...(levelPlan
+      ? {
+          laidOut: {
+            baysPerLevel: levelPlan.bayCount,
+            ...(levelPlan.grade ? { groundBays: levelPlan.grade.bayCount } : {}),
+          },
+        }
+      : {}),
   });
   const coreReconciliation = reconcileCore({
     plateShare: core.plateShare.value,
@@ -975,17 +1017,6 @@ export function runPipeline(input: RunInput): RunOutput {
       },
     },
   );
-
-  const massing = buildMassing({
-    tracer,
-    podiumRing: envelope.podiumRing,
-    plateRing: envelope.plateRing,
-    floorToFloorM: envelope.floorToFloorM,
-    maxLevelsByHeight: envelope.maxLevelsByHeight,
-    ...(podiumFootprint === undefined
-      ? {}
-      : { podiumLevels: { value: podiumFootprint, actor: input.actor } }),
-  });
 
   const building = buildBuildingModel({
     tracer,

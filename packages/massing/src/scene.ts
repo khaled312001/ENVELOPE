@@ -406,7 +406,8 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
       depth and not in space (`polygonOffset` on the shared material), so none of
       them floats above the floor it belongs to.
     */
-    for (const aisle of parking.aisles) {
+    // The drive from the entrance, at grade, is an aisle too: the same surface.
+    for (const aisle of [...parking.aisles, ...(parking.drives ?? [])]) {
       const mesh = new THREE.Mesh(track(fill([aisle.outline], at, 0).geometry), surface(palette.neutral, 0.55, false));
       mesh.name = `${level.id} ${aisle.label}`;
       mesh.receiveShadow = true;

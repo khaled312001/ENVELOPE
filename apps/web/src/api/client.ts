@@ -415,6 +415,23 @@ export interface LevelPlanView {
     }[];
   };
   readonly notAssessed: readonly string[];
+  /**
+   * The level at grade, where it parks: the drive from the entrance and the
+   * substation's band on the road, and the bays each gave up. Optional: absent on
+   * runs stored before 16 Oct 2026; null where the ground floor does not park.
+   */
+  readonly grade?: {
+    readonly bayCount: TracedWire;
+    readonly dropped: { readonly drive: number; readonly plant: number };
+    readonly drives: readonly {
+      readonly label: string;
+      readonly role: 'ENTRY_EXIT' | 'ENTRY' | 'EXIT';
+      readonly edgeSeq: number;
+      readonly depthM: string;
+    }[];
+    readonly plantBand: { readonly edgeSeq: number; readonly outline: readonly WirePoint[] } | null;
+    readonly notes: readonly string[];
+  } | null;
 }
 
 /**

@@ -729,9 +729,21 @@ function moduleChain(
   outline: readonly ModelPoint[],
   s: number,
 ): ModelItem[] {
-  // A module aisle, never the cross aisle: the cross aisle has no bay run on
-  // either side, so a module measured across it is a module nobody laid out.
-  const ring = parking.aisles.find((a) => !a.crossing)?.outline;
+  /*
+    A module aisle, never the cross aisle: the cross aisle has no bay run on
+    either side, so a module measured across it is a module nobody laid out.
+
+    And the LONGEST of them. The first in the list was taken, and on a ring
+    layout that is a 6 × 5.5 m piece at a corner of the ring: its longer side runs
+    ACROSS the driveway, so the chain was measured along the driveway and printed
+    a bay above the slab edge, where there is only setback.
+  */
+  const longest = (o: readonly ModelPoint[]): number =>
+    Math.max(...o.map((p, i) => lengthOf(p, o[(i + 1) % o.length]!)));
+  const ring = parking.aisles
+    .filter((a) => !a.crossing)
+    .slice()
+    .sort((a, b) => longest(b.outline) - longest(a.outline))[0]?.outline;
   const p0 = ring?.[0];
   const p1 = ring?.[1];
   const p2 = ring?.[2];
@@ -763,16 +775,49 @@ function moduleChain(
   const corner = mm(u.x * minU + w.x * minW, u.y * minU + w.y * minW);
   const bayMm = Number(parking.module.bayLengthM) * 1000;
   const aisleMm = Number(parking.module.aisleWidthM) * 1000;
-  const start = offsetPoint(corner, w, -bayMm);
   const two = (value: string): string => `${Number(value).toFixed(2)} M`;
+
+  /*
+    A BAY IS DIMENSIONED ONLY ON A SIDE THAT HAS BAYS. A ring's driveway has a
+    bay run on its outer side and the core or the reserved zone on its inner one,
+    and "5.50 M" printed across the core is a bay nobody drew. A side has bays when
+    a bay's open end lies on that edge of the aisle and overlaps it along its run.
+  */
+  let maxW = -Infinity;
+  let maxU = -Infinity;
+  for (const p of ring) {
+    maxW = Math.max(maxW, dot(p, w));
+    maxU = Math.max(maxU, dot(p, u));
+  }
+  const hasBays = (edge: number, side: -1 | 1): boolean =>
+    parking.bays.some((b) => {
+      const ws = b.outline.map((p) => dot(p, w));
+      const us = b.outline.map((p) => dot(p, u));
+      const near = side < 0 ? Math.max(...ws) : Math.min(...ws);
+      // Its length across the aisle: a bay turned along it at a ring's corner is not "5.50 M" deep here.
+      const deep = Math.abs(Math.max(...ws) - Math.min(...ws) - bayMm) <= 50;
+      return deep && Math.abs(near - edge) <= 50 && Math.min(...us) < maxU && Math.max(...us) > minU;
+    });
+  const before = hasBays(minW, -1);
+  const after = hasBays(maxW, 1);
+
+  const start = offsetPoint(corner, w, before ? -bayMm : 0);
+  const marks = [start];
+  const words: string[] = [];
+  let run = 0;
+  for (const [present, width, value] of [
+    [before, bayMm, parking.module.bayLengthM],
+    [true, aisleMm, parking.module.aisleWidthM],
+    [after, bayMm, parking.module.bayLengthM],
+  ] as const) {
+    if (!present) continue;
+    run += width;
+    marks.push(offsetPoint(start, w, run));
+    words.push(two(value));
+  }
   return dimensionChain(
-    [
-      start,
-      offsetPoint(start, w, bayMm),
-      offsetPoint(start, w, bayMm + aisleMm),
-      offsetPoint(start, w, bayMm + aisleMm * 1 + bayMm),
-    ],
-    [two(parking.module.bayLengthM), two(parking.module.aisleWidthM), two(parking.module.bayLengthM)],
+    marks,
+    words,
     {
       scale: s,
       out: { x: -u.x, y: -u.y },
@@ -791,9 +836,24 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
   // Framed on the slab, not the plot: the bays are what this sheet is for, and on an
   // 80 m plot framing the boundary puts them at 1:500, where a bay number is 0.8 mm
   // of ink. The boundary beyond the frame is clipped on paper and whole in the DXF.
-  const box = grow(boxOf(level.outline), 2000);
-  // Its labels sit inside the slab, so it needs little paper round it.
-  const f = frame(box, 4);
+  // At grade the frame also takes in what stands outside the slab — the substation
+  // on the road may stand in the setback (B.4.2.3 ¶12), up to the plot limit — or
+  // the one room a clause put on the boundary is the one the paper cuts in half.
+  const outside = [
+    ...(model.groundRooms?.levelId === level.id ? model.groundRooms.rooms.flatMap((r) => r.outline) : []),
+    ...(level.parking?.drives ?? []).flatMap((d) => d.outline),
+  ];
+  // Not grown: it reaches the plot limit, and the margin is for labels round the slab.
+  const slabBox = grow(boxOf(level.outline), 2000);
+  const box = outside.length > 0 ? boxOf([...boxCorners(slabBox), ...outside]) : slabBox;
+  /*
+    Its labels sit inside the slab, so it needs little paper round it — and with
+    rooms outside the slab, less: the 2 m round the slab is already the label
+    room, and those rooms carry their names inside them. Four millimetres on top
+    took the worked example's ground floor from 1:250 to 1:500 for 1.5 m of
+    substation, which is the scale the comment above exists to avoid.
+  */
+  const f = frame(box, outside.length > 0 ? 1 : 4);
   const s = f.scale;
   const items: ModelItem[] = [...plotContext(model, s, false)];
 
@@ -896,6 +956,22 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       });
     }
     items.push(label(Role.AISLE, midpointOf(a, b), aisle.label, 2, along));
+  }
+
+  /*
+    THE DRIVE FROM THE ENTRANCE, at grade only: the opening carried onto the plot
+    to the aisle it lands on. Drawn as an aisle, because it is one — the bays it
+    crosses were given up for it, and that count is on this sheet.
+  */
+  for (const drive of parking.drives ?? []) {
+    items.push(shape(Role.AISLE, drive.outline, true, { name: drive.label }));
+    const [p0, p1, p2, p3] = drive.outline as readonly [ModelPoint, ModelPoint, ModelPoint, ModelPoint];
+    const from = midpointOf(p0, p1);
+    const to = midpointOf(p3, p2);
+    // A quarter of the way across, not on the centre line: the entrance's arrow runs there.
+    const wide = lengthOf(p0, p1) || 1;
+    const across = { x: (p1.x - p0.x) / wide, y: (p1.y - p0.y) / wide };
+    items.push(label(Role.AISLE, offsetPoint(midpointOf(from, to), across, wide / 4), drive.label, 1.8, angleOf(from, to)));
   }
 
   /*
@@ -1370,6 +1446,10 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
 
 function grow(box: Box, by: number): Box {
   return { minX: box.minX - by, minY: box.minY - by, maxX: box.maxX + by, maxY: box.maxY + by };
+}
+
+function boxCorners(box: Box): ModelPoint[] {
+  return [mm(box.minX, box.minY), mm(box.maxX, box.maxY)];
 }
 
 function levelRange(levels: readonly ModelLevel[]): string {

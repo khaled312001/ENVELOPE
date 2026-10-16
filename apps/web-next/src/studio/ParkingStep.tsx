@@ -96,6 +96,35 @@ export function ParkingPanel({
           ))}
         </dl>
 
+        {/* The level at grade: its own count, and what the drive and the plant cost it, by cause. */}
+        {lp.grade ? (
+          <section className="grid min-w-0 gap-2" aria-labelledby="grade">
+            <Heading id="grade">{t.parking.grade.title}</Heading>
+            <p className="text-[12px] text-secondary">{t.parking.grade.hint}</p>
+            <dl className="grid grid-cols-2 gap-x-4">
+              <Row label={t.parking.grade.bays}>
+                <Traced value={lp.grade.bayCount} />
+              </Row>
+            </dl>
+            <ul className="grid gap-0.5 text-[12px] text-fg">
+              <li>{t.parking.grade.drive(lp.grade.dropped.drive)}</li>
+              <li>{t.parking.grade.plant(lp.grade.dropped.plant)}</li>
+            </ul>
+            <p className="text-[12px] text-secondary">
+              {lp.grade.plantBand ? t.parking.grade.band(lp.grade.plantBand.edgeSeq) : t.parking.grade.noBand}
+            </p>
+            {lp.grade.notes.length > 0 ? (
+              <ul className="grid gap-1 text-[12px] text-secondary">
+                {lp.grade.notes.map((n, i) => (
+                  <li key={i}>
+                    <EngineNote text={n} />
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+        ) : null}
+
         <section className="grid min-w-0 gap-2.5" aria-labelledby="access">
           <Heading id="access">{t.parking.access}</Heading>
           {inUse ? (

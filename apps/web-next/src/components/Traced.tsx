@@ -49,7 +49,8 @@ export function Traced({
   // Some traced values are words — an orientation, a treatment — and those wrap like words.
   const numeric = /^-?\d/.test(value.value);
   const shown = numeric ? grouped(trimmed(value.value, places)) : value.value;
-  const u = unit === undefined ? value.unit : unit;
+  const sent = unit === undefined ? value.unit : unit;
+  const u = sent ? (t.traced.unitWord[sent] ?? sent) : sent;
   const label = t.classLabel[value.provenanceClass as keyof typeof t.classLabel] ?? value.provenanceClass;
   const sizes = {
     sm: 'text-[12.5px]',

@@ -30,6 +30,18 @@ export const AR: Dict = {
 
   traced: {
     aria: (parameterId: string, figure: string, cls: string): string => `${parameterId}: ${figure}، ${cls}. اعرض من أين جاء هذا الرقم.`,
+    // A unit label after a figure, as on a drawing: «موقف» per the glossary, not «حيّز».
+    unitWord: {
+      bays: 'موقف',
+      levels: 'دور',
+      units: 'وحدة',
+      transformers: 'محول',
+      'bays/unit': 'موقف/وحدة',
+      'm²/bay': 'm²/موقف',
+      // A ratio needs no word after it; «0.85 نسبة» reads as a mistake.
+      ratio: '',
+      percent: '%',
+    },
     open: 'اعرض من أين جاء هذا الرقم',
   },
 
@@ -504,6 +516,16 @@ export const AR: Dict = {
     },
     lossValue: (bays: string, m2: string): string => `${bays} موقف · ${m2} m²`,
     standard: (w: string, l: string, d: string): string => `الموقف ${w} × ${l} m، وممر المركبات ${d} m، من الجدول B.11.`,
+    grade: {
+      title: 'الدور الأرضي',
+      bays: 'المواقف في الدور الأرضي',
+      hint: 'يصل الشارع إلى هذا الدور، فيتنازل عن مواقف تحتفظ بها أدوار المواقف الأخرى.',
+      // The count after a colon: «4 موقف» breaks the counted-noun agreement, and a figure must not be reworded.
+      drive: (n: number): string => `المواقف التي يشغلها ممر المدخل: ${n}`,
+      plant: (n: number): string => `المواقف التي تشغلها غرفة المحول وغرفة الجهد المنخفض: ${n}`,
+      band: (edge: number): string => `غرفة المحول وغرفة الجهد المنخفض على الحد ${edge}، المطل على الطريق.`,
+      noBand: 'لم يقتطع شريط على الطريق لغرفة المحول. السبب أدناه.',
+    },
     access: 'مدخل المركبات',
     chosen: 'اختيارك',
     recommended: 'الموصى به',

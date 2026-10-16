@@ -158,9 +158,9 @@ describe('the area is the curved plot, not the polygon standing in for it', () =
   it('subtracts where the boundary curves into the plot', () => {
     const inward = analysePlot(SQUARE, [new Decimal(-1), undefined, undefined, undefined]);
     expect(inward.areaM2.toFixed(6)).toBe('60.730092');
-    // And a plot whose boundary bows inward is re-entrant, which Phase 0 has
-    // always refused by name rather than approximated.
-    expect(inward.shapeClass).toBe('COMPLEX');
+    // A boundary bowing inward makes the plot re-entrant: simple, not convex.
+    // Computed since 16 Oct 2026 (it used to be refused as COMPLEX).
+    expect(inward.shapeClass).toBe('SIMPLE_CONCAVE');
   });
 
   it('leaves a straight plot exactly as it was', () => {

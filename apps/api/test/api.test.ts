@@ -169,7 +169,7 @@ describe('plot intake — FR-PLT-001', () => {
     expect(body.areaMismatchMessage).toMatch(/not automatically right/);
   });
 
-  it('refuses a self-intersecting plot by naming the Phase 0 restriction — §14.1', async () => {
+  it('refuses a self-intersecting plot and says the boundary crosses itself — §14.1', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/plots',
@@ -185,7 +185,7 @@ describe('plot intake — FR-PLT-001', () => {
       },
     });
     expect(res.statusCode).toBe(422);
-    expect(res.json().message).toMatch(/not approximated — it is refused/);
+    expect(res.json().message).toMatch(/crosses itself/);
   });
 });
 
@@ -1477,8 +1477,8 @@ describe('a plot is stored counter-clockwise however it was walked', () => {
  * a traverse produces reaches capacity and comes back with an answer, rather than
  * being a shape the API accepts and the engine then refuses.
  *
- * Five sides and convex. A reflex corner is `COMPLEX` and `assertPhase0Shape`
- * refuses it by name, which is §14.1 and not a gap to fill here.
+ * Five sides and convex. The concave case is the next suite: a reflex corner
+ * used to be refused under §14.1 and has been computed since 16 Oct 2026.
  */
 describe('a five-sided plot', () => {
   const PENTAGON = {
@@ -1545,6 +1545,73 @@ describe('a five-sided plot', () => {
     expect(['REGULATORY', 'GEOMETRIC', 'PARKING']).toContain(
       run.json().capacity.governingBand,
     );
+  });
+});
+
+/**
+ * A PLOT WITH A CORNER THAT TURNS INWARD IS COMPUTED, NOT REFUSED.
+ *
+ * DDA sheet 5134565 prints six corners, one a hair inward, and the studio
+ * answered "plot shape is COMPLEX … it is refused" (Eng. Mohamed, 16 Oct 2026).
+ * The refusal's own reason — partitioning units under frontage and depth
+ * constraints — is work Phase 0 does not do. What stays refused is a boundary
+ * that crosses itself, which encloses no single area.
+ */
+describe('a plot that is not convex', () => {
+  const NOTCHED = {
+    ...SQUARE_80x40,
+    plotNumber: '345-1234-n',
+    // The 80 × 40 rectangle with its north side pushed in to a 6 m deep notch.
+    vertices: [
+      { x: '0', y: '0' },
+      { x: '80', y: '0' },
+      { x: '80', y: '40' },
+      { x: '40', y: '34' },
+      { x: '0', y: '40' },
+    ],
+    edges: [
+      { seq: 0, classification: 'ROAD' as const, roadHierarchy: 'LOCAL' as const },
+      { seq: 1, classification: 'ADJACENT_PLOT' as const },
+      { seq: 2, classification: 'ADJACENT_PLOT' as const },
+      { seq: 3, classification: 'ADJACENT_PLOT' as const },
+      { seq: 4, classification: 'ADJACENT_PLOT' as const },
+    ],
+  };
+
+  it('is stored as SIMPLE_CONCAVE and reaches an answer', async () => {
+    const created = await app.inject({ method: 'POST', url: '/api/plots', headers: ACTOR, payload: NOTCHED });
+    expect(created.statusCode).toBe(201);
+    const run = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: ACTOR,
+      payload: { ...RUN_BODY, plotId: created.json().plotId },
+    });
+    expect(run.statusCode).toBe(201);
+    expect(run.json().capacity.governingGfa.value).toBeTruthy();
+  });
+
+  it('still refuses a boundary that crosses itself, and says why in words', async () => {
+    const refused = await app.inject({
+      method: 'POST',
+      url: '/api/plots',
+      headers: ACTOR,
+      payload: {
+        ...SQUARE_80x40,
+        plotNumber: '345-1234-x',
+        // Two corners swapped: a bow tie.
+        vertices: [
+          { x: '0', y: '0' },
+          { x: '80', y: '40' },
+          { x: '80', y: '0' },
+          { x: '0', y: '40' },
+        ],
+      },
+    });
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json().error).toBe('UnsupportedShapeError');
+    expect(refused.json().message).toMatch(/crosses itself/);
+    expect(refused.json().message).not.toMatch(/Phase 4|research problem/);
   });
 });
 
@@ -1672,11 +1739,11 @@ describe('a plot whose frontage curves', () => {
     expect(refused.json().message).toMatch(/at least half of it/);
   });
 
-  it('refuses a curve that bows into the plot, by the rule that was already there', async () => {
-    // A boundary bowing inward makes the plot re-entrant, and §14.1 has refused
-    // re-entrant plots by name since before curves existed. No second refusal
-    // was written for this: the shape classifier simply sees what is there.
-    const refused = await create({
+  it('computes a curve that bows into the plot, as any re-entrant plot is', async () => {
+    // A boundary bowing inward makes the plot re-entrant. §14.1 refused that
+    // until 16 Oct 2026; the classifier now calls it SIMPLE_CONCAVE and the
+    // engine computes it — the offset kernel never needed convexity.
+    const accepted = await create({
       ...CURVED,
       plotNumber: '345-1234-ci',
       edges: [
@@ -1689,9 +1756,7 @@ describe('a plot whose frontage curves', () => {
         ...SQUARE_80x40.edges.slice(1),
       ],
     });
-    expect(refused.statusCode).toBe(422);
-    expect(refused.json().error).toBe('UnsupportedShapeError');
-    expect(refused.json().message).toMatch(/it is refused/);
+    expect(accepted.statusCode).toBe(201);
   });
 
   it('sets every piece of the curve back by the setback its own frontage carries', async () => {

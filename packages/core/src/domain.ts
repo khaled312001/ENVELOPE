@@ -26,13 +26,15 @@ export type LandUse = (typeof LandUse)[keyof typeof LandUse];
 export const PHASE_0_LAND_USES: ReadonlySet<LandUse> = new Set([LandUse.RESIDENTIAL_MULTI]);
 
 /**
- * PRD §14.1: rectilinear and simple convex polygons only, "enforced at the data
- * layer via `shape_class`, not by convention". `COMPLEX` is rejected with a
- * message naming the restriction — never approximated.
+ * PRD §14.1, "enforced at the data layer via `shape_class`, not by convention".
+ * Every simple ring is computed — the convex-only restriction was lifted on
+ * 16 Oct 2026, see `geometry/analysis.ts`. `COMPLEX` (a self-crossing boundary)
+ * is rejected with a message naming why — never approximated.
  */
 export const ShapeClass = {
   RECTILINEAR: 'RECTILINEAR',
   SIMPLE_CONVEX: 'SIMPLE_CONVEX',
+  SIMPLE_CONCAVE: 'SIMPLE_CONCAVE',
   COMPLEX: 'COMPLEX',
 } as const;
 export type ShapeClass = (typeof ShapeClass)[keyof typeof ShapeClass];

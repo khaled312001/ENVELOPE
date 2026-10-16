@@ -40,7 +40,7 @@ export const EN = {
     shape: 'Shape',
     /** The leading space and dash are the sentence's. */
     shapeScope: (phase: string): string =>
-      ` — Phase ${phase} handles rectilinear and simple convex plots only`,
+      ` — Phase ${phase} computes any plot whose boundary does not cross itself`,
     roadFrontages: 'Road frontages',
   },
 

@@ -32,6 +32,9 @@ import { extent } from './offset.js';
 export const ShapeClass = {
   RECTILINEAR: 'RECTILINEAR',
   SIMPLE_CONVEX: 'SIMPLE_CONVEX',
+  /** Simple, not convex, not rectilinear: one corner or more turns inward. */
+  SIMPLE_CONCAVE: 'SIMPLE_CONCAVE',
+  /** The boundary crosses itself. Not a plot — a mis-ordered or mis-typed corner. */
   COMPLEX: 'COMPLEX',
 } as const;
 export type ShapeClass = (typeof ShapeClass)[keyof typeof ShapeClass];
@@ -39,7 +42,7 @@ export type ShapeClass = (typeof ShapeClass)[keyof typeof ShapeClass];
 /**
  * Classify a ring.
  *
- * `COMPLEX` is not an error here — it is a fact about the plot. Rejecting it is
+ * `COMPLEX` is not an error here — it is a fact about the ring. Rejecting it is
  * the caller's job, and §14.1 requires the rejection message to name the
  * restriction rather than fail obscurely.
  */
@@ -47,24 +50,40 @@ export function classifyShape(ring: Ring): ShapeClass {
   if (!isSimple(ring)) return ShapeClass.COMPLEX;
   if (isRectilinear(ring)) return ShapeClass.RECTILINEAR;
   if (isConvex(ring)) return ShapeClass.SIMPLE_CONVEX;
-  return ShapeClass.COMPLEX;
+  return ShapeClass.SIMPLE_CONCAVE;
 }
 
-/** Phase 0 supports these two. Anything else is refused with the reason named. */
+/*
+  A PLOT WITH A CORNER THAT TURNS INWARD IS A PLOT, AND PHASE 0 COMPUTES IT.
+
+  §14.1 refused every non-convex, non-rectilinear plot, and the reason it gave —
+  "partitioning a non-convex polygon under simultaneous area, frontage, depth…
+  constraints" — is unit partitioning, which Phase 0 does not do at all. Nothing
+  the engine does needs convexity: Clipper offsets any simple ring per edge,
+  `largestInscribedRectangle` packs by containment (so a reflex corner costs
+  bays, and the loss is published), and a concave RECTILINEAR plot — an L — was
+  always accepted and always computed. So the refusal fell only on real sheets:
+  DDA plot 5134565 prints six corners, one of them a hair inward, and was
+  refused outright (Eng. Mohamed, 16 Oct 2026 — "يفضل نلغي انو يقولنا كدا").
+
+  What stays refused is a boundary that crosses itself. That is not a shape the
+  engine is too limited for; it is two corners typed in the wrong order, and a
+  number computed over it would be an area of nothing.
+*/
+/** Phase 0 computes every simple ring. A self-crossing one is refused with the reason named. */
 export const PHASE_0_SHAPES: ReadonlySet<ShapeClass> = new Set([
   ShapeClass.RECTILINEAR,
   ShapeClass.SIMPLE_CONVEX,
+  ShapeClass.SIMPLE_CONCAVE,
 ]);
 
 export class UnsupportedShapeError extends Error {
   override readonly name = 'UnsupportedShapeError';
   constructor(readonly shapeClass: ShapeClass) {
     super(
-      `plot shape is ${shapeClass}. Phase 0 supports rectilinear and simple convex ` +
-        `polygons only (PRD §14.1). Partitioning a non-convex polygon under ` +
-        `simultaneous area, frontage, depth, aspect-ratio, façade-access and ` +
-        `corridor-adjacency constraints is a research problem, deferred to Phase 4. ` +
-        `This plot is not approximated — it is refused.`,
+      `The plot's boundary crosses itself, so it encloses no single area. Two corners ` +
+        `are most likely in the wrong order, or one was typed wrong. Check the corners ` +
+        `against the sheet's coordinate table and file the plot again.`,
     );
   }
 }

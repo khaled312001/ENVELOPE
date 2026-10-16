@@ -29,7 +29,7 @@ export const AR: ParametersDictionary = {
     computedArea: 'المساحة المحسوبة',
     shape: 'الشكل',
     shapeScope: (phase: string): string =>
-      ` — لا تتعامل المرحلة ${phase} إلا مع القطع القائمة الزوايا والمحدبة البسيطة`,
+      ` — تحسب المرحلة ${phase} أي قطعة لا يتقاطع حدها مع نفسه`,
     roadFrontages: 'الواجهات على طرق',
   },
 
@@ -37,6 +37,7 @@ export const AR: ParametersDictionary = {
   shapes: {
     RECTILINEAR: 'قائمة الزوايا',
     SIMPLE_CONVEX: 'محدبة بسيطة',
+    SIMPLE_CONCAVE: 'بزاوية داخلة',
     COMPLEX: 'معقدة',
   },
 

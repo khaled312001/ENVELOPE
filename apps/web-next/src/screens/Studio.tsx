@@ -4,6 +4,8 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 
+import { legBetween } from '@web/geo.js';
+
 import {
   type Actor,
   api,
@@ -42,6 +44,7 @@ import {
   rulesFrom,
   typedSetbacksOf,
 } from '../studio/model.js';
+import { fetchRoadsBeside, type RoadBeside } from '../studio/edge-suggest.js';
 import { pointsToDraft, pointsToRing, ringToDraft } from '../studio/geometry.js';
 import { ParkingCanvas, ParkingPanel, type VehicleAccessBody } from '../studio/ParkingStep.js';
 import { PlotCanvas, PlotPanel, type PlotViewMode } from '../studio/PlotStep.js';
@@ -100,6 +103,39 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
   const [statedArea, setStatedArea] = useState('');
   const [trace, setTrace] = useState<MapTrace>({ ring: [], closed: false });
   const [plotView, setPlotView] = useState<PlotViewMode>(() => (runId || params.get('example') === '1' ? 'plan' : 'map'));
+
+  /*
+    The road beside each boundary, once the plot stands on the map — the second
+    witness for each boundary's class (see `edge-suggest.ts`). Asked only while
+    the closed trace IS the corner table: same number of sides, and every side
+    within half a metre of the table's own length. A trace the reader is still
+    drawing, or one the table has since been edited away from, would hang a
+    road on the wrong boundary.
+  */
+  const [mapRoads, setMapRoads] = useState<readonly RoadBeside[] | null>(null);
+  const traceIsTable = useMemo(() => {
+    if (!trace.closed || trace.ring.length < 3 || trace.ring.length !== draft.vertices.length) return false;
+    const v = draft.vertices.map((p) => ({ x: Number(p.x), y: Number(p.y) }));
+    return trace.ring.every((p, i) => {
+      const a = v[i]!;
+      const b = v[(i + 1) % v.length]!;
+      const table = Math.hypot(b.x - a.x, b.y - a.y);
+      return Number.isFinite(table) && Math.abs(legBetween(p, trace.ring[(i + 1) % trace.ring.length]!).lengthM - table) <= 0.5;
+    });
+  }, [trace, draft.vertices]);
+  useEffect(() => {
+    if (!traceIsTable || plot) {
+      setMapRoads(null);
+      return;
+    }
+    let live = true;
+    void fetchRoadsBeside(trace.ring).then((roads) => {
+      if (live) setMapRoads(roads);
+    });
+    return () => {
+      live = false;
+    };
+  }, [traceIsTable, trace.ring, plot]);
 
   // The worked example, on request: the plot and the answers the landing page describes.
   useEffect(() => {
@@ -546,6 +582,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 busy={busy === 'plot'}
                 onFile={fileplot}
                 onNext={() => setStep('rules')}
+                roads={mapRoads}
               />
             ) : step === 'rules' && plotId ? (
               <RulesPanel

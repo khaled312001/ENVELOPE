@@ -10,7 +10,7 @@
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
 
-import { fetchFootprintWays, OVERPASS_SERVERS, registerGeoRoutes } from '../src/geo-route.js';
+import { fetchFootprintWays, type MapRoad, OVERPASS_SERVERS, registerGeoRoutes, ROAD_HIERARCHY_OF_OSM, roadsBesideEdges } from '../src/geo-route.js';
 
 const AT = { lat: 25.2916, lng: 55.3525 };
 const FAST = { hedgeMs: 50, giveUpMs: 500 };
@@ -106,6 +106,68 @@ describe('GET /api/geo/footprint', () => {
     expect(res.json().elements[0].tags).toEqual({ building: 'yes', name: 'A' });
     expect(calls[0]!.url).toContain('openfreemap');
     expect(calls[1]!.url).toBe(MAIN);
+    await a.close();
+  });
+});
+
+/*
+  The road beside each boundary. A 60 × 40 m plot near Dubai, built in metres
+  and turned into degrees, with roads laid around it on purpose: one that
+  qualifies, one that is not a road a car uses, one too short, one inside the
+  plot, and two on one side where the nearer must win.
+*/
+describe('roadsBesideEdges', () => {
+  const LAT0 = 25.2;
+  const LNG0 = 55.3;
+  const KX = 111_320 * Math.cos((LAT0 * Math.PI) / 180);
+  const at = (x: number, y: number) => ({ lng: LNG0 + x / KX, lat: LAT0 + y / 111_320 });
+  // Counter-clockwise: south (0), east (1), north (2), west (3).
+  const RING = [at(0, 0), at(60, 0), at(60, 40), at(0, 40)];
+  const ROADS: MapRoad[] = [
+    { osmClass: 'secondary', name: 'Test Street', line: [at(-20, -12), at(80, -12)] },
+    { osmClass: 'path', line: [at(68, -10), at(68, 50)] },
+    { osmClass: 'minor', line: [at(40, 50), at(50, 50)] },
+    { osmClass: 'minor', line: [at(-10, 35), at(70, 35)] },
+    { osmClass: 'service', line: [at(-6, -5), at(-6, 45)] },
+    { osmClass: 'primary', line: [at(-30, -5), at(-30, 45)] },
+  ];
+
+  it('finds the road alongside each boundary, outside it, and the nearer of two', () => {
+    const out = roadsBesideEdges(RING, ROADS);
+    expect(out.map((e) => e.road?.hierarchy ?? null)).toEqual(['COLLECTOR', null, null, 'ACCESS']);
+    expect(out[0]!.road).toMatchObject({ osmClass: 'secondary', name: 'Test Street', distanceM: 12 });
+    expect(out[3]!.road?.distanceM).toBe(6);
+  });
+
+  it('gives the same answer for the ring walked the other way', () => {
+    const reversed = [...RING].reverse();
+    // Reversed, the ring starts at the north-west corner: 0 is north, 1 east, 2 south, 3 west.
+    const out = roadsBesideEdges(reversed, ROADS);
+    expect(out.map((e) => e.road?.hierarchy ?? null)).toEqual([null, null, 'COLLECTOR', 'ACCESS']);
+  });
+
+  it('maps OSM ranks to the four hierarchies by a stated table, and leaves a footway out', () => {
+    expect(ROAD_HIERARCHY_OF_OSM['motorway']).toBe('ARTERIAL');
+    expect(ROAD_HIERARCHY_OF_OSM['tertiary']).toBe('COLLECTOR');
+    expect(ROAD_HIERARCHY_OF_OSM['minor']).toBe('LOCAL');
+    expect(ROAD_HIERARCHY_OF_OSM['path']).toBeUndefined();
+  });
+});
+
+describe('GET /api/geo/roads', () => {
+  it('refuses a ring outside the UAE or with too few corners', async () => {
+    const a = Fastify();
+    registerGeoRoutes(a, {}, (async () => new Response(null, { status: 500 })) as typeof fetch);
+    expect((await a.inject({ url: '/api/geo/roads?ring=55.3,25.2;55.31,25.2' })).statusCode).toBe(400);
+    expect((await a.inject({ url: '/api/geo/roads?ring=2.3,48.8;2.31,48.8;2.31,48.81' })).statusCode).toBe(400);
+    await a.close();
+  });
+
+  it('says the map could not be reached rather than answering every boundary "none"', async () => {
+    const a = Fastify();
+    registerGeoRoutes(a, {}, (async () => new Response(null, { status: 503 })) as typeof fetch);
+    const res = await a.inject({ url: '/api/geo/roads?ring=55.3,25.2;55.301,25.2;55.301,25.201' });
+    expect(res.statusCode).toBe(502);
     await a.close();
   });
 });

@@ -47,10 +47,11 @@
  *   It moves where the plot is drawn on a map and nothing the engine computes.
  *
  *   What lies beyond each boundary is SUGGESTED, from the labels the drawing
- *   prints outside it — a road's name and width, a neighbour's plot number — and
- *   never written into the form. FR-PLT-001 AC3 gives that field no default; a
- *   suggestion with its evidence beside it is a question asked well, not an
- *   answer given.
+ *   prints outside it — a road's name and width, a neighbour's plot number.
+ *   FR-PLT-001 AC3 gives that field no default, so this module only reports
+ *   the evidence. Since 16 Oct 2026 the studio fills an EMPTY field from it by
+ *   itself, at Eng. Mohamed's request, with the evidence written beside the
+ *   field and the reader free to change it (`apps/web-next/src/studio/edge-suggest.ts`).
  */
 
 import { type TextItem, type PdfPageText } from './pdf-text.js';

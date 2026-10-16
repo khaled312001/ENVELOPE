@@ -1,5 +1,5 @@
-import { CircleCheck, FileCheck2, LogIn, Map as MapIcon, PenSquare, Plus, Trash2, X } from 'lucide-react';
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { CircleCheck, FileCheck2, LogIn, Map as MapIcon, PenSquare, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { LevelPlanView, PlotCreated, PlotView } from '@web/api/client.js';
 
@@ -11,6 +11,7 @@ import { EngineText, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, Field, Input, Notice, PanelHeader, Select, Spinner } from '../ui/primitives.js';
 import { Segmented } from '../ui/radix.js';
+import { fillFromSuggestions, type RoadBeside, suggestEdges } from './edge-suggest.js';
 import { useEntranceOnPlan } from './EntranceOnPlan.js';
 import { legsToDraft, pointsToDraft } from './geometry.js';
 import type { DraftPlot, EdgeClass, Hierarchy } from './model.js';
@@ -347,11 +348,14 @@ export function PlotPanel({
   busy,
   onFile,
   onNext,
+  roads = null,
 }: {
   readonly draft: DraftPlot;
   readonly onChange: (next: DraftPlot) => void;
   readonly statedArea: string;
   readonly onStatedArea: (next: string) => void;
+  /** The road beside each boundary on the map, once the plot stands on it; null until then or if the map could not be asked. */
+  readonly roads?: readonly RoadBeside[] | null;
   /** The affection plan in use for this study, if one was read and chosen. */
   readonly sheet: SheetState | null;
   readonly created: PlotCreated | null;
@@ -360,7 +364,7 @@ export function PlotPanel({
   readonly onFile: () => void;
   readonly onNext: () => void;
 }): JSX.Element {
-  const { t } = useLocale();
+  const { t, dir } = useLocale();
   const n = draft.vertices.length;
   const unclassified = draft.edges.filter((e) => e.classification === '').length;
   const missingHierarchy = draft.edges.filter((e) => e.classification === 'ROAD' && e.roadHierarchy === '').length;
@@ -408,22 +412,23 @@ export function PlotPanel({
   }, [sheet, draft]);
 
   /*
-    What the sheet prints outside each boundary, as a SUGGESTION for its class.
-    Only while the corners are the sheet's own — once a corner moves, boundary 2
-    may not be the boundary the label sat beside. A hint fills an unanswered
-    boundary on a press and never replaces an answer; the hierarchy is never
-    suggested, because a sheet names a road and does not rank it.
+    What the sheet prints outside each boundary, and the road the map draws
+    beside it — see `edge-suggest.ts`. The sheet's labels only while the corners
+    are the sheet's own: once a corner moves, boundary 2 may not be the boundary
+    the label sat beside. Each suggestion fills an EMPTY field once, by itself
+    (Eng. Mohamed, 16 Oct 2026), and never replaces an answer; its source is
+    written under the boundary, and the list beside it changes it.
   */
   const hints = offer?.kind === 'survey' && offer.applied && offer.hints.length === n ? offer.hints : [];
-  const suggestible = hints.filter((h, i) => h !== null && draft.edges[i]?.classification === '').length;
-  const applyHints = (): void =>
-    onChange({
-      ...draft,
-      edges: draft.edges.map((e, i) => {
-        const h = hints[i];
-        return h && e.classification === '' ? { ...e, classification: h.classification, roadHierarchy: '' } : e;
-      }),
-    });
+  const suggestions = useMemo(() => suggestEdges(n, hints, roads), [n, hints, roads]);
+  const applied = useRef(new Set<string>());
+  useEffect(() => {
+    if (plot) return;
+    const filled = fillFromSuggestions(draft, suggestions, applied.current);
+    if (!filled) return;
+    filled.keys.forEach((k) => applied.current.add(k));
+    onChange(filled.draft);
+  }, [plot, draft, suggestions, onChange]);
 
   return (
     <div>
@@ -484,11 +489,6 @@ export function PlotPanel({
                     <p className="text-[11.5px] text-tertiary">{t.plot.replaces}</p>
                   </>
                 )}
-                {suggestible > 0 ? (
-                  <Button variant="secondary" size="sm" className="justify-self-start" onClick={applyHints}>
-                    {t.plot.useHints(suggestible)}
-                  </Button>
-                ) : null}
               </div>
             ) : offer.applied ? null : (
               <Notice tone="assumed">
@@ -564,6 +564,27 @@ export function PlotPanel({
                         </span>
                       ) : null}
                     </span>
+                    {(() => {
+                      const road = roads && roads.length === n ? roads[i]?.road : null;
+                      if (!road) return null;
+                      const name = (dir === 'rtl' ? road.nameAr ?? road.name : road.name ?? road.nameAr) ?? t.plot.suggest.unnamed;
+                      return (
+                        <span className="text-[11.5px] text-tertiary">
+                          {t.plot.suggest.mapSays(name, road.osmClass, road.distanceM)}
+                        </span>
+                      );
+                    })()}
+                    {(() => {
+                      // Said only while the field still holds what was suggested: once changed, it is the reader's own.
+                      const s = suggestions[i];
+                      if (!s || plot || e.classification !== s.classification || (s.roadHierarchy !== '' && e.roadHierarchy !== s.roadHierarchy)) return null;
+                      return (
+                        <span className="flex items-center gap-1.5 text-[11.5px] text-secondary">
+                          <Sparkles className="size-3.5 shrink-0 text-accent" aria-hidden="true" />
+                          {t.plot.suggest.filled[s.from]}
+                        </span>
+                      );
+                    })()}
                     <div className="grid grid-cols-2 gap-2">
                       <Select
                         aria-label={t.plot.edgeOf(i, j)}

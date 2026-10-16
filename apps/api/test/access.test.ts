@@ -237,6 +237,8 @@ const ROUTES: Readonly<Record<string, Reach>> = {
   'POST /api/intake/affection-plan': 'open',
   /* OpenStreetMap's outlines around a point. Public data, nobody's run or plot. */
   'GET /api/geo/footprint': 'open',
+  /* OpenStreetMap's roads beside a ring the caller sends. Public data, and the ring is the caller's own. */
+  'GET /api/geo/roads': 'open',
   'POST /api/auth/register': 'open',
   'POST /api/auth/login': 'open',
   'POST /api/auth/logout': 'open',

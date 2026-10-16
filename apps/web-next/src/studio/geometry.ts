@@ -11,7 +11,9 @@ import type { DraftPlot } from './model.js';
 
   None of them classifies a boundary. A photograph, a fitted outline and a
   coordinate table all say where the corners are and nothing about what lies
-  beyond each edge, and FR-PLT-001 AC3 gives that field no default. A boundary
+  beyond each edge, and FR-PLT-001 AC3 gives that field no default. The class
+  is suggested afterwards, from the sheet's labels and the map's roads, with
+  its source on screen — `edge-suggest.ts` — never here. A boundary
   the reader had already classified keeps its answer while the ring still has
   the same number of sides, or when the map recorded which boundary each edge
   came from as it inserted or deleted a corner; otherwise every boundary is

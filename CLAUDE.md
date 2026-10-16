@@ -377,6 +377,25 @@ is a defect even when it makes something easier.
   so an unfiled plot places nothing. It is drawn as a point with an arrow, not as
   an opening — the opening's extent is the engine's to work out — and it is sent
   with the run, where B.7.2.1 accepts or refuses it in a sentence.
+- **A boundary's class fills itself in, from two ranked witnesses** (16 Oct 2026,
+  «تلقائي … ومع امكانيه تغييرهم»). The sheet's label outside a boundary (ROAD, a
+  neighbour's plot number) decides the class, and the map may not contradict it.
+  The road OpenStreetMap draws alongside it (`GET /api/geo/roads`, off the same
+  OpenFreeMap tiles as the footprint picker) gives the rank the sheet never
+  prints, by a stated table: motorway/trunk/primary arterial, secondary/tertiary
+  collector, minor local, service access. Silence from both suggests nothing:
+  no road on the map is not a neighbour. A suggestion fills an **empty** field
+  once, with its source written under it. It never overwrites an answer and never
+  refills one the reader cleared, and filing is the reader's confirmation. Roads
+  are asked for only while the closed trace *is* the corner table, side for side
+  within half a metre. Otherwise a road would land on the wrong boundary.
+- **A chamfer its neighbours' setbacks swallow is dropped, not a refusal.** Plot
+  6468096 (the reference drawings) was refused as "over-consumed": 6 m off the
+  street and 4.5 m off the side put the 5 m chamfer's own line outside their
+  corner, so its offset ran backwards. `offsetPerEdge` now drops such a straight
+  boundary and meets its neighbours. Then it checks every corner left against
+  every shifted line, the dropped ones included, so "redundant" is verified and
+  not assumed.
 - **The orientation is swept; the design is not.** Runs along a level's width and runs
   along its depth place different numbers of bays in the same rectangle. Both are
   packed, the better is kept, and the loser's count is in the formula. Two candidates,

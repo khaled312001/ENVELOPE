@@ -165,6 +165,38 @@ describe('per-edge offset — FR-PLT-002', () => {
     );
   });
 
+  /*
+    Plot 6468096's outline, near enough: 87.25 m along the top, the bottom two
+    corners cut by chamfers. 6 m off the street and 4.5 m elsewhere puts each
+    chamfer's own line outside the corner its neighbours make, so it vanishes.
+    That was refused as an over-consumed plot.
+  */
+  const CHAMFERED: Ring = [pt(3.6, 0), pt(83.45, 0), pt(87.25, 4.49), pt(87.25, 50.98), pt(0, 50.98), pt(0, 3.6)];
+  const CHAMFERED_INSETS = [6, 4.5, 4.5, 4.5, 4.5, 4.5].map((v, seq) => ({ seq, insetMm: m(v) }));
+
+  it('drops a chamfer its neighbours’ setbacks make redundant, rather than refusing the plot', () => {
+    const result = offsetPerEdge(CHAMFERED, CHAMFERED_INSETS);
+    const corners = result.ring.map((p) => `${p.x},${p.y}`);
+    // The 45° chamfer on the left is gone: the street line meets the side at its corner.
+    expect(corners).toContain('4500,6000');
+    // The steeper one on the right still binds, so it keeps its own short edge.
+    expect(corners).toContain('82633,6000');
+    expect(corners).toContain('82750,6139');
+    expect(result.ring).toHaveLength(5);
+    expect(result.ring.every((p) => containsPoint(CHAMFERED, p))).toBe(true);
+  });
+
+  it('keeps a chamfer that still binds', () => {
+    // At 1 m all round the chamfers stay: six corners, every one inside the plot.
+    const result = offsetPerEdge(CHAMFERED, uniformInsets(6, 1));
+    expect(result.ring).toHaveLength(6);
+    expect(result.ring.every((p) => containsPoint(CHAMFERED, p))).toBe(true);
+  });
+
+  it('NEGATIVE: still refuses a plot the setbacks really do consume', () => {
+    expect(() => offsetPerEdge(CHAMFERED, uniformInsets(6, 26))).toThrow(/over-consume/);
+  });
+
   it('NEGATIVE: refuses a missing inset rather than defaulting — FR-PLT-001 AC3', () => {
     expect(() => offsetPerEdge(PLOT_80x40, uniformInsets(3, 5))).toThrow(/forbids a default/);
   });

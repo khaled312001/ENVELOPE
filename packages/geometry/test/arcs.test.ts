@@ -219,12 +219,13 @@ describe('what it refuses', () => {
 /**
  * Setting a curved boundary back.
  *
- * This is the part that does not work the obvious way, and the first test here
- * is the doctored one: offsetting a curve as the sixty straight pieces it was
- * drawn as intersects two lines six thousandths of a radian apart, on a grid
- * whose rounding is half a millimetre. It fails — and it fails on a plot whose
- * footprint is perfectly ordinary, which is why it needs a test that says so
- * rather than a comment.
+ * Offsetting a curve as the sixty straight pieces it was drawn as used to trip
+ * the self-intersection gate on a perfectly ordinary plot. The cause turned out
+ * to be the pieces nearest the corners: each is shorter than its neighbours'
+ * setbacks eat, so its offset ran backwards. Since a straight boundary made
+ * redundant by its neighbours is dropped (plot 6468096's chamfers needed it),
+ * the straight path no longer refuses — so the first test now measures it
+ * against the concentric arc instead of asserting that it fails.
  */
 describe('a curved boundary is set back as a circle', () => {
   // The offset intersects its result with the plot through Clipper, which is a
@@ -259,13 +260,15 @@ describe('a curved boundary is set back as a circle', () => {
     };
   };
 
-  it('refuses to come out of treating the curve as the lines it was drawn as', () => {
-    const { ring } = built();
+  it('treated as the lines it was drawn as, agrees with the concentric arc to the tessellation', () => {
+    const { ring, arcs } = built();
     const insets = ring.map((_, i) => ({ seq: i, insetMm: asMm(INSET) }));
-    // No arcs: every piece of the curve is an independent supporting line, which
-    // is what this file argues cannot work. It does not quietly return a wrong
-    // footprint — it trips the self-intersection gate.
-    expect(() => offsetPerEdge(ring, insets)).toThrow(/self-intersects/);
+    // No arcs: every piece of the curve is an independent supporting line, and
+    // the corner pieces its neighbours' setbacks consume are dropped. Measured
+    // 2,411.181 m² against the arc's 2,411.192 — the tessellation, not an error.
+    const asLines = offsetPerEdge(ring, insets);
+    const asArc = offsetPerEdge(ring, insets, arcs);
+    expect(Math.abs(asLines.areaMm2 - asArc.areaMm2)).toBeLessThan(100_000); // 0.1 m²
   });
 
   it('and produces the concentric arc when told the curve is a curve', () => {

@@ -228,14 +228,14 @@ export function offsetPerEdge(
 
   // Vertex i of the offset ring is where the offset shapes of edges i-1 and i
   // meet — and, where both are the same arc, the point on it nearest vertex i.
-  const offsetRing: Pt[] = [];
-  for (let i = 0; i < n; i++) {
-    const { x, y } = meet(curves[(i - 1 + n) % n]!, curves[i]!, ring[i]!);
-    offsetRing.push({
-      x: asMm(x.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
-      y: asMm(y.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
-    });
-  }
+  const snap = ({ x, y }: Xy): Pt => ({
+    x: asMm(x.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
+    y: asMm(y.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
+  });
+  const offsetRing: Pt[] =
+    arcs.length === 0
+      ? straightCorners(ring, curves)
+      : ring.map((p, i) => snap(meet(curves[(i - 1 + n) % n]!, curves[i]!, p)));
 
   /*
     A CURVE'S OFFSET HAS TO BE TRIMMED, AND A LINE'S DOES NOT.
@@ -336,6 +336,76 @@ export function offsetPerEdge(
     areaMm2: verifiedArea(finalRing, 'setback-permitted footprint'),
     exact: allAxisParallel,
   };
+}
+
+/*
+  A SHORT BOUNDARY CAN VANISH UNDER ITS NEIGHBOURS' SETBACKS, AND THAT IS NOT
+  AN OVER-CONSUMED PLOT.
+
+  Plot 6468096 has two corners cut off by chamfers of 5.09 and 6.48 m. Set the
+  street side back 6 m and the side boundary 4.5 m, and the chamfer's own 4.5 m
+  line passes outside the corner the other two make: every point that keeps
+  6 m from the street and 4.5 m from the side is already more than 4.5 m from
+  the chamfer. Its offset "segment" then runs backwards between its neighbours'
+  lines, the ring crosses itself, and the gate below refused a 4,466 m² plot
+  as having no buildable footprint at all — on the plot whose drawings the
+  client sent us as the reference.
+
+  So a straight boundary whose offset runs backwards is dropped, its two
+  neighbours meet directly, and the corners are recomputed — one boundary at a
+  time, the most reversed first, since dropping one changes its neighbours'
+  lengths. Dropping is a claim that the boundary's setback is REDUNDANT, so it
+  is checked rather than trusted: every corner left must stand inside every
+  shifted line, the dropped ones included. If one does not, the plot really is
+  over-consumed and is refused as before. Neighbours that end up parallel, or
+  fewer than three boundaries left, are the same refusal.
+*/
+function straightCorners(ring: Ring, curves: readonly OffsetCurve[]): Pt[] {
+  const lines = curves.map((c) => (c as { line: Line }).line);
+  const n = ring.length;
+  const overConsumed = (detail: Record<string, unknown>): DegenerateGeometryError =>
+    new DegenerateGeometryError(
+      'the setbacks over-consume the plot: the offset boundary self-intersects. ' +
+        'No buildable footprint exists at these setback values.',
+      detail,
+    );
+  let live = ring.map((_, i) => i);
+  for (;;) {
+    if (live.length < 3) throw overConsumed({ boundariesLeft: live.length });
+    const corners = live.map((e, k) => {
+      const prev = live[(k - 1 + live.length) % live.length]!;
+      try {
+        return intersectLines(lines[prev]!, lines[e]!);
+      } catch {
+        throw overConsumed({ parallelBoundaries: [prev, e] });
+      }
+    });
+    // How far each boundary's offset runs along its own direction; negative is backwards.
+    let worst = -1;
+    let worstAlong = new Decimal(0);
+    live.forEach((e, k) => {
+      const p = ring[e]!;
+      const q = ring[(e + 1) % n]!;
+      const from = corners[k]!;
+      const to = corners[(k + 1) % live.length]!;
+      const along = to.x.minus(from.x).times(q.x - p.x).plus(to.y.minus(from.y).times(q.y - p.y));
+      if (along.lt(worstAlong)) {
+        worst = k;
+        worstAlong = along;
+      }
+    });
+    if (worst < 0) {
+      const pts = corners.map((c) => ({
+        x: asMm(c.x.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
+        y: asMm(c.y.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
+      }));
+      if (live.length < n && !pts.every((p) => insideAll(p, curves))) {
+        throw overConsumed({ dropped: ring.map((_, i) => i).filter((i) => !live.includes(i)) });
+      }
+      return pts;
+    }
+    live = live.filter((_, k) => k !== worst);
+  }
 }
 
 /**

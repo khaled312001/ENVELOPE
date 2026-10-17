@@ -834,9 +834,13 @@ export const SEED_RULES: readonly RuleRecord[] = [
     sized. So the figure stays, because every storey of every run stands on it,
     under a clause that says what it is: a placeholder storey height, the same on
     every level, basements and ground floor included. The clear heights the code
-    does print are their own records below (`R-DBC-B53-*`), and `envelope.ts`
-    shows this one ASSUMED, amber, rather than DERIVED from a clause it never
-    reached. The client's own storey heights are an open question.
+    does print are their own records below (`R-DBC-B53-*`). STILL OPEN:
+    `envelope.ts` traces `envelope.floor_to_floor_m` as DERIVED through this
+    record, so on screen it is not amber although no instrument prints it. It
+    should be `assumed()` with this clause as its basis; that change cascades
+    into the height ceiling and the level cap and belongs to the envelope, not
+    to this record. Until it lands, the note under every drawing says the
+    figure is a placeholder. The client's own storey heights are an open question.
   */
   draft({
     ruleId: 'R-FLOOR-TO-FLOOR-RES',

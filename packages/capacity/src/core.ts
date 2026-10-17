@@ -356,7 +356,8 @@ export function reconcileCore(input: {
         'that does not sell — the core, the corridors, the structure, the plant and the amenity. ' +
         'The core alone is more than that. Both can hold only if the saleable figure is measured ' +
         'on a larger base than this GFA, for instance a saleable area that counts balconies ' +
-        'outside it, or if the core is smaller than assumed. Which base the share is measured on ' +
+        // "than assumed" was wrong whenever a named person stated the core; it is this run's core either way.
+        'outside it, or if the core is smaller than this run takes it. Which base the share is measured on ' +
         'is an open question; the engine has changed neither figure.'
       : `Core and saleable share, compared on this GFA: the core is ${core}% of the tower plate, ` +
         `within the ${left}% of the gross the saleable share this run was given leaves for ` +

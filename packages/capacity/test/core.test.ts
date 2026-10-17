@@ -272,6 +272,10 @@ describe('the reconciliation', () => {
     expect(saleable).not.toMatch(/cannot both be right/);
     // And it changes neither of them, which is the discipline this engine keeps.
     expect(saleable).toContain('changed neither figure');
+    // reconcileCore does not know who stated the core, so it may not call it assumed:
+    // a named person's 18% is not an assumption.
+    expect(saleable).not.toMatch(/than assumed/);
+    expect(saleable).toContain('smaller than this run takes it');
   });
 
   it('does not call a default run self-contradictory', () => {

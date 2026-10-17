@@ -154,6 +154,8 @@ export interface LevelPlan {
       readonly areaM2: Decimal;
       readonly bays: number;
       readonly strandedBays: number;
+      /** Of `bays`, those the drive from the slab edge to a ring crosses. See `ParkingLosses`. */
+      readonly entryDriveBays: number;
     };
     readonly footprint: { readonly areaM2: Decimal; readonly bays: number };
   };

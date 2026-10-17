@@ -9,19 +9,22 @@
  * by dividing area by 37.5 cannot offer.
  */
 
-import { Decimal, ProvenanceGraph, Tracer } from '@envelope/core';
+import { Decimal, ProvenanceGraph, Tracer, type TracedDecimal } from '@envelope/core';
 import { describe, expect, it } from 'vitest';
 
 import {
   BAY_STANDARDS,
   DrivewayType,
+  ENTRY_DRIVE_ROW,
   layoutParkingLevel,
   ParkingAngle,
   ParkingLayoutError,
   RectKind,
   standardFor,
+  type ParkingArrangement,
   type ParkingLayoutResult,
   type PlacedRect,
+  type Rect,
 } from '../src/layout.js';
 
 const d = (v: string | number): Decimal => new Decimal(v);
@@ -283,6 +286,52 @@ describe('bays to the walls, one ring aisle', () => {
     }
   });
 
+  /*
+    THE DRIVE FROM THE SLAB EDGE, AND THE BAYS IT CROSSES.
+
+    The ring does not touch the slab edge — the wall runs do — so where nothing
+    else brings a car onto the level, a 6 m drive crosses the wall run to reach
+    the ring. It used to be drawn over three bays that stayed in the count, on
+    every ring level: two wholly under it and one half under it. On a level a
+    ramp or a sloped ring already reaches, the drive led into the wall and was
+    drawn anyway.
+  */
+  it('counts no bay the drive from the slab edge crosses, and publishes what it cost', () => {
+    const out = run(...CLIENT, { arrangement: { id: 'PERIMETER' } });
+    expect(out.arrangement).toBe('PERIMETER');
+    const drive = out.rects.find((r) => r.row === ENTRY_DRIVE_ROW);
+    expect(drive, 'a ring with no ramp is reached by a drive from the slab edge').toBeDefined();
+    const bays = out.rects.filter((r) => r.kind === RectKind.BAY);
+    for (const bay of bays) expect(overlaps(bay, drive!), `bay at ${bay.x}, ${bay.y}`).toBe(false);
+    expect(bays).toHaveLength(out.bayCount.value);
+    // 2.5 m bays from the corner under a 6 m drive: the first three.
+    expect(out.losses.circulation.entryDriveBays).toBe(3);
+    expect(out.losses.circulation.bays).toBeGreaterThanOrEqual(3);
+    // Verbatim: apps/web-next/test/engine-notes-entry.test.ts holds the same sentence to its Arabic.
+    expect(out.notes).toContain(
+      '3 bay(s) stand where the drive from the slab edge crosses the wall run to reach the ring ' +
+        '(6 × 5.5 m), and are not placed: a car drives through them. They are counted as a ' +
+        'circulation loss, not as bays.',
+    );
+  });
+
+  it('draws no drive from the slab edge on a ring a ramp or the sloped ring reaches', () => {
+    const seen = new Set<string>();
+    for (const [w, dp] of [CLIENT, ['48.64', '48.64'], ['60', '52']] as const) {
+      const offered = run(w, dp, { includeRamp: true }).arrangements;
+      for (const id of ['PERIMETER', 'SLOPED'] as const) {
+        if (!offered.some((a) => a.id === id && a.bayCount > 0)) continue;
+        const out = run(w, dp, { includeRamp: true, arrangement: { id } });
+        expect(out.arrangement).toBe(id);
+        expect(out.rects.some((r) => r.row === ENTRY_DRIVE_ROW), `${id} on ${w} × ${dp}`).toBe(false);
+        expect(out.losses.circulation.entryDriveBays).toBe(0);
+        seen.add(id);
+      }
+    }
+    // Both kinds of way on were measured, or nothing was proved about either.
+    expect([...seen].sort()).toEqual(['PERIMETER', 'SLOPED']);
+  });
+
   it('refuses when the core would stand across the ring, and the modules still answer', () => {
     const tracer = new Tracer(new ProvenanceGraph());
     const out = layoutParkingLevel({
@@ -298,5 +347,119 @@ describe('bays to the walls, one ring aisle', () => {
     expect(out.orientation.value).toMatch(/^modules along the (width|depth)$/);
     expect(out.notes.join(' ')).toContain('stands across the ring aisle');
     expect(out.bayCount.value).toBeGreaterThan(0);
+  });
+});
+
+/*
+  NOTHING STANDS ON A BAY, IN ANY ARRANGEMENT A READER CAN PICK.
+
+  The no-overlap test above ran on one 60 × 52 level, which picks modules — so
+  the ring's drive from the slab edge stood on three counted bays on every ring
+  level for as long as the ring existed, and nothing looked. A reader may pick
+  any arrangement the level offers (16 Oct 2026), so every one is laid out here,
+  on footprints where each of them wins somewhere, with and without a ramp, with
+  a core, a column gap and a field. A bay may not share area with another bay, an
+  aisle, a drive, a ramp, the core or the reserved area drawn on the level.
+*/
+describe('no arrangement stands anything on a bay', () => {
+  const MAMZAR_FIELD: readonly { x: number; y: number }[] = [
+    [27.09, 64.49],
+    [25.12, 64.3],
+    [-27.97, -0.68],
+    [106.29, -0.68],
+  ].map(([x, y]) => ({ x: x! * 1000, y: y! * 1000 }));
+
+  interface Case {
+    readonly name: string;
+    readonly extra: (tracer: Tracer) => Partial<Parameters<typeof layoutParkingLevel>[0]>;
+    readonly width: string;
+    readonly depth: string;
+  }
+  const gap = (tracer: Tracer): { everyBays: number; gapM: TracedDecimal } => ({
+    everyBays: 3,
+    gapM: tracer.assumed('gap', d('0.5'), { basis: 'test fixture', unit: 'm' }),
+  });
+  const CASES: readonly Case[] = [
+    { name: 'the client’s plot', width: '50.85', depth: '26.85', extra: () => ({}) },
+    { name: 'the client’s plot, ramp', width: '50.85', depth: '26.85', extra: () => ({ includeRamp: true }) },
+    {
+      name: 'the client’s plot, ramp strip only',
+      width: '50.85',
+      depth: '26.85',
+      extra: () => ({ includeRamp: true, slopedRing: false }),
+    },
+    { name: '46.08 × 37.77, ramp', width: '46.08', depth: '37.773', extra: () => ({ includeRamp: true }) },
+    { name: '48.64 square, ramp', width: '48.64', depth: '48.64', extra: () => ({ includeRamp: true }) },
+    { name: '40 × 40', width: '40', depth: '40', extra: () => ({}) },
+    { name: '60 × 52', width: '60', depth: '52', extra: () => ({}) },
+    { name: '80 × 60, ramp', width: '80', depth: '60', extra: () => ({ includeRamp: true }) },
+    {
+      name: 'the client’s plot, column gap',
+      width: '50.85',
+      depth: '26.85',
+      extra: (tracer) => ({ columnGap: gap(tracer) }),
+    },
+    {
+      name: '48.64 square, core on the island',
+      width: '48.64',
+      depth: '48.64',
+      extra: (tracer) => ({
+        includeRamp: true,
+        core: {
+          rect: { x: d('20'), y: d('20'), width: d('8'), height: d('6') },
+          areaM2: tracer.assumed('core', d('48'), { basis: 'test fixture', unit: 'm²' }),
+        },
+      }),
+    },
+    {
+      name: 'Al Mamzar field, ramp',
+      width: '65.732',
+      depth: '32.582',
+      extra: (tracer) => ({
+        includeRamp: true,
+        field: {
+          polygonMm: MAMZAR_FIELD,
+          grossAreaM2: d('4433'),
+          deductionsTraced: tracer.assumed('field', d('665'), { basis: 'test fixture', unit: 'm²' }),
+        },
+      }),
+    },
+  ];
+
+  const layOut = (c: Case, arrangement?: ParkingArrangement): ParkingLayoutResult => {
+    const tracer = new Tracer(new ProvenanceGraph());
+    return layoutParkingLevel({
+      tracer,
+      footprint: { widthM: d(c.width), depthM: d(c.depth) },
+      deductions: { areaM2: d('120'), source: 'ASSUMED', basis: 'test fixture' },
+      ...c.extra(tracer),
+      ...(arrangement ? { arrangement: { id: arrangement } } : {}),
+    });
+  };
+
+  it.each(CASES)('$name', (c) => {
+    const offered = layOut(c).arrangements.filter((a) => a.bayCount > 0);
+    expect(offered.length).toBeGreaterThan(0);
+    for (const { id } of offered) {
+      const out = layOut(c, id);
+      const isBay = (r: PlacedRect): boolean => r.kind === RectKind.BAY || r.kind === RectKind.ACCESSIBLE_BAY;
+      const bays = out.rects.filter(isBay);
+      expect(bays, id).toHaveLength(out.bayCount.value);
+      const core = c.extra(new Tracer(new ProvenanceGraph())).core?.rect;
+      const solid: readonly { what: string; r: Rect }[] = [
+        ...out.rects.filter((r) => !isBay(r)).map((r) => ({ what: `${r.kind} row ${r.row}`, r })),
+        ...out.reservedPieces.map((r) => ({ what: 'reserved', r })),
+        ...(core ? [{ what: 'core', r: core }] : []),
+      ];
+      for (let i = 0; i < bays.length; i += 1) {
+        const a = bays[i]!;
+        for (let j = i + 1; j < bays.length; j += 1) {
+          expect(overlaps(a, bays[j]!), `${id}: bay at ${a.x}, ${a.y} on another`).toBe(false);
+        }
+        for (const s of solid) {
+          expect(overlaps(a, s.r as PlacedRect), `${id}: ${s.what} on the bay at ${a.x}, ${a.y}`).toBe(false);
+        }
+      }
+    }
   });
 });

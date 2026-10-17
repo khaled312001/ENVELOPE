@@ -217,6 +217,23 @@ describe('a chosen vehicle entrance', () => {
     expect(picked.levelPlan.arrangements).toEqual(first.levelPlan.arrangements);
   });
 
+  /*
+    The bays a ring's drive from the slab edge crosses are their own figure, inside
+    the circulation loss. Every level a run lays out has a ramp or a sloped ring, so
+    no such drive is drawn and the figure is a stated zero — not a missing field a
+    reader cannot tell from "not measured".
+  */
+  it('publishes the bays the drive from the slab edge cost, inside the circulation loss', async () => {
+    type Losses = { levelPlan: { losses: { circulation: { bays: number; entryDriveBays: number } } } };
+    for (const arrangement of [undefined, 'PERIMETER', 'SLOPED'] as const) {
+      const res = await send(arrangement ? { parkingArrangement: arrangement } : {});
+      if (res.statusCode !== 201) continue;
+      const { circulation } = (res.json() as Losses).levelPlan.losses;
+      expect(circulation.entryDriveBays, arrangement ?? 'the default').toBe(0);
+      expect(circulation.bays).toBeGreaterThanOrEqual(circulation.entryDriveBays);
+    }
+  });
+
   it('refuses a parking option the level does not offer, naming the ones it does', async () => {
     const res = await send({ parkingArrangement: 'FIELD_DEPTH' });
     expect(res.statusCode).toBe(422);

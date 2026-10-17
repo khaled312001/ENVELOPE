@@ -78,12 +78,21 @@ Recorded as printed, never resolved silently:
 
 | Clause | Used in |
 |---|---|
+| B.4.2.2 ¶6–¶7 — total allowable height = stated floors × 6 m | `packages/rules/src/seed/dubai-residential.ts` (`R-DBC-B422-HEIGHT`, `DBC_B422`) |
+| B.4.2.3 ¶1–¶3, Table B.1 — setback from neighbour by floors; 0 m from a road | `packages/rules/src/seed/dubai-residential.ts` (`TABLE_B1_PRINTED`, `R-DBC-B1-NEIGHBOUR`, `R-DBC-B1-ROAD`) |
 | B.7.2.1 ¶4, Figures B.49–B.50 — 15 m from a junction | `packages/capacity/src/access.ts` |
-| Tables B.9, B.10 — ramp gradients and transitions | `packages/capacity/src/ramp-rules.ts` |
+| B.7.2.2 ¶1, c), d), ¶4, Tables B.9, B.10 — ramp gradients, transitions, the 300 × 150 mm curb | `packages/capacity/src/ramp-rules.ts` |
 | B.7.2.3.1 — a ramped parking floor at no more than 4% | `packages/capacity/src/ramp-rules.ts` |
 | Table B.11 — bay and aisle dimensions | `packages/capacity/src/layout.ts` (`TABLE_B11`) |
 | B.7.2.6.1 ¶1, Table B.13 — residential parking ratios, no visitor allowance | `packages/rules/src/seed/dubai-residential.ts` (`TABLE_B13`) |
 | B.4.2.3 ¶12 — plant on the street | `packages/capacity/src/ground-program.ts` |
+
+Every DBC citation those files carry is held to this folder by
+`test-support/dbc-reference.ts`: its verbatim text is split on ` … `, and each
+piece must be a run of an English quote on the stated page or, written
+`Table B.9 [a | b | …]`, consecutive cells of a row of that table on that page.
+`packages/rules/test/table-b1.test.ts` and `packages/capacity/test/dbc-citations.test.ts`
+run it, and each feeds it a doctored citation first to show it can fail.
 
 Anything else here is available to cite and is not yet encoded. Encoding one means a
 record with this file's page and verbatim text, a test, and — for a seed rule — a

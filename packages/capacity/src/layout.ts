@@ -857,8 +857,8 @@ export const RAMP_TYPES: readonly RampTypeSpec[] = [
     totalWidthM: '6.3',
     placed: true,
     note:
-      'Table B.9: 12% at most, lanes of at least 3 m, separated by a curb of at least ' +
-      '300 mm (B.7.2.2 c, d); Table B.10: a 3.6 m transition at 6% at each end.',
+      'Table B.9: 12% at most, lanes of at least 3 m, separated by a curb at least ' +
+      '300 mm wide and 150 mm high (B.7.2.2 c, d); Table B.10: a 3.6 m transition at 6% at each end.',
   },
   {
     type: RampType.SPLIT,
@@ -1138,7 +1138,8 @@ function packLevel(o: PackOptions): Packing {
     notes.push(
       `A ${rampWidth.toFixed(2)} × ${rampRun.toFixed(2)} m straight ramp runs down one edge: ` +
         '12% with a 3.6 m transition at 6% at each end (DBC Tables B.9 and B.10), two 3 m ' +
-        'lanes and a 300 mm curb. The bay runs are packed into the remaining width. ' +
+        'lanes and a curb at least 300 mm wide and 150 mm high (B.7.2.2 d). The bay runs are ' +
+        'packed into the remaining width. ' +
         'Headroom (2.4 m) is NOT ASSESSED.',
     );
   }

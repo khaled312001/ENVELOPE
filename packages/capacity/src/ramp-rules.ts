@@ -43,32 +43,48 @@ import { Decimal, type Citation, type TracedDecimal, type Tracer } from '@envelo
 
 const DBC_PDF = 'docs/00-source/regulations/Dubai Building Code_English_2021 Edition_compressed.pdf';
 
+/*
+  VERBATIM MEANS FINDABLE ON THE PAGE. These two citations used to join table
+  cells and clauses into sentences p80 and p82 do not print ("Straight: maximum
+  slope percentage 12%, …"), which a mechanical audit cannot find, and the join
+  dropped half of d): the curb's 150 mm height. They now carry the page's own
+  sentences, and each table row as its cells, `Table B.9 [a | b | …]`, with
+  ` … ` wherever text was left out. `packages/capacity/test/dbc-citations.test.ts`
+  finds every piece in `docs/02-reference/dbc`, the audited transcription.
+*/
 export const TABLE_B9: Citation = {
   instrumentId: 'DUBAI_BUILDING_CODE',
   instrumentVersion: '2021',
-  clauseReference: 'B.7.2.2 Table B.9 — Ramp slope and width',
+  clauseReference: 'B.7.2.2 ¶1, c), d); Table B.9 row "Straight" — Ramp slope and width',
   documentUri: DBC_PDF,
   sourcePage: 80,
   sourceBbox: [0, 0, 842, 595],
-  sourceTextVerbatim:
-    'Ramps allocated for vehicular access shall conform to Table B.9 and the following. ' +
-    'Straight: maximum slope percentage 12%, minimum single lane width 3 m, minimum ' +
-    'vertical clear height above any point 2.4 m. Lane separation for ramps shall be ' +
-    'provided through curbs, walls or other structural segregation. Curbs shall be not ' +
-    'less than 300 mm in width.',
+  sourceTextVerbatim: [
+    'Ramps allocated for vehicular access shall conform to Table B.9 and the following.',
+    'Lane separation for ramps shall be provided through curbs, walls or other structural segregation.',
+    'Where a curb is used between lanes to separate traffic flows, each lane shall meet the ' +
+      'minimum width requirement. Curbs shall be not less than 300 mm in width, and not less ' +
+      'than 150 mm in height.',
+    'Table B.9 [Ramp type | Maximum slope percentage | Minimum single lane width (m) | ' +
+      'Minimum inner circle radius (m) | Minimum vertical clear height above any point (m)]',
+    'Table B.9 [Straight See Figure B.51 | 12% | 3 | - | 2.4]',
+  ].join(' … '),
 };
 
 export const TABLE_B10: Citation = {
   instrumentId: 'DUBAI_BUILDING_CODE',
   instrumentVersion: '2021',
-  clauseReference: 'B.7.2.2 Table B.10 — Transition and ramp slopes recommendations',
+  clauseReference: 'B.7.2.2 ¶4; Table B.10 row "12%" — Transition and ramp slopes recommendations',
   documentUri: DBC_PDF,
   sourcePage: 82,
   sourceBbox: [0, 0, 842, 595],
-  sourceTextVerbatim:
+  sourceTextVerbatim: [
     'Ramp design should provide blended transitions to horizontal parking levels. The ' +
-    'transition should be equal to half the percentage of ramp’s slope. Ramp slope 12%, ' +
-    'transition slope 6%, transition length (minimum) 3.6 m.',
+      'transition should be equal to half the percentage of ramp’s slope, according to the ' +
+      'dimensions given in Table B.10 and Figure B.54.',
+    'Table B.10 [Ramp slope, *R | Transition slope, *T | Transition length, *L (minimum) (m)]',
+    'Table B.10 [12% | 6% | 3.6]',
+  ].join(' … '),
 };
 
 export const PARKED_SLOPE_B7231: Citation = {
@@ -88,6 +104,8 @@ export const STRAIGHT_RAMP = {
   maxSlope: '0.12',
   laneWidthM: '3',
   separationM: '0.3',
+  /** B.7.2.2 d): the curb between the lanes is at least 150 mm high as well as 300 mm wide. */
+  separationHeightM: '0.15',
   clearHeightM: '2.4',
   transitionSlope: '0.06',
   transitionLengthM: '3.6',

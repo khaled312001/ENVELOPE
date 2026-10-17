@@ -18,6 +18,7 @@ import {
   arcFromBulge,
   type BoundaryArc,
   bulgeFromRadius,
+  containsPoint,
   initGeometry,
   MAX_SAGITTA_MM,
   offsetPerEdge,
@@ -25,6 +26,7 @@ import {
   type Ring,
   tessellateArc,
   tessellateRing,
+  verifiedArea,
 } from '../src/index.js';
 
 const mm = (x: number, y: number): Pt => ({ x: asMm(x), y: asMm(y) });
@@ -306,6 +308,26 @@ describe('a curved boundary is set back as a circle', () => {
       const distance = dx.times(dx).plus(dy.times(dy)).sqrt();
       expect(circle.radiusMm.minus(distance).gte(INSET - 3)).toBe(true);
     }
+  });
+
+  /*
+    DBC Table B.1 sets a building 0 m back from a road. On a curved road the
+    zero offset IS the curve, its points rounded to the grid, and some landed a
+    millimetre outside the chords the plot is drawn with: the run was refused as
+    "escaped the plot boundary". A setback of zero must give a footprint inside
+    the plot, with the curve's pieces where they are.
+  */
+  it('sets a curved road boundary back by zero without leaving the plot', () => {
+    const { ring, arcs } = built();
+    const span = arcs[0]!;
+    const insets = ring.map((_, i) => ({
+      seq: i,
+      insetMm: asMm(i >= span.from && i < span.from + span.count ? 0 : INSET),
+    }));
+    const offset = offsetPerEdge(ring, insets, arcs);
+    expect(offset.ring.every((p) => containsPoint(ring, p))).toBe(true);
+    expect(offset.areaMm2).toBeGreaterThan(0);
+    expect(offset.areaMm2).toBeLessThan(verifiedArea(ring));
   });
 
   it('refuses a setback that eats the curve entirely, in words', () => {

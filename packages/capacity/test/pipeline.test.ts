@@ -535,8 +535,25 @@ describe('saleable efficiency', () => {
       band (16 Oct 2026) leave 103 bays: parking binds at 100%, and at 93% Band C
       rises past regulation's 6,934 m² and stops binding — the case this comment
       describes, which is not the case this assertion is about.
+
+      THE ASSERTION IS THAT PARKING SET THE COUNT, NOT THAT THE TWO COUNTS ARE
+      EQUAL. They were equal on this plot until Table B.1's 0 m road setback
+      (17 Oct 2026) changed its geometry; now they are 31 and 32. Not the
+      efficiency leaking in: bays per unit is the mix's bays at the GFA probe's
+      unit count, rounded per type, and the probe's count does move with the
+      efficiency. What must hold is that the published count IS the parking
+      ceiling at either efficiency.
     */
-    expect(unitsAt('0.93', 1)).toBe(unitsAt('1', 1));
+    for (const eff of ['0.93', '1']) {
+      const out = runPipeline(
+        baseInput({
+          parkingLevelsAvailable: 1,
+          saleableEfficiency: { value: new Decimal(eff), source: 'USER_SET', basis: 'test — varied' },
+        }),
+      );
+      expect(out.capacity.governingBand, eff).toBe('PARKING');
+      expect(out.governingUnitCount.value, eff).toBe(out.parking.supportableUnitCeiling.value);
+    }
 
     const bandCAt = (value: string): Decimal =>
       runPipeline(

@@ -29,13 +29,19 @@
  * 4. Each rule gets three real tests, including a boundary case *at* the tier
  *    threshold, and is approved by name.
  *
- * The one thing here that is not illustrative is the **shape of
- * `T-SETBACK-BOUNDARY`**: a setback that tiers on level count is what makes the
- * envelope a fixpoint, and it is the structure the deck's slide 05 describes.
- * Whatever the real numbers turn out to be, that structure is what the solver
- * has to cope with.
+ * Not every record is illustrative any more. Three are transcribed from the
+ * Dubai Building Code with page, bounding box and verbatim text — Table B.1's
+ * two columns (`R-DBC-B1-NEIGHBOUR`, `R-DBC-B1-ROAD`), B.4.2.2 ¶6's height
+ * (`R-DBC-B422-HEIGHT`) and Table B.13's parking ratios — and they are still
+ * `DRAFT`: a real page makes a rule *checkable*, and approval is a named
+ * architect's act. The neighbour setback tiers on the floor count, which is
+ * what makes the envelope a fixpoint and the structure the deck's slide 05
+ * describes.
  */
 
+import { Decimal } from '@envelope/core';
+
+import { NOT_APPLICABLE, readPath, registerCustomFunction } from '../evaluators.js';
 import {
   ApprovalStatus,
   EvaluatorName,
@@ -48,10 +54,18 @@ import {
 const PLACEHOLDER_AUTHOR = 'engineering-placeholder';
 const RECORDED_AT = '2026-08-30T00:00:00Z';
 
+/** The instrument id every placeholder citation carries. */
+export const PLACEHOLDER_INSTRUMENT_ID = 'PLACEHOLDER-NOT-A-REAL-INSTRUMENT';
+
+/** Whether a rule's citation reaches no instrument at all — a placeholder figure. */
+export function citesPlaceholder(rule: RuleRecord): boolean {
+  return rule.citation.instrumentId === PLACEHOLDER_INSTRUMENT_ID;
+}
+
 /** A citation that is honest about being a placeholder. */
 function draftCitation(clause: string, note: string) {
   return {
-    instrumentId: 'PLACEHOLDER-NOT-A-REAL-INSTRUMENT',
+    instrumentId: PLACEHOLDER_INSTRUMENT_ID,
     instrumentVersion: '0.0.0-draft',
     clauseReference: clause,
     documentUri: 'urn:envelope:placeholder:unsourced',
@@ -101,54 +115,214 @@ const draft = (
 const RESIDENTIAL = { land_use: { in: ['RESIDENTIAL_MULTI'] } } as const;
 
 // ---------------------------------------------------------------------------
-// The setback table that makes the envelope circular
+// DBC 2021 Table B.1 — the setback table that makes the envelope circular
+// ---------------------------------------------------------------------------
+
+const DBC_PDF = 'docs/00-source/regulations/Dubai Building Code_English_2021 Edition_compressed.pdf';
+
+/**
+ * Table B.1 exactly as printed on p41 of the English edition, row for row.
+ *
+ * WHY IT IS WRITTEN OUT. The seed used to cite "Part B, Table B.1" for two
+ * tables the page does not hold: a road setback of 9 / 6 / 4.5 / 3 m by road
+ * hierarchy (the table prints 0 m facing a road at every height, and Figure B.9
+ * is titled "Zero setback facing road"), and neighbour tiers one floor off that
+ * skipped 3.75 and 6.75 — a G+8 building was given 6.00 m where the code asks
+ * 6.75 m, which let the envelope grow past the code under a clause label that
+ * said otherwise. So the transcription is held here once, as the page prints
+ * it, and both rules' lookup tables are BUILT from it rather than typed beside
+ * it: a second hand-typed copy is how the first one drifted.
+ *
+ * `floors` maps the printed row onto `levels.above_ground`, which counts every
+ * level above ground INCLUDING the ground floor. That is the code's own count:
+ * B.4.2.2 ¶7 works "G+10" as 11 floors. So "G+4" is 5 floors and "G+1 to G+3"
+ * is 2 to 4. The basement row is printed and kept, with no floor range: B.4.2.3
+ * ¶3 sets back "from ground floor and above", and the engine's above-ground
+ * count never selects it.
+ *
+ * Checked against the page render and its text layer (bbox below), and against
+ * `docs/02-reference/dbc/B.4-general-architectural-provisions.md` by
+ * `packages/rules/test/table-b1.test.ts`.
+ */
+export const TABLE_B1_PRINTED = [
+  { printed: 'Basement', neighbourM: '0', roadM: '0', floors: null },
+  { printed: 'Ground (G)', neighbourM: '3', roadM: '0', floors: { from: 1, to: 1 } },
+  { printed: 'G+1 to G+3', neighbourM: '3', roadM: '0', floors: { from: 2, to: 4 } },
+  { printed: 'G+4', neighbourM: '3.75', roadM: '0', floors: { from: 5, to: 5 } },
+  { printed: 'G+5', neighbourM: '4.50', roadM: '0', floors: { from: 6, to: 6 } },
+  { printed: 'G+6', neighbourM: '5.25', roadM: '0', floors: { from: 7, to: 7 } },
+  { printed: 'G+7', neighbourM: '6', roadM: '0', floors: { from: 8, to: 8 } },
+  { printed: 'G+8', neighbourM: '6.75', roadM: '0', floors: { from: 9, to: 9 } },
+  { printed: 'G+9', neighbourM: '7.50', roadM: '0', floors: { from: 10, to: 10 } },
+  { printed: 'G+10 and above', neighbourM: '7.50', roadM: '0', floors: { from: 11, to: null } },
+] as const;
+
+/** The column headings, as printed. */
+export const TABLE_B1_HEADINGS = [
+  'Building height by number of floors',
+  'Setback from neighbour (X) (see Figure B.8) (m)',
+  'Setback from road (see Figure B.9) (m)',
+] as const;
+
+/**
+ * The citation both Table B.1 rules carry.
+ *
+ * `sourceTextVerbatim` is the page's own words — ¶1, ¶2 and ¶3 of B.4.2.3, then
+ * the table as cells, one `Table B.1 [a | b | c]` per printed row — with ` … `
+ * marking each place text was left out. ¶1 is in it because it is the condition
+ * the table applies under: the affection plan or DCR takes precedence, which
+ * `resolveParameter` gives by §11.5 step 1 when the plot's sheet is on file.
+ *
+ * `sourceBbox` is PDF user space, origin bottom-left, measured off the text
+ * layer: from the table's caption (y 196.8) to the top of ¶1 (y 455.4), across
+ * the left column (x 56.7–411.8). It covers the setback paragraphs and the
+ * table, and not Figures B.8–B.9 beside them.
+ */
+export const TABLE_B1: {
+  readonly instrumentId: string;
+  readonly instrumentVersion: string;
+  readonly clauseReference: string;
+  readonly documentUri: string;
+  readonly sourcePage: number;
+  readonly sourceBbox: readonly [number, number, number, number];
+  readonly sourceTextVerbatim: string;
+} = {
+  instrumentId: 'DUBAI_BUILDING_CODE',
+  instrumentVersion: '2021',
+  clauseReference: 'B.4.2.3 ¶1–¶3, Table B.1 — Setback calculation table',
+  documentUri: DBC_PDF,
+  sourcePage: 41,
+  sourceBbox: [56.7, 196.8, 411.8, 455.4],
+  sourceTextVerbatim: [
+    'The building setback requirements in the affection plan or DCR shall take precedence ' +
+      'over the setback requirements in this section.',
+    'When setback limitations for the plot or development are not defined, setbacks shall ' +
+      'be calculated from the plot limit to the face of buildings in accordance with Table B.1.',
+    `Table B.1 [${TABLE_B1_HEADINGS.join(' | ')}]`,
+    ...TABLE_B1_PRINTED.map((r) => `Table B.1 [${r.printed} | ${r.neighbourM} | ${r.roadM}]`),
+    'Setbacks shall be calculated from ground floor and above.',
+  ].join(' … '),
+};
+
+/**
+ * One of Table B.1's two columns as a lookup on `levels.above_ground`.
+ *
+ * Rows are first-match-wins, so the tallest row comes first and each row's
+ * lower bound is its first floor. The basement row has no floor range and is
+ * not a row of the lookup; a count of zero floors above ground matches nothing
+ * and the rule does not apply, rather than borrowing the ground row.
+ */
+function tableB1Column(tableId: string, column: 'neighbourM' | 'roadM') {
+  return {
+    tableId,
+    rows: TABLE_B1_PRINTED.flatMap((r) =>
+      r.floors === null ? [] : [{ when: {}, whenAtLeast: { 'levels.above_ground': r.floors.from }, value: r[column] }],
+    ).reverse(),
+  };
+}
+
+/** Setback from neighbour (X) — the column the fixpoint straddles. */
+const T_DBC_B1_NEIGHBOUR = tableB1Column('T-DBC-B1-NEIGHBOUR', 'neighbourM');
+/** Setback from road — 0 m on every printed row. Built from the page all the same. */
+const T_DBC_B1_ROAD = tableB1Column('T-DBC-B1-ROAD', 'roadM');
+
+/**
+ * A setback the code does not print, marked as such.
+ *
+ * Table B.1 has two columns, neighbour and road. A boundary to public open space
+ * and an unclassified boundary are neither, and their 3.00 m used to be cited to
+ * Table B.1 as well. They stay — a deleted rule would halt every plot with such an
+ * edge — but under a clause that says they are not the code's.
+ */
+const NOT_IN_TABLE_B1 = 'Not DBC Table B.1 — that table prints neighbour and road columns only';
+
+// ---------------------------------------------------------------------------
+// DBC 2021 B.4.2.2 — how tall
 // ---------------------------------------------------------------------------
 
 /**
- * Tiered boundary setback, keyed on level count.
+ * B.4.2.2 ¶1, ¶6 and ¶7, p40 (¶1 is the last line of p39's column; the box is p40's).
  *
- * This is the structure the deck describes: "3.00 m at ground, rising to 7.50 m
- * at G+9 and above. But the number of floors depends on the footprint, and the
- * footprint depends on the setback."
+ * WHY THIS REPLACED A NUMBER. The seed's height ceiling was 45.00 m cited to
+ * "DCR, plot schedule", a placeholder, and it governed every plot whose sheet
+ * stated no floor count — 14 levels at 3.20 m, shown DERIVED. The code states no
+ * such figure. It says heights follow the DCR and the affection plan (¶1), and
+ * that the total allowable height is the floors THEY allow × 6 m (¶6), the
+ * ground floor counted (¶7: G+10 → 11 × 6 = 66 m). So the ceiling is computed
+ * from the count, and with no count there is no ceiling to compute: the rule
+ * does not apply, nothing governs `height.max`, and the envelope refuses the run
+ * in a sentence instead of inventing a height.
  *
- * Rows are ordered and first-match-wins, so the highest tier is listed first.
+ * `sourceBbox` covers ¶6 and ¶7 in the left column (text layer, origin
+ * bottom-left: x 56.7–413.5, y 383.8–471.3).
  */
-const T_SETBACK_BOUNDARY = {
-  tableId: 'T-SETBACK-BOUNDARY',
-  rows: [
-    { when: {}, whenAtLeast: { 'levels.above_ground': 10 }, value: '7.50' },
-    { when: {}, whenAtLeast: { 'levels.above_ground': 8 }, value: '6.00' },
-    { when: {}, whenAtLeast: { 'levels.above_ground': 7 }, value: '5.25' },
-    { when: {}, whenAtLeast: { 'levels.above_ground': 4 }, value: '4.50' },
-    { when: {}, whenAtLeast: { 'levels.above_ground': 0 }, value: '3.00' },
-  ],
-} as const;
+export const DBC_B422: {
+  readonly instrumentId: string;
+  readonly instrumentVersion: string;
+  readonly clauseReference: string;
+  readonly documentUri: string;
+  readonly sourcePage: number;
+  readonly sourceBbox: readonly [number, number, number, number];
+  readonly sourceTextVerbatim: string;
+} = {
+  instrumentId: 'DUBAI_BUILDING_CODE',
+  instrumentVersion: '2021',
+  clauseReference: 'B.4.2.2 ¶6–¶7 — Building height',
+  documentUri: DBC_PDF,
+  sourcePage: 40,
+  sourceBbox: [56.7, 383.8, 413.5, 471.3],
+  sourceTextVerbatim: [
+    'To calculate the total allowable building height, the allowable number of floors, ' +
+      'as defined by the affection plan or DCR, shall be multiplied by 6 m per floor. ' +
+      'This does not impose restrictions on single floor heights.',
+    'Example: For a building with G+10 floors limit, the maximum allowable height shall be ' +
+      'calculated as 11 (the number of floors) × 6 m (the factor) = 66 m maximum building height.',
+  ].join(' … '),
+};
 
-/** Road setback by hierarchy — the classic table lookup, not circular. */
-const T_SETBACK_ROAD = {
-  tableId: 'T-SETBACK-ROAD',
-  rows: [
-    { when: { 'edge.road_hierarchy': 'ARTERIAL' }, value: '9.00' },
-    { when: { 'edge.road_hierarchy': 'COLLECTOR' }, value: '6.00' },
-    { when: { 'edge.road_hierarchy': 'LOCAL' }, value: '4.50' },
-    { when: { 'edge.road_hierarchy': 'ACCESS' }, value: '3.00' },
-  ],
-} as const;
+/** The custom evaluator B.4.2.2 ¶6 needs: a count from the context × a stated factor. */
+export const DBC_B422_HEIGHT_FN = 'dbc_b422_floors_times_metres';
+
+/*
+  A CUSTOM FUNCTION, BECAUSE NONE OF THE ELEVEN CAN MULTIPLY A COUNT. §11.4
+  caps the registry at twelve and the twelfth is this escape hatch, registered by
+  name and reviewed like any rule. The record stays data: the factor and the
+  path are its arguments, and the code below only multiplies them.
+
+  A count that is not a whole number of at least one floor is not a count the
+  plan stated, and the rule does not apply rather than guess.
+*/
+registerCustomFunction(DBC_B422_HEIGHT_FN, (rule, ctx) => {
+  const floors = readPath(ctx, String(rule.evaluatorArgs['floorsPath']));
+  if (typeof floors !== 'number' || !Number.isInteger(floors) || floors < 1) return NOT_APPLICABLE;
+  return { kind: 'scalar', value: new Decimal(String(rule.evaluatorArgs['metresPerFloor'])).times(floors) };
+});
+
+/**
+ * Whether a height rule's value is the stated floor count × a factor.
+ *
+ * Such a rule is not a rival to the count — it is the count, in metres — so the
+ * envelope must not set it aside as a generic ceiling the plan supersedes (which
+ * is right for a figure like the old 45 m and wrong for this one).
+ */
+export function heightFromStatedFloors(rule: RuleRecord): boolean {
+  return rule.evaluator === EvaluatorName.CUSTOM_FN && rule.evaluatorArgs['fn'] === DBC_B422_HEIGHT_FN;
+}
+
+/** Where the envelope puts the stated floor count for that rule to read. */
+export const STATED_FLOORS_PATH = 'levels.max_above_ground';
 
 export const SEED_RULES: readonly RuleRecord[] = [
   draft({
-    ruleId: 'R-SETBACK-ROAD-RES',
+    ruleId: 'R-DBC-B1-ROAD',
     parameterId: 'setback.road',
     ruleClass: RuleClass.GENERATIVE,
     operator: Operator.MIN,
     evaluator: EvaluatorName.POLYGON_OFFSET_INWARD,
-    evaluatorArgs: { key: ['edge.road_hierarchy'], table: T_SETBACK_ROAD },
+    evaluatorArgs: { key: ['levels.above_ground'], table: T_DBC_B1_ROAD },
     unit: 'm',
     applicability: { all: [RESIDENTIAL, { 'edge.classification': { eq: 'ROAD' } }] },
-    citation: draftCitation(
-      'Part B, Table B.1',
-      'road setback by hierarchy for residential development',
-    ),
+    citation: TABLE_B1,
     jurisdiction: 'DM_MAINLAND',
     isLifeSafety: false,
     mechanization: Mechanization.MECHANIZED,
@@ -157,37 +331,38 @@ export const SEED_RULES: readonly RuleRecord[] = [
     tests: [
       {
         kind: 'POSITIVE',
-        context: { land_use: 'RESIDENTIAL_MULTI', edge: { classification: 'ROAD', road_hierarchy: 'COLLECTOR' } },
-        expected: 6,
+        context: { land_use: 'RESIDENTIAL_MULTI', edge: { classification: 'ROAD', road_hierarchy: 'ARTERIAL' }, levels: { above_ground: 12 } },
+        expected: 0,
+        note: 'Table B.1 prints 0 facing a road at every height, whatever the road.',
       },
       {
         kind: 'BOUNDARY',
-        context: { land_use: 'RESIDENTIAL_MULTI', edge: { classification: 'ROAD', road_hierarchy: 'ACCESS' } },
-        expected: 3,
-        note: 'Lowest tier. An off-by-one in table ordering surfaces here.',
+        context: { land_use: 'RESIDENTIAL_MULTI', edge: { classification: 'ROAD' }, levels: { above_ground: 1 } },
+        expected: 0,
+        note: 'The ground row. A road hierarchy the table does not print must not tier it.',
       },
       {
         kind: 'NEGATIVE',
-        context: { land_use: 'INDUSTRIAL', edge: { classification: 'ROAD', road_hierarchy: 'ARTERIAL' } },
+        context: { land_use: 'INDUSTRIAL', edge: { classification: 'ROAD' }, levels: { above_ground: 12 } },
         expected: 'NOT_APPLICABLE',
       },
     ],
-    note: 'Values illustrative. A real authoring pass must replace every one.',
+    note:
+      'Replaces R-SETBACK-ROAD-RES, which cited Table B.1 for 9.00 / 6.00 / 4.50 / 3.00 m by ' +
+      'road hierarchy. The table prints no hierarchy and 0 m on every row. Where the ' +
+      'affection plan or DCR states a road setback, it governs (B.4.2.3 ¶1).',
   }),
 
   draft({
-    ruleId: 'R-SETBACK-BOUNDARY-RES',
+    ruleId: 'R-DBC-B1-NEIGHBOUR',
     parameterId: 'setback.adjacent_plot',
     ruleClass: RuleClass.GENERATIVE,
     operator: Operator.MIN,
     evaluator: EvaluatorName.POLYGON_OFFSET_INWARD,
-    evaluatorArgs: { key: ['levels.above_ground'], table: T_SETBACK_BOUNDARY },
+    evaluatorArgs: { key: ['levels.above_ground'], table: T_DBC_B1_NEIGHBOUR },
     unit: 'm',
     applicability: { all: [RESIDENTIAL, { 'edge.classification': { eq: 'ADJACENT_PLOT' } }] },
-    citation: draftCitation(
-      'Part B, Table B.1',
-      'boundary setback tiered by building height, 3.00 m at ground rising to 7.50 m at G+9',
-    ),
+    citation: TABLE_B1,
     jurisdiction: 'DM_MAINLAND',
     isLifeSafety: false,
     mechanization: Mechanization.MECHANIZED,
@@ -198,12 +373,13 @@ export const SEED_RULES: readonly RuleRecord[] = [
         kind: 'POSITIVE',
         context: { land_use: 'RESIDENTIAL_MULTI', edge: { classification: 'ADJACENT_PLOT' }, levels: { above_ground: 12 } },
         expected: 7.5,
+        note: 'G+11, inside "G+10 and above".',
       },
       {
         kind: 'BOUNDARY',
-        context: { land_use: 'RESIDENTIAL_MULTI', edge: { classification: 'ADJACENT_PLOT' }, levels: { above_ground: 10 } },
-        expected: 7.5,
-        note: 'Exactly at the G+9 threshold — the tier boundary the fixpoint straddles.',
+        context: { land_use: 'RESIDENTIAL_MULTI', edge: { classification: 'ADJACENT_PLOT' }, levels: { above_ground: 9 } },
+        expected: 6.75,
+        note: 'G+8 — nine floors with the ground floor counted. The old table gave 6.00 here.',
       },
       {
         kind: 'NEGATIVE',
@@ -214,7 +390,9 @@ export const SEED_RULES: readonly RuleRecord[] = [
     note:
       'THIS is the circular rule. Its lookup key is a solver output, which is why ' +
       'the envelope must be solved as a fixpoint (PRD §11.7 applied beyond its ' +
-      'stated scope). FR-PLT-002 does not describe an iteration; see open-questions.md.',
+      'stated scope). FR-PLT-002 does not describe an iteration; see open-questions.md. ' +
+      'The key is the whole building’s floor count, ground floor included; whether a ' +
+      'tower on a podium takes the row for its total count is a question for the client.',
   }),
 
   draft({
@@ -226,7 +404,7 @@ export const SEED_RULES: readonly RuleRecord[] = [
     evaluatorArgs: { value: '3.00' },
     unit: 'm',
     applicability: { all: [RESIDENTIAL, { 'edge.classification': { eq: 'OPEN_SPACE' } }] },
-    citation: draftCitation('Part B, Table B.1', 'setback to public open space'),
+    citation: draftCitation(NOT_IN_TABLE_B1, 'setback to public open space — a placeholder, not a figure the code prints'),
     jurisdiction: 'DM_MAINLAND',
     isLifeSafety: false,
     mechanization: Mechanization.MECHANIZED,
@@ -248,7 +426,7 @@ export const SEED_RULES: readonly RuleRecord[] = [
     evaluatorArgs: { value: '3.00' },
     unit: 'm',
     applicability: { all: [RESIDENTIAL, { 'edge.classification': { eq: 'OTHER' } }] },
-    citation: draftCitation('Part B, Table B.1', 'default boundary treatment'),
+    citation: draftCitation(NOT_IN_TABLE_B1, 'unclassified boundary — a placeholder, not a figure the code prints'),
     jurisdiction: 'DM_MAINLAND',
     isLifeSafety: false,
     mechanization: Mechanization.PARTIALLY_MECHANIZED,
@@ -340,6 +518,59 @@ export const SEED_RULES: readonly RuleRecord[] = [
   }),
 
   draft({
+    ruleId: 'R-DBC-B422-HEIGHT',
+    parameterId: 'height.max',
+    ruleClass: RuleClass.GENERATIVE,
+    operator: Operator.MAX,
+    evaluator: EvaluatorName.CUSTOM_FN,
+    evaluatorArgs: { fn: DBC_B422_HEIGHT_FN, floorsPath: STATED_FLOORS_PATH, metresPerFloor: '6' },
+    unit: 'm',
+    applicability: { all: [RESIDENTIAL] },
+    citation: DBC_B422,
+    jurisdiction: 'DM_MAINLAND',
+    isLifeSafety: false,
+    mechanization: Mechanization.MECHANIZED,
+    validFrom: '2021-01-01',
+    validTo: null,
+    tests: [
+      {
+        kind: 'POSITIVE',
+        context: { land_use: 'RESIDENTIAL_MULTI', levels: { max_above_ground: 11 } },
+        expected: 66,
+        note: 'B.4.2.2 ¶7’s own example: G+10 is 11 floors × 6 m = 66 m.',
+      },
+      {
+        kind: 'BOUNDARY',
+        context: { land_use: 'RESIDENTIAL_MULTI', levels: { max_above_ground: 1 } },
+        expected: 6,
+        note: 'A ground floor alone.',
+      },
+      {
+        kind: 'NEGATIVE',
+        context: { land_use: 'RESIDENTIAL_MULTI', levels: { above_ground: 14 } },
+        expected: 'NOT_APPLICABLE',
+        note: 'No floor count stated: there is no height to compute, and none is invented.',
+      },
+    ],
+    note:
+      'B.4.2.2 ¶1: heights follow the DCR and affection plan; ¶6: floors × 6 m. The ' +
+      'affection plan’s own floor count still governs the level count; this is its height.',
+  }),
+
+  /*
+    THE 45 m, KEPT ONLY WHERE NOTHING STATES A FLOOR COUNT, AND NO LONGER PASSED
+    OFF AS A RULE'S FIGURE. It governed every plot without a sheet, cited to "DCR,
+    plot schedule" and shown DERIVED. The code prints no such height: B.4.2.2 ¶1
+    leaves height to the affection plan or DCR, and a plot with neither has none.
+    Refusing those runs outright is what the code implies, and it would also
+    refuse every study begun before the sheet is to hand — which CLAUDE.md keeps
+    open on purpose ("Step 0 … is not gated"). That choice is the client's. Until
+    he makes it, the figure applies only when no count is stated, its citation
+    says it is not the code's, and the envelope shows the ceiling it gives as
+    ASSUMED, amber, with that basis (see `envelope.ts`). Delete this record and
+    the envelope refuses the run in a sentence instead.
+  */
+  draft({
     ruleId: 'R-HEIGHT-MAX-RES',
     parameterId: 'height.max',
     ruleClass: RuleClass.GENERATIVE,
@@ -347,8 +578,12 @@ export const SEED_RULES: readonly RuleRecord[] = [
     evaluator: EvaluatorName.SCALAR_MAX,
     evaluatorArgs: { value: '45.00' },
     unit: 'm',
-    applicability: { all: [RESIDENTIAL] },
-    citation: draftCitation('DCR, plot schedule', 'maximum building height'),
+    applicability: { all: [RESIDENTIAL, { [STATED_FLOORS_PATH]: { exists: false } }] },
+    citation: draftCitation(
+      'Not DBC B.4.2.2 — no floor count stated',
+      'a placeholder height for a plot whose affection plan or DCR states no floor count; ' +
+        'B.4.2.2 ¶1 leaves height to those instruments and prints no figure of its own',
+    ),
     jurisdiction: 'DM_MAINLAND',
     isLifeSafety: false,
     mechanization: Mechanization.MECHANIZED,
@@ -356,8 +591,18 @@ export const SEED_RULES: readonly RuleRecord[] = [
     validTo: null,
     tests: [
       { kind: 'POSITIVE', context: { land_use: 'RESIDENTIAL_MULTI' }, expected: 45 },
-      { kind: 'BOUNDARY', context: { land_use: 'RESIDENTIAL_MULTI', levels: { above_ground: 99 } }, expected: 45 },
-      { kind: 'NEGATIVE', context: { land_use: 'INDUSTRIAL' }, expected: 'NOT_APPLICABLE' },
+      {
+        kind: 'BOUNDARY',
+        context: { land_use: 'RESIDENTIAL_MULTI', levels: { above_ground: 99 } },
+        expected: 45,
+        note: 'A solver level count is not a stated floor count.',
+      },
+      {
+        kind: 'NEGATIVE',
+        context: { land_use: 'RESIDENTIAL_MULTI', levels: { max_above_ground: 11 } },
+        expected: 'NOT_APPLICABLE',
+        note: 'A stated count is answered by B.4.2.2 ¶6, never by this figure.',
+      },
     ],
   }),
 

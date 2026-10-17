@@ -122,3 +122,37 @@ describe('a parking option the level cannot lay out', () => {
     expect(fix?.body.vehicleAccess).toEqual(BODY.vehicleAccess);
   });
 });
+
+/*
+  DBC B.4.2.2 (17 Oct 2026): the height ceiling is the stated floors × 6 m. With
+  no floor count the 45 m placeholder is ASSUMED and says why; with no
+  placeholder either, the run is refused. Each sentence is the engine's own.
+*/
+describe('the height, when no floor count is stated', () => {
+  const REFUSED =
+    'no floor count is stated for this plot, so no height can be computed. DBC B.4.2.2 ¶1: building heights follow ' +
+    'the affection plan or DCR, and ¶6 sets the ceiling at the floors they allow × 6 m. The engine does not substitute ' +
+    'a height. Add the plot’s affection plan, or a floor count from its DCR.';
+  const BASIS =
+    'no floor count is stated for this plot, and DBC B.4.2.2 ¶1 leaves height to the affection plan or DCR. 45 m is a ' +
+    'placeholder (R-HEIGHT-MAX-RES) so a study can run before the sheet is to hand; no instrument prints it. With the ' +
+    'sheet’s floor count, the ceiling is that count × 6 m (B.4.2.2 ¶6).';
+  const FORMULA = 'stated floor count 11 × 6 m per floor (DBC B.4.2.2 ¶6, ground floor counted)';
+
+  it('says the refusal in Arabic, naming what is needed', () => {
+    const ar = engineNote(REFUSED, 'ar') ?? '';
+    expect(ar).toContain('مخطط أفكشن');
+    expect(ar).toContain('B.4.2.2');
+    expect(ar).not.toMatch(/[A-Za-z]{4,} [A-Za-z]{4,}/);
+  });
+
+  it('says the placeholder’s basis in Arabic, with its figure', () => {
+    const ar = engineNote(BASIS, 'ar') ?? '';
+    expect(ar).toContain('45 م قيمة مؤقتة');
+    expect(engineNote(BASIS, 'en')).toMatch(/^No floor count is stated/);
+  });
+
+  it('says the B.4.2.2 ¶6 derivation with both figures', () => {
+    expect(engineNote(FORMULA, 'ar')).toBe('11 دور محدد × 6 م للدور (كود دبي B.4.2.2، مع احتساب الدور الأرضي)');
+  });
+});

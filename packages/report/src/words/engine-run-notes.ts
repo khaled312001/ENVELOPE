@@ -383,6 +383,11 @@ export const RUN_READERS: readonly Reader[] = [
     const m = /^emission blocked by (\d+) finding\(s\)/.exec(t);
     return m ? { en: `Cannot be issued: ${m[1]} check(s) stop it.`, ar: `لا يمكن الإصدار: ${m[1]} من الفحوص تمنعه.` } : null;
   },
+  /* No floor count, no placeholder: the envelope refuses rather than invent a height (DBC B.4.2.2). */
+  starts('no floor count is stated for this plot, so no height can be computed', {
+    en: 'No floor count is stated for this plot, so there is no height to compute (DBC B.4.2.2: the affection plan or DCR sets the floors, × 6 m each). Add the affection plan or the DCR’s floor count.',
+    ar: 'لا يوجد عدد أدوار محدد لهذه القطعة، فلا يمكن حساب الارتفاع (كود دبي B.4.2.2: مخطط أفكشن أو اشتراطات نظم التطوير (DCR) تحدد الأدوار، و6 م لكل دور). أضف مخطط أفكشن أو عدد الأدوار من اشتراطات نظم التطوير.',
+  }),
 
   /* ── The sheet step ───────────────────────────────────────── */
   (t) => (t === 'plot_area = area of the drawn ring' ? { en: 'plot area = area of the drawn outline', ar: 'مساحة القطعة = مساحة الحدود المرسومة' } : null),
@@ -431,6 +436,22 @@ export const RUN_READERS: readonly Reader[] = [
     return {
       en: `Core at ${m[1]}% of the tower plate, within the usual ${m[2]}%. It moves no capacity figure. Enter the core area to replace it.`,
       ar: `النواة ${m[1]}% من مسطح البرج، ضمن النطاق المعتاد ${m[2]}%. لا تغير أي رقم للسعة. أدخل مساحة النواة لاستبدالها.`,
+    };
+  },
+  (t) => {
+    const m = /^no floor count is stated for this plot, and DBC B\.4\.2\.2 ¶1 leaves height to the affection plan or DCR\. ([\d.]+) m is a placeholder/.exec(t);
+    if (!m) return null;
+    return {
+      en: `No floor count is stated, and the code leaves height to the affection plan or DCR (B.4.2.2). ${m[1]} m is a placeholder no document prints, so the study can run. With the sheet’s floor count the ceiling is that count × 6 m.`,
+      ar: `لا يوجد عدد أدوار محدد، والكود يترك الارتفاع لمخطط أفكشن أو اشتراطات نظم التطوير (B.4.2.2). ${m[1]} م قيمة مؤقتة لا تذكرها أي وثيقة، لتعمل الدراسة. مع عدد الأدوار من المخطط يصبح الحد هذا العدد × 6 م.`,
+    };
+  },
+  (t) => {
+    const m = /^stated floor count (\d+) × ([\d.]+) m per floor \(DBC B\.4\.2\.2 ¶6, ground floor counted\)$/.exec(t);
+    if (!m) return null;
+    return {
+      en: `${m[1]} floors stated × ${m[2]} m a floor (DBC B.4.2.2, ground floor counted)`,
+      ar: `${m[1]} دور محدد × ${m[2]} م للدور (كود دبي B.4.2.2، مع احتساب الدور الأرضي)`,
     };
   },
   starts('the general coverage rule', {

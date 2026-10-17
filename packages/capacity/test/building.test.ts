@@ -436,7 +436,24 @@ describe('the ramp', () => {
 
 describe('the podium is the footprint the figure describes', () => {
   it('is the setback line when coverage does not bind', () => {
-    const out = runPipeline(input(RECT_60x30, { parkingLevelsAvailable: 1 }));
+    /*
+      ONE road, on a short side, and three neighbours. Table B.1 sets back 0 m
+      from a road, so with two long road frontages a 60 × 30 m plot keeps
+      (60 − 2 × 7.5) × 30 = 1,350 m², more than 60% of it. With the road on the
+      west and neighbours at 7.5 m elsewhere it keeps 52.5 × 15 = 787.5 m², under
+      the 1,080 m² cap — the case this is about.
+    */
+    const base = plotOf(RECT_60x30);
+    const plot: Plot = {
+      ...base,
+      edges: base.edges.map((e, i) =>
+        i === 3
+          ? { ...e, classification: EdgeClassification.ROAD, roadHierarchy: 'LOCAL' as const }
+          : { seq: e.seq, start: e.start, end: e.end, lengthMm: e.lengthMm, bearingDeg: e.bearingDeg, classification: EdgeClassification.ADJACENT_PLOT },
+      ),
+      frontageCount: 1,
+    };
+    const out = runPipeline({ ...input(RECT_60x30, { parkingLevelsAvailable: 1 }), plot });
     // The precondition, checked rather than hoped for: the setbacks leave less
     // than the cap allows.
     expect(out.envelope.setbackPermittedFootprint.value.lt(out.envelope.coverageCap.value)).toBe(true);

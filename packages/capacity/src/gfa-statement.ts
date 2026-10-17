@@ -45,9 +45,10 @@
  *     parking is excluded it is not GFA, and a zero row would read as a parking
  *     area of zero.
  *
- * PROPOSED is whole floors. The governing capacity is the smallest band and is
- * rarely a whole number of floors; the part floor above the last whole one is not
- * placed, and the statement says how much that is rather than rounding it in.
+ * PROPOSED is the whole floors and, where the run draws one, the part floor above
+ * them at its own area (a PART_FLOOR row, ASSUMED, 17 Oct 2026). The governing
+ * capacity is the smallest band and is rarely a whole number of floors; where the
+ * part floor is dropped, the statement says how much that is rather than rounding it in.
  *
  * Square feet are written beside square metres because the drawings carry both.
  * 1 ft = 0.3048 m exactly (international foot), so 1 m² = 1 ÷ 0.09290304 ft²;
@@ -147,6 +148,12 @@ export const GfaRowKind = {
   COMMERCIAL: 'COMMERCIAL',
   /** The roof level — stair head, lift motor room, tank room. Never an area. */
   ROOF: 'ROOF',
+  /**
+   * The part floor above the last whole level, at its own area — a smaller top
+   * floor, ASSUMED (`part-floor.ts`). Its own row because its plate is not the
+   * tower plate, and a row is a group of identical plates.
+   */
+  PART_FLOOR: 'PART_FLOOR',
 } as const;
 export type GfaRowKind = (typeof GfaRowKind)[keyof typeof GfaRowKind];
 
@@ -265,7 +272,7 @@ export interface GfaStatement {
    * against a drawing they already have.
    */
   readonly reconciliation: readonly string[];
-  /** The rows, summed. Whole floors only. */
+  /** The rows, summed: the whole floors, and the part floor where one is drawn. */
   readonly proposedGfaM2: TracedDecimal;
   /** Allowed less proposed. Never negative: proposed is within band A by construction. */
   readonly remainingGfaM2: TracedDecimal;
@@ -333,6 +340,12 @@ export interface GfaStatementInput {
    * is the smallest band less the floors, which only the bands know.
    */
   readonly partFloorNotPlacedM2?: Decimal;
+  /**
+   * The part floor the run draws above its whole levels, and the level it stands
+   * on (null where the model could not stack it). A row of its own, at its own
+   * area; the proposal is then the governing capacity to the square metre.
+   */
+  readonly partFloor?: { readonly areaM2: TracedDecimal; readonly levelId: string | null };
   /**
    * The level schedule states the ground floor does not park. The sentence about
    * the ground floor then says so, rather than one written for a parking ground
@@ -516,12 +529,17 @@ export function buildGfaStatement(input: GfaStatementInput): GfaStatement {
     the floors actually placed. Recomputing either from the rows would be the
     same arithmetic in a second place.
   */
+  const part = input.partFloor;
   const residentialArea = tracer.computed(
     'gfa_statement.residential_gfa_m2',
-    input.towerPlate.value.times(floors),
+    input.towerPlate.value.times(floors).plus(part ? part.areaM2.value : 0),
     {
-      formula: `tower plate ${input.towerPlate.value.toFixed(2)} m² × ${floors} whole level(s)`,
-      uses: { plate: input.towerPlate, levels: input.levels },
+      formula:
+        `tower plate ${input.towerPlate.value.toFixed(2)} m² × ${floors} whole level(s)` +
+        (part ? ` + part top floor ${part.areaM2.value.toFixed(2)} m²` : ''),
+      uses: part
+        ? { plate: input.towerPlate, levels: input.levels, partFloor: part.areaM2 }
+        : { plate: input.towerPlate, levels: input.levels },
       unit: 'm²',
       detail: { metric: gfa },
     },
@@ -627,6 +645,25 @@ export function buildGfaStatement(input: GfaStatementInput): GfaStatement {
   };
 
   const rows: GfaStatementRow[] = groups.map(rowOf);
+  if (part) {
+    /*
+      ONE LEVEL AT ITS OWN AREA, IN THE CLASS OF THE ASSUMPTION IT IS DRAWN BY.
+      Not a repeat of the tower plate, so no traced count: the row's area is the
+      part floor's node itself, and a reader who opens it reaches the rule and
+      the open question about a smaller top floor.
+    */
+    rows.push({
+      kind: GfaRowKind.PART_FLOOR,
+      cap: GfaCapKind.RESIDENTIAL,
+      levelIds: part.levelId ? [part.levelId] : [],
+      perLevelM2: part.areaM2,
+      count: 1,
+      levelCount: null,
+      areaM2: part.areaM2,
+      perLevelFt2: toFt2(part.areaM2.value),
+      areaFt2: toFt2(part.areaM2.value),
+    });
+  }
 
   const counts = input.parkingInFar === 'COUNTS_TOWARD_FAR';
   if (counts) {

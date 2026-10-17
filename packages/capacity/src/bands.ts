@@ -37,6 +37,15 @@ import {
   type Tracer,
 } from '@envelope/core';
 
+import {
+  PART_FLOOR_RULE_VALUE,
+  type PartFloor,
+  partFloorBelowMinimum,
+  partFloorMinimum,
+  partFloorNotPlaced,
+  partFloorRuleBasis,
+} from './part-floor.js';
+
 /**
  * The rule a band is derived from.
  *
@@ -154,6 +163,21 @@ export interface BandsInput {
   readonly realismDiscount: {
     readonly value: Decimal;
     readonly actor: { readonly id: string; readonly name: string };
+  };
+  /**
+   * What the part floor above the last whole level needs to be drawn — see
+   * `part-floor.ts`. The smallest floor is the core and one unit's GFA unless
+   * somebody stated one; `placeable` asks the drawing rule whether a top floor
+   * of that area holds the core inside the plate, and how it is scaled when it does.
+   */
+  readonly partFloor: {
+    readonly core: TracedDecimal;
+    readonly unitGfa: TracedDecimal;
+    readonly statedMinimum?: {
+      readonly areaM2: Decimal;
+      readonly actor: { readonly id: string; readonly name: string };
+    };
+    readonly placeable: (areaM2: Decimal) => { readonly aboutCore: boolean } | null;
   };
 }
 
@@ -302,22 +326,26 @@ export function computeBands(input: BandsInput): BandsResult {
   // --- Integer granularity — §15.4 ----------------------------------------
   //
   // Capacity is quantized by floors. When the smallest band exceeds what an
-  // integer number of floors consumes, the remainder is real lost capacity and
-  // is reported rather than smoothed away.
+  // integer number of floors consumes, the remainder is a part floor, and what
+  // happens to it is said rather than smoothed away.
   /*
-    AND "REPORTED, NOT ABSORBED" NOW MEANS THE GOVERNING FIGURE IS THE WHOLE
-    FLOORS. It used to be the band minimum itself, with the part floor above the
-    last whole one named beside it as a loss — and then counted anyway: the
-    units were cut from it, the saleable area was taken on it, the FAR the
-    answer "reaches" included it, and no drawing placed it. On a 1,280 m² plate
-    a remainder of 1,279 m² was 13 units of a building nobody drew.
+    THE GOVERNING FIGURE IS min(A, B, C) AGAIN, AND THE PART FLOOR STANDS.
 
-    So the band minimum is kept where it belongs — naming the governing band,
-    and the headroom to the next — and the capacity this run reports is the
-    levels it places at the plate it draws. The remainder is
-    `integerGranularityLossM2`. Shrinking every plate so one more level fits, or
-    drawing a part floor at the top, would recover it; both are design choices
-    this engine does not make, and the question is with the client.
+    It was the band minimum once, with the part floor above the last whole level
+    named as a loss and counted anyway: no drawing placed it. The fix of 17 Oct
+    2026 held the figure to whole levels instead, which made the drawing true by
+    cutting the answer — 9,677.42 m² reported as 8,960 on the worked example,
+    7.4% under what an architect draws, on every run, in the direction nobody
+    checks. An architect fills the figure.
+
+    So the remainder is drawn: a top floor of its own area, the tower plate
+    scaled to it (`part-floor.ts`), ASSUMED because whether he draws a smaller
+    top floor or shrinks every plate is a question still open with him. The
+    governing figure counts it and takes its class. A part floor too small to
+    hold its core and one unit — or one the drawing rule cannot place around the
+    core — is dropped, said in a sentence with both figures, and the governing
+    figure is then the whole levels. `integerGranularityLossM2` is what was
+    dropped: zero where the part floor stands.
   */
   const bandMinimum = governing.value;
   const wholeFloors = plateM2.isZero()
@@ -330,24 +358,89 @@ export function computeBands(input: BandsInput): BandsResult {
     uses: { a: bandA, b: bandB, c: bandC, floorAreaLevels: input.floorAreaLevels, plate: input.towerPlate },
     unit: 'levels',
   });
-  const governingValue = plateM2.times(wholeFloors);
-  const integerGranularityLossM2 = Decimal.max(new Decimal(0), bandMinimum.minus(governingValue));
+  const wholeValue = plateM2.times(wholeFloors);
+  const remainder = plateM2.isZero() ? new Decimal(0) : Decimal.max(new Decimal(0), bandMinimum.minus(wholeValue));
+
+  let partFloor: PartFloor | null = null;
+  if (remainder.gt(0)) {
+    const minimum = partFloorMinimum(
+      tracer,
+      input.partFloor.core,
+      input.partFloor.unitGfa,
+      input.partFloor.statedMinimum,
+    );
+    const placed = remainder.gte(minimum.value) ? input.partFloor.placeable(remainder) : null;
+    if (remainder.lt(minimum.value)) {
+      partFloor = {
+        kind: 'DROPPED',
+        remainderM2: remainder,
+        minimum,
+        reason: partFloorBelowMinimum(remainder, minimum.value, wholeValue, input.partFloor.statedMinimum !== undefined),
+      };
+    } else if (!placed) {
+      partFloor = { kind: 'DROPPED', remainderM2: remainder, minimum: null, reason: partFloorNotPlaced(remainder, wholeValue) };
+    } else {
+      const rule = tracer.assumed('building.part_floor_rule', PART_FLOOR_RULE_VALUE, {
+        basis: partFloorRuleBasis({
+          wholeLevels: wholeFloors,
+          plateM2,
+          remainderM2: remainder,
+          governingM2: bandMinimum,
+          aboutCore: placed.aboutCore,
+        }),
+        label: 'how the part floor is drawn',
+      });
+      const areaM2 = tracer.computed('capacity.part_floor_m2', remainder, {
+        formula:
+          `smallest band ${bandMinimum.toFixed(2)} m² − ${wholeFloors} whole level(s) × tower plate ` +
+          `${plateM2.toFixed(2)} m², drawn as a smaller top floor`,
+        uses: { a: bandA, b: bandB, c: bandC, levels, plate: input.towerPlate, rule, minimum },
+        unit: 'm²',
+        detail: {
+          metric: 'GFA',
+          note:
+            'The part floor above the last whole level, as its own top floor. Its area is the governing ' +
+            'capacity less the whole levels; that it is drawn as a smaller top floor, rather than spread ' +
+            'over every plate, is the assumption it rests on.',
+        },
+      });
+      partFloor = { kind: 'DRAWN', areaM2, rule, minimum };
+    }
+  }
+  const drawn = partFloor?.kind === 'DRAWN' ? partFloor : null;
+  const governingValue = drawn ? bandMinimum : wholeValue;
+  const integerGranularityLossM2 = drawn ? new Decimal(0) : remainder;
 
   const governingGfa = tracer.computed('capacity.governing_gfa', governingValue, {
-    formula:
-      `min(band A, band B, band C) = ${bandMinimum.toFixed(2)} m², in whole levels: ` +
-      `${wholeFloors} level(s) × tower plate ${plateM2.toFixed(2)} m²`,
-    uses: { a: bandA, b: bandB, c: bandC, levels, plate: input.towerPlate },
+    formula: drawn
+      ? `min(band A, band B, band C) = ${bandMinimum.toFixed(2)} m²: ${wholeFloors} whole level(s) × ` +
+        `tower plate ${plateM2.toFixed(2)} m² + a part top floor of ${remainder.toFixed(2)} m²`
+      : partFloor
+        ? `min(band A, band B, band C) = ${bandMinimum.toFixed(2)} m², in whole levels: ` +
+          `${wholeFloors} level(s) × tower plate ${plateM2.toFixed(2)} m²; the part floor of ` +
+          `${remainder.toFixed(2)} m² is not drawn`
+        : `min(band A, band B, band C) = ${bandMinimum.toFixed(2)} m² = ${wholeFloors} whole level(s) × ` +
+          `tower plate ${plateM2.toFixed(2)} m²`,
+    uses: {
+      a: bandA,
+      b: bandB,
+      c: bandC,
+      levels,
+      plate: input.towerPlate,
+      ...(drawn ? { partFloor: drawn.areaM2 } : {}),
+      ...(partFloor?.kind === 'DROPPED' && partFloor.minimum ? { minimum: partFloor.minimum } : {}),
+    },
     unit: 'm²',
     detail: {
       governingBand: governing.band,
       bindingConstraint: governing.label,
       partFloorNotPlacedM2: integerGranularityLossM2.toFixed(2),
+      ...(partFloor?.kind === 'DROPPED' ? { partFloorDropped: partFloor.reason } : {}),
       note:
-        'The governing capacity is the smallest of the three, not the maximum, ' +
-        'held to the whole levels this run places. Reporting a maximum the plot ' +
-        'will never deliver is how a pro forma acquires a number nobody can defend; ' +
-        'the part floor above the last whole level is reported as lost, not sold.',
+        'The governing capacity is the smallest of the three, not the maximum. Reporting a ' +
+        'maximum the plot will never deliver is how a pro forma acquires a number nobody can ' +
+        'defend. Above the last whole level the remainder is drawn as a smaller top floor, ' +
+        'assumed; where it is too small to be a floor it is not drawn, and that is said.',
     },
   });
 
@@ -451,21 +544,33 @@ export function computeBands(input: BandsInput): BandsResult {
     Not DERIVED by fiat any more. It is as certain as the levels and the parking
     placement it counts, and an assumed podium makes it amber.
   */
+  /*
+    The part floor is a storey: a smaller plate, a full floor to floor. Counted
+    here as the model stacks it, on the next storey that does not park, so the
+    cover, the sections and INV-11 stand one building.
+  */
+  const storeysOfFloorArea = wholeFloors + (drawn ? 1 : 0);
   const storeys = storeysToTop(
     input.maxLevels.value,
     input.aboveGradeParking.ground,
     input.aboveGradeParking.podium,
-    wholeFloors,
+    storeysOfFloorArea,
   );
   const parkingStoreys = (input.aboveGradeParking.ground ? 1 : 0) + input.aboveGradeParking.podium;
   const levelsAboveGround = tracer.computed('capacity.levels_above_ground', new Decimal(storeys), {
     formula:
       `${storeys} storey(s) from grade to the top of the highest level placed: ` +
       `${parkingStoreys} parking at or above grade, ${wholeFloors} of floor area` +
-      (storeys > parkingStoreys + wholeFloors
-        ? `, and ${storeys - parkingStoreys - wholeFloors} unplaced under them`
+      (drawn ? ', the part top floor' : '') +
+      (storeys > parkingStoreys + storeysOfFloorArea
+        ? `, and ${storeys - parkingStoreys - storeysOfFloorArea} unplaced under them`
         : ''),
-    uses: { levels, floorAreaLevels: input.floorAreaLevels, maxLevels: input.maxLevels },
+    uses: {
+      levels,
+      floorAreaLevels: input.floorAreaLevels,
+      maxLevels: input.maxLevels,
+      ...(drawn ? { partFloor: drawn.areaM2 } : {}),
+    },
     unit: 'levels',
     detail: {
       note:
@@ -505,6 +610,7 @@ export function computeBands(input: BandsInput): BandsResult {
     userRealismDiscount,
     levels,
     levelsAboveGround,
+    partFloor,
   };
 }
 
@@ -571,6 +677,8 @@ export function traceFloorAreaLevels(
 export interface BandsResult extends CapacityResult {
   /** Storeys from grade to the top of the highest placed level. Observed against the plan's G+N. */
   readonly levelsAboveGround: TracedDecimal;
+  /** The part floor above the last whole level: drawn, dropped and said, or null where there is none. */
+  readonly partFloor: PartFloor | null;
 }
 
 /**

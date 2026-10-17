@@ -195,7 +195,11 @@ describe('the stack', () => {
     const answer = out.capacity.levels.value;
     // The case this exists for: the ceiling permits more than the answer uses.
     expect(above.length).toBeGreaterThan(answer);
-    expect(above.filter((l) => l.placed).length).toBe(answer);
+    // The whole levels, and above them the part floor, which is the one level
+    // at its own plate. Nothing else.
+    const part = out.partFloor?.kind === 'DRAWN' ? 1 : 0;
+    expect(above.filter((l) => l.placed).length).toBe(answer + part);
+    expect(above.filter((l) => l.placed && l.partFloor === undefined).length).toBe(answer);
     expect(out.building.placedLevels.node).toBe(out.capacity.levels.node);
     expect(out.building.placedLevels.value).toBe(String(answer));
   });

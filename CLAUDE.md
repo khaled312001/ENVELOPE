@@ -700,6 +700,28 @@ is a defect even when it makes something easier.
   applied. It prints in the audit report (8a) and the study report, both languages, with
   what the 31 Aug proposal promised beside what exists (IFC: not built). Changing a
   status is a decision: bump `CLAUSE_REGISTER_VERSION`.
+- **The governing capacity is min(A, B, C), and the part floor stands** (17 Oct 2026).
+  It is never rounded down to whole tower plates, which reported 8,960 m² for a worked
+  example whose bands allow 9,677.42. The remainder above the last whole level is drawn
+  as one smaller top floor (`part-floor.ts`): the tower plate scaled to the remainder's
+  area about the centre the plate and core are drawn by. That is `ASSUMED`
+  (`building.part_floor_rule`), and its basis names the open question: a smaller top
+  floor, or every plate shrunk. It is amber in every renderer (sheet A-202, both DXFs,
+  the 3D view, the .glb). The core stands on it, and it carries no bays. The level
+  schedule, band B, `levels_above_ground`, the cover height, the GFA statement
+  (`PART_FLOOR`) and INV-16 all count it, and INV-01/11 fail on a run with it removed.
+  A part floor is dropped in two cases, and a sentence gives both figures:
+  - it is smaller than `capacity.part_floor_minimum_m2`, which is `ASSUMED` as the core
+    plus one unit's GFA, or `USER_SET`. A stated minimum is said as stated, never as
+    "its core and one unit";
+  - it cannot hold the core.
+
+  Governing then becomes the whole levels. Do not put the whole-plate rounding back.
+  **Band A is the rule's own figure:** where a sheet prints a GFA, band A is `far.max`
+  (GFA ÷ printed area, rounded down at six places) × that area. That equals the printed
+  GFA to the cent and never exceeds it. A gross equal to the printed GFA had put the
+  achieved FAR 3e-7 above the rule once governing could land on band A, and blocked DDA
+  5134565.
 - **Degenerate geometry raises.** Slivers, self-intersections and near-tangent offsets throw
   rather than return a plausible wrong answer (PRD §14.3).
 - **Invariant failure blocks emission.** Never a warning, never a configurable severity.

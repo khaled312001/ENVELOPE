@@ -1356,6 +1356,110 @@ export const RUN_READERS: readonly Reader[] = [
           ar: `${lead.ar} وعلى أدوار القبو وحدها (${m[1]}) لكان ${m[2]} م² لكل موقف (${m[3]} موقفا). سؤال للعميل.`,
         };
   },
+  /* ── capacity `part-floor.ts` / `building.ts`: the part floor above the last whole level ── */
+  (t) => {
+    const said: Readonly<Record<string, Said>> = {
+      'how the part floor is drawn': { en: 'How the part floor is drawn', ar: 'طريقة رسم الدور الجزئي' },
+      'building.part_floor_rule': { en: 'How the part floor is drawn', ar: 'طريقة رسم الدور الجزئي' },
+      'smallest top floor drawn': { en: 'Smallest top floor drawn', ar: 'أصغر دور أخير يرسم' },
+      'capacity.part_floor_minimum_m2': { en: 'Smallest top floor drawn', ar: 'أصغر دور أخير يرسم' },
+      'capacity.part_floor_m2': { en: 'Part floor', ar: 'الدور الجزئي' },
+      'the remainder drawn as a smaller top floor, the tower plate scaled to its area': {
+        en: 'The remainder drawn as a smaller top floor, the tower plate scaled to its area',
+        ar: 'الباقي مرسوم دورا أخيرا أصغر، مسطح البرج مصغرا إلى مساحته',
+      },
+      'Part floor': { en: 'Part floor', ar: 'الدور الجزئي' },
+    };
+    return said[t] ?? null;
+  },
+  (t) => {
+    const m = /^(Basement|Podium|Level) (\d+) · part floor$|^Ground floor · part floor$/.exec(t);
+    if (!m) return null;
+    const name = !m[1]
+      ? { en: 'Ground floor', ar: 'الدور الأرضي' }
+      : m[1] === 'Podium'
+        ? { en: `Podium ${m[2]}`, ar: `البوديوم ${m[2]}` }
+        : m[1] === 'Basement'
+          ? { en: `Basement ${m[2]}`, ar: `البدروم ${m[2]}` }
+          : { en: `Level ${m[2]}`, ar: `الدور ${m[2]}` };
+    return { en: `${name.en} · part floor`, ar: `${name.ar} · دور جزئي` };
+  },
+  (t) => {
+    const m = /^Part floor: (\S+) is a smaller top floor of ([\d.,]+) m², the tower plate of ([\d.,]+) m² scaled to that area/.exec(t);
+    if (!m) return null;
+    return {
+      en: `Part floor: ${m[1]} is a smaller top floor of ${m[2]} m², the ${m[3]} m² tower plate scaled to that area. An assumption: a smaller top floor or every plate shrunk is still an open question.`,
+      ar: `الدور الجزئي: ${m[1]} دور أخير أصغر مساحته ${m[2]} م²، وهو مسطح البرج ${m[3]} م² مصغرا إلى تلك المساحة. مفترض: هل يرسم دور أخير أصغر أم تصغر كل المسطحات، سؤال ما زال مفتوحا.`,
+    };
+  },
+  (t) => {
+    const m =
+      /^The governing capacity of ([\d.]+) m² is (\d+) whole level\(s\) of the ([\d.]+) m² tower plate and ([\d.]+) m² more\..*?(about the point the core is scaled about|about its centre).*?the governing capacity would be the whole levels alone, ([\d.]+) m²\.$/s.exec(
+        t,
+      );
+    if (!m) return null;
+    const core = m[5] === 'about the point the core is scaled about';
+    return {
+      en:
+        `The governing ${m[1]} m² is ${m[2]} whole level(s) of the ${m[3]} m² plate and ${m[4]} m² more, drawn as a smaller top floor: ` +
+        `the plate scaled ${core ? 'about the point the core is scaled about, so the core stands inside it' : 'about its centre'}. ` +
+        `A smaller top floor or every plate shrunk is still open with the client. Left out, the governing capacity would be ${m[6]} m².`,
+      ar:
+        `السعة الحاكمة ${m[1]} م² هي ${m[2]} دورا كاملا من مسطح ${m[3]} م² و${m[4]} م² إضافية، مرسومة دورا أخيرا أصغر: ` +
+        `مسطح البرج مصغرا ${core ? 'حول النقطة التي تصغر حولها النواة، فتقع النواة داخله' : 'حول مركزه'}. ` +
+        `دور أخير أصغر أم تصغير كل المسطحات، سؤال ما زال مفتوحا مع العميل. ولو حذف لكانت السعة الحاكمة ${m[6]} م².`,
+    };
+  },
+  (t) => {
+    const m = /^The smallest top floor drawn: the core of ([\d.]+) m² and one unit's ([\d.]+) m² of GFA, ([\d.]+) m² together\./.exec(t);
+    if (!m) return null;
+    return {
+      en: `Smallest top floor drawn: the ${m[1]} m² core and one unit’s ${m[2]} m² of GFA, ${m[3]} m² together. A smaller part floor is not drawn. No code clause states this; which figure to use is a question with the client.`,
+      ar: `أصغر دور أخير يرسم: النواة ${m[1]} م² ووحدة واحدة ${m[2]} م² من المساحة الطابقية، ${m[3]} م² معا. الدور الجزئي الأصغر منه لا يرسم. لا ينص عليه بند في الكود، والرقم المعتمد سؤال مطروح على العميل.`,
+    };
+  },
+  (t) => {
+    const m =
+      /^The part floor above the last whole level is not drawn: its ([\d.]+) m² is less than the ([\d.]+) m² this run takes as the smallest top floor, its core and one unit\. The governing capacity is the whole levels, ([\d.]+) m²\.$/.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en: `The part floor above the last whole level is not drawn: its ${m[1]} m² is less than the ${m[2]} m² smallest top floor (its core and one unit). The governing capacity is the whole levels, ${m[3]} m².`,
+      ar: `الدور الجزئي فوق آخر دور كامل لا يرسم: مساحته ${m[1]} م² أقل من ${m[2]} م²، أصغر دور أخير (نواته ووحدة واحدة). السعة الحاكمة هي الأدوار الكاملة، ${m[3]} م².`,
+    };
+  },
+  (t) => {
+    const m =
+      /^The part floor above the last whole level is not drawn: a top floor of ([\d.]+) m², drawn by the rule the plate and the core are drawn by, does not hold the core inside the tower plate\. The governing capacity is the whole levels, ([\d.]+) m²\.$/.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en: `The part floor above the last whole level is not drawn: a ${m[1]} m² top floor, drawn by the plate’s and the core’s rule, does not hold the core inside the plate. The governing capacity is the whole levels, ${m[2]} m².`,
+      ar: `الدور الجزئي فوق آخر دور كامل لا يرسم: دور أخير مساحته ${m[1]} م²، مرسوم بقاعدة المسطح والنواة، لا يضم النواة داخل مسطح البرج. السعة الحاكمة هي الأدوار الكاملة، ${m[2]} م².`,
+    };
+  },
+  (t) => {
+    // The minimum a named person stated: not "its core and one unit", which is the engine's own reasoning.
+    const m =
+      /^The part floor above the last whole level is not drawn: its ([\d.]+) m² is less than the ([\d.]+) m² stated as the smallest top floor\. The governing capacity is the whole levels, ([\d.]+) m²\.$/.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en: `The part floor above the last whole level is not drawn: its ${m[1]} m² is less than the ${m[2]} m² stated as the smallest top floor. The governing capacity is the whole levels, ${m[3]} m².`,
+      ar: `الدور الجزئي فوق آخر دور كامل لا يرسم: مساحته ${m[1]} م² أقل من ${m[2]} م²، أصغر دور أخير كما حدد. السعة الحاكمة هي الأدوار الكاملة، ${m[3]} م².`,
+    };
+  },
+  (t) => {
+    const m = /^The part floor of ([\d.]+) m² above the answer's whole levels\. Every storey under the height ceiling that does not park is taken, so it is not drawn\.$/.exec(t);
+    if (!m) return null;
+    return {
+      en: `The part floor of ${m[1]} m² above the whole levels is not drawn: every storey under the height ceiling that does not park is taken.`,
+      ar: `الدور الجزئي ${m[1]} م² فوق الأدوار الكاملة لا يرسم: كل دور تحت حد الارتفاع بلا مواقف مشغول.`,
+    };
+  },
 ];
 
 /* ── The ramps from the street: the reasons a placement is refused ── */

@@ -1510,7 +1510,8 @@ export type GfaRowKindView =
   | 'UNPLACED'
   | 'PARKING'
   | 'COMMERCIAL'
-  | 'ROOF';
+  | 'ROOF'
+  | 'PART_FLOOR';
 
 /** Which allowance a row draws on. Two, capped separately and summed at the end. */
 export type GfaCapKindView = 'RESIDENTIAL' | 'COMMERCIAL';

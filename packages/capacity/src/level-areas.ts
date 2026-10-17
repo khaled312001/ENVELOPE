@@ -13,8 +13,9 @@
  *
  * That premise stopped being true when the engine began to stack the building
  * (`building.ts`): every level, at its elevation, parking or not, placed or not.
- * The capacity figure is computed by a separate path (`bands.ts`: whole levels ×
- * plate, under a ceiling less the parking). So the two can now disagree, and did
+ * The capacity figure is computed by a separate path (`bands.ts`: min(A, B, C),
+ * which is whole levels × plate and, since 17 Oct 2026, a part floor at its own
+ * area above them, under a ceiling less the parking). So the two can disagree, and did
  * — the 3B+G+5P scheme reported 17,920 m² while its drawn levels held 11,520 —
  * which is precisely what INV-01 exists to catch.
  *
@@ -65,6 +66,12 @@ export interface LevelAreasInput {
   readonly parkingInFar: 'COUNTS_TOWARD_FAR' | 'EXCLUDED_FROM_FAR';
   /** The parking area band A deducted; counted on the parking levels when parking counts. */
   readonly parkingArea: TracedDecimal;
+  /**
+   * The part floor's own area, counted on the level the model marks as the part
+   * floor (`ModelLevel.partFloor`) rather than a whole plate. Which level that
+   * is stays the model's word; what it counts is the capacity's.
+   */
+  readonly partFloor?: TracedDecimal;
 }
 
 const isParking = (use: LevelUse): boolean =>
@@ -104,7 +111,13 @@ export function levelAreasOf(input: LevelAreasInput): readonly LevelArea[] {
 
   return building.levels.map((l) => {
     const parks = isParking(l.use);
-    const gfaM2 = parks ? parkingShare : l.placed ? input.towerPlate : null;
+    const gfaM2 = parks
+      ? parkingShare
+      : l.placed
+        ? l.partFloor && input.partFloor
+          ? input.partFloor
+          : input.towerPlate
+        : null;
     return {
       levelId: l.id,
       use: l.use,

@@ -401,7 +401,9 @@ export function symbolBlocks(): DxfBlock[] {
 function prefixOf(sheet: Sheet): string {
   if (sheet.kind === SheetKind.PARKING && sheet.levelId) return sheet.levelId;
   if (sheet.kind === SheetKind.SITE) return 'SITE';
-  if (sheet.kind === SheetKind.TYPICAL) return 'TYPICAL';
+  // The part floor is a plan of one level whose plate is not the typical one, so
+  // its layers carry that level's id rather than claim to be the typical floor's.
+  if (sheet.kind === SheetKind.TYPICAL) return sheet.id === 'typical' || !sheet.levelId ? 'TYPICAL' : sheet.levelId;
   return sheet.id.toUpperCase();
 }
 

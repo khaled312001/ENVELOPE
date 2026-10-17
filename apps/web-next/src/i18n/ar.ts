@@ -572,6 +572,7 @@ export const AR: Dict = {
     coreRec: 'مقارنة النواة — لا يطرح لها شيء',
     assumptions: (n: number): string => (n === 1 ? 'افتراض واحد — لك أن تعدله' : `${n} افتراضات — لك أن تعدل كلا منها`),
     sensitivity: (p: string, lo: string, hi: string, rel: string): string => `بتحريكه ${p} تتراوح السعة الحاكمة بين ${lo} و${hi} m² (${rel}).`,
+    partFloor: 'دور جزئي، مفترض:',
   },
 
   sheets: {

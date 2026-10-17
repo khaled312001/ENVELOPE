@@ -65,11 +65,18 @@ function sheet(far: string, height: { typicalFloors: number; podiumLevels: numbe
 
 const isParking = (use: string): boolean => use === 'BASEMENT_PARKING' || use === 'PODIUM_PARKING';
 
-/** The levels the model places as floor area, each at the plate — what the drawings hold. */
+/**
+ * The levels the model places as floor area, each at its own plate — the tower
+ * plate, or the part floor's area on the one level that carries it. What the
+ * drawings hold, read off the model rather than off the capacity.
+ */
 const drawnGfa = (out: RunOutput): Decimal =>
-  out.envelope.towerPlateCap.value.times(
-    out.building.levels.filter((l) => l.placed && !isParking(l.use)).length,
-  );
+  out.building.levels
+    .filter((l) => l.placed && !isParking(l.use))
+    .reduce(
+      (s, l) => s.plus(l.partFloor ? new Decimal(l.partFloor.areaM2.value) : out.envelope.towerPlateCap.value),
+      new Decimal(0),
+    );
 
 /** The top of the highest placed level, from grade, in metres — the section's top datum. */
 const drawnTopM = (out: RunOutput): Decimal =>
@@ -162,8 +169,22 @@ describe('the capacity is the levels the drawings place', () => {
         out = runPipeline(make());
       });
 
-      it('governing GFA = the placed levels of floor area × the plate', () => {
+      it('governing GFA = the placed levels of floor area, each at its own plate', () => {
         expect(out.capacity.governingGfa.value.toString()).toBe(drawnGfa(out).toString());
+      });
+
+      it('governing GFA = min(A, B, C) exactly, unless a part floor was dropped and said', () => {
+        const min = Decimal.min(
+          out.capacity.regulationLimitedGfa.value,
+          out.capacity.geometryLimitedGfa.value,
+          out.capacity.parkingLimitedGfa.value,
+        );
+        if (out.partFloor?.kind === 'DROPPED') {
+          expect(out.building.notModelled).toContain(out.partFloor.reason);
+          expect(out.capacity.governingGfa.value.plus(out.partFloor.remainderM2).toString()).toBe(min.toString());
+        } else {
+          expect(out.capacity.governingGfa.value.toString()).toBe(min.toString());
+        }
       });
 
       it('the level schedule the engine emits sums to the GFA the area table states', () => {
@@ -188,11 +209,12 @@ describe('the capacity is the levels the drawings place', () => {
         );
       });
 
-      it('reports the part floor as lost, never more than a plate', () => {
+      it('loses no part floor it draws, and reports one it drops, never more than a plate', () => {
         expect(out.capacity.integerGranularityLossM2.lt(out.envelope.towerPlateCap.value)).toBe(true);
         expect(out.gfaStatement.partFloorNotPlacedM2.toString()).toBe(
           out.capacity.integerGranularityLossM2.toString(),
         );
+        if (out.partFloor?.kind !== 'DROPPED') expect(out.capacity.integerGranularityLossM2.isZero()).toBe(true);
       });
     });
   }

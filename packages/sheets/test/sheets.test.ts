@@ -36,11 +36,13 @@ const count = (svg: string, needle: RegExp): number => (svg.match(needle) ?? [])
 const STRIP = { levelPlan: { rampType: 'STRAIGHT' } } as const;
 
 describe('the set', () => {
-  it('has a site plan, a sheet per parking level, a typical floor and a section, in binding order', () => {
+  it('has a site plan, a sheet per parking level, a typical floor, the part floor and a section, in binding order', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2, ...STRIP }));
     const sheets = composeSheets(out.building, META);
     write('80x40', sheets);
-    expect(sheets.map((s) => s.number)).toEqual(['A-001', 'A-101', 'A-102', 'A-201', 'A-301', 'A-302']);
+    // A-202: the governing capacity above the last whole plate, drawn as a smaller top floor.
+    expect(out.partFloor?.kind).toBe('DRAWN');
+    expect(sheets.map((s) => s.number)).toEqual(['A-001', 'A-101', 'A-102', 'A-201', 'A-202', 'A-301', 'A-302']);
     expect(sheets.filter((s) => s.kind === 'PARKING').map((s) => s.levelId)).toEqual(['G', 'P1']);
   });
 
@@ -48,7 +50,7 @@ describe('the set', () => {
     const out = runPipeline(input(RECT_80x40, { podiumLevels: 2, parkingLevelsAvailable: 2 }));
     const sheets = composeSheets(out.building, META);
     write('80x40-sloped', sheets);
-    expect(sheets.map((s) => s.number)).toEqual(['A-001', 'A-101', 'A-102', 'A-201', 'A-301']);
+    expect(sheets.map((s) => s.number)).toEqual(['A-001', 'A-101', 'A-102', 'A-201', 'A-202', 'A-301']);
   });
 
   it('carries the two sentences on every sheet', () => {

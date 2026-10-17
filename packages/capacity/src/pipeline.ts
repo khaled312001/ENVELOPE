@@ -55,6 +55,7 @@ import { fromLocal, largestInscribedRectangle } from '@envelope/geometry';
 
 import { computeBands, traceFloorAreaLevels, type BandSource } from './bands.js';
 import { levelAreasOf, type LevelArea } from './level-areas.js';
+import { type PartFloor, partFloorRing, type PartFloorRing } from './part-floor.js';
 import { aboveGradeParkingOf, buildBuildingModel, entryLevelOf, parkingInPodiumOf } from './building.js';
 import { planGrade } from './grade.js';
 import { planStreetRamps, type StreetLevel } from './street-ramp.js';
@@ -401,6 +402,14 @@ export interface RunInput {
    * argument in full is at the top of `core.ts`.
    */
   readonly coreAreaM2?: Decimal;
+  /**
+   * The smallest top floor this run draws, m² — `USER_SET` by `actor`.
+   *
+   * Absent, it is `ASSUMED` as the core and one unit's GFA (`part-floor.ts`). A
+   * part floor above the last whole level smaller than this is not drawn, the
+   * governing capacity is then the whole levels, and that is said.
+   */
+  readonly partFloorMinimumM2?: Decimal;
   readonly context?: EvalContext;
 }
 
@@ -437,6 +446,12 @@ export interface RunOutput {
   readonly floorAreaLevels: Traced<number>;
   /** Storeys from grade to the top of the highest placed level — observed against the plan's G+N. */
   readonly levelsAboveGround: TracedDecimal;
+  /**
+   * The part floor above the last whole level — drawn as a smaller top floor,
+   * assumed, or dropped with the sentence that says why. Null where the
+   * governing capacity is a whole number of plates. See `part-floor.ts`.
+   */
+  readonly partFloor: PartFloor | null;
   /** Each level of the model with what the run counts on it — INV-01, INV-11, INV-18 read it. */
   readonly levelAreas: readonly LevelArea[];
   /**
@@ -1333,6 +1348,10 @@ function runPipelineOnce(input: RunInput): RunOutput {
     instrument it is the boundary as traced. Warsan 6211383 entered at 40 × 30 m
     reported 4,200 m² against a sheet that prints 4,778.31 m². See `FarBasis`.
   */
+  /** A top floor of this area, drawn by the rule the plate and the core are drawn by. */
+  const partFloorRingOf = (areaM2: Decimal): PartFloorRing =>
+    partFloorRing({ plateRing: envelope.plateRing, coreRing: core.ring, coreAreaM2: core.areaM2.value, areaM2 });
+
   const farBasis = envelope.farBasis;
   const grossPermittedGfa = farBasis.gross.value;
   const parkingAreaM2 = parking.requiredAreaM2.value;
@@ -1375,7 +1394,26 @@ function runPipelineOnce(input: RunInput): RunOutput {
     gfaPerUnitM2: gfaPerUnit,
     parkingRule,
     realismDiscount: { value: input.realismDiscount, actor: input.actor },
+    /*
+      THE PART FLOOR, ASKED OF THE DRAWING RULE BEFORE IT IS COUNTED. A top floor
+      the rule cannot place around the core is not counted, so the question is
+      put here, where the governing figure is decided, rather than discovered by
+      the model after the figure has been published.
+    */
+    partFloor: {
+      core: core.areaM2,
+      unitGfa: gfaPerUnitTraced,
+      ...(input.partFloorMinimumM2 === undefined
+        ? {}
+        : { statedMinimum: { areaM2: input.partFloorMinimumM2, actor: input.actor } }),
+      placeable: (areaM2) => {
+        const r = partFloorRingOf(areaM2);
+        return r.kind === 'PLACED' ? { aboutCore: r.aboutCore } : null;
+      },
+    },
   });
+  const partFloorDrawn = capacity.partFloor?.kind === 'DRAWN' ? capacity.partFloor : null;
+  const partFloorPlaced = partFloorDrawn ? partFloorRingOf(partFloorDrawn.areaM2.value) : null;
 
   // --- Closing the loop: what the emitted answer actually demands -----------
   //
@@ -1466,6 +1504,10 @@ function runPipelineOnce(input: RunInput): RunOutput {
     levelPlan,
     levelPlanRefusal,
     answerLevels: capacity.levels,
+    ...(partFloorDrawn && partFloorPlaced?.kind === 'PLACED'
+      ? { partFloor: { ring: partFloorPlaced.ring, areaM2: partFloorDrawn.areaM2, rule: partFloorDrawn.rule } }
+      : {}),
+    ...(capacity.partFloor?.kind === 'DROPPED' ? { partFloorDropped: capacity.partFloor.reason } : {}),
     /*
       The schedule, when there is one — and it stops the placement being an
       assumption. Where the parking sits was never derivable from two integers,
@@ -1560,6 +1602,8 @@ function runPipelineOnce(input: RunInput): RunOutput {
 
   const isParking = (use: string): boolean =>
     use === 'BASEMENT_PARKING' || use === 'PODIUM_PARKING';
+  /** The level the part floor stands on, when the model placed one. */
+  const partLevel = building.levels.find((l) => l.partFloor !== undefined);
   const gfaStatement = buildGfaStatement({
     tracer,
     farMax: farBasis.far.value,
@@ -1569,9 +1613,11 @@ function runPipelineOnce(input: RunInput): RunOutput {
     allowedGfa: farBasis.gross,
     towerPlate: envelope.towerPlateCap,
     levels: capacity.levels,
+    // The whole plates only: the part floor is a row of its own, at its own area.
     residentialLevelIds: building.levels
-      .filter((l) => l.placed && !isParking(l.use))
+      .filter((l) => l.placed && !isParking(l.use) && l.partFloor === undefined)
       .map((l) => l.id),
+    ...(partFloorDrawn ? { partFloor: { areaM2: partFloorDrawn.areaM2, levelId: partLevel?.id ?? null } } : {}),
     parkingInFar: input.parkingInFar,
     parkingArea: parking.requiredAreaM2,
     parkingLevelIds: building.levels.filter((l) => isParking(l.use)).map((l) => l.id),
@@ -1592,6 +1638,7 @@ function runPipelineOnce(input: RunInput): RunOutput {
     floorToFloorM: envelope.floorToFloorM,
     parkingInFar: input.parkingInFar,
     parkingArea: parking.requiredAreaM2,
+    ...(partFloorDrawn ? { partFloor: partFloorDrawn.areaM2 } : {}),
   });
 
   return {
@@ -1606,6 +1653,7 @@ function runPipelineOnce(input: RunInput): RunOutput {
     unitSchedule: atGoverning.schedule,
     floorAreaLevels,
     levelsAboveGround: capacity.levelsAboveGround,
+    partFloor: capacity.partFloor,
     levelAreas,
     saleableEfficiency: efficiencyTraced,
     saleableAreaM2: saleableAreaTraced,
@@ -1894,6 +1942,19 @@ const PERTURBABLE: readonly Perturbable[] = [
         entries: input.unitMix.entries.map((e) => ({ ...e, nsaM2: e.nsaM2.times(factor) })),
       },
     }),
+  },
+  {
+    /*
+      THE SMALLEST TOP FLOOR, MEASURED. Moving it moves the answer only where the
+      part floor sits near it — then by the whole part floor, which is the row a
+      reader of a plot on that edge needs at the top of the register. From the
+      output, as the core is: unstated, the input holds nothing.
+    */
+    parameterId: 'capacity.part_floor_minimum_m2',
+    apply: (input, factor, base) => {
+      const minimum = base.partFloor?.minimum;
+      return minimum ? { ...input, partFloorMinimumM2: minimum.value.times(factor) } : input;
+    },
   },
 ];
 

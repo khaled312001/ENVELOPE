@@ -207,10 +207,13 @@ describe('the run, naming the brief', () => {
       expect(r.statusCode, r.body).toBe(201);
       const run = r.json() as Json;
       expect(run['sheet'].briefBound).toMatchObject([{ parameterId: 'far.max', value: '4.837235' }]);
-      // The brief prints its GFA, and a printed GFA governs as printed (`FarBasis`): band A is
-      // 21,604.61 m², not the ratio re-multiplied over the 4,480 m² entered here — re-multiplying
-      // is how 5180196's rounded FAR under-reports the GFA the developer priced.
-      expect(run['capacity'].bandA.value).toBe('21604.61');
+      // The brief prints its GFA, and a printed GFA governs (`FarBasis`): band A is 21,604.61 m²
+      // to the cent, not the ratio re-multiplied over the 4,480 m² entered here — re-multiplying
+      // is how 5180196's rounded FAR under-reports the GFA the developer priced. Exactly, it is
+      // the ratio the rule states × the brief's area, a hair under the printed figure and never
+      // above it, because that is the figure the validator holds the run to (17 Oct 2026).
+      expect(new Decimal(run['capacity'].bandA.value).toFixed(2)).toBe('21604.61');
+      expect(new Decimal(run['capacity'].bandA.value).lte('21604.61')).toBe(true);
     } finally {
       await app.close();
     }

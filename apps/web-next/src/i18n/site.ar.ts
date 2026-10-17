@@ -195,6 +195,7 @@ export const SITE_AR: SiteDict = {
       const fixed: Readonly<Record<string, string>> = {
         'Site plan': 'مخطط الموقع',
         'Typical floor': 'الدور المتكرر',
+        'Part floor': 'الدور الجزئي',
         'About this file': 'عن هذا الملف',
         Capacity: 'السعة',
         Envelope: 'الغلاف البنائي',

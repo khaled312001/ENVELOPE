@@ -206,6 +206,8 @@ export function composeSheets(model: BuildingModel, meta: SheetMeta): Sheet[] {
   }
   const typical = typicalSheet(model, meta);
   if (typical) sheets.push(typical);
+  const partFloor = partFloorSheet(model, meta);
+  if (partFloor) sheets.push(partFloor);
   model.sections.forEach((section, i) => sheets.push(sectionSheet(model, section, meta, `A-30${i + 1}`)));
 
   /*
@@ -1475,19 +1477,57 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
 // ---------------------------------------------------------------------------
 
 function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
-  const typical = model.levels.filter((l) => l.use === 'TYPICAL');
+  // The whole plates. The part floor is a plate of its own and gets a plan of its own.
+  const typical = model.levels.filter((l) => l.use === 'TYPICAL' && l.partFloor === undefined);
   const first = typical[0];
   if (!first) return null;
+  return floorPlanSheet(model, meta, first, typical[typical.length - 1]!, {
+    id: 'typical',
+    number: 'A-201',
+    title: 'Typical floor',
+    slab: 'Typical floor plate',
+  });
+}
+
+/*
+  A-202 PART FLOOR — THE ONE LEVEL WHOSE PLATE IS NOT THE TOWER PLATE.
+
+  The governing capacity above the last whole level is drawn as a smaller top
+  floor (`part-floor.ts` in `@envelope/capacity`), and a plan of the typical
+  floor is not a plan of it. Its slab is inked in its own source's class —
+  ASSUMED, amber — because whether the architect draws a smaller top floor or
+  shrinks every plate is an open question, and its area is printed from the
+  engine's figure, never measured off the ring.
+*/
+function partFloorSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
+  const level = model.levels.find((l) => l.partFloor !== undefined && l.placed);
+  if (!level?.partFloor) return null;
+  return floorPlanSheet(model, meta, level, level, {
+    id: 'part-floor',
+    number: 'A-202',
+    title: 'Part floor',
+    slab: 'Part floor plate - assumed',
+  });
+}
+
+function floorPlanSheet(
+  model: BuildingModel,
+  meta: SheetMeta,
+  first: ModelLevel,
+  last: ModelLevel,
+  as: { readonly id: string; readonly number: string; readonly title: string; readonly slab: string },
+): Sheet {
   const podiumBelow = [...model.levels].reverse().find((l) => l.use !== 'TYPICAL' && l.elevationMm >= 0);
   const box = grow(boxOf((podiumBelow ?? first).outline), 2000);
   const f = frame(box, SITE_NOTES, 4);
   const s = f.scale;
   const podium = podiumBelow;
+  const part = first.partFloor;
   const items: ModelItem[] = [...plotContext(model, s, false)];
   if (podium) {
     items.push(shape(Role.CONTEXT, podium.outline, true, { source: podium.outlineSource, name: 'Podium roof, below' }));
   }
-  items.push(shape(Role.SLAB, first.outline, true, { source: first.outlineSource, name: 'Typical floor plate' }));
+  items.push(shape(Role.SLAB, first.outline, true, { source: first.outlineSource, name: as.slab }));
   items.push(...coreItems(model, first.id, s));
   /*
     THE CORE IS NOW MODELLED AND THIS LABEL SAID IT WAS NOT. It sat in the middle
@@ -1513,12 +1553,34 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
       NEAR,
     ),
   );
+  if (part) {
+    // The engine's words and figure, in the slab's own (assumed) ink, a third of
+    // the way from the plate's northern edge to its centre — clear of the note above.
+    const plateHead = boxOf(first.outline).maxY;
+    items.push(
+      withRule(
+        label(
+          Role.SLAB,
+          { x: plateCentre.x, y: asMm(Math.round(plateHead - (plateHead - plateCentre.y) / 3)) },
+          part.label,
+          NOTE,
+          0,
+          'middle',
+          first.outlineSource,
+        ),
+        NEAR,
+      ),
+    );
+  }
 
-  const last = typical[typical.length - 1]!;
   const range = first === last ? first.id : `${first.id} - ${last.id}`;
   const facts: StripFact[] = [
     { label: 'Levels', value: range },
-    fact('First typical floor level', first.elevationM, `${signedLevel(first.elevationM.value)} M`),
+    part
+      ? fact('Part floor level', first.elevationM, `${signedLevel(first.elevationM.value)} M`)
+      : fact('First typical floor level', first.elevationM, `${signedLevel(first.elevationM.value)} M`),
+    // Printed to two decimals, as every measure on paper is; the exact figure stays on the fact's node.
+    ...(part ? [fact('Part floor plate', part.areaM2, `${Number(part.areaM2.value).toFixed(2)} SQ.M`)] : []),
     ...(model.core
       ? [
           fact('Core', model.core.areaM2, `${model.core.areaM2.value} SQ.M`),
@@ -1527,7 +1589,7 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
       : []),
   ];
   const legend: LegendEntry[] = [
-    { role: Role.SLAB, provenanceClass: first.outlineSource.provenanceClass, label: 'Typical floor plate' },
+    { role: Role.SLAB, provenanceClass: first.outlineSource.provenanceClass, label: as.slab },
     ...(model.core
       ? [
           {
@@ -1541,18 +1603,18 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
     { role: Role.SETBACK, provenanceClass: model.setbackSource.provenanceClass, label: 'Setback line' },
   ];
   return {
-    id: 'typical',
+    id: as.id,
     kind: SheetKind.TYPICAL,
     levelId: first.id,
-    number: 'A-201',
-    title: 'Typical floor',
+    number: as.number,
+    title: as.title,
     paper: PAPER,
     view: f.view,
     viewport: f.viewport,
     items: annotationLast(items),
     paperItems: paperFurniture({
-      title: 'Typical floor',
-      number: 'A-201',
+      title: as.title,
+      number: as.number,
       scale: s,
       meta,
       facts,
@@ -1564,7 +1626,7 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
     legend,
     notes: [
       ...model.placements
-        .filter((p) => p.subject === 'tower' || p.subject === 'core')
+        .filter((p) => p.subject === 'tower' || p.subject === 'core' || (part !== undefined && p.subject === 'part floor'))
         .map((p) => p.statement),
       // The saleable reconciliation, on the sheet the saleable area is of.
       ...(model.core ? model.core.reconciliation.slice(0, 1) : []),

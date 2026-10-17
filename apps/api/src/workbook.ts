@@ -57,7 +57,8 @@ type GfaRowKindWire =
   | 'UNPLACED'
   | 'PARKING'
   | 'COMMERCIAL'
-  | 'ROOF';
+  | 'ROOF'
+  | 'PART_FLOOR';
 type GfaCapKindWire = 'RESIDENTIAL' | 'COMMERCIAL';
 
 interface GfaStatementRows {
@@ -101,6 +102,7 @@ const GFA_ROW_LABEL: Readonly<Record<GfaRowKindWire, string>> = {
   PARKING: 'Parking, counted toward FAR',
   COMMERCIAL: 'Commercial tenancy',
   ROOF: 'Roof floor',
+  PART_FLOOR: 'Part floor, a smaller top floor (assumed)',
 } as const;
 
 const GFA_CAP_LABEL: Readonly<Record<GfaCapKindWire, string>> = {

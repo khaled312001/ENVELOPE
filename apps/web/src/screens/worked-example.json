@@ -171,7 +171,7 @@
       "bandA": "FAR 5 × plot area 3200.00 m² (parking excluded from FAR)",
       "bandB": "tower plate 1280.00 m² × 13 level(s) of floor area (14 under the height ceiling, less 1 given to parking)",
       "bandC": "106 unit(s) supportable by parking × 96.77 m² GFA per unit",
-      "governingGfa": "min(band A, band B, band C) = 10258.07 m², in whole levels: 8 level(s) × tower plate 1280.00 m²",
+      "governingGfa": "min(band A, band B, band C) = 10258.07 m², in whole levels: 8 level(s) × tower plate 1280.00 m²; the part floor of 18.07 m² is not drawn",
       "levels": "floor(min(13 level(s) of floor area, smallest band 10258.07 m² ÷ tower plate 1280.00 m²))"
     },
     "levelPlan": {
@@ -366,7 +366,7 @@
         "preferred": {
           "required": {
             "value": "6",
-            "node": "n301",
+            "node": "n304",
             "parameterId": "parking.preferred_required",
             "provenanceClass": "ASSUMED",
             "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -2742,6 +2742,7 @@
           "Escape distances and the pedestrian route from the street to the entrance — NOT ASSESSED. The fire code's travel distance, common path and dead-end limits (Table 3.6A) are declared in the deferred-check list; no floor plan is drawn to measure them on.",
           "Bicycle parking — NOT ASSESSED. DBC B.7.2.7 asks for bicycle parking equal to a twentieth of the car parking requirement, within 30 m of the building entrance; no bicycle space is counted or drawn.",
           "Clear height on the parking levels. Each is drawn 3.20 m floor to floor, a placeholder storey height that no instrument prints, and DBC Table B.4 asks 2.30 m clear for light-vehicle parking, measured to the underside of the lowest beam or soffit. That leaves 0.90 m for the slab, beams and services, which are not computed, so whether it is enough is NOT ASSESSED.",
+          "The part floor above the last whole level is not drawn: its 18.07 m² is less than the 327.17 m² this run takes as the smallest top floor, its core and one unit. The governing capacity is the whole levels, 10240.00 m².",
           "The sloped ring is drawn level in 3D and in section. On plan the ring aisle and the bays on it climb one storey over each 112.46 m lap; the 3D view and the sections stand every parking level flat at its floor height, and where the core door meets the ring at each level is not drawn.",
           "The core, as a design. Its outline is the tower plate scaled to the core area, and only that area is a computed quantity. The stairs, lifts and lobby drawn inside it, and the door into it at ground level, are an indicative layout, assumed: egress, lift traffic and fire-fighting are NOT ASSESSED, no riser or core wall is placed, and no route from the street to the core's door is drawn.",
           "The ground floor, as a services design. Every room in its reserved strip whose width is a typical figure is an assumption: it is not sized, ventilated or access-checked against any requirement. The substation is sized from DEWA §11.4.1, and the LV room is drawn beside it (§11.2.3) at a typical width; neither is ventilated or access-checked — §11.5.1 is only partly mechanizable and is NOT ASSESSED. The garbage room and the water tank are sized by the Dubai Building Code, and this run does not apply it: B.8.5.2.3 sizes waste storage for two days of waste at a suggested 12 kg for each 100 m² of net area for residential use, with containers by Table B.29, and H.5.5.3 sizes a domestic water tank on 24 hours of demand at Table H.6's rates. Where they are drawn it is at a typical width, and their size against those clauses is NOT ASSESSED. GARBAGE ROOM: GARBAGE ROOM needs 4.00 m along the strip and 2.43 m of its 8.43 m is left, so it was not drawn rather than drawn narrow.",

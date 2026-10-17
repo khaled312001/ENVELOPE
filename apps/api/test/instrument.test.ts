@@ -312,7 +312,9 @@ describe('the sheet binds the run', () => {
         (r.json() as { capacity: { bandA: { value: string } } }).capacity.bandA.value;
 
       expect(band(loose)).toBe('6000');
-      expect(band(bound)).toBe('4778.31');
+      // To the cent; exactly, 3.500003 × 1,365.23, never above the printed GFA.
+      expect(Number(band(bound)).toFixed(2)).toBe('4778.31');
+      expect(band(bound)).toBe('4778.30909569');
     } finally {
       await app.close();
     }

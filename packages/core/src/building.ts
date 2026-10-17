@@ -243,6 +243,19 @@ export interface ModelLevel {
    */
   readonly placed: boolean;
   /**
+   * Present on the one level that is the part floor: the governing capacity
+   * above the answer's last whole tower plate, drawn as a smaller top floor.
+   *
+   * Its `outline` is then that floor — the tower plate scaled to this area — and
+   * `outlineSource` is this area's node, ASSUMED, because whether the architect
+   * draws a smaller top floor or shrinks every plate is still an open question.
+   * Every renderer that inks a slab by its source draws it amber without knowing
+   * this field exists; it is here so a figure can print the area the engine
+   * counted rather than one measured off the ring. Absent on every other level
+   * and on a run stored before 17 Oct 2026.
+   */
+  readonly partFloor?: { readonly areaM2: TracedWire; readonly label: string };
+  /**
    * Present on parking levels only. Identical on every one (see `parking.ts`)
    * except the one at grade, which also carries the drive from the entrance and
    * gives up the bays that drive, and the substation on the road, stand on — and

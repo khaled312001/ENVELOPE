@@ -231,10 +231,15 @@ export function buildInvariantSubject(
       parkingLimitedGfaM2: str(capacity.parkingLimitedGfa),
       governingGfaM2: str(capacity.governingGfa),
       governingBand: capacity.governingBand,
-      // The engine holds the governing figure to whole levels of this plate;
-      // INV-16 recomputes that floor from the three bands rather than reading
-      // the engine's level count.
+      // The engine counts whole levels of this plate and, above them, a part
+      // floor no smaller than the stated minimum; INV-16 recomputes both from
+      // the three bands rather than reading the engine's level count. Lifted,
+      // not computed: the minimum is the engine's own traced figure.
       wholeLevelPlateM2: str(output.envelope.towerPlateCap),
+      ...(output.partFloor?.minimum ? { partFloorMinimumM2: str(output.partFloor.minimum) } : {}),
+      ...(output.partFloor?.kind === 'DROPPED' && output.partFloor.minimum === null
+        ? { partFloorNotPlaced: true }
+        : {}),
     },
 
     composition: {

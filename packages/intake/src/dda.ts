@@ -46,9 +46,20 @@
  *    to a general note — "QUARTER OF THE HEIGHT FROM NEIGHBORING PLOTS … MAXIMUM
  *    7.5M AND A MINIMUM OF 3M" — which is a rule with the storey count as its
  *    input, not a distance. It is reported as the deferral it is.
+ *
+ * 4. **And a number in that table IS a setback** (2026-10-17). Plot 6457790
+ *    prints `SIDE ( 1 )` 5 / 4 and `SIDE ( 2..4 )` 7 / 6 (building / podium), and
+ *    for months this module never opened the table: the caller printed "SEE
+ *    NOTES against every face" for every DDA sheet, the podium was put on the
+ *    boundary under the practice statement, and the tower took placeholder
+ *    distances. `readSetbackTable` reads each cell in its own state — a
+ *    distance, a deferral, or N/A — and `placeSides` names the boundary each
+ *    `SIDE n` is drawn against.
  */
 
-import { type PdfPageText, type TextItem } from './pdf-text.js';
+import { Decimal, type SetbackCell, type SideSetback } from '@envelope/core';
+
+import { type PdfPageText, type TextItem, unionCell } from './pdf-text.js';
 
 /**
  * The labels that identify the dialect, and why these three.
@@ -122,6 +133,299 @@ export function valueRightOf(page: PdfPageText, label: string): TextItem | undef
     /* Nearest wins: the value cell abuts the label, and the imperial figure in
        brackets sits one cell further out. */
     .sort((a, b) => a.bbox[0] - b.bbox[0])[0];
+}
+
+// ---------------------------------------------------------------------------
+// The setback table
+// ---------------------------------------------------------------------------
+
+/** The header of the table: `SETBACK (M)` on the DDA sheet, `SETBACK (m)` on the unified site plan. */
+const SETBACK_HEADER = /^SETBACK\s*\(\s*M\s*\)$/i;
+/** A row label: `SIDE ( 1 )` on the DDA sheet, `Side 1` on the unified one. */
+const SIDE_LABEL = /^SIDE\s*\(?\s*(\d{1,2})\s*\)?$/i;
+/** How far a cell's centre may sit from its column header's centre. */
+const COLUMN_REACH_PT = 45;
+/** A row's cells share its label's baseline to within this. */
+const TABLE_ROW_PT = 3;
+
+/** A table read, or the sentence saying why it was not. */
+export type SetbackTableReading =
+  | { readonly ok: true; readonly sides: readonly SideSetback[]; readonly box: TextItem; readonly raw: string }
+  | { readonly ok: false; readonly reason: string };
+
+/**
+ * One cell, in the state its words state. `undefined` for words that are none
+ * of the three — and the caller then refuses the TABLE, not the cell: a table
+ * with one unread side is a different schedule from the printed one.
+ */
+export function setbackCell(text: string): SetbackCell | undefined {
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (/^SEE\s*NOTES?$/i.test(t)) return { kind: 'SEE_NOTES', verbatim: t };
+  if (/^N\s*\/\s*A$/i.test(t)) return { kind: 'NOT_APPLICABLE', verbatim: t };
+  const m = /^(\d+(?:\.\d+)?)\s*M?$/i.exec(t);
+  return m?.[1] === undefined ? undefined : { kind: 'DISTANCE', metres: new Decimal(m[1]) };
+}
+
+/**
+ * The `SETBACK (M)` table: one row per `SIDE n`, one column per mass.
+ *
+ * Read from the header down — the column headers on the header's own row, the
+ * side labels down the header's own column, and each cell at the crossing of
+ * its row's baseline and its column's centre. Built from items rather than from
+ * `pageLines`, for the reason `readSurveyTable` gives: a table's cells are a gap
+ * apart that a line-splitter reads as two columns or as one, unpredictably.
+ *
+ * Returns `undefined` where the sheet has no such table, and a refusal where it
+ * has one this reader cannot read whole.
+ */
+export function readSetbackTable(page: PdfPageText): SetbackTableReading | undefined {
+  const header = page.items.find((i) => SETBACK_HEADER.test(i.text.trim()));
+  if (!header) return undefined;
+  const midY = (i: TextItem): number => (i.bbox[1] + i.bbox[3]) / 2;
+  const midX = (i: TextItem): number => (i.bbox[0] + i.bbox[2]) / 2;
+  const onHeaderRow = page.items.filter(
+    (i) => i !== header && Math.abs(midY(i) - midY(header)) <= TABLE_ROW_PT && i.bbox[0] > header.bbox[0],
+  );
+  const building = onHeaderRow.find((i) => /^BUILDING$/i.test(i.text.trim()));
+  const podium = onHeaderRow.find((i) => /^PODIUM$/i.test(i.text.trim()));
+  if (!building || !podium) {
+    return { ok: false, reason: 'The sheet prints a setback table whose BUILDING and PODIUM columns could not both be found, so none of its cells is read.' };
+  }
+
+  /* Side labels below the header, down its own column, in reading order and contiguous. */
+  const labels = page.items
+    .filter((i) => SIDE_LABEL.test(i.text.trim()) && i.bbox[3] <= header.bbox[1] + 1 && Math.abs(i.bbox[0] - header.bbox[0]) <= 30)
+    .sort((a, b) => b.bbox[1] - a.bbox[1]);
+  const rows: TextItem[] = [];
+  for (const l of labels) {
+    const prev = rows.at(-1) ?? header;
+    // A row is one or two line-heights below the last; a larger drop is another table.
+    if (prev.bbox[1] - l.bbox[1] > 3 * Math.max(1, header.bbox[3] - header.bbox[1])) break;
+    rows.push(l);
+  }
+  if (rows.length === 0) {
+    return { ok: false, reason: 'The sheet prints a setback table header with no SIDE rows under it, so no setback is read from it.' };
+  }
+
+  const sides: SideSetback[] = [];
+  const read: TextItem[] = [header, building, podium];
+  const rawRows: string[] = [];
+  for (const label of rows) {
+    const side = Number(SIDE_LABEL.exec(label.text.trim())?.[1]);
+    const cellsOnRow = page.items.filter(
+      (i) => i !== label && Math.abs(midY(i) - midY(label)) <= TABLE_ROW_PT && /\S/.test(i.text) && i.bbox[0] > label.bbox[2] - 1,
+    );
+    const inColumn = (col: TextItem): readonly TextItem[] => {
+      const hits = cellsOnRow.filter((i) => Math.abs(midX(i) - midX(col)) <= COLUMN_REACH_PT);
+      return [...hits].sort((a, b) => a.bbox[0] - b.bbox[0]);
+    };
+    const b = inColumn(building);
+    const p = inColumn(podium);
+    const bText = b.map((i) => i.text).join(' ');
+    const pText = p.map((i) => i.text).join(' ');
+    const bCell = setbackCell(bText);
+    const pCell = setbackCell(pText);
+    if (!bCell || !pCell || sides.some((s) => s.side === side)) {
+      return {
+        ok: false,
+        reason:
+          `The setback table's row for side ${side} reads "${bText.trim() || 'nothing'}" under BUILDING and ` +
+          `"${pText.trim() || 'nothing'}" under PODIUM, which is not a distance, SEE NOTES or N/A; ` +
+          'the table is not read, rather than read with a side missing.',
+      };
+    }
+    sides.push({ side, building: bCell, podium: pCell });
+    read.push(label, ...b, ...p);
+    rawRows.push(`${label.text.replace(/\s+/g, ' ').trim()}: ${bText.trim()} / ${pText.trim()}`);
+  }
+  const raw = `${header.text.trim()} BUILDING / PODIUM — ${rawRows.join('; ')}`;
+  return { ok: true, sides, raw, box: { ...unionCell(read, page.page), text: raw } };
+}
+
+/**
+ * The `SIDE n` labels the drawing prints inside the plot, each placed on the
+ * surveyed boundary it is drawn against.
+ *
+ * `toGrid` is the page's own placement (`matchDrawnRing`): it puts each label's
+ * centre on the coordinate table's grid, where the distance to every surveyed leg
+ * is plane geometry. A label belongs to the nearest leg. The mapping is
+ * PUBLISHED ONLY WHOLE AND ONE-TO-ONE: every row of the table placed, no two
+ * labels on one leg, each label within reach of the plot. Anything short of that
+ * returns a sentence instead, because a half-placed table invites the reader to
+ * assume the rest.
+ */
+export function placeSides(
+  page: PdfPageText,
+  sides: readonly number[],
+  ring: readonly SurveyPoint[],
+  toGrid: (x: number, y: number) => readonly [number, number],
+): ReadonlyMap<number, number> | string {
+  const pts = ring.map((p) => [Number(p.east), Number(p.north)] as const);
+  const n = pts.length;
+  if (n < 3) return 'The surveyed ring has fewer than three corners, so no side label is placed on it.';
+  const span = Math.max(
+    Math.max(...pts.map((p) => p[0])) - Math.min(...pts.map((p) => p[0])),
+    Math.max(...pts.map((p) => p[1])) - Math.min(...pts.map((p) => p[1])),
+  );
+  /* A label drawn against a boundary sits a few metres inside it. A quarter of
+     the plot's longest extent separates that from a `SIDE ( n )` cell in the
+     table, which lands hundreds of metres off the plot. */
+  const reach = Math.max(5, span / 4);
+  const distToLeg = (q: readonly [number, number], i: number): number => {
+    const a = pts[i]!;
+    const b = pts[(i + 1) % n]!;
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len2 = dx * dx + dy * dy;
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / len2));
+    return Math.hypot(q[0] - (a[0] + t * dx), q[1] - (a[1] + t * dy));
+  };
+
+  const placed = new Map<number, number>();
+  for (const item of page.items) {
+    /* Case-sensitive: the drawing prints `SIDE 1`; the unified sheet's table
+       prints `Side 1`, which is a row label and not a mark on a boundary. */
+    const m = /^SIDE\s+(\d{1,2})$/.exec(item.text.trim());
+    if (!m?.[1]) continue;
+    const side = Number(m[1]);
+    const q = toGrid((item.bbox[0] + item.bbox[2]) / 2, (item.bbox[1] + item.bbox[3]) / 2);
+    const ranked = pts.map((_, i) => ({ i, d: distToLeg(q, i) })).sort((a, b) => a.d - b.d);
+    const best = ranked[0];
+    if (!best || best.d > reach) continue;
+    if (placed.has(side)) return `The drawing labels side ${side} more than once, so no side is placed on a boundary.`;
+    placed.set(side, best.i);
+  }
+  const unplaced = sides.filter((s) => !placed.has(s));
+  if (unplaced.length > 0) {
+    return `The drawing does not label ${unplaced.map((s) => `side ${s}`).join(', ')} against a surveyed boundary, so no side of the table is placed on one.`;
+  }
+  const legs = [...placed.entries()].filter(([s]) => sides.includes(s)).map(([, i]) => i);
+  if (new Set(legs).size !== legs.length) {
+    return 'Two side labels on the drawing are nearest the same surveyed boundary, so no side of the table is placed on one.';
+  }
+  return new Map([...placed.entries()].filter(([s]) => sides.includes(s)));
+}
+
+// ---------------------------------------------------------------------------
+// Land use, and the general notes
+// ---------------------------------------------------------------------------
+
+/** One line under `LAND USE / GFA SPLIT`: `COMMERCIAL : RETAIL (1,680.00 M²)`. */
+export interface LandUseLine {
+  readonly use: string;
+  /** The area printed beside it, m², digits only; absent where none is printed. */
+  readonly areaM2?: string;
+  readonly box: TextItem;
+}
+
+/**
+ * EVERY LINE UNDER `LAND USE / GFA SPLIT`, not the first.
+ *
+ * On plot 6457790 the heading is answered by two lines — retail 1,680.00 m² and
+ * residential 12,255.45 m², which together are the sheet's maximum GFA — and
+ * `valueBelow` returned the first. The plot's land use was reported as
+ * "COMMERCIAL : RETAIL", and the 12,255.45 m² of flats the sheet allows was not
+ * mentioned anywhere. Lines are taken down the heading's column until a gap
+ * wider than two line-heights, which is where the next table begins.
+ */
+export function readLandUseLines(page: PdfPageText): readonly LandUseLine[] {
+  const heading = labelCell(page, 'LAND USE / GFA SPLIT');
+  if (!heading) return [];
+  const lineHeight = Math.max(1, heading.bbox[3] - heading.bbox[1]);
+  /* Brackets and the superscript `2` are kept: they are the area's own
+     punctuation. The decorative `!` marks are not. */
+  const below = page.items
+    .filter(
+      (i) =>
+        i.bbox[3] <= heading.bbox[1] + 1 &&
+        i.bbox[0] >= heading.bbox[0] - 2 &&
+        i.bbox[0] <= heading.bbox[2] + 160 &&
+        /\S/.test(i.text) &&
+        i.text.trim() !== '!',
+    )
+    .sort((a, b) => b.bbox[1] - a.bbox[1]);
+  /* Baselines, each the run of items within a superscript's rise of the first. */
+  const rows: TextItem[][] = [];
+  for (const item of below) {
+    const row = rows.at(-1);
+    const first = row?.[0];
+    if (row && first && Math.abs(first.bbox[1] - item.bbox[1]) <= ROW_TOLERANCE_PT) row.push(item);
+    else rows.push([item]);
+  }
+  const out: LandUseLine[] = [];
+  /* The first line sits a cell's padding under the heading; each next line
+     directly under the last (11 pt baselines over 9 pt type, so they touch).
+     A gap of a cell's padding after the first line is the next table's heading. */
+  let lastBottom = heading.bbox[1];
+  for (const row of rows) {
+    const top = Math.max(...row.map((i) => i.bbox[3]));
+    const gap = lastBottom - top;
+    if (gap > (out.length === 0 ? 2 : 0.5) * lineHeight) break;
+    lastBottom = Math.min(...row.map((i) => i.bbox[1]));
+    const ordered = [...row].sort((a, b) => a.bbox[0] - b.bbox[0]);
+    /* The superscript `2` of `M²` is its own item above the baseline; it is the unit, not a digit of the area. */
+    const text = ordered
+      .map((i) => i.text)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\bM\s*2\s*\)/i, 'M²)')
+      .trim();
+    const m = /^(.*?)\s*\(\s*(\d[\d,]*(?:\.\d+)?)\s*M²?\s*\)$/i.exec(text);
+    const box = { ...unionCell(ordered, page.page), text };
+    out.push(m?.[1] !== undefined && m[2] !== undefined ? { use: m[1].trim(), areaM2: m[2].replace(/,/g, ''), box } : { use: text, box });
+  }
+  return out;
+}
+
+/** One general note, its continuation lines joined: `- PARKING: … 70` + `SQ.M OF RETAIL NET AREA.` */
+export interface GeneralNote {
+  readonly text: string;
+  readonly box: TextItem;
+}
+
+/**
+ * The notes under `GENERAL NOTES`, each a dash-led paragraph.
+ *
+ * A note runs over as many lines as it needs, and the line after the dash is a
+ * continuation, not a new note: plot 6457790's parking note ends "ONE BAY FOR
+ * EACH 70" on one line and "SQ.M OF RETAIL NET AREA." on the next, and reading
+ * the first line alone would rate retail at one bay per 70 of nothing.
+ */
+export function readGeneralNotes(page: PdfPageText): readonly GeneralNote[] {
+  const heading = page.items.find((i) => /^GENERAL\s+NOTES$/i.test(i.text.trim()));
+  if (!heading) return [];
+  const column = page.items
+    .filter(
+      (i) =>
+        i.bbox[0] > heading.bbox[2] &&
+        i.bbox[0] - heading.bbox[2] < 40 &&
+        Math.abs(i.bbox[1] - heading.bbox[1]) < 80 &&
+        hasContent(i.text),
+    )
+    .sort((a, b) => b.bbox[1] - a.bbox[1]);
+  const notes: TextItem[][] = [];
+  for (const item of column) {
+    if (/^-\s/.test(item.text.trim())) {
+      notes.push([item]);
+      continue;
+    }
+    /* A continuation sits directly under the line before it. The disclaimer in
+       the footer starts at the same margin a line and a half further down, and
+       is not part of the last note. */
+    const last = notes.at(-1);
+    const prev = last?.at(-1);
+    const height = Math.max(1, item.bbox[3] - item.bbox[1]);
+    if (last && prev && prev.bbox[1] - item.bbox[3] <= 0.8 * height) last.push(item);
+  }
+  return notes.map((parts) => {
+    const text = parts
+      .map((p) => p.text)
+      .join(' ')
+      .replace(/^-\s*/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return { text, box: { ...unionCell(parts, page.page), text } };
+  });
 }
 
 /**

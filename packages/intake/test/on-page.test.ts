@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { parseAffectionPlan, type AffectionPlanFacts } from '../src/affection-plan.js';
 import { matchDrawnRing, type PagePlacement } from '../src/on-page.js';
+import type { TextItem } from '../src/pdf-text.js';
 
 const REPO = new URL('../../../', import.meta.url);
 const SHEETS = {
@@ -85,5 +86,51 @@ describe('the page on the grid', () => {
     const hit = matchDrawnRing([square, drawn], table, [0, 0, 600, 400]);
     expect(hit?.residualM).toBeLessThan(0.001);
     expect(toGrid(hit!, 200, 100).map((v) => Number(v.toFixed(6)))).toEqual([0, 0]);
+  });
+
+  const table = [
+    { id: '1', east: '0', north: '0' },
+    { id: '2', east: '40', north: '0' },
+    { id: '3', east: '40', north: '30' },
+    { id: '4', east: '0', north: '30' },
+  ];
+  const label = (text: string, x: number, y: number): TextItem => ({ text, page: 1, bbox: [x - 3, y - 4, x + 3, y + 4] });
+  const at = (p: PagePlacement, x: number, y: number): number[] => toGrid(p, x, y).map((v) => Number(v.toFixed(6)));
+
+  /*
+    A BOUNDARY SPLIT WHERE A NEIGHBOUR MEETS IT. Plot 6457790's four corners are
+    drawn as a six-point path, two of its points on its own straight sides; the
+    match was refused, and with it every placement downstream.
+  */
+  it('finds the plot drawn with points on its straight sides, and keeps the table’s corners', () => {
+    // A point midway along the bottom and one midway up the right: four corners once both are seen for what they are.
+    const withMid = {
+      paint: 20,
+      fill: null,
+      closed: true,
+      points: [[100, 100], [140, 100], [180, 100], [180, 130], [180, 160], [100, 160]] as [number, number][],
+    };
+    const hit = matchDrawnRing([withMid], table, [0, 0, 600, 400]);
+    expect(hit?.residualM).toBeLessThan(0.001);
+    expect(at(hit!, 100, 100)).toEqual([0, 0]);
+    expect(at(hit!, 180, 160)).toEqual([40, 30]);
+  });
+
+  /*
+    A PARALLELOGRAM FITS ITS DRAWING TWICE. A rectangle drawn upside down fits
+    the table as exactly as one drawn the right way up, so the residual cannot
+    choose. The corner numbers printed beside the drawn corners can; without
+    them the fit nearest north-up is taken.
+  */
+  it('reads a centrally symmetric plot the way its corner numbers say, and north-up without them', () => {
+    const drawn = { paint: 20, fill: null, closed: true, points: [[100, 100], [180, 100], [180, 160], [100, 160]] as [number, number][] };
+    const upright = matchDrawnRing([drawn], table, [0, 0, 600, 400]);
+    expect(at(upright!, 100, 100)).toEqual([0, 0]);
+
+    // Corner 1 printed at the top right: the drawing is turned half a turn.
+    const numbers = [label('1', 186, 166), label('2', 94, 166), label('3', 94, 94), label('4', 186, 94)];
+    const turned = matchDrawnRing([drawn], table, [0, 0, 600, 400], numbers);
+    expect(at(turned!, 180, 160)).toEqual([0, 0]);
+    expect(at(turned!, 100, 100)).toEqual([40, 30]);
   });
 });

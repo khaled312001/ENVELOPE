@@ -233,6 +233,21 @@ export function locate(page: PdfPageText, needle: string): TextItem | undefined 
   const direct = page.items.find((i) => flat(i.text).includes(target));
   if (direct) return direct;
 
+  /*
+    THE ROW FIRST, THE CONTENT STREAM SECOND.
+
+    The span below walks items in content-stream order, which is not reading
+    order: on the Trakhees sheets the stream interleaves the English line with
+    the Arabic label beside it, set in a font with no usable ToUnicode map. So
+    "1365.23 SQ. M." was cited as `plot area اŚرض Ĺñéċ … G+2P+8 GFA=…` — the
+    union of everything the stream emitted between the first and the last word —
+    and a setback line longer than twelve items was not found at all, and was
+    cited by its first word, `GF/`. A value read off one row is quoted from that
+    row: the shortest run of its items, left to right, that holds the needle.
+  */
+  const onRow = locateOnRow(page, target);
+  if (onRow) return onRow;
+
   // Span the runs that together cover the needle, and return their union box.
   const n = page.items.length;
   for (let start = 0; start < n; start += 1) {
@@ -256,6 +271,164 @@ export function locate(page: PdfPageText, needle: string): TextItem | undefined 
     }
   }
   return undefined;
+}
+
+/** Items sharing a baseline, top row first, each row left to right. */
+function baselineRows(page: PdfPageText, tolerance: number): readonly (readonly TextItem[])[] {
+  const rows: TextItem[][] = [];
+  for (const item of [...page.items].sort((a, b) => b.bbox[1] - a.bbox[1])) {
+    const row = rows.at(-1);
+    const prev = row?.[0];
+    if (row && prev && Math.abs(prev.bbox[1] - item.bbox[1]) <= tolerance) row.push(item);
+    else rows.push([item]);
+  }
+  return rows.map((row) => [...row].sort((a, b) => a.bbox[0] - b.bbox[0]));
+}
+
+/** The union of some items as one citable cell, their texts joined by single spaces. */
+export function unionCell(items: readonly TextItem[], page: number): TextItem {
+  return {
+    text: items
+      .map((i) => i.text)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim(),
+    page,
+    bbox: [
+      Math.min(...items.map((i) => i.bbox[0])),
+      Math.min(...items.map((i) => i.bbox[1])),
+      Math.max(...items.map((i) => i.bbox[2])),
+      Math.max(...items.map((i) => i.bbox[3])),
+    ],
+  };
+}
+
+/** The shortest left-to-right run of one row's items whose joined text holds `target`. */
+function locateOnRow(page: PdfPageText, target: string): TextItem | undefined {
+  const flat = (s: string): string => s.replace(/\s+/g, ' ').trim();
+  for (const row of baselineRows(page, 2)) {
+    if (!flat(row.map((i) => i.text).join(' ')).includes(target)) continue;
+    let best: readonly TextItem[] | undefined;
+    for (let start = 0; start < row.length; start += 1) {
+      let joined = '';
+      for (let end = start; end < row.length; end += 1) {
+        joined = flat(`${joined} ${row[end]!.text}`);
+        if (!joined.includes(target)) continue;
+        const span = row.slice(start, end + 1);
+        if (!best || span.length < best.length) best = span;
+        break;
+      }
+    }
+    if (best) return unionCell(best, page.page);
+  }
+  return undefined;
+}
+
+/**
+ * The visual line holding a word — the citation of last resort.
+ *
+ * Used where a value was read by a pattern over the page and its own words
+ * cannot be found as a run: the line it sits on is a true, if wider, quotation.
+ * Quoting the first word alone (`GF/`) was not.
+ */
+export function lineContaining(page: PdfPageText, word: string): TextItem | undefined {
+  const target = word.replace(/\s+/g, ' ').trim();
+  if (target === '') return undefined;
+  return pageLines(page).find((l) => l.text.includes(target));
+}
+
+/**
+ * The page's words grouped into PHRASES: runs on one baseline whose gaps are
+ * word spaces rather than the gutter between two cells of a form.
+ *
+ * What a label is matched against. A Trakhees sheet sets `Developer` once as the
+ * label of the developer's cell and again as the first word of `Developer Plot
+ * No.`, and its general notes say "Master Developer's Guidelines" two rows
+ * above. A substring search for "Developer" found the note first and read the
+ * value beside it — "Master" — which then filled the plot form and every title
+ * block built from it. A phrase is matched whole, so the label is the label.
+ */
+export function phraseCells(page: PdfPageText): readonly TextItem[] {
+  const out: TextItem[] = [];
+  for (const row of baselineRows(page, 2)) {
+    let run: TextItem[] = [];
+    const flush = (): void => {
+      if (run.length > 0) out.push(unionCell(run, page.page));
+      run = [];
+    };
+    for (const item of row) {
+      if (item.text.trim() === '') continue;
+      const prev = run.at(-1);
+      const height = Math.max(1, item.bbox[3] - item.bbox[1]);
+      // A word space is a quarter to a third of the type size; a cell gutter is several.
+      if (prev && item.bbox[0] - prev.bbox[2] > height * 0.6) flush();
+      run.push(item);
+    }
+    flush();
+  }
+  return out;
+}
+
+const upperFlat = (s: string): string => s.replace(/\s+/g, ' ').trim().toUpperCase();
+
+/**
+ * The value cell LEFT of a label matched as a whole phrase, joined across its words.
+ *
+ * `valueLeftOf` returns the single item nearest the label, which on Trakhees is
+ * the last word of the value: `WARSAN 1 - 621` came back as "621", and the
+ * community the form filled in was a number. The phrase is the cell.
+ *
+ * `accept` narrows what may answer — a plot number is digits — so that a label
+ * whose own cell is empty is not answered by the next label along.
+ */
+export function cellLeftOf(
+  page: PdfPageText,
+  label: string,
+  opts: {
+    readonly rowTolerance?: number;
+    readonly maxDistance?: number;
+    readonly accept?: (text: string) => boolean;
+    /** Which of several identical labels: the one this predicate picks. Default the first in reading order. */
+    readonly anchor?: (cell: TextItem) => boolean;
+  } = {},
+): TextItem | undefined {
+  const cells = phraseCells(page);
+  const want = upperFlat(label);
+  const anchor = cells.find((c) => upperFlat(c.text) === want && (opts.anchor?.(c) ?? true));
+  if (!anchor) return undefined;
+  const rowTolerance = opts.rowTolerance ?? 14;
+  const maxDistance = opts.maxDistance ?? 420;
+  const mid = (i: TextItem): number => (i.bbox[1] + i.bbox[3]) / 2;
+  return cells
+    .filter((c) => {
+      if (c === anchor) return false;
+      if (c.bbox[2] > anchor.bbox[0] + 2) return false;
+      if (anchor.bbox[0] - c.bbox[2] > maxDistance) return false;
+      if (Math.abs(mid(c) - mid(anchor)) > rowTolerance) return false;
+      return opts.accept?.(c.text) ?? true;
+    })
+    .sort((a, b) => b.bbox[2] - a.bbox[2])[0];
+}
+
+/*
+  A RUN OF GLYPHS NO READER CAN READ.
+
+  The Trakhees sheets set their Arabic in an embedded font whose ToUnicode map
+  is missing, so it decodes to Latin-1 and Latin Extended letters — `Ĺñéċ`,
+  `ð¸ÍĢ`. No figure or English word on these sheets carries a diacritic, so a
+  word holding one is a glyph run, not text. Quoted as "the sheet's words" it
+  is worse than nothing: it is evidence nobody can check against the page.
+*/
+const GARBLED = /[¨ª¯´¸ºÀ-ɏ]/;
+
+/** The words of a citation, with the undecodable glyph runs taken out. */
+export function cleanVerbatim(text: string): string {
+  return text
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter((w) => !GARBLED.test(w))
+    .join(' ');
 }
 
 /**

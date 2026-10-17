@@ -18,7 +18,6 @@
  */
 
 import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 
 import { ProvenanceClass, ProvenanceGraph, Tracer } from '@envelope/core';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -32,8 +31,9 @@ import {
   type SitePlanReading,
 } from '../src/site-plan.js';
 
+import { absentNote, sourceSheet } from './source-sheets.js';
+
 const HOOK_TIMEOUT_MS = 90_000;
-const REPO = new URL('../../../', import.meta.url);
 
 const SHEETS = {
   warsan: 'docs/00-source/samples/affection-plan/IC1-CTYL-16_011-warsan1-621.pdf',
@@ -42,12 +42,24 @@ const SHEETS = {
 } as const;
 
 async function bytesOf(key: keyof typeof SHEETS): Promise<Uint8Array> {
-  return new Uint8Array(await readFile(fileURLToPath(new URL(SHEETS[key], REPO))));
+  const path = sourceSheet(SHEETS[key]);
+  if (path === undefined) throw new Error(`${SHEETS[key]} is not on this machine`);
+  return new Uint8Array(await readFile(path));
 }
+
+/*
+  Most of this file walks all three sheets, and two are kept out of git. Where
+  either is absent the sheet-driven blocks are skipped, with the path in their
+  names; the built cases (a notched mask, the PNG encoder) run regardless.
+*/
+const MISSING = Object.values(SHEETS).find((p) => sourceSheet(p) === undefined);
+const ALL = MISSING === undefined;
+const named = (title: string): string => (MISSING === undefined ? title : `${title} ${absentNote(MISSING)}`);
 
 const facts: Partial<Record<keyof typeof SHEETS, AffectionPlanFacts>> = {};
 
 beforeAll(async () => {
+  if (!ALL) return;
   for (const key of Object.keys(SHEETS) as (keyof typeof SHEETS)[]) {
     facts[key] = await parseAffectionPlan(await bytesOf(key), {
       documentUri: SHEETS[key],
@@ -65,7 +77,7 @@ const planOf = (key: keyof typeof SHEETS): SitePlanReading => {
 const lengths = (key: keyof typeof SHEETS): number[] =>
   (planOf(key).outline?.legs.value ?? []).map((l) => Number(l.lengthM));
 
-describe('the plot outline, against what the sheet draws', () => {
+describe.skipIf(!ALL)(named('the plot outline, against what the sheet draws'), () => {
   it('reproduces the two dimensions the drawing itself prints', () => {
     /*
       `L=50.85` and `L=26.85`, set as raster text inside the image. The extractor
@@ -162,7 +174,7 @@ describe('the plot outline, against what the sheet draws', () => {
   });
 });
 
-describe('the picture, as a file a browser can show', () => {
+describe.skipIf(!ALL)(named('the picture, as a file a browser can show'), () => {
   it('writes a PNG with the signature, dimensions and end marker in it', () => {
     const image = planOf('warsan').image;
     expect(image).toBeDefined();
@@ -284,7 +296,7 @@ describe('shapes this reader refuses', () => {
   });
 });
 
-describe('the whole tree, over the wire', () => {
+describe.skipIf(!ALL)(named('the whole tree, over the wire'), () => {
   it('holds nothing a JSON round trip would change', () => {
     // Same walk as `edges.test.ts`, same reason: the API hands this object to
     // the screen in process and sends it over HTTP, and the two must be one

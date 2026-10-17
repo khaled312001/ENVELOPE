@@ -39,9 +39,12 @@ import {
   type Citation,
   type CoverageSchedule,
   type HeightAllowance,
+  type ParkingRequirement,
   type SetbackFace,
   type SetbackSchedule,
   type SetbackValue,
+  type SideSetback,
+  type SideSetbackTable,
   type Traced,
   type TracedDecimal,
   type Tracer,
@@ -49,14 +52,29 @@ import {
 import {
   isDdaSheet,
   metricArea,
+  placeSides,
+  readGeneralNotes,
+  readLandUseLines,
+  readSetbackTable,
   readSurveyTable,
   surveyAreaM2,
   surveyLegs,
   valueBelow,
   valueRightOf,
+  type SetbackTableReading,
   type SurveyLeg,
   type SurveyPoint,
 } from './dda.js';
+import { parseParkingRequirement } from './parking.js';
+import {
+  isUnifiedSitePlan,
+  readTextRuns,
+  unifiedCell,
+  unifiedDate,
+  unifiedDimensions,
+  unifiedNotes,
+  unifiedSideRoads,
+} from './unified.js';
 import {
   isDmSheet,
   pagePaths,
@@ -72,11 +90,14 @@ import { readBoundaries, type EdgeReadings } from './edges.js';
 import { matchDrawnRing, type PagePlacement, placementFromGrid } from './on-page.js';
 import { readSitePlan, type SitePlanReading } from './site-plan.js';
 import {
+  cellLeftOf,
+  cleanVerbatim,
+  lineContaining,
   locate,
   pageLines,
   pageText,
   readPdfText,
-  valueLeftOf,
+  unionCell,
   type PdfPageText,
   type TextItem,
 } from './pdf-text.js';
@@ -176,6 +197,22 @@ export interface DrawnPlotReading {
   readonly notModelled: readonly string[];
 }
 
+/** One line of a land-use split: `RESIDENTIAL : APARTMENT` and `12255.45`. */
+export interface LandUseShare {
+  readonly use: string;
+  /** m², digits as printed without the grouping commas; absent where the line prints no area. */
+  readonly areaM2?: string;
+}
+
+/** A road the drawing labels beside one of its numbered sides. */
+export interface SideRoad {
+  readonly side: number;
+  /** The label as printed: `ROAD 12.00M`. */
+  readonly verbatim: string;
+  /** The width it prints, metres, as printed. */
+  readonly widthM: string;
+}
+
 export interface AffectionPlanFacts {
   readonly parcelId?: Traced<string>;
   readonly community?: Traced<string>;
@@ -213,6 +250,29 @@ export interface AffectionPlanFacts {
    * the sheet's words: turning them into a rule is the rule store's work.
    */
   readonly parkingRequirement?: Traced<string>;
+  /**
+   * The same requirement, typed: bays per dwelling by a size threshold and per
+   * area by use. Read from the Municipality's Parking row and the DDA's `PARKING:`
+   * note. Absent where the sheet prints none, or prints one this reader could not
+   * type at all — the words are then still in `parkingRequirement`.
+   */
+  readonly parking?: Traced<ParkingRequirement>;
+  /** The expiry date the unified site plan prints beside its issue date. */
+  readonly expiryDate?: Traced<string>;
+  /**
+   * The setbacks the sheet prints per numbered side (the DDA's `SETBACK (M)`
+   * table), each cell a distance, a `SEE NOTES` deferral or `N/A`, and each side
+   * placed on a surveyed boundary where the drawing says which.
+   */
+  readonly sideSetbacks?: Traced<SideSetbackTable>;
+  /** `LAND USE / GFA SPLIT`, every line: the use and the area printed beside it. */
+  readonly landUseSplit?: Traced<readonly LandUseShare[]>;
+  /** The sheet's general notes, each in its own words, continuation lines joined. */
+  readonly generalNotes?: Traced<readonly string[]>;
+  /** Each boundary dimension the drawing prints, as printed (`87.25`), metres. */
+  readonly boundaryDimensionsM?: Traced<readonly string[]>;
+  /** Each road label the drawing sets beside a `SIDE n`, with the width it prints. */
+  readonly sideRoads?: Traced<readonly SideRoad[]>;
   /** Fields the sheet does not print. The caller must resolve these. */
   readonly missing: readonly MissingField[];
   /** Arithmetic the sheet asserts about itself, re-checked. */
@@ -285,50 +345,97 @@ function cite(
     documentUri,
     sourcePage: item.page,
     sourceBbox: [item.bbox[0], item.bbox[1], item.bbox[2], item.bbox[3]],
-    sourceTextVerbatim: item.text.replace(/\s+/g, ' ').trim(),
+    sourceTextVerbatim: quoted(item.text),
   };
 }
 
 /**
- * `G+2P+8`, `G+3P+6`, `G+11`.
+ * The words a citation quotes: the cell's text with undecodable glyph runs taken
+ * out (see `cleanVerbatim`). Where nothing decodable is left, the cell's text as
+ * it came — an empty quotation would claim the box holds nothing.
+ */
+function quoted(text: string): string {
+  const clean = cleanVerbatim(text);
+  return clean !== '' ? clean : text.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * A height code as Dubai sheets print it, found in running text: an optional
+ * basement token, `G`, and `+`-joined tokens — `G+2P+8`, `G+M+4`, `B+G+P+10`,
+ * `2B+G+4P+20`, `G+4+R`. A token's letter must touch its number and be followed
+ * by no further letter, so "G+11 Residential" does not read the R of the next
+ * word as a roof.
+ */
+const HEIGHT_CODE = /(?:\b(?:\d{0,2}B\d{0,2})\s*\+\s*)?\bG(?:\s*\+\s*(?:\d{1,3}[PMR]?|[PMR])(?![A-Za-z0-9]))+/i;
+
+/** The first height code in a run of text, verbatim. */
+export function findHeightCode(text: string): string | undefined {
+  return HEIGHT_CODE.exec(text)?.[0];
+}
+
+/**
+ * `G+2P+8`, `G+3P+6`, `G+11` — and since 2026-10-17 the forms the first reader
+ * missed: `G+M+4` (a mezzanine), `B+G+P+10` (a basement and a podium level with no
+ * count), `2B+G+4P+20` (two basements), `G+4+R` (a roof).
  *
- * NOT THE CAUSE OF THE `G+4` → 13 DEFECT, and this note is here so nobody
- * "fixes" it twice. `docs/03-analysis/meeting-03-2026-10-04.md` §2.1 records the
- * client reading `G+4` off a plan while the screen reported 13 levels, and names
- * two candidate causes that had to be told apart before either was touched. They
- * were, and it is the second:
+ * Those used to come back `undefined` — a blocking gap on a sheet that prints
+ * its height — or, worse, half-read: `G+4+R` was `G+4` with the roof dropped and
+ * `2B+G+4P+20` lost its basements, which the level schedule asks about first.
+ * Each token is now read or the code is refused: two plain numbers, an unknown
+ * letter or a missing `G` return `undefined` and the height is reported unread,
+ * rather than one of two readings being picked.
  *
- *   `parseHeight('G+4')` returns `typicalFloors 4, podiumLevels 0,
- *   totalLevels 5`. The test below asserts it by name.
- *
- * The 13 is the FAR-driven level count, uncapped by the stated height. The
- * sheet's `G+N` deliberately binds nothing — `packages/rules/src/instruments/
- * sheet.ts` pushes it to `notBound` because `height.max` is a ceiling in metres
- * and converting a level count into one needs a floor-to-floor that is itself a
- * resolved parameter — so the solver's ceiling is the generic seed rule
- * `R-HEIGHT-MAX-RES` at 45.00 m over `floor_to_floor` 3.20 m, which is 14, and
- * the answer is `min(14, ceil(permitted GFA ÷ plate))`. Nothing in that formula
- * is the number printed on the sheet. The fix belongs to the envelope solver and
- * the rule builder, not here; this parser's job is to read `4` and it reads `4`.
+ * THE `G+4` → 13 DEFECT WAS NOT HERE, and the record stays so nobody "fixes" it
+ * twice (`docs/03-analysis/meeting-03-2026-10-04.md` §2.1): this parser read `4`
+ * all along. The 13 was the FAR-driven level count uncapped by the stated height,
+ * and `packages/rules/src/instruments/sheet.ts` now binds the code's
+ * `totalLevels` as `levels.max_above_ground`, a count, converting nothing to
+ * metres. Mezzanines and the roof are carried and NOT counted in `totalLevels`
+ * until the client says whether they count against the cap.
  */
 export function parseHeight(raw: string): HeightAllowance | undefined {
-  const withPodium = /\bG\s*\+\s*(\d+)\s*P\s*\+\s*(\d+)\b/i.exec(raw);
-  if (withPodium?.[1] !== undefined && withPodium[2] !== undefined) {
-    const podiumLevels = Number(withPodium[1]);
-    const typicalFloors = Number(withPodium[2]);
-    return {
-      podiumLevels,
-      typicalFloors,
-      totalLevels: 1 + podiumLevels + typicalFloors,
-      raw: withPodium[0],
-    };
+  const code = findHeightCode(raw);
+  if (code === undefined) return undefined;
+  const tokens = code.split('+').map((t) => t.replace(/\s+/g, '').toUpperCase());
+  let basements: number | undefined;
+  if (/^\d*B\d*$/.test(tokens[0] ?? '')) {
+    const b = tokens.shift() ?? '';
+    const n = /\d+/.exec(b)?.[0];
+    basements = n === undefined ? 1 : Number(n);
   }
-  const plain = /\bG\s*\+\s*(\d+)\b(?!\s*P)/i.exec(raw);
-  if (plain?.[1] !== undefined) {
-    const typicalFloors = Number(plain[1]);
-    return { podiumLevels: 0, typicalFloors, totalLevels: 1 + typicalFloors, raw: plain[0] };
+  if (tokens.shift() !== 'G') return undefined;
+
+  let podiumLevels = 0;
+  let mezzanines = 0;
+  let roof = false;
+  let typicalFloors: number | undefined;
+  for (const t of tokens) {
+    const m = /^(\d{1,3})?([PMR])?$/.exec(t);
+    if (!m || (m[1] === undefined && m[2] === undefined)) return undefined;
+    const n = m[1] === undefined ? 1 : Number(m[1]);
+    if (m[2] === 'P') podiumLevels += n;
+    else if (m[2] === 'M') mezzanines += n;
+    else if (m[2] === 'R') {
+      // `R` takes no count, and a roof is the last thing in a code.
+      if (m[1] !== undefined || roof) return undefined;
+      roof = true;
+    } else {
+      // Two plain counts is two readings of one building.
+      if (typicalFloors !== undefined || roof) return undefined;
+      typicalFloors = n;
+    }
   }
-  return undefined;
+  const typical = typicalFloors ?? 0;
+  if (typicalFloors === undefined && podiumLevels === 0) return undefined;
+  return {
+    podiumLevels,
+    typicalFloors: typical,
+    totalLevels: 1 + podiumLevels + typical,
+    ...(basements !== undefined ? { basements } : {}),
+    ...(mezzanines > 0 ? { mezzanines } : {}),
+    ...(roof ? { roof } : {}),
+    raw: code.trim(),
+  };
 }
 
 /** One face's distance, or the conditional pair when the sheet gives two. */
@@ -528,12 +635,66 @@ function parseCoverage(text: string): CoverageSchedule | undefined {
 }
 
 // ---------------------------------------------------------------------------
+// What a `SEE NOTES` cell says, in a sentence
+// ---------------------------------------------------------------------------
+
+/** The limits a sheet can answer with `SEE NOTES`, each with what that leaves unread. */
+const DEFERRED_CONSEQUENCE = {
+  'maximum GFA':
+    'No GFA and no floor area ratio is read from the sheet. Both must come from the approved master plan or the DCR, or be set by a named user; neither is taken from a neighbouring plot.',
+  'maximum height':
+    'No storey count is read from the sheet, so it gives the envelope no vertical bound. It must come from the approved master plan or the DCR, or be set by a named user.',
+  'maximum plot coverage':
+    'No coverage cap is read from the sheet. It must come from the approved master plan or the DCR, or be set by a named user.',
+  'whole setback table':
+    'No setback is read from the sheet. Setbacks must come from the approved master plan or the DCR, or be set by a named user.',
+} as const;
+type Deferred = keyof typeof DEFERRED_CONSEQUENCE;
+
+/**
+ * A `SEE NOTES` cell, said as the deferral it is, with the notes it points at.
+ *
+ * The notes are quoted rather than summarised: on plot 6468096 they say
+ * "APPROVED MASTER PLAN IS REQUIRED PRIOR TO ANY SUBMITTALS." and nothing else,
+ * and that sentence IS the answer — the limit lives in a document the reader
+ * has to obtain. A sheet whose notes say nothing gets that said instead.
+ */
+export function seeNotesDeferral(what: Deferred, notes: string): string {
+  return (
+    `This sheet prints "SEE NOTES" against its ${what} instead of a value.` +
+    (notes.trim() !== '' ? ` Its notes read: «${notes.trim()}».` : ' None of its notes states one.') +
+    ` ${DEFERRED_CONSEQUENCE[what]}`
+  );
+}
+
+/** A table whose cells mix distances and deferrals: which cells defer, by side and mass. */
+function partialDeferral(sides: readonly SideSetback[]): string {
+  const cells = sides.flatMap((s) => [
+    ...(s.building.kind === 'SEE_NOTES' ? [`side ${s.side} (building)`] : []),
+    ...(s.podium.kind === 'SEE_NOTES' ? [`side ${s.side} (podium)`] : []),
+  ]);
+  return (
+    `The setback table prints "SEE NOTES" instead of a distance for ${cells.join(', ')}. ` +
+    'Those cells defer to the sheet’s notes and no distance is read from them; every other cell is read as printed.'
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
 export interface ParseAffectionPlanOptions {
   readonly documentUri: string;
   readonly tracer: Tracer;
+  /**
+   * Where the DDA sheet's drawing places its coordinate table on the page
+   * (`matchDrawnRing`), when the async reader found it. With it, `readFacts`
+   * attaches the placement to the survey and puts each `SIDE n` of the setback
+   * table on the boundary the drawing labels. Without it — a test driving
+   * `readFacts` from text — the table is still read and its sides are unplaced,
+   * which the table says.
+   */
+  readonly surveyPlacement?: PagePlacement;
 }
 
 /**
@@ -548,9 +709,28 @@ export async function parseAffectionPlan(
   bytes: Uint8Array,
   opts: ParseAffectionPlanOptions,
 ): Promise<AffectionPlanFacts> {
-  const [page] = await readPdfText(bytes, { pages: [1] });
-  if (!page) throw new Error('affection plan has no first page');
-  const facts = readFacts(page, opts);
+  const [layer] = await readPdfText(bytes, { pages: [1] });
+  if (!layer) throw new Error('affection plan has no first page');
+
+  /*
+    THE UNIFIED SITE PLAN IS READ FROM ITS CONTENT STREAM. Its text layer is one
+    item per glyph with guessed spaces (see `unified.ts`), so the page handed to
+    `readFacts` is rebuilt from the operator list: one item per run, with the
+    generator's own spaces. Everything downstream reads it like any other page.
+  */
+  const runs = !isDmSheet(layer) && !isDdaSheet(layer) && isUnifiedSitePlan(layer) ? await readTextRuns(bytes) : undefined;
+  const page = runs ?? layer;
+
+  /*
+    A DDA SHEET'S DRAWING IS PLACED BEFORE ITS TEXT IS TRACED, because the
+    setback table's `SIDE n` rows are only boundaries once the drawing's own
+    `SIDE n` labels are on the grid — and a traced value is not re-emitted.
+  */
+  const table = isDdaSheet(page) ? readSurveyTable(page) : undefined;
+  const drawing = table ? await readDmDrawing(bytes) : undefined;
+  const surveyPlacement =
+    table && drawing ? matchDrawnRing(drawing.paths, table.points, [0, 0, page.width, page.height], page.items) : undefined;
+  const facts = readFacts(page, { ...opts, ...(surveyPlacement ? { surveyPlacement } : {}) });
 
   if (isDmSheet(page)) return readDmFacts(bytes, page, facts, opts);
 
@@ -575,12 +755,7 @@ export async function parseAffectionPlan(
     ...(facts.totalAreaSqm ? { statedAreaSqm: facts.totalAreaSqm.value.toString() } : {}),
   });
 
-  // A DDA sheet draws the plot its table lists: matched, it places the page on the grid.
-  if (facts.survey) {
-    const { paths } = await readDmDrawing(bytes);
-    const onPage = matchDrawnRing(paths, facts.survey.points.value, [0, 0, page.width, page.height]);
-    if (onPage) return { ...facts, sitePlan, survey: { ...facts.survey, onPage } };
-  }
+  // A DDA sheet draws the plot its table lists: matched, `readFacts` placed the page on the grid.
   return { ...facts, sitePlan };
 }
 
@@ -699,11 +874,8 @@ export function readFacts(
      "22/2001", a law number — which the pattern below would misread. */
   const dm = isDmSheet(page);
   const dmRequest = dm ? readDmRequest(page) : undefined;
-  const issueDate = dmRequest?.date ?? (dm ? undefined : /(\d{1,2}[-/]\d{1,2}[-/]\d{4})/.exec(text)?.[1]) ?? 'UNDATED';
-  const dmRows = dm ? readDmRows(page) : {};
-
   /*
-    WHICH SHEET THIS IS. See `dda.ts` for what differs and what it cost.
+    WHICH SHEET THIS IS. See `dda.ts` and `unified.ts` for what differs and what it cost.
 
     Read once and threaded through the readers below rather than sniffed inside
     each: a field that decided its own dialect could read the area off one
@@ -711,6 +883,18 @@ export function readFacts(
     cross-check against each other perfectly well.
   */
   const dda = isDdaSheet(page);
+  const unified = !dm && !dda && isUnifiedSitePlan(page);
+  /* The unified sheet prints an issue date AND an expiry date, each under its own
+     label; the first date-shaped run on the page is whichever the stream emits
+     first, and dating every citation by the expiry would be a quiet lie. */
+  const unifiedIssued = unified ? unifiedDate(page, 'Issue Date') : undefined;
+  const unifiedExpires = unified ? unifiedDate(page, 'Expiry Date') : undefined;
+  const issueDate =
+    dmRequest?.date ??
+    unifiedIssued?.text.trim() ??
+    (dm || unified ? undefined : /(\d{1,2}[-/]\d{1,2}[-/]\d{4})/.exec(text)?.[1]) ??
+    'UNDATED';
+  const dmRows = dm ? readDmRows(page) : {};
 
   /** Emit a `DERIVED` value citing the box it was read from. */
   const fromSheet = <T>(
@@ -719,7 +903,9 @@ export function readFacts(
     verbatim: string,
     unit?: string,
   ): Traced<T> | undefined => {
-    const item = locate(page, verbatim) ?? locate(page, verbatim.split(/\s/)[0] ?? verbatim);
+    /* Never the first word alone: `GF/` was once the whole quotation of a
+       setback line. The line the value sits on is a true, if wider, one. */
+    const item = locate(page, verbatim) ?? lineContaining(page, verbatim.split(/\s/)[0] ?? verbatim);
     if (!item) return undefined;
     return tracer.derived(`affection_plan.${field}`, value, {
       rule: {
@@ -728,7 +914,7 @@ export function readFacts(
       },
       formula: `read from affection plan field "${field}"`,
       ...(unit !== undefined ? { unit } : {}),
-      detail: { verbatim: item.text.replace(/\s+/g, ' ').trim() },
+      detail: { verbatim: quoted(item.text) },
     });
   };
 
@@ -754,13 +940,40 @@ export function readFacts(
       },
       formula: `read from affection plan field "${field}"`,
       ...(unit !== undefined ? { unit } : {}),
-      detail: { verbatim: item.text.replace(/\s+/g, ' ').trim() },
+      detail: { verbatim: quoted(item.text) },
     });
 
   const absent = (field: string, label: string, consequence: string): undefined => {
     missing.push({ field, label, consequence });
     return undefined;
   };
+
+  /*
+    THE NOTES A DEFERRAL POINTS AT. A DDA sheet heads them `GENERAL NOTES`; the
+    unified site plan prints its plot-specific remarks as capitalised dash lines
+    ("- APPROVED MASTER PLAN IS REQUIRED PRIOR TO ANY SUBMITTALS."). Read once:
+    the parking requirement, the setback rule and every `SEE NOTES` gap quote them.
+  */
+  const notes: readonly { readonly text: string; readonly box: TextItem }[] = dda
+    ? readGeneralNotes(page)
+    : unified
+    ? unifiedNotes(page).map((n) => ({ text: n.text.replace(/^-\s*/, '').replace(/\s+/g, ' ').trim(), box: n }))
+    : [];
+  /* What a `SEE NOTES` cell defers to, in the sheet's words — every note except
+     the parking one, which answers a different question. */
+  const deferralNotes = notes
+    .filter((n) => !/^PARKING\s*:/i.test(n.text))
+    .map((n) => n.text)
+    .join(' ');
+
+  /* The unified sheet's limit cells, each the value left of its English label. */
+  const uCell = (label: string): TextItem | undefined => (unified ? unifiedCell(page, label) : undefined);
+  const uGfa = uCell('Maximum GFA');
+  const uHeight = uCell('Maximum Height');
+  const uCoverage = uCell('Maximum Plot Coverage') ?? uCell('Maximum Plot');
+  const says = (cell: TextItem | undefined, words: RegExp): boolean => cell !== undefined && words.test(cell.text.trim());
+  const SEE_NOTES = /^SEE\s*NOTES?$/i;
+  const NOT_APPLICABLE = /^N\s*\/\s*A$/i;
 
   // --- self-describing numeric fields ------------------------------------
   // Scanned line by line, skipping the GFA line. Both figures are written in
@@ -778,7 +991,13 @@ export function readFacts(
     another exclusion: a labelled cell is a reading and a page-wide scan is a
     guess, so where the sheet labels the box, the label wins.
   */
-  const ddaAreaCell = dda ? valueRightOf(page, 'PLOT AREA') : undefined;
+  /* The unified sheet's `Total Area` is answered twice, in m² above the label's
+     row and in ft² on it; only the metric cell is read, as on the DDA's. */
+  const ddaAreaCell = dda
+    ? valueRightOf(page, 'PLOT AREA')
+    : unified
+    ? unifiedCell(page, 'Total Area', (t) => metricArea({ text: t, page: page.page, bbox: [0, 0, 0, 0] }) !== undefined)
+    : undefined;
   const ddaArea = metricArea(ddaAreaCell);
 
   const areaLine = pageLines(page)
@@ -804,7 +1023,7 @@ export function readFacts(
     'i',
   ).exec(text);
 
-  const ddaGfaCell = dda ? valueRightOf(page, 'MAX. GFA') : undefined;
+  const ddaGfaCell = dda ? valueRightOf(page, 'MAX. GFA') : uGfa;
   const ddaGfa = metricArea(ddaGfaCell);
 
   const gfaSqm =
@@ -817,6 +1036,8 @@ export function readFacts(
           'GFA',
           dm && dmRows.Height?.lines.some((l) => parseArabicFar(l) !== undefined)
             ? 'This sheet states its limit as a floor ratio and prints no GFA. The engine derives GFA as that ratio × the plot area; nothing else is needed from the sheet for it.'
+            : says(uGfa, SEE_NOTES)
+            ? seeNotesDeferral('maximum GFA', deferralNotes)
             : 'Permitted GFA is not printed on this sheet. It must be obtained from the DCR or set by a named user; it must not be inferred from a neighbouring plot.',
         );
 
@@ -844,7 +1065,7 @@ export function readFacts(
       : absent(
           'far',
           'FAR',
-          dda
+          (dda || unified) && ddaGfa !== undefined
             ? 'This sheet prints a maximum GFA and no floor area ratio. The study takes the ratio from the sheet’s own figures: maximum GFA ÷ plot area. Nothing else is needed for it.'
             : 'Floor area ratio is not printed on this sheet. Required before any capacity figure may be produced.',
         );
@@ -854,7 +1075,7 @@ export function readFacts(
      طابق». Read into the `G+1P+16` the other two generators print, and cited to
      the Arabic row it came from, so the derivation shows the sheet's own words. */
   const dmStoreys = dmHeightRow?.lines.map(parseArabicHeight).find((v) => v !== undefined);
-  const heightRaw = /\bG\s*\+\s*\d+(?:\s*P\s*\+\s*\d+)?\b/i.exec(text)?.[0];
+  const heightRaw = unified ? (uHeight ? findHeightCode(uHeight.text) : undefined) : findHeightCode(text);
   const parsedHeight = heightRaw === undefined ? undefined : parseHeight(heightRaw);
   const height =
     dmStoreys !== undefined && dmHeightRow
@@ -872,14 +1093,28 @@ export function readFacts(
           dmHeightRow.box,
         )
       : parsedHeight !== undefined && heightRaw !== undefined
-      ? fromSheet('height_allowance', parsedHeight, heightRaw)
+      ? unified && uHeight
+        ? fromCell('height_allowance', parsedHeight, uHeight)
+        : fromSheet('height_allowance', parsedHeight, heightRaw)
       : absent(
           'height_allowance',
           'Height',
-          'Permitted storey count is not printed; the envelope has no vertical bound.',
+          says(uHeight, SEE_NOTES)
+            ? seeNotesDeferral('maximum height', deferralNotes)
+            : heightRaw !== undefined
+            ? `This sheet prints the height code "${heightRaw}", which does not read as one building: two plain storey counts, a letter other than B, G, P, M or R, or no ground floor. No storey count is read from it; it must be confirmed by a named user.`
+            : 'Permitted storey count is not printed; the envelope has no vertical bound.',
         );
 
   // --- setbacks and coverage ---------------------------------------------
+  /*
+    A SETBACK TABLE PER SIDE — the DDA's `SETBACK (M)` and the unified sheet's
+    `SETBACK (m)`. Read cell by cell, in the cell's own state. It is the only
+    setback either sheet prints, so it is read before anything is said about one.
+  */
+  const sideTable: SetbackTableReading | undefined = dda || unified ? readSetbackTable(page) : undefined;
+  const sideCells = sideTable?.ok ? sideTable.sides.flatMap((s) => [s.building, s.podium]) : [];
+  const quarterNote = notes.find((n) => /^SETBACK\s*:/i.test(n.text) && /QUARTER\s+OF\s+THE\s+HEIGHT/i.test(n.text));
   const parsedSetbacks = parseSetbacks(text);
   const setbacks =
     parsedSetbacks !== undefined
@@ -888,21 +1123,47 @@ export function readFacts(
           'setbacks',
           'Setback',
           /*
-            `SEE NOTES` IS A DEFERRAL, AND IT IS REPORTED AS ONE.
+            `SEE NOTES` IS A DEFERRAL, AND IT IS REPORTED AS ONE — BUT ONLY WHERE
+            THE SHEET PRINTS IT.
 
-            The DDA setback table prints `SEE NOTES` in all four building cells
-            and `N/A` in all four podium cells, and the note it points at reads
-            "QUARTER OF THE HEIGHT FROM NEIGHBORING PLOTS AND FROM CENTER OF
-            SIKKA - MAXIMUM 7.5M AND A MINIMUM OF 3M". That is a rule whose input
-            is the storey count — exactly the fixpoint `FR-PLT-002` does not
-            describe — and not a distance. Resolving it here would mean this
-            module had computed a setback from a height, which is the engine's
-            work and would arrive with no fixpoint and no citation.
+            Plot 5134565 prints `SEE NOTES` in all four building cells and `N/A`
+            in all four podium cells, and its note reads "QUARTER OF THE HEIGHT
+            FROM NEIGHBORING PLOTS AND FROM CENTER OF SIKKA - MAXIMUM 7.5M AND A
+            MINIMUM OF 3M" — a rule whose input is the storey count, which is
+            the engine's fixpoint and not this module's. That sentence used to be
+            printed for EVERY DDA sheet, and plot 6457790 prints eight numbers.
+            It is now said only of a table whose every building cell defers and
+            whose notes carry that rule; any other deferral is said as it is.
           */
           dm && dmRows.Setback
             ? `This sheet states its setback as a rule, not a distance: «${dmRows.Setback.lines.join(' ')}» — a quarter of the building height from the neighbours and from the middle of the sikkas, at most 7.5 m and at least 3 m, as the DDA note says it. Its input is the storey count, so no distance is read from the sheet. It must be authored as a rule or set under a named user.`
-            : dda
+            : sideTable?.ok === false
+            ? sideTable.reason
+            : /*
+                A TABLE READ IS NOT A TABLE APPLIED. Where every cell is a
+                distance or N/A the table is published whole as `sideSetbacks`,
+                but nothing binds it yet (`StatedLimits.setbacksBySide` waits for
+                `rules/instruments/sheet.ts`), and `facts.setbacks` stays empty
+                because a front / side / rear schedule cannot say "side 1 is 5 m".
+                Saying nothing here left the sheet step printing "Not printed"
+                beside a sheet with eight numbers on it, while the run took its
+                setbacks from the general rules without a word. So the gap stays,
+                and says exactly that, until the binder lands.
+              */
+              sideTable?.ok && sideCells.every((c) => c.kind === 'NOT_APPLICABLE')
+            ? 'This sheet prints "N/A" in every cell of its setback table: it sets no setback. Setbacks must come from the plot guidelines, the master plan or the DCR, or be set by a named user.'
+            : sideTable?.ok && !sideCells.some((c) => c.kind === 'SEE_NOTES')
+            ? `This sheet prints its setbacks per numbered side, not per face: «${sideTable.raw}». The table is read, but no setback from it is applied to the study yet. Until it is, the study’s setbacks do not come from this sheet: they come from the general rules, and a tower setback typed on the plot step under a named user overrides them.`
+            : sideTable?.ok &&
+              quarterNote &&
+              sideTable.sides.every((s) => s.building.kind === 'SEE_NOTES' && s.podium.kind !== 'DISTANCE')
             ? 'This sheet prints "SEE NOTES" against every face instead of a distance, and defers to a general note setting the setback at a quarter of the building height, capped at 7.5 m and floored at 3 m. That is a rule with the storey count as its input, not a schedule of distances, so no setback is read from the sheet. It must be authored as a rule or set under a named user.'
+            : sideTable?.ok && sideCells.every((c) => c.kind === 'SEE_NOTES')
+            ? seeNotesDeferral('whole setback table', deferralNotes)
+            : sideTable?.ok
+            ? partialDeferral(sideTable.sides)
+            : dda || unified
+            ? 'No setback table was found on this sheet. Setbacks must come from the plot guidelines, the master plan or the DCR, or be set by a named user.'
             : 'No setback schedule on the sheet. Trakhees regulations and the master developer DCR govern instead and must be supplied.',
         );
 
@@ -917,20 +1178,33 @@ export function readFacts(
              none — and it is a different fact from a sheet that has no coverage
              row at all. Both leave the footprint unbound; only one of them has
              been answered. */
-          dda && /^N\/?A$/i.test(valueRightOf(page, 'MAX. COVERAGE')?.text.trim() ?? '')
+          (dda && NOT_APPLICABLE.test(valueRightOf(page, 'MAX. COVERAGE')?.text.trim() ?? '')) || says(uCoverage, NOT_APPLICABLE)
             ? 'This sheet prints "N/A" against the maximum coverage: it sets no coverage cap. The footprint has no horizontal bound from this instrument, and one must come from the DCR or from a named user.'
+            : says(uCoverage, SEE_NOTES)
+            ? seeNotesDeferral('maximum plot coverage', deferralNotes)
             : 'No coverage cap on the sheet; the footprint has no horizontal bound from this instrument.',
         );
 
   // --- label/value fields -------------------------------------------------
-  const labelled = <T extends string>(
-    field: string,
-    label: string,
-    transform: (s: string) => T = (s) => s as T,
-  ): Traced<T> | undefined => {
-    const item = valueLeftOf(page, label);
+  /*
+    A LABEL IS A WHOLE PHRASE. This read `valueLeftOf(page, label)`, whose anchor
+    is the first item CONTAINING the label: on `IC1-CTYL-16_011` that was
+    "Developer's" in a general note, and the developer read as "Master"; and the
+    value was the single item nearest the label, so `WARSAN 1 - 621` came back
+    as "621". Both went straight into the plot form and every title block built
+    from it. The label is now matched whole (`cellLeftOf`), the value is its
+    whole cell, and a cell that is another label, or an undecodable glyph run,
+    does not answer.
+  */
+  const FORM_LABELS = new Set(
+    ['PARCEL ID', 'COMMUNITY', 'DEVELOPER', 'DEVELOPER PLOT NO.', 'AUTHORITY', 'DLD REF NUMBER', 'OWNER', 'TITLE', 'REMARKS', 'USAGE', 'HEIGHT', 'PARKING', 'SETBACK', 'PLOT COVERAGE', 'SITE PLAN -'],
+  );
+  const formValue = (t: string): boolean =>
+    /[\p{L}\p{N}]/u.test(t) && cleanVerbatim(t) === t.replace(/\s+/g, ' ').trim() && !FORM_LABELS.has(t.replace(/\s+/g, ' ').trim().toUpperCase());
+  const labelled = (field: string, label: string, accept: (t: string) => boolean = () => true): Traced<string> | undefined => {
+    const item = cellLeftOf(page, label, { accept: (t) => formValue(t) && accept(t) });
     if (!item) return undefined;
-    const value = transform(item.text.replace(/\s+/g, ' ').trim());
+    const value = item.text.replace(/\s+/g, ' ').trim();
     if (value === '') return undefined;
     return tracer.derived(`affection_plan.${field}`, value, {
       rule: {
@@ -952,7 +1226,10 @@ export function readFacts(
     is what makes a unit mix mean anything — so the line is taken whole rather
     than trimmed back to the word the old pattern knew.
   */
-  const ddaLandUse = dda ? valueBelow(page, 'LAND USE / GFA SPLIT') : undefined;
+  /* Every line of the split, not the first (see `readLandUseLines`). */
+  const ddaLandUse = dda ? readLandUseLines(page) : [];
+  const ddaLandUseBox = ddaLandUse.length > 0 ? unionCell(ddaLandUse.map((l) => l.box), page.page) : undefined;
+  const unifiedLandUse = unified ? unifiedCell(page, 'Land Use') : undefined;
   const landUseRaw = /Mixed Use \([^)]*\)|(?:^|\n)(Residential|Commercial|Industrial)(?:\n|$)/i.exec(
     text,
   )?.[0];
@@ -962,18 +1239,73 @@ export function readFacts(
   const landUse =
     dmUse && dmUse.lines.length > 0
       ? fromCell('land_use', `${dmUse.lines.join(' ')}${dmUse.code ? ` (${dmUse.code})` : ''}`, dmUse.box)
-      : ddaLandUse !== undefined && ddaLandUse.text.trim() !== ''
-      ? fromCell('land_use', ddaLandUse.text.replace(/\s+/g, ' ').trim(), ddaLandUse)
+      : ddaLandUseBox !== undefined
+      ? fromCell('land_use', ddaLandUse.map((l) => l.box.text).join(' + '), { ...ddaLandUseBox, text: ddaLandUse.map((l) => l.box.text).join(' + ') })
+      : unifiedLandUse !== undefined
+      ? fromCell('land_use', unifiedLandUse.text.replace(/\s+/g, ' ').trim(), unifiedLandUse)
       : landUseRaw !== undefined
       ? fromSheet('land_use', landUseRaw.trim(), landUseRaw.trim())
       : absent('land_use', 'Usage', 'Land use selects the applicable rule set; none can be chosen.');
 
+  /*
+    THE SPLIT, TYPED — and checked against the maximum GFA it divides.
+
+    Plot 6457790 allows 13,935.45 m², of which 1,680.00 is retail and 12,255.45
+    residential, and a note restricts the retail to the ground floor. Reading the
+    land use as one line counted the retail share as flats, in units and in bays.
+    Binding the residential share as the cap is the rule builder's work; this
+    publishes the shares and whether they add up to the printed maximum.
+  */
+  const shares = ddaLandUse.filter((l) => l.areaM2 !== undefined);
+  const landUseSplit =
+    shares.length > 0 && ddaLandUseBox
+      ? fromCell(
+          'land_use_split',
+          ddaLandUse.map((l): LandUseShare => ({ use: l.use, ...(l.areaM2 !== undefined ? { areaM2: l.areaM2 } : {}) })),
+          { ...ddaLandUseBox, text: ddaLandUse.map((l) => l.box.text).join(' + ') },
+        )
+      : undefined;
+  if (landUseSplit && gfaSqm && shares.length === ddaLandUse.length) {
+    const sum = shares.reduce((acc, l) => acc.plus(toDecimal(l.areaM2 ?? '0')), new Decimal(0));
+    crossChecks.push({
+      name: 'gfa split = maximum GFA',
+      // Each share and the total are printed to the hundredth.
+      passed: sum.minus(gfaSqm.value).abs().lte('0.01'),
+      detail: `${shares.map((l) => `${l.use} ${l.areaM2 ?? ''} m²`).join(' + ')} = ${qArea(sum).toString()} m² against a printed maximum GFA of ${gfaSqm.value.toString()} m².`,
+    });
+  }
+
+  /*
+    PARKING, IN THE SHEET'S WORDS AND TYPED.
+
+    Trakhees defers parking in words — "(Refer to Trakhees Regulations & Dubai
+    Building Code …)". The Municipality prints a Parking row; the DDA a
+    `PARKING:` note, which was not read at all, so the sheet step told the
+    reader the plot's parking instrument was unknown while the sheet stated it.
+    B.7.2.6.1 puts either above Table B.13. The words are kept as before and the
+    requirement is typed beside them (`parking.ts`).
+  */
   const parkingNote = /\(Refer to [^)]*\)/i.exec(text)?.[0];
   const parkingDeferredTo =
     parkingNote === undefined ? undefined : fromSheet('parking_authority', parkingNote, parkingNote);
   const dmParking = dmRows.Parking;
-  const parkingRequirement =
-    dmParking && dmParking.lines.length > 0 ? fromCell('parking_requirement', dmParking.lines.join(' '), dmParking.box) : undefined;
+  const ddaParking = notes.find((n) => /^PARKING\s*:/i.test(n.text));
+  const parkingCell =
+    dmParking && dmParking.lines.length > 0
+      ? { text: dmParking.lines.join(' '), box: dmParking.box }
+      : ddaParking
+      ? { text: ddaParking.text.replace(/^PARKING\s*:\s*/i, ''), box: ddaParking.box }
+      : undefined;
+  const parkingRequirement = parkingCell ? fromCell('parking_requirement', parkingCell.text, parkingCell.box) : undefined;
+  const parkingTyped = parkingCell ? parseParkingRequirement(parkingCell.text) : undefined;
+  const parking = parkingCell && parkingTyped ? fromCell('parking', parkingTyped, parkingCell.box) : undefined;
+  if (parkingCell && !parkingTyped) {
+    missing.push({
+      field: 'parking_requirement',
+      label: 'Parking',
+      consequence: `This sheet states a parking requirement this reader could not type: «${parkingCell.text}». Its words are kept; no bay count may be read from them until it is confirmed by a named user.`,
+    });
+  }
   if (parkingDeferredTo === undefined && parkingRequirement === undefined) {
     missing.push({
       field: 'parking_authority',
@@ -1066,6 +1398,7 @@ export function readFacts(
       const legs = surveyLegs(surveyTable.points);
       survey = {
         system: fromCell('survey_system', surveyTable.system, surveyTable.box),
+        ...(opts.surveyPlacement ? { onPage: opts.surveyPlacement } : {}),
         points: fromCell('survey_points', surveyTable.points, surveyTable.box),
         legs: fromCell('survey_legs', legs, surveyTable.box),
         areaM2: fromCell('survey_area_sqm', qArea(ringArea), surveyTable.box, 'm²'),
@@ -1076,6 +1409,47 @@ export function readFacts(
         ],
       };
     }
+  }
+
+  /*
+    EACH SIDE OF THE SETBACK TABLE ON THE BOUNDARY THE DRAWING NAMES.
+
+    The table says "SIDE ( 1 ): 5 / 4"; the drawing prints `SIDE 1` inside the
+    plot beside one boundary. Placed on the coordinate table's grid by the
+    drawing's own fit (`matchDrawnRing`), each label is nearest one surveyed leg,
+    and the table's side becomes that leg — one to one, every side, or none.
+  */
+  let sideSetbacks: Traced<SideSetbackTable> | undefined;
+  if (sideTable?.ok) {
+    const placement = opts.surveyPlacement;
+    const placed =
+      survey && placement
+        ? placeSides(
+            page,
+            sideTable.sides.map((s) => s.side),
+            survey.points.value,
+            (x, y) => [placement.ax * x + placement.bx * y + placement.cx, placement.ay * x + placement.by * y + placement.cy],
+          )
+        : undefined;
+    const ring = survey?.points.value ?? [];
+    const sides: SideSetback[] = sideTable.sides.map((s) => {
+      const leg = placed instanceof Map ? placed.get(s.side) : undefined;
+      return leg === undefined ? s : { ...s, boundary: leg };
+    });
+    const legName = (i: number): string => `corner ${ring[i]?.id ?? i + 1} to corner ${ring[(i + 1) % ring.length]?.id ?? ((i + 1) % ring.length) + 1}`;
+    const placementSentence =
+      placed instanceof Map
+        ? `Each side of the table is the surveyed boundary the drawing labels with its number: ${sides
+            .map((s) => `side ${s.side} runs from ${legName(s.boundary ?? 0)}`)
+            .join('; ')}.`
+        : typeof placed === 'string'
+        ? placed
+        : unified
+        ? 'This sheet prints no coordinate table, so no side of the setback table is placed on a boundary; the reader says which boundary each side is.'
+        : survey === undefined
+        ? 'No surveyed ring was read from this sheet, so no side of the setback table is placed on a boundary; the reader says which boundary each side is.'
+        : 'The drawing could not be placed on the sheet’s coordinate table, so no side of the setback table is placed on a boundary; the reader says which boundary each side is.';
+    sideSetbacks = fromCell('setbacks_by_side', { sides, raw: sideTable.raw, placement: placementSentence }, sideTable.box);
   }
 
   // --- boundaries ---------------------------------------------------------
@@ -1103,6 +1477,40 @@ export function readFacts(
   if (landUse) facts.landUse = landUse;
   if (parkingDeferredTo) facts.parkingDeferredTo = parkingDeferredTo;
   if (parkingRequirement) facts.parkingRequirement = parkingRequirement;
+  if (parking) facts.parking = parking;
+  if (sideSetbacks) facts.sideSetbacks = sideSetbacks;
+  if (landUseSplit) facts.landUseSplit = landUseSplit;
+  if (notes.length > 0) {
+    facts.generalNotes = fromCell(
+      'general_notes',
+      notes.map((n) => n.text),
+      { ...unionCell(notes.map((n) => n.box), page.page), text: notes.map((n) => n.text).join(' | ') },
+    );
+  }
+
+  /* The unified sheet's drawing: the dimension it prints beside each boundary,
+     and each road it labels beside a side. Read, cited, and bound to nothing —
+     there is no coordinate table to put them on a ring. */
+  if (unified) {
+    const dims = unifiedDimensions(page);
+    if (dims.length > 0) {
+      facts.boundaryDimensionsM = fromCell(
+        'boundary_dimensions_m',
+        dims.map((d) => d.text.trim().replace(/m$/, '')),
+        { ...unionCell(dims, page.page), text: dims.map((d) => d.text.trim()).join(' · ') },
+        'm',
+      );
+    }
+    const { paired } = unifiedSideRoads(page);
+    if (paired.length > 0) {
+      facts.sideRoads = fromCell(
+        'side_roads',
+        paired.map((r): SideRoad => ({ side: r.side, verbatim: r.verbatim, widthM: r.widthM })),
+        { ...unionCell(paired.map((r) => r.box), page.page), text: paired.map((r) => r.box.text).join(' · ') },
+      );
+    }
+    if (unifiedExpires) facts.expiryDate = fromCell('expiry_date', unifiedExpires.text.trim(), unifiedExpires);
+  }
 
   /*
     THREE FIELDS, TWO LAYOUTS, AND THE HAND CHANGES WITH THE SHEET.
@@ -1122,16 +1530,26 @@ export function readFacts(
 
   const parcelId =
     (dda ? ddaCell('parcel_id', valueRightOf(page, 'PLOT NUMBER')) : undefined) ??
+    (unified ? ddaCell('parcel_id', unifiedCell(page, 'Parcel ID', (t) => /^\d{5,10}$/.test(t.trim()))) : undefined) ??
     labelled('parcel_id', 'Parcel ID');
   if (parcelId) facts.parcelId = parcelId;
   const community =
     (dda ? ddaCell('community', valueBelow(page, 'COMMUNITY')) : undefined) ??
+    (unified ? ddaCell('community', unifiedCell(page, 'Community')) : undefined) ??
     labelled('community', 'Community');
   if (community) facts.community = community;
-  const developer =
-    (dda ? ddaCell('developer', valueBelow(page, 'MASTER DEVELOPER')) : undefined) ??
-    labelled('developer', 'Developer');
+  /* Not on the unified sheet: its Developer cell runs over two lines, and half
+     a name read as the whole would be a confident wrong answer. */
+  const developer = dda
+    ? ddaCell('developer', valueBelow(page, 'MASTER DEVELOPER'))
+    : unified
+    ? undefined
+    : labelled('developer', 'Developer');
   if (developer) facts.developer = developer;
+  /* The master developer's own plot reference — `DJAZ1TRE10RES022` — which is
+     the key the developer's brief is filed under, not the land department's. */
+  const developerPlotNo = dda || unified ? undefined : labelled('developer_plot_no', 'Developer Plot No.');
+  if (developerPlotNo) facts.developerPlotNo = developerPlotNo;
   const drgRef = /Drg\.\s*Ref\.?\s*:\s*(\S+)/i.exec(text)?.[1];
   const drawingRef = drgRef === undefined ? undefined : fromSheet('drawing_ref', drgRef, drgRef);
   if (drawingRef) facts.drawingRef = drawingRef;
@@ -1139,6 +1557,8 @@ export function readFacts(
   if (dmRequest) {
     facts.issueDate = fromCell('issue_date', dmRequest.date, dmRequest.item);
     facts.drawingRef = fromCell('drawing_ref', dmRequest.ref, dmRequest.item);
+  } else if (unifiedIssued) {
+    facts.issueDate = fromCell('issue_date', issueDate, unifiedIssued);
   } else if (issueDate !== 'UNDATED') {
     const issued = fromSheet('issue_date', issueDate, issueDate);
     if (issued) facts.issueDate = issued;

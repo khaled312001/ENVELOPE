@@ -14,7 +14,6 @@
  */
 
 import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 
 import { ProvenanceClass, ProvenanceGraph, Tracer } from '@envelope/core';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -30,6 +29,8 @@ import {
 } from '../src/index.js';
 import type { PdfPageText } from '../src/pdf-text.js';
 
+import { absentNote, sourceSheet } from './source-sheets.js';
+
 /**
  * Long enough for three real PDFs on a loaded machine.
  *
@@ -41,8 +42,6 @@ import type { PdfPageText } from '../src/pdf-text.js';
  */
 const HOOK_TIMEOUT_MS = 60_000;
 
-const REPO = new URL('../../../', import.meta.url);
-
 const SHEETS = {
   warsan: 'docs/00-source/samples/affection-plan/IC1-CTYL-16_011-warsan1-621.pdf',
   med12: 'docs/00-source/developer-standards/azizi/Plot DJAZ1MED12RES011-178.pdf',
@@ -53,11 +52,27 @@ const SHEETS = {
   dm: 'docs/00-source/samples/affection-plan/DM-1341556-al-mamzar.pdf',
 } as const;
 
-async function parse(key: keyof typeof SHEETS): Promise<AffectionPlanFacts> {
-  const path = fileURLToPath(new URL(SHEETS[key], REPO));
+async function parse(key: keyof typeof SHEETS, graph = new ProvenanceGraph()): Promise<AffectionPlanFacts> {
+  const path = sourceSheet(SHEETS[key]);
+  if (path === undefined) throw new Error(`${SHEETS[key]} is not on this machine`);
   const bytes = new Uint8Array(await readFile(path));
-  const tracer = new Tracer(new ProvenanceGraph());
+  const tracer = new Tracer(graph);
   return parseAffectionPlan(bytes, { documentUri: SHEETS[key], tracer });
+}
+
+/* The two Azizi sheets live in the ignored developer-standards folder: skipped, by name, where absent. */
+const absent = (key: keyof typeof SHEETS): boolean => sourceSheet(SHEETS[key]) === undefined;
+const named = (key: keyof typeof SHEETS, title: string): string => (absent(key) ? `${title} ${absentNote(SHEETS[key])}` : title);
+
+/** A value with its Decimals as the strings they print as. */
+const plain = (v: unknown): unknown => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+
+/** Every quotation a parse put in its provenance graph: the citation's and the value's own. */
+function quotations(graph: ProvenanceGraph): readonly string[] {
+  return graph.nodes.flatMap((n) => [
+    ...(n.citation ? [n.citation.sourceTextVerbatim] : []),
+    ...(typeof n.detail?.['verbatim'] === 'string' ? [n.detail['verbatim']] : []),
+  ]);
 }
 
 describe('parseHeight', () => {
@@ -105,8 +120,44 @@ describe('parseHeight', () => {
     expect(parseHeight('Height: G + 4 (Residential)')).toMatchObject({ typicalFloors: 4 });
   });
 
-  it('returns undefined rather than guessing on an unrecognised code', () => {
-    expect(parseHeight('B+G+M+15')).toBeUndefined();
+  /*
+    THE FORMS DUBAI SHEETS PRINT, and what each one says. `G+M+4` and
+    `B+G+P+10` used to come back undefined — a blocking gap on a sheet that
+    prints its height — and `G+4+R` and `2B+G+4P+20` came back half-read, the
+    roof and the basements dropped. Mezzanines and the roof are carried and not
+    counted in `totalLevels`: whether they count against the cap is the
+    client's question, and counting them here would answer it.
+  */
+  it.each([
+    ['G+4', { podiumLevels: 0, typicalFloors: 4, totalLevels: 5 }],
+    ['G+2P+8', { podiumLevels: 2, typicalFloors: 8, totalLevels: 11 }],
+    ['G+P+10', { podiumLevels: 1, typicalFloors: 10, totalLevels: 12 }],
+    ['G+M+4', { podiumLevels: 0, typicalFloors: 4, mezzanines: 1, totalLevels: 5 }],
+    ['B+G+P+10', { basements: 1, podiumLevels: 1, typicalFloors: 10, totalLevels: 12 }],
+    ['B+G+M+15', { basements: 1, mezzanines: 1, typicalFloors: 15, totalLevels: 16 }],
+    ['2B+G+4P+20', { basements: 2, podiumLevels: 4, typicalFloors: 20, totalLevels: 25 }],
+    ['G+4+R', { typicalFloors: 4, roof: true, totalLevels: 5 }],
+    ['G+3P+9+R', { podiumLevels: 3, typicalFloors: 9, roof: true, totalLevels: 13 }],
+    ['G + 1P + 16', { podiumLevels: 1, typicalFloors: 16, totalLevels: 18 }],
+    ['G+2M+6', { mezzanines: 2, typicalFloors: 6, totalLevels: 7 }],
+    ['G+4P', { podiumLevels: 4, typicalFloors: 0, totalLevels: 5 }],
+  ] as const)('reads %s whole', (code, expected) => {
+    const h = parseHeight(code);
+    expect(h).toMatchObject(expected);
+    // A token the code does not print is absent, not zero or false.
+    for (const k of ['basements', 'mezzanines', 'roof'] as const) {
+      if (!(k in expected)) expect(h).not.toHaveProperty(k);
+    }
+  });
+
+  it.each([
+    ['G+4+5', 'two plain storey counts are two readings of one building'],
+    ['G+R+4', 'a roof is the last thing in a code'],
+    ['G+2R', 'a roof takes no count'],
+    ['G+M', 'a mezzanine over ground is not a building with storeys'],
+    ['B+4', 'no ground floor'],
+  ])('refuses %s rather than picking a reading (%s)', (code) => {
+    expect(parseHeight(code)).toBeUndefined();
   });
 });
 
@@ -177,9 +228,32 @@ describe('a sheet worded differently from the samples', () => {
 
 describe('IC1-CTYL-16_011 — Warsan 1, Nakheel', () => {
   let facts: AffectionPlanFacts;
+  const graph = new ProvenanceGraph();
   beforeAll(async () => {
-    facts = await parse('warsan');
+    facts = await parse('warsan', graph);
   }, HOOK_TIMEOUT_MS);
+
+  /*
+    THE LABEL IS A WHOLE PHRASE. The value used to be found left of the first
+    item CONTAINING the label, and "Developer's" in a general note contains
+    "Developer": the developer read "Master", and the community — nearest single
+    item — "621". Both went into the plot form and every title block.
+  */
+  it('reads the identity cells whole, beside their own labels', () => {
+    expect(facts.parcelId?.value).toBe('6211383');
+    expect(facts.community?.value).toBe('WARSAN 1 - 621');
+    expect(facts.developer?.value).toBe('NAKHEEL');
+    expect(facts.developerPlotNo?.value).toBe('IC1-CTYL-16_011');
+  });
+
+  /* The Arabic on these sheets is set in a font with no ToUnicode map and
+     decodes to Latin Extended letters; quoted, it is evidence nobody can check. */
+  it('quotes no undecodable glyph run and no lone token', () => {
+    const quotes = quotations(graph);
+    expect(quotes.length).toBeGreaterThan(10);
+    for (const q of quotes) expect(q, q).not.toMatch(/[À-ɏ¨ª¯´¸º]/);
+    expect(quotes).not.toContain('GF/');
+  });
 
   it('reads the printed plot area, FAR and GFA', () => {
     expect(facts.totalAreaSqm?.value.toString()).toBe('1365.23');
@@ -248,11 +322,28 @@ describe('IC1-CTYL-16_011 — Warsan 1, Nakheel', () => {
   });
 });
 
-describe('DJAZ1TRE10RES022 — Jabal Ali, Limitless', () => {
+describe.skipIf(absent('tre10'))(named('tre10', 'DJAZ1TRE10RES022 — Jabal Ali, Limitless'), () => {
   let facts: AffectionPlanFacts;
+  const graph = new ProvenanceGraph();
   beforeAll(async () => {
-    facts = await parse('tre10');
+    facts = await parse('tre10', graph);
   }, HOOK_TIMEOUT_MS);
+
+  /* The developer plot number is the key the developer's brief is filed under. */
+  it('reads the identity cells whole, and the developer plot number', () => {
+    expect(facts.parcelId?.value).toBe('5180196');
+    expect(facts.community?.value).toBe('JABAL ALI INDUSTRIAL 2 - 518');
+    expect(facts.developer?.value).toBe('LIMITLESS');
+    expect(facts.developerPlotNo?.value).toBe('DJAZ1TRE10RES022');
+  });
+
+  /* Its setback was once quoted as "GF/" — the first word of its line. */
+  it('quotes the setback line it read, not the first word of it', () => {
+    const quotes = quotations(graph);
+    expect(quotes).not.toContain('GF/');
+    expect(quotes.some((q) => q.startsWith('GF/ Podium: 0m to street front'))).toBe(true);
+    for (const q of quotes) expect(q, q).not.toMatch(/[À-ɏ¨ª¯´¸º]/);
+  });
 
   it('reads the printed area, FAR and GFA', () => {
     expect(facts.totalAreaSqm?.value.toString()).toBe('1740.56');
@@ -274,7 +365,7 @@ describe('DJAZ1TRE10RES022 — Jabal Ali, Limitless', () => {
   });
 });
 
-describe('DJAZ1MED12RES011 — the sheet that omits its own limits', () => {
+describe.skipIf(absent('med12'))(named('med12', 'DJAZ1MED12RES011 — the sheet that omits its own limits'), () => {
   let facts: AffectionPlanFacts;
   beforeAll(async () => {
     facts = await parse('med12');
@@ -283,6 +374,12 @@ describe('DJAZ1MED12RES011 — the sheet that omits its own limits', () => {
   it('reads what is printed', () => {
     expect(facts.totalAreaSqm?.value.toString()).toBe('2365.87');
     expect(facts.height?.value).toMatchObject({ podiumLevels: 0, typicalFloors: 11 });
+  });
+
+  it('reads the identity cells whole, and the developer plot number', () => {
+    expect(facts.community?.value).toBe('JABAL ALI INDUSTRIAL 2 - 518');
+    expect(facts.developer?.value).toBe('LIMITLESS');
+    expect(facts.developerPlotNo?.value).toBe('DJAZ1MED12RES011');
   });
 
   it('does not invent the FAR, GFA, setbacks or coverage the sheet omits', () => {
@@ -355,6 +452,39 @@ describe('the DDA dialect — plot 5134565, Saih Shuaib 1', () => {
      undated sheet cites an undated instrument on every value read from it. */
   it('dates the instrument', () => {
     expect(facts.issueDate?.value).toBe('18/11/2025');
+  });
+
+  /*
+    ITS PARKING NOTE IS ITS PARKING RULE. B.7.2.6.1 puts an affection plan's
+    requirement above Table B.13, and this sheet states one in its general
+    notes — which were not read, so the sheet step said the plot's parking
+    instrument was unknown. Typed, cited to the note, and the gap is gone.
+  */
+  it('reads the parking note as the typed requirement it states', () => {
+    expect(plain(facts.parking?.value.dwelling)).toEqual({ baysAtOrBelow: 1, baysAbove: 2, thresholdM2: '150', measure: 'GFA' });
+    expect(facts.parking?.value.byArea).toEqual([]);
+    expect(facts.parking?.value.unread).toEqual([]);
+    expect(facts.parking?.provenanceClass).toBe(ProvenanceClass.DERIVED);
+    expect(facts.parkingRequirement?.value).toMatch(/^ONE BAY FOR EACH UNIT/);
+    expect(facts.missing.map((m) => m.field)).not.toContain('parking_authority');
+  });
+
+  it('keeps its general notes, each whole', () => {
+    expect(facts.generalNotes?.value).toHaveLength(2);
+    expect(facts.generalNotes?.value[1]).toMatch(/^SETBACK: QUARTER OF THE HEIGHT .* MINIMUM OF 3M\.$/);
+  });
+
+  /* The table is read cell by cell even where no cell is a distance, and each
+     side is put on the boundary the drawing labels with its number. */
+  it('reads the setback table in its own states and places each side on a surveyed boundary', () => {
+    const t = facts.sideSetbacks?.value;
+    expect(t?.sides.map((s) => [s.side, s.building.kind, s.podium.kind, s.boundary])).toEqual([
+      [1, 'SEE_NOTES', 'NOT_APPLICABLE', 4],
+      [2, 'SEE_NOTES', 'NOT_APPLICABLE', 2],
+      [3, 'SEE_NOTES', 'NOT_APPLICABLE', 0],
+      [4, 'SEE_NOTES', 'NOT_APPLICABLE', 5],
+    ]);
+    expect(t?.placement).toMatch(/^Each side of the table is the surveyed boundary/);
   });
 
   /*
@@ -469,6 +599,17 @@ describe('the Municipality dialect — plot 1341556, Al Mamzar', () => {
   it('keeps the parking row in the sheet’s own words', () => {
     expect(facts.parkingRequirement?.value).toContain('موقف لكل شقة');
     expect(facts.parkingRequirement?.provenanceClass).toBe(ProvenanceClass.DERIVED);
+  });
+
+  /* «مساحتها» — "its area" — names no measure, so the threshold's measure is
+     UNSTATED rather than the DDA's GFA: which area is the client's question. */
+  it('types the parking row: per flat and studio, two above 150 m², and by area for commerce and offices', () => {
+    expect(plain(facts.parking?.value.dwelling)).toEqual({ baysAtOrBelow: 1, baysAbove: 2, thresholdM2: '150', measure: 'UNSTATED', studioBays: 1 });
+    expect(plain(facts.parking?.value.byArea)).toEqual([
+      { use: 'COMMERCIAL', bays: 1, perM2: '70', measure: 'UNSTATED' },
+      { use: 'OFFICE', bays: 1, perM2: '50', measure: 'UNSTATED' },
+    ]);
+    expect(facts.parking?.value.unread).toEqual([]);
   });
 
   /* FAR is printed, so a missing GFA is a gap and not a stop: the engine

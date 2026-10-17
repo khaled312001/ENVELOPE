@@ -149,8 +149,10 @@ describe('the sheet travels with the plot', () => {
       expect(sheet.documentUri).toBe('warsan-6211383.pdf');
       expect(sheet.issuedOn).toBe('22-12-2025');
 
+      // The printed GFA governs (17 Oct 2026): 4,778.31 ÷ 1,365.23, the printed FAR 3.50 its cross-check.
       const far = sheet.bound.find((b) => b.parameterId === 'far.max');
-      expect(far?.value).toBe('3.5');
+      expect(far?.value).toBe('3.500003');
+      expect(far?.clause).toMatch(/^the printed GFA governs and the printed FAR 3\.5 is its cross-check/);
       // The clause is the sheet's own text, located by the parser in this process.
       expect(far?.clause.length).toBeGreaterThan(0);
     } finally {
@@ -164,12 +166,14 @@ describe('the sheet travels with the plot', () => {
       const sheet = res.json().sheet as SheetReport;
       const fields = sheet.notBound.map((n) => n.field);
 
-      // This sheet states a GFA, which is checked against FAR × plot area and
-      // binds nothing, and it says so. Its height in levels binds as a count,
-      // and since 17 Oct 2026 its TOWER row binds too — the tower coverage and
-      // the tower setbacks used to be listed here and cut nothing, which is how
-      // a 60% tower stood on 100% of the plot.
-      expect(fields).toEqual(['gfaSqm']);
+      // This sheet states a GFA and a FAR; the GFA binds and the FAR is listed as
+      // the cross-check it passed. Its parking is referred to the master
+      // developer's DCR, which is not on file, and that is said rather than
+      // Table B.13 being applied in silence. Its height in levels binds as a
+      // count, and its TOWER row binds too — the tower coverage and the tower
+      // setbacks used to be listed here and cut nothing.
+      expect(fields).toEqual(['far', 'parking.deferred']);
+      expect(sheet.notBound[0]?.stated).toBe('FAR 3.5; GFA 4778.31 m² ÷ plot area 1365.23 m² = 3.500003');
       for (const n of sheet.notBound) expect(n.reason.length).toBeGreaterThan(30);
     } finally {
       await app.close();
@@ -300,14 +304,16 @@ describe('the sheet binds the run', () => {
       expect(bound.statusCode).toBe(201);
       expect(loose.statusCode).toBe(201);
 
-      // 1,200 m² of plot. The seed rule says FAR 5.00 → 6,000 m²; the sheet says
-      // 3.5 → 4,200 m². The second number is the one the document printed, and
-      // the first is what this plot reported before the sheet reached the engine.
+      // 1,200 m² of plot. The seed rule says FAR 5.00 → 6,000 m²; the sheet's
+      // GFA ÷ its area is 3.500003 → 4,200.0036 m². The second number is the
+      // document's, and the first is what this plot reported before the sheet
+      // reached the engine. (Band A's base is the plot as entered, not the
+      // sheet's printed 1,365.23 m² — that is a separate finding.)
       const band = (r: { json(): unknown }): string =>
         (r.json() as { capacity: { bandA: { value: string } } }).capacity.bandA.value;
 
       expect(band(loose)).toBe('6000');
-      expect(band(bound)).toBe('4200');
+      expect(band(bound)).toBe('4200.0036');
     } finally {
       await app.close();
     }

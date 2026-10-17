@@ -247,6 +247,25 @@ export interface BuildableEnvelope {
     /** The same value as a traced node, so a report can link the edge to its clause. */
     readonly traced: TracedDecimal;
   }[];
+  /**
+   * The PODIUM's setback on each edge where a rule set it (17 Oct 2026): the
+   * plot's own sheet, under `setback.podium.<class>`. Additive and optional — a
+   * run stored before has none.
+   *
+   * Only edges a rule governs are here. An edge the podium statement puts on the
+   * boundary is the statement's (USER_SET by its author), an edge where the sheet
+   * leaves a choice is ASSUMED, and an edge held to the tower's line is already in
+   * `appliedSetbacks`: holding any of those to a podium rule would check the
+   * engine against a rule it did not apply there.
+   */
+  readonly appliedPodiumSetbacks?: readonly {
+    readonly seq: number;
+    readonly valueM: Decimal;
+    readonly ruleId: string;
+    /** `setback.podium.<class>` — the key the validator joins on. */
+    readonly parameterId: string;
+    readonly traced: TracedDecimal;
+  }[];
   /** Iterations the setback↔floor-count fixpoint took to settle. See `capacity`. */
   readonly fixpointIterations: number;
   readonly fixpointConverged: boolean;

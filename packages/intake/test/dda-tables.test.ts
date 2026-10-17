@@ -58,7 +58,7 @@ describe('the SETBACK (M) table', () => {
        sheet step's only sentence beside eight printed figures. */
     expect(facts.setbacks).toBeUndefined();
     expect(facts.missing.find((m) => m.field === 'setbacks')?.consequence).toMatch(
-      /^This sheet prints its setbacks per numbered side, not per face: «SETBACK \(M\) BUILDING \/ PODIUM — SIDE \( 1 \): 5 \/ 4;.*». The table is read, but no setback from it is applied to the study yet\./,
+      /^This sheet prints its setbacks per numbered side, not per face: «SETBACK \(M\) BUILDING \/ PODIUM — SIDE \( 1 \): 5 \/ 4;.*». Each side binds the boundary the drawing places it on/,
     );
     expect(facts.missing.map((m) => m.consequence).join(' ')).not.toContain('SEE NOTES');
     expect(blockingGaps(facts).map((m) => m.field)).not.toContain('setbacks');

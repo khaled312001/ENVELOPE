@@ -308,7 +308,12 @@ export const EN = {
     faceNotStated: 'not stated',
     notBound: {
       title: 'What the affection plan states that this run does not apply',
-      lede: 'Each was read from the sheet. None of them limits the envelope until it is decided.',
+      /*
+        Rewritten 17 Oct 2026. "None of them limits the envelope until it is decided" stopped
+        being true once a printed FAR became the GFA's cross-check: that FAR is not applied,
+        and the limit it states still binds through the GFA. Each reason says which case it is.
+      */
+      lede: 'Each was read from the sheet and is not applied as printed. The reason beside it says what the study does instead: checks it against another figure on the sheet, takes the limit from another rule, or leaves a question for you.',
     },
     planPick: 'Select a boundary’s number to classify it here.',
     edgeMarker: (i: number, cls: string | null): string =>
@@ -352,6 +357,11 @@ export const EN = {
       done: 'Done',
       pin: { ENTRY_EXIT: 'Entrance', ENTRY: 'Entry', EXIT: 'Exit' },
     },
+    // 17 Oct 2026: the run is refused on these; the plot step says so before four more steps are filled.
+    sheetBlocking: {
+      title: 'Limits the affection plan leaves open, which stop the study',
+      lede: 'The study does not fill a limit the plot’s own sheet leaves out, and does not borrow one from a neighbouring plot. Each must come from the instrument that states it: the master plan, the DCR, or this plot’s project brief.',
+    },
   },
 
   sheet: {
@@ -378,6 +388,11 @@ export const EN = {
       corners: 'Corners',
       issued: 'Issued',
       reference: 'Reference',
+      // Read since 17 Oct 2026 and shown nowhere until now.
+      developerPlotNo: 'Developer’s plot number',
+      landUseSplit: 'Land use split',
+      expires: 'Valid until',
+      roadsUnplaced: 'Roads on no side',
     },
     cornersRead: (n: string, area: string): string => (area ? `${n}, closing to ${area} m²` : n),
     decide: 'Needs your decision',

@@ -499,6 +499,14 @@ export function runPipeline(input: RunInput): RunOutput {
       community: input.plot.community,
       shape_class: input.plot.shapeClass,
       frontage_count: input.plot.frontageCount,
+      /*
+        The plot's own number, as `envelope.ts` carries it (17 Oct 2026). Every rule
+        built from the plot's sheet is fenced to it, and this context is the one
+        parking resolves in: without it the sheet's parking requirement matched
+        nothing and Table B.13 answered in its place, cited, on every plot whose
+        sheet B.7.2.6.1 puts above it.
+      */
+      plot_number: input.plot.plotNumber,
     },
   };
 
@@ -990,6 +998,7 @@ export function runPipeline(input: RunInput): RunOutput {
       actor: input.actor,
     },
     targetUnits,
+    saleableEfficiency: efficiencyTraced,
     areaPerLevelM2: envelope.podiumFootprint.value,
     levelsAvailable: parkingLevelsAvailable,
     usableFraction: input.parkingUsableFraction,

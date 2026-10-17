@@ -439,6 +439,24 @@ describe('IC1-CTYL-16_011 — a front face, and three questions the sheet does n
     expect(facts.edges.accessSide).toBeUndefined();
   });
 
+  /*
+    17 Oct 2026: both gaps used to claim what the sheets do print. Rendered, the
+    Access Side cell holds a drawn "*"; 6457790 prints "ROAD 8.60M". What stays
+    true is narrower, and that is all either sentence may say.
+  */
+  it('never says the access box is empty or that no road width is printed', () => {
+    const access = facts.edges.missing.find((m) => m.field === 'boundary.access_side')!.consequence;
+    expect(access).not.toMatch(/box is empty/);
+    // Said on the Municipality's and the DDA's sheets too, which have no Access Side box: it may not claim one.
+    expect(access).toMatch(/^No access side is read from this sheet\./);
+    expect(access).not.toMatch(/^The sheet’s Access Side box/);
+    expect(access).toMatch(/Where a sheet has an Access Side box/);
+    expect(access).toMatch(/\(\*\), drawn rather than typed/);
+    const rank = facts.edges.missing.find((m) => m.field === 'boundary.road_hierarchy')!.consequence;
+    expect(rank).not.toMatch(/no carriageway width/);
+    expect(rank).toMatch(/A sheet may print a road’s name or its width, but neither is a rank/);
+  });
+
   it('finds no road name, because the drawing panel holds no text at all', () => {
     expect(facts.edges.roadLabels).toEqual([]);
   });

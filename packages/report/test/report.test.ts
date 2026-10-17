@@ -1184,6 +1184,11 @@ describe('the study report', () => {
     expect(ar).toContain(esc('Tower: Front = 0m, Sides & Rear = 3m'));
     expect(ar).not.toContain('does not say which road is the front');
     expect(ar).not.toContain('Collapsing it to one distance');
+    // 17 Oct 2026: a printed FAR listed here is the GFA's cross-check, and the limit binds — "none cut the envelope" was false.
+    expect(en).not.toContain('none of them cut the envelope');
+    expect(en).toContain('none is applied as printed');
+    expect(ar).not.toContain('ولم يقطع أي منها الغلاف');
+    expect(ar).toContain('ولا يطبق أي منها كما طبع');
     // No sheet, or a run stored before the list was kept: no heading that would read as "nothing left out".
     for (const nb of [{ notBound: null }, {}, { notBound: [] }]) {
       expect(studyReportHtml(run, { locale: 'en', sheets: [], building: null, ...nb })).not.toContain(

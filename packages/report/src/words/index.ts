@@ -12,3 +12,4 @@ export { INVARIANT } from './engine-run-notes.js';
 export type { Locale } from './locale.js';
 export { METRIC_AR, type MetricWords } from './metric-notes.js';
 export { NOT_BOUND_FIELD } from './tower-notes.js';
+export { BINDING_FIELD } from './binding-notes.js';

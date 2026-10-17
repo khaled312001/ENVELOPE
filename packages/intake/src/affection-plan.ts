@@ -213,6 +213,12 @@ export interface SideRoad {
   readonly widthM: string;
 }
 
+/** What is said under `unplacedRoads`, every time. */
+export const UNPLACED_ROADS_NOTE =
+  'The drawing prints these roads, and no numbered side is nearest each in turn, so none is placed ' +
+  'on a side. Its width is information, never a road’s rank; which boundary it runs along is for ' +
+  'the reader to say on the plot step.';
+
 export interface AffectionPlanFacts {
   readonly parcelId?: Traced<string>;
   readonly community?: Traced<string>;
@@ -273,6 +279,12 @@ export interface AffectionPlanFacts {
   readonly boundaryDimensionsM?: Traced<readonly string[]>;
   /** Each road label the drawing sets beside a `SIDE n`, with the width it prints. */
   readonly sideRoads?: Traced<readonly SideRoad[]>;
+  /**
+   * Road labels the drawing prints that no `SIDE n` claims as its nearest (17 Oct
+   * 2026). They used to be dropped, so a sheet printing three roads read as
+   * printing two. Published as printed, with `UNPLACED_ROADS_NOTE`; never placed.
+   */
+  readonly unplacedRoads?: Traced<readonly string[]>;
   /** Fields the sheet does not print. The caller must resolve these. */
   readonly missing: readonly MissingField[];
   /** Arithmetic the sheet asserts about itself, re-checked. */
@@ -1142,18 +1154,18 @@ export function readFacts(
             : /*
                 A TABLE READ IS NOT A TABLE APPLIED. Where every cell is a
                 distance or N/A the table is published whole as `sideSetbacks`,
-                but nothing binds it yet (`StatedLimits.setbacksBySide` waits for
-                `rules/instruments/sheet.ts`), and `facts.setbacks` stays empty
-                because a front / side / rear schedule cannot say "side 1 is 5 m".
-                Saying nothing here left the sheet step printing "Not printed"
-                beside a sheet with eight numbers on it, while the run took its
-                setbacks from the general rules without a word. So the gap stays,
-                and says exactly that, until the binder lands.
+                and `facts.setbacks` stays empty because a front / side / rear
+                schedule cannot say "side 1 is 5 m". Since 17 Oct 2026
+                `rules/instruments/sheet.ts` binds each side to the boundary it is
+                — but only where the plot was entered as the sheet's surveyed
+                ring, leg for leg, since a side is a surveyed leg and not a kind
+                of boundary. So the gap stays and says exactly when the table
+                binds and what governs where it does not.
               */
               sideTable?.ok && sideCells.every((c) => c.kind === 'NOT_APPLICABLE')
             ? 'This sheet prints "N/A" in every cell of its setback table: it sets no setback. Setbacks must come from the plot guidelines, the master plan or the DCR, or be set by a named user.'
             : sideTable?.ok && !sideCells.some((c) => c.kind === 'SEE_NOTES')
-            ? `This sheet prints its setbacks per numbered side, not per face: «${sideTable.raw}». The table is read, but no setback from it is applied to the study yet. Until it is, the study’s setbacks do not come from this sheet: they come from the general rules, and a tower setback typed on the plot step under a named user overrides them.`
+            ? `This sheet prints its setbacks per numbered side, not per face: «${sideTable.raw}». Each side binds the boundary the drawing places it on, the building row the tower and the podium row the podium, where the plot is entered from the sheet’s coordinate table. On a side the drawing does not place, or a plot entered another way, the setback comes from the general rules, and a tower setback typed on the plot step under a named user overrides them.`
             : sideTable?.ok &&
               quarterNote &&
               sideTable.sides.every((s) => s.building.kind === 'SEE_NOTES' && s.podium.kind !== 'DISTANCE')
@@ -1501,12 +1513,20 @@ export function readFacts(
         'm',
       );
     }
-    const { paired } = unifiedSideRoads(page);
+    const { paired, unpaired } = unifiedSideRoads(page);
     if (paired.length > 0) {
       facts.sideRoads = fromCell(
         'side_roads',
         paired.map((r): SideRoad => ({ side: r.side, verbatim: r.verbatim, widthM: r.widthM })),
         { ...unionCell(paired.map((r) => r.box), page.page), text: paired.map((r) => r.box.text).join(' · ') },
+      );
+    }
+    // A road no side claims is still a road the sheet prints: published, said, and placed on nothing.
+    if (unpaired.length > 0) {
+      facts.unplacedRoads = fromCell(
+        'unplaced_roads',
+        unpaired.map((r) => r.text.replace(/\s+/g, ' ').trim()),
+        { ...unionCell(unpaired, page.page), text: unpaired.map((r) => r.text.trim()).join(' · ') },
       );
     }
     if (unifiedExpires) facts.expiryDate = fromCell('expiry_date', unifiedExpires.text.trim(), unifiedExpires);

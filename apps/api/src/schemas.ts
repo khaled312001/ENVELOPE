@@ -184,6 +184,14 @@ export const runRequest = z.object({
    */
   columnGapStatementId: z.string().min(1).optional(),
   /**
+   * The project brief the actor chose to apply where the plot's own affection
+   * plan is silent (17 Oct 2026) — e.g. plot 5180178, whose sheet prints no FAR
+   * and whose brief prints FAR 5 and 11,829.35 m². Offered, never pre-selected;
+   * refused (422) when it is not on file for this plot. Its values are marked as
+   * the brief's on every one of them, never as the authority's.
+   */
+  projectBriefId: z.string().min(1).max(120).optional(),
+  /**
    * The parking arrangement the actor picked from a previous run's
    * `levelPlan.arrangements` — USER_SET under the actor. Absent, the one placing
    * the most bays is laid out. One this level cannot pack comes back 422.

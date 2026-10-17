@@ -152,7 +152,8 @@ const EN = {
   excludedTitle: 'Rules considered and not applied',
   notBoundTitle: 'Limits the affection plan states that this study does not apply',
   notBoundLede:
-    'Each is printed on the plot’s own sheet and was read; none of them cut the envelope. They are listed so the sheet is not reported as saying less than it does.',
+    // 17 Oct 2026: "none of them cut the envelope" was false once a printed FAR became the GFA's cross-check.
+    'Each is printed on the plot’s own sheet and was read, and none is applied as printed. The reason beside each says what the study does instead: checks it against another figure on the sheet, takes the limit from another rule, or leaves it as a question. They are listed so the sheet is not reported as saying less than it does.',
   colField: 'Limit',
   colStated: 'As printed',
   colOutcome: 'Outcome',
@@ -389,7 +390,7 @@ const AR: Words = {
   excludedTitle: 'قواعد درست ولم تطبق',
   notBoundTitle: 'حدود يذكرها مخطط الأفكشن ولا تطبقها هذه الدراسة',
   notBoundLede:
-    'كل منها مطبوع في مخطط القطعة نفسها وقرئ، ولم يقطع أي منها الغلاف. تذكر هنا حتى لا ينقل عن المخطط أقل مما يقول.',
+    'كل منها مطبوع في مخطط القطعة نفسها وقرئ، ولا يطبق أي منها كما طبع. السبب بجانب كل منها يذكر ما تفعله الدراسة بدلا منه: تقارنه برقم آخر على المخطط، أو تأخذ الحد من قاعدة أخرى، أو تتركه سؤالا. تذكر هنا حتى لا ينقل عن المخطط أقل مما يقول.',
   colField: 'الحد',
   colStated: 'كما طبع',
   colOutcome: 'النتيجة',

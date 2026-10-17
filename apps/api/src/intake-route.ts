@@ -27,6 +27,7 @@ import {
   blockingGaps,
   crossChecksPassed,
   parseAffectionPlan,
+  UNPLACED_ROADS_NOTE,
   type AffectionPlanFacts,
 } from '@envelope/intake';
 import { ProvenanceGraph, toWire, Tracer, type Traced } from '@envelope/core';
@@ -181,9 +182,10 @@ function present(facts: AffectionPlanFacts): unknown {
       WHAT THE READERS ADDED ON 17 OCT 2026: the developer plot number and the
       expiry date as fields; the typed parking requirement, the per-side setback
       table, the land-use split, the general notes, and on the unified site plan
-      the boundary dimensions and the road beside each side. Read and cited,
-      and bound by no rule yet — that is `rules/instruments/sheet.ts`'s next
-      step. Their Decimals are sent as the strings JSON makes of them, here
+      the boundary dimensions and the road beside each side. Read and cited;
+      the parking requirement and the per-side table are bound by
+      `rules/instruments/sheet.ts` when the plot is filed, the rest are
+      information. Their Decimals are sent as the strings JSON makes of them, here
       rather than by whoever serialises the response, so an in-process caller
       and an HTTP one receive the same object.
     */
@@ -195,6 +197,8 @@ function present(facts: AffectionPlanFacts): unknown {
     generalNotes: asJson(facts.generalNotes),
     boundaryDimensionsM: asJson(facts.boundaryDimensionsM),
     sideRoads: asJson(facts.sideRoads),
+    // A road no side claims, with the sentence that says so: never dropped, never placed.
+    unplacedRoads: facts.unplacedRoads ? { ...(asJson(facts.unplacedRoads) as object), note: UNPLACED_ROADS_NOTE } : null,
 
     missing: facts.missing,
     crossChecks: facts.crossChecks,

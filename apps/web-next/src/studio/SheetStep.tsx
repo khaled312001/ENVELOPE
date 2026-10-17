@@ -136,18 +136,52 @@ export function SheetPanel({
                   {/* Identifiers and words as printed: a plot number grouped into thousands is a different string. */}
                   <Fact label={t.sheet.fields.plotNumber} text={facts.parcelId?.value} mono />
                   <Fact label={t.sheet.fields.community} text={facts.community?.value} />
+                  {facts.developerPlotNo ? (
+                    <Fact label={t.sheet.fields.developerPlotNo} text={facts.developerPlotNo.value} mono />
+                  ) : null}
                   <Fact label={t.sheet.fields.landUse} text={facts.landUse?.value} />
+                  {/* The split line by line: a mixed-use sheet's areas are limits a single land-use word hides. */}
+                  {facts.landUseSplit && facts.landUseSplit.value.length > 0 ? (
+                    <Fact
+                      label={t.sheet.fields.landUseSplit}
+                      text={facts.landUseSplit.value.map((s) => `${s.use}: ${grouped(s.areaM2)} m²`).join('; ')}
+                    />
+                  ) : null}
                   <Fact label={t.sheet.fields.area} value={facts.totalAreaSqm} />
                   <Fact label={t.sheet.fields.far} value={facts.far} />
                   <Fact label={t.sheet.fields.gfa} value={facts.gfaSqm} />
                   <Fact label={t.sheet.fields.height} text={facts.height?.value.raw} />
-                  <Fact label={t.sheet.fields.setbacks} text={facts.setbacks?.value.raw} />
+                  {/*
+                    A per-side table is the sheet's setbacks, and "not printed" beside it was false (17 Oct 2026).
+                    Its placement is said with it: which boundary each side is, or why none could be placed.
+                  */}
+                  {facts.setbacks || !facts.sideSetbacks ? (
+                    <Fact label={t.sheet.fields.setbacks} text={facts.setbacks?.value.raw} />
+                  ) : (
+                    <div className="grid grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)] items-baseline gap-3 px-3 py-2" data-sheet-fact="side-setbacks">
+                      <dt className="text-[12px] text-secondary">{t.sheet.fields.setbacks}</dt>
+                      <dd className="grid min-w-0 gap-1 break-words text-[13px] text-fg">
+                        <EngineText className="figure">{facts.sideSetbacks.value.raw}</EngineText>
+                        <EngineNote className="text-[12px] text-secondary" text={facts.sideSetbacks.value.placement} />
+                      </dd>
+                    </div>
+                  )}
                   <Fact label={t.sheet.fields.coverage} text={facts.coverage?.value.raw} />
+                  {facts.unplacedRoads && facts.unplacedRoads.value.length > 0 ? (
+                    <div className="grid grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)] items-baseline gap-3 px-3 py-2" data-sheet-fact="unplaced-roads">
+                      <dt className="text-[12px] text-secondary">{t.sheet.fields.roadsUnplaced}</dt>
+                      <dd className="grid min-w-0 gap-1 break-words text-[13px] text-fg">
+                        <EngineText className="figure">{facts.unplacedRoads.value.join(' · ')}</EngineText>
+                        <EngineNote className="text-[12px] text-secondary" text={facts.unplacedRoads.note} />
+                      </dd>
+                    </div>
+                  ) : null}
                   {facts.parkingRequirement || facts.parkingDeferredTo ? (
                     <Fact label={t.sheet.fields.parking} text={(facts.parkingRequirement ?? facts.parkingDeferredTo)?.value} />
                   ) : null}
                   <Fact label={t.sheet.fields.corners} text={corners ? t.sheet.cornersRead(String(corners.points.value.length), corners.areaM2 ? grouped(corners.areaM2.value) : '') : undefined} />
                   <Fact label={t.sheet.fields.issued} text={facts.issueDate?.value} mono />
+                  {facts.expiryDate ? <Fact label={t.sheet.fields.expires} text={facts.expiryDate.value} mono /> : null}
                   {facts.drawingRef ? <Fact label={t.sheet.fields.reference} text={facts.drawingRef.value} mono /> : null}
                 </dl>
               </section>

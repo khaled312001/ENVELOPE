@@ -216,7 +216,7 @@ export function buildInvariantSubject(
  * every larger one does. Publishing the largest, or an average, would let a
  * violating edge hide behind a compliant sibling.
  */
-function observationsFrom(output: RunOutput): Record<string, Observation> {
+export function observationsFrom(output: RunOutput): Record<string, Observation> {
   const { envelope, parking, capacity } = output;
   const obs: Record<string, Observation> = {};
 
@@ -239,6 +239,23 @@ function observationsFrom(output: RunOutput): Record<string, Observation> {
     }
   }
   for (const [parameterId, applied] of worstByParameter) {
+    obs[parameterId] = quantity(applied.traced, 'm');
+  }
+  /*
+    THE PODIUM'S OWN ROW, OBSERVED (17 Oct 2026). The sheet's podium row binds
+    `setback.podium.<class>`, and with nothing published under that key the
+    validator could only ever say it had no observation. The engine publishes the
+    podium setback on each edge a sheet rule set — never on an edge the statement
+    put on the boundary or one where the sheet left a choice the run ASSUMED, which
+    no rule governed — and the least per parameter is held, as for the tower.
+  */
+  const worstPodium = new Map<string, NonNullable<typeof envelope.appliedPodiumSetbacks>[number]>();
+  for (const applied of envelope.appliedPodiumSetbacks ?? []) {
+    if (applied.traced.provenanceClass === 'ASSUMED') continue;
+    const held = worstPodium.get(applied.parameterId);
+    if (!held || applied.valueM.lt(held.valueM)) worstPodium.set(applied.parameterId, applied);
+  }
+  for (const [parameterId, applied] of worstPodium) {
     obs[parameterId] = quantity(applied.traced, 'm');
   }
 

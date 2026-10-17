@@ -17,6 +17,8 @@
  */
 
 import { runPipeline } from '@envelope/capacity';
+import { Decimal } from '@envelope/core';
+import { COLUMN_GAP_STATEMENT, PODIUM_SETBACK_STATEMENT } from '@envelope/rules';
 import { buildingDxf, layerName, sheetDxf } from '@envelope/exports';
 import { buildBuildingScene, buildingGlb, carsPerLevel, GLB_NOTICE, type ScenePalette } from '@envelope/massing';
 import { initGeometry } from '@envelope/geometry';
@@ -27,7 +29,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { parseDxf } from '../../../test-support/dxf.js';
-import { META, RECT_120x80, RECT_80x40, runInput, SKEWED } from '../../../test-support/pipeline.js';
+import { META, pt, RECT_120x80, RECT_80x40, runInput, SKEWED } from '../../../test-support/pipeline.js';
 import { SheetView } from '../src/components/DrawingSet.js';
 
 beforeAll(async () => {
@@ -150,6 +152,20 @@ const AISLE_MM = 6000 - 10;
 */
 const A_104 = { basements: 3, groundIsParking: false, podiumAboveGround: 5, podiumParkingLevels: 5 } as const;
 
+/** Plot 6468096's ring, solved from its affection plan's corner table. */
+const P6468096 = [pt(3.148, 0), pt(82.998, 0), pt(87.25, 4.89), pt(87.25, 51.38), pt(0, 51.38), pt(0, 4)];
+const ref = (s: typeof PODIUM_SETBACK_STATEMENT) => ({
+  statementId: s.statementId,
+  statedBy: s.statedBy.name,
+  statedOn: s.statedOn,
+  verbatim: s.verbatim,
+});
+/** What `apps/web-next` sends with every run: the podium on the boundary, and the column gap. */
+const STUDIO = {
+  podiumAtBoundaryStatement: ref(PODIUM_SETBACK_STATEMENT),
+  columnGapStatement: { ...ref(COLUMN_GAP_STATEMENT), gapM: new Decimal(COLUMN_GAP_STATEMENT.value) },
+};
+
 // --- what stands on a bay, measured on the drawing --------------------------
 /*
   AREA, NOT TOUCH. A bay and the aisle it opens onto share an edge, and every
@@ -215,16 +231,28 @@ const CASES = [
   { name: '120 x 80', ring: RECT_120x80, podiumLevels: undefined, levelSchedule: undefined },
   { name: 'skewed', ring: SKEWED, podiumLevels: undefined, levelSchedule: undefined },
   { name: '80 x 40, ground floor not parking (6468096)', ring: RECT_80x40, podiumLevels: undefined, levelSchedule: A_104 },
+  /*
+    Plot 6468096's own ring, run as the studio sends it: laid out as the one-way
+    loop on 5.5 m aisles (17 Oct 2026), so every renderer is counted on it too.
+  */
+  { name: 'plot 6468096, the one-way loop', ring: P6468096, podiumLevels: undefined, levelSchedule: A_104, studio: true },
 ] as const;
 
-describe.each(CASES)('$name', ({ ring, podiumLevels, levelSchedule }) => {
+describe.each(CASES)('$name', (c) => {
+  const { ring, podiumLevels, levelSchedule } = c;
   const out = (): ReturnType<typeof runPipeline> =>
     runPipeline(
       runInput(ring, {
         ...(podiumLevels === undefined ? {} : { podiumLevels }),
         ...(levelSchedule === undefined ? {} : { levelSchedule }),
+        ...('studio' in c ? STUDIO : {}),
       }),
     );
+
+  it('lays the loop out where the case is the loop', () => {
+    if (!('studio' in c)) return;
+    expect(out().levelPlan!.layout.arrangement).toBe('ONE_WAY_LOOP');
+  });
 
   it('draws, on every parking level, in every renderer, exactly the bays the engine placed', () => {
     const model = out().building;
@@ -401,7 +429,10 @@ describe.each(CASES)('$name', ({ ring, podiumLevels, levelSchedule }) => {
         ...(level.parking.rampStrip ? [level.parking.rampStrip] : []),
       ];
       expect(nodes.length, `${level.id} draws bays and no aisle`).toBeGreaterThan(0);
-      expect(components(nodes, AISLE_MM), `${level.id} draws ${nodes.length} aisles`).toBe(1);
+      // The level's own driveway: 6 m two-way, or the one-way loop's 5.5 m (Table B.11).
+      const opening = Number(level.parking.module.aisleWidthM) * 1000 - 10;
+      expect(opening).toBeLessThanOrEqual(AISLE_MM);
+      expect(components(nodes, opening), `${level.id} draws ${nodes.length} aisles`).toBe(1);
       checked += 1;
     }
     expect(checked, 'no parking level was measured, so nothing was proved').toBeGreaterThan(0);
@@ -576,7 +607,8 @@ describe('a ground floor the schedule does not give to parking', () => {
 */
 describe('the cross aisle, removed', () => {
   it('leaves the level in islands, which is the defect it was added to end', () => {
-    const model = runPipeline(runInput(RECT_120x80, {})).building;
+    // Picked: the one-way loop, which has no cross aisle, is this plot's default since 17 Oct 2026.
+    const model = runPipeline(runInput(RECT_120x80, { levelPlan: { arrangement: 'WIDTH' } })).building;
     let doctored = 0;
     for (const level of model.levels) {
       if (!level.parking) continue;

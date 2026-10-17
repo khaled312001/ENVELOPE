@@ -91,14 +91,26 @@ describe('a column gap after every three bays', () => {
       expect(runs.length).toBeGreaterThan(0);
       let gaps = 0;
       for (const run of runs) {
-        // Every group but a run's last is exactly three; the last may be shorter, never longer.
-        run.slice(0, -1).forEach((n) => expect(n).toBe(3));
+        // Every group inside a run is exactly three. The last may be shorter, and so
+        // may the first where a drive or a one-way turn took the bays at its start
+        // (the one-way loop drops a bay behind a turn rather than counting it).
+        run.slice(1, -1).forEach((n) => expect(n).toBe(3));
+        expect(run[0]!).toBeLessThanOrEqual(3);
         expect(run[run.length - 1]!).toBeLessThanOrEqual(3);
         gaps += run.length - 1;
       }
       expect(gaps).toBeGreaterThan(0);
     });
   }
+
+  it('starts every module run on a whole group of three, where nothing takes a bay at its start', () => {
+    for (const [w, h] of SIZES) {
+      const out = lay(w, h, true, { arrangement: { id: 'WIDTH' } });
+      for (const run of lines(out.rects).flatMap(groupsOf)) {
+        run.slice(0, -1).forEach((n) => expect(n).toBe(3));
+      }
+    }
+  });
 
   it('without the statement, the bays still pack shoulder to shoulder, as every older run did', () => {
     const out = lay('80', '40', false);

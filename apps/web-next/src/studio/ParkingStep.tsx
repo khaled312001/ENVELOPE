@@ -39,9 +39,16 @@ function accessibleLevel(a: NonNullable<LevelPlanView['accessible']>): Accessibl
   every sheet, the DXF and the 3D view are redrawn by the engine — never a second
   drawing made here. The list is the same fixed candidates each time: nothing
   moves a ramp or a core to look for more bays.
+
+  Since 17 Oct 2026 the default is not always the most bays: it is the most bays
+  among the options whose every dead-end driveway serves eight or fewer (DBC
+  B.7.2.3.3 ¶8). So each option says its longest dead end where it is over eight,
+  and the engine's default is marked by the id the engine sent — never by the
+  rule re-derived here.
 */
 function ParkingOptions({
   options,
+  byDefault,
   drawn,
   picked,
   busy,
@@ -49,6 +56,7 @@ function ParkingOptions({
   onArrange,
 }: {
   readonly options: NonNullable<LevelPlanView['arrangements']>;
+  readonly byDefault: ParkingArrangementId | null;
   readonly drawn: ParkingArrangementId | null;
   readonly picked: ParkingArrangementId | null;
   readonly busy: boolean;
@@ -80,7 +88,13 @@ function ParkingOptions({
                 <p className="figure !whitespace-normal text-tertiary">
                   {o.bayCount > 0 ? t.parking.options.perLevel(o.bayCount) : t.parking.options.none}
                   {o.bayCount > 0 && o.bayCount === most ? ` · ${t.parking.options.best}` : ''}
+                  {o.id === byDefault ? ` · ${t.parking.options.byDefault}` : ''}
                 </p>
+                {Math.max(0, ...(o.deadEnds ?? [])) > 8 ? (
+                  <p className="figure !whitespace-normal text-secondary">
+                    {t.parking.options.deadEnd(Math.max(...(o.deadEnds ?? [])))}
+                  </p>
+                ) : null}
               </div>
               {isDrawn ? (
                 <span className="flex items-center gap-1 text-[12px] text-accent-strong">
@@ -214,6 +228,7 @@ export function ParkingPanel({
         {lp.arrangements && lp.arrangements.length > 1 ? (
           <ParkingOptions
             options={lp.arrangements}
+            byDefault={lp.defaultArrangement ?? null}
             drawn={lp.arrangement ?? null}
             picked={picked}
             busy={busy}

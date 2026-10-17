@@ -204,9 +204,13 @@ export const runRequest = z.object({
   /**
    * The parking arrangement the actor picked from a previous run's
    * `levelPlan.arrangements` — USER_SET under the actor. Absent, the one placing
-   * the most bays is laid out. One this level cannot pack comes back 422.
+   * the most bays among those whose every dead end serves eight or fewer
+   * (DBC B.7.2.3.3 ¶8) is laid out, or the most bays where none does
+   * (`DEFAULT_ARRANGEMENT_RULE`). One this level cannot pack comes back 422.
    */
-  parkingArrangement: z.enum(['WIDTH', 'DEPTH', 'PERIMETER', 'SLOPED', 'FIELD_WIDTH', 'FIELD_DEPTH']).optional(),
+  parkingArrangement: z
+    .enum(['WIDTH', 'DEPTH', 'PERIMETER', 'SLOPED', 'FIELD_WIDTH', 'FIELD_DEPTH', 'ONE_WAY_LOOP'])
+    .optional(),
   /**
    * Tower setbacks typed by the actor, by edge, in metres. USER_SET. An edge the
    * affection plan governs refuses a typed value (422, in a sentence).

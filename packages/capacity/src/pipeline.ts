@@ -1009,6 +1009,8 @@ export function runPipeline(input: RunInput): RunOutput {
       storeyHeightM: envelope.floorToFloorM,
       ...(schedule ? { rampPlan: { schedule, actor: input.actor } } : {}),
       slopedRing: parkingLevelsAvailable >= 2,
+      // Sizes the sloped ring's level landing for the accessible bays of every level that shares it.
+      parkingLevelCount: parkingLevelsAvailable,
       ...(input.levelPlan?.rampType === undefined
         ? {}
         : { rampType: { type: input.levelPlan.rampType, actor: input.actor } }),
@@ -1059,6 +1061,9 @@ export function runPipeline(input: RunInput): RunOutput {
           tracer,
           level: entryLevel,
           ...(plan.slopedFloor ? { floorGradientPct: plan.slopedFloor.gradientPct } : {}),
+          ...(plan.slopedFloor?.landing
+            ? { landing: { world: plan.slopedFloor.landing.world, gradientPct: plan.slopedFloor.landing.gradientPct } }
+            : {}),
           rects: plan.grade?.rects ?? plan.rects,
           levelBays: plan.grade?.bayCount ?? plan.bayCount,
           others: { perLevel: plan.bayCount, levels: parkingLevelsAvailable - 1 },

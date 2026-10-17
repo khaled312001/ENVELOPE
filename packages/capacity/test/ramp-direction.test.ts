@@ -474,9 +474,17 @@ describe('the ring aisle sloped as the ramp — the client\'s own podium', () =>
     const r = big();
     expect(r.slopedFloor).toBeDefined();
     expect(r.ramp).toBeUndefined();
-    // Lap 2 × ((40 − 17) + (51 − 17)) = 114 m; 3.2 / 114 = 2.807…% → 2.81, rounded up.
+    // Lap 2 × ((40 − 17) + (51 − 17)) = 114 m; 3.2 / 114 = 2.807…%, above the 2%
+    // accessible parking may fall, so a stretch is kept level for the accessible
+    // bays and the rest of the lap climbs the storey: 3.2 / (114 − landing).
     expect(r.slopedFloor!.lapM.toString()).toBe('114');
-    expect(r.slopedFloor!.gradientPct.value.toString()).toBe('2.81');
+    const landing = r.slopedFloor!.landing!;
+    expect(landing.gradientPct.value.toString()).toBe('0');
+    const climbing = new Decimal('114').minus(landing.lengthM.value);
+    expect(r.slopedFloor!.gradientPct.value.toString()).toBe(
+      new Decimal('3.2').div(climbing).times(100).toDecimalPlaces(2, Decimal.ROUND_UP).toString(),
+    );
+    expect(r.slopedFloor!.gradientPct.value.gt('2.81')).toBe(true);
     expect(r.slopedFloor!.gradientPct.value.lte(4)).toBe(true);
   });
 

@@ -418,7 +418,14 @@ export interface OpeningPlacementBody {
  * This is the screen the 30 Aug 2026 meeting was about. Every rectangle here was
  * placed by the engine; the drawing code below adds a colour and nothing else.
  */
-export type ParkingArrangementId = 'WIDTH' | 'DEPTH' | 'PERIMETER' | 'SLOPED' | 'FIELD_WIDTH' | 'FIELD_DEPTH';
+export type ParkingArrangementId =
+  | 'WIDTH'
+  | 'DEPTH'
+  | 'PERIMETER'
+  | 'SLOPED'
+  | 'FIELD_WIDTH'
+  | 'FIELD_DEPTH'
+  | 'ONE_WAY_LOOP';
 
 export interface LevelPlanView {
   readonly bayCount: TracedWire;
@@ -449,7 +456,11 @@ export interface LevelPlanView {
     readonly id: ParkingArrangementId;
     readonly bayCount: number;
     readonly refusal?: string;
+    /** The bays each dead-end driveway serves (B.7.2.3.3 ¶8). Absent on runs stored before 17 Oct 2026. */
+    readonly deadEnds?: readonly number[];
   }[];
+  /** The arrangement laid out when nobody picks. Absent on runs stored before 17 Oct 2026. */
+  readonly defaultArrangement?: ParkingArrangementId;
   /**
    * The bays set aside on the level the street reaches: accessible ones under
    * DBC C.6.4 with their access aisles, and preferred ones under B.7.2.6.2.

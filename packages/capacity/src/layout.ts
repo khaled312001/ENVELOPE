@@ -61,15 +61,25 @@ import {
   type Tracer,
 } from '@envelope/core';
 
+/*
+  Two cycles, both safe: `dead-ends.ts` and `accessible.ts` read this module's
+  constants inside their functions, and this module calls theirs inside
+  `layoutParkingLevel`. Nothing on either side is read while a module loads.
+*/
+import { ACCESSIBLE_SLOPE_B7231, accessibleRequired, MAX_ACCESSIBLE_SLOPE_PCT } from './accessible.js';
 import {
   bayIsServed,
+  oneWayServes,
   openingM,
   servingNode,
   traceCirculation,
+  traceOneWay,
   type CircRect,
 } from './circulation.js';
+import { DEAD_END_B7233, DEAD_END_MAX_BAYS, deadEndBays } from './dead-ends.js';
 import {
   MAX_PARKED_SLOPE,
+  PARKED_SLOPE_B7231,
   rampHeadroom,
   slopedFloorGradient,
   straightRampRequirement,
@@ -211,6 +221,12 @@ export interface PlacedRect extends Rect {
   readonly kind: RectKind;
   /** Row index, so a reviewer can talk about "the third module". */
   readonly row: number;
+  /**
+   * On a one-way aisle, which way the traffic runs along its long axis: `1`
+   * towards larger x (or y), `-1` towards smaller. Absent on everything two-way.
+   * Read by the one-way flood (`traceOneWay`) and by the drawing's arrow.
+   */
+  readonly travel?: 1 | -1;
 }
 
 /**
@@ -333,6 +349,12 @@ export interface ParkingLayoutInput {
    */
   readonly slopedRing?: boolean;
   /**
+   * How many parking levels share this layout. Read only to size the sloped
+   * ring's level landing for the accessible bays Table C.17 asks of them all
+   * (`levelLanding`); absent, the schedule's count, and two where there is none.
+   */
+  readonly parkingLevelCount?: number;
+  /**
    * The core, where it stands on this level, in the footprint's local metres —
    * x along the width, y along the depth.
    *
@@ -384,6 +406,12 @@ export interface ParkingLayoutResult {
   readonly arrangement: ParkingArrangement;
   /** Every arrangement packed on this level, in a fixed order, with its count — the options a reader picks from. */
   readonly arrangements: readonly ArrangementCandidate[];
+  /**
+   * The one laid out when nobody picks (`DEFAULT_ARRANGEMENT_RULE`), whatever was
+   * picked on this run: the options list marks it, and a screen never re-derives
+   * the rule to find it.
+   */
+  readonly defaultArrangement: ParkingArrangement;
   readonly losses: ParkingLosses;
   /**
    * The ramp strip's plan size, its kind and which way it runs, when the level
@@ -434,8 +462,23 @@ export interface ParkingLayoutResult {
   readonly headroom?: RampHeadroom;
   readonly slopedFloor?: {
     readonly lapM: Decimal;
+    /** The climbing part of the lap: the whole lap, or the lap less its level landing. */
     readonly gradientPct: TracedDecimal;
     readonly runs: readonly RampRun[] | undefined;
+    /**
+     * The stretch of one long side kept level, where the accessible bays stand
+     * (B.7.2.3.1: 2% at most), in the same local metres as `rects`. Laid only
+     * where the lap itself climbs more than 2%, and only where the rest of the
+     * lap then still climbs within 4%; `notes` says when it does not fit.
+     */
+    readonly landing?: {
+      readonly rect: Rect;
+      readonly lengthM: TracedDecimal;
+      /** Zero, traced: what `accessible.ts` holds against the 2%. */
+      readonly gradientPct: TracedDecimal;
+      /** Accessible bays, with their aisles, the wall run on it holds. */
+      readonly holds: number;
+    };
   };
   /**
    * The strip the deduction was taken from, in the same local metres as `rects`:
@@ -462,6 +505,11 @@ export interface ParkingLayoutResult {
   readonly baysUnderCore: number;
   /** Rows that came out partial, and why. Reported, not hidden. */
   readonly notes: readonly string[];
+  /**
+   * What this layout did for the columns, in one sentence: the gap it left, the
+   * clearance it charged, or neither. The note under every drawing says it.
+   */
+  readonly columns: string;
 }
 
 /**
@@ -929,6 +977,8 @@ export const ParkingArrangement = {
   SLOPED: 'SLOPED',
   FIELD_WIDTH: 'FIELD_WIDTH',
   FIELD_DEPTH: 'FIELD_DEPTH',
+  /** Bays to the walls and on islands, one-way 5.5 m aisles round them (Table B.11). See `packOneWayLoop`. */
+  ONE_WAY_LOOP: 'ONE_WAY_LOOP',
 } as const;
 export type ParkingArrangement = (typeof ParkingArrangement)[keyof typeof ParkingArrangement];
 
@@ -938,7 +988,41 @@ export interface ArrangementCandidate {
   readonly name: string;
   readonly bayCount: number;
   readonly refusal?: string;
+  /**
+   * The bays each dead-end driveway of this arrangement serves (DBC B.7.2.3.3
+   * ¶8, eight advised), measured as the drawing measures them. Empty where it
+   * has none; absent where it placed no bay.
+   */
+  readonly deadEnds?: readonly number[];
 }
+
+/**
+ * HOW THE ARRANGEMENT A READER DID NOT PICK IS CHOSEN. One constant, so that Eng.
+ * Mohamed's answer to the question it stands for is a one-line change.
+ *
+ * DBC B.7.2.3.3 ¶8: dead-end driveways "should serve a maximum of eight spaces".
+ * The arrangement with the most bays used to be laid out whatever its dead ends
+ * served, and on plot 6468096 that was modules along the width at 97 bays, with
+ * dead ends of 52 and 45: nearly every bay on the level opening onto an aisle the
+ * code says should serve eight. So the default is now the most bays AMONG the
+ * arrangements whose every dead end serves eight or fewer; where none does, the
+ * most bays, and the shortfall is said. The arrangement with the most bays is
+ * still packed, published with its dead ends and may be picked: a "should" ranks
+ * the candidates and never removes one.
+ *
+ * This chooses among the same fixed candidates on every run, all reported. It is
+ * not a search for where a ramp or a core goes — that is the optimiser of 34:37,
+ * which `PHASE_0_CLASSES` refuses.
+ *
+ * Asked and not yet answered: does he want the compliant count as the default,
+ * or the maximum with the dead ends in red? `MOST_BAYS` is the other answer.
+ */
+export const DefaultArrangementRule = {
+  MOST_BAYS_WITHIN_DEAD_END_LIMIT: 'MOST_BAYS_WITHIN_DEAD_END_LIMIT',
+  MOST_BAYS: 'MOST_BAYS',
+} as const;
+export type DefaultArrangementRule = (typeof DefaultArrangementRule)[keyof typeof DefaultArrangementRule];
+export const DEFAULT_ARRANGEMENT_RULE: DefaultArrangementRule = DefaultArrangementRule.MOST_BAYS_WITHIN_DEAD_END_LIMIT;
 
 // ---------------------------------------------------------------------------
 // The packer
@@ -1020,6 +1104,8 @@ interface Packing {
   readonly strandedBays: number;
   readonly baysUnderCore: number;
   readonly notes: readonly string[];
+  /** One-way loop only: the island depth no unit fills, which bounds how far its units can slide. */
+  readonly slackM?: Decimal;
   /** Why nothing could be packed this way round. Returned, not thrown: the other
    *  orientation may still work, and a throw would hide that. */
   readonly refusal: string | undefined;
@@ -2267,6 +2353,606 @@ function packField(o: FieldOptions): Packing {
   };
 }
 
+interface LoopOptions extends PackOptions {
+  /** The drive from the slab edge, where the level has no ramp: two-way, Table B.11. */
+  readonly driveWidthM: Decimal;
+}
+
+/** The first row an aisle across the loop's island carries; the next one is one more. */
+const LOOP_AISLE_ROW = 100;
+
+/**
+ * The one-way loop — bays against the four walls and on islands, and one-way
+ * aisles round them at Table B.11's 5.5 m for 90° parking.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY A SEVENTH CANDIDATE.
+ *
+ * Every other arrangement drives on 6.0 m two-way aisles, and on plot 6468096 the
+ * one with the most bays did it with dead ends serving 52 and 45 bays. The
+ * architect's own levels for that plot (A-101 to A-107) are none of the six: a
+ * one-way loop round the walls, islands of back-to-back bays inside it, aisles
+ * 5.50 m between bay rows, arrows the whole way round, and no dead end. Table
+ * B.11 has the row for it — "90° one way, driveway 5.5" — and it was transcribed
+ * in `BAY_STANDARDS` and never laid out.
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT IS FIXED.
+ *
+ * The ring is `packPerimeter`'s, one way round: along the near long side towards
+ * larger x, up the far short side, back along the far long side, down the near
+ * short side. The island is filled from the near long side outward with whole
+ * units — a row facing the ring, then pairs of back-to-back rows each side of an
+ * aisle that crosses the island from one short side of the ring to the other, all
+ * the same way — and a single-loaded aisle where one more row and its aisle fit
+ * but a pair does not. What is left over is said. The straight ramp stands at one
+ * end of the island, as on the perimeter ring. Nothing is searched: the core
+ * stands where the run put it, and an aisle it cuts is cut.
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT ONE WAY COSTS.
+ *
+ * `traceOneWay` floods the aisles with the traffic, so a bay counts only where a
+ * car that came in passes it and the loop leads back out. The bays behind a turn
+ * at the ring's corners are not on that path — reaching one means driving against
+ * the arrows — and an aisle the core cuts is a trap at both ends. Those bays are
+ * dropped and counted as stranded, never drawn.
+ */
+function packOneWayLoop(o: LoopOptions, fromFar = false, shiftM: Decimal = ZERO): Packing {
+  const notes: string[] = [];
+  const W = o.widthM;
+  const D = o.grossDepthM;
+  const L = o.bayLength;
+  const a = o.aisleWidth;
+  const band = L.plus(a);
+  if (W.lte(band.times(2)) || D.lte(band.times(2))) {
+    return refused(
+      `a ${W.toFixed(2)} × ${D.toFixed(2)} m level does not hold a one-way loop: two bay runs ` +
+        `and two ${a.toString()} m aisles need ${band.times(2).toFixed(2)} m each way`,
+    );
+  }
+  const inner = { x0: L, y0: L, x1: W.minus(L), y1: D.minus(L) };
+  const island = { x0: band, y0: band, x1: W.minus(band), y1: D.minus(band) };
+  const islandW = island.x1.minus(island.x0);
+  const islandD = island.y1.minus(island.y0);
+
+  // A core in a wall run costs the bays it covers; a core across the ring cuts the only loop.
+  for (const b of o.obstructions) {
+    const insideIsland =
+      b.x.gte(island.x0) && b.y.gte(island.y0) && b.x.plus(b.width).lte(island.x1) && b.y.plus(b.height).lte(island.y1);
+    const outsideRing =
+      b.x.plus(b.width).lte(inner.x0) || b.x.gte(inner.x1) || b.y.plus(b.height).lte(inner.y0) || b.y.gte(inner.y1);
+    if (!insideIsland && !outsideRing) {
+      return refused(
+        `the core (${b.width.toFixed(2)} × ${b.height.toFixed(2)} m at ${b.x.toFixed(2)}, ${b.y.toFixed(2)}) ` +
+          'stands across the one-way ring, and a loop cut once has no way round',
+      );
+    }
+  }
+
+  const rects: PlacedRect[] = [];
+  const bayAt = (x: Decimal, y: Decimal, w: Decimal, h: Decimal, row: number): void => {
+    rects.push({ kind: RectKind.BAY, row, x, y, width: w, height: h });
+  };
+
+  // --- the four wall runs, as on the perimeter ring --------------------------------
+  const acrossCount = baysAlong(o, W);
+  const sideStart = inner.y0.plus(a);
+  const sideEnd = inner.y1.minus(a);
+  const downCount = baysAlong(o, sideEnd.minus(sideStart));
+  if (acrossCount < 1) {
+    return refused(`a ${W.toFixed(2)} m wall holds no ${o.effectiveBayWidth.toString()} m bay run`);
+  }
+  for (let i = 0; i < acrossCount; i += 1) {
+    const x = bayAlong(o, i);
+    bayAt(x, ZERO, o.bayWidth, L, 0);
+    bayAt(x, D.minus(L), o.bayWidth, L, 1);
+  }
+  for (let i = 0; i < downCount; i += 1) {
+    const y = sideStart.plus(bayAlong(o, i));
+    bayAt(ZERO, y, L, o.bayWidth, 2);
+    bayAt(W.minus(L), y, L, o.bayWidth, 3);
+  }
+
+  // --- the ring, one way round -------------------------------------------------------
+  const ring: PlacedRect[] = [
+    { kind: RectKind.AISLE, row: RING_AISLE_ROW, x: ZERO, y: inner.y0, width: W, height: a, travel: 1 },
+    { kind: RectKind.AISLE, row: RING_AISLE_ROW, x: inner.x1.minus(a), y: sideStart, width: a, height: sideEnd.minus(sideStart), travel: 1 },
+    { kind: RectKind.AISLE, row: RING_AISLE_ROW, x: ZERO, y: inner.y1.minus(a), width: W, height: a, travel: -1 },
+    { kind: RectKind.AISLE, row: RING_AISLE_ROW, x: inner.x0, y: sideStart, width: a, height: sideEnd.minus(sideStart), travel: -1 },
+  ];
+  rects.push(...ring);
+  let circulationAreaM2 = W.times(a).times(2).plus(a.times(sideEnd.minus(sideStart)).times(2));
+
+  // --- the drive from the slab edge, only where nothing else reaches the level ------
+  let entryDriveBays = 0;
+  if (!o.includeRamp) {
+    const drive: PlacedRect = {
+      kind: RectKind.AISLE,
+      row: ENTRY_DRIVE_ROW,
+      x: ZERO,
+      y: ZERO,
+      width: Decimal.min(o.driveWidthM, W),
+      height: L,
+    };
+    for (let i = rects.length - 1; i >= 0; i -= 1) {
+      const r = rects[i]!;
+      if (r.kind === RectKind.BAY && collides(r, drive)) {
+        rects.splice(i, 1);
+        entryDriveBays += 1;
+      }
+    }
+    rects.push(drive);
+    circulationAreaM2 = circulationAreaM2.plus(drive.width.times(drive.height));
+    if (entryDriveBays > 0) {
+      notes.push(
+        `${entryDriveBays} bay(s) stand where the drive from the slab edge crosses the wall run to ` +
+          `reach the loop (${drive.width.toString()} × ${drive.height.toString()} m), and are not placed: ` +
+          'a car drives through them. They are counted as a circulation loss, not as bays.',
+      );
+    }
+  }
+
+  // --- the island, in whole units from the near long side ---------------------------
+  type Band = { readonly from: Decimal; readonly to: Decimal; readonly row: number };
+  let rowBands: Band[] = [];
+  let aisleAt: Decimal[] = [];
+  let slack = ZERO;
+  /*
+    The depth no unit fills, as bands of their own: between the last unit and the
+    far row (and, where the units are slid, between the near row and the first),
+    or the whole island where no row fits. The reserved strip goes here first,
+    where it costs no bay.
+  */
+  let slackBands: [Decimal, Decimal][] = [];
+  if (islandD.gte(L.times(2))) {
+    const unit = L.times(2).plus(a);
+    const pairs = islandD.minus(L.times(2)).div(unit).floor().toNumber();
+    const rest = islandD.minus(L.times(2)).minus(unit.times(pairs));
+    const single = rest.gte(L.plus(a));
+    slack = single ? rest.minus(L.plus(a)) : rest;
+    // Units between the near and the far row slide by at most the slack; with none, nothing slides.
+    const slide = pairs > 0 || single ? Decimal.min(Decimal.max(ZERO, shiftM), slack) : ZERO;
+    let row = 4;
+    rowBands.push({ from: ZERO, to: L, row: row++ });
+    let at = L.plus(slide);
+    for (let i = 0; i < pairs; i += 1) {
+      rowBands.push({ from: at, to: at.plus(L), row: row++ });
+      aisleAt.push(at.plus(L));
+      rowBands.push({ from: at.plus(L).plus(a), to: at.plus(unit), row: row++ });
+      at = at.plus(unit);
+    }
+    if (single) {
+      rowBands.push({ from: at, to: at.plus(L), row: row++ });
+      aisleAt.push(at.plus(L));
+      at = at.plus(L).plus(a);
+    }
+    rowBands.push({ from: islandD.minus(L), to: islandD, row: row++ });
+    slackBands = [
+      [L, L.plus(slide)],
+      [at, islandD.minus(L)],
+    ];
+  } else if (islandD.gte(L)) {
+    rowBands.push({ from: ZERO, to: L, row: 4 });
+    slack = islandD.minus(L);
+    slackBands = [[L, islandD]];
+  } else {
+    slack = Decimal.max(ZERO, islandD);
+    slackBands = [[ZERO, slack]];
+  }
+  slackBands = slackBands.filter(([lo, hi]) => hi.minus(lo).gt('0.01'));
+  /*
+    FROM THE FAR SIDE, the same units mirrored, and the units slid across the
+    slack: tried only where a core stands on the level and strands bays, because
+    the core can stand across an aisle one way and in a row of bays another. A
+    fixed sweep, the best kept and ties to the first — the same sweep the module
+    arrangement makes against the core, and not a search for where the core goes.
+  */
+  if (fromFar) {
+    rowBands = rowBands.map((b) => ({ from: islandD.minus(b.to), to: islandD.minus(b.from), row: b.row }));
+    aisleAt = aisleAt.map((y) => islandD.minus(y).minus(a)).sort((p, q) => p.comparedTo(q));
+    slackBands = slackBands.map(([lo, hi]): [Decimal, Decimal] => [islandD.minus(hi), islandD.minus(lo)]);
+  }
+  aisleAt.forEach((y, i) => {
+    rects.push({ kind: RectKind.AISLE, row: LOOP_AISLE_ROW + i, x: island.x0, y: island.y0.plus(y), width: islandW, height: a, travel: 1 });
+    circulationAreaM2 = circulationAreaM2.plus(islandW.times(a));
+  });
+
+  // What stands on the island, and the stretches along it still clear across a band of its depth.
+  type Span = [Decimal, Decimal];
+  const standing: Rect[] = [...o.obstructions];
+  const clear = (lo: Decimal, hi: Decimal): Span[] => {
+    const taken = standing
+      .filter((r) => r.y.plus(r.height).gt(island.y0.plus(lo)) && r.y.lt(island.y0.plus(hi)))
+      .map((r): Span => [Decimal.max(ZERO, r.x.minus(island.x0)), Decimal.min(islandW, r.x.plus(r.width).minus(island.x0))])
+      .filter(([s, e]) => e.gt(s))
+      .sort((p, q) => p[0].comparedTo(q[0]));
+    const out: Span[] = [];
+    let at = ZERO;
+    for (const [s, e] of taken) {
+      if (s.gt(at)) out.push([at, s]);
+      at = Decimal.max(at, e);
+    }
+    if (islandW.gt(at)) out.push([at, islandW]);
+    return out;
+  };
+  const onIsland = (x0: Decimal, len: Decimal, y0: Decimal, dep: Decimal): Rect => ({
+    x: island.x0.plus(x0),
+    y: island.y0.plus(y0),
+    width: len,
+    height: dep,
+  });
+
+  // --- the ramp, at one end of the island ---------------------------------------------
+  let ramp: Packing['ramp'];
+  if (o.includeRamp) {
+    const run = o.rampRunM;
+    const firstAisle = aisleAt[0] ?? islandD;
+    const slot = clear(ZERO, o.rampWidthM)
+      .map(([lo, hi]) => (lo.isZero() && hi.minus(lo).gte(run) ? lo : hi.eq(islandW) && hi.minus(lo).gte(run) ? hi.minus(run) : null))
+      .find((s): s is Decimal => s !== null);
+    if (o.rampWidthM.gt(firstAisle) || slot === undefined) {
+      return refused(
+        `a straight ramp climbing a ${o.storeyHeightM.toString()} m storey needs ${o.rampWidthM.toFixed(2)} × ` +
+          `${run.toFixed(2)} m (DBC Tables B.9 and B.10) at one end of the island, clear of the core and of the ` +
+          `aisles across it, and the ${islandW.toFixed(2)} × ${islandD.toFixed(2)} m island does not have it`,
+      );
+    }
+    ramp = { widthM: o.rampWidthM, runM: run };
+    const r = onIsland(slot, run, ZERO, o.rampWidthM);
+    rects.push({ kind: RectKind.RAMP, row: RAMP_ROW, ...r });
+    standing.push(r);
+    notes.push(
+      `A ${o.rampWidthM.toFixed(2)} × ${run.toFixed(2)} m straight ramp stands at one end of the island, ` +
+        'two-way, met by the loop on two sides: 12% with a 3.6 m transition at 6% at each end (DBC Tables ' +
+        'B.9 and B.10). Headroom (2.4 m) is NOT ASSESSED.',
+    );
+  }
+
+  // --- the reserved strip, then bays -------------------------------------------------
+  const stripArea = o.deductedDepthM.times(W);
+  let reserved: Rect | undefined;
+  const reservedPieces: Rect[] = [];
+  let stripLeft = stripArea;
+  let inSlackM2 = ZERO;
+  for (const [lo, hi] of slackBands) {
+    const depth = hi.minus(lo);
+    for (const [s0, s1] of clear(lo, hi).sort((p, q) => q[1].minus(q[0]).comparedTo(p[1].minus(p[0])))) {
+      if (stripLeft.lte(0)) break;
+      const len = Decimal.min(s1.minus(s0), stripLeft.div(depth));
+      const p = onIsland(s0, len, lo, depth);
+      if (!reserved || len.times(depth).gt(reserved.width.times(reserved.height))) reserved = p;
+      reservedPieces.push(p);
+      standing.push(p);
+      stripLeft = stripLeft.minus(len.times(depth));
+      inSlackM2 = inSlackM2.plus(len.times(depth));
+    }
+  }
+  if (slack.gt('0.01')) {
+    notes.push(
+      `${slack.toFixed(2)} m of the island's ${islandD.toFixed(2)} m depth is left between its rows: too shallow ` +
+        `for another row of ${L.toString()} m bays and the ${a.toString()} m aisle it would face.` +
+        (inSlackM2.gte('0.5')
+          ? ` ${inSlackM2.toFixed(0)} m² of the strip reserved for plant and circulation stands there, where it costs no bay.`
+          : ''),
+    );
+  }
+  const stretches = rowBands
+    .flatMap((b) => clear(b.from, b.to).map((s) => ({ b, s })))
+    .sort((p, q) => q.s[1].minus(q.s[0]).comparedTo(p.s[1].minus(p.s[0])));
+  for (const { b, s } of stretches) {
+    if (stripLeft.lte(0)) break;
+    // Re-measured: a piece laid in an earlier band may stand across this one.
+    const free = clear(b.from, b.to).find(([lo, hi]) => lo.gte(s[0]) && hi.lte(s[1]));
+    if (!free) continue;
+    const depth = b.to.minus(b.from);
+    const len = Decimal.min(free[1].minus(free[0]), stripLeft.div(depth));
+    const p = onIsland(free[0], len, b.from, depth);
+    if (!reserved || len.times(depth).gt(reserved.width.times(reserved.height))) reserved = p;
+    reservedPieces.push(p);
+    standing.push(p);
+    stripLeft = stripLeft.minus(len.times(depth));
+  }
+  if (stripLeft.gt('0.5')) {
+    notes.push(
+      `Of the ${stripArea.toFixed(0)} m² reserved for plant and circulation, ` +
+        `${stripArea.minus(stripLeft).toFixed(0)} m² is drawn on the island in ` +
+        `${reservedPieces.length} piece(s) and ${stripLeft.toFixed(0)} m² has no room on it at all. ` +
+        'The deduction is still charged in full against the bay count.',
+    );
+  }
+  let islandBays = 0;
+  for (const b of rowBands) {
+    for (const [lo, hi] of clear(b.from, b.to)) {
+      const n = baysAlong(o, hi.minus(lo));
+      for (let k = 0; k < n; k += 1) {
+        const r = onIsland(lo.plus(bayAlong(o, k)), o.bayWidth, b.from, L);
+        bayAt(r.x, r.y, r.width, r.height, b.row);
+        islandBays += 1;
+      }
+    }
+  }
+
+  // --- the core, where it stands -------------------------------------------------------
+  let baysUnderCore = 0;
+  const cut: PlacedRect[] = [];
+  for (const r of rects) {
+    const hits = o.obstructions.filter((b) => collides(r, b));
+    if (hits.length === 0) cut.push(r);
+    else if (r.kind === RectKind.BAY) baysUnderCore += 1;
+    else cut.push(...piecesOutside(r, hits));
+  }
+
+  // --- with the traffic: is every bay passed by a car that came in and gets out? ------
+  const drivableIdx: number[] = [];
+  for (let i = 0; i < cut.length; i += 1) {
+    const k = cut[i]!.kind;
+    if (k === RectKind.AISLE || k === RectKind.RAMP) drivableIdx.push(i);
+  }
+  const drivable = drivableIdx.map((i) => cut[i]!);
+  const entries = drivable
+    .map((r, n) => ((ramp ? r.kind === RectKind.RAMP : r.row === ENTRY_DRIVE_ROW) ? n : -1))
+    .filter((n) => n >= 0);
+  const circ = traceOneWay({ drivable, entries, minOpeningM: a });
+  // An aisle a car reaches and cannot leave, or cannot reach, leads nowhere: not drawn.
+  const usable = new Set(drivableIdx.filter((_, n) => circ.forward.has(n) && circ.back.has(n)));
+  const kept: PlacedRect[] = [];
+  let bayCount = 0;
+  let strandedBays = 0;
+  for (let i = 0; i < cut.length; i += 1) {
+    const r = cut[i]!;
+    if (r.kind === RectKind.AISLE && !usable.has(i)) continue;
+    if (r.kind !== RectKind.BAY) {
+      kept.push(r);
+      continue;
+    }
+    if (oneWayServes(r, drivable, circ)) {
+      kept.push(r);
+      bayCount += 1;
+    } else {
+      strandedBays += 1;
+    }
+  }
+  if (bayCount === 0) {
+    return refused('every bay of the one-way loop was placed and none is passed by a car that came in and can get out');
+  }
+  notes.push(
+    `A one-way loop: ${a.toString()} m aisles (DBC Table B.11, 90° parking, one way) run one way round the ` +
+      `level, and ${aisleAt.length} aisle(s) cross the island from one side of the ring to the other in the ` +
+      `same direction, so no aisle ends in a dead end. ${acrossCount} bays stand to each long wall and ` +
+      `${downCount} to each short one, and ${islandBays} on the island, less those the way in, the core and ` +
+      'the turns take. The direction of travel is drawn on every aisle.',
+  );
+  if (strandedBays > 0) {
+    notes.push(
+      `${strandedBays} bay(s) were placed and then dropped: no car driving with the traffic passes them and ` +
+        'gets back out — they stand behind a turn at a corner of the ring, or on an aisle the core cuts. ' +
+        'They are not counted and not drawn.',
+    );
+  }
+
+  return {
+    rects: kept,
+    bayCount,
+    reserved,
+    reservedPieces,
+    ramp,
+    crossAisleAreaM2: circulationAreaM2,
+    baysLostToCrossAisle: 0,
+    entryDriveBays,
+    strandedBays,
+    baysUnderCore,
+    notes,
+    slackM: slack,
+    refusal: undefined,
+  };
+}
+
+/**
+ * The level landing on the sloped ring, where the accessible bays stand.
+ *
+ * DBC B.7.2.3.1: a parked floor may fall 4%, accessible parking 2%. On the
+ * sloped ring every bay used to stand on the climbing floor, so on a lap steeper
+ * than 2% no accessible bay was placed at all — and the bays their aisles would
+ * have taken stayed in the supply, which raised the capacity of every run whose
+ * ring was steeper than 2%. Holding undrawn bays back was tried and refused by
+ * `pnpm parity`: a held-back bay is a car drawn where the engine counts none.
+ *
+ * So the ring is kept LEVEL for a stretch of one long side, and the rest of the
+ * lap climbs the storey: a steeper lap, and checked against 4% again. A fixed
+ * rule, not a search: the long side nearer the core (C.6.4.2 a puts accessible
+ * bays as close as possible to the lifts), centred on the core, between the two
+ * turns; grown a bay at a time, alternately each way, until the wall run beside
+ * it holds the accessible bays Table C.17 asks for with their 1.2 m aisles, or
+ * the side runs out. The wall run and the aisle along it are flat, and
+ * `accessible.ts` places the bays there and nowhere else.
+ */
+interface Landing {
+  /** The level stretch: the wall run, the ring aisle and the island row along it. */
+  readonly rect: Rect;
+  readonly lengthM: Decimal;
+  /** Accessible bays the wall run on it holds, with their aisles. */
+  readonly holds: number;
+}
+
+/** How many accessible bays a run of `m` touching bays holds: two in each three, one in a pair left over. */
+const accessibleInRun = (m: number): number => 2 * Math.floor(m / 3) + (m % 3 === 2 ? 1 : 0);
+
+function flatLanding(rects: readonly PlacedRect[], o: PackOptions, wanted: number, core: Rect | undefined): Landing | undefined {
+  const W = o.widthM;
+  const D = o.grossDepthM;
+  const L = o.bayLength;
+  const a = o.aisleWidth;
+  const x0 = L.plus(a);
+  const x1 = W.minus(L).minus(a);
+  if (x1.lte(x0) || wanted <= 0) return undefined;
+  const coreY = core ? core.y.plus(core.height.div(2)) : ZERO;
+  const coreX = core ? core.x.plus(core.width.div(2)) : x0;
+  const far = coreY.gt(D.div(2));
+  const run = rects
+    .filter((r) => r.kind === RectKind.BAY && r.row === (far ? 1 : 0))
+    .filter((r) => r.x.gte(x0) && r.x.plus(r.width).lte(x1))
+    .sort((p, q) => p.x.comparedTo(q.x));
+  if (run.length === 0) return undefined;
+  const centre = (r: Rect): Decimal => r.x.plus(r.width.div(2));
+  let i0 = 0;
+  run.forEach((r, i) => {
+    if (centre(r).minus(coreX).abs().lt(centre(run[i0]!).minus(coreX).abs())) i0 = i;
+  });
+  const holds = (lo: number, hi: number): number => {
+    let total = 0;
+    let m = 1;
+    for (let i = lo + 1; i <= hi; i += 1) {
+      if (run[i - 1]!.x.plus(run[i - 1]!.width).eq(run[i]!.x)) m += 1;
+      else {
+        total += accessibleInRun(m);
+        m = 1;
+      }
+    }
+    return total + accessibleInRun(m);
+  };
+  let lo = i0;
+  let hi = i0;
+  let right = true;
+  while (holds(lo, hi) < wanted && (lo > 0 || hi < run.length - 1)) {
+    if ((right && hi < run.length - 1) || lo === 0) hi += 1;
+    else lo -= 1;
+    right = !right;
+  }
+  const from = run[lo]!.x;
+  const to = run[hi]!.x.plus(run[hi]!.width);
+  /*
+    The wall run and the aisle in front of it, and no further. The island row
+    across the aisle stands level too, but on a ring whose island runs the other
+    way the rows beside this stretch face a side that climbs, and a zone that
+    took them in would hand `accessible.ts` a bay on a slope.
+  */
+  const depth = L.plus(a);
+  return {
+    rect: { x: from, y: far ? D.minus(depth) : ZERO, width: to.minus(from), height: depth },
+    lengthM: to.minus(from),
+    holds: holds(lo, hi),
+  };
+}
+
+const LANDING_SIZE_BASIS =
+  'The landing is sized before the building\'s supply is known, so it is sized on the most the ' +
+  'supply can be: this level\'s bays on every parking level that shares the layout, under Table C.17 ' +
+  'read as the accessible bays themselves are read (a fraction rounded up, 10 for the first 500, one ' +
+  'under 25). The ground floor and the access aisles only ever take bays away, so the count placed on ' +
+  'it, Table C.17 on the real supply, is never more than this.';
+
+/**
+ * The sloped ring's level landing, traced, or a sentence saying why there is none.
+ * `flatLanding` finds the stretch; this checks what the rest of the lap then climbs.
+ */
+function levelLanding(
+  tracer: Tracer,
+  input: {
+    readonly rects: readonly PlacedRect[];
+    readonly geometry: PackOptions;
+    readonly lapM: Decimal;
+    readonly storey: TracedDecimal;
+    readonly perLevel: number;
+    readonly core?: Rect;
+    readonly levels: number | undefined;
+  },
+): {
+  readonly landing?: {
+    readonly rect: Rect;
+    readonly lengthM: TracedDecimal;
+    readonly gradientPct: TracedDecimal;
+    readonly slopedGradientPct: TracedDecimal;
+    readonly holds: number;
+  };
+  readonly note?: string;
+} {
+  const lapPct = input.storey.value.div(input.lapM).times(100);
+  if (lapPct.lte(MAX_ACCESSIBLE_SLOPE_PCT)) return {};
+  const levels = input.levels ?? 2;
+  const upper = input.perLevel * levels;
+  const wanted = accessibleRequired(upper);
+  const found = flatLanding(input.rects, input.geometry, wanted, input.core);
+  const storeyM = input.storey.value.toString();
+  if (!found) {
+    return {
+      note:
+        `No level landing is laid on the sloped ring, whose lap climbs ${lapPct.toDecimalPlaces(2, Decimal.ROUND_UP).toFixed(2)}%: ` +
+        'no run of bays stands along a long side of the ring between its turns.',
+    };
+  }
+  const climbing = input.lapM.minus(found.lengthM);
+  const steeper = input.storey.value.div(climbing);
+  if (steeper.gt(MAX_PARKED_SLOPE)) {
+    return {
+      note:
+        `No level landing fits on the sloped ring: the ${wanted} accessible bays Table C.17 asks for need ` +
+        `${found.lengthM.toFixed(2)} m of it kept level, and the rest of the ${input.lapM.toFixed(2)} m lap would climb ` +
+        `the ${storeyM} m storey at ${steeper.times(100).toDecimalPlaces(2, Decimal.ROUND_UP).toFixed(2)}%, above the 4% ` +
+        'a parked floor may fall (DBC B.7.2.3.1).',
+    };
+  }
+  const wantedNode = tracer.assumed('parking.landing_accessible_bays', wanted, {
+    basis:
+      LANDING_SIZE_BASIS +
+      ` Here: ${input.perLevel} bays × ${levels} parking level(s) = ${upper} bays.` +
+      (input.levels === undefined
+        ? ' No level count reached the layout, so two are taken: the fewest levels a sloped ring serves.'
+        : ''),
+    label: 'accessible bays the level landing is sized for',
+    unit: 'bays',
+  });
+  const accessibleLimit = tracer.derived('parking.accessible_max_slope_pct', new Decimal(MAX_ACCESSIBLE_SLOPE_PCT), {
+    rule: { ruleId: 'DBC.B.7.2.3.1.ACCESSIBLE', citation: ACCESSIBLE_SLOPE_B7231 },
+    formula: 'accessible parking falls at no more than 2%',
+    unit: '%',
+  });
+  const lengthM = tracer.computed('parking.level_landing_m', found.lengthM, {
+    formula:
+      `the ring kept level for ${found.lengthM.toFixed(2)} m along a long side, centred on the core: the wall run ` +
+      `on it holds ${found.holds} accessible bay(s) with their 1.2 m aisles, of the ${wanted} it is sized for`,
+    uses: { wanted: wantedNode, limit: accessibleLimit },
+    unit: 'm',
+  });
+  // Measured, not left unsaid: the landing the other reading of Table C.17 would lay.
+  const lower = flatLanding(input.rects, input.geometry, accessibleRequired(upper, false), input.core);
+  tracer.sensitiveTo(lengthM, wantedNode, {
+    relativeEffect: found.lengthM.isZero()
+      ? '0'
+      : found.lengthM.minus(lower?.lengthM ?? 0).div(found.lengthM).toFixed(4),
+    perturbation: 'Table C.17 read with every fraction rounded down instead of up',
+  });
+  const parkedLimit = tracer.derived('parking.max_parked_slope', new Decimal(MAX_PARKED_SLOPE), {
+    rule: { ruleId: 'DBC.B.7.2.3.1', citation: PARKED_SLOPE_B7231 },
+    formula: 'a floor with parked cars on it falls at no more than 4%',
+  });
+  const slopedGradientPct = tracer.computed(
+    'parking.sloped_floor_gradient_pct',
+    steeper.times(100).toDecimalPlaces(2, Decimal.ROUND_UP),
+    {
+      formula:
+        `${storeyM} m storey ÷ (${input.lapM.toFixed(2)} m lap − ${found.lengthM.toFixed(2)} m level landing) ` +
+        "along the aisle's centre line",
+      uses: { storey: input.storey, landing: lengthM, limit: parkedLimit },
+      unit: '%',
+      detail: { limitPct: '4', note: 'The ring aisle is the ramp: one lap climbs one storey, all of it off the landing.' },
+    },
+  );
+  const gradientPct = tracer.computed('parking.landing_gradient_pct', new Decimal(0), {
+    formula: 'the landing is laid level: no fall along it',
+    uses: { landing: lengthM, limit: accessibleLimit },
+    unit: '%',
+  });
+  return {
+    landing: { rect: found.rect, lengthM, gradientPct, slopedGradientPct, holds: found.holds },
+    note:
+      `The ring is kept level for ${found.lengthM.toFixed(2)} m along one long side, centred on the core, so the ` +
+      `accessible bays stand on a floor within the 2% DBC B.7.2.3.1 allows; the rest of the ` +
+      `${input.lapM.toFixed(2)} m lap climbs the ${storeyM} m storey at ` +
+      `${slopedGradientPct.value.toFixed(2)}%, within 4%.`,
+  };
+}
+
 /**
  * Reflect a packing about the diagonal: what was packed `D × W` reads `W × D`.
  *
@@ -2280,7 +2966,8 @@ const flip = (r: Rect): Rect => ({ x: r.y, y: r.x, width: r.height, height: r.wi
 function transpose(p: Packing): Packing {
   return {
     ...p,
-    rects: p.rects.map((r) => ({ kind: r.kind, row: r.row, ...flip(r) })),
+    // A one-way aisle keeps its direction: reflected, along x becomes along y the same way round.
+    rects: p.rects.map((r) => ({ kind: r.kind, row: r.row, ...(r.travel ? { travel: r.travel } : {}), ...flip(r) })),
     reserved: p.reserved ? flip(p.reserved) : undefined,
     ...(p.reservedPieces ? { reservedPieces: p.reservedPieces.map(flip) } : {}),
   };
@@ -2413,6 +3100,24 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
   }
   const columnEvery = columnGap ? columnGap.everyBays : 0;
   const columnGapM = columnGap ? columnGap.gapM.value : ZERO;
+  /*
+    WHAT WAS APPLIED FOR THE COLUMNS, IN ONE SENTENCE, for the note under every
+    drawing. That note used to say the layout charges Table B.11's 300 mm per bay,
+    which it does only where a structural grid is given — and no run from the
+    studio gives one. Three statements about the spacing are on file and not
+    reconciled (30 cm per car on 4 Oct, 0.50 m every three bays on 16 Oct, and the
+    table's 300 mm), so the sentence says which one this layout used and nothing more.
+  */
+  const columns = columnGap
+    ? `${columnGapM.toFixed(2)} m is left clear after every ${columnEvery} bays for the columns, and no column is ` +
+      "drawn in it; Table B.11's further 300 mm beside a structural element is not added, and whether the gap " +
+      'includes it is NOT ASSESSED.'
+    : input.structuralGridM !== undefined
+      ? `Each bay is charged ${effectiveBayWidth.toFixed(2)} m: Table B.11's 300 mm beside a structural element, ` +
+        `added on a ${input.structuralGridM.toString()} m grid. No column is drawn.`
+      : `Bays stand side by side at ${bayWidth.toFixed(2)} m: no column gap and no structural grid was given, so no ` +
+        "space is left for a column and Table B.11's 300 mm beside a structural element is not added.";
+  if (!columnGap && input.structuralGridM === undefined) notes.push(columns);
 
   // --- pack it both ways round --------------------------------------------
   // The deduction is taken off the depth so the packing runs on a real
@@ -2598,6 +3303,56 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
       )
     : undefined;
 
+  /*
+    THE SEVENTH, WHERE THE BAYS ARE 90° ON THE TWO-WAY DEFAULT: the same walls,
+    islands inside, and one-way aisles at Table B.11's 5.5 m. Laid with the
+    island's long side along the level's, as the architect lays it, so a level
+    deeper than wide is packed reflected and reflected back. See `packOneWayLoop`.
+  */
+  const oneWay =
+    angle === ParkingAngle.DEG_90 && driveway === DrivewayType.TWO_WAY
+      ? standardFor(ParkingAngle.DEG_90, DrivewayType.ONE_WAY)
+      : undefined;
+  const loopAisle = oneWay ? new Decimal(oneWay.drivewayWidthM) : undefined;
+  const loop = loopAisle
+    ? ((): Packing => {
+        const opts = {
+          ...ringOpts,
+          aisleWidth: loopAisle,
+          moduleDepth: bayLength.times(2).plus(loopAisle),
+          driveWidthM: aisleWidth,
+        };
+        const wide = footprint.widthM.gte(footprint.depthM);
+        const framed: LoopOptions = wide
+          ? opts
+          : {
+              ...opts,
+              widthM: footprint.depthM,
+              grossDepthM: footprint.widthM,
+              deductedDepthM: stripM2.div(footprint.depthM),
+              obstructions: input.core ? [flip(input.core.rect)] : [],
+            };
+        /*
+          The island stacked from the near side; where a core stands, from the far
+          side too, and the units slid across the island's leftover depth in 1 m
+          steps (the packer stops each at the leftover, so no step past it is
+          tried). Fixed, reproducible, the most bays kept and ties to the earlier
+          — see `packOneWayLoop`.
+        */
+        let packed = packOneWayLoop(framed);
+        if (framed.obstructions.length > 0) {
+          const last = Math.ceil((packed.slackM ?? ZERO).toNumber());
+          for (let s = 0; s <= last; s += 1) {
+            for (const far of [false, true]) {
+              if (s === 0 && !far) continue;
+              packed = best(packed, packOneWayLoop(framed, far, new Decimal(s)));
+            }
+          }
+        }
+        return wide ? packed : transpose(packed);
+      })()
+    : undefined;
+
   const ORIENTATION = {
     WIDTH: 'modules along the width',
     DEPTH: 'modules along the depth',
@@ -2605,20 +3360,41 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     SLOPED: 'bays to the walls, the ring aisle sloped as the ramp',
     FIELD_WIDTH: 'rows across the whole footprint, along the width',
     FIELD_DEPTH: 'rows across the whole footprint, along the depth',
+    ONE_WAY_LOOP: 'bays to the walls and on islands, one-way aisles round them',
   } as const;
+  /*
+    Each candidate's dead ends, measured as the drawing measures them
+    (`dead-ends.ts`), on the aisle width that candidate was packed on.
+  */
+  const deadEndsOf = (p: Packing, aisle: Decimal): readonly number[] =>
+    p.bayCount === 0
+      ? []
+      : deadEndBays(
+          p.rects.map((r) => ({ kind: r.kind, row: r.row, xM: r.x, yM: r.y, widthM: r.width, heightM: r.height })),
+          aisle,
+          angle === ParkingAngle.PARALLEL,
+        );
+  const candidate = (packing: Packing, name: string, id: ParkingArrangement, aisle = aisleWidth) => ({
+    packing,
+    name,
+    id,
+    deadEnds: deadEndsOf(packing, aisle),
+  });
   const candidates = [
-    { packing: alongWidth, name: ORIENTATION.WIDTH, id: ParkingArrangement.WIDTH },
-    { packing: alongDepth, name: ORIENTATION.DEPTH, id: ParkingArrangement.DEPTH },
-    { packing: perimeter, name: ORIENTATION.PERIMETER, id: ParkingArrangement.PERIMETER },
-    ...(sloped ? [{ packing: sloped, name: ORIENTATION.SLOPED, id: ParkingArrangement.SLOPED }] : []),
-    ...(fieldWidth ? [{ packing: fieldWidth, name: ORIENTATION.FIELD_WIDTH, id: ParkingArrangement.FIELD_WIDTH }] : []),
-    ...(fieldDepth ? [{ packing: fieldDepth, name: ORIENTATION.FIELD_DEPTH, id: ParkingArrangement.FIELD_DEPTH }] : []),
-  ] as const;
+    candidate(alongWidth, ORIENTATION.WIDTH, ParkingArrangement.WIDTH),
+    candidate(alongDepth, ORIENTATION.DEPTH, ParkingArrangement.DEPTH),
+    candidate(perimeter, ORIENTATION.PERIMETER, ParkingArrangement.PERIMETER),
+    ...(sloped ? [candidate(sloped, ORIENTATION.SLOPED, ParkingArrangement.SLOPED)] : []),
+    ...(fieldWidth ? [candidate(fieldWidth, ORIENTATION.FIELD_WIDTH, ParkingArrangement.FIELD_WIDTH)] : []),
+    ...(fieldDepth ? [candidate(fieldDepth, ORIENTATION.FIELD_DEPTH, ParkingArrangement.FIELD_DEPTH)] : []),
+    ...(loop && loopAisle ? [candidate(loop, ORIENTATION.ONE_WAY_LOOP, ParkingArrangement.ONE_WAY_LOOP, loopAisle)] : []),
+  ];
   const arrangements: readonly ArrangementCandidate[] = candidates.map((c) => ({
     id: c.id,
     name: c.name,
     bayCount: c.packing.bayCount,
     ...(c.packing.refusal ? { refusal: c.packing.refusal } : {}),
+    ...(c.packing.bayCount > 0 ? { deadEnds: c.deadEnds } : {}),
   }));
 
   if (candidates.every((c) => c.packing.bayCount === 0)) {
@@ -2629,7 +3405,8 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
         `${alongDepth.refusal ?? 'no bays placed'}. Bays to the walls: ` +
         `${perimeter.refusal ?? 'no bays placed'}.` +
         (sloped ? ` The ring sloped as the ramp: ${sloped.refusal ?? 'no bays placed'}.` : '') +
-        (fieldWidth ? ` Rows across the whole footprint: ${fieldWidth.refusal ?? 'no bays placed'}.` : ''),
+        (fieldWidth ? ` Rows across the whole footprint: ${fieldWidth.refusal ?? 'no bays placed'}.` : '') +
+        (loop ? ` The one-way loop: ${loop.refusal ?? 'no bays placed'}.` : ''),
     );
   }
   // Ties go to the earlier candidate, so the answer does not depend on the order
@@ -2641,7 +3418,9 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
       `the parking arrangement ${stated.id} is not one this level can be packed in: ` +
         (stated.id === ParkingArrangement.SLOPED
           ? 'the ring may be the ramp only where there are two parking levels or more and no ramp strip was stated. '
-          : 'rows across the whole footprint are offered only where the footprint is not itself a rectangle. ') +
+          : stated.id === ParkingArrangement.ONE_WAY_LOOP
+            ? 'the one-way loop is offered only for 90° bays on the two-way driveway every other arrangement uses. '
+            : 'rows across the whole footprint are offered only where the footprint is not itself a rectangle. ') +
         `This level offers ${candidates.map((c) => `${c.id} (${c.packing.bayCount} bays)`).join(', ')}.`,
     );
   }
@@ -2652,10 +3431,20 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
         ` This level offers ${candidates.map((c) => `${c.id} (${c.packing.bayCount} bays)`).join(', ')}.`,
     );
   }
-  const winner = statedCandidate ?? candidates.reduce((a, b) => (b.packing.bayCount > a.packing.bayCount ? b : a));
+  type Candidate = (typeof candidates)[number];
+  const most = (list: readonly Candidate[]): Candidate =>
+    list.reduce((a, b) => (b.packing.bayCount > a.packing.bayCount ? b : a));
+  const worst = (c: Candidate): number => Math.max(0, ...c.deadEnds);
+  const mostBays = most(candidates);
+  const withinLimit = candidates.filter((c) => c.packing.bayCount > 0 && worst(c) <= DEAD_END_MAX_BAYS);
+  const ruled =
+    DEFAULT_ARRANGEMENT_RULE === DefaultArrangementRule.MOST_BAYS_WITHIN_DEAD_END_LIMIT && withinLimit.length > 0;
+  const winner = statedCandidate ?? (ruled ? most(withinLimit) : mostBays);
   const packing = winner.packing;
   const chosen = winner.name;
-  const listed = candidates.map((c) => `${c.packing.bayCount} ${c.name}`).join(', ');
+  const deadEndWords = (c: Candidate): string =>
+    worst(c) > DEAD_END_MAX_BAYS ? ` (a dead end serving ${worst(c)} bays)` : '';
+  const listed = candidates.map((c) => `${c.packing.bayCount} ${c.name}${deadEndWords(c)}`).join(', ');
   const orientation = ((): Traced<string> => {
     if (stated?.actor) {
       return tracer.userSet('parking.module_orientation', chosen, { actor: stated.actor, label: 'parking arrangement' });
@@ -2667,6 +3456,33 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
           `The arrangement "${chosen}" was handed to the layout with no named user attached. ` +
           `Every arrangement on this level: ${listed}.`,
         label: 'parking arrangement',
+      });
+    }
+    if (ruled) {
+      /*
+        RANKED BY THE CLAUSE, THEN BY BAYS. The limit is a node of its own, cited
+        to its page, so the choice it made can be opened rather than read in a
+        sentence.
+      */
+      const limit = tracer.derived('parking.dead_end_max_bays', DEAD_END_MAX_BAYS, {
+        rule: { ruleId: 'DBC.B.7.2.3.3.8', citation: DEAD_END_B7233 },
+        formula: 'a dead-end driveway should serve no more than eight spaces',
+        unit: 'bays',
+      });
+      return tracer.derived('parking.module_orientation', chosen, {
+        rule: { ruleId: 'DBC.B.7.2.3.3.8', citation: DEAD_END_B7233 },
+        formula:
+          `the most bays among the arrangements whose every dead end serves ${DEAD_END_MAX_BAYS} bays or fewer, ` +
+          `of: ${listed}`,
+        uses: { moduleDepth, limit },
+        detail: {
+          note:
+            'Every enumerated arrangement is packed. The default is the one with the most bays among those ' +
+            'whose dead-end driveways each serve eight bays or fewer (DBC B.7.2.3.3 ¶8, a "should"); the one ' +
+            'with the most bays overall is reported beside it and may be picked. The candidate list is the ' +
+            'same on every run and the answer is reproducible. It is not the ramp-and-core optimiser, which ' +
+            'is a TRADEOFF value Phase 0 refuses to emit.',
+        },
       });
     }
     return tracer.derived('parking.module_orientation', chosen, {
@@ -2685,7 +3501,20 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
   })();
   notes.push(...packing.notes);
   const losers = candidates.filter((c) => c !== winner);
-  if (losers.some((c) => c.packing.bayCount !== packing.bayCount)) {
+  if (!statedCandidate && winner !== mostBays) {
+    /*
+      THE DEFAULT IS NOT THE MOST BAYS, and the sentence says why and what the
+      most bays came to — the reader may still pick it.
+    */
+    notes.push(
+      `Laid out as ${chosen}, the most bays where every dead end serves ${DEAD_END_MAX_BAYS} or fewer ` +
+        `(DBC B.7.2.3.3 ¶8): ${packing.bayCount} bays, against ` +
+        losers
+          .map((c) => `${c.packing.bayCount} ${c.name}${deadEndWords(c)}${c.packing.refusal ? ` (${c.packing.refusal})` : ''}`)
+          .join('; ') +
+        `, on the same level. All ${candidates.length} were packed, and any may be picked.`,
+    );
+  } else if (losers.some((c) => c.packing.bayCount !== packing.bayCount)) {
     notes.push(
       `Laid out as ${chosen}${statedCandidate ? ', as picked' : ''}: ${packing.bayCount} bays, against ` +
         losers
@@ -2694,6 +3523,36 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
         `, on the same level. All ${candidates.length} were packed.`,
     );
   }
+  if (!statedCandidate && !ruled && worst(winner) > DEAD_END_MAX_BAYS) {
+    notes.push(
+      `No arrangement keeps every dead-end driveway to the ${DEAD_END_MAX_BAYS} bays DBC B.7.2.3.3 ¶8 asks, so ` +
+        `the one with the most bays is laid out, and its dead ends serve ${winner.deadEnds.join(', ')} bays. ` +
+        'It is a "should": every bay is counted, and each dead end is labelled on the drawing.',
+    );
+  }
+
+  /*
+    THE ONE-WAY LOOP IS PACKED ON ITS OWN AISLE. Where it is laid out, the level's
+    standard is Table B.11's 90° one-way row — its 5.5 m driveway — with the bays
+    the level was packed with, and its module depth is that aisle's.
+  */
+  const isLoop = winner.id === ParkingArrangement.ONE_WAY_LOOP && loopAisle !== undefined;
+  const laidStandard: BayStandard = isLoop
+    ? { ...standard, driveway: DrivewayType.ONE_WAY, drivewayWidthM: oneWay!.drivewayWidthM }
+    : standard;
+  const laidModuleDepthValue = isLoop ? bayLength.times(2).plus(loopAisle) : moduleDepthValue;
+  const laidModuleDepth = isLoop
+    ? tracer.derived('parking.module_depth_m', laidModuleDepthValue, {
+        rule: { ruleId: 'DBC.B.7.2.4.TABLE_B11', citation: TABLE_B11 },
+        formula: `2 × ${bayLength.toString()} m bay + ${loopAisle.toString()} m one-way aisle`,
+        unit: 'm',
+        detail: {
+          note:
+            'Back-to-back bays either side of a one-way aisle, Table B.11\'s 90° one-way row: the ' +
+            'module the loop\'s islands are laid in.',
+        },
+      })
+    : moduleDepth;
 
   /*
     WHAT THE WINNER WAS CHARGED. Rows across the whole footprint pay the
@@ -2727,7 +3586,7 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
   // --- the three losses ---------------------------------------------------
   // A bay's charged width, its share of the column gap after its group included.
   const chargedBayWidth = columnEvery > 0 ? effectiveBayWidth.plus(columnGapM.div(columnEvery)) : effectiveBayWidth;
-  const marginalAreaPerBay = moduleDepthValue.times(chargedBayWidth).div(2);
+  const marginalAreaPerBay = laidModuleDepthValue.times(chargedBayWidth).div(2);
   const losses: ParkingLosses = {
     marginalAreaPerBayM2: marginalAreaPerBay,
     reserved: {
@@ -2787,7 +3646,7 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
       `${packing.rects.filter((r) => r.kind === RectKind.BAY).length} bays placed ` +
       `with the runs ${chosen}, each served by an aisle that reaches the way in` +
       (columnGap ? `, ${columnGapM.toFixed(2)} m left after every ${columnEvery} bays for the columns` : ''),
-    uses: { moduleDepth, usableArea: chargedUsable, orientation, ...(columnGap ? { columnGap: columnGap.gapM } : {}) },
+    uses: { moduleDepth: laidModuleDepth, usableArea: chargedUsable, orientation, ...(columnGap ? { columnGap: columnGap.gapM } : {}) },
     unit: 'bays',
     detail: {
       note:
@@ -2819,7 +3678,18 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
   let ramp: ParkingLayoutResult['ramp'];
   let slopedFloor: ParkingLayoutResult['slopedFloor'];
   if (packing.slopedLapM && storey) {
-    const { gradientPct } = slopedFloorGradient(tracer, storey, packing.slopedLapM);
+    const lap = packing.slopedLapM;
+    const level = levelLanding(tracer, {
+      rects: packing.rects,
+      geometry: ringOpts,
+      lapM: lap,
+      storey,
+      perLevel: packing.bayCount,
+      ...(input.core ? { core: input.core.rect } : {}),
+      levels: input.parkingLevelCount ?? (input.rampPlan ? parkingLevels(input.rampPlan.schedule) : undefined),
+    });
+    if (level.note) notes.push(level.note);
+    const gradientPct = level.landing?.slopedGradientPct ?? slopedFloorGradient(tracer, storey, lap).gradientPct;
     const runs = input.rampPlan
       ? resolveRampRuns({
           tracer,
@@ -2827,7 +3697,21 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
           ...(input.rampPlan.actor ? { actor: input.rampPlan.actor } : {}),
         })
       : undefined;
-    slopedFloor = { lapM: packing.slopedLapM, gradientPct, runs };
+    slopedFloor = {
+      lapM: lap,
+      gradientPct,
+      runs,
+      ...(level.landing
+        ? {
+            landing: {
+              rect: level.landing.rect,
+              lengthM: level.landing.lengthM,
+              gradientPct: level.landing.gradientPct,
+              holds: level.landing.holds,
+            },
+          }
+        : {}),
+    };
   }
 
   // --- headroom over the ramp, as the budget the structure must fit in ----
@@ -2977,12 +3861,14 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     baysUnderCore: packing.baysUnderCore,
     bayCount: bayCountTraced,
     areaPerBayM2: areaPerBay,
-    moduleDepthM: moduleDepth,
+    moduleDepthM: laidModuleDepth,
     usableAreaM2: chargedUsable,
-    standard,
+    standard: laidStandard,
+    columns,
     orientation,
     arrangement: winner.id,
     arrangements,
+    defaultArrangement: (ruled ? most(withinLimit) : mostBays).id,
     losses,
     notes,
   };

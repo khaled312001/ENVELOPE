@@ -180,8 +180,13 @@ export function settleLabels(
     slots.push([]);
   }
   const last: ModelItem[] = [];
+  // Every room whose name may be set beside it: the rooms one another's names keep off.
+  const rooms = items.flatMap((i) => {
+    const r = i.kind === 'text' ? RULES.get(i) : undefined;
+    return r?.leaderMm !== undefined && r.within ? [r.within] : [];
+  });
   for (const { item, rule } of deferred) {
-    const outside = beside(item, rule, view, tests, frame, placed);
+    const outside = beside(item, rule, view, tests, frame, placed, rooms);
     if (outside === null) continue;
     placed.push(modelTextBox(outside.label, view));
     last.push(outside.leader, outside.label);
@@ -202,6 +207,12 @@ export function settleLabels(
   the room's centre to the edge of the words — how a draughtsman names a room too
   small to write in. It must be clear of every label and dimension line, wholly
   outside the room, and its leader may cross no other words.
+
+  And off every other such room (17 Oct 2026). On the one-way loop's ground
+  floor the program stands in a single 5.5 m row between bays and an aisle, and
+  the ENTRANCE LOBBY's name was set inside the GENERATOR ROOM beside it: it read
+  as that room's name, and the generator's own leader then had nowhere to cross
+  to. Both rooms went unnamed in the screen, the A3 set and the DXF.
 */
 function beside(
   item: TextItem,
@@ -210,6 +221,7 @@ function beside(
   tests: readonly ((b: TextBox) => boolean)[],
   frame: readonly PaperPoint[],
   placed: readonly TextBox[],
+  rooms: readonly (readonly ModelPoint[])[],
 ): { readonly label: TextItem; readonly leader: ModelItem } | null {
   const reach = rule.leaderMm ?? 0;
   if (reach <= 0 || !rule.within || item.anchor !== 'middle') return null;
@@ -221,6 +233,7 @@ function beside(
   const origin = item.at;
   const from = toPaper(view, origin);
   const n = Math.floor(reach / step);
+  const others = rooms.filter((r) => r !== rule.within).map((r) => r.map((p) => toPaper(view, p)));
   for (const clear of tests) {
     for (const [a, c] of ladder(n, n)) {
       if (a === 0 && c === 0) continue;
@@ -232,6 +245,11 @@ function beside(
       if (!fitsWithin(box, frame) || !clear(box)) continue;
       // Wholly outside the room: no corner of the room inside the words, no edge through them.
       if (inside(box.centre, ring) || ring.some((p, i) => segmentCrossesBox(p, ring[(i + 1) % ring.length]!, box))) continue;
+      // And off every other room that is named the same way: set on a neighbour, a
+      // name reads as the neighbour's, and its box blocks the neighbour's own leader.
+      if (others.some((o) => (inside(box.centre, o) || o.some((p, i) => segmentCrossesBox(p, o[(i + 1) % o.length]!, box))))) {
+        continue;
+      }
       const span = segmentInBox(from, box.centre, box, BREAK_MM);
       if (span === null || span[0] <= 0) continue;
       const t = span[0];

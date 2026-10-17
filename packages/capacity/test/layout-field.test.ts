@@ -48,7 +48,7 @@ function corners(r: PlacedRect): XY[] {
   ];
 }
 
-function run(withField: boolean) {
+function run(withField: boolean, pick?: 'FIELD_WIDTH') {
   const tracer = new Tracer(new ProvenanceGraph());
   const ded = (v: string) => tracer.assumed('d', new Decimal(v), { basis: 'test fixture', unit: 'm²' });
   return layoutParkingLevel({
@@ -60,17 +60,30 @@ function run(withField: boolean) {
     ...(withField
       ? { field: { polygonMm: MAMZAR, grossAreaM2: new Decimal('4433'), deductionsTraced: ded('665') } }
       : {}),
+    ...(pick ? { arrangement: { id: pick } } : {}),
   });
 }
 
 describe('rows across the whole footprint', () => {
-  const field = run(true);
+  // Picked: the field places the most bays here, and its rows meet the
+  // connectors at one end only, so it is not the default under B.7.2.3.3 ¶8.
+  const field = run(true, 'FIELD_WIDTH');
   const rectOnly = run(false);
 
-  it('wins on a footprint the rectangle covers half of', () => {
+  it('places the most bays on a footprint the rectangle covers half of', () => {
     expect(field.orientation.value).toMatch(/^rows across the whole footprint/);
     expect(field.bayCount.value).toBeGreaterThan(rectOnly.bayCount.value);
     expect(field.wholeFootprint).toBe(true);
+    const offered = run(true).arrangements;
+    expect(Math.max(...offered.map((a) => a.bayCount))).toBe(field.bayCount.value);
+  });
+
+  it('is reported beside the default with its dead end, not laid out over it', () => {
+    const byDefault = run(true);
+    const listed = byDefault.arrangements.find((a) => a.id === 'FIELD_WIDTH')!;
+    expect(Math.max(...(listed.deadEnds ?? []))).toBeGreaterThan(8);
+    expect(byDefault.arrangement).not.toBe('FIELD_WIDTH');
+    expect(byDefault.notes.join(' ')).toContain(`${listed.bayCount} rows across the whole footprint, along the width (a dead end serving`);
   });
 
   it('stands every bay, aisle and ramp wholly inside the setback line', () => {

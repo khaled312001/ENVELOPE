@@ -143,6 +143,8 @@ export interface AccessiblePlan {
     readonly gradientPct: TracedDecimal;
     readonly limitPct: TracedDecimal;
     readonly blocked: boolean;
+    /** The ring's level landing the bays were placed on, where it has one. */
+    readonly landingPct?: TracedDecimal;
   };
   /** That level's rectangles, with the accessible bays, their aisles and the preferred bays marked. */
   readonly rects: readonly WorldRect[];
@@ -170,6 +172,12 @@ export interface AccessibleInput {
    * so a sloped ring here is a sloped ring on every level the bays could go to.
    */
   readonly floorGradientPct?: TracedDecimal;
+  /**
+   * Where that sloped ring keeps a stretch level (`levelLanding` in `layout.ts`):
+   * its outline in plot millimetres and its traced gradient. The accessible bays
+   * are placed on it and nowhere else on the ring.
+   */
+  readonly landing?: { readonly world: readonly Pt[]; readonly gradientPct: TracedDecimal };
   /** The level's rectangles before any designation: the grade plan's, or the shared layout's. */
   readonly rects: readonly WorldRect[];
   readonly levelBays: Traced<number>;
@@ -200,6 +208,17 @@ function toRingMm(p: { x: number; y: number }, ring: readonly Pt[]): number {
     best = Math.min(best, Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy)));
   }
   return best;
+}
+
+/** Whether a point lies inside a ring, by the crossings of a ray to its right. */
+function inside(p: { x: number; y: number }, ring: readonly Pt[]): boolean {
+  let within = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
+    const a = ring[i]!;
+    const b = ring[j]!;
+    if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) within = !within;
+  }
+  return within;
 }
 
 /** `b` stands immediately after `a` along the same run, their long sides touching. */
@@ -300,7 +319,7 @@ export function designateAccessible(input: AccessibleInput): AccessiblePlan {
         }
         return g;
       })
-      .filter((g): g is number[] => g !== null && g.every((k) => !taken.has(k)))
+      .filter((g): g is number[] => g !== null && g.every((k) => !taken.has(k) && onLanding(rects[k]!)))
       .sort((p, q) => distance(rects[p[Math.floor(n / 2)]!]!) - distance(rects[q[Math.floor(n / 2)]!]!) || p[0]! - q[0]!);
 
   const vanRatio = tracer.derived('parking.accessible_van_ratio', '10% of the accessible bays, at least one per building', {
@@ -315,13 +334,14 @@ export function designateAccessible(input: AccessibleInput): AccessiblePlan {
     B.7.2.3.1: "Accessible parking slopes shall be limited to a maximum of 2%."
     The sloped ring falls at up to the 4% a parked floor may, so on that
     arrangement every bay — against the walls and on the island, which faces the
-    ring — stands on a floor the engine itself reports above 2%. The model has no
-    flat landing: one would be a zone nobody laid out. And every parking level
-    shares the layout, so there is no flatter level to move them to by the rule
-    above. So none is designated, and the shortfall is said with both figures.
-    The arrangement is NOT changed to make room: choosing a layout to pass a
-    check is the search `PHASE_0_CLASSES` refuses, and the reader may pick
-    another arrangement themselves.
+    ring — stands on a floor the engine itself reports above 2%. Every parking
+    level shares the layout, so there is no flatter level to move them to by the
+    rule above. Where the layout keeps a stretch of the ring level for them
+    (`levelLanding` in `layout.ts`, 17 Oct 2026), they are placed on it, drawn and
+    paid for like any other; where it could not, none is designated, and the
+    shortfall is said with both figures. The arrangement is NOT changed to make
+    room: choosing a layout to pass a check is the search `PHASE_0_CLASSES`
+    refuses, and the reader may pick another arrangement themselves.
   */
   let slope: AccessiblePlan['slope'];
   if (input.floorGradientPct) {
@@ -330,12 +350,21 @@ export function designateAccessible(input: AccessibleInput): AccessiblePlan {
       formula: 'accessible parking falls at no more than 2%',
       unit: '%',
     });
+    /*
+      THE LEVEL LANDING. Where the ring keeps a stretch level for them, the bays
+      go there — and only there: every other bay on the ring stands on the
+      climbing floor, and the check above still holds for it.
+    */
+    const landingFlat = input.landing !== undefined && input.landing.gradientPct.value.lte(limitPct.value);
     slope = {
       gradientPct: input.floorGradientPct,
       limitPct,
-      blocked: input.floorGradientPct.value.gt(limitPct.value),
+      blocked: input.floorGradientPct.value.gt(limitPct.value) && !landingFlat,
+      ...(landingFlat && input.landing ? { landingPct: input.landing.gradientPct } : {}),
     };
   }
+  const onLanding = (r: WorldRect): boolean =>
+    slope?.landingPct === undefined || !input.landing ? true : inside(centroid(r.world), input.landing.world);
 
   let placedValue = 0;
   let vans = 0;
@@ -380,11 +409,19 @@ export function designateAccessible(input: AccessibleInput): AccessiblePlan {
     formula: slope?.blocked
       ? `0 of ${requiredValue} placed: ${level} is the sloped ring at ${slope.gradientPct.value.toFixed(2)}%, ` +
         `above the ${slope.limitPct.value.toString()}% B.7.2.3.1 allows accessible parking`
-      : `${placedValue} of ${requiredValue} placed on ${level}, at the bays nearest the core, ` +
+      : `${placedValue} of ${requiredValue} placed on ${level}` +
+        (slope?.landingPct ? `, on the sloped ring's level landing (${slope.landingPct.value.toString()}%)` : '') +
+        ', at the bays nearest the core, ' +
         `${lost} bay(s) given up to the access aisle(s) of C.6.4.2 f)` +
         (vans > 0 ? `; ${vans} of them ${VAN_BAY_WIDTH_M.toString()} m wide for a van` : ''),
     uses: slope
-      ? { required, vanRatio, gradient: slope.gradientPct, limit: slope.limitPct }
+      ? {
+          required,
+          vanRatio,
+          gradient: slope.gradientPct,
+          limit: slope.limitPct,
+          ...(slope.landingPct ? { landing: slope.landingPct } : {}),
+        }
       : { required, vanRatio },
     unit: 'bays',
   });
@@ -396,6 +433,13 @@ export function designateAccessible(input: AccessibleInput): AccessiblePlan {
         // "May", not "would": no flat arrangement was tried for them, and one with too
         // few runs side by side would place fewer than C.17 asks for too.
         'The arrangement was not changed to make room for them; the reader may pick one with a flat floor.',
+    );
+  } else if (placedValue < requiredValue && slope?.landingPct) {
+    notes.push(
+      `${requiredValue - placedValue} of the ${requiredValue} accessible bays Table C.17 asks for could not be ` +
+        `placed on ${level}: the sloped ring's level landing holds no further run of bays side by side, and the ` +
+        `rest of the ring climbs ${slope.gradientPct.value.toFixed(2)}%, above the ${slope.limitPct.value.toString()}% ` +
+        'DBC B.7.2.3.1 allows accessible parking.',
     );
   } else if (placedValue < requiredValue) {
     notes.push(

@@ -157,6 +157,71 @@ const REASONS: Readonly<Record<string, Said>> = {
       en: 'Set aside for this run and not checked: no instrument on file states this limit for the plot, so the figure typed by the person who ran the study replaces this general rule, under their name.',
       ar: 'استبعدت في هذه الدراسة ولم تفحص: لا توجد وثيقة محفوظة تذكر هذا الحد لهذه القطعة، فالرقم الذي كتبه من شغل الدراسة يحل محل هذه القاعدة العامة، باسمه.',
     },
+  /*
+    The project briefs' own notes, as the rules step's brief card prints them
+    (17 Oct 2026). Written in `packages/rules/src/standards/`; held to this table
+    by `apps/api/test/brief-6468096.test.ts`, every note of every brief on file.
+  */
+  'The brief prints the plot area in square feet only: 48,075 ft² × 0.09290304 (exact, by the definition of the foot) = 4,466.313648 m². The plot’s affection plan prints 4,466.35 m²; a figure rounded to the whole square foot can differ from it by up to 0.046 m², and this one differs by 0.036 m².':
+    {
+      en: 'The brief prints the plot area in square feet only: 48,075 ft² × 0.09290304 (exact) = 4,466.313648 m². The affection plan prints 4,466.35 m²; a figure rounded to the whole square foot can differ by up to 0.046 m², and this one differs by 0.036 m².',
+      ar: 'الموجز يطبع مساحة القطعة بالقدم المربعة فقط: 48,075 قدم² × 0.09290304 (معامل دقيق بتعريف القدم) = 4,466.313648 م². مخطط الأفكشن يطبع 4,466.35 م²؛ والرقم المقرب إلى أقرب قدم مربعة قد يختلف عنه حتى 0.046 م²، وهذا يختلف بمقدار 0.036 م².',
+    },
+  'The brief also prints 232,552 ft², and the two do not quite agree: 21,604.61 m² is 232,550.09 ft², and 232,552 ft² is 21,604.79 m², 0.18 m² more. The square-metre figure is the one taken, as printed, and the difference is said rather than resolved. Under the table the brief says "25% tolerance in GFA could be considered, so GFA swapping is possible between plots": the figure is the one the brief states, not a fixed allowance. It defines GFA "as defined by DDA Regulations" (section 1.1).':
+    {
+      en: 'The brief also prints 232,552 ft², and the two do not quite agree: 21,604.61 m² is 232,550.09 ft², and 232,552 ft² is 21,604.79 m², 0.18 m² more. The square-metre figure is taken as printed and the difference is said, not resolved. Under the table the brief allows a 25% tolerance in GFA, swapped between plots: the figure is the one it states, not a fixed allowance. It defines GFA as the DDA Regulations do (section 1.1).',
+      ar: 'الموجز يطبع أيضا 232,552 قدم²، والرقمان لا يتفقان تماما: 21,604.61 م² تساوي 232,550.09 قدم²، و232,552 قدم² تساوي 21,604.79 م²، أي أكثر بـ0.18 م². يؤخذ الرقم بالمتر المربع كما طبع، ويذكر الفرق ولا يحسم. وتحت الجدول يسمح الموجز بتفاوت 25% في المساحة الطابقية يتبادل بين القطع: فالرقم هو ما يذكره الموجز، لا حد ثابت. ويعرف المساحة الطابقية كما تعرفها لوائح DDA (القسم 1.1).',
+    },
+  'Printed as a ceiling ("range up to") for the plots the request lists, and it lists only this one. A brief supplies only its GFA in this study, so this binds nothing here: the run’s height stays open until the affection plan’s master plan states it, or the client says this ceiling may stand for it.':
+    {
+      en: 'Printed as a ceiling ("range up to") for the plots the request lists, and it lists only this one. A brief supplies only its GFA in this study, so this binds nothing here: the height stays open until the affection plan’s master plan states it, or the client says this ceiling may stand for it.',
+      ar: 'مطبوع كسقف («حتى») للقطع التي يذكرها الطلب، والطلب لا يذكر غير هذه القطعة. الموجز لا يقدم في هذه الدراسة إلا مساحته الطابقية، فلا يلزم هذا شيئا هنا: يبقى الارتفاع مفتوحا حتى يذكره المخطط الرئيسي الذي يحيل إليه مخطط الأفكشن، أو يقول العميل إن هذا السقف يصلح له.',
+    },
+  'Information for the reader. The run’s levels are entered on the rules step; nothing is filled from this.':
+    {
+      en: 'Information for you. The study’s levels are entered on the rules step; nothing is filled from this.',
+      ar: 'معلومة لك. أدوار الدراسة تدخل في خطوة القواعد، ولا يملأ منها شيء.',
+    },
+  'The brief prints no FAR. The study’s ratio is the brief’s GFA ÷ its plot area, and there is no printed ratio to check it against.':
+    {
+      en: 'The brief prints no FAR. The study’s ratio is the brief’s GFA ÷ its plot area, with no printed ratio to check it against.',
+      ar: 'الموجز لا يطبع معامل بناء. معامل الدراسة هو المساحة الطابقية في الموجز ÷ مساحة القطعة فيه، ولا يوجد معامل مطبوع للمقارنة به.',
+    },
+  'The brief’s height, "up to G+5P+45", is a ceiling, not a limit this study binds from a brief, and is not applied. Whether it may stand as this plot’s height limit is an open question.':
+    {
+      en: 'The brief’s height, "up to G+5P+45", is a ceiling, not a limit this study binds from a brief, and is not applied. Whether it may stand as this plot’s height limit is an open question.',
+      ar: 'ارتفاع الموجز «حتى G+5P+45» سقف، وليس حدا تأخذه هذه الدراسة من موجز، ولا يطبق. وهل يصلح حدا لارتفاع هذه القطعة سؤال مفتوح.',
+    },
+  'Sellable area of at least 100% of GFA (section 3, 1.0 item 5), a basement car park of at least 37.5 m² per car (item 6), parking on up to 5 levels above the ground (item 7), 6 m retail on the ground floor (item 11) and 3% of GFA for amenities (1.1) are the brief’s targets. None is applied by this study.':
+    {
+      en: 'Sellable area of at least 100% of GFA (section 3, 1.0 item 5), a basement car park of at least 37.5 m² per car (item 6), parking on up to 5 levels above the ground (item 7), 6 m retail on the ground floor (item 11) and 3% of GFA for amenities (1.1) are the brief’s targets. This study applies none of them.',
+      ar: 'مساحة قابلة للبيع لا تقل عن 100% من المساحة الطابقية (القسم 3، البند 1.0 فقرة 5)، ومواقف بدروم لا تقل عن 37.5 م² لكل سيارة (فقرة 6)، ومواقف حتى 5 أدوار فوق الأرضي (فقرة 7)، وتجزئة بارتفاع 6 م في الدور الأرضي (فقرة 11)، و3% من المساحة الطابقية للمرافق (1.1): هذه أهداف الموجز، ولا تطبق هذه الدراسة أيا منها.',
+    },
+  'The brief’s unit sizes (studio 320 ft², one-bed 550 to 650, two-bed 1,100, three-bed 1,400) are not encoded as a mix. Its shares are the general standard’s worst case, which is offered with that standard’s own maxima as the areas.':
+    {
+      en: 'The brief’s unit sizes (studio 320 ft², one-bed 550 to 650, two-bed 1,100, three-bed 1,400) are not encoded as a mix. Its shares are the general standard’s worst case, offered with that standard’s own maxima as the areas.',
+      ar: 'مساحات الوحدات في الموجز (استوديو 320 قدم²، غرفة واحدة 550 إلى 650، غرفتان 1,100، ثلاث غرف 1,400) لم ترمز كتوزيع. نسبه هي أسوأ حالة في معيار المطور العام، وهي معروضة بالحدود القصوى لذلك المعيار كمساحات.',
+    },
+  'The affection plan for this plot prints no FAR at all. This is the only instrument in the file that states one, and it is a developer brief rather than an authority document.':
+    {
+      en: 'The affection plan for this plot prints no FAR at all. This is the only instrument on file that states one, and it is a developer brief, not an authority document.',
+      ar: 'مخطط الأفكشن لهذه القطعة لا يطبع معامل بناء إطلاقا. هذه الوثيقة الوحيدة في الملف التي تذكره، وهي موجز مطور لا وثيقة نظامية.',
+    },
+  'The brief narrows the standard mix to studios and one-bedrooms only. The wider mix in the general standard does not apply to this plot.':
+    {
+      en: 'The brief narrows the standard mix to studios and one-bedrooms only. The wider mix in the general standard does not apply to this plot.',
+      ar: 'الموجز يحصر التوزيع في الاستوديوهات ووحدات الغرفة الواحدة. التوزيع الأوسع في المعيار العام لا ينطبق على هذه القطعة.',
+    },
+  'The printed FAR does not reproduce this: 5.05 × 1,740.56 = 8,789.83, which is 6.63 m² short. The true ratio is 5.0538 and the document prints it rounded to two decimals. The GFA is the number the developer priced; the FAR is a rounded description of it, and re-multiplying the rounded FAR under-reports on every plot whose ratio does not divide evenly.':
+    {
+      en: 'The printed FAR does not reproduce this: 5.05 × 1,740.56 = 8,789.83, 6.63 m² short. The true ratio is 5.0538, printed rounded to two decimals. The GFA is the number the developer priced; multiplying the rounded FAR back under-reports.',
+      ar: 'معامل البناء المطبوع لا يعطي هذا الرقم: 5.05 × 1,740.56 = 8,789.83، أي أقل بـ6.63 م². المعامل الحقيقي 5.0538، وطبع مقربا إلى منزلتين. المساحة الطابقية هي الرقم الذي سعر عليه المطور؛ وضرب المعامل المقرب مرة أخرى ينقص النتيجة.',
+    },
+  'This one agrees with the affection plan, which prints the same FAR and the same GFA. Two independent instruments stating the same number is the cheapest corroboration available, and it is worth recording that it held.':
+    {
+      en: 'This agrees with the affection plan, which prints the same FAR and the same GFA. Two independent instruments stating one number is the cheapest corroboration there is, and it held.',
+      ar: 'هذا يتفق مع مخطط الأفكشن، الذي يطبع معامل البناء نفسه والمساحة الطابقية نفسها. وثيقتان مستقلتان تذكران الرقم نفسه أرخص تأكيد متاح، وقد صمد.',
+    },
 };
 
 /** Sentences with figures in them, recognised by their fixed wording. */
@@ -215,6 +280,58 @@ const PATTERNS: readonly Reader[] = [
     const on = m[3] === ' (GFA)' ? ' (من المساحة الطابقية)' : m[3] === ' (saleable)' ? ' (قابلة للبيع)' : '';
     const studio = m[5] === undefined ? '' : `؛ الاستوديو ${m[5]}`;
     return { en: t, ar: `${m[1]} لكل وحدة سكنية ≤ ${m[2]} م²${on}، و${m[4]} لما فوقها${studio}` };
+  },
+  /*
+    What a project brief bound (rules `rulesFromBrief`), as the plot step and the
+    study's annex print it (17 Oct 2026). The brief's own words after "As printed"
+    stay as printed, in English: a translated quote is no longer a quote.
+  */
+  (t) => {
+    const m =
+      /^Developer brief, not an authority document: issued by the developer’s consultant and applied only where the plot’s own affection plan states nothing\. GFA ([\d.]+) m² ÷ plot area ([\d.]+) m² \(rounded down at 6 places\); (?:the brief's FAR ([\d.]+) is the cross-check|the brief prints no FAR to cross-check it against)\. As printed: "([\s\S]*)"$/.exec(
+        t,
+      );
+    if (!m) return null;
+    const check =
+      m[3] === undefined ? 'الموجز لا يطبع معامل بناء للمقارنة به' : `ومعامل البناء في الموجز ${m[3]} هو المقارنة`;
+    return {
+      en: t,
+      ar:
+        'موجز مطور، وليس وثيقة نظامية: يصدره استشاري المطور، ولا يطبق إلا حيث لا يذكر مخطط الأفكشن الخاص بالقطعة شيئا. ' +
+        `إجمالي المساحة الطابقية ${m[1]} م² ÷ مساحة القطعة ${m[2]} م² (مقربا للأسفل إلى 6 منازل)؛ ${check}. ` +
+        `كما طبع: «${m[4]}»`,
+    };
+  },
+  /*
+    A title-block field refused at the run (apps/api `titleBlockInput`, 17 Oct
+    2026), as the 400 names it: "titleBlock.<field>: <sentence>".
+  */
+  (t) => {
+    const m = /^titleBlock\.(projectName|client|consultant|description|status): ([\s\S]+)$/.exec(t);
+    if (!m) return null;
+    const field: Readonly<Record<string, Said>> = {
+      projectName: { en: 'Project', ar: 'المشروع' },
+      client: { en: 'Client', ar: 'العميل' },
+      consultant: { en: 'Consultant', ar: 'الاستشاري' },
+      description: { en: 'Description', ar: 'الوصف' },
+      status: { en: 'Status', ar: 'الحالة' },
+    };
+    const name = field[m[1] ?? ''];
+    const reason = m[2] ?? '';
+    if (!name) return null;
+    if (reason.startsWith('is printed in the drawings’ title block and in the DXF, whose text is plain ASCII.')) {
+      return {
+        en: `${name.en} ${reason}`,
+        ar: `خانة «${name.ar}» تطبع في إطار عنوان الرسومات وفي ملف DXF، ونصه حروف لاتينية فقط (ASCII). اكتبها بحروف لاتينية وأرقام وعلامات ترقيم؛ أي حرف خارجها يطبع «?» في ملف الكاد.`,
+      };
+    }
+    if (reason.startsWith('contains "%%", which a CAD reader takes as a control code')) {
+      return {
+        en: `${name.en} ${reason}`,
+        ar: `خانة «${name.ar}» فيها «%%»، وبرامج الكاد تقرؤها رمز تحكم فتطبع شيئا آخر. اكتبها دون علامة النسبة المكررة.`,
+      };
+    }
+    return null;
   },
 ];
 

@@ -1204,16 +1204,29 @@ export function DeveloperStandardPanel({
                 {ltr(standards.brief.plotNumber)}
                 {t.brief.end}
               </strong>{' '}
-              {t.brief.statesFar}
-              {standards.brief.far.value}
-              {t.brief.statesAnd}
+              {standards.brief.far ? (
+                <>
+                  {t.brief.statesFar}
+                  {standards.brief.far.value}
+                  {t.brief.statesAnd}
+                </>
+              ) : (
+                t.brief.statesGfaOnly
+              )}
               {standards.brief.gfaM2.value}
               {t.brief.statesGfa}
             </p>
-            {standards.brief.far.note ? (
+            {standards.brief.far?.note ? (
               <p className="fine-print">{ltr(standards.brief.far.note)}</p>
             ) : null}
-            <p className="fine-print">{t.brief.replaces}</p>
+            {/*
+              Only when the brief brought scenarios of its own. Plot 6468096's
+              brings none (its shares are the general standard's worst case), and
+              saying "its scenarios replace the standard's" there would be false.
+            */}
+            {standards.standards.some((s) => s.scenarios.some((sc) => sc.fromBrief)) ? (
+              <p className="fine-print">{t.brief.replaces}</p>
+            ) : null}
           </div>
         ) : null}
 

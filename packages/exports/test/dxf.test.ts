@@ -179,6 +179,34 @@ describe('the title block, in the file an architect x-refs', () => {
     expect(sheetOf({ ...META, checkedBy: 'R. HABIB' })).toContain('Checked by: R. HABIB');
   });
 
+  /*
+    THE READER'S FIVE FIELDS (17 Oct 2026). The A3 strip printed them, or NOT
+    STATED, and the DXF wrote its own lines and carried none of them — so the file
+    most likely to be x-reffed named no project. Read back by an independent
+    parser, so a value that broke the pairing would fail here and not on site.
+  */
+  it('prints the project, client, consultant, description and status the reader stated', () => {
+    const dxf = sheetOf({
+      ...META,
+      projectName: 'Plot 04 Residential',
+      client: 'A Client LLC',
+      consultant: 'Studio Three',
+      description: '3B+G+5P+38 residential building',
+      status: 'Feasibility',
+    });
+    const texts = (parse(dxf).entities.filter((e) => e.type === 'TEXT') as ITextEntity[]).map((t) => t.text);
+    expect(texts).toContain('Project: Plot 04 Residential. Client: A Client LLC. Consultant: Studio Three.');
+    expect(texts).toContain('Description: 3B+G+5P+38 residential building. Status: Feasibility.');
+  });
+
+  it('prints NOT STATED for each field nobody stated, never a blank or a guess', () => {
+    const dxf = sheetOf(META);
+    expect(dxf).toContain('Project: NOT STATED. Client: NOT STATED. Consultant: NOT STATED.');
+    expect(dxf).toContain('Description: NOT STATED. Status: NOT STATED.');
+    // And the issue line's two sentences no longer run together.
+    expect(dxf).toContain('Drawn by the Plotlogic engine. Checked by:');
+  });
+
   it('states the one revision there is, and that no history is kept', () => {
     expect(sheetOf(META)).toContain('Revision 0 - first issue');
     expect(sheetOf(META)).toContain('a recomputation is a new run');

@@ -1,7 +1,7 @@
 import { CircleCheck, FileCheck2, LogIn, Map as MapIcon, PenSquare, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { LevelPlanView, PlotCreated, PlotView } from '@web/api/client.js';
+import type { LevelPlanView, PlotCreated, PlotView, RunView } from '@web/api/client.js';
 
 import type { MapTrace, SheetUnderlay } from '../components/PlotMapView.js';
 import { PlotSketch } from '../components/PlotSketch.js';
@@ -18,7 +18,7 @@ import type { DraftPlot, EdgeClass, Hierarchy } from './model.js';
 import type { VehicleAccessBody } from './ParkingStep.js';
 import { Footer, Heading, NextStep, Row } from './parts.js';
 import type { SheetState } from './SheetStep.js';
-import { NotBoundList, SheetBlockingList, TowerSetbackField } from './sheet-setbacks.js';
+import { NotBoundList, RunSheetLists, SheetBlockingList, TowerSetbackField } from './sheet-setbacks.js';
 
 // maplibre is the heaviest thing the studio loads; it comes down only when the map is opened.
 const PlotMapView = lazy(() => import('../components/PlotMapView.js').then((m) => ({ default: m.PlotMapView })));
@@ -331,9 +331,12 @@ export function PlotPanel({
   onFile,
   onNext,
   roads = null,
+  runSheet = null,
 }: {
   readonly draft: DraftPlot;
   readonly onChange: (next: DraftPlot) => void;
+  /** The last run's sheet report: placeholders it did not load and what a chosen brief bound. Null before a run. */
+  readonly runSheet?: RunView['sheet'] | null;
   readonly statedArea: string;
   readonly onStatedArea: (next: string) => void;
   /** The road beside each boundary on the map, once the plot stands on it; null until then or if the map could not be asked. */
@@ -448,6 +451,7 @@ export function PlotPanel({
         */}
         {plot && created ? <SheetBlockingList sheet={created.sheet} /> : null}
         {plot && created ? <NotBoundList sheet={created.sheet} /> : null}
+        {plot ? <RunSheetLists sheet={runSheet} /> : null}
 
         {sheet ? (
           <p className="flex items-start gap-2 rounded-md border border-line bg-raised px-3 py-2 text-[12.5px] text-secondary">

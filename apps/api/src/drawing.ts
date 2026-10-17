@@ -37,6 +37,17 @@ export interface DrawableRun {
   readonly issuedAt: string;
   /** The G4 reviewer's name, once somebody has signed. Absent prints NOT CHECKED. */
   readonly checkedBy?: string;
+  /**
+   * What the reader called the job when they ran it (17 Oct 2026), as stored with
+   * the run. A field absent here prints NOT STATED; nothing is filled in its place.
+   */
+  readonly titleBlock?: {
+    readonly projectName?: string;
+    readonly client?: string;
+    readonly consultant?: string;
+    readonly description?: string;
+    readonly status?: string;
+  };
 }
 
 /**
@@ -52,6 +63,21 @@ function metaOf(run: DrawableRun): SheetMeta {
     runId: run.runId,
     issuedAt: run.issuedAt,
     ...(run.checkedBy ? { checkedBy: run.checkedBy } : {}),
+    ...titleFieldsOf(run.titleBlock),
+  };
+}
+
+/** The reader's title-block words, field by field; a field they did not state is left out, never filled. */
+export function titleFieldsOf(
+  stated: DrawableRun['titleBlock'],
+): Pick<SheetMeta, 'projectName' | 'client' | 'consultant' | 'description' | 'status'> {
+  if (!stated) return {};
+  return {
+    ...(stated.projectName ? { projectName: stated.projectName } : {}),
+    ...(stated.client ? { client: stated.client } : {}),
+    ...(stated.consultant ? { consultant: stated.consultant } : {}),
+    ...(stated.description ? { description: stated.description } : {}),
+    ...(stated.status ? { status: stated.status } : {}),
   };
 }
 

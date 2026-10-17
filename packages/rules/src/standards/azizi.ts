@@ -26,6 +26,7 @@
 
 import type { Citation } from '@envelope/core';
 
+import { BRIEF_PLOT_6468096 } from './plot-6468096.js';
 import type { DeveloperStandard, ProjectBrief } from './types.js';
 
 const STANDARD_URI =
@@ -412,4 +413,10 @@ export const DEVELOPER_STANDARDS: readonly DeveloperStandard[] = [AZIZI_RESIDENT
 export const PROJECT_BRIEFS: readonly ProjectBrief[] = [
   BRIEF_DJAZ1MED12RES011,
   BRIEF_DJAZ1TRE10RES022,
+  /*
+    Plot 6468096 (17 Oct 2026). Transcribed in its own module with no party named
+    in it; filed here under the general standard it inherits its targets from,
+    because the standard is defined in this file.
+  */
+  { ...BRIEF_PLOT_6468096, standardId: AZIZI_RESIDENTIAL.standardId },
 ];

@@ -232,6 +232,13 @@ export interface RunView {
   readonly withinRuntimeBudget: boolean;
   readonly draftRules: boolean;
   readonly warning?: string;
+  /**
+   * What the plot's sheet did for THIS run (17 Oct 2026): the placeholders it did
+   * not load and what a named brief bound. Absent on a run stored before.
+   */
+  readonly sheet?: SheetReport;
+  /** The title block's words as stored with the run, and who stated them. Absent when none were. */
+  readonly titleBlock?: TitleBlockBody & { readonly statedBy: string };
   readonly plot: {
     readonly plotId: string;
     readonly plotNumber: string;
@@ -1032,9 +1039,12 @@ export interface StandardsView {
     readonly citation: CitationView;
     readonly plotAreaM2: StandardTarget;
     readonly gfaM2: StandardTarget;
-    readonly far: StandardTarget;
+    /** Absent where the brief prints no FAR (plot 6468096's does not). */
+    readonly far?: StandardTarget;
     readonly heightCode: StandardTarget;
     readonly landUse: StandardTarget;
+    /** The level schedule the brief states, as printed. Information only; nothing binds it. */
+    readonly levels?: StandardTarget;
     readonly notMechanized: readonly string[];
   } | null;
   readonly disclaimer: string;
@@ -1151,6 +1161,26 @@ export interface RunRequestBody {
   );
   readonly realismDiscount: string;
   readonly useDraftRules: boolean;
+  /**
+   * The project brief the reader chose for this plot, by its id (17 Oct 2026).
+   * Offered, never pre-selected: absent, nothing is taken from any brief. The
+   * server refuses an id that is not this plot's, in a sentence.
+   */
+  readonly projectBriefId?: string;
+  /**
+   * The title block's words. Every field optional and none defaulted; printable
+   * ASCII only, because they print in the DXF. Absent fields print NOT STATED.
+   */
+  readonly titleBlock?: TitleBlockBody;
+}
+
+/** What the reader calls the job, for the drawings' title block. */
+export interface TitleBlockBody {
+  readonly projectName?: string;
+  readonly client?: string;
+  readonly consultant?: string;
+  readonly description?: string;
+  readonly status?: string;
 }
 
 // ---------------------------------------------------------------------------

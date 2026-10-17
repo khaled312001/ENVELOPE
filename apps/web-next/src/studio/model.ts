@@ -98,6 +98,12 @@ export interface RulesForm {
   readonly coreArea: string;
   readonly mix: readonly MixRow[];
   readonly mixSource: 'USER_SET' | 'ASSUMED';
+  /**
+   * The project brief the reader chose for this plot, or '' for none. Opens at ''
+   * on every study: a brief is offered with a button and never chosen for the
+   * reader (FR-DEF-002's "no default", applied to a developer's document).
+   */
+  readonly projectBriefId: string;
 }
 
 /*
@@ -137,6 +143,7 @@ export const EMPTY_RULES: RulesForm = {
   coreArea: '',
   mix: DEFAULT_MIX,
   mixSource: 'ASSUMED',
+  projectBriefId: '',
 };
 
 /** The worked example's request, exactly as `worked-example.json` records it. */
@@ -161,6 +168,7 @@ export function exampleStudy(): { plot: DraftPlot; rules: RulesForm } {
       coreArea: '',
       mix: r.unitMix.entries,
       mixSource: 'USER_SET',
+      projectBriefId: '',
     },
   };
 }
@@ -221,6 +229,8 @@ export function requestBody(
     levels,
     ...(f.coreArea.trim() === '' ? {} : { coreAreaM2: f.coreArea.trim() }),
     ...(chosenAccessEdgeSeq === undefined ? {} : { chosenAccessEdgeSeq }),
+    // Only when the reader pressed "Use this brief"; '' sends nothing and takes nothing from any brief.
+    ...(f.projectBriefId === '' ? {} : { projectBriefId: f.projectBriefId }),
     parkingUsableFraction: { value: '0.85', source: 'ASSUMED', basis: USABLE_FRACTION_BASIS },
     saleableEfficiency: { value: SALEABLE_ASSUMED, source: 'ASSUMED', basis: SALEABLE_BASIS },
     realismDiscount: '1.00',
@@ -244,7 +254,52 @@ export function rulesFrom(body: RunRequestBody): RulesForm {
     coreArea: body.coreAreaM2 ?? '',
     mix: body.unitMix.entries,
     mixSource: body.unitMix.source,
+    projectBriefId: body.projectBriefId ?? '',
   };
+}
+
+/*
+  THE TITLE BLOCK, AS THE READER TYPES IT (17 Oct 2026).
+
+  Five optional strings, each printed in the drawings' title strip and in the
+  DXF. The server refuses anything outside printable ASCII and a doubled `%%`
+  (a CAD control code), and caps each length; the same rules are checked here
+  so the reader learns it beside the field rather than from a refused run.
+*/
+export const TITLE_FIELDS = ['projectName', 'client', 'consultant', 'description', 'status'] as const;
+export type TitleFieldName = (typeof TITLE_FIELDS)[number];
+export type TitleBlockForm = Readonly<Record<TitleFieldName, string>>;
+
+/** The server's caps (`apps/api/src/schemas.ts` `titleBlockInput`), field by field. */
+export const TITLE_MAX: Readonly<Record<TitleFieldName, number>> = {
+  projectName: 80,
+  client: 80,
+  consultant: 80,
+  description: 160,
+  status: 40,
+};
+
+export const EMPTY_TITLE_BLOCK: TitleBlockForm = { projectName: '', client: '', consultant: '', description: '', status: '' };
+
+export type TitleProblem = 'notLatin' | 'controlCode' | 'tooLong';
+
+/** What stops one field from printing as typed. Nothing for a field that will print. */
+export function titleProblem(field: TitleFieldName, value: string): TitleProblem | undefined {
+  if (!/^[\x20-\x7E]*$/.test(value)) return 'notLatin';
+  if (value.includes('%%')) return 'controlCode';
+  if (value.length > TITLE_MAX[field]) return 'tooLong';
+  return undefined;
+}
+
+/** The form from what a run stored, so the reader edits what the drawings print. */
+export function titleFormOf(stored: Partial<Record<TitleFieldName, string>> | undefined): TitleBlockForm {
+  return Object.fromEntries(TITLE_FIELDS.map((k) => [k, stored?.[k] ?? ''])) as TitleBlockForm;
+}
+
+/** The request's title block: trimmed, blanks left out, and nothing at all when nothing was stated. */
+export function titleBlockBody(form: TitleBlockForm): Partial<Record<TitleFieldName, string>> | undefined {
+  const kept = Object.fromEntries(TITLE_FIELDS.map((k) => [k, form[k].trim()]).filter(([, v]) => v !== ''));
+  return Object.keys(kept).length > 0 ? kept : undefined;
 }
 
 /*

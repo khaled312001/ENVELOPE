@@ -233,6 +233,8 @@ export const EN = {
       statesGfa: ' m² of GFA.',
       replaces:
         'Its scenarios replace the general standard’s — the wider mix does not apply to this plot.',
+      /** A brief that prints no FAR (6468096): its GFA sits after this. */
+      statesGfaOnly: 'It prints no FAR, and states ',
     },
     none: {
       label: 'None — use a generic mix',

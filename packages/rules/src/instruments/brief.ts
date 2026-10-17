@@ -83,7 +83,10 @@ export function rulesFromBrief(brief: ProjectBrief, binding: BriefBinding): read
         clauseReference: `${brief.gfaM2.citation.clauseReference} ÷ ${brief.plotAreaM2.citation.clauseReference}`,
         sourceTextVerbatim:
           `${BRIEF_NOT_AUTHORITY} GFA ${gfa.toString()} m² ÷ plot area ${area.toString()} m² ` +
-          `(rounded down at 6 places); the brief's FAR ${brief.far.value} is the cross-check. ` +
+          // A brief that prints no FAR (6468096) says so, rather than quoting a ratio it does not print.
+          (brief.far
+            ? `(rounded down at 6 places); the brief's FAR ${brief.far.value} is the cross-check. `
+            : '(rounded down at 6 places); the brief prints no FAR to cross-check it against. ') +
           `As printed: "${brief.citation.sourceTextVerbatim}"`,
       },
       /*

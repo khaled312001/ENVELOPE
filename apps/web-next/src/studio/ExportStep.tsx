@@ -1,15 +1,24 @@
 import { Box, Check, FileCode2, FileJson, FileSpreadsheet, FileText, Layers, Lock, Printer } from 'lucide-react';
 import { useState } from 'react';
 
-import { type Actor, api, ApiError, type RunView } from '@web/api/client.js';
+import { type Actor, api, ApiError, type RunView, type TitleBlockBody } from '@web/api/client.js';
 import { printDocument } from '@web/documents.js';
 import { hashOf } from '@web/gateHash.js';
 
 import { cn } from '../lib/cn.js';
 import { EngineMessage, useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
-import { Notice, PanelHeader, Spinner } from '../ui/primitives.js';
+import { Field, Input, Notice, PanelHeader, Spinner } from '../ui/primitives.js';
 import { AdvisorBox } from './AdvisorBox.js';
+import {
+  TITLE_FIELDS,
+  TITLE_MAX,
+  type TitleBlockForm,
+  titleBlockBody,
+  type TitleFieldName,
+  titleFormOf,
+  titleProblem,
+} from './model.js';
 
 /*
   EXPORT, BEHIND THE SAME TWO GATES THE SERVER ENFORCES.
@@ -24,7 +33,25 @@ import { AdvisorBox } from './AdvisorBox.js';
 
 type Format = 'html' | 'sheets' | 'dxf' | 'xlsx' | 'glb' | 'json';
 
-export function ExportPanel({ actor, run, onSigned }: { readonly actor: Actor; readonly run: RunView; readonly onSigned: () => Promise<void> }): JSX.Element {
+/** What the export step needs to change the title block: the run is recomputed with it, never edited. */
+export interface TitleBlockControl {
+  /** False when this browser does not hold the request the run was made with. */
+  readonly canSave: boolean;
+  readonly busy: boolean;
+  readonly onSave: (titleBlock: TitleBlockBody | undefined) => void;
+}
+
+export function ExportPanel({
+  actor,
+  run,
+  onSigned,
+  titleBlock,
+}: {
+  readonly actor: Actor;
+  readonly run: RunView;
+  readonly onSigned: () => Promise<void>;
+  readonly titleBlock?: TitleBlockControl;
+}): JSX.Element {
   const { t, locale, href } = useLocale();
   const gates = run.gates ?? {};
   const g3 = gates['G3_ASSUMPTIONS_ACKNOWLEDGED'];
@@ -221,8 +248,77 @@ export function ExportPanel({ actor, run, onSigned }: { readonly actor: Actor; r
             {filesBlock}
           </>
         )}
+        {titleBlock ? <TitleBlockDisclosure run={run} control={titleBlock} /> : null}
       </div>
     </div>
+  );
+}
+
+/*
+  THE TITLE BLOCK, A SMALL DISCLOSURE UNDER THE FILES (17 Oct 2026).
+
+  The strip printed NOT STATED in five fields because the run had nowhere to
+  hold what the reader calls the job. Closed by default — most exports do not
+  need it, and an open form above the files would compete with them. Each field
+  is checked here by the server's own rules, so a value the DXF would print as
+  "?" is named beside its field before anything is sent. Saving is a new run:
+  the stored run is never edited, so its gates are signed again.
+*/
+export function TitleBlockDisclosure({ run, control }: { readonly run: RunView; readonly control: TitleBlockControl }): JSX.Element {
+  const { t } = useLocale();
+  const [form, setForm] = useState<TitleBlockForm>(() => titleFormOf(run.titleBlock));
+  const problems = TITLE_FIELDS.map((k) => [k, titleProblem(k, form[k])] as const).filter(
+    (p): p is readonly [TitleFieldName, NonNullable<ReturnType<typeof titleProblem>>] => p[1] !== undefined,
+  );
+  const unchanged = TITLE_FIELDS.every((k) => form[k].trim() === (run.titleBlock?.[k] ?? ''));
+  const say = (k: TitleFieldName, p: NonNullable<ReturnType<typeof titleProblem>>): string => {
+    const label = t.titleBlock.field[k] ?? k;
+    return p === 'notLatin' ? t.titleBlock.notLatin(label) : p === 'controlCode' ? t.titleBlock.controlCode(label) : t.titleBlock.tooLong(label, TITLE_MAX[k]);
+  };
+  return (
+    <details className="group rounded-md border border-line bg-base" data-title-block="">
+      <summary className="flex min-h-11 cursor-pointer items-center px-3 text-[13px] font-medium text-fg">{t.titleBlock.title}</summary>
+      <div className="grid gap-3 border-t border-subtle p-3">
+        <p className="text-[12px] text-secondary">{t.titleBlock.lede}</p>
+        <p className="text-[12px] text-secondary">{t.titleBlock.latinOnly}</p>
+        {TITLE_FIELDS.map((k) => {
+          const problem = problems.find(([f]) => f === k)?.[1];
+          return (
+            <Field key={k} label={t.titleBlock.field[k] ?? k} error={problem ? say(k, problem) : undefined}>
+              {({ id, describedBy, invalid }) => (
+                <Input
+                  id={id}
+                  dir="ltr"
+                  value={form[k]}
+                  maxLength={TITLE_MAX[k] + 20}
+                  onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+                  aria-describedby={describedBy}
+                  aria-invalid={invalid || undefined}
+                />
+              )}
+            </Field>
+          );
+        })}
+        {run.titleBlock ? <p className="text-[12px] text-secondary">{t.titleBlock.statedBy(run.titleBlock.statedBy)}</p> : null}
+        {control.canSave ? (
+          <>
+            <p className="text-[12px] text-secondary">{t.titleBlock.recomputes}</p>
+            <Button
+              variant="secondary"
+              className="justify-self-start"
+              disabled={problems.length > 0 || unchanged || control.busy}
+              aria-busy={control.busy || undefined}
+              onClick={() => control.onSave(titleBlockBody(form))}
+            >
+              {control.busy ? <Spinner /> : null}
+              {t.titleBlock.save}
+            </Button>
+          </>
+        ) : (
+          <p className="text-[12px] text-secondary">{t.titleBlock.noRequest}</p>
+        )}
+      </div>
+    </details>
   );
 }
 

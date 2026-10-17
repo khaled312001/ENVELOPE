@@ -39,6 +39,7 @@ import {
   type Role,
   type Sheet,
   SheetKind,
+  stated,
   type SymbolName,
   SYMBOLS,
 } from '@envelope/sheets';
@@ -462,7 +463,15 @@ function itemsToEntities(
 function titleLines(sheetTitle: string, meta: DxfMeta): string[] {
   return [
     `${sheetTitle} - plot ${meta.plotNumber}, ${meta.community} - run ${meta.runId}`,
-    `Issued ${issueDate(meta.issuedAt)}. Drawn by the Plotlogic engine.` +
+    /*
+      The reader's own words for the job, as the A3 strip prints them, with the
+      strip's NOT STATED where they gave none (17 Oct 2026). Until then the DXF
+      carried none of the five, so a file x-reffed into a set named no project.
+    */
+    `Project: ${stated(meta.projectName)}. Client: ${stated(meta.client)}. Consultant: ${stated(meta.consultant)}.`,
+    `Description: ${stated(meta.description)}. Status: ${stated(meta.status)}.`,
+    // A space after "engine." — the two sentences ran together as "engine.Checked" until 17 Oct 2026.
+    `Issued ${issueDate(meta.issuedAt)}. Drawn by the Plotlogic engine. ` +
       `Checked by: ${meta.checkedBy ?? NOT_CHECKED}.`,
     'Revision 0 - first issue. No revision history is kept: a recomputation is a new run.',
     'NOT FOR CONSTRUCTION. REGULATORY VALIDITY: NOT ASSESSED.',
@@ -478,6 +487,17 @@ export interface DxfMeta {
   readonly issuedAt: string;
   /** Who signed G4, when somebody has. Absent is printed NOT CHECKED, in words. */
   readonly checkedBy?: string;
+  /*
+    The reader's words for the job — `SheetMeta`'s five, by the same names, so the
+    meta the sheets were composed with is the meta the file is written with. Each
+    absent one prints NOT STATED. The API refuses a value outside printable ASCII
+    before it reaches here; one that arrives anyway still folds to a visible '?'.
+  */
+  readonly projectName?: string;
+  readonly client?: string;
+  readonly consultant?: string;
+  readonly description?: string;
+  readonly status?: string;
 }
 
 /**

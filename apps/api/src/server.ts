@@ -587,9 +587,11 @@ export async function build(
             citation: brief.citation,
             plotAreaM2: brief.plotAreaM2,
             gfaM2: brief.gfaM2,
-            far: brief.far,
+            // Absent where the brief prints no FAR (6468096): never filled with GFA ÷ area under its citation.
+            ...(brief.far ? { far: brief.far } : {}),
             heightCode: brief.heightCode,
             landUse: brief.landUse,
+            ...(brief.levels ? { levels: brief.levels } : {}),
             notMechanized: brief.notMechanized,
           }
         : null,
@@ -1045,6 +1047,8 @@ export async function build(
       checks,
     );
     const sheetSaid = sheetReport(bound, plot, [], setAsidePlaceholders, briefRules);
+    // What the reader calls the job, for the title block: stored with the run, under their name.
+    const titleSaid = titleBlockOf(body.titleBlock, actor.name);
 
     // --- The §3.4 artifact, built now and stored -------------------------
     //
@@ -1106,7 +1110,7 @@ export async function build(
         plot's sheet at download time would. A run stored before has none, and
         the annex says nothing rather than reconstructing it.
       */
-      output: JSON.stringify({ ...payload, sheet: sheetSaid }),
+      output: JSON.stringify({ ...payload, sheet: sheetSaid, ...(titleSaid ? { titleBlock: titleSaid } : {}) }),
       report: reportJson,
       fingerprint: subjectHash({ body, engine: ENGINE_VERSION, annex: ANNEX_VERSION }),
       draftRules: body.useDraftRules,
@@ -1128,7 +1132,7 @@ export async function build(
     });
 
     reply.header('X-Run-Id', runId).status(201);
-    return { ...payload, sheet: sheetSaid, issuedAt: createdAt };
+    return { ...payload, sheet: sheetSaid, ...(titleSaid ? { titleBlock: titleSaid } : {}), issuedAt: createdAt };
   });
 
   /**
@@ -1577,6 +1581,9 @@ export async function build(
         building: drawable.building ?? null,
         // As the run saw it; null on a run stored before the sheet was kept with it.
         notBound: said?.attached && said.notBound ? said.notBound : null,
+        // The run's own sheet report again: placeholders it did not load, and what a brief it named bound.
+        placeholdersNotApplied: said?.placeholdersNotApplied ?? null,
+        briefBound: said?.briefBound ?? null,
       });
     }
 
@@ -2253,6 +2260,30 @@ export function sheetGapsSentence(gaps: readonly GapWire[], plotNumber: string):
     'is not used in its place.'
   );
 }
+
+/**
+ * The title block's words as the run stores them, or nothing when none was stated.
+ *
+ * Trimmed, and a blank field dropped: whitespace is not a statement, and a field
+ * kept as "" would print an empty box where the strip says NOT STATED. Recorded
+ * under the actor who sent them — the title block's equivalent of USER_SET; the
+ * composition root never fills one from the brief, the plot or the height code.
+ */
+export function titleBlockOf(
+  stated: RunRequest['titleBlock'],
+  actorName: string,
+): (Partial<Record<TitleBlockField, string>> & { readonly statedBy: string }) | undefined {
+  if (!stated) return undefined;
+  const kept: Partial<Record<TitleBlockField, string>> = {};
+  for (const key of TITLE_BLOCK_FIELDS) {
+    const value = stated[key]?.trim();
+    if (value) kept[key] = value;
+  }
+  return Object.keys(kept).length > 0 ? { ...kept, statedBy: actorName } : undefined;
+}
+
+const TITLE_BLOCK_FIELDS = ['projectName', 'client', 'consultant', 'description', 'status'] as const;
+type TitleBlockField = (typeof TITLE_BLOCK_FIELDS)[number];
 
 /**
  * The rules the project brief a run names supplies, or a refusal in a sentence.

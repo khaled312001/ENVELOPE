@@ -796,6 +796,59 @@ export const EN = {
     body: 'The address may have changed, or the study belongs to someone else.',
     home: 'Go to the start',
   },
+
+  /* 17 Oct 2026: the plot's project brief, offered on the rules step and never chosen for the reader. */
+  brief: {
+    title: 'Project brief for this plot',
+    notRegulation:
+      'A developer brief, not a regulation. It is applied only where the plot’s own affection plan states nothing, and every figure taken from it is marked as the brief’s.',
+    gfa: 'GFA, as printed',
+    plotArea: 'Plot area',
+    far: 'FAR, as printed',
+    noFar: 'The brief prints no FAR. The study would take its GFA ÷ its plot area.',
+    height: 'Height, as printed',
+    levels: 'Levels, as printed',
+    page: (n: string): string => `page ${n}`,
+    fills: 'This plot’s affection plan does not state its FAR or GFA. Using the brief fills that gap and no other.',
+    use: 'Use this brief',
+    stop: 'Stop using this brief',
+    notUsed: 'Not used. Nothing is taken from the brief unless you choose it.',
+    used: 'Used in the next computation, under your name.',
+    notApplied: 'What the brief asks for that this study does not apply',
+  },
+
+  /* What the last computation did with the plot's sheet: placeholders it did not load, and what a brief bound. */
+  runSheet: {
+    placeholdersTitle: 'Placeholder limits not used',
+    placeholdersLede:
+      'The general rules carry figures no instrument prints. This plot has its own affection plan, so the last computation used none of these.',
+    briefTitle: 'Limits taken from the project brief',
+    briefLede: 'In the last computation. A developer brief, not a regulation.',
+  },
+
+  /* The drawings' title block, entered on the export step. */
+  titleBlock: {
+    title: 'Title block',
+    lede: 'Printed on every drawing and in the DXF. A field left empty prints NOT STATED.',
+    field: {
+      projectName: 'Project',
+      client: 'Client',
+      consultant: 'Consultant',
+      description: 'Description',
+      status: 'Status',
+    } as Readonly<Record<string, string>>,
+    latinOnly: 'Latin letters, digits and punctuation only. The DXF cannot hold other letters.',
+    notLatin: (field: string): string =>
+      `${field} has a letter the DXF cannot hold. Write it in Latin letters, digits and punctuation.`,
+    controlCode: (field: string): string =>
+      `${field} contains “%%”, which CAD software reads as a control code. Remove the doubled percent sign.`,
+    tooLong: (field: string, max: number): string => `${field} is longer than ${max} characters. Shorten it.`,
+    save: 'Save and compute again',
+    recomputes: 'Saving computes this study again with the same inputs, as a new study. Sign G3 and G4 again before you export.',
+    noRequest:
+      'This study was computed on another device, so its inputs are not here to compute it again. Open it where it was computed to change the title block.',
+    statedBy: (name: string): string => `In the drawings, as entered by ${name}.`,
+  },
 };
 
 export type Dict = typeof EN;

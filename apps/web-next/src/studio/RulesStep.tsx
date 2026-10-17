@@ -25,12 +25,15 @@ export function RulesPanel({
   busy,
   onCompute,
   hasRun,
+  brief = null,
 }: {
   readonly form: RulesForm;
   readonly onChange: (next: RulesForm) => void;
   readonly busy: boolean;
   readonly onCompute: () => void;
   readonly hasRun: boolean;
+  /** The plot's project brief, offered (see `BriefPicker`); null where none is on file or served. */
+  readonly brief?: ReactNode;
 }): JSX.Element {
   const { t } = useLocale();
   const problems = rulesProblems(form);
@@ -57,6 +60,9 @@ export function RulesPanel({
             <span>{t.rules.saleableFixed(SALEABLE_ASSUMED)}</span>
           </li>
         </ul>
+
+        {/* Before the questions: where the plot's sheet omits its GFA, this is what can supply it. */}
+        {brief}
 
         <Card n={1} title={t.rules.levelsTitle} done={!problems.levels} note={t.rules.levelsNote}>
           <div className="grid grid-cols-2 gap-3">

@@ -202,10 +202,16 @@ describe('DDA 5134565 — the surveyed ring with a jog', () => {
     }
     expect(caught).toBeInstanceOf(DegenerateGeometryError);
     const message = (caught as Error).message;
-    expect(message).toMatch(/^Two boundaries meet almost in line, turning \d+\.\d°/);
+    expect(message).toMatch(/^Two boundaries meet at a turn of \d+\.\d°/);
     expect(message).toContain(named);
-    expect(message).toContain('Give both boundaries the same setback');
+    expect(message).toContain('give both boundaries the same setback');
     expect(message).not.toMatch(/over-consume/);
+  });
+
+  it('lists the jog as held to its side’s line only when that costs footprint', () => {
+    expect(offsetPerEdge(DDA, insetsOf([3, 0, 3, 3, 3, 3])).heldToNeighbourLine).toEqual([EDGE.JOG_042]);
+    // At one figure all round the jog is dropped for free, and is not "held".
+    expect(offsetPerEdge(DDA, uniform(DDA, 3)).heldToNeighbourLine).toEqual([]);
   });
 
   it('computes the same plot once the kinked side is set back alike', () => {
@@ -281,6 +287,68 @@ describe('brief plot 5180196 — four legs, nearly a rectangle', () => {
     const result = offsetPerEdge(P196, insetsOf(insets));
     expect(result.ring.every((p) => containsPoint(P196, p))).toBe(true);
     expectEverySetbackKept(result.ring, P196, insets);
+  });
+});
+
+/*
+  FOUND BY RUNNING THIS KERNEL AND THE ONE BEFORE IT OVER THE SAME RANDOM PLOTS.
+
+  "Crossing past an end" is scale-free, so it also marks a 5.9 m boundary at a
+  59° turn — nowhere near in line, and its own line is not redundant. Dropping
+  it up front and then failing refused, as "no buildable footprint exists",
+  plots the previous kernel computed with every setback kept. The rings are as
+  the probe printed them (counter-clockwise, mm); the areas are the previous
+  kernel's.
+*/
+describe('plots the previous kernel computed are still computed', () => {
+  const ringOf = (xy: readonly (readonly [number, number])[]): Ring =>
+    xy.map(([x, y]) => ({ x: asMm(x) as Mm, y: asMm(y) as Mm }));
+
+  it.each([
+    [
+      [[36815, 13042], [-27686, 18622], [-41827, 7200], [-43743, 1622], [-26192, -19260]],
+      [4.5, 0, 4.5, 7.5, 6],
+      736.6,
+    ],
+    [
+      [[28462, 21590], [-30282, -18100], [-24962, -26614], [-21623, -30163], [31217, -15910]],
+      [0, 4.5, 6, 7.5, 6],
+      901.06,
+    ],
+  ] as const)('a five-sided plot with a short boundary at a wide turn (%#)', (xy, insets, previousM2) => {
+    const plot = ringOf(xy);
+    const result = offsetPerEdge(plot, insetsOf(insets));
+    expectEverySetbackKept(result.ring, plot, insets);
+    expect(Math.abs(m2(result.areaMm2) - previousM2)).toBeLessThan(0.01);
+  });
+
+  /*
+    And where the loop really does carry a short boundary's larger setback down
+    its long neighbour — 100 m² below what the setbacks permit, which the
+    previous kernel returned without a word — the sentence that names the two
+    boundaries is said, not "over-consumed", and the turn is printed rather
+    than called "almost in line".
+  */
+  it('refuses the carried case by naming the boundaries, never as over-consumed', () => {
+    const plot = ringOf([
+      [37600, 2017], [3854, 15858], [-30189, 9639], [-35367, 5734],
+      [-23229, -12596], [3664, -15866], [7032, -15664],
+    ]);
+    expect(() => offsetPerEdge(plot, insetsOf([4.5, 0, 7.5, 0, 0, 6, 7.5]))).toThrow(
+      /^Two boundaries meet at a turn of \d+\.\d° but are set back by different distances/,
+    );
+  });
+
+  it('prints the turn it found, which need not be shallow', () => {
+    const plot = ringOf([[6602, 22349], [2295, 24344], [-6069, 22713], [-14407, -10044], [5158, -23254], [8962, -20253]]);
+    let message = '';
+    try {
+      offsetPerEdge(plot, insetsOf([7.5, 0, 6, 0, 4.5, 6]));
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toMatch(/^Two boundaries meet at a turn of 35\.9°/);
+    expect(message).not.toMatch(/almost in line/);
   });
 });
 

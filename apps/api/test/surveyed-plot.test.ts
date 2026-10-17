@@ -157,18 +157,18 @@ describe('DDA 5134565, from its own coordinate table', () => {
       expect(run.statusCode).toBe(422);
       expect(run.json().error).toBe('DegenerateGeometryError');
       const message = run.json().message as string;
-      expect(message).toMatch(/^Two boundaries meet almost in line, turning 1\.8°/);
+      expect(message).toMatch(/^Two boundaries meet at a turn of 1\.8°/);
       expect(message).toContain('the 6.36 m boundary');
       expect(message).toContain('the 27.76 m boundary by 0 m');
-      expect(message).toContain('Give both boundaries the same setback');
+      expect(message).toContain('give both boundaries the same setback');
       expect(message).not.toMatch(/over-consume/);
       // Said in the reader's language, figure for figure, from the engine's own sentence.
       const ar = engineNote(message, 'ar');
-      expect(ar).toContain('حدان يلتقيان على استقامة تقريبا (1.8°)');
+      expect(ar).toContain('حدان يلتقيان بانعطاف 1.8°');
       expect(ar).toContain('الحد بطول 6.36 م');
       expect(ar).toContain('الحد بطول 27.76 م ارتداده 0 م');
       expect(ar).not.toMatch(/[A-Za-z]{4,}/);
-      expect(engineNote(message, 'en')).toMatch(/^Two boundaries meet almost in line \(1\.8°\)/);
+      expect(engineNote(message, 'en')).toMatch(/^Two boundaries meet at a turn of 1\.8°/);
     },
     READS_A_REAL_PDF,
   );

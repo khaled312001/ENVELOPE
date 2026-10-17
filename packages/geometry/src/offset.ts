@@ -102,6 +102,15 @@ export interface OffsetResult {
    * (the plot itself) still fits the type; read absent as none.
    */
   readonly dropped?: readonly number[];
+  /**
+   * The part of `dropped` that is NOT free: short boundaries asking for less
+   * than the long one they continue, held to the long one's setback line. Their
+   * own setback is met with room to spare, so the footprint is smaller than
+   * their figure alone permits — by at most the boundary's length times the
+   * difference. Separate from `dropped` because a redundant chamfer costs
+   * nothing and this does, and a caller publishing the footprint has to say so.
+   */
+  readonly heldToNeighbourLine?: readonly number[];
 }
 
 /** A line `a·x + b·y = c`, coefficients carried in exact decimal. */
@@ -343,6 +352,7 @@ export function offsetPerEdge(
     areaMm2: verifiedArea(finalRing, 'setback-permitted footprint'),
     exact: allAxisParallel,
     dropped: straight?.dropped ?? [],
+    heldToNeighbourLine: straight?.held ?? [],
   };
 }
 
@@ -393,29 +403,75 @@ export function offsetPerEdge(
   it; what is newly accepted is only what the line test refused by measuring
   from a stretch of line no boundary occupies.
 */
+/** The corners of a straight plot's footprint, and which boundaries drew no line. */
+interface StraightCorners {
+  readonly corners: Pt[];
+  readonly dropped: readonly number[];
+  /** The dropped boundaries held to a neighbour's line at a cost; see `OffsetResult`. */
+  readonly held: readonly number[];
+}
+
 function straightCorners(
   ring: Ring,
   curves: readonly OffsetCurve[],
   insetsMm: readonly number[],
-): { readonly corners: Pt[]; readonly dropped: readonly number[] } {
+): StraightCorners {
   const lines = curves.map((c) => (c as { line: Line }).line);
-  const n = ring.length;
   const steps = unequalSteps(ring, insetsMm);
   /*
     Where a short boundary asks for LESS than the long one it continues, the
     long one's setback line is carried across it and the short one is dropped —
-    claimed redundant, and verified below like every other drop. That is the
+    its own setback verified below like every other drop. That is the
     conservative reading (a 0.42 m jog at 0 m beside a side at 3 m is held at
-    3 m), never the generous one. Where the short one asks for MORE, carrying
-    the long one's line would build inside the short one's setback, and carrying
-    the short one's would hold the whole side at its figure: the second is the
-    126 m² case, and is refused before anything is drawn.
+    3 m), never the generous one: it is NOT redundant, it costs footprint, and
+    `dropped` lists it. Where the short one asks for MORE, carrying the long
+    one's line would build inside the short one's setback, and carrying the
+    short one's would hold the whole side at its figure: the second is the
+    126 m² case, and is refused in `solveCorners` when the loop does it.
   */
   const preDropped = new Set<number>();
   for (const step of steps) {
     if (insetsMm[step.shorter]! < insetsMm[step.longer]!) preDropped.add(step.shorter);
-    else if (step.pastLonger) throw stepError(ring, step);
   }
+  /*
+    THE PRE-DROP IS A FIRST ATTEMPT, NOT A VERDICT. "Crossing past an end" is
+    scale-free, so it also fires on a 5.9 m boundary at a 59° turn, which is
+    nowhere near in line and whose own line is NOT redundant: dropping it up
+    front and then failing refused, as "no buildable footprint", plots the
+    ordinary loop computes exactly (found by comparing this kernel with the one
+    before it on random plots). So if the attempt with the pre-drop fails, the
+    ordinary loop runs as it always did, every drop still verified.
+  */
+  const all = ring.map((_, i) => i);
+  if (preDropped.size > 0) {
+    try {
+      return solveCorners(ring, lines, insetsMm, steps, all.filter((i) => !preDropped.has(i)), preDropped);
+    } catch (first) {
+      try {
+        return solveCorners(ring, lines, insetsMm, steps, all, new Set());
+      } catch (second) {
+        // The sentence that names two boundaries and what to do beats the one
+        // that names none; otherwise the first attempt's reason stands.
+        throw second instanceof StepRefusal ? second : first;
+      }
+    }
+  }
+  return solveCorners(ring, lines, insetsMm, steps, all, preDropped);
+}
+
+/**
+ * The drop-and-recompute loop of {@link straightCorners}, from a given set of
+ * live boundaries. Throws rather than return a footprint it cannot verify.
+ */
+function solveCorners(
+  ring: Ring,
+  lines: readonly Line[],
+  insetsMm: readonly number[],
+  steps: readonly UnequalStep[],
+  start: readonly number[],
+  preDropped: ReadonlySet<number>,
+): StraightCorners {
+  const n = ring.length;
   /*
     The steps not resolved by a drop. If the loop below fails with one of them
     standing, that sentence is said instead of "over-consumed": it names the two
@@ -431,7 +487,7 @@ function straightCorners(
             'No buildable footprint exists at these setback values.',
           detail,
         );
-  let live = ring.map((_, i) => i).filter((i) => !preDropped.has(i));
+  let live = [...start];
   for (;;) {
     if (live.length < 3) throw overConsumed({ boundariesLeft: live.length });
     const corners = live.map((e, k) => {
@@ -460,10 +516,28 @@ function straightCorners(
       const pts = corners.map((c) => snapInside(ring, c.x, c.y));
       const dropped = ring.map((_, i) => i).filter((i) => !live.includes(i));
       if (dropped.length > 0) {
+        /*
+          THE 126 m² CASE, BY WHAT IT DOES RATHER THAN BY WHERE TWO LINES CROSS.
+          A short boundary asking for MORE than the long one it continues is
+          only a problem when the loop drops the LONG one and carries the short
+          one's line down its whole length: every setback met, footprint
+          silently lost. Refusing on the crossing alone also refused plots
+          where the loop drops the short one instead and the corner is exact —
+          at turns of 36°, "almost in line" being then a false sentence. So it
+          is refused when, and only when, that carrying actually happened.
+        */
+        const carried = steps.find(
+          (s) =>
+            s.pastLonger &&
+            insetsMm[s.shorter]! > insetsMm[s.longer]! &&
+            dropped.includes(s.longer) &&
+            !dropped.includes(s.shorter),
+        );
+        if (carried !== undefined) throw stepError(ring, carried);
         const breach = setbackBreach(ring, insetsMm, pts);
         if (breach !== undefined) throw overConsumed({ dropped, ...breach });
       }
-      return { corners: pts, dropped };
+      return { corners: pts, dropped, held: dropped.filter((i) => preDropped.has(i)) };
     }
     live = live.filter((_, k) => k !== worst);
   }
@@ -578,6 +652,8 @@ function unequalSteps(ring: Ring, insetsMm: readonly number[]): UnequalStep[] {
  * reader's edge 1. A length is the same on both sides of that, and it is what
  * the plot step prints beside every boundary.
  */
+class StepRefusal extends DegenerateGeometryError {}
+
 function stepError(ring: Ring, step: UnequalStep): DegenerateGeometryError {
   const metres = (mm: number): string => new Decimal(mm).div(1000).toString();
   const n = ring.length;
@@ -593,12 +669,16 @@ function stepError(ring: Ring, step: UnequalStep): DegenerateGeometryError {
           .div(1000)
           .toFixed(1)} m away`;
   const [dA, dB] = step.insetsMm;
-  return new DegenerateGeometryError(
-    `Two boundaries meet almost in line, turning ${step.turnDeg.toFixed(1)}°, but are set back by different ` +
+  // A subclass only so the fallback in `straightCorners` can tell this sentence
+  // from "over-consumed"; its `name` stays DegenerateGeometryError on the wire.
+  return new StepRefusal(
+    // The turn is printed, not characterised: the test is scale-free, so a short
+    // pair can trip it at 20–40°, where "almost in line" would be untrue.
+    `Two boundaries meet at a turn of ${step.turnDeg.toFixed(1)}° but are set back by different ` +
       `distances: the ${lengthM(step.a)} m boundary by ${metres(dA)} m and the ${lengthM(step.k)} m boundary by ` +
       `${metres(dB)} m. Their setback lines ${away}, so there is no corner to draw where the two meet. How a ` +
-      `setback line steps between two figures along one side is not modelled. Give both boundaries the same ` +
-      `setback: they read as one side of the plot.`,
+      `setback line steps between two figures at such a corner is not modelled. If the two are one side of ` +
+      `the plot, give both boundaries the same setback.`,
     { ringEdges: [step.a, step.k], turnDeg: Number(step.turnDeg.toFixed(2)), insetsMm: [dA, dB] },
   );
 }

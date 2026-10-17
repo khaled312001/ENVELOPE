@@ -137,6 +137,9 @@ describe('a part floor too small to be a floor', () => {
     expect(out.partFloor.reason).toContain(base.partFloor.areaM2.value.toFixed(2));
     expect(out.partFloor.reason).toContain(stated.toFixed(2));
     expect(out.partFloor.reason).toContain(whole.toFixed(2));
+    // A stated minimum is a person's figure: the sentence may not call it the engine's "core and one unit".
+    expect(out.partFloor.reason).toContain('stated as the smallest top floor');
+    expect(out.partFloor.reason).not.toContain('core and one unit');
     // Said under every drawing, and nothing drawn. (Its Arabic: `apps/api/test/part-floor.test.ts`.)
     expect(out.building.notModelled).toContain(out.partFloor.reason);
     expect(out.building.levels.some((l) => l.partFloor)).toBe(false);

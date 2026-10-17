@@ -375,7 +375,7 @@ export function computeBands(input: BandsInput): BandsResult {
         kind: 'DROPPED',
         remainderM2: remainder,
         minimum,
-        reason: partFloorBelowMinimum(remainder, minimum.value, wholeValue),
+        reason: partFloorBelowMinimum(remainder, minimum.value, wholeValue, input.partFloor.statedMinimum !== undefined),
       };
     } else if (!placed) {
       partFloor = { kind: 'DROPPED', remainderM2: remainder, minimum: null, reason: partFloorNotPlaced(remainder, wholeValue) };

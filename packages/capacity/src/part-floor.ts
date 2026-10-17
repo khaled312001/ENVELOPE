@@ -94,16 +94,32 @@ export function partFloorMinimumBasis(coreM2: Decimal, unitGfaM2: Decimal): stri
     `${unitGfaM2.toFixed(2)} m² of GFA, ${coreM2.plus(unitGfaM2).toFixed(2)} m² together. A top floor ` +
     'that cannot hold its core and one unit is not a floor anyone builds, so a part floor smaller ' +
     'than this is not drawn and the governing capacity is the whole levels; it errs toward leaving ' +
-    'a floor out. No clause of the Dubai Building Code states a smallest floor. Enter one to replace it.'
+    // No screen asks for this figure yet, so the sentence must not tell a reader to
+    // "enter one": an instruction nobody can follow is a promise the product breaks.
+    'a floor out. No clause of the Dubai Building Code states a smallest floor; which one to use is ' +
+    'a question with the client.'
   );
 }
 
-/** Said, with both figures, when the part floor is smaller than the minimum. */
-export function partFloorBelowMinimum(remainderM2: Decimal, minimumM2: Decimal, wholeM2: Decimal): string {
+/**
+ * Said, with both figures, when the part floor is smaller than the minimum.
+ *
+ * Two sentences, because the minimum has two owners. The assumed one IS the core
+ * and one unit; a stated one is a named person's figure, and calling it "its core
+ * and one unit" would put the engine's reasoning under their number.
+ */
+export function partFloorBelowMinimum(
+  remainderM2: Decimal,
+  minimumM2: Decimal,
+  wholeM2: Decimal,
+  stated: boolean,
+): string {
   return (
     `The part floor above the last whole level is not drawn: its ${remainderM2.toFixed(2)} m² is less ` +
-    `than the ${minimumM2.toFixed(2)} m² this run takes as the smallest top floor, its core and one ` +
-    `unit. The governing capacity is the whole levels, ${wholeM2.toFixed(2)} m².`
+    (stated
+      ? `than the ${minimumM2.toFixed(2)} m² stated as the smallest top floor. `
+      : `than the ${minimumM2.toFixed(2)} m² this run takes as the smallest top floor, its core and one unit. `) +
+    `The governing capacity is the whole levels, ${wholeM2.toFixed(2)} m².`
   );
 }
 

@@ -1,7 +1,8 @@
 import type { PlotCreated, RunView, SheetFace, SheetSetback } from '@web/api/client.js';
 
 import { cn } from '../lib/cn.js';
-import { EngineNote, useLocale } from '../lib/locale.js';
+import { EngineNote } from '../lib/engine-text.js';
+import { useLocale } from '../lib/locale.js';
 import { Input } from '../ui/primitives.js';
 import type { EdgeClass } from './model.js';
 import { Heading } from './parts.js';

@@ -7,7 +7,8 @@ import type { ProvTree } from '@web/components/ProvenanceTree.js';
 
 import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
-import { EngineText, useLocale } from '../lib/locale.js';
+import { EngineText } from '../lib/engine-text.js';
+import { useLocale } from '../lib/locale.js';
 import { Notice, Spinner } from '../ui/primitives.js';
 import { Drawer } from '../ui/drawer.js';
 import { ClassMark } from './Traced.js';

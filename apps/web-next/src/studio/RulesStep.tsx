@@ -2,7 +2,8 @@ import { CircleCheck, Minus, Plus, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { cn } from '../lib/cn.js';
-import { EngineText, useLocale } from '../lib/locale.js';
+import { EngineText } from '../lib/engine-text.js';
+import { useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, Field, Input, PanelHeader, Spinner } from '../ui/primitives.js';
 import { Segmented } from '../ui/radix.js';

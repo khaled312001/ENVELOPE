@@ -5,7 +5,8 @@ import worked from '@web/screens/worked-example.json';
 
 import { cn } from '../../lib/cn.js';
 import { grouped } from '../../lib/figures.js';
-import { EngineNote, useLocale } from '../../lib/locale.js';
+import { EngineNote } from '../../lib/engine-text.js';
+import { useLocale } from '../../lib/locale.js';
 import { Art, Illustration } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
 import { EASE, Item, Spotlight, Stagger } from '../../ui/motion.js';

@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 
 import { type Actor, api, type StandardsView } from '@web/api/client.js';
 
-import { EngineNote, useLocale } from '../lib/locale.js';
+import { EngineNote } from '../lib/engine-text.js';
+import { useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Notice } from '../ui/primitives.js';
 import { Heading } from './parts.js';

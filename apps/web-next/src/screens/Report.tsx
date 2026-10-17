@@ -6,7 +6,8 @@ import { type Actor, api, ApiError } from '@web/api/client.js';
 import { downloadObject } from '@web/documents.js';
 
 import { TopBar } from '../components/Shell.js';
-import { EngineMessage, useLocale } from '../lib/locale.js';
+import { EngineMessage } from '../lib/engine-text.js';
+import { useLocale } from '../lib/locale.js';
 import { Link } from '../lib/nav.js';
 import { Button } from '../ui/button.js';
 import { Notice, Spinner } from '../ui/primitives.js';

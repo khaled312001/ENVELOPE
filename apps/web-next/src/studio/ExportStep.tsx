@@ -6,7 +6,8 @@ import { printDocument } from '@web/documents.js';
 import { hashOf } from '@web/gateHash.js';
 
 import { cn } from '../lib/cn.js';
-import { EngineMessage, useLocale } from '../lib/locale.js';
+import { EngineMessage } from '../lib/engine-text.js';
+import { useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Field, Input, Notice, PanelHeader, Spinner } from '../ui/primitives.js';
 import { AdvisorBox } from './AdvisorBox.js';

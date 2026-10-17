@@ -4,7 +4,8 @@ import type { RunView } from '@web/api/client.js';
 
 import { cn } from '../lib/cn.js';
 import { engineNote } from '../lib/engine-notes.js';
-import { EngineText, useLocale } from '../lib/locale.js';
+import { EngineText } from '../lib/engine-text.js';
+import { useLocale } from '../lib/locale.js';
 import { Badge, PanelHeader } from '../ui/primitives.js';
 import { AdvisorBox } from './AdvisorBox.js';
 import { Footer, Heading, More, NextStep } from './parts.js';

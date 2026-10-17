@@ -5,7 +5,8 @@ import { type PointerEvent as ReactPointerEvent, useMemo, useRef, useState, type
 
 import { cn } from '../lib/cn.js';
 import { engineNote } from '../lib/engine-notes.js';
-import { EngineText, useLocale } from '../lib/locale.js';
+import { EngineText } from '../lib/engine-text.js';
+import { useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Tab, Tabs, TabsList } from '../ui/radix.js';
 

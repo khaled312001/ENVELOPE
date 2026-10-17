@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 
 import type { AdviseStudioStep, RunRequestBody } from '@web/api/client.js';
 
-import { EngineMessage, useLocale } from '../lib/locale.js';
+import { EngineMessage } from '../lib/engine-text.js';
+import { useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Notice } from '../ui/primitives.js';
 import { AdvisorBox } from './AdvisorBox.js';

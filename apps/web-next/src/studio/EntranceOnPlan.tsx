@@ -4,7 +4,8 @@ import { type ReactNode, useState } from 'react';
 import type { LevelPlanView, VehicleAccessArrangement } from '@web/api/client.js';
 
 import type { SketchPin } from '../components/PlotSketch.js';
-import { EngineNote, useLocale } from '../lib/locale.js';
+import { EngineNote } from '../lib/engine-text.js';
+import { useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Segmented } from '../ui/radix.js';
 import type { VehicleAccessBody } from './ParkingStep.js';

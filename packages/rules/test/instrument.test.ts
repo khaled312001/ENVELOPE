@@ -23,8 +23,15 @@ import { Decimal, type Citation, type StatedLimits } from '@envelope/core';
 import { describe, expect, it } from 'vitest';
 
 import {
+  DecisionKind,
+  decisionKindOf,
+  faceOptionsOf,
   INSTRUMENT_APPROVER,
+  PODIUM_SIDE_REAR_REASON,
+  podiumSetbackParameter,
   rulesFromInstrument,
+  TOWER_FRONT_REASON,
+  TOWER_SIDE_REAR_REASON,
   type InstrumentBinding,
 } from '../src/instruments/sheet.js';
 import { SEED_RULES } from '../src/seed/dubai-residential.js';
@@ -51,26 +58,33 @@ function citation(clause: string, verbatim: string): Citation {
   };
 }
 
-/** The Warsan sheet, as `intake` reads it. */
+/**
+ * The Warsan sheet, as `intake` reads it — the two schedules exactly as
+ * `parseAffectionPlan` returns them for `IC1-CTYL-16_011-warsan1-621.pdf`.
+ */
 const WARSAN: StatedLimits = {
   far: { value: new Decimal('3.5'), citation: citation('far', 'FAR = 3.5') },
   gfaM2: { value: new Decimal('4778.31'), citation: citation('gfa', 'GFA=4778.31 Sq. m') },
   coverage: {
-    value: { podium: new Decimal('0.6'), raw: '60% of plot area' },
-    citation: citation('coverage', '60% of plot area'),
+    value: { podium: new Decimal('1'), tower: new Decimal('0.6'), raw: 'GF & Podium: 100% | Tower: Maximum 60%' },
+    citation: citation('plot_coverage', 'GF & Podium: 100%'),
   },
   setbacks: {
     value: {
       podium: {
-        front: { kind: 'FIXED', metres: new Decimal('6') },
+        front: { kind: 'FIXED', metres: new Decimal('0') },
+        side: { kind: 'FIXED', metres: new Decimal('0') },
+        rear: { kind: 'FIXED', metres: new Decimal('0') },
+      },
+      tower: {
+        front: { kind: 'FIXED', metres: new Decimal('0') },
         side: { kind: 'FIXED', metres: new Decimal('3') },
         rear: { kind: 'FIXED', metres: new Decimal('3') },
       },
-      tower: {},
-      raw: 'Front 6.0m, side and rear 3.0m',
+      raw: 'GF & Podium: 0m from all sides | Tower: Front = 0m, Sides & Rear = 3m',
       requiresDecision: false,
     },
-    citation: citation('setbacks', 'Front 6.0m, side and rear 3.0m'),
+    citation: citation('setbacks', 'GF & Podium: 0m from all sides'),
   },
   height: {
     value: { typicalFloors: 8, podiumLevels: 2, totalLevels: 11, raw: 'G+2P+8' },
@@ -79,9 +93,9 @@ const WARSAN: StatedLimits = {
 };
 
 /** The context the envelope solver builds, reduced to what applicability reads. */
-const ctx = (plotNumber: string, edgeClass?: string): Record<string, unknown> => ({
+const ctx = (plotNumber: string, edgeClass?: string, roads = 1): Record<string, unknown> => ({
   land_use: 'RESIDENTIAL_MULTI',
-  plot: { plot_number: plotNumber, area_m2: 1365.23, community: 'WARSAN FIRST' },
+  plot: { plot_number: plotNumber, area_m2: 1365.23, community: 'WARSAN FIRST', frontage_count: roads },
   ...(edgeClass ? { edge: { classification: edgeClass } } : {}),
   levels: { above_ground: 9 },
 });
@@ -155,7 +169,7 @@ describe('resolution — the defect this closes', () => {
     const all = [...SEED_RULES, ...rules];
 
     const onRoad = resolveParameter('setback.road', all, ctx(PLOT, 'ROAD'));
-    expect(onRoad.governing!.value).toEqual({ kind: 'scalar', value: new Decimal('6') });
+    expect(onRoad.governing!.value).toEqual({ kind: 'scalar', value: new Decimal('0') });
 
     const onBoundary = resolveParameter('setback.road', all, ctx(PLOT, 'ADJACENT_PLOT'));
     expect(onBoundary.status).toBe(ResolutionStatus.NOT_GOVERNED);
@@ -165,8 +179,125 @@ describe('resolution — the defect this closes', () => {
     const { rules } = rulesFromInstrument(WARSAN, BINDING);
     const resolution = resolveParameter('coverage.max', [...SEED_RULES, ...rules], ctx(PLOT));
 
-    // The sheet says 0.6 of the plot; `coverage.max` is a percentage.
-    expect(resolution.governing!.value).toEqual({ kind: 'scalar', value: new Decimal('60') });
+    // The sheet says 1.00 of the plot for the podium; `coverage.max` is a percentage.
+    expect(resolution.governing!.value).toEqual({ kind: 'scalar', value: new Decimal('100') });
+  });
+});
+
+/*
+  THE TOWER ROW BINDS THE TOWER (17 Oct 2026).
+
+  Warsan prints "GF & Podium: 0m from all sides | Tower: Front = 0m, Sides &
+  Rear = 3m" and "Tower: Maximum 60%". The podium row used to bind the tower's
+  parameters and the tower row went to `notBound`, so the tower stood on all four
+  boundaries at 100% of the plot. These hold the two rows apart.
+*/
+describe('the tower row and the podium row, apart', () => {
+  const all = (binding = BINDING) => [...SEED_RULES, ...rulesFromInstrument(WARSAN, binding).rules];
+
+  it('binds the tower’s 3 m on every neighbour, not the podium’s 0 m', () => {
+    const r = resolveParameter('setback.adjacent_plot', all(), ctx(PLOT, 'ADJACENT_PLOT'));
+    expect(r.governing!.value).toEqual({ kind: 'scalar', value: new Decimal('3') });
+    expect(r.governing!.rule.jurisdiction).toBe(`PLOT:${PLOT}`);
+    // The seed's table, beaten and named.
+    expect(r.superseded.length).toBeGreaterThan(0);
+  });
+
+  it('cites the tower line, not the podium line it sits under', () => {
+    const r = resolveParameter('setback.adjacent_plot', all(), ctx(PLOT, 'ADJACENT_PLOT'));
+    expect(r.governing!.rule.citation.sourceTextVerbatim).toBe('Tower: Front = 0m, Sides & Rear = 3m');
+    expect(r.governing!.rule.citation.clauseReference).toBe('setbacks (tower)');
+  });
+
+  it('binds the podium row under its own parameter, which only the podium line reads', () => {
+    for (const cls of ['ROAD', 'ADJACENT_PLOT']) {
+      const r = resolveParameter(podiumSetbackParameter(cls), all(), ctx(PLOT, cls));
+      expect(r.governing!.value).toEqual({ kind: 'scalar', value: new Decimal('0') });
+      expect(r.governing!.rule.citation.sourceTextVerbatim).toBe('GF & Podium: 0m from all sides');
+    }
+  });
+
+  it('binds the tower’s 60% as a percentage of its own, never as metres or a fixed area', () => {
+    const r = resolveParameter('tower_coverage.max', all(), ctx(PLOT));
+    expect(r.governing!.value).toEqual({ kind: 'scalar', value: new Decimal('60') });
+    expect(r.governing!.rule.unit).toBe('%');
+    expect(r.governing!.rule.citation.sourceTextVerbatim).toBe('Tower: Maximum 60%');
+    // `tower_plate.max` is an area and the sheet states none.
+    const { rules } = rulesFromInstrument(WARSAN, BINDING);
+    expect(rules.some((x) => x.parameterId === 'tower_plate.max')).toBe(false);
+  });
+
+  it('reports neither the tower schedule nor the tower coverage as unbound any more', () => {
+    const { notBound } = rulesFromInstrument(WARSAN, { ...BINDING, roadBoundaries: 1 });
+    const fields = notBound.map((n) => n.field);
+    expect(fields).not.toContain('setbacks.tower');
+    expect(fields).not.toContain('coverage.tower');
+    // One road: there is no "which road is the front?" to report.
+    expect(fields).not.toContain('setbacks.tower.front');
+  });
+
+  /*
+    TWO ROADS: the sheet's "Front" names one of them and does not say which. The
+    front figure binds only on a one-road plot; on any other, each road gets a
+    decision the reader answers.
+  */
+  it('asks which road is the front on a plot with two roads, rather than choosing', () => {
+    const r = resolveParameter('setback.road', all(), ctx(PLOT, 'ROAD', 2));
+    expect(r.status).toBe(ResolutionStatus.RESOLVED);
+    expect(r.governing!.value).toEqual({ kind: 'enum', permitted: ['0', '3'] });
+    expect(decisionKindOf(r.governing!.rule)).toBe(DecisionKind.FACE);
+    expect(faceOptionsOf(r.governing!.rule)).toEqual([
+      { face: 'front', metres: '0' },
+      { face: 'side', metres: '3' },
+      { face: 'rear', metres: '3' },
+    ]);
+    // And says so in the list of what it did not bind, when it knows the plot has two.
+    const { notBound } = rulesFromInstrument(WARSAN, { ...BINDING, roadBoundaries: 2 });
+    expect(notBound.find((n) => n.field === 'setbacks.tower.front')?.reason).toBe(TOWER_FRONT_REASON);
+  });
+
+  it('binds the front on every road when every face states the same figure', () => {
+    const allSides: StatedLimits = {
+      setbacks: {
+        value: {
+          podium: {},
+          tower: {
+            front: { kind: 'FIXED', metres: new Decimal('4') },
+            side: { kind: 'FIXED', metres: new Decimal('4') },
+            rear: { kind: 'FIXED', metres: new Decimal('4') },
+          },
+          raw: 'Tower: 4m from all sides',
+          requiresDecision: false,
+        },
+        citation: citation('setbacks', 'Tower: 4m from all sides'),
+      },
+    };
+    const rules = [...SEED_RULES, ...rulesFromInstrument(allSides, BINDING).rules];
+    const r = resolveParameter('setback.road', rules, ctx(PLOT, 'ROAD', 2));
+    expect(r.governing!.value).toEqual({ kind: 'scalar', value: new Decimal('4') });
+  });
+
+  it('asks which neighbour is the rear where the side and rear differ', () => {
+    const split: StatedLimits = {
+      setbacks: {
+        value: {
+          podium: {},
+          tower: {
+            side: { kind: 'FIXED', metres: new Decimal('3') },
+            rear: { kind: 'FIXED', metres: new Decimal('6') },
+          },
+          raw: 'Tower: Side 3m, Rear 6m',
+          requiresDecision: false,
+        },
+        citation: citation('setbacks', 'Tower: Side 3m, Rear 6m'),
+      },
+    };
+    const built = rulesFromInstrument(split, BINDING);
+    const r = resolveParameter('setback.adjacent_plot', [...SEED_RULES, ...built.rules], ctx(PLOT, 'ADJACENT_PLOT'));
+    expect(r.governing!.value).toEqual({ kind: 'enum', permitted: ['3', '6'] });
+    expect(built.notBound.find((n) => n.field === 'setbacks.tower.side_and_rear')?.reason).toBe(
+      TOWER_SIDE_REAR_REASON,
+    );
   });
 });
 
@@ -279,6 +410,13 @@ describe('what it refuses to bind, continued', () => {
     const entry = notBound.find((n) => n.field === 'setbacks.side');
     expect(entry?.stated).toContain('to window wall');
     expect(entry?.reason).toMatch(/design decision/);
+    // Bound as a façade decision under the podium's own parameter, never as one number.
+    const podium = rules.find((r) => r.parameterId === podiumSetbackParameter('ADJACENT_PLOT'));
+    expect(podium && decisionKindOf(podium)).toBe(DecisionKind.FACADE);
+    expect(podium && faceOptionsOf(podium)).toEqual([
+      { face: 'side to solid wall', metres: '0' },
+      { face: 'side to window wall', metres: '4' },
+    ]);
   });
 
   it('refuses to bind one parameter from two different distances', () => {
@@ -299,9 +437,9 @@ describe('what it refuses to bind, continued', () => {
 
     const { rules, notBound } = rulesFromInstrument(split, BINDING);
     expect(rules.some((r) => r.parameterId === 'setback.adjacent_plot')).toBe(false);
-    expect(notBound.find((n) => n.field === 'setbacks.side_and_rear')?.reason).toMatch(
-      /one parameter over every non-road boundary/,
-    );
+    expect(notBound.find((n) => n.field === 'setbacks.side_and_rear')?.reason).toBe(PODIUM_SIDE_REAR_REASON);
+    const podium = rules.find((r) => r.parameterId === podiumSetbackParameter('ADJACENT_PLOT'));
+    expect(podium && decisionKindOf(podium)).toBe(DecisionKind.FACE);
   });
 
   it('says nothing at all about a limit the sheet does not print', () => {

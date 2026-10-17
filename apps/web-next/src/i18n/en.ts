@@ -293,6 +293,19 @@ export const EN = {
     towerSetbackOf: (i: number): string => `Tower setback on boundary ${i}, metres`,
     towerSetbackBlank: 'from the rule',
     towerSetbackFromSheet: 'Tower setback, as the affection plan states:',
+    // The sheet's two rows kept apart (17 Oct 2026): a podium figure is never shown as the tower's.
+    towerSetbackOnly: 'Tower setback (m)',
+    towerByFace: (faces: string): string =>
+      `The affection plan states the tower setback by face (${faces}) and not which face this boundary is. Type the figure for its face.`,
+    podiumFromSheet: 'Podium setback, as the affection plan states:',
+    podiumByFacade: (faces: string): string => `The affection plan sets the podium back by façade here (${faces}).`,
+    podiumByFace: (faces: string): string => `The affection plan states the podium setback by face here (${faces}).`,
+    face: { front: 'front', side: 'side', rear: 'rear' } as Readonly<Record<string, string>>,
+    faceNotStated: 'not stated',
+    notBound: {
+      title: 'What the affection plan states that this run does not apply',
+      lede: 'Each was read from the sheet. None of them limits the envelope until it is decided.',
+    },
     planPick: 'Select a boundary’s number to classify it here.',
     edgeMarker: (i: number, cls: string | null): string =>
       cls ? `Boundary ${i}: ${cls}. Select to change it.` : `Boundary ${i}: not classified yet. Select to classify it.`,

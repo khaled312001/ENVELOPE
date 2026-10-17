@@ -1,6 +1,7 @@
 import { RUN_READERS } from './engine-run-notes.js';
 import type { Locale } from './locale.js';
 import { STUDY_READERS } from './study-notes.js';
+import { TOWER_READERS } from './tower-notes.js';
 
 /*
   THE ENGINE'S PARKING SENTENCES, SHORT AND IN THE READER'S LANGUAGE.
@@ -572,7 +573,7 @@ const READERS: readonly Reader[] = [
 
 /** The engine's sentence, short and in `locale`; null when its wording is not one this file knows. */
 export function engineNote(text: string, locale: Locale): string | null {
-  for (const read of [...READERS, ...RUN_READERS, ...STUDY_READERS]) {
+  for (const read of [...READERS, ...RUN_READERS, ...STUDY_READERS, ...TOWER_READERS]) {
     const said = read(text);
     if (said) return said[locale];
   }

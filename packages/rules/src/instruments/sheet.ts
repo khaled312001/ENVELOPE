@@ -59,9 +59,32 @@
  *   `gfa.max` parameter: the FAR binds and the GFA is a cross-check against it.
  *   A GFA printed with NO FAR (every DDA sheet) binds `far.max` as the sheet's own
  *   GFA ÷ its own printed plot area — see the FAR block below.
- * - **Tower coverage binds nothing.** `coverage.max` governs the podium footprint;
- *   the tower is capped by `tower_plate.max`, which is an area in m² and not a
- *   percentage, so the two are not interchangeable.
+ * - **A face the sheet names and the plot cannot tell apart is a question, not a
+ *   number.** "Front = 0m, Sides & Rear = 3m" on a plot with two roads does not
+ *   say which road is the front; a sheet stating a side and a rear figure does not
+ *   say which neighbour is the rear. Those come back as a DECISION rule (see
+ *   {@link TOWER_FACE_OPTIONS}) that the envelope refuses to compute past until the
+ *   reader says which face the boundary is.
+ *
+ * ---------------------------------------------------------------------------
+ * TWO SCHEDULES, TWO SETS OF PARAMETERS (17 Oct 2026).
+ *
+ * A Trakhees sheet prints "GF & Podium: 0m from all sides | Tower: Front = 0m,
+ * Sides & Rear = 3m" and "GF & Podium: 100% | Tower: Maximum 60%". This module
+ * used to bind the PODIUM row into `setback.road` / `setback.adjacent_plot` —
+ * the parameters the envelope cuts the TOWER line with — and drop the tower row
+ * into `notBound`. On Warsan (6211383) the tower then stood on all four
+ * boundaries at 100% of the plot, three levels were proposed where Eng. Mohamed
+ * draws seven, and a reader who typed the sheet's own 3 m was refused because
+ * "the affection plan states 0 m" — the podium's figure, quoted as the tower's.
+ *
+ * Under his statement of 16 Oct 2026 (`STMT-PODIUM-SETBACK-2026-10-16`) the
+ * setback parameters ARE the tower's, so the tower row now binds them, and the
+ * podium row binds `setback.podium.<class>` ({@link podiumSetbackParameter}),
+ * which only the podium line reads. Tower coverage binds `tower_coverage.max`, a
+ * percentage of the plot like `coverage.max`, and is never converted into metres
+ * or into a fixed area here: the envelope multiplies it by the plot area it
+ * measured, and says so in the formula.
  *
  * ---------------------------------------------------------------------------
  * THE SHEET'S OWN EXPIRY IS NOT MODELLED. An affection plan is valid for a period
@@ -80,6 +103,7 @@ import {
   Operator,
   RuleClass,
   type RuleRecord,
+  type Term,
 } from '../record.js';
 
 /**
@@ -109,6 +133,111 @@ export interface InstrumentBinding {
   readonly issuedOn: string;
   /** Who ran the transcription. A name, never a system default. */
   readonly authoredBy: string;
+  /**
+   * How many of the plot's boundaries are classified ROAD, where the caller knows.
+   *
+   * It decides nothing about which rules are emitted — the rules carry
+   * `plot.frontage_count` in their own applicability, so they are right whichever
+   * plot they meet. It only decides whether "which road is the front?" is said in
+   * `notBound`: on a plot with one road there is no question to report, and
+   * reporting one anyway would teach a reader to ignore the list.
+   */
+  readonly roadBoundaries?: number;
+}
+
+/**
+ * The options a DECISION rule offers: one per face the sheet names, with the
+ * figure it states for that face (`null` where it names the face and states no
+ * figure). Carried in `evaluatorArgs[TOWER_FACE_OPTIONS]` beside the enum the
+ * evaluator returns, so the sentence that asks the reader can name the faces.
+ */
+export interface FaceOption {
+  /** The face as the sheet names it: "front", "sides and rear", "rear". */
+  readonly face: string;
+  /** Metres as a decimal string, or null where the sheet states no figure. */
+  readonly metres: string | null;
+}
+
+/** The `evaluatorArgs` key a decision rule keeps its {@link FaceOption}s under. */
+export const TOWER_FACE_OPTIONS = 'faceOptions';
+
+/** The parameter the PODIUM's setback on a boundary of this class is bound under. */
+export function podiumSetbackParameter(edgeClass: string): string {
+  return `setback.podium.${edgeClass.toLowerCase()}`;
+}
+
+/** The face options a decision rule carries, or undefined for any other rule. */
+export function faceOptionsOf(rule: RuleRecord): readonly FaceOption[] | undefined {
+  const v = rule.evaluatorArgs[TOWER_FACE_OPTIONS];
+  return Array.isArray(v) ? (v as readonly FaceOption[]) : undefined;
+}
+
+/**
+ * What a decision rule is waiting on.
+ *
+ * - `FACE`: which face of the plot this boundary is — front, side or rear. A fact
+ *   about the plot the reader knows and the sheet does not print.
+ * - `FACADE`: what the façade on this boundary will be — "0m to solid wall and
+ *   4.0m to window wall". A design decision.
+ */
+export const DecisionKind = {
+  FACE: 'FACE',
+  FACADE: 'FACADE',
+} as const;
+export type DecisionKind = (typeof DecisionKind)[keyof typeof DecisionKind];
+
+/** The `evaluatorArgs` key a decision rule keeps its {@link DecisionKind} under. */
+export const DECISION_KIND = 'decisionKind';
+
+/** The decision a rule is waiting on, or undefined for a rule that states a number. */
+export function decisionKindOf(rule: RuleRecord): DecisionKind | undefined {
+  const v = rule.evaluatorArgs[DECISION_KIND];
+  return v === DecisionKind.FACE || v === DecisionKind.FACADE ? v : undefined;
+}
+
+/** The reasons `notBound` gives for a tower face the plot cannot name. Read by `report/words`. */
+export const TOWER_FRONT_REASON =
+  'The sheet states the tower setback by face, and a plot with more than one road boundary ' +
+  'does not say which road is the front. The run asks for the face of each road boundary ' +
+  'rather than choosing one.';
+export const TOWER_SIDE_REAR_REASON =
+  'The sheet states a different tower setback for the side and for the rear, and which ' +
+  'neighbour is the rear is not on the sheet. The run asks for the face of each neighbouring ' +
+  'boundary rather than applying either figure to both.';
+export const PODIUM_SIDE_REAR_REASON =
+  'The sheet states a different podium setback for the side and for the rear, and which ' +
+  'neighbour is the rear is not on the sheet. Applying either figure to both would choose for ' +
+  'the reader.';
+
+/** One face's offer: its figure, each condition's figure, or a face the sheet names with none. */
+function faceOptionsFor(face: string, v: SetbackValue | undefined): readonly FaceOption[] {
+  if (v === undefined) return [{ face, metres: null }];
+  if (v.kind === 'FIXED') return [{ face, metres: v.metres.toString() }];
+  return v.options.map((o) => ({ face: `${face} ${o.condition}`, metres: o.metres.toString() }));
+}
+
+/**
+ * The sheet's citation, narrowed to one of the lines it read.
+ *
+ * Intake locates the setback (or coverage) panel once and quotes its first line,
+ * which on a Trakhees sheet is the podium's. A rule built from the TOWER line
+ * quoting the podium line would cite the wrong sentence beside the right number.
+ * So the verbatim text is the line this rule was built from, as intake joined it
+ * into `raw`; the page and box stay the panel's, which holds both lines. Where the
+ * line cannot be found in `raw` the citation is returned unchanged.
+ */
+function partCitation(
+  citation: RuleRecord['citation'],
+  raw: string,
+  line: RegExp,
+  label: string,
+): RuleRecord['citation'] {
+  const part = raw
+    .split(' | ')
+    .map((s) => s.trim())
+    .find((s) => line.test(s));
+  if (part === undefined) return citation;
+  return { ...citation, clauseReference: `${citation.clauseReference} (${label})`, sourceTextVerbatim: part };
 }
 
 /** A limit the sheet states that this module would not convert into a rule. */
@@ -305,50 +434,66 @@ export function rulesFromInstrument(
       );
     }
     if (tower) {
-      notBound.push({
-        field: 'coverage.tower',
-        stated: `${tower.times(100).toString()}% of plot area`,
-        reason:
-          'coverage.max governs the podium footprint. The tower is capped by ' +
-          'tower_plate.max, which is an area in m² and not a percentage of the plot.',
-      });
+      /*
+        THE TOWER'S OWN COVERAGE, AS A PERCENTAGE OF THE PLOT. It used to go to
+        `notBound` on the argument that `tower_plate.max` is an area — true, and
+        beside the point: the sheet does not state an area, it states a share,
+        and a share has a parameter of its own. Converting 60% into m² here would
+        need a plot area, and the printed one and the measured one differ (1,365.23
+        against the boundary's own figure on Warsan); the envelope multiplies by
+        the area every other coverage in the run is measured against, and the
+        formula says which.
+      */
+      const pct = tower.times(100);
+      rules.push(
+        record({
+          ruleId: `INSTRUMENT.${binding.instrumentId}.tower_coverage.max`,
+          parameterId: 'tower_coverage.max',
+          operator: Operator.MAX,
+          evaluator: EvaluatorName.SCALAR_MAX,
+          evaluatorArgs: { value: pct.toString() },
+          unit: '%',
+          applicability: { all: [thisPlot] },
+          citation: partCitation(limits.coverage.citation, limits.coverage.value.raw, /^\s*Tower\b/i, 'tower'),
+          tests: [
+            {
+              kind: 'POSITIVE',
+              context: { plot: { plot_number: binding.plotNumber } },
+              expected: pct.toNumber(),
+            },
+            {
+              kind: 'BOUNDARY',
+              context: { plot: { plot_number: binding.plotNumber }, levels: { above_ground: 1 } },
+              expected: pct.toNumber(),
+              note: 'The sheet states one tower coverage, not a tier by level count.',
+            },
+            { kind: 'NEGATIVE', context: otherPlot, expected: 'NOT_APPLICABLE' },
+          ],
+        }),
+      );
     }
   }
 
   // --- Setbacks ------------------------------------------------------------
   if (limits.setbacks) {
     const { podium, tower, raw } = limits.setbacks.value;
+    const towerCitation = partCitation(limits.setbacks.citation, raw, /^\s*Tower\b/i, 'tower');
+    const podiumCitation = partCitation(limits.setbacks.citation, raw, /^\s*G\.?\s*F\b/i, 'GF & podium');
 
-    /*
-      THE TOWER SCHEDULE BINDS NOTHING, AND SAYING SO IS NOT OPTIONAL.
-
-      A real sheet states both: the Warsan plan prints "GF & Podium: 0m from all
-      sides | Tower: Front = 0m, Sides & Rear = 3m". The engine has ONE
-      `setback.road` and ONE `setback.adjacent_plot`, which together cut the
-      footprint the podium occupies; the tower above it is governed by
-      `tower_plate.max`, an area. So the podium row binds and the tower row
-      cannot — and a builder that read the podium and stayed quiet about the
-      tower would be dropping half of what the document says while returning a
-      complete-looking answer. That was the shape of the defect this whole module
-      exists to close, and repeating it one level down would be worse, not better.
-    */
-    const towerStates = [tower.front, tower.side, tower.rear].filter((v) => v !== undefined);
-    if (towerStates.length > 0) {
-      notBound.push({
-        field: 'setbacks.tower',
-        stated: raw,
-        reason:
-          'setback.road and setback.adjacent_plot cut the podium footprint, and the engine ' +
-          'holds one of each. The tower’s own setbacks are a second schedule this phase ' +
-          'does not model; the tower is capped by tower_plate.max, which is an area.',
-      });
-    }
+    /** A plot context a rule's own test can be evaluated in. */
+    const testPlot = (frontages: number | undefined): Record<string, unknown> =>
+      frontages === undefined
+        ? { plot_number: binding.plotNumber }
+        : { plot_number: binding.plotNumber, frontage_count: frontages };
 
     const setbackRule = (
       parameterId: string,
       suffix: string,
       metres: Decimal,
       edgeClass: string,
+      citation: RuleRecord['citation'],
+      onlyWhen: readonly Term[] = [],
+      frontages?: number,
     ): RuleRecord =>
       record({
         ruleId: `INSTRUMENT.${binding.instrumentId}.${suffix}`,
@@ -361,21 +506,18 @@ export function rulesFromInstrument(
         evaluator: EvaluatorName.POLYGON_OFFSET_INWARD,
         evaluatorArgs: { value: metres.toString() },
         unit: 'm',
-        applicability: { all: [thisPlot, { 'edge.classification': { eq: edgeClass } }] },
-        citation: limits.setbacks!.citation,
+        applicability: { all: [thisPlot, { 'edge.classification': { eq: edgeClass } }, ...onlyWhen] },
+        citation,
         tests: [
           {
             kind: 'POSITIVE',
-            context: {
-              plot: { plot_number: binding.plotNumber },
-              edge: { classification: edgeClass },
-            },
+            context: { plot: testPlot(frontages), edge: { classification: edgeClass } },
             expected: metres.toNumber(),
           },
           {
             kind: 'BOUNDARY',
             context: {
-              plot: { plot_number: binding.plotNumber },
+              plot: testPlot(frontages),
               edge: { classification: edgeClass },
               levels: { above_ground: 12 },
             },
@@ -384,51 +526,247 @@ export function rulesFromInstrument(
           },
           {
             kind: 'NEGATIVE',
-            context: {
-              plot: { plot_number: binding.plotNumber },
-              edge: { classification: 'OPEN_SPACE' },
-            },
+            context: { plot: testPlot(frontages), edge: { classification: 'OPEN_SPACE' } },
             expected: 'NOT_APPLICABLE',
           },
         ],
       });
 
-    if (isFixed(podium.front)) {
-      rules.push(setbackRule('setback.road', 'setback.road', podium.front.metres, 'ROAD'));
-    } else if (podium.front) {
-      notBound.push(conditional('setbacks.front', podium.front, raw));
+    /*
+      A DECISION RULE: the sheet states a figure for each of several faces, and
+      nothing on the sheet or in the plot says which face this boundary is. It
+      evaluates to the set of figures the sheet allows, and the envelope refuses
+      to compute past it until the reader names the face (a tower boundary) or —
+      for the podium's façade, under the podium statement — assumes the
+      solid-wall answer in amber with its alternative measured.
+    */
+    const decisionRule = (
+      parameterId: string,
+      suffix: string,
+      options: readonly FaceOption[],
+      edgeClass: string,
+      citation: RuleRecord['citation'],
+      kind: DecisionKind,
+      onlyWhen: readonly Term[] = [],
+      frontages?: number,
+    ): RuleRecord => {
+      const permitted = [...new Set(options.flatMap((o) => (o.metres === null ? [] : [o.metres])))];
+      return record({
+        ruleId: `INSTRUMENT.${binding.instrumentId}.${suffix}`,
+        parameterId,
+        operator: Operator.ENUM,
+        evaluator: EvaluatorName.ENUM_PERMITTED_SET,
+        evaluatorArgs: { permitted, [TOWER_FACE_OPTIONS]: options, [DECISION_KIND]: kind },
+        unit: 'm',
+        applicability: { all: [thisPlot, { 'edge.classification': { eq: edgeClass } }, ...onlyWhen] },
+        citation,
+        tests: [
+          {
+            kind: 'POSITIVE',
+            context: { plot: testPlot(frontages), edge: { classification: edgeClass } },
+            expected: permitted,
+          },
+          {
+            kind: 'BOUNDARY',
+            context: {
+              plot: testPlot(frontages),
+              edge: { classification: edgeClass },
+              levels: { above_ground: 12 },
+            },
+            expected: permitted,
+            note: 'Which face a boundary is does not change with the level count.',
+          },
+          {
+            kind: 'NEGATIVE',
+            context: { plot: testPlot(frontages), edge: { classification: 'OPEN_SPACE' } },
+            expected: 'NOT_APPLICABLE',
+          },
+        ],
+      });
+    };
+
+    // --- The TOWER row: `setback.road` and `setback.adjacent_plot` ---------
+    /*
+      SIDE AND REAR SHARE ONE BOUNDARY CLASS, SO THEY MUST AGREE TO BIND IT AS A
+      NUMBER. Every neighbour is ADJACENT_PLOT. A sheet that states a different
+      distance for the side and for the rear needs to know which neighbour is the
+      rear — "opposite the front" on a rectangle, and nothing at all on an
+      irregular plot — so it is a decision per boundary, never the larger figure
+      applied to both (which is what two scalar rules would have produced, through
+      `byPartialOrder`, silently).
+    */
+    const tSide = tower.side;
+    const tRear = tower.rear;
+    if (isFixed(tSide) && isFixed(tRear) && !tSide.metres.eq(tRear.metres)) {
+      rules.push(
+        decisionRule(
+          'setback.adjacent_plot',
+          'tower.setback.adjacent_plot.which_face',
+          [
+            { face: 'side', metres: tSide.metres.toString() },
+            { face: 'rear', metres: tRear.metres.toString() },
+          ],
+          'ADJACENT_PLOT',
+          towerCitation,
+          DecisionKind.FACE,
+        ),
+      );
+      notBound.push({
+        field: 'setbacks.tower.side_and_rear',
+        stated: `side ${tSide.metres.toString()} m, rear ${tRear.metres.toString()} m`,
+        reason: TOWER_SIDE_REAR_REASON,
+      });
+    } else {
+      const shared = isFixed(tSide) ? tSide : isFixed(tRear) ? tRear : undefined;
+      if (shared) {
+        rules.push(
+          setbackRule(
+            'setback.adjacent_plot',
+            'tower.setback.adjacent_plot',
+            shared.metres,
+            'ADJACENT_PLOT',
+            towerCitation,
+          ),
+        );
+      }
+      for (const [name, v] of [
+        ['setbacks.tower.side', tSide],
+        ['setbacks.tower.rear', tRear],
+      ] as const) {
+        if (v && v.kind === 'CONDITIONAL') notBound.push(conditional(name, v, raw));
+      }
     }
 
     /*
-      SIDE AND REAR SHARE ONE PARAMETER, SO THEY MUST AGREE TO BIND IT.
-      `setback.adjacent_plot` is a single parameter over every non-road boundary.
-      A sheet that states a different distance for the side and for the rear is
-      stating something this parameter cannot express, and emitting two rules for
-      it would put two plot-specific candidates in front of `resolveParameter` —
-      which would then fall through to `byPartialOrder` and pick the larger as
-      "most restrictive", silently applying the rear setback to the side.
+      THE FRONT IS THE ROAD — WHEN THERE IS ONE ROAD. On a plot with two road
+      boundaries the sheet's "Front" names one of them and says nothing about
+      which; the other is a side (a corner plot) or a rear (a plot between two
+      streets). Where every face the sheet states carries the same figure the
+      question does not matter and the figure binds every road. Otherwise the
+      front figure binds only on a plot with exactly one road
+      (`plot.frontage_count`, read from the plot the rule meets), and every road
+      of any other plot gets the decision — the reader says which face it is.
     */
+    const tFront = tower.front;
+    if (isFixed(tFront)) {
+      const options = [
+        { face: 'front', metres: tFront.metres.toString() },
+        ...faceOptionsFor('side', tSide),
+        ...faceOptionsFor('rear', tRear),
+      ];
+      const unambiguous = options.every((o) => o.metres !== null && tFront.metres.eq(o.metres));
+      if (unambiguous) {
+        rules.push(setbackRule('setback.road', 'tower.setback.road', tFront.metres, 'ROAD', towerCitation));
+      } else {
+        rules.push(
+          setbackRule(
+            'setback.road',
+            'tower.setback.road',
+            tFront.metres,
+            'ROAD',
+            towerCitation,
+            [{ 'plot.frontage_count': { eq: 1 } }],
+            1,
+          ),
+        );
+        rules.push(
+          decisionRule(
+            'setback.road',
+            'tower.setback.road.which_face',
+            options,
+            'ROAD',
+            towerCitation,
+            DecisionKind.FACE,
+            [{ 'plot.frontage_count': { ne: 1 } }],
+            2,
+          ),
+        );
+        if (binding.roadBoundaries === undefined || binding.roadBoundaries > 1) {
+          notBound.push({
+            field: 'setbacks.tower.front',
+            stated: towerCitation.sourceTextVerbatim,
+            reason: TOWER_FRONT_REASON,
+          });
+        }
+      }
+    } else if (tFront) {
+      notBound.push(conditional('setbacks.tower.front', tFront, raw));
+    }
+
+    // --- The PODIUM row: `setback.podium.<class>`, read by the podium line only ---
+    /*
+      A conditional podium setback ("0m to solid wall and 4.0m to window wall")
+      is a façade decision. It is bound as a decision AND reported in `notBound`:
+      the envelope, under the podium statement, assumes the solid-wall answer in
+      amber and measures the window-wall one, and the reader still sees that the
+      sheet did not give one number.
+    */
+    const pFront = podium.front;
+    if (isFixed(pFront)) {
+      rules.push(
+        setbackRule(podiumSetbackParameter('ROAD'), 'podium.setback.road', pFront.metres, 'ROAD', podiumCitation),
+      );
+    } else if (pFront) {
+      rules.push(
+        decisionRule(
+          podiumSetbackParameter('ROAD'),
+          'podium.setback.road.which_facade',
+          faceOptionsFor('front', pFront),
+          'ROAD',
+          podiumCitation,
+          DecisionKind.FACADE,
+        ),
+      );
+      notBound.push(conditional('setbacks.front', pFront, raw));
+    }
+
     const side = podium.side;
     const rear = podium.rear;
     if (isFixed(side) && isFixed(rear) && !side.metres.eq(rear.metres)) {
+      rules.push(
+        decisionRule(
+          podiumSetbackParameter('ADJACENT_PLOT'),
+          'podium.setback.adjacent_plot.which_face',
+          [
+            { face: 'side', metres: side.metres.toString() },
+            { face: 'rear', metres: rear.metres.toString() },
+          ],
+          'ADJACENT_PLOT',
+          podiumCitation,
+          DecisionKind.FACE,
+        ),
+      );
       notBound.push({
         field: 'setbacks.side_and_rear',
         stated: `side ${side.metres.toString()} m, rear ${rear.metres.toString()} m`,
-        reason:
-          'setback.adjacent_plot is one parameter over every non-road boundary and the ' +
-          'sheet states two different distances. Binding either would apply it to both.',
+        reason: PODIUM_SIDE_REAR_REASON,
       });
     } else {
       const shared = isFixed(side) ? side : isFixed(rear) ? rear : undefined;
       if (shared) {
         rules.push(
           setbackRule(
-            'setback.adjacent_plot',
-            'setback.adjacent_plot',
+            podiumSetbackParameter('ADJACENT_PLOT'),
+            'podium.setback.adjacent_plot',
             shared.metres,
             'ADJACENT_PLOT',
+            podiumCitation,
           ),
         );
+      } else {
+        const conditionalFace = [side, rear].find((v) => v?.kind === 'CONDITIONAL');
+        if (conditionalFace) {
+          rules.push(
+            decisionRule(
+              podiumSetbackParameter('ADJACENT_PLOT'),
+              'podium.setback.adjacent_plot.which_facade',
+              faceOptionsFor('side', conditionalFace),
+              'ADJACENT_PLOT',
+              podiumCitation,
+              DecisionKind.FACADE,
+            ),
+          );
+        }
       }
       for (const [name, v] of [
         ['setbacks.side', side],

@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { subjectHash } from '../src/gates.js';
 import { build } from '../src/server.js';
 
 const REPO = new URL('../../../', import.meta.url);
@@ -47,10 +48,18 @@ type SheetReport = {
   refused: string | null;
   bound: { parameterId: string; value: string; unit: string; clause: string }[];
   notBound: { field: string; stated: string; reason: string }[];
+  setbacks?: {
+    tower: Record<string, { kind: string; metres?: string; faces?: { face: string; metres: string | null }[]; clause: string }>;
+    podium: Record<string, { kind: string; metres?: string; clause: string }>;
+  } | null;
 };
 
-/** A 40 × 30 m plot — the shape is irrelevant here, the limits are the subject. */
-function plotBody(plotNumber: string, withSheet: boolean) {
+/**
+ * A 40 × 30 m plot — the shape is irrelevant here, the limits are the subject.
+ * One road, as Warsan 6211383 has; `roads: 2` makes boundary 2 a second road,
+ * which is the plot on which the sheet's "Front" no longer names a boundary.
+ */
+function plotBody(plotNumber: string, withSheet: boolean, roads: 1 | 2 = 1) {
   return {
     plotNumber,
     community: 'WARSAN FIRST',
@@ -64,7 +73,9 @@ function plotBody(plotNumber: string, withSheet: boolean) {
     edges: [
       { seq: 0, classification: 'ROAD' as const, roadHierarchy: 'LOCAL' as const },
       { seq: 1, classification: 'ADJACENT_PLOT' as const },
-      { seq: 2, classification: 'ROAD' as const, roadHierarchy: 'LOCAL' as const },
+      roads === 2
+        ? { seq: 2, classification: 'ROAD' as const, roadHierarchy: 'LOCAL' as const }
+        : { seq: 2, classification: 'ADJACENT_PLOT' as const },
       { seq: 3, classification: 'ADJACENT_PLOT' as const },
     ],
     ...(withSheet ? { affectionPlan: { content: pdfBase64, filename: 'warsan-6211383.pdf' } } : {}),
@@ -99,13 +110,13 @@ function runBody(plotId: string) {
   };
 }
 
-async function createPlot(plotNumber: string, withSheet: boolean) {
+async function createPlot(plotNumber: string, withSheet: boolean, roads: 1 | 2 = 1) {
   const app = await build();
   const res = await app.inject({
     method: 'POST',
     url: '/api/plots',
     headers: ACTOR,
-    payload: plotBody(plotNumber, withSheet),
+    payload: plotBody(plotNumber, withSheet, roads),
   });
   return { app, res };
 }
@@ -153,19 +164,50 @@ describe('the sheet travels with the plot', () => {
       const sheet = res.json().sheet as SheetReport;
       const fields = sheet.notBound.map((n) => n.field);
 
-      // This sheet states a GFA, a tower coverage and a tower setback schedule;
-      // none binds a parameter, and all three are said. Its height in levels
-      // DOES bind now — as a count, `levels.max_above_ground` — so it is no
-      // longer here. It used to be, and that is how `G+4` reported 13 levels.
-      expect(fields).toContain('gfaSqm');
-      expect(fields).toContain('coverage.tower');
-      expect(fields).toContain('setbacks.tower');
-      expect(fields).not.toContain('height');
+      // This sheet states a GFA, which is checked against FAR × plot area and
+      // binds nothing, and it says so. Its height in levels binds as a count,
+      // and since 17 Oct 2026 its TOWER row binds too — the tower coverage and
+      // the tower setbacks used to be listed here and cut nothing, which is how
+      // a 60% tower stood on 100% of the plot.
+      expect(fields).toEqual(['gfaSqm']);
       for (const n of sheet.notBound) expect(n.reason.length).toBeGreaterThan(30);
     } finally {
       await app.close();
     }
-  });
+  }, READS_A_REAL_PDF);
+
+  it('binds the tower row as the tower’s and the podium row as the podium’s', async () => {
+    const { app, res } = await createPlot(PARCEL, true);
+    try {
+      const sheet = res.json().sheet as SheetReport;
+      const bound = new Map(sheet.bound.map((b) => [b.parameterId, b]));
+      expect(bound.get('tower_coverage.max')?.value).toBe('60');
+      expect(bound.get('tower_coverage.max')?.clause).toMatch(/^Tower/);
+      expect(bound.get('setback.adjacent_plot')?.value).toBe('3');
+      expect(bound.get('setback.adjacent_plot')?.clause).toMatch(/^Tower/);
+      expect(bound.get('setback.podium.adjacent_plot')?.value).toBe('0');
+      expect(bound.get('setback.podium.adjacent_plot')?.clause).toMatch(/^GF/);
+      // What the plot step reads, per kind of boundary: never the podium's 0 under the tower's name.
+      expect(sheet.setbacks?.tower['ADJACENT_PLOT']).toMatchObject({ kind: 'FIXED', metres: '3' });
+      expect(sheet.setbacks?.tower['ROAD']).toMatchObject({ kind: 'FIXED', metres: '0' });
+      expect(sheet.setbacks?.podium['ADJACENT_PLOT']).toMatchObject({ kind: 'FIXED', metres: '0' });
+    } finally {
+      await app.close();
+    }
+  }, READS_A_REAL_PDF);
+
+  it('on a plot with two roads, says the front is a question and asks it per road', async () => {
+    const { app, res } = await createPlot(PARCEL, true, 2);
+    try {
+      const sheet = res.json().sheet as SheetReport;
+      expect(sheet.notBound.map((n) => n.field)).toContain('setbacks.tower.front');
+      const road = sheet.setbacks?.tower['ROAD'];
+      expect(road?.kind).toBe('BY_FACE');
+      expect(road?.faces?.map((f) => `${f.face} ${f.metres}`)).toEqual(['front 0', 'side 3', 'rear 3']);
+    } finally {
+      await app.close();
+    }
+  }, READS_A_REAL_PDF);
 
   it('refuses a sheet issued for another parcel, and says which', async () => {
     const { app, res } = await createPlot('0000000', true);
@@ -295,4 +337,91 @@ describe('the sheet binds the run', () => {
       await app.close();
     }
   });
+
+  it('accepts the sheet’s own 3 m typed on a neighbour, where it used to quote the podium’s 0 m back', async () => {
+    const app = await build();
+    try {
+      const plot = await app.inject({ method: 'POST', url: '/api/plots', headers: ACTOR, payload: plotBody(PARCEL, true) });
+      const typed = (metres: string) =>
+        app.inject({
+          method: 'POST',
+          url: '/api/runs',
+          headers: ACTOR,
+          payload: { ...runBody(plot.json().plotId), typedSetbacks: [{ edgeSeq: 1, metres }] },
+        });
+      const agrees = await typed('3');
+      expect(agrees.statusCode).toBe(201);
+      const refused = await typed('2');
+      expect(refused.statusCode).toBe(422);
+      expect(refused.json().message).toContain('states a tower setback of 3 m for this boundary');
+      expect(refused.json().message).not.toMatch(/states 0 m|setback of 0 m/);
+    } finally {
+      await app.close();
+    }
+  }, 30_000);
+
+  /*
+    TWO ROADS: the run asks which face each road is, and the answer travels.
+    Then the stored run carries what the sheet left unbound, and the study's
+    annex prints it — in the reader's language, the sheet's words as printed.
+  */
+  it('halts on two roads until each road’s face is named, and the study lists what was not bound', async () => {
+    const app = await build();
+    try {
+      const plot = await app.inject({ method: 'POST', url: '/api/plots', headers: ACTOR, payload: plotBody(PARCEL, true, 2) });
+      const plotId = plot.json().plotId as string;
+
+      const asked = await app.inject({ method: 'POST', url: '/api/runs', headers: ACTOR, payload: runBody(plotId) });
+      expect(asked.statusCode).toBe(422);
+      expect(asked.json().message).toMatch(
+        /^edge 0: the affection plan states the tower setback by face \(front 0 m; side 3 m; rear 3 m\) and does not say which face this boundary is\./,
+      );
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/runs',
+        headers: ACTOR,
+        payload: {
+          ...runBody(plotId),
+          typedSetbacks: [
+            { edgeSeq: 0, metres: '0' },
+            { edgeSeq: 2, metres: '3' },
+          ],
+        },
+      });
+      expect(res.statusCode).toBe(201);
+      const run = res.json() as Record<string, unknown> & { runId: string; sheet: SheetReport };
+      expect(run.sheet.notBound.map((n) => n.field)).toContain('setbacks.tower.front');
+
+      const hashes = {
+        G3_ASSUMPTIONS_ACKNOWLEDGED: subjectHash(run['assumptions']),
+        G4_REVIEWER_NAMED: subjectHash(run['capacity']),
+      };
+      for (const [gate, hash] of Object.entries(hashes)) {
+        const signed = await app.inject({
+          method: 'POST',
+          url: `/api/runs/${run.runId}/gates`,
+          headers: gate === 'G4_REVIEWER_NAMED' ? { ...ACTOR, 'x-actor-licence': 'DM-12345' } : ACTOR,
+          payload: { gate, subjectHash: hash },
+        });
+        expect(signed.statusCode, gate).toBe(200);
+      }
+      const study = (lang: 'en' | 'ar') =>
+        app.inject({
+          method: 'POST',
+          url: `/api/runs/${run.runId}/export?format=html&lang=${lang}`,
+          headers: { ...ACTOR, 'x-actor-licence': 'DM-12345' },
+        });
+      const en = await study('en');
+      expect(en.statusCode).toBe(200);
+      expect(en.body).toContain('Limits the affection plan states that this study does not apply');
+      expect(en.body).toContain('Tower setback, front');
+      expect(en.body).toContain('Tower: Front = 0m, Sides &amp; Rear = 3m');
+      const ar = await study('ar');
+      expect(ar.body).toContain('حدود يذكرها مخطط الأفكشن ولا تطبقها هذه الدراسة');
+      expect(ar.body).toContain('ارتداد البرج، الحد الأمامي');
+    } finally {
+      await app.close();
+    }
+  }, 60_000);
 });

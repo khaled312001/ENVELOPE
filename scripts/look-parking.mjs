@@ -75,7 +75,14 @@ const PLOTS = [
       community: 'WARSAN FIRST',
       landUse: 'RESIDENTIAL_MULTI',
       vertices: rect('50.85', '26.85'),
-      edges,
+      // One road, as the plot has: with two, the sheet's tower "Front" names neither
+      // and the run asks which road is the front (17 Oct 2026).
+      edges: [
+        { seq: 0, classification: 'ROAD', roadHierarchy: 'LOCAL' },
+        { seq: 1, classification: 'ADJACENT_PLOT' },
+        { seq: 2, classification: 'ADJACENT_PLOT' },
+        { seq: 3, classification: 'ADJACENT_PLOT' },
+      ],
       affectionPlan: sheet('IC1-CTYL-16_011-warsan1-621.pdf'),
     },
     run: { parkingLevelsAvailable: 3, levels: { basements: 0, groundIsParking: true, podiumAboveGround: 2, podiumParkingLevels: 2 } },

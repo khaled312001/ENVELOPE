@@ -11,3 +11,4 @@ export { ARRANGEMENT_NAME, engineNote, type Reader, type Said } from './engine-n
 export { INVARIANT } from './engine-run-notes.js';
 export type { Locale } from './locale.js';
 export { METRIC_AR, type MetricWords } from './metric-notes.js';
+export { NOT_BOUND_FIELD } from './tower-notes.js';

@@ -18,6 +18,7 @@ import type { DraftPlot, EdgeClass, Hierarchy } from './model.js';
 import type { VehicleAccessBody } from './ParkingStep.js';
 import { Footer, Heading, NextStep, Row } from './parts.js';
 import type { SheetState } from './SheetStep.js';
+import { NotBoundList, TowerSetbackField } from './sheet-setbacks.js';
 
 // maplibre is the heaviest thing the studio loads; it comes down only when the map is opened.
 const PlotMapView = lazy(() => import('../components/PlotMapView.js').then((m) => ({ default: m.PlotMapView })));
@@ -184,13 +185,6 @@ export function PlotCanvas({
   );
 }
 
-/** Is a typed tower setback a number of metres? Blank is allowed: the rule then governs. */
-const isMetres = (s: string): boolean => s.trim() === '' || /^\d+(\.\d+)?$/.test(s.trim());
-
-/** The setback the filed sheet binds for this kind of boundary, if it binds one. */
-const sheetSetbackOf = (created: PlotCreated | null, cls: Exclude<EdgeClass, ''>): string | undefined =>
-  created?.sheet.bound.find((b) => b.parameterId === `setback.${cls.toLowerCase()}`)?.value;
-
 /**
  * Which side of the canvas the boundary card goes on: the one away from the
  * boundary, so the card never covers the line it is asking about. Physical, not
@@ -239,7 +233,6 @@ function EdgeEditor({
   const e = draft.edges[seq]!;
   const j = (seq + 1) % draft.vertices.length;
   const set = (patch: Partial<DraftPlot['edges'][number]>): void => onChange(patchEdge(draft, seq, patch));
-  const stated = e.classification === '' ? undefined : sheetSetbackOf(created, e.classification);
   const titleId = `edge-editor-${seq}`;
   return (
     <section
@@ -293,25 +286,14 @@ function EdgeEditor({
         </fieldset>
       ) : null}
       {e.classification !== '' ? (
-        stated ? (
-          <p className="text-[12px] text-secondary">
-            {t.plot.towerSetbackFromSheet} <span className="figure text-fg">{stated} m</span>
-          </p>
-        ) : (
-          <label className="grid gap-1 text-[12px] text-secondary">
-            <span>{t.plot.towerSetback}</span>
-            <Input
-              aria-label={t.plot.towerSetbackOf(seq)}
-              inputMode="decimal"
-              placeholder={t.plot.towerSetbackBlank}
-              value={e.towerSetback ?? ''}
-              onChange={(ev) => set({ towerSetback: ev.target.value })}
-              aria-invalid={isMetres(e.towerSetback ?? '') ? undefined : true}
-              className="figure h-8 w-32 px-2"
-              dir="ltr"
-            />
-          </label>
-        )
+        <TowerSetbackField
+          created={created}
+          cls={e.classification}
+          seq={seq}
+          value={e.towerSetback ?? ''}
+          onChange={(v) => set({ towerSetback: v })}
+          inline={false}
+        />
       ) : null}
       {filed ? <p className="text-[11.5px] text-tertiary">{t.plot.refileNote}</p> : null}
     </section>
@@ -374,7 +356,6 @@ export function PlotPanel({
   const setVertex = (i: number, key: 'x' | 'y', value: string): void =>
     onChange({ ...draft, vertices: draft.vertices.map((v, j) => (j === i ? { ...v, [key]: value } : v)) });
   const setEdge = (i: number, patch: Partial<DraftPlot['edges'][number]>): void => onChange(patchEdge(draft, i, patch));
-  const sheetSetback = (cls: Exclude<EdgeClass, ''>): string | undefined => sheetSetbackOf(created, cls);
   const add = (): void =>
     onChange({ ...draft, vertices: [...draft.vertices, { x: '', y: '' }], edges: [...draft.edges, { classification: '', roadHierarchy: '' }] });
   const remove = (i: number): void =>
@@ -458,6 +439,14 @@ export function PlotPanel({
             ) : null}
           </section>
         ) : null}
+
+        {/*
+          WHAT THE SHEET STATES AND THE RUN DOES NOT APPLY. The API returned this
+          from the day the binder existed and no screen showed it, so a sheet
+          stating six limits read as one stating four. A list, never collapsed:
+          an omission a reader must open to find is still an omission.
+        */}
+        {plot && created ? <NotBoundList sheet={created.sheet} /> : null}
 
         {sheet ? (
           <p className="flex items-start gap-2 rounded-md border border-line bg-raised px-3 py-2 text-[12.5px] text-secondary">
@@ -625,28 +614,14 @@ export function PlotPanel({
                       the sheet governs; elsewhere the reader may type one, USER_SET.
                     */}
                     {e.classification !== '' ? (
-                      (() => {
-                        const stated = sheetSetback(e.classification);
-                        return stated ? (
-                          <p className="text-[11.5px] text-secondary">
-                            {t.plot.towerSetbackFromSheet} <span className="figure text-fg">{stated} m</span>
-                          </p>
-                        ) : (
-                          <label className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-2 text-[11.5px] text-secondary">
-                            <span>{t.plot.towerSetback}</span>
-                            <Input
-                              aria-label={t.plot.towerSetbackOf(i)}
-                              inputMode="decimal"
-                              placeholder={t.plot.towerSetbackBlank}
-                              value={e.towerSetback ?? ''}
-                              onChange={(ev) => setEdge(i, { towerSetback: ev.target.value })}
-                              aria-invalid={isMetres(e.towerSetback ?? '') ? undefined : true}
-                              className="figure h-8 px-2"
-                              dir="ltr"
-                            />
-                          </label>
-                        );
-                      })()
+                      <TowerSetbackField
+                        created={created}
+                        cls={e.classification}
+                        seq={i}
+                        value={e.towerSetback ?? ''}
+                        onChange={(v) => setEdge(i, { towerSetback: v })}
+                        inline
+                      />
                     ) : null}
                   </div>
                 </li>

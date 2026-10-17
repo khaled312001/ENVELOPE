@@ -1147,6 +1147,51 @@ describe('the study report', () => {
     );
   });
 
+  it('lists in the annex what the affection plan states and the run did not apply, in both languages', () => {
+    /*
+      `notBound` was returned by the API and shown nowhere a reader of the study
+      looks, so a sheet stating six limits read as one stating four. The entries
+      here are the binder's own, for Trakhees 6211383 on a corner plot.
+    */
+    const notBound = [
+      {
+        field: 'setbacks.tower.front',
+        stated: 'Tower: Front = 0m, Sides & Rear = 3m',
+        reason:
+          'The sheet states the tower setback by face, and a plot with more than one road boundary ' +
+          'does not say which road is the front. The run asks for the face of each road boundary ' +
+          'rather than choosing one.',
+      },
+      {
+        field: 'setbacks.front',
+        stated: '0 m to solid wall; 4 m to window wall',
+        reason:
+          'The sheet makes this setback depend on the façade, which is a design decision and ' +
+          'not a datum. Collapsing it to one distance would choose the applicant’s façade for ' +
+          'them, so it stays a decision and binds nothing until it is made.',
+      },
+    ];
+    const run = makeRun();
+    const en = studyReportHtml(run, { locale: 'en', sheets: [], building: null, notBound });
+    expect(en).toContain('Limits the affection plan states that this study does not apply');
+    expect(en).toContain('Tower setback, front');
+    expect(en).toContain(esc('Tower: Front = 0m, Sides & Rear = 3m'));
+    expect(en).toContain('Ground floor and podium setback, front');
+    const ar = studyReportHtml(run, { locale: 'ar', sheets: [], building: null, notBound });
+    expect(ar).toContain('حدود يذكرها مخطط الأفكشن ولا تطبقها هذه الدراسة');
+    expect(ar).toContain('ارتداد البرج، الحد الأمامي');
+    // The sheet's words are quoted as printed; the reason is said in Arabic, not left in English.
+    expect(ar).toContain(esc('Tower: Front = 0m, Sides & Rear = 3m'));
+    expect(ar).not.toContain('does not say which road is the front');
+    expect(ar).not.toContain('Collapsing it to one distance');
+    // No sheet, or a run stored before the list was kept: no heading that would read as "nothing left out".
+    for (const nb of [{ notBound: null }, {}, { notBound: [] }]) {
+      expect(studyReportHtml(run, { locale: 'en', sheets: [], building: null, ...nb })).not.toContain(
+        'Limits the affection plan states',
+      );
+    }
+  });
+
   it('says every area definition in Arabic line for line, so no term loses an inclusion in translation', () => {
     for (const d of ALL_DEFINITIONS) {
       const ar = METRIC_AR[d.metricId];

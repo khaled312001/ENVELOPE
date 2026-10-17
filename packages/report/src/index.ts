@@ -55,6 +55,12 @@ export {
   type RunReport,
   type RunnerUpConstraint,
   type UserInputRecord,
+  RegisterClauseStatus,
+  RegisterObligation,
+  WrittenPromiseStatus,
+  type ClauseRegisterRow,
+  type ClauseRegisterSection,
+  type WrittenPromiseRow,
 } from './json.js';
 
 export {

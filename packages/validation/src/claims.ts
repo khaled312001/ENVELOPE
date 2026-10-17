@@ -65,6 +65,7 @@
  */
 
 import { ClaimStatus, type ClaimStatement, Decimal } from '@envelope/core';
+import type { ClauseRegisterCounts } from '@envelope/rules';
 
 import type { DeferredConstraint } from './categories.js';
 
@@ -155,6 +156,23 @@ export interface RuleCoverage {
   readonly encoded: number;
   readonly applicable: number;
   readonly deferred: readonly DeferredConstraint[];
+  /**
+   * The Dubai Building Code clause register's counts, said beside the ratio.
+   *
+   * Required, because the ratio alone was the defect: "7 of 9 (77.8%)" counted
+   * seed rule records, and a professional read it as coverage of the code. Every
+   * clause the engine applies as a cited constant, and every clause nobody
+   * encoded, was outside both sides of it. The two counts are kept apart rather
+   * than summed — a rule record and a clause are different units, and a ratio
+   * over both would be a number nobody could check.
+   */
+  readonly clauses: ClauseCoverage;
+}
+
+/** The register a run was validated against, counted. */
+export interface ClauseCoverage {
+  readonly version: string;
+  readonly counts: ClauseRegisterCounts;
 }
 
 /**
@@ -276,8 +294,31 @@ function ruleCoverageClaim(coverage: RuleCoverage): { status: ClaimStatus; detai
       `The denominator is the set of requirements we identified, not the set that ` +
       `applies. A requirement nobody identified is absent from both sides of this ` +
       `ratio, so a high percentage is evidence of diligence against our own list ` +
-      `and is not evidence of completeness.`,
+      `and is not evidence of completeness. ${clauseCoverageSentence(coverage.clauses)}`,
   };
+}
+
+/**
+ * The register's counts in one sentence, appended to the coverage line.
+ *
+ * `packages/report/src/words/engine-run-notes.ts` recognises this wording to say
+ * it in Arabic; change one and the other in the same commit.
+ */
+export function clauseCoverageSentence(clauses: ClauseCoverage): string {
+  const c = clauses.counts;
+  if (c.total === 0) {
+    return (
+      'No Dubai Building Code clause register was supplied, so no clause outside ' +
+      'the rule records is listed.'
+    );
+  }
+  return (
+    `Outside that ratio, the Dubai Building Code clause register (${clauses.version}) ` +
+    `lists ${c.total} clauses of B.4, B.5, B.7 and C.6.4: ${c.applied} applied by the ` +
+    `engine, ${c.notAssessed} not assessed (${c.notAssessedMandatory} of them mandatory), ` +
+    `${c.notApplicable} not applicable to a residential tower. The ratio above counts ` +
+    `rule records, not clauses.`
+  );
 }
 
 function geometricValidityClaim(

@@ -63,7 +63,9 @@ import { CLAIM_STATEMENT_VERBATIM, esc, groupDigits, treatmentFor } from './html
 import { forDisplay } from './precision.js';
 import {
   InvariantStatus,
+  RegisterClauseStatus,
   RuleSetApproval,
+  WrittenPromiseStatus,
   assertEmittable,
   unsignedAnnexNotice,
   type GfaStatementSection,
@@ -345,6 +347,36 @@ const EN = {
   briefLede:
     'Named by the person who ran this study. A developer brief is not a regulation: it is applied only where the plot’s own affection plan states nothing, and every value it supplies is marked as the brief’s.',
   colBound: 'Bound',
+  register: {
+    title: 'Dubai Building Code clause register',
+    counts: (total: number, applied: number, notAssessed: number, mandatory: number, na: number): string =>
+      `${total} clauses: ${applied} applied by the engine, ${notAssessed} not assessed (${mandatory} of them mandatory), ${na} not applicable. Applied means the engine uses the clause, not that the scheme meets it.`,
+    checksTitle: 'Code clauses not assessed',
+    checksLede: (mandatory: number): string =>
+      `${mandatory} mandatory clauses of the code sections this study touches are not assessed. Those a parking study is read for are below; every one is listed in the annex, section 8.`,
+    none: 'This run was computed before the clause register existed, so it does not list the code clauses it did not assess. Compute it again to list them.',
+    colClause: 'Clause',
+    colForm: 'Form',
+    colStatus: 'Status',
+    colWhat: 'What the engine does',
+    rest: 'The rest is not assessed:',
+    lifeSafety: 'life safety',
+    status: { APPLIED: 'Applied', NOT_ASSESSED: 'Not assessed', NOT_APPLICABLE: 'Not applicable' } as Readonly<
+      Record<string, string>
+    >,
+    form: {
+      SHALL: 'shall',
+      SHOULD: 'should',
+      MAY: 'may',
+      DEFINITION: 'definition',
+      INFORMATIVE: 'informative',
+    } as Readonly<Record<string, string>>,
+    promisesTitle: (date: string): string => `Written in the proposal of ${date}, and what exists`,
+    promisesLede: 'Listed so that no output of this system is read as delivering what it does not.',
+    colPromised: 'Promised',
+    colExists: 'What exists',
+    promise: { BUILT: 'Built', PARTLY_BUILT: 'Partly built', NOT_BUILT: 'Not built' } as Readonly<Record<string, string>>,
+  },
 };
 
 type Words = typeof EN;
@@ -594,6 +626,35 @@ const AR: Words = {
   briefLede:
     'اختاره من شغل هذه الدراسة. موجز المشروع ليس لائحة نظامية: لا يطبق إلا حيث لا يذكر مخطط الأفكشن الخاص بالقطعة شيئا، وكل قيمة يقدمها معلمة بأنها من الموجز.',
   colBound: 'القيمة المطبقة',
+  register: {
+    title: 'سجل بنود كود دبي للبناء',
+    counts: (total: number, applied: number, notAssessed: number, mandatory: number, na: number): string =>
+      `${total} بندا: ${applied} يطبقها المحرك، و${notAssessed} لم تخضع للتقييم (${mandatory} منها إلزامية)، و${na} لا تنطبق. التطبيق يعني أن المحرك يستخدم البند، لا أن المخطط يستوفيه.`,
+    checksTitle: 'بنود الكود التي لم تخضع للتقييم',
+    checksLede: (mandatory: number): string =>
+      `${mandatory} بندا إلزاميا من أقسام الكود التي تمسها هذه الدراسة لم تخضع للتقييم. ما يهم دراسة المواقف منها مذكور أدناه، وكلها مذكورة في الملحق، القسم 8.`,
+    none: 'حسبت هذه الدراسة قبل وجود سجل البنود، فلا تذكر بنود الكود التي لم تخضع للتقييم. احسبها مرة أخرى لتظهر.',
+    colClause: 'البند',
+    colForm: 'الصيغة',
+    colStatus: 'الحالة',
+    colWhat: 'ما يفعله المحرك',
+    rest: 'الباقي لم يخضع للتقييم:',
+    lifeSafety: 'سلامة الأرواح',
+    // Not «مطبق»: unvowelled it also reads "clamped shut", and it sits one letter from «مطابق».
+    status: { APPLIED: 'يطبقه المحرك', NOT_ASSESSED: 'لم يخضع للتقييم', NOT_APPLICABLE: 'لا ينطبق' },
+    form: {
+      SHALL: 'يجب',
+      SHOULD: 'يفضل',
+      MAY: 'يمكن',
+      DEFINITION: 'تعريف',
+      INFORMATIVE: 'إرشادي',
+    },
+    promisesTitle: (date: string): string => `ما كتب في العرض بتاريخ ${date}، وما هو موجود`,
+    promisesLede: 'مذكور حتى لا يقرأ أي ناتج لهذا النظام على أنه يقدم ما لا يقدمه.',
+    colPromised: 'الوعد',
+    colExists: 'الموجود',
+    promise: { BUILT: 'منفذ', PARTLY_BUILT: 'منفذ جزئيا', NOT_BUILT: 'غير منفذ' },
+  },
 };
 
 const WORDS: Readonly<Record<Locale, Words>> = { en: EN, ar: AR };
@@ -1126,6 +1187,7 @@ function checksSection(run: RunReport, L: Locale, sources: Sources): string {
     (deferred.length === 0
       ? `<p class="note">${esc(w.noDeferred)}</p>`
       : table(w.deferredTitle, [w.colRequirement, '', w.colWhy, w.colSource], deferred)) +
+    registerChecks(run, L) +
     `<h3>${esc(w.claimTitle)}</h3>` +
     line('SELF_CONSISTENCY', run.claim.selfConsistency.status, run.claim.selfConsistency.detail) +
     line('RULE_COVERAGE', run.claim.ruleCoverage.status, run.claim.ruleCoverage.detail) +
@@ -1135,6 +1197,96 @@ function checksSection(run: RunReport, L: Locale, sources: Sources): string {
     line('PROFESSIONAL_AGREEMENT', run.claim.professionalAgreement.status, run.claim.professionalAgreement.detail) +
     `<h3>${esc(w.disclaimerTitle)}</h3><p class="note">${esc(say(run.disclaimer, L))}</p>` +
     `</section>`
+  );
+}
+
+/*
+  THE CODE CLAUSES NOTHING CHECKS, BESIDE THE DEFERRED RULES.
+
+  The deferred table above lists rule records. A clause nobody encoded never
+  became a record, so it could not appear there, and for a parking study the
+  reader looks for exactly those: bicycle parking, the loading area, clear
+  heights, the 6 m entry, wheel stoppers. So the clauses the register gives a
+  sentence of their own are listed here, one row per sentence with the clauses
+  it covers, and the count of every mandatory clause not assessed is said
+  above them with a pointer to the annex, which lists them all. Nothing is
+  dropped between the two: what is not here by name is there.
+*/
+function registerChecks(run: RunReport, L: Locale): string {
+  const w = WORDS[L];
+  const r = run.clauseRegister;
+  if (r === undefined) {
+    return `<h3>${esc(w.register.checksTitle)}</h3><p class="note">${chip(w.key.notAssessed)} ${esc(w.register.none)}</p>`;
+  }
+  const groups = new Map<string, { clauses: string[]; reason: string }>();
+  for (const e of r.entries) {
+    if (e.status !== RegisterClauseStatus.NOT_ASSESSED || e.detail === null) continue;
+    const g = groups.get(e.detail) ?? { clauses: [], reason: e.reason };
+    g.clauses.push(e.clause);
+    groups.set(e.detail, g);
+  }
+  const rows = [...groups.entries()].map(([detail, g]) => [
+    g.clauses.map((c) => `<bdi>${esc(c)}</bdi>`).join('<br>'),
+    chip(w.key.notAssessed),
+    `${esc(say(detail, L))}<div class="note">${esc(say(g.reason, L))}</div>`,
+  ]);
+  return (
+    `<h3>${esc(w.register.checksTitle)}</h3>` +
+    `<p class="note">${esc(w.register.checksLede(r.counts.notAssessedMandatory))}</p>` +
+    table(w.register.checksTitle, [w.register.colClause, '', w.colWhy], rows, '', ['26%', '16%', '58%'])
+  );
+}
+
+/** The whole register, and the proposal's written promises beside what exists. */
+function registerAnnex(run: RunReport, L: Locale): string {
+  const w = WORDS[L];
+  const r = run.clauseRegister;
+  if (r === undefined) {
+    return `<h3>${esc(w.register.title)}</h3><p class="note">${chip(w.key.notAssessed)} ${esc(w.register.none)}</p>`;
+  }
+  const c = r.counts;
+  const rows = r.entries.map((e) => {
+    const status = w.register.status[e.status] ?? e.status;
+    const what =
+      esc(say(e.reason, L)) +
+      (e.appliedBy.length > 0
+        ? `<div class="cite">${e.appliedBy.map((b) => `<bdi class="mono" dir="ltr">${esc(b)}</bdi>`).join('<br>')}</div>`
+        : '') +
+      (e.rest === null ? '' : `<div class="note">${esc(w.register.rest)} ${esc(say(e.rest, L))}</div>`) +
+      (e.detail === null ? '' : `<div class="note">${esc(say(e.detail, L))}</div>`);
+    return [
+      `<bdi>${esc(e.clause)}</bdi>`,
+      `<bdi>${e.page}</bdi>`,
+      esc(w.register.form[e.obligation] ?? e.obligation) + (e.lifeSafety ? `<div class="note">${esc(w.register.lifeSafety)}</div>` : ''),
+      e.status === RegisterClauseStatus.NOT_ASSESSED ? chip(status) : esc(status),
+      what,
+    ];
+  });
+  const promises = r.promises.items.map((p) => [
+    `<bdi dir="ltr" lang="en">${esc(p.promised)}</bdi>`,
+    p.status === WrittenPromiseStatus.BUILT ? esc(w.register.promise[p.status] ?? p.status) : chip(w.register.promise[p.status] ?? p.status),
+    esc(say(p.exists, L)),
+  ]);
+  return (
+    `<h3>${esc(w.register.title)}</h3>` +
+    `<p class="note">${esc(say(r.scope, L))}</p>` +
+    `<p class="note"><bdi class="mono">${esc(r.version)}</bdi> · ${esc(
+      w.register.counts(c.total, c.applied, c.notAssessed, c.notAssessedMandatory, c.notApplicable),
+    )}</p>` +
+    table(
+      w.register.title,
+      [w.register.colClause, w.colPage, w.register.colForm, w.register.colStatus, w.register.colWhat],
+      rows,
+      'register',
+      ['20%', '7%', '11%', '14%', '48%'],
+    ) +
+    `<h3>${esc(w.register.promisesTitle(r.promises.date))}</h3>` +
+    `<p class="note">${esc(w.register.promisesLede)}</p>` +
+    table(w.register.promisesTitle(r.promises.date), [w.register.colPromised, w.register.colStatus, w.register.colExists], promises, 'register', [
+      '38%',
+      '14%',
+      '48%',
+    ])
   );
 }
 
@@ -1271,6 +1423,7 @@ function annexSection(run: RunReport, o: StudyReportOptions): string {
       '27%',
       '23%',
     ]) +
+    registerAnnex(run, L) +
     `</section>`
   );
 }
@@ -1387,6 +1540,8 @@ ul.notes { margin: 6px 0 0; padding-inline-start: 18px; font-size: 0.82rem; colo
 ul.notes li { margin-bottom: 4px; }
 table.definitions { table-layout: fixed; }
 table.definitions td { font-size: 0.8rem; }
+table.register { table-layout: fixed; }
+table.register td, table.register th { font-size: 0.78rem; overflow-wrap: anywhere; }
 ul.terms { margin: 0; padding-inline-start: 16px; }
 ul.terms li { margin-bottom: 2px; }
 

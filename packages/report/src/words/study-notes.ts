@@ -1,4 +1,5 @@
 import type { Reader, Said } from './engine-notes.js';
+import { REGISTER_READERS } from './register-notes.js';
 
 /*
   THE SENTENCES THE STUDY REPORT READS THAT THE SCREEN HAD NOT YET NEEDED.
@@ -334,4 +335,6 @@ export const STUDY_READERS: readonly Reader[] = [
     },
     'egress.parking.dead_end.max [LIFE SAFETY]': { en: 'Parking: dead end (life safety)', ar: 'المواقف: النهاية المسدودة (سلامة الأرواح)' },
   }),
+  // The DBC clause register's reasons, details, scope and the proposal's promises.
+  ...REGISTER_READERS,
 ];

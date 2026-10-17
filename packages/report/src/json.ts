@@ -619,6 +619,83 @@ export interface DeferredCheckEntry {
 }
 
 // ---------------------------------------------------------------------------
+// The Dubai Building Code clause register, and the written promises
+// ---------------------------------------------------------------------------
+
+/**
+ * What the engine does with a code clause. Re-declared from `@envelope/rules`
+ * for the reason {@link DeferredCheckEntry} gives: this package may not reach the
+ * rule engine, and the compiler checks the two shapes meet at the composition root.
+ */
+export const RegisterClauseStatus = {
+  APPLIED: 'APPLIED',
+  NOT_ASSESSED: 'NOT_ASSESSED',
+  NOT_APPLICABLE: 'NOT_APPLICABLE',
+} as const;
+export type RegisterClauseStatus = (typeof RegisterClauseStatus)[keyof typeof RegisterClauseStatus];
+
+export const RegisterObligation = {
+  SHALL: 'SHALL',
+  SHOULD: 'SHOULD',
+  MAY: 'MAY',
+  DEFINITION: 'DEFINITION',
+  INFORMATIVE: 'INFORMATIVE',
+} as const;
+export type RegisterObligation = (typeof RegisterObligation)[keyof typeof RegisterObligation];
+
+/** One clause, every field already a sentence or a label: the report looks nothing up. */
+export interface ClauseRegisterRow {
+  readonly clause: string;
+  readonly page: number;
+  readonly obligation: RegisterObligation;
+  readonly status: RegisterClauseStatus;
+  readonly reason: string;
+  readonly appliedBy: readonly string[];
+  readonly rest: string | null;
+  readonly detail: string | null;
+  readonly lifeSafety: boolean;
+}
+
+export const WrittenPromiseStatus = {
+  BUILT: 'BUILT',
+  PARTLY_BUILT: 'PARTLY_BUILT',
+  NOT_BUILT: 'NOT_BUILT',
+} as const;
+export type WrittenPromiseStatus = (typeof WrittenPromiseStatus)[keyof typeof WrittenPromiseStatus];
+
+export interface WrittenPromiseRow {
+  readonly id: string;
+  readonly promised: string;
+  readonly status: WrittenPromiseStatus;
+  readonly exists: string;
+}
+
+/**
+ * The register the run was validated against, and what the proposal promised.
+ *
+ * Printed whole in both reports' annexes, and its mandatory not-assessed
+ * clauses beside the deferred checks: a clause nobody encoded used to be absent
+ * from every output, and an absence reads as "fine".
+ */
+export interface ClauseRegisterSection {
+  readonly version: string;
+  readonly scope: string;
+  readonly counts: {
+    readonly total: number;
+    readonly applied: number;
+    readonly notAssessed: number;
+    readonly notAssessedMandatory: number;
+    readonly notApplicable: number;
+  };
+  readonly entries: readonly ClauseRegisterRow[];
+  readonly promises: {
+    /** The date of the proposal the promises were written in. */
+    readonly date: string;
+    readonly items: readonly WrittenPromiseRow[];
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Inputs persisted for §13.4
 // ---------------------------------------------------------------------------
 
@@ -692,6 +769,12 @@ export interface RunReport {
   readonly invariants: readonly InvariantOutcome[];
   readonly claim: ClaimStatement;
   readonly deferredChecks: readonly DeferredCheckEntry[];
+  /**
+   * The DBC clause register as the run was validated against it. Optional: a
+   * run stored before the register existed has none, and one filled in from
+   * today's register would describe a validation that run never had.
+   */
+  readonly clauseRegister?: ClauseRegisterSection;
   readonly provenance: ProvenanceExport;
   /** Post-extraction structured inputs, as persisted. Hashed verbatim (§13.4). */
   readonly structuredInputs: JsonObject;
@@ -1221,6 +1304,49 @@ function readGfaStatement(value: unknown, at: string): GfaStatementSection {
   };
 }
 
+function readClauseRegister(value: unknown, at: string): ClauseRegisterSection {
+  const r = readObject(value, at);
+  const counts = readObject(r['counts'], `${at}.counts`);
+  const promises = readObject(r['promises'], `${at}.promises`);
+  return {
+    version: readString(r['version'], `${at}.version`),
+    scope: readString(r['scope'], `${at}.scope`),
+    counts: {
+      total: readInteger(counts['total'], `${at}.counts.total`),
+      applied: readInteger(counts['applied'], `${at}.counts.applied`),
+      notAssessed: readInteger(counts['notAssessed'], `${at}.counts.notAssessed`),
+      notAssessedMandatory: readInteger(counts['notAssessedMandatory'], `${at}.counts.notAssessedMandatory`),
+      notApplicable: readInteger(counts['notApplicable'], `${at}.counts.notApplicable`),
+    },
+    entries: readList(r['entries'], `${at}.entries`, (v, a) => {
+      const e = readObject(v, a);
+      return {
+        clause: readString(e['clause'], `${a}.clause`),
+        page: readInteger(e['page'], `${a}.page`),
+        obligation: readMember(e['obligation'], `${a}.obligation`, RegisterObligation),
+        status: readMember(e['status'], `${a}.status`, RegisterClauseStatus),
+        reason: readString(e['reason'], `${a}.reason`),
+        appliedBy: readList(e['appliedBy'], `${a}.appliedBy`, readString),
+        rest: readNullable(e['rest'], `${a}.rest`, readString),
+        detail: readNullable(e['detail'], `${a}.detail`, readString),
+        lifeSafety: readBoolean(e['lifeSafety'], `${a}.lifeSafety`),
+      };
+    }),
+    promises: {
+      date: readString(promises['date'], `${at}.promises.date`),
+      items: readList(promises['items'], `${at}.promises.items`, (v, a) => {
+        const p = readObject(v, a);
+        return {
+          id: readString(p['id'], `${a}.id`),
+          promised: readString(p['promised'], `${a}.promised`),
+          status: readMember(p['status'], `${a}.status`, WrittenPromiseStatus),
+          exists: readString(p['exists'], `${a}.exists`),
+        };
+      }),
+    },
+  };
+}
+
 function readRun(value: unknown, at: string): RunReport {
   const o = readObject(value, at);
   const plot = readObject(o['plot'], `${at}.plot`);
@@ -1463,6 +1589,10 @@ function readRun(value: unknown, at: string): RunReport {
         citation: readCitation(d['citation'], `${a}.citation`),
       };
     }),
+    // Absent on a run stored before the register existed; never synthesised.
+    ...(o['clauseRegister'] === undefined
+      ? {}
+      : { clauseRegister: readClauseRegister(o['clauseRegister'], `${at}.clauseRegister`) }),
     provenance: {
       nodes: readList(provenance['nodes'], `${at}.provenance.nodes`, readProvenanceNode),
       edges: readList(provenance['edges'], `${at}.provenance.edges`, readProvenanceEdge),

@@ -8,6 +8,7 @@
 
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { DBC_REGISTER } from '@envelope/rules';
 
 import { emissionBlockers } from '../src/checks.js';
 import { subjectHash } from '../src/gates.js';
@@ -1129,6 +1130,62 @@ describe('export — the §3.4 artifact', () => {
       expect(study.body).toMatch(lang === 'ar' ? /قواعد لم تعتمد بعد|لم تعتمد/ : /rules not yet approved/);
       expect(study.body).toMatch(/@media\s+print/);
     }
+  });
+
+  it('prints the code clauses it did not assess — bicycle parking and loading by name — in every report and the JSON', async () => {
+    /*
+      Until 17 Oct 2026 a clause nobody encoded appeared in no output: the claim
+      line counted nine rule records, and B.7.2.7's bicycle parking or B.7.3.1's
+      loading area were simply absent, which reads as "fine". The register is
+      composed here from the validator's, so the claim line, the annex and the
+      JSON cannot disagree on its counts.
+    */
+    const plot = await createPlot();
+    const run = (
+      await app.inject({ method: 'POST', url: '/api/runs', headers: ACTOR, payload: { ...RUN_BODY, plotId: plot.plotId } })
+    ).json();
+    await openGates(run.runId, run);
+
+    const doc = (
+      await app.inject({ method: 'POST', url: `/api/runs/${run.runId}/export`, headers: REVIEWER })
+    ).json().document.run;
+    const register = doc.clauseRegister as {
+      version: string;
+      counts: { total: number; notAssessed: number; notAssessedMandatory: number };
+      entries: { clause: string; status: string }[];
+      promises: { items: { id: string; status: string }[] };
+    };
+    expect(register.version).toBe(DBC_REGISTER.version);
+    expect(register.entries).toHaveLength(DBC_REGISTER.entries.length);
+    expect(register.counts.total).toBe(DBC_REGISTER.entries.length);
+    expect(register.entries.find((e) => e.clause === 'B.7.2.7 ¶4')?.status).toBe('NOT_ASSESSED');
+    expect(register.entries.find((e) => e.clause === 'B.7.3.1.1 ¶2')?.status).toBe('NOT_ASSESSED');
+    expect(register.promises.items.find((p) => p.id === 'IFC_EXPORT')?.status).toBe('NOT_BUILT');
+    // The claim line counts the same register the annex prints.
+    expect(doc.claim.ruleCoverage.detail).toContain(
+      `lists ${register.counts.total} clauses of B.4, B.5, B.7 and C.6.4`,
+    );
+
+    const audit = (
+      await app.inject({ method: 'POST', url: `/api/runs/${run.runId}/export?format=audit`, headers: REVIEWER })
+    ).body;
+    expect(audit).toContain('8a · Dubai Building Code clause register');
+    expect(audit).toContain('No IFC file is written.');
+
+    const en = (
+      await app.inject({ method: 'POST', url: `/api/runs/${run.runId}/export?format=html&lang=en`, headers: REVIEWER })
+    ).body;
+    const checks = en.slice(en.indexOf('id="s6"'), en.indexOf('id="s7"'));
+    expect(checks).toContain('Code clauses not assessed');
+    expect(checks).toContain('Bicycle parking is not computed.');
+    expect(checks).toContain('No loading area is placed.');
+
+    const ar = (
+      await app.inject({ method: 'POST', url: `/api/runs/${run.runId}/export?format=html&lang=ar`, headers: REVIEWER })
+    ).body;
+    expect(ar).toContain('بنود الكود التي لم تخضع للتقييم');
+    expect(ar).toContain('مواقف الدراجات لا تحسب');
+    expect(ar).not.toContain('Bicycle parking is not computed.');
   });
 
   it('prints computed figures to two decimals and keeps every digit in the derivation', async () => {

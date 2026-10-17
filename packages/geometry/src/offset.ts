@@ -62,6 +62,7 @@ import {
   dropCollinear,
   isCounterClockwise,
   isSimple,
+  segmentsProperlyIntersect,
   type Pt,
   type Ring,
   toCounterClockwise,
@@ -94,6 +95,13 @@ export interface OffsetResult {
   readonly areaMm2: number;
   /** True when every edge was axis-parallel, so no snapping was needed. */
   readonly exact: boolean;
+  /**
+   * Edges whose setback the footprint meets without any of its own line being
+   * drawn: swallowed by their neighbours' setbacks, each one verified by its
+   * distance to the footprint. Optional so a footprint built without offsetting
+   * (the plot itself) still fits the type; read absent as none.
+   */
+  readonly dropped?: readonly number[];
 }
 
 /** A line `a·x + b·y = c`, coefficients carried in exact decimal. */
@@ -230,9 +238,10 @@ export function offsetPerEdge(
   // meet — and, where both are the same arc, the point on it nearest vertex i.
   // Inside the plot where rounding alone would put it a millimetre out — see `snapInside`.
   const snap = ({ x, y }: Xy): Pt => snapInside(ring, x, y);
+  const straight = arcs.length === 0 ? straightCorners(ring, curves, ring.map((_, i) => bySeq.get(i)!)) : undefined;
   const offsetRing: Pt[] =
-    arcs.length === 0
-      ? straightCorners(ring, curves)
+    straight !== undefined
+      ? straight.corners
       : ring.map((p, i) => snap(meet(curves[(i - 1 + n) % n]!, curves[i]!, p)));
 
   /*
@@ -333,6 +342,7 @@ export function offsetPerEdge(
     ring: finalRing,
     areaMm2: verifiedArea(finalRing, 'setback-permitted footprint'),
     exact: allAxisParallel,
+    dropped: straight?.dropped ?? [],
   };
 }
 
@@ -357,17 +367,71 @@ export function offsetPerEdge(
   shifted line, the dropped ones included. If one does not, the plot really is
   over-consumed and is refused as before. Neighbours that end up parallel, or
   fewer than three boundaries left, are the same refusal.
+
+  THE CHECK IS AGAINST THE BOUNDARY AS DRAWN, NOT AGAINST ITS LINE CARRIED ON
+  FOREVER — and on a plot that turns inward anywhere, those are different
+  claims.
+
+  DDA plot 5134565 prints six surveyed corners (1,040.04 m², Saih Shuaib 1).
+  Two of its legs are a jog: 0.42 m long, then a 33.15 m side that turns 2.08°
+  INWARD from it. Set every boundary back 1 m and the jog's offset runs
+  backwards, so it is dropped, correctly — every point 1 m from its neighbours
+  is already more than 1 m from it. But the jog's supporting line, carried on
+  past the inward corner, crosses INTO the plot and is 1.2 m inside the long
+  side by its far end. The old check demanded every corner stand behind that
+  line, found the far corner of the long side did not, and refused a 28 × 33 m
+  plot as having no footprint at any setback, whatever its boundaries were
+  called. An L-shaped plot losing a short edge failed the same way, because
+  the line of one wing runs through the other.
+
+  A setback is a distance from a boundary. So a corner left standing is checked
+  against every boundary it must clear, dropped or kept, by its distance to
+  that boundary's own segment: from each footprint edge to each boundary, the
+  nearest approach of two segments. That is the claim "redundant" makes, and
+  it is still checked, not assumed. Everything the line test accepted is still
+  accepted, because a point behind a line is at least as far from any piece of
+  it; what is newly accepted is only what the line test refused by measuring
+  from a stretch of line no boundary occupies.
 */
-function straightCorners(ring: Ring, curves: readonly OffsetCurve[]): Pt[] {
+function straightCorners(
+  ring: Ring,
+  curves: readonly OffsetCurve[],
+  insetsMm: readonly number[],
+): { readonly corners: Pt[]; readonly dropped: readonly number[] } {
   const lines = curves.map((c) => (c as { line: Line }).line);
   const n = ring.length;
+  const steps = unequalSteps(ring, insetsMm);
+  /*
+    Where a short boundary asks for LESS than the long one it continues, the
+    long one's setback line is carried across it and the short one is dropped —
+    claimed redundant, and verified below like every other drop. That is the
+    conservative reading (a 0.42 m jog at 0 m beside a side at 3 m is held at
+    3 m), never the generous one. Where the short one asks for MORE, carrying
+    the long one's line would build inside the short one's setback, and carrying
+    the short one's would hold the whole side at its figure: the second is the
+    126 m² case, and is refused before anything is drawn.
+  */
+  const preDropped = new Set<number>();
+  for (const step of steps) {
+    if (insetsMm[step.shorter]! < insetsMm[step.longer]!) preDropped.add(step.shorter);
+    else if (step.pastLonger) throw stepError(ring, step);
+  }
+  /*
+    The steps not resolved by a drop. If the loop below fails with one of them
+    standing, that sentence is said instead of "over-consumed": it names the two
+    boundaries and what to do, where the other names nothing. A plot whose
+    setbacks really do consume it says so on the next run, once the step is gone.
+  */
+  const unresolved = steps.filter((s) => !preDropped.has(s.shorter));
   const overConsumed = (detail: Record<string, unknown>): DegenerateGeometryError =>
-    new DegenerateGeometryError(
-      'the setbacks over-consume the plot: the offset boundary self-intersects. ' +
-        'No buildable footprint exists at these setback values.',
-      detail,
-    );
-  let live = ring.map((_, i) => i);
+    unresolved.length > 0
+      ? stepError(ring, unresolved[0]!)
+      : new DegenerateGeometryError(
+          'the setbacks over-consume the plot: the offset boundary self-intersects. ' +
+            'No buildable footprint exists at these setback values.',
+          detail,
+        );
+  let live = ring.map((_, i) => i).filter((i) => !preDropped.has(i));
   for (;;) {
     if (live.length < 3) throw overConsumed({ boundariesLeft: live.length });
     const corners = live.map((e, k) => {
@@ -394,13 +458,155 @@ function straightCorners(ring: Ring, curves: readonly OffsetCurve[]): Pt[] {
     });
     if (worst < 0) {
       const pts = corners.map((c) => snapInside(ring, c.x, c.y));
-      if (live.length < n && !pts.every((p) => insideAll(p, curves))) {
-        throw overConsumed({ dropped: ring.map((_, i) => i).filter((i) => !live.includes(i)) });
+      const dropped = ring.map((_, i) => i).filter((i) => !live.includes(i));
+      if (dropped.length > 0) {
+        const breach = setbackBreach(ring, insetsMm, pts);
+        if (breach !== undefined) throw overConsumed({ dropped, ...breach });
       }
-      return pts;
+      return { corners: pts, dropped };
     }
     live = live.filter((_, k) => k !== worst);
   }
+}
+
+/*
+  TWO BOUNDARIES THAT MEET ALMOST IN LINE, SET BACK BY DIFFERENT DISTANCES,
+  HAVE NO CORNER TO DRAW — AND THE KERNEL SAYS SO RATHER THAN DRAW ONE.
+
+  A corner of the setback line is where two shifted lines cross. Where the two
+  boundaries turn sharply, that crossing is near the corner they share. Where
+  they run almost straight on, it is not: lines 2.08° apart, shifted 0 m and
+  3 m, cross 83 m away. On DDA 5134565 — a surveyed jog of 0.42 m beside a 33.15 m
+  side, and a 6.36 m leg 1.8° off a 27.76 m one — that put the "corner" past
+  the far end of the long side. What followed was either a refusal that blamed
+  the setbacks for consuming a 1,040 m² plot, or, worse, a footprint that kept
+  the short leg's line and ran it the whole length of the long side: every
+  setback satisfied, and 126 m² of permitted footprint silently gone.
+
+  What the setback line does at such a point is a question about the drawing,
+  not about geometry: does it step square at the corner, or does the larger
+  setback wrap around it? That is the client's to answer, so neither is drawn.
+  `straightCorners` takes the one reading that needs no answer — a short
+  boundary asking for less is held to its long neighbour's line, which only
+  ever costs footprint — and refuses the rest in a sentence naming both edges.
+
+  The test is scale-free, so it carries no tuning constant: the crossing falls
+  past the far end of one of the two boundaries, and would not if both were set
+  back by the larger figure. The second half is what keeps a short boundary
+  that its neighbour's setback swallows whole on the ordinary path, where it is
+  dropped and verified: there the crossing is far because the setbacks are
+  large, not because they differ.
+*/
+interface UnequalStep {
+  /** The two edges, in ring order, and the one each role falls to. */
+  readonly a: number;
+  readonly k: number;
+  readonly shorter: number;
+  readonly longer: number;
+  /** Whether the crossing is past the far end of the LONGER edge. */
+  readonly pastLonger: boolean;
+  /** Where the two setback lines cross; null when they are parallel. */
+  readonly crossing: Xy | null;
+  readonly corner: Pt;
+  readonly turnDeg: number;
+  readonly insetsMm: readonly [number, number];
+}
+
+function unequalSteps(ring: Ring, insetsMm: readonly number[]): UnequalStep[] {
+  const n = ring.length;
+  const out: UnequalStep[] = [];
+  for (let k = 0; k < n; k++) {
+    const a = (k - 1 + n) % n;
+    const dA = insetsMm[a]!;
+    const dB = insetsMm[k]!;
+    if (dA === dB) continue;
+    const start = ring[a]!;
+    const corner = ring[k]!;
+    const end = ring[(k + 1) % n]!;
+    const lengthA2 = lengthSquaredOf(start, corner);
+    const lengthB2 = lengthSquaredOf(corner, end);
+    /** Where the crossing falls: past A's start, past B's end, or near the corner. */
+    const crossingOf = (insetA: number, insetB: number): { at: Xy | null; pastA: boolean; pastB: boolean } => {
+      const lineA = inwardShiftedLine(start, corner, insetA);
+      const lineB = inwardShiftedLine(corner, end, insetB);
+      const det = lineA.a.times(lineB.b).minus(lineB.a.times(lineA.b));
+      // Parallel: the crossing is at infinity, past every end there is.
+      if (det.abs().lt('1e-12')) return { at: null, pastA: true, pastB: true };
+      const m = intersectLines(lineA, lineB);
+      const dx = m.x.minus(corner.x);
+      const dy = m.y.minus(corner.y);
+      // Projections scaled by each edge's length, compared with its length squared.
+      const towardA = dx.times(start.x - corner.x).plus(dy.times(start.y - corner.y));
+      const towardB = dx.times(end.x - corner.x).plus(dy.times(end.y - corner.y));
+      return { at: m, pastA: towardA.gt(lengthA2), pastB: towardB.gt(lengthB2) };
+    };
+    const larger = Math.max(dA, dB);
+    const even = crossingOf(larger, larger);
+    if (even.pastA || even.pastB) continue;
+    const actual = crossingOf(dA, dB);
+    if (!actual.pastA && !actual.pastB) continue;
+    const longerIsA = lengthA2.gte(lengthB2);
+    const ux = new Decimal(corner.x - start.x);
+    const uy = new Decimal(corner.y - start.y);
+    const vx = new Decimal(end.x - corner.x);
+    const vy = new Decimal(end.y - corner.y);
+    const turnDeg = Math.abs(
+      (Math.atan2(ux.times(vy).minus(uy.times(vx)).toNumber(), ux.times(vx).plus(uy.times(vy)).toNumber()) * 180) /
+        Math.PI,
+    );
+    out.push({
+      a,
+      k,
+      shorter: longerIsA ? k : a,
+      longer: longerIsA ? a : k,
+      pastLonger: longerIsA ? actual.pastA : actual.pastB,
+      crossing: actual.at,
+      corner,
+      turnDeg,
+      insetsMm: [dA, dB],
+    });
+  }
+  return out;
+}
+
+/**
+ * The refusal for an unequal step: both boundaries, both figures, and what to do.
+ *
+ * Each boundary is named by its length, not its number. The kernel numbers the
+ * ring it was given, and the plot's own numbering is the reader's: a ring the
+ * reader walked clockwise is stored reversed, so "edge 3" here would be the
+ * reader's edge 1. A length is the same on both sides of that, and it is what
+ * the plot step prints beside every boundary.
+ */
+function stepError(ring: Ring, step: UnequalStep): DegenerateGeometryError {
+  const metres = (mm: number): string => new Decimal(mm).div(1000).toString();
+  const n = ring.length;
+  const lengthM = (e: number): string => lengthSquaredOf(ring[e]!, ring[(e + 1) % n]!).sqrt().div(1000).toFixed(2);
+  const away =
+    step.crossing === null
+      ? 'never meet'
+      : `meet ${step.crossing.x
+          .minus(step.corner.x)
+          .pow(2)
+          .plus(step.crossing.y.minus(step.corner.y).pow(2))
+          .sqrt()
+          .div(1000)
+          .toFixed(1)} m away`;
+  const [dA, dB] = step.insetsMm;
+  return new DegenerateGeometryError(
+    `Two boundaries meet almost in line, turning ${step.turnDeg.toFixed(1)}°, but are set back by different ` +
+      `distances: the ${lengthM(step.a)} m boundary by ${metres(dA)} m and the ${lengthM(step.k)} m boundary by ` +
+      `${metres(dB)} m. Their setback lines ${away}, so there is no corner to draw where the two meet. How a ` +
+      `setback line steps between two figures along one side is not modelled. Give both boundaries the same ` +
+      `setback: they read as one side of the plot.`,
+    { ringEdges: [step.a, step.k], turnDeg: Number(step.turnDeg.toFixed(2)), insetsMm: [dA, dB] },
+  );
+}
+
+function lengthSquaredOf(p: Pt, q: Pt): Decimal {
+  const dx = new Decimal(q.x - p.x);
+  const dy = new Decimal(q.y - p.y);
+  return dx.times(dx).plus(dy.times(dy));
 }
 
 /**
@@ -449,6 +655,65 @@ function snapInside(ring: Ring, x: Decimal, y: Decimal): Pt {
   }
   // None within a millimetre: not rounding. The containment gate refuses it.
   return best ?? rounded;
+}
+
+/**
+ * The first boundary a footprint comes nearer to than its own setback, if any.
+ *
+ * Distance is measured to the boundary's segment — the piece of line the
+ * survey drew — and the footprint is taken as its edges, so the nearest
+ * approach is found whether it falls at a footprint corner or at a boundary
+ * corner. Exact decimal throughout: the coordinates are integer millimetres
+ * and only the final comparison involves a square, which is compared squared.
+ */
+function setbackBreach(
+  ring: Ring,
+  insetsMm: readonly number[],
+  footprint: readonly Pt[],
+): { boundary: number; insetMm: number; distanceMm: string } | undefined {
+  const n = ring.length;
+  const m = footprint.length;
+  for (let i = 0; i < n; i++) {
+    const need = insetsMm[i]! - CONSTRAINT_SLACK_MM;
+    if (need <= 0) continue;
+    const a = ring[i]!;
+    const b = ring[(i + 1) % n]!;
+    let nearest2: Decimal | undefined;
+    for (let j = 0; j < m; j++) {
+      const d2 = segmentGap2(footprint[j]!, footprint[(j + 1) % m]!, a, b);
+      if (nearest2 === undefined || d2.lt(nearest2)) nearest2 = d2;
+    }
+    if (nearest2 !== undefined && nearest2.lt(new Decimal(need).pow(2))) {
+      return { boundary: i, insetMm: insetsMm[i]!, distanceMm: nearest2.sqrt().toFixed(1) };
+    }
+  }
+  return undefined;
+}
+
+/** Squared nearest approach of two closed segments; zero where they meet. */
+function segmentGap2(p1: Pt, p2: Pt, q1: Pt, q2: Pt): Decimal {
+  if (segmentsProperlyIntersect(p1, p2, q1, q2)) return new Decimal(0);
+  return Decimal.min(
+    pointSegment2(p1, q1, q2),
+    pointSegment2(p2, q1, q2),
+    pointSegment2(q1, p1, p2),
+    pointSegment2(q2, p1, p2),
+  );
+}
+
+/** Squared distance from `p` to the closed segment `a`–`b`. */
+function pointSegment2(p: Pt, a: Pt, b: Pt): Decimal {
+  const dx = new Decimal(b.x - a.x);
+  const dy = new Decimal(b.y - a.y);
+  const px = new Decimal(p.x - a.x);
+  const py = new Decimal(p.y - a.y);
+  const len2 = dx.times(dx).plus(dy.times(dy));
+  let t = len2.isZero() ? new Decimal(0) : px.times(dx).plus(py.times(dy)).div(len2);
+  if (t.lt(0)) t = new Decimal(0);
+  if (t.gt(1)) t = new Decimal(1);
+  const ex = px.minus(dx.times(t));
+  const ey = py.minus(dy.times(t));
+  return ex.times(ex).plus(ey.times(ey));
 }
 
 /** Whether a point is inside every shifted line and every concentric circle. */

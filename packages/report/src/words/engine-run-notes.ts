@@ -762,4 +762,24 @@ export const RUN_READERS: readonly Reader[] = [
     if (!said.every((s): s is Said => s !== undefined)) return null;
     return { en: said.map((s) => s.en).join(' and '), ar: said.map((s) => s.ar).join(' و') };
   },
+
+  /* ── The offset kernel: two boundaries almost in line, set back differently ── */
+  (t) => {
+    const m =
+      /^Two boundaries meet almost in line, turning ([\d.]+)°, but are set back by different distances: the ([\d.]+) m boundary by ([\d.]+) m and the ([\d.]+) m boundary by ([\d.]+) m\. Their setback lines (?:meet ([\d.]+) m away|never meet), so there is no corner to draw where the two meet\./.exec(
+        t,
+      );
+    if (!m) return null;
+    const meet = m[6] === undefined ? { en: 'never meet', ar: 'لا يلتقيان' } : { en: `meet ${m[6]} m away`, ar: `يلتقيان على بعد ${m[6]} م` };
+    return {
+      en:
+        `Two boundaries meet almost in line (${m[1]}°) but have different setbacks: the ${m[2]} m boundary ${m[3]} m, ` +
+        `the ${m[4]} m boundary ${m[5]} m. Their setback lines ${meet.en}, so no corner can be drawn there. ` +
+        `Give both the same setback: they are one side of the plot.`,
+      ar:
+        `حدان يلتقيان على استقامة تقريبا (${m[1]}°) وارتداداهما مختلفان: الحد بطول ${m[2]} م ارتداده ${m[3]} م، ` +
+        `والحد بطول ${m[4]} م ارتداده ${m[5]} م. خطا الارتداد ${meet.ar}، فلا توجد زاوية ترسم عند التقائهما. ` +
+        `أعط الحدين الارتداد نفسه: فهما جهة واحدة من قطعة الأرض.`,
+    };
+  },
 ];

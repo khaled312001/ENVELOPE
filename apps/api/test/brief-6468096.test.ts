@@ -13,7 +13,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { Decimal, type Citation } from '@envelope/core';
 import { readPdfText } from '@envelope/intake';
@@ -141,9 +141,39 @@ describe.skipIf(!BRIEF_PDF)('every citation’s box holds its figure (skipped: t
     ['levels', brief.levels!.citation],
   ];
 
+  /*
+    Read once, in the hook. pdfjs takes seconds to load cold, and inside the
+    first `it` that ran past the 5 s per-test default whenever the suite was busy
+    (18 s once) — a flake on how loaded the laptop was, not on the brief.
+  */
+  type Page = Awaited<ReturnType<typeof readPdfText>>[number];
+  const pages = new Map<number, Page>();
+  beforeAll(async () => {
+    const bytes = new Uint8Array(await readFile(BRIEF_PDF!));
+    const wanted = [...new Set([3, ...citations.map(([, c]) => c.sourcePage!)])];
+    const read = await readPdfText(bytes, { pages: wanted });
+    wanted.forEach((n, i) => pages.set(n, read[i]!));
+  });
+
+  /*
+    "All the above plots … range up to G+5P+45" is a sentence about a list, and
+    the first draft of the height note read it as a ceiling for OTHER plots, "not
+    this one". The list on p3 holds this plot and nothing else. Read it off the
+    page, so a note that says the ceiling belongs to somebody else's parcel fails.
+  */
+  it('height: the plots the ceiling is written of are this plot alone, and the notes say so', () => {
+    const page = pages.get(3);
+    const listed = page!.items.map((i) => i.text.trim()).filter((t) => /^\d{7}-/.test(t));
+    expect(listed).toEqual(['6468096-Z6-04']);
+    expect(brief.heightCode.note).toMatch(/it lists only this one/);
+    for (const said of [brief.heightCode.note!, ...brief.notMechanized]) {
+      expect(said).not.toMatch(/not (?:as |for )this (?:plot|one)/);
+    }
+  });
+
   for (const [name, c] of citations) {
-    it(`${name}: page ${c.sourcePage}`, async () => {
-      const [page] = await readPdfText(new Uint8Array(await readFile(BRIEF_PDF!)), { pages: [c.sourcePage!] });
+    it(`${name}: page ${c.sourcePage}`, () => {
+      const page = pages.get(c.sourcePage!);
       const [x0, top, x1, bottom] = c.sourceBbox!;
       const inside = page!.items
         .filter((i) => {

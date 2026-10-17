@@ -25,10 +25,14 @@
  * - **No plot area in square metres.** The brief prints 48,075 ft². The value
  *   below is that figure × 0.09290304, which is exact by the definition of the
  *   foot; the note says so, and the verbatim text keeps the printed ft².
- * - **No height for this plot.** "The building heights range up to G+5P+45" is
- *   said of all the plots the request covers. It is recorded as printed, it
- *   binds nothing, and the run's height gap stays open: whether it may stand for
- *   this plot's height is a question for the client, not for this file.
+ * - **No height limit for this plot.** "The building heights range up to
+ *   G+5P+45" is a ceiling, written of "all the above plots" — and the list above
+ *   it (p3, "Plot no - 6468096-Z6-04") holds this plot and no other, so it is
+ *   NOT a figure meant for some other parcel; an earlier draft of this note said
+ *   it was, and the test now reads the list off the page. It is recorded as
+ *   printed and binds nothing, because a brief supplies only its GFA in this
+ *   study (`rulesFromBrief`), and the run's height gap stays open: whether this
+ *   ceiling may stand as the plot's height limit is the client's question.
  *
  * Its own mix scenario is not encoded either. The brief's mix (studio 70%,
  * one-bed 25%, two-bed 3%, three-bed 2%) is the general standard's worst case
@@ -110,8 +114,10 @@ export const BRIEF_PLOT_6468096: Omit<ProjectBrief, 'standardId'> = {
         'apartment types. The building heights range up to G+5P+45 stories.',
     ),
     note:
-      'Said of every plot the request covers, as a ceiling ("range up to"), and not as this plot’s ' +
-      'height. It binds nothing here: the run’s height stays open until an instrument states it.',
+      'Printed as a ceiling ("range up to") for the plots the request lists, and it lists only this ' +
+      'one. A brief supplies only its GFA in this study, so this binds nothing here: the run’s height ' +
+      'stays open until the affection plan’s master plan states it, or the client says this ceiling ' +
+      'may stand for it.',
   },
   landUse: {
     value: 'Residential, with retail on the ground floor',
@@ -138,8 +144,8 @@ export const BRIEF_PLOT_6468096: Omit<ProjectBrief, 'standardId'> = {
   notMechanized: [
     'The brief prints no FAR. The study’s ratio is the brief’s GFA ÷ its plot area, and there is no ' +
       'printed ratio to check it against.',
-    'The brief’s height, "up to G+5P+45", is stated for every plot of the request, not for this one, ' +
-      'and is not applied.',
+    'The brief’s height, "up to G+5P+45", is a ceiling, not a limit this study binds from a brief, ' +
+      'and is not applied. Whether it may stand as this plot’s height limit is an open question.',
     'Sellable area of at least 100% of GFA (section 3, 1.0 item 5), a basement car park of at least ' +
       '37.5 m² per car (item 6), parking on up to 5 levels above the ground (item 7), 6 m retail on ' +
       'the ground floor (item 11) and 3% of GFA for amenities (1.1) are the brief’s targets. None is ' +

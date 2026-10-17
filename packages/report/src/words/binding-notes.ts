@@ -166,10 +166,10 @@ const REASONS: Readonly<Record<string, Said>> = {
       en: 'The brief also prints 232,552 ft², and the two do not quite agree: 21,604.61 m² is 232,550.09 ft², and 232,552 ft² is 21,604.79 m², 0.18 m² more. The square-metre figure is taken as printed and the difference is said, not resolved. Under the table the brief allows a 25% tolerance in GFA, swapped between plots: the figure is the one it states, not a fixed allowance. It defines GFA as the DDA Regulations do (section 1.1).',
       ar: 'الموجز يطبع أيضا 232,552 قدم²، والرقمان لا يتفقان تماما: 21,604.61 م² تساوي 232,550.09 قدم²، و232,552 قدم² تساوي 21,604.79 م²، أي أكثر بـ0.18 م². يؤخذ الرقم بالمتر المربع كما طبع، ويذكر الفرق ولا يحسم. وتحت الجدول يسمح الموجز بتفاوت 25% في المساحة الطابقية يتبادل بين القطع: فالرقم هو ما يذكره الموجز، لا حد ثابت. ويعرف المساحة الطابقية كما تعرفها لوائح DDA (القسم 1.1).',
     },
-  'Said of every plot the request covers, as a ceiling ("range up to"), and not as this plot’s height. It binds nothing here: the run’s height stays open until an instrument states it.':
+  'Printed as a ceiling ("range up to") for the plots the request lists, and it lists only this one. A brief supplies only its GFA in this study, so this binds nothing here: the run’s height stays open until the affection plan’s master plan states it, or the client says this ceiling may stand for it.':
     {
-      en: 'Said of every plot the request covers, as a ceiling ("range up to"), not as this plot’s height. It binds nothing here: the height stays open until an instrument states it.',
-      ar: 'قيل عن كل القطع التي يشملها الطلب، كسقف («حتى»)، لا كارتفاع هذه القطعة. لا يلزم شيئا هنا: يبقى الارتفاع مفتوحا حتى تذكره وثيقة.',
+      en: 'Printed as a ceiling ("range up to") for the plots the request lists, and it lists only this one. A brief supplies only its GFA in this study, so this binds nothing here: the height stays open until the affection plan’s master plan states it, or the client says this ceiling may stand for it.',
+      ar: 'مطبوع كسقف («حتى») للقطع التي يذكرها الطلب، والطلب لا يذكر غير هذه القطعة. الموجز لا يقدم في هذه الدراسة إلا مساحته الطابقية، فلا يلزم هذا شيئا هنا: يبقى الارتفاع مفتوحا حتى يذكره المخطط الرئيسي الذي يحيل إليه مخطط الأفكشن، أو يقول العميل إن هذا السقف يصلح له.',
     },
   'Information for the reader. The run’s levels are entered on the rules step; nothing is filled from this.':
     {
@@ -181,10 +181,10 @@ const REASONS: Readonly<Record<string, Said>> = {
       en: 'The brief prints no FAR. The study’s ratio is the brief’s GFA ÷ its plot area, with no printed ratio to check it against.',
       ar: 'الموجز لا يطبع معامل بناء. معامل الدراسة هو المساحة الطابقية في الموجز ÷ مساحة القطعة فيه، ولا يوجد معامل مطبوع للمقارنة به.',
     },
-  'The brief’s height, "up to G+5P+45", is stated for every plot of the request, not for this one, and is not applied.':
+  'The brief’s height, "up to G+5P+45", is a ceiling, not a limit this study binds from a brief, and is not applied. Whether it may stand as this plot’s height limit is an open question.':
     {
-      en: 'The brief’s height, "up to G+5P+45", is stated for every plot of the request, not for this one, and is not applied.',
-      ar: 'ارتفاع الموجز «حتى G+5P+45» مذكور لكل قطع الطلب، لا لهذه القطعة، ولا يطبق.',
+      en: 'The brief’s height, "up to G+5P+45", is a ceiling, not a limit this study binds from a brief, and is not applied. Whether it may stand as this plot’s height limit is an open question.',
+      ar: 'ارتفاع الموجز «حتى G+5P+45» سقف، وليس حدا تأخذه هذه الدراسة من موجز، ولا يطبق. وهل يصلح حدا لارتفاع هذه القطعة سؤال مفتوح.',
     },
   'Sellable area of at least 100% of GFA (section 3, 1.0 item 5), a basement car park of at least 37.5 m² per car (item 6), parking on up to 5 levels above the ground (item 7), 6 m retail on the ground floor (item 11) and 3% of GFA for amenities (1.1) are the brief’s targets. None is applied by this study.':
     {

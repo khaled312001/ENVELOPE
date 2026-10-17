@@ -104,7 +104,7 @@ describe('the project brief, offered on the rules step', () => {
     expect(html).toContain('موجز مطور، وليس لائحة نظامية.');
     expect(html).toContain('استخدم هذا الموجز');
     expect(html).not.toContain('The brief prints the plot area in square feet only');
-    expect(html).not.toContain('Said of every plot the request covers');
+    expect(html).not.toContain('Printed as a ceiling');
   });
 
   it('is never sent unless chosen, and survives a re-run from the remembered request', () => {

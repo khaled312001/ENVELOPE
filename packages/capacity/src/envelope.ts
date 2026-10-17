@@ -42,6 +42,8 @@ import {
 } from '@envelope/geometry';
 import {
   applicableRuleSetKey,
+  citesPlaceholder,
+  heightFromStatedFloors,
   isNotApplicable,
   isPlotSpecific,
   Operator,
@@ -68,7 +70,9 @@ export const ENVELOPE_PARAMETERS = [
   /*
     A ceiling stated as a COUNT — an affection plan's `G+4`. Optional: no seed rule
     states one, so on a plot without a sheet it resolves to nothing and the metres
-    ceiling governs alone. Never converted to metres; see `instruments/sheet.ts`.
+    ceiling governs alone. The sheet never converts it to metres (see
+    `instruments/sheet.ts`); the code does, by its own factor — B.4.2.2 ¶6's
+    `R-DBC-B422-HEIGHT` reads it as floors × 6 m, and that is the only conversion.
   */
   'levels.max_above_ground',
   'floor_to_floor',
@@ -334,7 +338,17 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
   // — so the iteration approaches the answer from the restrictive side and
   // converges downward. §11.7: "a conservative seed converging downward is safe
   // at every step."
-  const seedResolutions = resolveAll(rules, { ...baseCtx, levels: { above_ground: 0 } });
+  /*
+    THE STATED FLOOR COUNT GOES INTO THE CONTEXT, because DBC B.4.2.2 ¶6 makes the
+    height ceiling a function of it: the floors the affection plan or DCR allows ×
+    6 m (`R-DBC-B422-HEIGHT`). It is resolved first, on its own, and carried at
+    `levels.max_above_ground` through every iteration. Absent, it is absent — the
+    height rule then does not apply and the run is refused below, never given a
+    height nobody stated.
+  */
+  const statedCount = num(resolveParameter('levels.max_above_ground', rules, { ...baseCtx, levels: { above_ground: 0 } }));
+  const statedFloors = statedCount ? { max_above_ground: statedCount.toNumber() } : {};
+  const seedResolutions = resolveAll(rules, { ...baseCtx, levels: { above_ground: 0, ...statedFloors } });
   const heightCeiling = num(seedResolutions.get('height.max'));
   const floorToFloor = num(seedResolutions.get('floor_to_floor'));
   const farMax = num(seedResolutions.get('far.max'));
@@ -349,6 +363,19 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
       `computation halted: ${blockedEarly.length} parameter(s) could not be resolved. ` +
         blockedEarly.map((r) => `${r.parameterId} — ${r.conflict?.reason ?? r.status}`).join('; '),
       { blocked: blockedEarly.map((r) => ({ parameterId: r.parameterId, status: r.status })) },
+    );
+  }
+  if (
+    !heightCeiling &&
+    statedCount === undefined &&
+    rules.some((r) => r.parameterId === 'height.max' && heightFromStatedFloors(r))
+  ) {
+    throw new EnvelopeHaltedError(
+      'no floor count is stated for this plot, so no height can be computed. DBC B.4.2.2 ¶1: ' +
+        'building heights follow the affection plan or DCR, and ¶6 sets the ceiling at the floors ' +
+        'they allow × 6 m. The engine does not substitute a height. Add the plot’s affection plan, ' +
+        'or a floor count from its DCR.',
+      { missing: ['levels.max_above_ground'] },
     );
   }
   if (!heightCeiling || !floorToFloor || !farMax) {
@@ -372,7 +399,7 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     45 m placeholder alone and reported thirteen levels.
   */
   const levelsByMetres = heightCeiling.div(floorToFloor).floor().toNumber();
-  const statedLevels = num(seedResolutions.get('levels.max_above_ground'));
+  const statedLevels = statedCount;
   /*
     AND WHEN THE PLAN IS THE SPECIFIC INSTRUMENT, IT GOVERNS EITHER WAY. The
     two ceilings are two parameters, so `resolveParameter` never sets them side
@@ -386,11 +413,18 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
   */
   const levelsGoverning = seedResolutions.get('levels.max_above_ground')?.governing;
   const heightGoverning = seedResolutions.get('height.max')?.governing;
+  /*
+    A height rule that IS the stated count in metres (B.4.2.2 ¶6, floors × 6 m)
+    is not a rival ceiling for the plan to supersede: setting it aside would
+    declare the code's own conversion "not applied" on every plot with a sheet.
+  */
+  const heightIsTheCount = heightGoverning !== undefined && heightFromStatedFloors(heightGoverning.rule);
   const planSupersedesMetres =
     statedLevels !== undefined &&
     levelsGoverning !== undefined &&
     isPlotSpecific(levelsGoverning.rule) &&
     heightGoverning !== undefined &&
+    !heightIsTheCount &&
     !isPlotSpecific(heightGoverning.rule) &&
     !heightGoverning.rule.isLifeSafety;
   const levelCountGoverns =
@@ -402,7 +436,7 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
 
   const withLevels = (levels: number): EvalContext => ({
     ...baseCtx,
-    levels: { above_ground: levels, total: levels },
+    levels: { above_ground: levels, total: levels, ...statedFloors },
   });
 
   const fixpoint = runFixpoint<SolverState>({
@@ -936,14 +970,50 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
           uses: { stated: statedLevelsT, f2f: floorToFloorT },
           unit: 'm',
         })
-      : tracer.derived('envelope.height_ceiling_m', heightCeiling, {
-          rule: {
-            ruleId: heightRes.governing!.rule.ruleId,
-            citation: heightRes.governing!.rule.citation,
-          },
-          formula: 'height ceiling from the governing rule',
-          unit: 'm',
-        });
+      : heightIsTheCount && statedLevelsT
+        ? tracer.derived('envelope.height_ceiling_m', heightCeiling, {
+            rule: {
+              ruleId: heightRes.governing!.rule.ruleId,
+              citation: heightRes.governing!.rule.citation,
+            },
+            formula:
+              `stated floor count ${statedLevelsT.value} × ${heightCeiling.div(statedLevelsT.value).toString()} m ` +
+              'per floor (DBC B.4.2.2 ¶6, ground floor counted)',
+            uses: { stated: statedLevelsT },
+            unit: 'm',
+          })
+        : /*
+            A PLACEHOLDER HEIGHT IS AN ASSUMPTION, NOT A DERIVATION. With no floor
+            count stated, the only height on file is the seed's 45 m, which no
+            instrument prints (B.4.2.2 ¶1 leaves height to the affection plan or
+            DCR). It was shown DERIVED. It is shown for what it is: ASSUMED, amber,
+            with the reason and what replaces it — and every value `computed` from
+            it (the level count by height) inherits that. NOT YET Band B: `bands.ts`
+            traces it with `tracer.derived` citing the height rule, which here is
+            the placeholder, so a geometry-bound plot with no floor count still
+            shows its governing GFA DERIVED. Left open on purpose: the governing GFA
+            is `computed` over all three bands, so making Band B ASSUMED turns it
+            amber on every plot with no floor count, whichever band binds — a
+            decision to take, not a side effect to slip in.
+          */
+          !statedLevelsT && citesPlaceholder(heightRes.governing!.rule)
+          ? tracer.assumed('envelope.height_ceiling_m', heightCeiling, {
+              label: 'height ceiling',
+              basis:
+                `no floor count is stated for this plot, and DBC B.4.2.2 ¶1 leaves height to the ` +
+                `affection plan or DCR. ${heightCeiling.toString()} m is a placeholder ` +
+                `(${heightRes.governing!.rule.ruleId}) so a study can run before the sheet is to hand; ` +
+                'no instrument prints it. With the sheet’s floor count, the ceiling is that count × 6 m (B.4.2.2 ¶6).',
+              unit: 'm',
+            })
+          : tracer.derived('envelope.height_ceiling_m', heightCeiling, {
+              rule: {
+                ruleId: heightRes.governing!.rule.ruleId,
+                citation: heightRes.governing!.rule.citation,
+              },
+              formula: 'height ceiling from the governing rule',
+              unit: 'm',
+            });
   if (planSupersedesMetres && statedLevelsT) {
     const generic = heightRes.governing!.rule;
     tracer.supersededBy({ ruleId: generic.ruleId, citation: generic.citation }, heightCeilingT);
@@ -1037,7 +1107,7 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
  * makes a *different rule* apply.
  *
  * **It is wrong for the setback case, and silently so.** Here the same rule —
- * `R-SETBACK-BOUNDARY-RES` — applies at every level count; what changes is which
+ * `R-DBC-B1-NEIGHBOUR` — applies at every level count; what changes is which
  * *row of its table* fires. Applicability never changes, so a key built from
  * rule ids alone is identical on the very first comparison, the fixpoint reports
  * CONVERGED after one iteration, and the solver returns the answer implied by

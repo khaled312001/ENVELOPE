@@ -228,10 +228,8 @@ export function offsetPerEdge(
 
   // Vertex i of the offset ring is where the offset shapes of edges i-1 and i
   // meet — and, where both are the same arc, the point on it nearest vertex i.
-  const snap = ({ x, y }: Xy): Pt => ({
-    x: asMm(x.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
-    y: asMm(y.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
-  });
+  // Inside the plot where rounding alone would put it a millimetre out — see `snapInside`.
+  const snap = ({ x, y }: Xy): Pt => snapInside(ring, x, y);
   const offsetRing: Pt[] =
     arcs.length === 0
       ? straightCorners(ring, curves)
@@ -395,10 +393,7 @@ function straightCorners(ring: Ring, curves: readonly OffsetCurve[]): Pt[] {
       }
     });
     if (worst < 0) {
-      const pts = corners.map((c) => ({
-        x: asMm(c.x.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
-        y: asMm(c.y.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
-      }));
+      const pts = corners.map((c) => snapInside(ring, c.x, c.y));
       if (live.length < n && !pts.every((p) => insideAll(p, curves))) {
         throw overConsumed({ dropped: ring.map((_, i) => i).filter((i) => !live.includes(i)) });
       }
@@ -416,6 +411,45 @@ function straightCorners(ring: Ring, curves: readonly OffsetCurve[]): Pt[] {
  * millimetre of that is rounding and the second is the constraint's own.
  */
 const CONSTRAINT_SLACK_MM = 2;
+
+/**
+ * A corner, on the millimetre grid, and inside the plot.
+ *
+ * A ZERO SETBACK PUTS A CORNER ON THE BOUNDARY, AND ROUNDING CAN PUT IT JUST
+ * OFF IT. DBC Table B.1 sets back 0 m from a road at every height, so the corner
+ * where a road edge meets a neighbour's lies exactly on the plot's own line, and
+ * on an oblique edge rounding it to the nearest millimetre lands it up to 0.71 mm
+ * outside. The containment gate then refused a skewed plot as "non-convex",
+ * which it is not. So a corner that rounds outside the plot takes the nearest
+ * grid point within a millimetre that is inside it. A corner that rounds inside
+ * — every corner with a non-zero setback on both sides — is untouched. On the
+ * straight path a corner outside the plot was always refused, so no footprint it
+ * produced before moves by a millimetre; on a curved one the same holds for every
+ * vertex the trim keeps. The same applies to a curved road set back by zero,
+ * whose offset is the curve itself.
+ */
+function snapInside(ring: Ring, x: Decimal, y: Decimal): Pt {
+  const rounded: Pt = {
+    x: asMm(x.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
+    y: asMm(y.toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber()) as Mm,
+  };
+  if (containsPoint(ring, rounded)) return rounded;
+  let best: Pt | undefined;
+  let bestD = Infinity;
+  for (let dx = -1; dx <= 1; dx += 1) {
+    for (let dy = -1; dy <= 1; dy += 1) {
+      const c: Pt = { x: asMm(rounded.x + dx) as Mm, y: asMm(rounded.y + dy) as Mm };
+      if (!containsPoint(ring, c)) continue;
+      const d = x.minus(c.x).pow(2).plus(y.minus(c.y).pow(2)).toNumber();
+      if (d < bestD) {
+        best = c;
+        bestD = d;
+      }
+    }
+  }
+  // None within a millimetre: not rounding. The containment gate refuses it.
+  return best ?? rounded;
+}
 
 /** Whether a point is inside every shifted line and every concentric circle. */
 function insideAll(p: Pt, curves: readonly OffsetCurve[]): boolean {

@@ -175,10 +175,13 @@ describe('envelope solver — the circular setback case', () => {
     expect(result.fixpointIterations).toBe(1);
 
     const boundary = result.appliedSetbacks.filter(
-      (s) => s.ruleId === 'R-SETBACK-BOUNDARY-RES',
+      (s) => s.ruleId === 'R-DBC-B1-NEIGHBOUR',
     );
     expect(boundary.length).toBe(2);
     expect(boundary.every((b) => b.valueM.toString() === '7.5')).toBe(true);
+    // Table B.1 prints 0 m facing a road at every height.
+    const road = result.appliedSetbacks.filter((s) => s.ruleId === 'R-DBC-B1-ROAD');
+    expect(road.map((r) => r.valueM.toString())).toEqual(['0', '0']);
   });
 
   /**
@@ -209,7 +212,7 @@ describe('envelope solver — the circular setback case', () => {
     expect(result.fixpointIterations).toBeGreaterThan(1);
 
     const boundary = result.appliedSetbacks.filter(
-      (s) => s.ruleId === 'R-SETBACK-BOUNDARY-RES',
+      (s) => s.ruleId === 'R-DBC-B1-NEIGHBOUR',
     );
     // The seed (14 levels) selects 7.50 m. The settled answer selects a lower
     // tier — proof the iteration changed the geometry, not just the bookkeeping.
@@ -272,9 +275,15 @@ describe('envelope solver — the circular setback case', () => {
       EdgeClassification.ADJACENT_PLOT,
     ]);
     const { result, graph } = solve(plot);
-    expect(result.heightCeilingM.provenanceClass).toBe('DERIVED');
-    expect(graph.hasKindBelow(result.heightCeilingM.node, 'RULE')).toBe(true);
-    expect(graph.hasKindBelow(result.heightCeilingM.node, 'SOURCE_CLAUSE')).toBe(true);
+    // Every edge's setback is Table B.1's, and reaches p41.
+    for (const s of result.appliedSetbacks) {
+      expect(s.traced.provenanceClass).toBe('DERIVED');
+      expect(graph.hasKindBelow(s.traced.node, 'RULE')).toBe(true);
+      expect(graph.hasKindBelow(s.traced.node, 'SOURCE_CLAUSE')).toBe(true);
+    }
+    // The height is NOT: with no floor count stated, the only height on file is a
+    // placeholder no instrument prints, and it says so in amber (B.4.2.2 ¶1).
+    expect(result.heightCeilingM.provenanceClass).toBe('ASSUMED');
   });
 
   it('refuses to substitute a default when no rule governs a setback', () => {

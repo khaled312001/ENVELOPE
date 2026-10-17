@@ -73,11 +73,17 @@ import {
 // Rule data
 // ---------------------------------------------------------------------------
 
-/** B.7.2.1 — where a vehicle access may be, relative to junctions and roads. */
+/**
+ * B.7.2.1 — where a vehicle access may be, relative to junctions and roads.
+ *
+ * ¶5 is quoted to its end. It used to stop at "affection plan." where the page
+ * prints "affection plan, as shown in Figure B.49." — a full stop the code does
+ * not print, so the piece could not be found on p78 (`dbc-citations.test.ts`).
+ */
 export const CLAUSE_B_7_2_1: Citation = {
   instrumentId: 'DUBAI_BUILDING_CODE',
   instrumentVersion: '2021',
-  clauseReference: 'B.7.2.1 — Vehicle access and movement, general requirements',
+  clauseReference: 'B.7.2.1 ¶4, ¶5 — Vehicle access and movement, general requirements',
   documentUri: 'docs/00-source/regulations/Dubai Building Code_English_2021 Edition_compressed.pdf',
   sourcePage: 78,
   sourceBbox: [0, 0, 842, 595],
@@ -85,7 +91,8 @@ export const CLAUSE_B_7_2_1: Citation = {
     'Vehicle access shall be separated from local road intersection or minor T junctions ' +
     'by not less than 15 m from the chamfered edge of the plot (see Figure B.49 and ' +
     'Figure B.50). … If the building is facing more than one road, the vehicle access ' +
-    'point should be from the secondary road, or as specified on the affection plan.',
+    'point should be from the secondary road, or as specified on the affection plan, ' +
+    'as shown in Figure B.49.',
 };
 
 /** Table B.11 — the two-way driveway width the 6 m comes from. */

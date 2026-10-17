@@ -236,7 +236,41 @@ describe('the plan’s stated level count', () => {
     const levels = out.envelope.bindingConstraints.find((b) => b.dimension === 'levels');
     expect(levels?.ruleId).toBe('INSTRUMENT.TEST-345-1234.levels.max_above_ground');
     expect(levels?.valueM.toNumber()).toBe(5);
-    expect(levels?.runnerUp?.valueM.toNumber()).toBe(14);
+    // B.4.2.2 ¶6: 5 floors × 6 m = 30 m, which holds floor(30 ÷ 3.2) = 9 levels.
+    expect(levels?.runnerUp?.ruleId).toBe('R-DBC-B422-HEIGHT');
+    expect(levels?.runnerUp?.valueM.toNumber()).toBe(9);
+  });
+
+  /*
+    DBC B.4.2.2 ¶6, p40: the total allowable height is the floors the affection
+    plan or DCR allows × 6 m — ¶7 works G+10 as 11 × 6 = 66 m. The ceiling is
+    that, cited to the page, and the code's conversion is never "set aside" as a
+    generic rule the plan supersedes: it IS the plan's count, in metres.
+  */
+  it('makes the ceiling the stated floors × 6 m, cited to B.4.2.2 ¶6 — ¶7’s own example', () => {
+    const out = runPipeline(withHeight('G+10', 11));
+    expect(out.envelope.heightCeilingM.value.toString()).toBe('66');
+    expect(out.envelope.heightCeilingM.provenanceClass).toBe('DERIVED');
+    expect(out.envelope.setAside.some((s) => s.parameterId === 'height.max')).toBe(false);
+    const clause = out.graph.nodes.find((n) => n.citation?.clauseReference.startsWith('B.4.2.2 ¶6'));
+    expect(clause?.citation?.sourcePage).toBe(40);
+    expect(clause?.citation?.instrumentId).toBe('DUBAI_BUILDING_CODE');
+    // And the count is in its derivation, so "66 m because of what?" has an answer.
+    expect(out.graph.hasKindBelow(out.envelope.heightCeilingM.node, 'RULE')).toBe(true);
+    expect(out.envelope.maxLevelsByHeight.value).toBe(11);
+  });
+
+  it('with no floor count stated, shows the placeholder height as ASSUMED, saying why', () => {
+    const out = runPipeline(withSheet('5.0'));
+    expect(out.envelope.heightCeilingM.value.toString()).toBe('45');
+    expect(out.envelope.heightCeilingM.provenanceClass).toBe('ASSUMED');
+    const basis = out.graph.nodes.find((n) => n.kind === 'BASIS' && /B\.4\.2\.2 ¶1/.test(n.label));
+    expect(basis?.label).toMatch(/no floor count is stated[^]*placeholder[^]*× 6 m \(B\.4\.2\.2 ¶6\)/);
+  });
+
+  it('with no floor count and no placeholder on file, refuses in a sentence rather than invent a height', () => {
+    const rules = seedRules().filter((r) => r.ruleId !== 'R-HEIGHT-MAX-RES');
+    expect(() => runPipeline(input(rules))).toThrow(/no floor count is stated for this plot[^]*B\.4\.2\.2 ¶1/);
   });
 
   it('carries the stated count into the graph, DERIVED, citing the plan’s own words', () => {
@@ -257,8 +291,31 @@ describe('the plan’s stated level count', () => {
     gives the question to the plot-specific instrument, so the plan governs,
     and the generic figure is reported beside it as superseded.
   */
-  it('governs over a generic height rule even when it states more', () => {
-    const out = runPipeline(withHeight('G+2P+20', 23, 2));
+  /*
+    A GENERIC METRES CEILING — one a community-wide DCR might state, which reads
+    no floor count — is still a rival the plan's own count supersedes (§11.5
+    step 1). The seed no longer holds one that applies beside a stated count, so
+    these build it: the 45 m figure, applicable whatever the sheet says.
+  */
+  const generic45 = (isLifeSafety = false): RunInput['rules'][number] => ({
+    ...seedRules().find((r) => r.ruleId === 'R-HEIGHT-MAX-RES')!,
+    ruleId: 'R-GENERIC-HEIGHT-45',
+    applicability: { all: [{ land_use: { in: ['RESIDENTIAL_MULTI'] } }] },
+    isLifeSafety,
+  });
+  const withGeneric = (isLifeSafety = false): RunInput => {
+    const limits: StatedLimits = {
+      ...sheet('5.0'),
+      height: {
+        value: { typicalFloors: 20, podiumLevels: 2, totalLevels: 23, raw: 'G+2P+20' },
+        citation: citation('height', 'G+2P+20'),
+      },
+    };
+    return input([...seedRules(), generic45(isLifeSafety), ...rulesFromInstrument(limits, BINDING).rules]);
+  };
+
+  it('governs over a generic metres rule even when it states more', () => {
+    const out = runPipeline(withGeneric());
     expect(out.envelope.maxLevelsByHeight.value).toBe(23);
     const levels = out.envelope.bindingConstraints.find((b) => b.dimension === 'levels');
     expect(levels?.ruleId).toBe('INSTRUMENT.TEST-345-1234.levels.max_above_ground');
@@ -272,43 +329,23 @@ describe('the plan’s stated level count', () => {
     both still reading the 45 m the plan had superseded.
   */
   it('makes the plan’s level count the ceiling, and sets the generic rule aside in words', () => {
-    const out = runPipeline(withHeight('G+2P+20', 23, 2));
+    const out = runPipeline(withGeneric());
     const f2f = out.envelope.floorToFloorM.value;
     expect(out.envelope.heightCeilingM.value.toString()).toBe(f2f.times(23).toString());
     expect(out.envelope.heightCeilingM.provenanceClass).toBe('DERIVED');
     const aside = out.envelope.setAside.find((s) => s.parameterId === 'height.max');
-    expect(aside?.rule.ruleId).toBe('R-HEIGHT-MAX-RES');
+    expect(aside?.rule.ruleId).toBe('R-GENERIC-HEIGHT-45');
     expect(aside?.reason).toMatch(/23 level\(s\).*§11\.5 step 1/);
   });
 
   it('sets nothing aside where the generic height still governs', () => {
-    const lifeSafe = seedRules().map((r) =>
-      r.parameterId === 'height.max' ? { ...r, isLifeSafety: true } : r,
-    );
-    const limits: StatedLimits = {
-      ...sheet('5.0'),
-      height: {
-        value: { typicalFloors: 20, podiumLevels: 2, totalLevels: 23, raw: 'G+2P+20' },
-        citation: citation('height', 'G+2P+20'),
-      },
-    };
-    const out = runPipeline(input([...lifeSafe, ...rulesFromInstrument(limits, BINDING).rules]));
+    const out = runPipeline(withGeneric(true));
     expect(out.envelope.setAside.some((s) => s.parameterId === 'height.max')).toBe(false);
     expect(out.envelope.heightCeilingM.value.toNumber()).toBe(45);
   });
 
   it('still yields to a height rule that carries life safety', () => {
-    const lifeSafe = seedRules().map((r) =>
-      r.parameterId === 'height.max' ? { ...r, isLifeSafety: true } : r,
-    );
-    const limits: StatedLimits = {
-      ...sheet('5.0'),
-      height: {
-        value: { typicalFloors: 20, podiumLevels: 2, totalLevels: 23, raw: 'G+2P+20' },
-        citation: citation('height', 'G+2P+20'),
-      },
-    };
-    const out = runPipeline(input([...lifeSafe, ...rulesFromInstrument(limits, BINDING).rules]));
+    const out = runPipeline(withGeneric(true));
     expect(out.envelope.maxLevelsByHeight.value).toBe(14);
   });
 });

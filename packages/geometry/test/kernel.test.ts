@@ -197,6 +197,23 @@ describe('per-edge offset — FR-PLT-002', () => {
     expect(() => offsetPerEdge(CHAMFERED, uniformInsets(6, 26))).toThrow(/over-consume/);
   });
 
+  /*
+    DBC Table B.1 sets a building 0 m back from a road at every height. On an
+    oblique road edge the corner where it meets a neighbour's setback lies ON the
+    plot's own line, and rounding it to the millimetre put it up to 0.71 mm
+    outside — the containment gate refused a convex plot as "non-convex".
+  */
+  const SKEWED_PLOT: Ring = [pt(10, 0), pt(80, 20), pt(70, 60), pt(0, 40)];
+  it.each([3, 3.75, 4.5, 5.25, 6, 6.75, 7.5])(
+    'a zero setback on an oblique road edge, %s m from the neighbours, stays inside the plot',
+    (neighbour) => {
+      const result = offsetPerEdge(SKEWED_PLOT, [0, neighbour, 0, neighbour].map((v, seq) => ({ seq, insetMm: m(v) })));
+      expect(result.ring.every((p) => containsPoint(SKEWED_PLOT, p))).toBe(true);
+      expect(result.areaMm2).toBeLessThan(area(SKEWED_PLOT));
+      expect(result.areaMm2).toBeGreaterThan(0);
+    },
+  );
+
   it('NEGATIVE: refuses a missing inset rather than defaulting — FR-PLT-001 AC3', () => {
     expect(() => offsetPerEdge(PLOT_80x40, uniformInsets(3, 5))).toThrow(/forbids a default/);
   });

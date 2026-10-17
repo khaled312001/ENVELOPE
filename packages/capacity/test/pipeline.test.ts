@@ -377,6 +377,50 @@ describe('§13.3 — every DERIVED value reaches a cited rule', () => {
     }
   });
 
+  /*
+    THE SALEABLE FIGURE COULD BE DERIVED WITH NOTHING BEHIND IT. It was traced
+    with `uses: {}` and the formula "from a cited instrument", so a brief's SA/GFA
+    sent as DERIVED read as cited and reached no clause. Now a DERIVED one needs
+    the instrument, and is refused without it.
+  */
+  describe('the saleable figure, sent as DERIVED', () => {
+    const BRIEF = {
+      ruleId: 'BRIEF-TEST-SA-GFA',
+      citation: {
+        instrumentId: 'TEST-PROJECT-BRIEF',
+        instrumentVersion: '1',
+        clauseReference: 'Project brief, area targets — SA/GFA',
+        documentUri: 'urn:test:brief',
+        sourcePage: 3,
+        sourceBbox: [10, 10, 200, 40] as const,
+        sourceTextVerbatim: 'Expectations are between 93%-97% (SA / GFA).',
+      },
+    };
+
+    it('is refused without the instrument it is read from', () => {
+      for (const saleableEfficiency of [
+        { value: new Decimal('0.93'), source: 'DERIVED' as const },
+        { saleableAreaM2: new Decimal('2000'), source: 'DERIVED' as const },
+      ]) {
+        expect(() => runPipeline(baseInput({ saleableEfficiency }))).toThrow(RunBlockedError);
+        expect(() => runPipeline(baseInput({ saleableEfficiency }))).toThrow(/must name the instrument/);
+      }
+    });
+
+    it('reaches that instrument’s RULE and SOURCE_CLAUSE in the graph, as a ratio or as an area', () => {
+      for (const saleableEfficiency of [
+        { value: new Decimal('0.93'), source: 'DERIVED' as const, cited: BRIEF },
+        { saleableAreaM2: new Decimal('2000'), source: 'DERIVED' as const, cited: BRIEF },
+      ]) {
+        const out = runPipeline(baseInput({ saleableEfficiency }));
+        const node = 'saleableAreaM2' in saleableEfficiency ? out.saleableAreaM2 : out.saleableEfficiency;
+        expect(node.provenanceClass).toBe(ProvenanceClass.DERIVED);
+        expect(out.graph.hasKindBelow(node.node, 'RULE')).toBe(true);
+        expect(out.graph.hasKindBelow(node.node, 'SOURCE_CLAUSE')).toBe(true);
+      }
+    });
+  });
+
   it('lets the footprint name the setback that produced each edge', () => {
     const out = runPipeline(baseInput());
     // The click-through §20.2 calls "the interaction that converts a sceptical

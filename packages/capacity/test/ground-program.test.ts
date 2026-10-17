@@ -33,6 +33,7 @@
 
 import {
   asMm,
+  Decimal,
   EdgeClassification,
   ProvenanceClass,
   ProvenanceGraph,
@@ -155,7 +156,27 @@ describe('the ground-program basis string', () => {
   it('still says the other rooms are typical widths, the LV room among them', () => {
     expect(GROUND_PROGRAM_BASIS).toMatch(/typical figure: Section 11 states no LV room area/);
     expect(GROUND_PROGRAM_BASIS).toMatch(/Every other room is a typical width/);
-    expect(GROUND_PROGRAM_BASIS).toMatch(/no DEWA, Civil Defence or municipality requirement/);
+  });
+
+  /*
+    THIS ASSERTED THE FALSE SENTENCE. It held the basis to "no DEWA, Civil Defence
+    or municipality requirement on file sizes any of them", and the Dubai Building
+    Code — the Municipality's own code, on file — sizes the garbage room
+    (B.8.5.2.3, Table B.29, PDF p116–117) and the water tank (H.5.5.3, p598).
+    The basis, the note and the published absence now say that the clauses exist
+    and that this run does not apply them, and none of them denies a requirement.
+  */
+  it('says the code sizes the garbage room and the water tank, and that this run does not apply it', () => {
+    const program = laidOut(layoutGroundProgram({ tracer: tracer(), zone: rect(0, 0, 50_000, 6_000) }));
+    for (const text of [GROUND_PROGRAM_BASIS, GROUND_PROGRAM_NOT_MODELLED, program.notAssessed.join(' | ')]) {
+      expect(text).not.toMatch(/requirement on file (sizes|states)/);
+      expect(text).not.toMatch(/no requirement on file/);
+      expect(text).toContain('B.8.5.2.3');
+      expect(text).toContain('Table B.29');
+      expect(text).toContain('H.5.5.3');
+      expect(text).toContain('12 kg for each 100 m² of net area');
+      expect(text).toMatch(/size against those clauses is NOT ASSESSED/);
+    }
   });
 
   it('names every typical room it draws, at the width it draws it', () => {
@@ -185,7 +206,7 @@ describe('the ground-program basis string', () => {
 
   it('says the same thing in the note drawn under the program', () => {
     expect(GROUND_PROGRAM_NOT_MODELLED).toMatch(/§11\.4\.1 and §11\.3\.1/);
-    expect(GROUND_PROGRAM_NOT_MODELLED).toMatch(/typical width that no requirement on file/);
+    expect(GROUND_PROGRAM_NOT_MODELLED).toMatch(/is a typical width, not checked against any requirement/);
     expect(GROUND_PROGRAM_NOT_MODELLED).toMatch(/REGULATORY VALIDITY: NOT ASSESSED/);
   });
 });
@@ -539,6 +560,57 @@ describe('what the program does not check', () => {
 
   it('never claims compliance', () => {
     expect(program.notAssessed.join(' | ')).toMatch(/REGULATORY VALIDITY: NOT ASSESSED/);
+  });
+});
+
+/*
+  DEWA §11.2.5 and DBC G.7.2.3 ask a single-room substation at ground floor for
+  3.70 m CLEAR, and every run stands on one 3.20 m storey. The published absence
+  used to say "the ground floor's floor-to-floor is not held to it" — true, and
+  it left the model's two numbers disagreeing in silence. Now a storey lower than
+  the clear height is a conflict stated in both figures, on the drawings too; a
+  taller one is still NOT ASSESSED, because no slab is computed to take off it.
+*/
+describe('the substation’s clear height against the storey it stands in', () => {
+  const at = (storey: string | undefined) =>
+    laidOut(
+      layoutGroundProgram({
+        tracer: tracer(),
+        zone: rect(0, 0, 90_000, 7_000),
+        ...(storey === undefined ? {} : { storeyHeightM: new Decimal(storey) }),
+      }),
+    );
+
+  it('reports a 3.20 m storey under a 3.70 m clear height as a conflict, in both figures', () => {
+    const program = at('3.2');
+    expect(program.heightConflict).toBeDefined();
+    expect(program.heightConflict).toMatch(/ground storey of 3\.20 m floor to floor/);
+    expect(program.heightConflict).toMatch(/at least 3\.70 m clear height/);
+    expect(program.heightConflict).toMatch(/cannot both stand/);
+    expect(program.notAssessed.join(' | ')).toContain(program.heightConflict!);
+  });
+
+  it('does not call a taller storey a pass: the slab is not computed, so it is not assessed', () => {
+    const program = at('4.5');
+    expect(program.heightConflict).toBeUndefined();
+    const text = program.notAssessed.join(' | ');
+    expect(text).toMatch(/ground storey is 4\.50 m floor to floor/);
+    expect(text).toMatch(/clear height is NOT ASSESSED/);
+  });
+
+  it('says it was held to nothing when no storey height was given', () => {
+    const program = at(undefined);
+    expect(program.heightConflict).toBeUndefined();
+    expect(program.notAssessed.join(' | ')).toMatch(/not given to this program/);
+  });
+
+  it('reaches the note under the drawings on a real run', () => {
+    const out = runPipeline(runInput(RECT_120x80));
+    expect(out.building.groundRooms?.rooms.map((r) => r.name)).toContain('SUBSTATION');
+    expect(out.envelope.floorToFloorM.value.toString()).toBe('3.2');
+    expect(out.building.notModelled.join(' | ')).toMatch(
+      /substation is drawn on a ground storey of 3\.20 m floor to floor.*3\.70 m clear height/,
+    );
   });
 });
 

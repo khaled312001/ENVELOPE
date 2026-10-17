@@ -36,7 +36,9 @@
  *    efficiency and the parking usable fraction are each a statement about how
  *    much of a level is not saleable or not packable. Those are comparable
  *    numbers, and when the core alone exceeds what one of them allows for, the
- *    input is wrong and nothing else in the system would have said so.
+ *    reader is told in both figures — and nothing else in the system would have
+ *    said so. (For the saleable share that is a question, not a verdict: see
+ *    `reconcileCore`.)
  * 3. **It is a declared quantity** rather than an absence. Unstated, it is
  *    `ASSUMED`, amber, with a basis and a measured sensitivity, in the register.
  *
@@ -308,8 +310,11 @@ export function solveCore(input: CoreInput): CoreResult {
  * cannot do in their head and that nothing else in the system performs: the core
  * is a share of a level, and the saleable efficiency and the parking usable
  * fraction are each a statement about how much of a level is *not* the thing
- * being counted. When the core alone exceeds what one of them leaves, that input
- * cannot hold — before a single corridor, wall, plant room or ramp landing.
+ * being counted. When the core alone exceeds what the parking fraction leaves,
+ * the bay count cannot hold. When it exceeds what the saleable share leaves, the
+ * two hold only if that share is measured on another base than this GFA — which
+ * is an open question with the client, and the sentence says so rather than
+ * declaring either figure wrong.
  *
  * Returned as sentences rather than as a boolean, because the useful output is
  * the comparison and not a verdict on it.
@@ -329,15 +334,34 @@ export function reconcileCore(input: {
     .minus(input.parkingUsableFraction)
     .times(input.parkingLevelAreaM2);
 
+  /*
+    "THE TWO FIGURES CANNOT BOTH BE RIGHT" WAS PRINTED ON EVERY DEFAULT RUN, and it
+    claimed more than the arithmetic shows. The 18% core is ASSUMED and the
+    saleable share is 0.95 ASSUMED from the studio, 0.93 USER_SET in the worked
+    example: the product's own defaults, declaring each other wrong. What the
+    arithmetic shows is narrower. The comparison holds only if the saleable figure
+    is measured on THIS GFA — and a developer's brief can count area outside it:
+    one brief on file asks for SA/GFA of at least 100% including balconies, which
+    no saleable area inside GFA could reach. Which base the share is measured on
+    is the client's to say. So the sentence states both figures, what they would
+    imply on this GFA, and the open question, and leaves the verdict to whoever
+    can answer it. It still compares, and it still changes neither figure.
+  */
+  const core = input.plateShare.times(100).toFixed(1);
+  const left = nonSaleable.times(100).toFixed(1);
   return [
-    `The core is ${input.plateShare.times(100).toFixed(1)}% of the tower plate, and the ` +
-      `saleable figure this run was given leaves ${nonSaleable.times(100).toFixed(1)}% of ` +
-      'the gross for everything that does not sell — the core, the corridors, the ' +
-      'structure, the plant and the amenity.' +
-      (input.plateShare.gt(nonSaleable)
-        ? ' The core alone exceeds it, so the two figures cannot both be right. The ' +
-          'engine has changed neither of them.'
-        : ' The core fits inside it, which is the arithmetic holding.'),
+    input.plateShare.gt(nonSaleable)
+      ? `Core and saleable share, compared on this GFA: the core is ${core}% of the tower plate, ` +
+        `and the saleable share this run was given leaves ${left}% of the gross for everything ` +
+        'that does not sell — the core, the corridors, the structure, the plant and the amenity. ' +
+        'The core alone is more than that. Both can hold only if the saleable figure is measured ' +
+        'on a larger base than this GFA, for instance a saleable area that counts balconies ' +
+        'outside it, or if the core is smaller than assumed. Which base the share is measured on ' +
+        'is an open question; the engine has changed neither figure.'
+      : `Core and saleable share, compared on this GFA: the core is ${core}% of the tower plate, ` +
+        `within the ${left}% of the gross the saleable share this run was given leaves for ` +
+        'everything that does not sell — the core, the corridors, the structure, the plant and ' +
+        'the amenity.',
 
     `A parking level of ${input.parkingLevelAreaM2.toFixed(0)} m² deducts ` +
       `${deducted.toFixed(0)} m² for cores, plant, the ramp landing and circulation that ` +

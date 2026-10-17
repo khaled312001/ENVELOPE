@@ -513,12 +513,16 @@ export const RUN_READERS: readonly Reader[] = [
   (t) => {
     if (!t.startsWith('An indicative ground floor for a residential tower')) return null;
     const m = /sizes at (\d+) m², drawn ([\d.]+ × [\d.]+) m, against boundary (\d+)/.exec(t);
+    // The code sizes the garbage room and the water tank; the basis says so and that it is not applied.
+    const dbc = t.includes('B.8.5.2.3');
     return {
       en:
         'Indicative ground floor in the strip reserved for plant. The substation follows DEWA §11.4.1 and faces a road (§11.3.1), with the LV room beside it; the other rooms are typical sizes.' +
+        (dbc ? ' The garbage room and water tank are sized by the Dubai Building Code (B.8.5.2.3, Table B.29, H.5.5.3), which is not applied: their size is not assessed.' : '') +
         (m ? ` Substation ${m[1]} m² (${m[2]} m) on boundary ${m[3]}.` : ''),
       ar:
         'دور أرضي استرشادي في الشريط المحجوز للمعدات. غرفة المحولات حسب DEWA §11.4.1 وتطل على طريق (§11.3.1)، وبجانبها غرفة الجهد المنخفض؛ وباقي الغرف بمقاسات معتادة.' +
+        (dbc ? ' غرفة النفايات وخزان المياه يحدد كود دبي للمباني مقاسهما (B.8.5.2.3 والجدول B.29 وH.5.5.3)، ولا يطبق هنا: لم يخضع مقاسهما للتقييم.' : '') +
         (m ? ` غرفة المحولات ${m[1]} م² (${m[2]} م) على الحد ${m[3]}.` : ''),
     };
   },
@@ -815,5 +819,103 @@ export const RUN_READERS: readonly Reader[] = [
   starts('INV-02 reads what fills each level: units, core, circulation and services.', {
     en: 'INV-02 needs what fills each level — units, core, circulation, services — and no unit is laid out, so it did not run and is not counted as a pass. INV-01, INV-11 and INV-18 read the engine’s own level schedule.',
     ar: 'يحتاج INV-02 ما يملأ كل دور: الوحدات والنواة والحركة والخدمات، ولا توزع وحدات، فلم يشغل ولا يحسب نجاحا. أما INV-01 وINV-11 وINV-18 فتقرأ جدول الأدوار الذي ينتجه المحرك.',
+  }),
+
+  /* ── Under every drawing: what this run did about columns (`columnsNote` in building.ts) ── */
+  (t) => {
+    if (!t.startsWith('No column is drawn, and so no grid bubbles')) return null;
+    const head = { en: 'No columns or grid lines are drawn.', ar: 'لا ترسم أعمدة ولا محاور.' };
+    const tail = { en: 'Position is given by bay number and dimensions.', ar: 'يحدد الموضع برقم الموقف والأبعاد.' };
+    const grid = /On the stated ([\d.]+) m structural grid every bay is charged Table B\.11's additional 300 mm, ([\d.]+) m rather than ([\d.]+) m/.exec(t);
+    if (grid) {
+      return {
+        en: `${head.en} On the stated ${grid[1]} m structural grid every bay is charged Table B.11's extra 300 mm (${grid[2]} m, not ${grid[3]} m); the columns are not placed or sized. ${tail.en}`,
+        ar: `${head.ar} على الشبكة الإنشائية المحددة ${grid[1]} م يحمل كل موقف 300 مم الإضافية في الجدول B.11 (${grid[2]} م بدل ${grid[3]} م)، ولا توضع الأعمدة ولا تحدد أبعادها. ${tail.ar}`,
+      };
+    }
+    const gap = /([\d.]+) m is left clear after every (\d+) bays for columns/.exec(t);
+    if (gap) {
+      return {
+        en: `${head.en} ${gap[1]} m is left clear after every ${gap[2]} bays for columns that are not placed or sized. Table B.11's extra 300 mm beside a column or wall is not added, at the gap or at a run's end; whether the ${gap[1]} m includes it is not assessed. ${tail.en}`,
+        ar: `${head.ar} تترك ${gap[1]} م بعد كل ${gap[2]} مواقف لأعمدة لا توضع ولا تحدد أبعادها. لا تضاف 300 مم الإضافية في الجدول B.11 بجانب عمود أو جدار، لا عند الفراغ ولا في نهاية صف المواقف، ولم يخضع للتقييم ما إذا كانت ${gap[1]} م تشملها. ${tail.ar}`,
+      };
+    }
+    const none = /packed side by side at Table B\.11's ([\d.]+) m/.exec(t);
+    if (!none) return null;
+    return {
+      en: `${head.en} Bays are packed side by side at ${none[1]} m (Table B.11); its extra 300 mm for a bay beside a column or wall is not added anywhere, so where a wall or column blocks a car door the count is more than a drawn structure would allow. Not assessed. ${tail.en}`,
+      ar: `${head.ar} توزع المواقف متجاورة بعرض ${none[1]} م (الجدول B.11)، ولا تضاف 300 مم الإضافية لموقف بجانب عمود أو جدار في أي موضع، فحيث يعيق جدار أو عمود فتح باب السيارة يكون العدد أكبر مما يسمح به هيكل مرسوم. لم يخضع للتقييم. ${tail.ar}`,
+    };
+  },
+  /* ── Table B.4's parking clear height against the storey (`parkingClearHeightNote`) ── */
+  (t) => {
+    const m = /^Clear height on the parking levels\. Each is drawn ([\d.]+) m floor to floor(, a placeholder storey height that no instrument prints)?, and DBC Table B\.4 asks ([\d.]+) m clear/.exec(t);
+    if (!m) return null;
+    const left = /That leaves ([\d.]+) m for the slab/.exec(t);
+    return {
+      en:
+        `Parking clear height: each parking level is ${m[1]} m floor to floor${m[2] ? ' (a placeholder no instrument prints)' : ''}, ` +
+        `and Table B.4 asks ${m[3]} m clear to the lowest beam or soffit. ` +
+        (left
+          ? `That leaves ${left[1]} m for slab, beams and services, which are not computed: not assessed.`
+          : 'That is more than the whole storey; the storey height was not changed for it.'),
+      ar:
+        `الارتفاع الصافي لأدوار المواقف: كل دور مواقف ${m[1]} م من دور إلى دور${m[2] ? ' (قيمة مؤقتة لا تنص عليها أي وثيقة)' : ''}، ` +
+        `والجدول B.4 يطلب ${m[3]} م صافية حتى أسفل أدنى عنصر إنشائي أو سقف. ` +
+        (left
+          ? `فيتبقى ${left[1]} م للبلاطة والجسور والخدمات، وهي لا تحسب: لم يخضع للتقييم.`
+          : 'وهذا أكبر من الدور كله، ولم يغير ارتفاع الدور من أجله.'),
+    };
+  },
+  starts('Escape distances and the pedestrian route from the street to the entrance', {
+    en: 'Escape distances and the pedestrian route from the street: not assessed. The fire code’s travel-distance, common-path and dead-end limits (Table 3.6A) are in the deferred checks; no floor plan is drawn to measure them on.',
+    ar: 'مسافات الإخلاء ومسار المشاة من الشارع إلى المدخل: لم تخضع للتقييم. حدود مسافة الانتقال والمسار المشترك والنهاية المسدودة في كود الحريق (الجدول 3.6A) مدرجة في الفحوص المؤجلة، ولا يرسم مسقط تقاس عليه.',
+  }),
+  starts('Bicycle parking — NOT ASSESSED.', {
+    en: 'Bicycle parking: not assessed. DBC B.7.2.7 asks for 5% of the car parking requirement, within 30 m of the building entrance; no bicycle space is counted or drawn.',
+    ar: 'مواقف الدراجات: لم تخضع للتقييم. يطلب كود دبي للمباني (B.7.2.7) مواقف دراجات تعادل 5% من المواقف المطلوبة للسيارات، على بعد لا يزيد عن 30 م من مدخل المبنى، ولا يحسب أي موقف دراجة ولا يرسم.',
+  }),
+  starts('The refuse room is not drawn on this run', {
+    en: 'The refuse room is not drawn on this run; its size against DBC B.8.5.2.3 and Table B.29 is not assessed.',
+    ar: 'غرفة النفايات غير مرسومة في هذه الدراسة، ولم يخضع حجمها للتقييم وفق البند B.8.5.2.3 والجدول B.29 من كود دبي للمباني.',
+  }),
+  /* ── The substation's clear height against the ground storey (`substationHeightSentence`) ── */
+  (t) => {
+    const c = /^Clear height, in conflict\. The substation is drawn on a ground storey of ([\d.]+) m floor to floor, and .*?at least ([\d.]+) m clear height/.exec(t);
+    if (c) {
+      return {
+        en: `Substation clear height, in conflict: the ground storey is ${c[1]} m floor to floor, and DEWA §11.2.5 and DBC G.7.2.3 ask ${c[2]} m clear for a single-room substation at ground floor, more than the whole storey. The ground storey must be taller, or the substation split with its RMU room at 3.0 m clear. Neither change is made here.`,
+        ar: `تعارض في الارتفاع الصافي لغرفة المحولات: الدور الأرضي ${c[1]} م من دور إلى دور، وتطلب DEWA §11.2.5 وكود دبي للمباني G.7.2.3 ارتفاعا صافيا لا يقل عن ${c[2]} م لغرفة محولات منفردة في الدور الأرضي، وهو أكبر من الدور كله. يجب أن يكون الدور الأرضي أعلى، أو تقسم غرفة المحولات مع غرفة RMU بارتفاع صاف 3.0 م. لم يجر أي من التغييرين هنا.`,
+      };
+    }
+    const n = /^Clear height\. DEWA §11\.2\.5 and DBC G\.7\.2\.3 ask a single-room substation at ground floor for at least ([\d.]+) m clear height(?:; the ground storey is ([\d.]+) m floor to floor)?/.exec(t);
+    if (!n) return null;
+    return n[2]
+      ? {
+          en: `Substation clear height: ${n[1]} m is asked at ground floor and the ground storey is ${n[2]} m floor to floor; the slab and services are not computed, so it is not assessed.`,
+          ar: `الارتفاع الصافي لغرفة المحولات: المطلوب ${n[1]} م في الدور الأرضي، والدور الأرضي ${n[2]} م من دور إلى دور، والبلاطة والخدمات لا تحسب، فلم يخضع للتقييم.`,
+        }
+      : {
+          en: `Substation clear height: ${n[1]} m is asked at ground floor; the ground storey's height was not given, so it is not assessed.`,
+          ar: `الارتفاع الصافي لغرفة المحولات: المطلوب ${n[1]} م في الدور الأرضي، ولم يعط ارتفاع الدور الأرضي، فلم يخضع للتقييم.`,
+        };
+  },
+  /* ── The core against the saleable share, as an open question (`reconcileCore`) ── */
+  (t) => {
+    const m = /^Core and saleable share, compared on this GFA: the core is ([\d.]+)% of the tower plate, (?:and the saleable share this run was given leaves ([\d.]+)%|within the ([\d.]+)%)/.exec(t);
+    if (!m) return null;
+    return m[2] !== undefined
+      ? {
+          en: `The core is ${m[1]}% of the plate, more than the ${m[2]}% the saleable share leaves for everything unsold on this GFA. Both hold only if the share is measured on a larger base, such as a saleable area counting balconies outside GFA, or if the core is smaller. Which base is an open question; neither figure was changed.`,
+          ar: `النواة ${m[1]}% من المسطح، أكبر من ${m[2]}% التي تتركها نسبة البيع لكل ما لا يباع على هذه المساحة الطابقية. لا يستقيم الرقمان إلا إذا قيست النسبة على أساس أكبر، كمساحة بيعية تشمل شرفات خارج المساحة الطابقية، أو كانت النواة أصغر. على أي أساس تقاس النسبة سؤال مفتوح، ولم يغير أي من الرقمين.`,
+        }
+      : {
+          en: `The core is ${m[1]}% of the plate, within the ${m[3]}% the saleable share leaves for everything unsold.`,
+          ar: `النواة ${m[1]}% من المسطح، ضمن ${m[3]}% التي تتركها نسبة البيع لكل ما لا يباع.`,
+        };
+  },
+  starts('a DERIVED saleable figure must name the instrument it is read from', {
+    en: 'A saleable figure marked as derived must name the document it comes from, with its page. Without one, enter it as yours or assume a share with a basis.',
+    ar: 'رقم البيع المصنف مشتقا يجب أن يسمي الوثيقة التي أخذ منها مع رقم صفحتها. وبدونها أدخله باسمك أو افترض نسبة مع ذكر الأساس.',
   }),
 ];

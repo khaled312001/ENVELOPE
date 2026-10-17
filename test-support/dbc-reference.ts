@@ -32,6 +32,14 @@ interface Quote {
 interface TableRow {
   readonly table: string;
   readonly page: number;
+  /**
+   * The last page the table is printed on. A table that runs over a page break
+   * (Table B.4, "EN p58–59") lists its rows under one heading and does not say
+   * which row fell on which page, so a row is accepted on any page of the range
+   * — and only of the range: a row cited to a page the table is not on is still
+   * reported.
+   */
+  readonly lastPage: number;
   readonly cells: readonly string[];
 }
 
@@ -51,6 +59,7 @@ function read(): { quotes: Quote[]; rows: TableRow[] } {
   const rows: TableRow[] = [];
   for (const file of readdirSync(DIR).filter((f) => f.endsWith('.md'))) {
     let page = 0;
+    let lastPage = 0;
     let table = '';
     for (const line of readFileSync(DIR + file, 'utf8').split(/\r?\n/)) {
       const heading = /^#{2,4} /.exec(line);
@@ -58,12 +67,15 @@ function read(): { quotes: Quote[]; rows: TableRow[] } {
         const t = /^#### (Table B\.\d+|Table C\.\d+)\b/.exec(line);
         table = t ? t[1]! : '';
       }
-      const p = /^- \*\*Pages:\*\* EN p(\d+)/.exec(line);
-      if (p) page = Number(p[1]);
+      const p = /^- \*\*Pages:\*\* EN p(\d+)(?:–(\d+))?/.exec(line);
+      if (p) {
+        page = Number(p[1]);
+        lastPage = p[2] ? Number(p[2]) : page;
+      }
       const q = /^- \*\*EN:\*\* "(.*)"\s*$/.exec(line);
       if (q) quotes.push({ page, text: q[1]! });
       if (table && line.startsWith('|') && !/^\|\s*-/.test(line)) {
-        rows.push({ table, page, cells: line.split('|').slice(1, -1).map((c) => c.trim()) });
+        rows.push({ table, page, lastPage, cells: line.split('|').slice(1, -1).map((c) => c.trim()) });
       }
     }
   }
@@ -84,7 +96,7 @@ export function unfoundOnPage(citation: { sourcePage: number; sourceTextVerbatim
     if (cells) {
       const want = cells[2]!.split(' | ').map(normCell);
       const found = rows.some((r) => {
-        if (r.table !== cells[1] || r.page !== page) return false;
+        if (r.table !== cells[1] || page < r.page || page > r.lastPage) return false;
         const have = r.cells.map(normCell);
         for (let i = 0; i + want.length <= have.length; i += 1) {
           if (want.every((w, k) => have[i + k] === w)) return true;

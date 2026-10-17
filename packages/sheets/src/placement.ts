@@ -21,7 +21,9 @@
  *    across is 5 mm at 1:500 and LIFT is 6.6 mm long at the note height; the
  *    cross drawn in it and the key already say what it is, and a name spilling
  *    into the next room says it worse. A ramp's gradient is kept where it was
- *    put (`withhold: false`), because no key restates it. The lettering is never
+ *    put (`withhold: false`), because no key restates it. A ground-floor room,
+ *    which nothing but its name identifies, is first tried beside its outline
+ *    on a leader (`leaderMm`, see `beside`). The lettering is never
  *    shrunk to make anything fit (`lettering.ts`).
  * 3. A movable label is tried where it was put, then stepped along its own line
  *    and across it, half a text height at a time, out to the distance its rule
@@ -58,6 +60,12 @@ export interface LabelRule {
    * the figure Table B.9 caps, and no key restates it.
    */
   readonly withhold?: boolean;
+  /**
+   * With `within`: before a label is withheld, how far (paper mm) it may stand
+   * OUTSIDE its outline, joined to it by a leader. For the rooms nothing else on
+   * the sheet names — see `beside`.
+   */
+  readonly leaderMm?: number;
 }
 
 /*
@@ -150,19 +158,97 @@ export function settleLabels(
     free,
   ];
 
-  const out: ModelItem[] = [];
+  // A slot per item; a label set beside its room is printed after everything
+  // else, since outside its room it may lie over bays drawn after the room.
+  const slots: ModelItem[][] = [];
+  const deferred: { readonly item: TextItem; readonly rule: LabelRule }[] = [];
   for (const item of items) {
     const rule = RULES.get(item);
     if (item.kind !== 'text' || !rule) {
-      out.push(item);
+      slots.push([item]);
       continue;
     }
     const settled = settle(item, rule, view, tests, frame);
-    if (settled === null) continue;
-    placed.push(modelTextBox(settled, view));
-    out.push(settled);
+    if (settled !== null) {
+      placed.push(modelTextBox(settled, view));
+      slots.push([settled]);
+      continue;
+    }
+    // Beside its room only once every label that fits in its own room has been
+    // placed: a name set outside first would take another room's only place.
+    if (rule.leaderMm !== undefined) deferred.push({ item, rule });
+    slots.push([]);
   }
-  return breakWitnessLines(out, view);
+  const last: ModelItem[] = [];
+  for (const { item, rule } of deferred) {
+    const outside = beside(item, rule, view, tests, frame, placed);
+    if (outside === null) continue;
+    placed.push(modelTextBox(outside.label, view));
+    last.push(outside.leader, outside.label);
+  }
+  return breakWitnessLines([...slots.flat(), ...last], view);
+}
+
+/*
+  A ROOM NOTHING ELSE NAMES IS NAMED BESIDE IT, ON A LEADER. Withholding a name is
+  honest for a lift or a stair — the cross and the treads say what they are — but
+  the ground floor's rooms are boxes alike: the substation B.7.2.1's street rule
+  places, the generator room, the water tank. The display list is the one the
+  screen, the A3 sheet AND the DXF walk, so a name withheld here was gone from all
+  three, the scale-free CAD file included, and nothing on the sheet said so. On
+  the worked example's ground floor that was the GENERATOR ROOM; on a 120 × 80
+  plot at 1:500 the SUBSTATION. So before giving a name up, it is tried outside
+  its outline, on the same fixed ladder, and joined to the room by a leader from
+  the room's centre to the edge of the words — how a draughtsman names a room too
+  small to write in. It must be clear of every label and dimension line, wholly
+  outside the room, and its leader may cross no other words.
+*/
+function beside(
+  item: TextItem,
+  rule: LabelRule,
+  view: SheetView,
+  tests: readonly ((b: TextBox) => boolean)[],
+  frame: readonly PaperPoint[],
+  placed: readonly TextBox[],
+): { readonly label: TextItem; readonly leader: ModelItem } | null {
+  const reach = rule.leaderMm ?? 0;
+  if (reach <= 0 || !rule.within || item.anchor !== 'middle') return null;
+  const ring = rule.within.map((p) => toPaper(view, p));
+  const step = item.sizeMm / 2;
+  const rad = (item.rotationDeg * Math.PI) / 180;
+  const along = { x: Math.cos(rad) * step * view.scale, y: Math.sin(rad) * step * view.scale };
+  const across = { x: -Math.sin(rad) * step * view.scale, y: Math.cos(rad) * step * view.scale };
+  const origin = item.at;
+  const from = toPaper(view, origin);
+  const n = Math.floor(reach / step);
+  for (const clear of tests) {
+    for (const [a, c] of ladder(n, n)) {
+      if (a === 0 && c === 0) continue;
+      const label: TextItem = {
+        ...item,
+        at: mm(origin.x + along.x * a + across.x * c, origin.y + along.y * a + across.y * c),
+      };
+      const box = modelTextBox(label, view);
+      if (!fitsWithin(box, frame) || !clear(box)) continue;
+      // Wholly outside the room: no corner of the room inside the words, no edge through them.
+      if (inside(box.centre, ring) || ring.some((p, i) => segmentCrossesBox(p, ring[(i + 1) % ring.length]!, box))) continue;
+      const span = segmentInBox(from, box.centre, box, BREAK_MM);
+      if (span === null || span[0] <= 0) continue;
+      const t = span[0];
+      const end = mm(origin.x + (label.at.x - origin.x) * t, origin.y + (label.at.y - origin.y) * t);
+      const to = toPaper(view, end);
+      if (placed.some((p) => segmentCrossesBox(from, to, p))) continue;
+      const leader: ModelItem = {
+        kind: 'shape',
+        role: item.role,
+        points: [origin, end],
+        closed: false,
+        ...(item.source !== undefined ? { source: item.source } : {}),
+      };
+      return { label, leader };
+    }
+  }
+  return null;
 }
 
 /** Clear air left between a broken witness line and the label it stops for, in paper mm. */

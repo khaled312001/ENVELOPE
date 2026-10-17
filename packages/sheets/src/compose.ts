@@ -568,8 +568,11 @@ function groundRoomItems(room: ModelGroundRoom, source: ElementSource): ModelIte
   const rotation = lengthOf(o, a) >= lengthOf(o, b) ? angleOf(o, a) : angleOf(o, b);
   return [
     shape(Role.GROUND_ROOM, room.outline, true, { source, name: `${room.name} - indicative` }),
+    // Nothing but its name tells the substation from the water tank: if the name
+    // will not fit inside, it stands beside the room on a leader (`placement.ts`).
     withRule(label(Role.GROUND_ROOM, centroidOf(room.outline), room.name, NOTE, rotation, 'middle', source), {
       within: room.outline,
+      leaderMm: 30,
     }),
   ];
 }

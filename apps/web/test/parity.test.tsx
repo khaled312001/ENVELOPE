@@ -17,6 +17,7 @@
  */
 
 import { runPipeline } from '@envelope/capacity';
+import { Decimal } from '@envelope/core';
 import { buildingDxf, layerName, sheetDxf } from '@envelope/exports';
 import { buildBuildingScene, buildingGlb, carsPerLevel, GLB_NOTICE, type ScenePalette } from '@envelope/massing';
 import { initGeometry } from '@envelope/geometry';
@@ -150,6 +151,25 @@ const AISLE_MM = 6000 - 10;
 */
 const A_104 = { basements: 3, groundIsParking: false, podiumAboveGround: 5, podiumParkingLevels: 5 } as const;
 
+/*
+  The same schedule where the ramps from the street fit (`street-ramp.ts`): the
+  podium on the boundary and an entrance 25 m along boundary 0. On 80 x 40 they
+  are refused, so without this case no renderer was ever counted on a B1 and a
+  P1 cut by a ramp from the street, nor any bay measured against that ramp.
+*/
+const STREET_RAMPS = {
+  podiumAtBoundaryStatement: {
+    statementId: 'STMT-PODIUM-SETBACK-2026-10-16',
+    statedBy: 'Eng. Mohamed',
+    statedOn: '2026-10-16',
+    verbatim: 'ال دور ال ارضي و البوديوم و البدروم بياخدو مساحه الارض كلها مفيش setbacks',
+  },
+  levelPlan: {
+    arrangement: 'WIDTH',
+    vehicleAccess: { entry: { edgeSeq: 0, centreOffsetM: new Decimal('25') } },
+  },
+} as const;
+
 // --- what stands on a bay, measured on the drawing --------------------------
 /*
   AREA, NOT TOUCH. A bay and the aisle it opens onto share an edge, and every
@@ -215,16 +235,35 @@ const CASES = [
   { name: '120 x 80', ring: RECT_120x80, podiumLevels: undefined, levelSchedule: undefined },
   { name: 'skewed', ring: SKEWED, podiumLevels: undefined, levelSchedule: undefined },
   { name: '80 x 40, ground floor not parking (6468096)', ring: RECT_80x40, podiumLevels: undefined, levelSchedule: A_104 },
+  {
+    name: '120 x 80, ground floor not parking, ramps from the street placed',
+    ring: RECT_120x80,
+    podiumLevels: undefined,
+    levelSchedule: A_104,
+    extra: STREET_RAMPS,
+  },
 ] as const;
 
-describe.each(CASES)('$name', ({ ring, podiumLevels, levelSchedule }) => {
+describe.each(CASES)('$name', (c) => {
+  const { ring, podiumLevels, levelSchedule } = c;
+  const extra = 'extra' in c ? c.extra : undefined;
   const out = (): ReturnType<typeof runPipeline> =>
     runPipeline(
       runInput(ring, {
         ...(podiumLevels === undefined ? {} : { podiumLevels }),
         ...(levelSchedule === undefined ? {} : { levelSchedule }),
+        ...(extra ?? {}),
       }),
     );
+
+  if (extra) {
+    it('places the ramps from the street, so the case measures what it was added for', () => {
+      expect(out().building.ramps.filter((r) => r.street).map((r) => r.label.slice(0, 27))).toEqual([
+        'RAMP FROM STREET DOWN TO B1',
+        'RAMP FROM STREET UP TO P1 1',
+      ]);
+    });
+  }
 
   it('draws, on every parking level, in every renderer, exactly the bays the engine placed', () => {
     const model = out().building;
@@ -436,6 +475,10 @@ describe.each(CASES)('$name', ({ ring, podiumLevels, levelSchedule }) => {
         ...(p.drives ?? []).map((d) => ({ what: d.label, ring: d.outline })),
         ...(p.accessAisles ?? []).map((ring) => ({ what: 'access aisle', ring })),
         ...(p.rampStrip ? [{ what: 'ramp', ring: p.rampStrip }] : []),
+        // A ramp from the street stands on the level it reaches, outside the strip.
+        ...model.ramps
+          .filter((r) => r.street && (r.fromLevelId === level.id || r.toLevelId === level.id))
+          .map((r) => ({ what: r.label, ring: r.outline })),
       ];
       for (const bay of p.bays) {
         for (const s of solid) {

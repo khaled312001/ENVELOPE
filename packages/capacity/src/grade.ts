@@ -29,6 +29,10 @@ import { area, containsPoint, intersect, type Pt, type Ring } from '@envelope/ge
 import { AccessChoiceRefusedError, type AccessOpening, type AccessResult } from './access.js';
 import { plantRunMm } from './ground-program.js';
 import type { WorldRect } from './level-plan.js';
+import { clearCentres, clearWords } from './street-ramp.js';
+
+/** Wider than one lane, an opening's centre is bounded by the 6 m range; else by the 3 m one. */
+const ONE_LANE_M = new Decimal('3.5');
 
 /** Overlap below this, in mm², is a shared edge rather than a crossing. */
 const TOUCH_MM2 = 10_000;
@@ -73,6 +77,12 @@ export interface GradeInput {
   readonly bayLengthM: Decimal;
   /** What a drive may not run through: the core's shafts and the ramp. */
   readonly obstacles: readonly { readonly ring: readonly Pt[]; readonly what: string }[];
+  /**
+   * Where the core stands, in words, when it is an assumption (`core.ts` always
+   * places it by one). A drive refused for running into the core says so: the
+   * reader is being refused by a position nobody chose.
+   */
+  readonly coreAssumedAt?: string;
 }
 
 const sub = (a: Pt, b: Pt): { x: number; y: number } => ({ x: a.x - b.x, y: a.y - b.y });
@@ -212,8 +222,29 @@ export function planGrade(input: GradeInput): GradePlan {
     }
     for (const ob of input.obstacles) {
       if (overlapMm2(d.world, ob.ring) <= TOUCH_MM2) continue;
+      /*
+        WHICH ELEMENT, AND WHERE IT WOULD NOT. "Runs through the core" used to be
+        the whole sentence, and on plot 6468096 it refused a centred entrance the
+        code allows because of a core position nobody chose. It still refuses —
+        rerouting a drive round the core is a design this engine does not make —
+        but it now says the core's position is assumed, and where on the same
+        boundary an entrance of the same width would clear it.
+      */
+      const edge = plot.edges.find((e) => e.seq === o.edgeSeq);
+      const range = entry
+        ? o.widthM.gt(ONE_LANE_M)
+          ? entry.value.centreRange.sixM
+          : entry.value.centreRange.threeM
+        : null;
+      const clear = edge ? clearWords(clearCentres(edge, ob.ring, o.widthM.div(2), range), `P${edge.seq}`) : null;
       const sentence =
-        `The drive from ${where} runs through the ${ob.what} before it reaches a drive aisle.`;
+        `The drive from ${where} runs through the ${ob.what} before it reaches a drive aisle.` +
+        (ob.what === 'core' && input.coreAssumedAt ? ` Where the core stands is assumed: ${input.coreAssumedAt}.` : '') +
+        (edge
+          ? clear
+            ? ` An opening on boundary ${edge.seq} centred ${clear} would clear it.`
+            : ` No position on boundary ${edge.seq} that B.7.2.1 allows clears it.`
+          : '');
       // The reader's placement is refused, as any other placement the plan cannot take;
       // the recommendation is the engine's and is reported rather than refused.
       if (access.chosen) {

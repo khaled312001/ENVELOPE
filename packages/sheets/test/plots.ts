@@ -124,7 +124,33 @@ export const PLOTS: readonly { readonly name: string; readonly input: () => RunI
   { name: '80 x 40, two podium levels', input: () => runInput(RECT_80x40, { podiumLevels: 2 }) },
   { name: '120 x 80', input: () => runInput(RECT_120x80) },
   { name: 'skewed', input: () => runInput(SKEWED) },
+  /*
+    Shops on G, parking below and above it, as the reference scheme draws it: the
+    one run that places the ramps from the street (`street-ramp.ts`), so the one
+    that holds their words to the lettering and collision rules every other
+    sheet is held to. Without it those rules were never measured on them, and
+    the first look found their gradient printed over the entrance's label, a
+    dimension and the bay numbers.
+  */
+  { name: '120 x 80, shops on G, ramps from the street', input: streetRamps },
 ];
+
+/** The 120 x 80 rectangle with the reference scheme's schedule and an entrance placed 25 m along boundary 0. */
+export function streetRamps(): RunInput {
+  return runInput(RECT_120x80, {
+    levelSchedule: { basements: 3, groundIsParking: false, podiumAboveGround: 5, podiumParkingLevels: 5 },
+    podiumAtBoundaryStatement: {
+      statementId: 'STMT-PODIUM-SETBACK-2026-10-16',
+      statedBy: 'Eng. Mohamed',
+      statedOn: '2026-10-16',
+      verbatim: 'ال دور ال ارضي و البوديوم و البدروم بياخدو مساحه الارض كلها مفيش setbacks',
+    },
+    levelPlan: {
+      arrangement: 'WIDTH',
+      vehicleAccess: { entry: { edgeSeq: 0, centreOffsetM: new Decimal('25') } },
+    },
+  });
+}
 
 export const setOf = (input: RunInput, meta: SheetMeta = META): Sheet[] =>
   composeSheets(runPipeline(input).building, meta);

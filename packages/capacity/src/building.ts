@@ -51,11 +51,13 @@ import {
 } from '@envelope/core';
 import {
   area as ringArea,
+  containsPoint,
   distanceAlong,
   lengthSquared,
   lineSpans,
   pointAlong,
   type Pt,
+  type Ring,
   subtractSpans,
 } from '@envelope/geometry';
 import { citesPlaceholder, PARKING_CLEAR_HEIGHT_M } from '@envelope/rules';
@@ -70,6 +72,7 @@ import type { EnvelopeSolution } from './envelope.js';
 import type { GradePlan } from './grade.js';
 import type { LevelPlan, WorldRect } from './level-plan.js';
 import type { MassingResult } from './massing.js';
+import type { StreetLevel } from './street-ramp.js';
 
 /**
  * Which above-grade levels park: the ground floor or not, and how many podium
@@ -490,13 +493,35 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       : parkingContent;
   // The first basement or first podium parking level, where the ground floor does
   // not park: the accessible bays are there.
+  const entryId = entry ? ENTRY_LEVEL_ID[entry] : null;
+  const entryStreet = levelPlan?.streetRamps?.levels.find((l) => l.levelId === entryId);
   const entryContent: ModelLevel['parking'] =
     levelPlan && accessible && entry !== EntryLevel.GROUND
-      ? parkingOf(levelPlan, climbs, undefined, accessible)
-      : parkingContent;
-  const entryId = entry ? ENTRY_LEVEL_ID[entry] : null;
+      ? parkingOf(levelPlan, climbs, undefined, accessible, entryStreet)
+      : levelPlan && entryStreet
+        ? parkingOf(levelPlan, climbs, undefined, undefined, entryStreet)
+        : parkingContent;
+  /*
+    A RAMP FROM THE STREET makes the level it reaches a level of its own: B1 or
+    P1 is the shared layout less the bays under the ramp and those its cut
+    strands. Where that level is also the one the street reaches first, the
+    accessible bays were designated on the cut layout already (the pipeline
+    passed it), so `entryContent` carries both; the other one is drawn here.
+  */
+  const streetLevels = levelPlan?.streetRamps?.levels ?? [];
+  const streetContent = new Map<string, ModelLevel['parking']>(
+    streetLevels
+      .filter((l) => l.levelId !== entryId)
+      .map((l) => [l.levelId, levelPlan ? parkingOf(levelPlan, climbs, undefined, undefined, l) : null]),
+  );
   const contentOf = (id: string): ModelLevel['parking'] =>
-    id === 'G' ? gradeContent : id === entryId ? entryContent : parkingContent;
+    id === 'G'
+      ? gradeContent
+      : id === entryId
+        ? entryContent
+        : streetContent.has(id)
+          ? streetContent.get(id)!
+          : parkingContent;
   if (parkingCount > 0 && !levelPlan) {
     notModelled.push(
       `Parking bays. The level could not be laid out: ${input.levelPlanRefusal ?? 'no reason was recorded'}`,
@@ -682,13 +707,51 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       notModelled.push(SLOPED_RING_STOPS_AT_GROUND);
     }
   }
-  if (parkingBelow > 0 && !above.ground) {
+  /*
+    THE RAMPS FROM THE STREET, where they were placed (`street-ramp.ts`). Each is
+    a ramp of the model like any other — the 3D view stands it up as a slope and
+    cuts the slab it opens, the DXF draws it at its two heights — and is marked as
+    the street's, because it does not stand in the strip the other ramps share.
+  */
+  const street = levelPlan?.streetRamps;
+  if (street) {
+    notModelled.push(...street.notes);
+    const ground = levels.find((l) => l.id === 'G');
+    for (const r of street.ramps) {
+      const reached = levels.find((l) => l.id === r.levelId);
+      if (!ground || !reached || !street.landing) continue;
+      const [low, high] = r.levelId === 'B1' ? [reached, ground] : [ground, reached];
+      const gradient = tracer.computed('building.ramp_gradient_pct', street.requirement.slopePct.value, {
+        formula:
+          `${street.requirement.slopePct.value.toString()}% over the main run; ${f2f.value.toString()} m over ` +
+          `${street.requirement.runM.value.toFixed(2)} m with the transitions, from the street to ${r.levelId}`,
+        uses: { slope: street.requirement.slopePct, rise: f2f, run: street.requirement.runM, ...(street.placement ? { placement: street.placement } : {}) },
+        unit: '%',
+      });
+      ramps.push({
+        id: `R${ramps.length + 1}`,
+        fromLevelId: low.id,
+        toLevelId: high.id,
+        outline: r.world.map(pt),
+        foot: [pt(r.foot[0]), pt(r.foot[1])],
+        head: [pt(r.head[0]), pt(r.head[1])],
+        fromElevationMm: low.elevationMm,
+        toElevationMm: high.elevationMm,
+        gradientPct: toWire(gradient),
+        label:
+          `RAMP FROM STREET ${r.levelId === 'B1' ? 'DOWN' : 'UP'} TO ${r.levelId} ` +
+          `${gradient.value.toFixed(0)}% - 6% TRANSITIONS (DBC TABLES B.9, B.10)`,
+        street: { landing: street.landing.map(pt) },
+      });
+    }
+  }
+  if (parkingBelow > 0 && !above.ground && !street) {
     notModelled.push(
       'The ramp from the street down to the first basement. Only ramps between two ' +
         'parking levels are modelled.',
     );
   }
-  if (above.podium > 0 && !above.ground) {
+  if (above.podium > 0 && !above.ground && !street) {
     // Said rather than drawn: the strip is sized for one storey between two
     // parking levels, and this ramp leaves a ground floor that holds no bays.
     notModelled.push(
@@ -717,16 +780,23 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     above.ground && gradeContent !== parkingContent
       ? (accessible?.bayCount ?? levelPlan?.grade?.bayCount)
       : entryContent !== parkingContent
-        ? accessible?.bayCount
+        ? (accessible?.bayCount ?? entryStreet?.bayCount)
         : undefined;
   const entryWords = !above.ground && entry ? `on ${ENTRY_LEVEL_WORDS[entry]}` : 'at grade';
+  // A ramp from the street on a level other than the first (P1, where B1 is reached first).
+  const streetElsewhere = streetLevels.filter((l) => l.levelId !== entryId && streetContent.get(l.levelId));
+  const streetLoss = streetElsewhere.reduce((s, l) => s + l.givenUp.value, 0);
+  const streetWords = streetElsewhere
+    .map((l) => ` − ${l.givenUp.value} given up on ${l.levelId} to the ramp from the street`)
+    .join('');
+  const streetUses = Object.fromEntries(streetElsewhere.map((l) => [`street${l.levelId}`, l.givenUp]));
   const drawnBays = perLevel
     ? atGrade
-      ? tracer.computed('building.drawn_bays', atGrade.value + perLevel.value * (parkingCount - 1), {
+      ? tracer.computed('building.drawn_bays', atGrade.value + perLevel.value * (parkingCount - 1) - streetLoss, {
           formula:
             `${atGrade.value} bays ${entryWords} + ${perLevel.value} bays laid out per level × ` +
-            `${parkingCount - 1} other parking level(s)`,
-          uses: { atGrade, perLevel, levels: input.parkingLevels },
+            `${parkingCount - 1} other parking level(s)${streetWords}`,
+          uses: { atGrade, perLevel, levels: input.parkingLevels, ...streetUses },
           unit: 'bays',
           detail: {
             note:
@@ -736,9 +806,9 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
               'floor, and the bays its accessible bays take as their access aisles.',
           },
         })
-      : tracer.computed('building.drawn_bays', perLevel.value * parkingCount, {
-          formula: `${perLevel.value} bays laid out per level × ${parkingCount} parking level(s)`,
-          uses: { perLevel, levels: input.parkingLevels },
+      : tracer.computed('building.drawn_bays', perLevel.value * parkingCount - streetLoss, {
+          formula: `${perLevel.value} bays laid out per level × ${parkingCount} parking level(s)${streetWords}`,
+          uses: { perLevel, levels: input.parkingLevels, ...streetUses },
           unit: 'bays',
           detail: {
             note:
@@ -930,7 +1000,16 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   }
 
   // --- sections -----------------------------------------------------------------------
-  const sections = sectionsOf(input.plot, envelope.setbackRing, envelope.podiumRing, levels, ramps, strip);
+  // The strip's ramps only: a section along the strip opens the slabs it crosses, and
+  // a ramp from the street stands elsewhere and opens other slabs.
+  const sections = sectionsOf(
+    input.plot,
+    envelope.setbackRing,
+    envelope.podiumRing,
+    levels,
+    ramps.filter((r) => !r.street),
+    strip,
+  );
   if (sections.length === 0) {
     notModelled.push(
       'Sections. No line through the scheme crossed the plot boundary, so no section was cut.',
@@ -1116,13 +1195,15 @@ function parkingOf(
   climbs: 'UP' | 'DOWN' | null,
   grade?: GradePlan,
   accessible?: AccessiblePlan,
+  street?: StreetLevel,
 ): NonNullable<ModelLevel['parking']> {
   const byScan = (a: WorldRect, b: WorldRect): number =>
     a.yM.comparedTo(b.yM) || a.xM.comparedTo(b.xM);
   // At grade the level is the shared layout less what the drive and the plant stand on;
-  // on the level the street reaches, less the access aisles too.
-  const rects = accessible?.rects ?? grade?.rects ?? plan.rects;
-  const count = accessible?.bayCount ?? grade?.bayCount ?? plan.bayCount;
+  // on the level the street reaches, less the access aisles too; on a level a ramp
+  // from the street reaches, less what that ramp stands on and strands.
+  const rects = accessible?.rects ?? grade?.rects ?? street?.rects ?? plan.rects;
+  const count = accessible?.bayCount ?? grade?.bayCount ?? street?.bayCount ?? plan.bayCount;
 
   const bays: ModelBay[] = rects
     .filter((r) => r.kind === 'BAY' || r.kind === 'ACCESSIBLE_BAY')
@@ -1135,9 +1216,22 @@ function parkingOf(
       ...(r.use ? { use: r.use } : {}),
     }));
   const accessAisles = rects.filter((r) => r.kind === 'ACCESS_AISLE').map((r) => r.world.map(pt));
-  const ends = accessible
-    ? deadEnds(rects, new Decimal(plan.layout.standard.drivewayWidthM), plan.layout.standard.angle === 'PARALLEL')
-    : plan.deadEnds;
+  const ends =
+    accessible || street
+      ? deadEnds(rects, new Decimal(plan.layout.standard.drivewayWidthM), plan.layout.standard.angle === 'PARALLEL')
+      : plan.deadEnds;
+  /*
+    The shared layout's turns, less any a ramp from the street has cut through on
+    this level: a swept path drawn across the ramp would be a turn nobody can make.
+  */
+  const streetRamp = street
+    ? plan.streetRamps?.ramps.find((r) => r.levelId === street.levelId)?.world
+    : undefined;
+  const turns = streetRamp
+    ? plan.turning.turns.filter(
+        (t) => ![...t.inner, ...t.outer].some((p) => containsPoint(streetRamp as Ring, p)),
+      )
+    : plan.turning.turns;
 
   const standard = plan.layout.standard;
   const twoWay = standard.driveway === 'TWO_WAY';
@@ -1172,10 +1266,12 @@ function parkingOf(
     aisles,
     ...(grade && grade.drives.length > 0
       ? { drives: grade.drives.map((d) => ({ outline: d.world.map(pt), label: d.label })) }
-      : {}),
+      : street?.drive
+        ? { drives: [{ outline: street.drive.map(pt), label: 'DRIVE FROM STREET RAMP' }] }
+        : {}),
     ...(accessAisles.length > 0 ? { accessAisles } : {}),
     deadEnds: ends.map((d) => ({ at: pt(d.at), along: pt(d.along), bays: d.bays })),
-    turns: plan.turning.turns.map((t) => ({ inner: t.inner.map(pt), outer: t.outer.map(pt), fits: t.fits })),
+    turns: turns.map((t) => ({ inner: t.inner.map(pt), outer: t.outer.map(pt), fits: t.fits })),
     turning: {
       innerRadiusM: toWire(plan.turning.innerRadiusM),
       laneM: toWire(plan.turning.laneM),

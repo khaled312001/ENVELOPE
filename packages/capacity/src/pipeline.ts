@@ -57,6 +57,7 @@ import { computeBands, traceFloorAreaLevels, type BandSource } from './bands.js'
 import { levelAreasOf, type LevelArea } from './level-areas.js';
 import { aboveGradeParkingOf, buildBuildingModel, entryLevelOf, parkingInPodiumOf } from './building.js';
 import { planGrade } from './grade.js';
+import { planStreetRamps, type StreetLevel } from './street-ramp.js';
 import { buildGfaStatement, type GfaStatement } from './gfa-statement.js';
 import { layoutCore } from './core-layout.js';
 import {
@@ -1080,6 +1081,33 @@ export function runPipeline(input: RunInput): RunOutput {
             ...(input.levelPlan?.avoidCore === false ? [] : [{ ring: parkingObstruction.ring, what: 'core' }]),
             ...(plan.rampStrip ? [{ ring: plan.rampStrip.world, what: 'ramp' }] : []),
           ],
+          coreAssumedAt: core.placement.value,
+        }),
+      };
+    }
+    /*
+      THE RAMPS FROM THE STREET, where the ground floor does not park. B1 and P1
+      are then two storeys apart across a shop floor, no ramp of the shared strip
+      joins either to the street, and each is reached by a ramp of its own from
+      the entrance — placed and paid for on the level it reaches. See `street-ramp.ts`.
+    */
+    const basementsHere = schedule
+      ? schedule.basements
+      : parkingLevelsAvailable - parkingInPodiumOf(schedule, parkingLevelsAvailable, podiumMassLevels);
+    if (!groundParks && (basementsHere > 0 || aboveGrade.podium > 0)) {
+      const plan = levelPlan;
+      levelPlan = {
+        ...plan,
+        streetRamps: planStreetRamps({
+          tracer,
+          plot: input.plot,
+          groundOutline: envelope.podiumRing,
+          plan,
+          storeyHeightM: envelope.floorToFloorM,
+          ...(basementsHere > 0 ? { down: { beyond: basementsHere > 1 } } : {}),
+          ...(aboveGrade.podium > 0 ? { up: { beyond: aboveGrade.podium > 1 } } : {}),
+          // The whole core on the ground floor, not its shafts: its lobby is there too.
+          core: { ring: core.ring, placement: core.placement.value },
         }),
       };
     }
@@ -1090,14 +1118,16 @@ export function runPipeline(input: RunInput): RunOutput {
     */
     if (parkingLevelsAvailable >= 1 && entryLevel) {
       const plan = levelPlan;
+      // Where a ramp from the street reaches the level the street reaches, it is laid out with it.
+      const street = streetLevelOf(plan, entryLevel);
       levelPlan = {
         ...plan,
         accessible: designateAccessible({
           tracer,
           level: entryLevel,
           ...(plan.slopedFloor ? { floorGradientPct: plan.slopedFloor.gradientPct } : {}),
-          rects: plan.grade?.rects ?? plan.rects,
-          levelBays: plan.grade?.bayCount ?? plan.bayCount,
+          rects: plan.grade?.rects ?? street?.rects ?? plan.rects,
+          levelBays: plan.grade?.bayCount ?? street?.bayCount ?? plan.bayCount,
           others: { perLevel: plan.bayCount, levels: parkingLevelsAvailable - 1 },
           bayWidthM: new Decimal(plan.layout.standard.bayWidthM),
           core: parkingObstruction.ring,
@@ -1147,6 +1177,7 @@ export function runPipeline(input: RunInput): RunOutput {
               : levelPlan.grade
                 ? { groundBays: levelPlan.grade.bayCount }
                 : {}),
+            ...(streetElsewhere(levelPlan).length > 0 ? { streetRamps: streetElsewhere(levelPlan) } : {}),
           },
         }
       : {}),
@@ -1395,6 +1426,26 @@ export function runPipeline(input: RunInput): RunOutput {
     building,
     gfaStatement,
   };
+}
+
+/** The model's id for the level the street reaches, where it is not the ground floor. */
+const STREET_LEVEL_ID: Readonly<Record<string, 'B1' | 'P1'>> = { FIRST_BASEMENT: 'B1', FIRST_PODIUM: 'P1' };
+
+/** The level a ramp from the street reaches, when it is the level the street reaches first. */
+function streetLevelOf(plan: LevelPlan, entry: string): StreetLevel | undefined {
+  const id = STREET_LEVEL_ID[entry];
+  return id ? plan.streetRamps?.levels.find((l) => l.levelId === id) : undefined;
+}
+
+/**
+ * The other level a ramp from the street reaches — P1, where B1 is reached first —
+ * whose bays given up are counted apart from the level the accessible bays stand on.
+ */
+function streetElsewhere(plan: LevelPlan): readonly { readonly levelId: string; readonly givenUp: Traced<number> }[] {
+  const first = plan.accessible ? STREET_LEVEL_ID[plan.accessible.level] : undefined;
+  return (plan.streetRamps?.levels ?? [])
+    .filter((l) => l.levelId !== first)
+    .map((l) => ({ levelId: l.levelId, givenUp: l.givenUp }));
 }
 
 function plotAreaOf(plot: Plot): Decimal {

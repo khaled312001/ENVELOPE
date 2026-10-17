@@ -98,6 +98,12 @@ export interface ParkingInput {
      * on the first level below it. The ground floor when absent.
      */
     readonly firstLevel?: string;
+    /**
+     * Bays a ramp from the street takes on a level other than the first: P1, where
+     * the ground floor does not park and B1 is reached first (`street-ramp.ts`).
+     * Each is counted off one of the levels at `baysPerLevel`.
+     */
+    readonly streetRamps?: readonly { readonly levelId: string; readonly givenUp: Traced<number> }[];
   };
 }
 
@@ -146,6 +152,11 @@ const num = (r: Resolution | undefined): Decimal | undefined => {
  * to argue with the authority about", and that is only answerable if each step
  * carries its own provenance.
  */
+/** The bays a ramp from the street takes on a further level, as `uses` edges. */
+function streetUses(laid: NonNullable<ParkingInput['laidOut']>): Record<string, Traced<number>> {
+  return Object.fromEntries((laid.streetRamps ?? []).map((l) => [`street${l.levelId}`, l.givenUp]));
+}
+
 export function solveParking(input: ParkingInput): ParkingSolution {
   const { rules, tracer, context, mix } = input;
 
@@ -376,12 +387,14 @@ export function solveParking(input: ParkingInput): ParkingSolution {
   // --- Levels required -----------------------------------------------------
   // The ground floor counts first where it has its own count: it is the level the street reaches.
   const ground = measured?.groundBays;
+  // What a ramp from the street takes on a further level, still required of the rest.
+  const streetLoss = (measured?.streetRamps ?? []).reduce((s, l) => s + l.givenUp.value, 0);
   const levelsRequiredValue = measured
     ? ground
       ? totalBaysValue <= ground.value
         ? 1
-        : 1 + Math.ceil((totalBaysValue - ground.value) / measured.baysPerLevel.value)
-      : Math.ceil(totalBaysValue / measured.baysPerLevel.value)
+        : 1 + Math.ceil((totalBaysValue - ground.value + streetLoss) / measured.baysPerLevel.value)
+      : Math.ceil((totalBaysValue + streetLoss) / measured.baysPerLevel.value)
     : availablePerLevelValue.isZero()
       ? 0
       : requiredAreaValue.div(availablePerLevelValue).ceil().toNumber();
@@ -390,13 +403,16 @@ export function solveParking(input: ParkingInput): ParkingSolution {
       ? tracer.computed('parking.levels_required', levelsRequiredValue, {
           formula:
             `${measured.firstLevel ?? 'the ground floor'}'s ${ground.value} bays, then ceil(${Math.max(0, totalBaysValue - ground.value)} ` +
-            `bays still required ÷ ${measured.baysPerLevel.value} bays per level): ${levelsRequiredValue} level(s)`,
-          uses: { required: totalBays, perLevel: measured.baysPerLevel, ground },
+            `bays still required${streetLoss > 0 ? ` + ${streetLoss} a ramp from the street takes` : ''} ÷ ` +
+            `${measured.baysPerLevel.value} bays per level): ${levelsRequiredValue} level(s)`,
+          uses: { required: totalBays, perLevel: measured.baysPerLevel, ground, ...streetUses(measured) },
           unit: 'levels',
         })
       : tracer.computed('parking.levels_required', levelsRequiredValue, {
-          formula: `ceil(${totalBaysValue} bays required ÷ ${measured.baysPerLevel.value} bays laid out per level)`,
-          uses: { required: totalBays, perLevel: measured.baysPerLevel },
+          formula:
+            `ceil(${totalBaysValue} bays required${streetLoss > 0 ? ` + ${streetLoss} a ramp from the street takes` : ''} ÷ ` +
+            `${measured.baysPerLevel.value} bays laid out per level)`,
+          uses: { required: totalBays, perLevel: measured.baysPerLevel, ...streetUses(measured) },
           unit: 'levels',
         })
     : tracer.computed('parking.levels_required', levelsRequiredValue, {
@@ -421,18 +437,30 @@ export function solveParking(input: ParkingInput): ParkingSolution {
   });
 
   const groundLaid = laid?.groundBays !== undefined && input.levelsAvailable > 0 ? laid.groundBays : undefined;
+  const laidStreet = laid && input.levelsAvailable > 0 ? (laid.streetRamps ?? []) : [];
+  const laidStreetLoss = laidStreet.reduce((s, l) => s + l.givenUp.value, 0);
   const suppliedBays = laid
-    ? groundLaid
-      ? new Decimal(laid.baysPerLevel.value).times(input.levelsAvailable - 1).plus(groundLaid.value)
-      : new Decimal(laid.baysPerLevel.value).times(input.levelsAvailable)
+    ? (groundLaid
+        ? new Decimal(laid.baysPerLevel.value).times(input.levelsAvailable - 1).plus(groundLaid.value)
+        : new Decimal(laid.baysPerLevel.value).times(input.levelsAvailable)
+      ).minus(laidStreetLoss)
     : availableAreaValue.div(factor).floor();
+  const streetWords = laidStreet
+    .map((l) => ` − ${l.givenUp.value} given up on ${l.levelId} to the ramp from the street`)
+    .join('');
   const providedBays = laid
     ? tracer.computed('parking.provided_bays', suppliedBays.toNumber(), {
-        formula: groundLaid
-          ? `${groundLaid.value} bays on ${laid.firstLevel ?? 'the ground floor'} + ${laid.baysPerLevel.value} bays laid out per ` +
-            `level × ${input.levelsAvailable - 1} other parking level(s)`
-          : `${laid.baysPerLevel.value} bays laid out per level × ${input.levelsAvailable} parking level(s)`,
-        uses: { perLevel: laid.baysPerLevel, levels: levelsAvailable, ...(groundLaid ? { ground: groundLaid } : {}) },
+        formula:
+          (groundLaid
+            ? `${groundLaid.value} bays on ${laid.firstLevel ?? 'the ground floor'} + ${laid.baysPerLevel.value} bays laid out per ` +
+              `level × ${input.levelsAvailable - 1} other parking level(s)`
+            : `${laid.baysPerLevel.value} bays laid out per level × ${input.levelsAvailable} parking level(s)`) + streetWords,
+        uses: {
+          perLevel: laid.baysPerLevel,
+          levels: levelsAvailable,
+          ...(groundLaid ? { ground: groundLaid } : {}),
+          ...Object.fromEntries(laidStreet.map((l) => [`street${l.levelId}`, l.givenUp])),
+        },
         unit: 'bays',
         detail: {
           note:

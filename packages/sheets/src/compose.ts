@@ -697,6 +697,87 @@ function accessLegend(model: BuildingModel): LegendEntry[] {
   ];
 }
 
+/*
+  THE RAMPS FROM THE STREET, where the ground floor does not park. Each is drawn
+  where it stands — on the site plan, which is the ground floor, and on the sheet
+  of the parking level it reaches, whose slab it is cut through — with the level
+  landing before it (DBC B.7.2.3.3 ¶4) and an arrow the way a car arriving from
+  the street drives. They are not the strip's ramp, and the strip's words never
+  name them: `ModelRamp.street` is what tells them apart.
+*/
+function streetRampItems(model: BuildingModel, s: number, levelId: string | null): ModelItem[] {
+  const items: ModelItem[] = [];
+  const landings = new Set<string>();
+  for (const ramp of model.ramps) {
+    if (!ramp.street) continue;
+    if (levelId !== null && ramp.fromLevelId !== levelId && ramp.toLevelId !== levelId) continue;
+    const source = sourceOf(ramp.gradientPct);
+    /*
+      THE LANDING IS AT GRADE, SO ONLY THE SITE PLAN DRAWS IT. It is the level
+      approach on the ground floor before the barrier; on B1 or P1 the same
+      outline lies over bays the layout rightly kept there, and drawn in aisle ink
+      it read as a drive across them — the one thing a parking sheet may never
+      draw on a bay. Both ramps share it, so it is drawn once.
+    */
+    const key = ramp.street.landing.map((p) => `${p.x},${p.y}`).join(' ');
+    if (levelId === null && !landings.has(key)) {
+      landings.add(key);
+      items.push(shape(Role.AISLE, ramp.street.landing, true, { name: `Level landing before the ramps from the street, DBC B.7.2.3.3` }));
+    }
+    items.push(shape(Role.RAMP, ramp.outline, true, { source, name: ramp.label }));
+    const footMid = midpointOf(ramp.foot[0], ramp.foot[1]);
+    const headMid = midpointOf(ramp.head[0], ramp.head[1]);
+    // A car from the street starts at grade: down a ramp to a basement it drives
+    // from the head to the foot, up one to the podium from the foot to the head.
+    const down = ramp.fromElevationMm < 0;
+    const along = down ? angleOf(headMid, footMid) : angleOf(footMid, headMid);
+    const run = lengthOf(footMid, headMid);
+    const c = centroidOf(ramp.outline);
+    items.push({
+      kind: 'symbol',
+      role: Role.RAMP_ARROW,
+      symbol: SymbolName.ARROW,
+      at: c,
+      rotationDeg: round2(along),
+      scale: Math.round(run * 0.5),
+    });
+    const across = { x: -Math.sin((along * Math.PI) / 180), y: Math.cos((along * Math.PI) / 180) };
+    const head = 0.09 * Math.round(run * 0.5);
+    /*
+      TWO LINES, AS THE STRIP'S RAMP IS LABELLED: where it goes on one side of the
+      arrow, its gradient on the other. Printed as one line — "RAMP FROM STREET
+      DOWN TO B1 12% - 6% TRANSITIONS (DBC TABLES B.9, B.10)" — it was longer than
+      the ramp at every scale the sheets use, so it could fit nowhere inside it and
+      stayed across the entrance's words, a dimension and a bay number. The model's
+      label is cut, not re-typed: the gradient line is the label less the words,
+      and less the tables it cites in brackets — a 30.27 m ramp at 1:500 holds
+      "RAMP 12% - 6% TRANSITIONS" and not the 64 mm of paper the bracket adds.
+      The citation is not lost: the ramp's outline carries the whole label as its
+      name, and a click on it opens the derivation that cites Tables B.9 and B.10.
+    */
+    const words = `FROM STREET ${down ? `DOWN TO ${ramp.fromLevelId}` : `UP TO ${ramp.toLevelId}`}`;
+    const prefix = `RAMP ${words} `;
+    const rest = ramp.label.startsWith(prefix) ? `RAMP ${ramp.label.slice(prefix.length)}` : ramp.label;
+    const gradient = rest.split(' (')[0] ?? rest;
+    const rule: LabelRule = { ...RAMP_WORDS, within: ramp.outline, withhold: false };
+    items.push(withRule(label(Role.RAMP, offsetPoint(c, across, Math.max(2.6 * s, head + 1.9 * s)), words, NOTE, along), rule));
+    items.push(
+      withRule(
+        label(Role.RAMP, offsetPoint(c, across, -Math.max(3 * s, head + 1.9 * s)), gradient, NOTE, along, 'middle', source),
+        rule,
+      ),
+    );
+  }
+  return items;
+}
+
+/** The key row for a ramp from the street, on a sheet that draws one and keys its arrow nowhere else. */
+function streetRampLegend(items: readonly ModelItem[], legend: readonly LegendEntry[]): LegendEntry[] {
+  const drawn = items.some((i) => i.kind === 'symbol' && i.role === Role.RAMP_ARROW);
+  if (!drawn || legend.some((e) => e.role === Role.RAMP_ARROW && e.symbol === SymbolName.ARROW)) return [];
+  return [{ role: Role.RAMP_ARROW, symbol: SymbolName.ARROW, label: 'Ramp from the street, direction of travel' }];
+}
+
 // ---------------------------------------------------------------------------
 // A-001 Site plan
 // ---------------------------------------------------------------------------
@@ -724,6 +805,7 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
     items.push(shape(Role.TOWER, tower.outline, true, { source: tower.outlineSource, name: 'Tower plate' }));
   }
   items.push(...accessItems(model, s, dimensionReachMm(model, s) + NOTE));
+  items.push(...streetRampItems(model, s, null));
 
   for (const section of model.sections) {
     const [a, b] = section.line;
@@ -755,6 +837,7 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
     ...accessLegend(model),
     ...(model.sections.length > 0 ? [{ role: Role.CUT_LINE, label: 'Section cut line' }] : []),
   ];
+  legend.push(...streetRampLegend(items, legend));
 
   return {
     id: 'site',
@@ -960,8 +1043,16 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
   }
 
   // --- the ramp, and which way it goes from here -------------------------------------
-  const up = model.ramps.find((r) => r.fromLevelId === level.id);
-  const down = model.ramps.find((r) => r.toLevelId === level.id);
+  const up = model.ramps.find((r) => !r.street && r.fromLevelId === level.id);
+  const down = model.ramps.find((r) => !r.street && r.toLevelId === level.id);
+  /*
+    A ramp from the street cuts the aisles it crosses, so a dead end usually
+    closes against it and that label is fixed at the closed end. The ramp's words
+    may slide inside the ramp; set after the dead ends, they give way to them
+    rather than pin the dead end's words over their own.
+  */
+  const streetItems = streetRampItems(model, s, level.id);
+  items.push(...streetItems.filter((i) => i.kind !== 'text'));
   if (parking.rampStrip) {
     const ramp = up ?? down;
     items.push(
@@ -1190,6 +1281,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       ),
     );
   }
+  items.push(...streetItems.filter((i) => i.kind === 'text'));
 
   /*
     THE CORE OVER THE BAYS, not under them. It passes through this level whatever
@@ -1322,6 +1414,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       if (entry.symbol !== undefined && !keyed.has(entry.symbol)) legend.push(entry);
     }
   }
+  legend.push(...streetRampLegend(items, legend));
   /*
     THE MODULE, DIMENSIONED ACROSS ONE AISLE: bay, aisle, bay. It is the figure
     an architect checks first and the one the client's own drawings carry

@@ -215,6 +215,10 @@ const LABEL: Readonly<Record<string, Said>> = {
     en: 'GFA, typed: no document on file states it',
     ar: 'المساحة الطابقية، أدخلتها: لا توجد وثيقة محفوظة تذكرها',
   },
+  'landing a ramp along the boundary turns off': {
+    en: 'Landing a ramp along the boundary turns off',
+    ar: 'منطقة الالتفاف قبل منحدر على امتداد الحد',
+  },
 };
 
 /* The register heads a value with its parameter id where the engine gave it no label. */
@@ -253,6 +257,13 @@ const PARAMETER: Readonly<Record<string, Said>> = {
   'envelope.far_max': { en: 'Floor area ratio', ar: 'معامل البناء' },
   'envelope.tower_plate_max_m2': { en: 'Tower plate cap', ar: 'الحد الأعلى لمسطح البرج' },
   'envelope.height_per_stated_floor_m': { en: 'Height per stated floor', ar: 'الارتفاع لكل دور محدد' },
+  'parking.street_ramp_approach_m': { en: 'Straight approach before the barrier', ar: 'المدخل المستقيم قبل الحاجز' },
+  'parking.street_ramp_reach_m': { en: 'How far in a ramp from the street reaches', ar: 'عمق منحدر الشارع من الحد' },
+  'parking.street_ramp_turn_m': { en: 'Landing a ramp along the boundary turns off', ar: 'منطقة الالتفاف قبل منحدر على امتداد الحد' },
+  'parking.street_ramp_placement': { en: 'Where the ramps from the street stand', ar: 'موضع منحدرات الشارع' },
+  'parking.street_ramp_bays_given_up': { en: 'Bays given up to the ramp from the street', ar: 'المواقف المتنازل عنها لمنحدر الشارع' },
+  'parking.street_level_bays': { en: 'Bays on a level a ramp from the street reaches', ar: 'المواقف في دور يصله منحدر الشارع' },
+  'parking.street_ramp_ground_area_m2': { en: 'Ground floor the ramps from the street take', ar: 'مساحة الدور الأرضي التي تأخذها منحدرات الشارع' },
 };
 
 /* Values the engine writes as words. */
@@ -270,6 +281,8 @@ const VALUE: Readonly<Record<string, Said>> = {
     en: 'Counted against the stated level count',
     ar: 'تحسب ضمن عدد الأدوار المذكور',
   },
+  STRAIGHT_IN: { en: 'Straight in from the entrance', ar: 'مستقيم من المدخل' },
+  ALONG_FRONTAGE: { en: 'Along the frontage from the entrance', ar: 'على امتداد الواجهة من المدخل' },
 };
 
 const SHEET: Readonly<Record<string, Said>> = {
@@ -405,9 +418,10 @@ export const RUN_READERS: readonly Reader[] = [
     const m = /^The (vehicle entrance|entry|exit) on (.+?) is centred ([\d.]+) m from (P\d+)\. A ([\d.]+) m opening on this boundary must be centred between ([\d.]+) m and ([\d.]+) m from P\d+/.exec(t);
     if (!m) return null;
     const what = m[1] === 'exit' ? { en: 'exit', ar: 'المخرج' } : m[1] === 'entry' ? { en: 'entry', ar: 'المدخل' } : { en: 'entrance', ar: 'مدخل السيارات' };
+    const reading = junctionReadingOf(t);
     return {
-      en: `The ${what.en} is ${m[3]} m from ${m[4]}; on this boundary it must sit between ${m[6]} and ${m[7]} m (15 m clear of a junction).`,
-      ar: `${what.ar} على بعد ${m[3]} م من ${m[4]}، ويجب أن يكون على هذا الحد بين ${m[6]} و${m[7]} م (15 م بعيدا عن التقاطع).`,
+      en: `The ${what.en} is ${m[3]} m from ${m[4]}; on this boundary it must sit between ${m[6]} and ${m[7]} m (15 m clear of a junction).${reading ? ` ${reading.en}` : ''}`,
+      ar: `${what.ar} على بعد ${m[3]} م من ${m[4]}، ويجب أن يكون على هذا الحد بين ${m[6]} و${m[7]} م (15 م بعيدا عن التقاطع).${reading ? ` ${reading.ar}` : ''}`,
     };
   },
   (t) => {
@@ -1052,4 +1066,160 @@ export const RUN_READERS: readonly Reader[] = [
           ar: 'الارتفاع لكل دور محدد (كود دبي B.4.2.2، مع احتساب الدور الأرضي)',
         }
       : null,
+  /* ── The ramps from the street, where the ground floor does not park (17 Oct 2026) ── */
+  (t) => {
+    const m =
+      /^The ramps from the street stand on the ground floor, (straight in from the entrance|along the frontage from the entrance), and take ([\d.]+) m² of it; how that bears on the ground floor's floor area is NOT ASSESSED\./.exec(
+        t,
+      );
+    if (!m) return null;
+    const how = m[1] === 'straight in from the entrance' ? 'مستقيمة من المدخل' : 'على امتداد الواجهة من المدخل';
+    return {
+      en: `The ramps from the street stand on the ground floor, ${m[1]}, and take ${m[2]} m² of it; the effect on its floor area is not assessed. They are straight, and the gate level above the road is not added to their climb.`,
+      ar: `منحدرات الشارع في الدور الأرضي، ${how}، وتأخذ منه ${m[2]} m²؛ ولم يقيم أثر ذلك على مساحته الطابقية. وهي مستقيمة، ولا يضاف منسوب البوابة فوق الطريق (B.4.2.1) إلى ارتفاعها.`,
+    };
+  },
+  (t) => {
+    const m = /^The ramps from the street are not placed: neither placement fits\. (.*) The bays they would take on the levels they reach are still counted\.$/.exec(t);
+    if (!m) return null;
+    const parts = (m[1] ?? '').split(/ (?=Straight in from the entrance on boundary \d+,|Along boundary \d+ from the entrance,)/);
+    const said = parts.map((p) => streetRampRefusal(p) ?? { en: p, ar: p });
+    return {
+      en: `The ramps from the street are not placed: neither placement fits. ${said.map((s) => s.en).join(' ')} The bays they would take are still counted.`,
+      ar: `لم توضع منحدرات الشارع: لا يتسع أي من الموضعين. ${said.map((s) => s.ar).join(' ')} المواقف التي كانت ستأخذها في الأدوار التي تصلها ما زالت محسوبة.`,
+    };
+  },
+  (t) => streetRampRefusal(t),
+  starts('The ramps from the street. No road boundary can take a vehicle entrance', {
+    en: 'No ramp from the street is placed: no road boundary can take a vehicle entrance.',
+    ar: 'لا يوضع منحدر من الشارع: لا يوجد حد على طريق يقبل مدخل سيارات.',
+  }),
+  starts('The ramps from the street. The entrance has no opening on its boundary', {
+    en: 'No ramp from the street is placed: the entrance has no opening on its boundary.',
+    ar: 'لا يوضع منحدر من الشارع: المدخل بلا فتحة على حده.',
+  }),
+  (t) => {
+    const m = /^The ramps from the street\. Boundary (\d+), where the entrance is, is not square to the parking level's rows/.exec(t);
+    if (!m) return null;
+    return {
+      en: `No ramp from the street is placed: boundary ${m[1]}, where the entrance is, is not square to the parking rows, so where a ramp would land among them cannot be said. The bays it would take are still counted.`,
+      ar: `لا يوضع منحدر من الشارع: الحد ${m[1]} حيث المدخل ليس متعامدا مع صفوف المواقف، فلا يمكن تحديد موضع نزول المنحدر بينها. المواقف التي سيأخذها ما زالت محسوبة.`,
+    };
+  },
+  starts('The exit apart from the entry. The ramps from the street start at the entry', {
+    en: 'The ramps from the street start at the entry; how a car leaving them reaches the separate exit is not assessed.',
+    ar: 'تبدأ منحدرات الشارع من المدخل؛ ولم يقيم كيف تصل السيارة الخارجة منها إلى المخرج المنفصل.',
+  }),
+  starts('DBC Part B states no turning figure for a car turning off an entrance landing onto a ramp.', {
+    en: 'The code states no turning figure for a car turning off the entrance landing onto a ramp, so Table B.9’s curved-ramp minimum — inner radius 4 m, lane 3.5 m — makes the landing 7.5 m square.',
+    ar: 'لا يحدد الكود مساحة لالتفاف السيارة من منطقة المدخل إلى المنحدر، فاعتمد الحد الأدنى للمنحدر المنحني في الجدول B.9: نصف قطر داخلي 4 m وحارة 3.5 m، فتكون منطقة الالتفاف مربعا 7.5 m.',
+  }),
+  (t) => {
+    const m =
+      /^The drive from the (entrance|entry|exit) on boundary (\d+) runs through the (core|ramp) before it reaches a drive aisle\.(?: Where the core stands is assumed: (.+?)\.)?(?: An opening on boundary \d+ centred (.+) would clear it\.| (No position on boundary \d+ that B\.7\.2\.1 allows clears it\.))?( Place the entrance elsewhere on the boundary\.| The recommendation stands; move the entrance to clear it\.)?$/.exec(
+        t,
+      );
+    if (!m) return null;
+    const who = m[1] === 'exit' ? 'المخرج' : m[1] === 'entry' ? 'المدخل' : 'مدخل السيارات';
+    const what = m[3] === 'core' ? 'النواة' : 'المنحدر';
+    const where = m[4] ? ` موضع النواة مفترض: ${CORE_AT[m[4]] ?? m[4]}.` : '';
+    const clear = m[5]
+      ? ` فتحة على الحد ${m[2]} مركزها ${clearAr(m[5])} تتجنبها.`
+      : m[6]
+        ? ` لا يوجد موضع على الحد ${m[2]} يسمح به B.7.2.1 يتجنبها.`
+        : '';
+    const tail = m[7]?.startsWith(' Place') ? ' ضع المدخل في موضع آخر على الحد.' : m[7] ? ' تبقى التوصية؛ حرك المدخل لتجنبها.' : '';
+    return {
+      en: t,
+      ar: `الطريق من ${who} على الحد ${m[2]} يمر عبر ${what} قبل أن يصل إلى ممر قيادة.${where}${clear}${tail}`,
+    };
+  },
 ];
+
+/* ── The ramps from the street: the reasons a placement is refused ── */
+
+const STREET_LEAD = '(Straight in from the entrance on boundary (\\d+)|Along boundary (\\d+) from the entrance), the ';
+const STREET_WHAT = '(two ramps, down to B1 and up to P1 side by side,|ramp down to B1|ramp up to P1)';
+const STREET_WHAT_AR: Readonly<Record<string, string>> = {
+  'two ramps, down to B1 and up to P1 side by side,': 'المنحدران، نزولا إلى B1 وصعودا إلى P1 متجاورين،',
+  'ramp down to B1': 'المنحدر نزولا إلى B1',
+  'ramp up to P1': 'المنحدر صعودا إلى P1',
+};
+/** Where the core stands, as `core.ts` assumes it. */
+const CORE_AT: Readonly<Record<string, string>> = {
+  "centred on the tower plate, in the plate's own proportions": 'في وسط مسطح البرج وبنفس نسبه',
+  "centred over the parking island, in the plate's own proportions": 'في وسط جزيرة المواقف وبنفس نسب المسطح',
+};
+
+/** "between 3.00 m and 12.40 m from P0, or between …", as `clearWords` writes it. */
+function clearAr(words: string): string {
+  return words
+    .split(', or ')
+    .map((w) => {
+      const m = /^between ([\d.]+) m and ([\d.]+) m from (P\d+)$/.exec(w);
+      return m ? `بين ${m[1]} m و${m[2]} m من ${m[3]}` : w;
+    })
+    .join('، أو ');
+}
+
+function streetRampRefusal(t: string): Said | null {
+  const head = new RegExp(`^${STREET_LEAD}${STREET_WHAT} (.*)$`).exec(t);
+  if (!head) return null;
+  const lead = head[2] !== undefined ? `مستقيما من المدخل على الحد ${head[2]}` : `على امتداد الحد ${head[3]} من المدخل`;
+  const what = STREET_WHAT_AR[head[4] ?? ''] ?? head[4] ?? '';
+  const rest = head[5] ?? '';
+  const say = (ar: string): Said => ({ en: t, ar: `${lead}، ${ar}` });
+  let m: RegExpExecArray | null;
+  if ((m = /^needs? ([\d.]+) m of straight approach \(B\.7\.2\.3\.3 ¶4\) and ([\d.]+) m of ramp \(Tables B\.9 and B\.10\), ([\d.]+) m in from the boundary, and the ground floor is ([\d.]+) m deep there\.$/.exec(rest))) {
+    return say(`يحتاج ${what} إلى ${m[1]} m مدخلا مستقيما (B.7.2.3.3 ¶4) و${m[2]} m منحدرا (الجدولان B.9 وB.10)، أي ${m[3]} m من الحد، وعمق الدور الأرضي هناك ${m[4]} m.`);
+  }
+  if ((m = /^needs? ([\d.]+) m of width for ([\d.]+) m in from the boundary, which the ground floor's outline does not hold there\.$/.exec(rest))) {
+    return say(`يحتاج ${what} إلى عرض ${m[1]} m لمسافة ${m[2]} m من الحد، ولا يتسع لها الدور الأرضي هناك.`);
+  }
+  if ((m = /^needs? a ([\d.]+) m landing to turn in \(Table B\.9's curved-ramp radius and lane, by analogy\) and ([\d.]+) m of ramp beside it, and the boundary has ([\d.]+) m on one side of the landing and ([\d.]+) m on the other\.$/.exec(rest))) {
+    return say(`يحتاج ${what} إلى منطقة التفاف ${m[1]} m (نصف قطر وحارة المنحدر المنحني في الجدول B.9، بالقياس) و${m[2]} m منحدرا بجانبها، وعلى الحد ${m[3]} m في جهة منها و${m[4]} m في الأخرى.`);
+  }
+  if ((m = /^needs? a ([\d.]+) m landing to turn in and ([\d.]+) m of ramp beside it, ([\d.]+) m wide along the ground floor's face, which its outline does not hold there\.$/.exec(rest))) {
+    return say(`يحتاج ${what} إلى منطقة التفاف ${m[1]} m و${m[2]} m منحدرا بجانبها، بعرض ${m[3]} m على امتداد واجهة الدور الأرضي، ولا يتسع لها هناك.`);
+  }
+  if ((m = /^runs? into the core ([\d.]+) m in from the boundary\. Where the core stands is assumed: (.+?)\.(?: An entrance on boundary (\d+) centred (.+) would clear it\.| No position on boundary (\d+) that B\.7\.2\.1 allows clears it\.)?$/.exec(rest))) {
+    const clear = m[4]
+      ? ` مدخل على الحد ${m[3]} مركزه ${clearAr(m[4])} يتجنبها.`
+      : m[5]
+        ? ` لا يوجد موضع على الحد ${m[5]} يسمح به B.7.2.1 يتجنبها.`
+        : '';
+    return say(`يصطدم ${what} بالنواة على بعد ${m[1]} m من الحد. موضع النواة مفترض: ${CORE_AT[m[2] ?? ''] ?? m[2]}.${clear}`);
+  }
+  if (/^would stand across the ramp strip between the parking levels\.$/.test(rest)) {
+    return say(`يقع ${what} على شريط المنحدرات بين أدوار المواقف.`);
+  }
+  if ((m = /^would cut the ring aisle on (\w+), which is the ramp between the parking levels\.$/.exec(rest))) {
+    return say(`يقطع ${what} الممر الدائري في ${m[1]}، وهو المنحدر بين أدوار المواقف.`);
+  }
+  if ((m = /^ends where no drive aisle on (\w+) (?:lies straight ahead of it|meets it) ([\d.]+) m wide, so a car leaving it has nowhere to go\.$/.exec(rest))) {
+    return say(`ينتهي ${what} حيث لا يقابله ممر قيادة بعرض ${m[2]} m في ${m[1]}، فلا مخرج للسيارة منه.`);
+  }
+  if ((m = /^cuts (\w+) so that its aisles no longer reach the ramp to (\w+)\.$/.exec(rest))) {
+    return say(`يقطع ${what} الدور ${m[1]} فلا تصل ممراته إلى المنحدر نحو ${m[2]}.`);
+  }
+  return null;
+}
+
+/** The reading of a junction corner `access.ts` appends to a refusal it causes. */
+function junctionReadingOf(t: string): Said | null {
+  const road = / (P\d+) is read as a junction because boundary (\d+) beyond it is a road too\./.exec(t);
+  if (road) {
+    return {
+      en: `${road[1]} counts as a junction because boundary ${road[2]} is a road too; if it is a corner where two roads meet with no chamfer, whether that makes a junction is a question for the client, and this reading stands until answered.`,
+      ar: `تعامل ${road[1]} كتقاطع لأن الحد ${road[2]} طريق أيضا؛ وإن كانت زاوية يلتقي فيها طريقان بلا شطفة، فهل تعد تقاطعا سؤال موجه للعميل، وتبقى هذه القراءة حتى يجيب.`,
+    };
+  }
+  const other = / (P\d+) is read as a junction because boundary (\d+) beyond it is classified OTHER/.exec(t);
+  if (other) {
+    return {
+      en: `${other[1]} counts as a junction because boundary ${other[2]} is classified OTHER and may be a road; classify it to settle this.`,
+      ar: `تعامل ${other[1]} كتقاطع لأن الحد ${other[2]} مصنف «آخر» وقد يكون طريقا؛ صنفه لحسم ذلك.`,
+    };
+  }
+  return null;
+}

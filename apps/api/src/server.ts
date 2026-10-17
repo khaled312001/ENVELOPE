@@ -977,9 +977,11 @@ export async function build(
       briefRules,
       briefRules.length > 0 ? briefFor(PROJECT_BRIEFS, plot.plotNumber) : undefined,
     );
+    const parkingTarget = parkingTargetOfBrief(body, plot.plotNumber, standardsOffered);
     const input: RunInput = {
       ...runInputFrom(body, plot, runRules, actor),
       ...(statedPlotAreas.length > 0 ? { statedPlotAreas } : {}),
+      ...(parkingTarget ? { parkingEfficiencyTarget: parkingTarget } : {}),
     };
 
     // The baseline must be taken immediately before the run and read
@@ -2315,6 +2317,30 @@ function projectBriefRulesFor(
     authoredBy: actorName,
     sheetBinds: new Set(sheetRules.map((r) => r.parameterId)),
   });
+}
+
+/**
+ * The car-park efficiency target of the developer standard the run's brief
+ * inherits from — the only way a target reaches a run. No brief, no target:
+ * the engine then says none is stated rather than measuring against a figure
+ * nobody attached. Called after `projectBriefRulesFor` has refused a brief
+ * that is not this plot's, so a mismatch here is simply no target.
+ */
+function parkingTargetOfBrief(
+  body: RunRequest,
+  plotNumber: string,
+  standardsOffered: boolean,
+): { m2PerBay: Decimal; clauseReference: string; verbatim: string } | undefined {
+  if (body.projectBriefId === undefined || !standardsOffered) return undefined;
+  const brief = briefFor(PROJECT_BRIEFS, plotNumber);
+  if (!brief || brief.briefId !== body.projectBriefId) return undefined;
+  const target = DEVELOPER_STANDARDS.find((s) => s.standardId === brief.standardId)?.targets.parkingAreaPerBayM2;
+  if (!target) return undefined;
+  return {
+    m2PerBay: new Decimal(target.value),
+    clauseReference: target.citation.clauseReference,
+    verbatim: target.citation.sourceTextVerbatim,
+  };
 }
 
 async function loadSheet(repo: RunRepository, plotId: string): Promise<StoredSheet | undefined> {

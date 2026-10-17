@@ -73,6 +73,7 @@ import type { GradePlan } from './grade.js';
 import type { LevelPlan, WorldRect } from './level-plan.js';
 import type { MassingResult } from './massing.js';
 import type { StreetLevel } from './street-ramp.js';
+import { isParallelRow } from './residual.js';
 
 /**
  * Which above-grade levels park: the ground floor or not, and how many podium
@@ -1214,6 +1215,7 @@ function parkingOf(
       outline: r.world.map(pt),
       accessible: r.kind === 'ACCESSIBLE_BAY',
       ...(r.use ? { use: r.use } : {}),
+      ...(isParallelRow(r.row) ? { parallel: true as const } : {}),
     }));
   const accessAisles = rects.filter((r) => r.kind === 'ACCESS_AISLE').map((r) => r.world.map(pt));
   const ends =

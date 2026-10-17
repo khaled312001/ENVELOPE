@@ -17,3 +17,4 @@ export * from './bands.js';
 export * from './gfa-statement.js';
 export * from './level-areas.js';
 export * from './pipeline.js';
+export * from './residual.js';

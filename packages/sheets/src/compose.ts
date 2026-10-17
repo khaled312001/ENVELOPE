@@ -1229,7 +1229,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
   }
 
   // --- bays: outline, car, number -----------------------------------------------------------
-  for (const { bay, at: c, rotationDeg: axis, tail } of placeCars(parking)) {
+  for (const { bay, at: c, rotationDeg: axis, tail, bayLengthMm } of placeCars(parking)) {
     const role = bay.accessible ? Role.BAY_ACCESSIBLE : bay.use === 'PREFERRED' ? Role.BAY_PREFERRED : Role.BAY;
     items.push(
       shape(role, bay.outline, true, {
@@ -1242,7 +1242,20 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       }),
     );
     items.push({ kind: 'symbol', role: Role.CAR, symbol: SymbolName.CAR, at: c, rotationDeg: axis, scale: 1, bay: bay.number });
-    items.push(label(Role.BAY_NUMBER, tail, String(bay.number), NOTE, axis + 90));
+    /*
+      A PARALLEL BAY'S NUMBER STAYS INSIDE ITS BAY. Its short end is not an aisle
+      end: it is the next bay, often a perpendicular row's, whose own number
+      stands at its mouth there. At the 260 mm inset a perpendicular bay uses,
+      half the number's height crossed that end and printed over the neighbour's
+      (the 120 × 80 m level, bays 118 and 133). So it is inset by its own half
+      height as well, and a tag on the bay moves toward the other end.
+    */
+    const rad = (axis * Math.PI) / 180;
+    const halfText = (NOTE / 2) * s;
+    const numberAt = bay.parallel
+      ? mm(c.x - Math.cos(rad) * (bayLengthMm / 2 - 260 - 1.2 * halfText), c.y - Math.sin(rad) * (bayLengthMm / 2 - 260 - 1.2 * halfText))
+      : tail;
+    items.push(label(Role.BAY_NUMBER, numberAt, String(bay.number), NOTE, axis + 90));
     /*
       In words as well as in ink (1.4.1): the van bay and the preferred bays say
       what they are. Down the bay's length, on the car: across it, at the note
@@ -1251,7 +1264,10 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       aisle end.
     */
     const tag = bay.accessible ? (bay.use === 'VAN' ? 'VAN' : null) : bay.use === 'PREFERRED' ? 'PREF' : null;
-    if (tag) items.push(label(role, c, tag, NOTE, axis));
+    if (tag) {
+      const tagAt = bay.parallel ? mm(c.x + Math.cos(rad) * halfText, c.y + Math.sin(rad) * halfText) : c;
+      items.push(label(role, tagAt, tag, NOTE, axis));
+    }
   }
 
   /*

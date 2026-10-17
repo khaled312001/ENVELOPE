@@ -49,6 +49,7 @@ import { deadEnds, type DeadEnd } from './dead-ends.js';
 import type { GradePlan } from './grade.js';
 import type { RampHeadroom } from './ramp-rules.js';
 import type { StreetRampPlan } from './street-ramp.js';
+import { reducedBayAllowance } from './residual.js';
 import { findTurns, type Pt2 } from './turning.js';
 import {
   layoutParkingLevel,
@@ -462,10 +463,19 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
       })()
     : undefined;
 
+  /*
+    TABLE B.11 NOTE *, READ ON THIS PLOT. The level knows the plot, so the
+    plot's length is read here — its longest side, assumed and amber — and the
+    layout is told how many 5.0 m bays the note allows where a 5.5 m one does
+    not fit. See `residual.ts`.
+  */
+  const reducedBays = reducedBayAllowance(input.tracer, input.edges, input.plot);
+
   const layout = layoutParkingLevel({
     tracer: input.tracer,
     footprint: { widthM, depthM },
     deductionsTraced,
+    ...(reducedBays ? { reducedBays } : {}),
     includeRamp: input.includeRamp,
     ...(input.storeyHeightM ? { storeyHeightM: input.storeyHeightM } : {}),
     ...(input.rampPlan ? { rampPlan: input.rampPlan } : {}),

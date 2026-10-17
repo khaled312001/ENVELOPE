@@ -19,6 +19,7 @@ import { DEAD_END_B7233 } from '../src/dead-ends.js';
 import { TABLE_B11 } from '../src/layout.js';
 import { PARKED_SLOPE_B7231, STRAIGHT_RAMP, TABLE_B10, TABLE_B9 } from '../src/ramp-rules.js';
 import { CLAUSE_B_7_2_3_3_4 } from '../src/street-ramp.js';
+import { TABLE_B11_PARALLEL, TABLE_B11_REDUCED } from '../src/residual.js';
 
 /*
   EVERY citation constant in `packages/capacity/src` that names the code, not
@@ -39,6 +40,8 @@ const CITATIONS: Readonly<Record<string, Citation>> = {
   CLAUSE_B_7_2_3_3_4,
   ACCESSIBLE_SLOPE_B7231,
   DEAD_END_B7233,
+  TABLE_B11_REDUCED,
+  TABLE_B11_PARALLEL,
 };
 
 describe('DBC citations in the engine', () => {

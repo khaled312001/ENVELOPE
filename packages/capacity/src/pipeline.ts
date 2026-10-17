@@ -68,6 +68,8 @@ import {
   type ParkingArrangement,
   type RampType,
 } from './layout.js';
+import { RectKind } from './layout.js';
+import { countBays, isReducedRow, REDUCED_BAY_SHARE, ReducedBayMode } from './residual.js';
 import { AccessChoiceRefusedError, type AccessChoice } from './access.js';
 import { designateAccessible, designatePreferred, ENTRY_LEVEL_WORDS } from './accessible.js';
 import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './core.js';
@@ -217,6 +219,23 @@ export interface RunInput {
    * shoulder, as every older run was, so a stored run keeps its count.
    */
   readonly columnGapStatement?: StatementRef & { readonly gapM: Decimal };
+  /**
+   * A car-park efficiency target, where the run attaches a developer standard
+   * that states one: m² of gross car park per car, at most.
+   *
+   * NEVER A DEFAULT. A developer's figure is that developer's commercial
+   * expectation, not a regulation, and a run that does not attach one is
+   * compared against nothing — it says no target is stated. Resolved at the
+   * composition root from the brief the run names, as the statements are; the
+   * engine takes the figure and where it is printed as data, `USER_SET` by the
+   * run's actor, because choosing to build to a brief is a person's decision.
+   * The clause and its words travel; the developer's name does not.
+   */
+  readonly parkingEfficiencyTarget?: {
+    readonly m2PerBay: Decimal;
+    readonly clauseReference: string;
+    readonly verbatim: string;
+  };
   /**
    * Tower setbacks the reader typed, for edges no instrument of the plot speaks
    * to. Each is `USER_SET` by `actor` and replaces a general rule's value on its
@@ -492,6 +511,31 @@ export interface RunOutput {
    * produced; see `gfa-statement.ts`.
    */
   readonly gfaStatement: GfaStatement;
+  /**
+   * The car park's gross area per car, building-wide — what a developer brief
+   * measures ("37.5 m² per car"), beside the one-level `levelPlan.areaPerBayM2`.
+   * Optional only so that a run stored before it existed still types; every run
+   * this engine computes carries it.
+   */
+  readonly parkingEfficiency?: ParkingEfficiency;
+  /** The residual strips' bays over the whole building: Table B.11's parallel and note \* bays. */
+  readonly parkingResidual?: {
+    readonly reducedBays: Traced<number>;
+    /** Short bays over all perpendicular bays — at most 10% under note \*(b). */
+    readonly reducedShare: TracedDecimal;
+    readonly parallelBays: Traced<number>;
+  };
+}
+
+export interface ParkingEfficiency {
+  /** Every parking level's whole footprint — bays, aisles, ramps, cores and plant — summed. */
+  readonly grossAreaM2: TracedDecimal;
+  /** That area over the bays provided. Absent where no bay is provided. */
+  readonly grossAreaPerBayM2: TracedDecimal | undefined;
+  /** The attached standard's target and the measured gap; absent where none is attached. */
+  readonly target: { readonly m2PerBay: TracedDecimal; readonly gapM2: TracedDecimal } | undefined;
+  /** What the figure covers, and — where nothing is attached — that no target is stated. */
+  readonly notes: readonly string[];
 }
 
 export class RunBlockedError extends Error {
@@ -1070,6 +1114,41 @@ export function runPipeline(input: RunInput): RunOutput {
         ? {}
         : { chosenAccess: { ...input.levelPlan.vehicleAccess, actor: input.actor } }),
     });
+    /*
+      TABLE B.11 NOTE *'S 10% IS THE PLOT'S, AND THE LEVEL THE STREET REACHES IS
+      CUT AFTER THE LAYOUT. Its drive, its plant band and its accessible bays take
+      full-size bays out of it once the shared layout has counted its cap, so the
+      same short bays on it could take the building past 10%. They are not used
+      there: every other level holds its cap of one short bay to nine full-size,
+      and the street level holds none, so the building's share stays at or under
+      the note's 10% by construction rather than by a count checked afterwards.
+      Under note *(a) there is no cap and nothing is held back.
+    */
+    // Exactly the conditions under which `planGrade` and `designateAccessible` below rework one level.
+    const streetDerived = groundParks || (parkingLevelsAvailable >= 1 && entryLevel !== null);
+    const shortOnLayout = levelPlan.rects.filter((r) => r.kind === RectKind.BAY && isReducedRow(r.row)).length;
+    const holdBack = streetDerived && shortOnLayout > 0 && levelPlan.layout.residual.allowance?.mode === ReducedBayMode.TEN_PERCENT;
+    const streetRects = holdBack ? levelPlan.rects.filter((r) => !isReducedRow(r.row)) : levelPlan.rects;
+    const streetLayoutBays = holdBack
+      ? tracer.computed('parking.street_level_layout_bays', levelPlan.bayCount.value - shortOnLayout, {
+          formula:
+            `${levelPlan.bayCount.value} bays laid out per level − ${shortOnLayout} bay(s) of 5 m not used on ` +
+            'the level the street reaches, where the drive, the plant band and the accessible bays cut the count',
+          uses: { perLevel: levelPlan.bayCount, reduced: levelPlan.layout.residual.reducedBays },
+          unit: 'bays',
+        })
+      : levelPlan.bayCount;
+    if (holdBack) {
+      levelPlan = {
+        ...levelPlan,
+        notAssessed: [
+          ...levelPlan.notAssessed,
+          `${shortOnLayout} bay(s) of 5 m are not used on the level the street reaches: its drive, plant band and ` +
+            'accessible bays change its count after the layout, and keeping the short bays off it holds the ' +
+            'building within the 10% of Table B.11 note *.',
+        ],
+      };
+    }
     if (groundParks) {
       const plan = levelPlan;
       levelPlan = {
@@ -1077,8 +1156,8 @@ export function runPipeline(input: RunInput): RunOutput {
         grade: planGrade({
           tracer,
           plot: input.plot,
-          rects: plan.rects,
-          perLevel: plan.bayCount,
+          rects: streetRects,
+          perLevel: streetLayoutBays,
           access: plan.access,
           bayLengthM: new Decimal(plan.layout.standard.bayLengthM),
           obstacles: [
@@ -1106,7 +1185,12 @@ export function runPipeline(input: RunInput): RunOutput {
           tracer,
           plot: input.plot,
           groundOutline: envelope.podiumRing,
-          plan,
+          /*
+            Cut from the layout as the street levels hold it: where note *'s short
+            bays are held back from the level the street reaches, a ramp from the
+            street cuts that same held-back layout, so B1 and P1 keep the 10% too.
+          */
+          plan: holdBack ? { ...plan, rects: streetRects, bayCount: streetLayoutBays } : plan,
           storeyHeightM: envelope.floorToFloorM,
           ...(basementsHere > 0 ? { down: { beyond: basementsHere > 1 } } : {}),
           ...(aboveGrade.podium > 0 ? { up: { beyond: aboveGrade.podium > 1 } } : {}),
@@ -1133,8 +1217,8 @@ export function runPipeline(input: RunInput): RunOutput {
           ...(plan.slopedFloor?.landing
             ? { landing: { world: plan.slopedFloor.landing.world, gradientPct: plan.slopedFloor.landing.gradientPct } }
             : {}),
-          rects: plan.grade?.rects ?? street?.rects ?? plan.rects,
-          levelBays: plan.grade?.bayCount ?? street?.bayCount ?? plan.bayCount,
+          rects: plan.grade?.rects ?? street?.rects ?? streetRects,
+          levelBays: plan.grade?.bayCount ?? street?.bayCount ?? streetLayoutBays,
           others: { perLevel: plan.bayCount, levels: parkingLevelsAvailable - 1 },
           bayWidthM: new Decimal(plan.layout.standard.bayWidthM),
           core: parkingObstruction.ring,
@@ -1365,6 +1449,82 @@ export function runPipeline(input: RunInput): RunOutput {
     },
   });
 
+  /*
+    THE RESIDUAL STRIPS, OVER THE BUILDING. Every parking level draws the shared
+    layout but the one the street reaches, which draws its own; counted the same
+    way `building.ts` draws them, so the totals are the drawings'.
+  */
+  let parkingResidual: RunOutput['parkingResidual'];
+  if (levelPlan) {
+    const levels = parking.levelsAvailable.value;
+    const street = levelPlan.accessible?.rects ?? levelPlan.grade?.rects;
+    const shared = countBays(levelPlan.rects);
+    const atStreet = street ? countBays(street) : undefined;
+    // The other level a ramp from the street cuts (P1 where B1 is reached first) draws its own rects too.
+    const firstStreet = levelPlan.accessible ? STREET_LEVEL_ID[levelPlan.accessible.level] : undefined;
+    const otherStreet = (levelPlan.streetRamps?.levels ?? [])
+      .filter((l) => l.levelId !== firstStreet)
+      .map((l) => countBays(l.rects));
+    const sharedLevels = Math.max(0, levels - (atStreet ? 1 : 0) - otherStreet.length);
+    const sum = (k: 'fullSize' | 'reduced' | 'parallel'): number =>
+      shared[k] * sharedLevels + (atStreet ? atStreet[k] : 0) + otherStreet.reduce((n, c) => n + c[k], 0);
+    const per = (k: 'reduced' | 'parallel'): string =>
+      `${shared[k]} per level × ${sharedLevels} level(s)` +
+      (atStreet ? ` + ${atStreet[k]} on the level the street reaches` : '') +
+      otherStreet.map((c) => ` + ${c[k]} on the other level a ramp from the street reaches`).join('');
+    const reducedBays = tracer.computed('parking.reduced_bays_total', sum('reduced'), {
+      formula: per('reduced'),
+      uses: { perLevel: levelPlan.layout.residual.reducedBays, levels: parking.levelsAvailable },
+      unit: 'bays',
+    });
+    const perpendicular = sum('fullSize') + sum('reduced');
+    const share = perpendicular === 0 ? new Decimal(0) : new Decimal(sum('reduced')).div(perpendicular);
+    const reducedShare = tracer.computed('parking.reduced_bay_share', share.toDecimalPlaces(4), {
+      formula: `${sum('reduced')} bay(s) of 5 m ÷ ${perpendicular} perpendicular bays`,
+      uses: { reduced: reducedBays },
+      unit: 'ratio',
+    });
+    /*
+      AN INVARIANT, NOT A CHECK THAT REPORTS. The cap and the street level's
+      holding-back make this impossible; if it ever holds, the engine has laid
+      out more short bays than the code allows and must not emit them.
+    */
+    if (levelPlan.layout.residual.allowance?.mode === ReducedBayMode.TEN_PERCENT && share.gt(REDUCED_BAY_SHARE)) {
+      throw new Error(
+        `${sum('reduced')} bays of 5 m are ${share.times(100).toFixed(1)}% of the building's ${perpendicular} ` +
+          'perpendicular bays, over the 10% Table B.11 note * allows on a plot 30 m or longer.',
+      );
+    }
+    const parallelBays = tracer.computed('parking.parallel_bays_total', sum('parallel'), {
+      formula: per('parallel'),
+      uses: { perLevel: levelPlan.layout.residual.parallelBays, levels: parking.levelsAvailable },
+      unit: 'bays',
+    });
+    parkingResidual = { reducedBays, reducedShare, parallelBays };
+  }
+
+  /*
+    The basements alone, counted off the drawn model, so the other reading of a
+    developer's target (its basement car park only) is a measured figure and not
+    a guess. Below grade is the level's own elevation, never a name.
+  */
+  const belowGrade = building.levels.filter((l) => l.parking && l.elevationMm < 0);
+  const parkingEfficiency = carParkEfficiency(tracer, {
+    footprint: envelope.podiumFootprint,
+    levels: parking.levelsAvailable,
+    providedBays: parking.providedBays,
+    actor: input.actor,
+    ...(input.parkingEfficiencyTarget ? { target: input.parkingEfficiencyTarget } : {}),
+    ...(belowGrade.length > 0
+      ? {
+          basements: {
+            levels: belowGrade.length,
+            bays: belowGrade.reduce((n, l) => n + Number(l.parking!.bayCount.value), 0),
+          },
+        }
+      : {}),
+  });
+
   const isParking = (use: string): boolean =>
     use === 'BASEMENT_PARKING' || use === 'PODIUM_PARKING';
   const gfaStatement = buildGfaStatement({
@@ -1432,6 +1592,8 @@ export function runPipeline(input: RunInput): RunOutput {
     massing,
     building,
     gfaStatement,
+    parkingEfficiency,
+    ...(parkingResidual ? { parkingResidual } : {}),
   };
 }
 
@@ -1453,6 +1615,126 @@ function streetElsewhere(plan: LevelPlan): readonly { readonly levelId: string; 
   return (plan.streetRamps?.levels ?? [])
     .filter((l) => l.levelId !== first)
     .map((l) => ({ levelId: l.levelId, givenUp: l.givenUp }));
+}
+
+/**
+ * The car park's gross area per car — the figure a developer brief sets a
+ * target on ("Car park minimum efficiency should achieve: 37.5 m2 per car").
+ *
+ * GROSS, AND OVER THE WHOLE CAR PARK. Every parking level stands on the podium
+ * footprint, so the car park is that footprint once per parking level — bays,
+ * aisles, ramps, cores, plant and the reserved strip all inside it — over the
+ * bays the building provides. The one-level `parking.area_per_bay_m2` divides
+ * the packed region of a single level and is not this figure.
+ *
+ * A target is compared only where the run attached one; otherwise the figure
+ * stands alone and says so. The brief names the basement car park, and whether
+ * its figure is basements only, and whether ramps and cores are inside it, is
+ * the client's to say — this measures every parking level and says that too.
+ */
+export function carParkEfficiency(
+  tracer: Tracer,
+  input: {
+    readonly footprint: TracedDecimal;
+    readonly levels: Traced<number>;
+    readonly providedBays: Traced<number>;
+    readonly actor: Actor;
+    readonly target?: NonNullable<RunInput['parkingEfficiencyTarget']>;
+    /** The parking levels below grade and the bays drawn on them, where there are any — the target's other reading. */
+    readonly basements?: { readonly levels: number; readonly bays: number };
+  },
+): ParkingEfficiency {
+  const qArea = (d: Decimal): Decimal => d.toDecimalPlaces(2);
+  const notes: string[] = [];
+  const grossValue = input.footprint.value.times(input.levels.value);
+  const grossAreaM2 = tracer.computed('parking.gross_area_m2', qArea(grossValue), {
+    formula: `${qArea(input.footprint.value).toString()} m² footprint × ${input.levels.value} parking level(s)`,
+    uses: { footprint: input.footprint, levels: input.levels },
+    unit: 'm²',
+    detail: {
+      note:
+        'Every parking level whole — bays, aisles, ramps, cores, plant and the reserved strip — ' +
+        'since each stands on the podium footprint.',
+    },
+  });
+  const bays = input.providedBays.value;
+  const grossAreaPerBayM2 =
+    bays > 0
+      ? tracer.computed('parking.gross_area_per_bay_m2', qArea(grossValue.div(bays)), {
+          formula: `${qArea(grossValue).toString()} m² of car park ÷ ${bays} bays provided`,
+          uses: { gross: grossAreaM2, bays: input.providedBays },
+          unit: 'm²/bay',
+        })
+      : undefined;
+  notes.push(
+    `Car park: ${qArea(grossValue).toString()} m² over ${input.levels.value} parking level(s), ramps, cores and ` +
+      'plant included' +
+      (grossAreaPerBayM2 ? `, ${grossAreaPerBayM2.value.toString()} m² per bay provided.` : ', and no bay is provided.'),
+  );
+  let target: ParkingEfficiency['target'];
+  if (input.target && grossAreaPerBayM2) {
+    const m2PerBay = tracer.userSet('parking.target_area_per_bay_m2', input.target.m2PerBay, {
+      actor: input.actor,
+      label: 'car park efficiency target of the attached developer standard',
+      unit: 'm²/bay',
+    });
+    /*
+      WHAT THE TARGET IS MEASURED OVER IS A READING, AND IT IS AMBER. The
+      standard gives a figure per car and does not say which levels it covers or
+      whether ramps and cores are inside it; the brief for one plot names its
+      basement car park. Comparing the whole car park with it, unflagged, would
+      answer the client's question for him in a figure that renders as computed.
+      So the reading is an assumption with a basis, the gap carries its class,
+      and the basements-only figure is measured beside it where the building
+      has basement parking.
+    */
+    const basementPerBay =
+      input.basements && input.basements.bays > 0
+        ? qArea(input.footprint.value.times(input.basements.levels).div(input.basements.bays))
+        : undefined;
+    const reading = tracer.assumed('parking.target_reading', 'every parking level, ramps, cores and plant included', {
+      basis:
+        "The developer standard's car park target does not say which parking levels it covers, or whether " +
+        'ramps, cores and plant are inside the area. It is compared here with every parking level whole, over ' +
+        'every bay provided. ' +
+        (basementPerBay && input.basements
+          ? `Over the ${input.basements.levels} basement level(s) alone it would be ${basementPerBay.toFixed(2)} m² ` +
+            `per bay (${input.basements.bays} bays). `
+          : 'This run has no basement parking to measure it over instead. ') +
+        'Which one the developer means is a question for the client.',
+      label: 'what the car park efficiency target is compared over',
+    });
+    const gap = grossAreaPerBayM2.value.minus(m2PerBay.value);
+    const gapM2 = tracer.computed('parking.gross_area_per_bay_gap_m2', qArea(gap), {
+      formula:
+        `${grossAreaPerBayM2.value.toString()} m² per bay achieved − ${m2PerBay.value.toString()} m² per bay ` +
+        'targeted',
+      uses: { achieved: grossAreaPerBayM2, target: m2PerBay, reading },
+      unit: 'm²/bay',
+      detail: { clauseReference: input.target.clauseReference, verbatim: input.target.verbatim },
+    });
+    if (basementPerBay) {
+      tracer.sensitiveTo(gapM2, reading, {
+        relativeEffect: basementPerBay.minus(grossAreaPerBayM2.value).abs().div(grossAreaPerBayM2.value).toDecimalPlaces(4).toString(),
+        perturbation:
+          `the target read as the basements only: ${basementPerBay.toFixed(2)} m² per bay achieved there, against ` +
+          `${grossAreaPerBayM2.value.toFixed(2)} over every parking level. Whether ramps and cores are inside it is not measured.`,
+      });
+    }
+    target = { m2PerBay, gapM2 };
+    notes.push(
+      gap.gt(0)
+        ? `Against the attached standard's target of ${m2PerBay.value.toString()} m² per bay, the car park uses ` +
+            `${gap.abs().toFixed(2)} m² more per bay. A developer's target, not a regulation.`
+        : `Against the attached standard's target of ${m2PerBay.value.toString()} m² per bay, the car park uses ` +
+            `${gap.abs().toFixed(2)} m² less per bay. A developer's target, not a regulation.`,
+      'The target is compared over every parking level, ramps and cores included. That is assumed: the ' +
+        'standard does not say which levels its figure covers.',
+    );
+  } else {
+    notes.push('No car park efficiency target is stated for this run, and none is assumed.');
+  }
+  return { grossAreaM2, grossAreaPerBayM2, target, notes };
 }
 
 function plotAreaOf(plot: Plot): Decimal {

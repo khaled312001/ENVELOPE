@@ -125,12 +125,18 @@ function components(nodes: readonly (readonly XY[])[], minOpeningMm: number): nu
   return found;
 }
 
-/** A bay is served when one of its short ends lies wholly on a drivable outline. */
+/**
+ * A bay is served when one of its short ends lies wholly on a drivable outline —
+ * or, for a parallel bay, one of its long sides. Read off the drawing, not the
+ * engine: a bay 6 m long is Table B.11's parallel bay, entered from the side,
+ * and no perpendicular bay is that long (5.5 m, or 5.0 m under its note *).
+ */
+const PARALLEL_BAY_MM = 6000 - 2;
 function served(bay: readonly XY[], nodes: readonly (readonly XY[])[]): boolean {
-  const ends = segments(bay)
+  const sides = segments(bay)
     .map((s) => ({ s, length: Math.hypot(s[1].x - s[0].x, s[1].y - s[0].y) }))
-    .sort((a, b) => a.length - b.length)
-    .slice(0, 2);
+    .sort((a, b) => a.length - b.length);
+  const ends = sides[sides.length - 1]!.length >= PARALLEL_BAY_MM ? sides.slice(2) : sides.slice(0, 2);
   return ends.some(({ s, length }) =>
     nodes.some((n) => segments(n).some((f) => sharedRun(s, f) >= length - 2)),
   );

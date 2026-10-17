@@ -220,6 +220,25 @@ export function presentRun(
           // The one laid out when nobody picks, ranked by the dead-end clause first.
           defaultArrangement: levelPlan.layout.defaultArrangement,
           /*
+            The bays placed in the strips no module reached, on one level: 5.5 m
+            bays, 5 × 2.5 m bays under Table B.11 note * and its cap, and 6 × 2.5 m
+            parallel bays; with the plot length note * was read against (ASSUMED).
+            The building's totals are under `parkingResidual`.
+          */
+          residual: {
+            standardBays: levelPlan.layout.residual.standardBays,
+            reducedBays: toWire(levelPlan.layout.residual.reducedBays),
+            parallelBays: toWire(levelPlan.layout.residual.parallelBays),
+            reducedCap: levelPlan.layout.residual.reducedCap,
+            allowance: levelPlan.layout.residual.allowance
+              ? {
+                  mode: levelPlan.layout.residual.allowance.mode,
+                  plotLengthM: toWire(levelPlan.layout.residual.allowance.plotLengthM),
+                  allowance: toWire(levelPlan.layout.residual.allowance.allowance),
+                }
+              : null,
+          },
+          /*
             The bays set aside on the level the street reaches (DBC C.6.4, B.7.2.6.2),
             what the access aisles cost, and every dead-end driveway's bays
             (B.7.2.3.3 ¶8). Absent on runs stored before 16 Oct 2026.
@@ -347,6 +366,40 @@ export function presentRun(
         }
       : null,
     levelPlanRefusal: output.levelPlanRefusal ?? null,
+
+    /*
+      The building's residual-strip bays, counted as the drawings draw them, and
+      the 5 m bays' share of its perpendicular bays — at most note *'s 10% on a
+      plot 30 m or longer, which the engine refuses to exceed.
+    */
+    parkingResidual: output.parkingResidual
+      ? {
+          reducedBays: toWire(output.parkingResidual.reducedBays),
+          reducedShare: toWire(output.parkingResidual.reducedShare),
+          parallelBays: toWire(output.parkingResidual.parallelBays),
+        }
+      : null,
+
+    /*
+      The car park's gross area per bay: every parking level whole, ramps and
+      cores inside it, over the bays provided. A target beside it only when the
+      run attached a developer standard that states one — never a default.
+    */
+    parkingEfficiency: output.parkingEfficiency
+      ? {
+          grossAreaM2: toWire(output.parkingEfficiency.grossAreaM2),
+          grossAreaPerBayM2: output.parkingEfficiency.grossAreaPerBayM2
+            ? toWire(output.parkingEfficiency.grossAreaPerBayM2)
+            : null,
+          target: output.parkingEfficiency.target
+            ? {
+                m2PerBay: toWire(output.parkingEfficiency.target.m2PerBay),
+                gapM2: toWire(output.parkingEfficiency.target.gapM2),
+              }
+            : null,
+          notes: output.parkingEfficiency.notes,
+        }
+      : null,
 
     /**
      * The envelope as volumes.

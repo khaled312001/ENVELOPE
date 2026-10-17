@@ -78,6 +78,13 @@ export interface ModelBay {
    * 16 Oct 2026.
    */
   readonly use?: 'VAN' | 'PREFERRED';
+  /**
+   * A parallel bay of Table B.11 (6.0 × 2.5 m), entered from the side: its long
+   * side lies on the aisle. Said here rather than read off the outline's length,
+   * for the reason `ModelAisle.crossing` is. Absent on every perpendicular bay
+   * and on runs stored before 17 Oct 2026, which have none.
+   */
+  readonly parallel?: true;
 }
 
 export interface ModelAisle {

@@ -43,7 +43,7 @@ export const DIM = {
   overMm: 1.5,
   /** Half the length of the terminator slash. */
   tickMm: 1.2,
-  /** Text height. */
+  /** Text height: `LETTERING.dimensionMm`, above ISO 3098's 1.8 mm floor. */
   textMm: 2,
   /** Clear of the dimension line, on the same side as the chain. */
   liftMm: 1.1,
@@ -58,6 +58,14 @@ export interface ChainStyle {
   readonly offsetMm: number;
   readonly textMm?: number;
 }
+
+/**
+ * The witness lines a chain drew, by identity — so a later pass can break one
+ * where it runs under a label, as a draughtsman breaks an extension line to
+ * clear text. Only witness lines: a dimension LINE under a label is a collision
+ * to be fixed by moving the label, and `textCollisions` still reports it.
+ */
+export const WITNESS_LINES: WeakSet<ModelItem> = new WeakSet<ModelItem>();
 
 /** Metres to two decimals, the way a drawing writes a length. */
 export const metres = (lengthMm: number): string => `${(lengthMm / 1000).toFixed(2)} M`;
@@ -92,6 +100,7 @@ export function dimensionChain(
   // Witness lines: clear of the feature, past the dimension line.
   for (const p of stops) {
     line(offsetPoint(p, out, DIM.gapMm * s), offsetPoint(p, out, off + DIM.overMm * s));
+    WITNESS_LINES.add(items[items.length - 1]!);
   }
 
   const first = offsetPoint(stops[0]!, out, off);

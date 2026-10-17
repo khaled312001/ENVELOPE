@@ -21,7 +21,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { META, RECT_120x80, RECT_80x40, runInput } from '../../../test-support/pipeline.js';
 import { composeSheets } from '../src/compose.js';
-import { issueDate, NOT_CHECKED, paperFurniture, REVISION_NOTE, UNFILLED } from '../src/strip.js';
+import { issueDate, NOT_CHECKED, NOT_STATED, paperFurniture, REVISION_NOTE, UNFILLED } from '../src/strip.js';
 import { sheetSvg } from '../src/svg.js';
 import { type PaperText, type SheetMeta, TitleField } from '../src/types.js';
 
@@ -142,6 +142,58 @@ describe('the revision table', () => {
       .map((t) => t.value)
       .join(' ');
     for (const word of REVISION_NOTE.split(/\s+/).slice(0, 6)) expect(printed).toContain(word);
+  });
+});
+
+describe('who the drawing is for, and what it is', () => {
+  /*
+    PROJECT used to print the product's name, so every sheet anyone filed was
+    titled after the tool that drew it. The run has no project, client,
+    consultant, description or status today, and none may be made up: a filled
+    box is a value somebody is taken to have given. So each prints NOT STATED in
+    words until it is stated, and the value once it is.
+  */
+  const STATED_FIELDS = [
+    TitleField.PROJECT,
+    TitleField.DESCRIPTION,
+    TitleField.CLIENT,
+    TitleField.CONSULTANT,
+    TitleField.STATUS,
+  ] as const;
+
+  it('prints NOT STATED in every field the run does not state, on every sheet', () => {
+    for (const sheet of set()) {
+      for (const field of STATED_FIELDS) expect(valueOf(sheet.paperItems, field), `${sheet.number} ${field}`).toBe(NOT_STATED);
+    }
+  });
+
+  it('never titles the project after the product', () => {
+    for (const sheet of set()) {
+      const project = valueOf(sheet.paperItems, TitleField.PROJECT);
+      expect(project).not.toMatch(/plotlogic|envelope/i);
+    }
+  });
+
+  it('prints each field as stated, keyed by name', () => {
+    const sheets = set({
+      ...META,
+      projectName: 'MARINA RESIDENCES',
+      description: 'CAPACITY STUDY FOR FEASIBILITY',
+      client: 'A CLIENT',
+      consultant: 'A CONSULTANT',
+      status: 'FOR INFORMATION',
+    });
+    for (const sheet of sheets) {
+      expect(valueOf(sheet.paperItems, TitleField.PROJECT)).toBe('MARINA RESIDENCES');
+      expect(valueOf(sheet.paperItems, TitleField.DESCRIPTION)).toBe('CAPACITY STUDY FOR FEASIBILITY');
+      expect(valueOf(sheet.paperItems, TitleField.CLIENT)).toBe('A CLIENT');
+      expect(valueOf(sheet.paperItems, TitleField.CONSULTANT)).toBe('A CONSULTANT');
+      expect(valueOf(sheet.paperItems, TitleField.STATUS)).toBe('FOR INFORMATION');
+    }
+  });
+
+  it('treats a blank answer as no answer', () => {
+    expect(valueOf(set({ ...META, client: '   ' })[0]!.paperItems, TitleField.CLIENT)).toBe(NOT_STATED);
   });
 });
 

@@ -206,6 +206,7 @@ export type PaperRole =
  * the word "SHEET" also finds the title of every parking sheet.
  */
 export const TitleField = {
+  /** The reader's project — never the product's name, which it printed until 17 Oct 2026. */
   PROJECT: 'project',
   PLOT: 'plot',
   COMMUNITY: 'community',
@@ -218,6 +219,16 @@ export const TitleField = {
   REVISION: 'revision',
   DRAWN: 'drawn',
   CHECKED: 'checked',
+  /*
+    The four fields an architect's own title block carries and this one did not
+    (the audit's reading of the client's reference sheets). Each is the reader's
+    to state; absent, each prints NOT STATED in words, because a blank box reads
+    as an oversight and a filled one would be a value nobody gave.
+  */
+  DESCRIPTION: 'description',
+  CLIENT: 'client',
+  CONSULTANT: 'consultant',
+  STATUS: 'status',
 } as const;
 export type TitleField = (typeof TitleField)[keyof typeof TitleField];
 
@@ -364,4 +375,19 @@ export interface SheetMeta {
    * check, and REGULATORY VALIDITY: NOT ASSESSED is on the same strip.
    */
   readonly checkedBy?: string;
+  /*
+    WHAT THE READER CALLS THE JOB. All optional and none defaulted: a run holds
+    no project name, client or consultant today, so every one prints NOT STATED
+    until a person states it. Inventing "Residential tower" from the height code,
+    or the developer's name from the brief on file, would be a title block
+    asserting what nobody told it.
+  */
+  /** The project's name, printed where the product's name used to be. */
+  readonly projectName?: string;
+  /** What is being studied, in the reader's words: "3B+G+5P+38 residential building". */
+  readonly description?: string;
+  readonly client?: string;
+  readonly consultant?: string;
+  /** The issue's status in the reader's words, e.g. "Feasibility". */
+  readonly status?: string;
 }

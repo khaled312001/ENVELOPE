@@ -17,6 +17,7 @@ import { CLAUSE_B_7_2_1, TABLE_B11_DRIVEWAY } from '../src/access.js';
 import { CLAUSE_B_7_2_6_2, CLAUSE_C_6_4_1_4, TABLE_C17 } from '../src/accessible.js';
 import { TABLE_B11 } from '../src/layout.js';
 import { PARKED_SLOPE_B7231, STRAIGHT_RAMP, TABLE_B10, TABLE_B9 } from '../src/ramp-rules.js';
+import { TABLE_B11_PARALLEL, TABLE_B11_REDUCED } from '../src/residual.js';
 
 /*
   EVERY citation constant in `packages/capacity/src` that names the code, not
@@ -34,6 +35,8 @@ const CITATIONS: Readonly<Record<string, Citation>> = {
   TABLE_C17,
   CLAUSE_C_6_4_1_4,
   CLAUSE_B_7_2_6_2,
+  TABLE_B11_REDUCED,
+  TABLE_B11_PARALLEL,
 };
 
 describe('DBC citations in the engine', () => {

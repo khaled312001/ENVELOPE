@@ -82,6 +82,17 @@ import {
   type Interval,
   type XY,
 } from './scanline.js';
+import {
+  fillResiduals,
+  PARALLEL_BAY_DEPTH_M,
+  PARALLEL_BAY_LENGTH_M,
+  RESIDUAL_AISLE_ROW,
+  ReducedBayMode,
+  TABLE_B11_PARALLEL,
+  TABLE_B11_REDUCED,
+  type ReducedBayAllowance,
+  type ResidualFill,
+} from './residual.js';
 
 // ---------------------------------------------------------------------------
 // Rule data — Dubai Building Code Table B.11
@@ -362,12 +373,41 @@ export interface ParkingLayoutInput {
     readonly grossAreaM2: Decimal;
     readonly deductionsTraced: TracedDecimal;
   };
+  /**
+   * Table B.11 note \*, for the plot this level stands on: whether a 5.0 m
+   * perpendicular bay may stand where a 5.5 m one does not fit, and how many.
+   * Absent, no short bay is laid — a direct caller that has no plot has no
+   * plot length to read the note by. See `residual.ts`.
+   */
+  readonly reducedBays?: ReducedBayAllowance;
+}
+
+/**
+ * What the residual fill added to the winning arrangement — the bays against
+ * the aisles' sides where no module reached. See `residual.ts`.
+ */
+export interface ParkingResidual {
+  /** 5.5 m bays added. Counted in the level's bays like any other. */
+  readonly standardBays: number;
+  /** 5.0 × 2.5 m bays under Table B.11 note \*. DERIVED from the note, through the plot-length reading. */
+  readonly reducedBays: Traced<number>;
+  /** Parallel bays, 6.0 × 2.5 m, Table B.11's parallel row. */
+  readonly parallelBays: Traced<number>;
+  /** The most 5.0 m bays the level may hold: 10% of its perpendicular bays. Null where none is capped or none allowed. */
+  readonly reducedCap: number | null;
+  /** The allowance the level was filled under, where the run supplied one. */
+  readonly allowance?: ReducedBayAllowance;
 }
 
 export interface ParkingLayoutResult {
   readonly rects: readonly PlacedRect[];
   readonly bayCount: Traced<number>;
-  /** Gross level area consumed per bay — the number Annexure A targets at 37.5. */
+  /**
+   * The packed region's area per bay on this one level: the whole level on a
+   * rectangular footprint, the inscribed rectangle otherwise (unless the rows
+   * covered the whole footprint). Not the car park's efficiency — that is
+   * `parking.gross_area_per_bay_m2`, which the pipeline publishes.
+   */
   readonly areaPerBayM2: TracedDecimal;
   readonly moduleDepthM: TracedDecimal;
   readonly usableAreaM2: TracedDecimal;
@@ -462,6 +502,8 @@ export interface ParkingLayoutResult {
   readonly baysUnderCore: number;
   /** Rows that came out partial, and why. Reported, not hidden. */
   readonly notes: readonly string[];
+  /** The bays the residual strips took, on the winning arrangement. See `residual.ts`. */
+  readonly residual: ParkingResidual;
 }
 
 /**
@@ -1023,6 +1065,13 @@ interface Packing {
   /** Why nothing could be packed this way round. Returned, not thrown: the other
    *  orientation may still work, and a throw would hide that. */
   readonly refusal: string | undefined;
+  /**
+   * The strip past the last bay row that a residual aisle was laid to reach,
+   * metres. `packLevel` only; the fill decides whether the aisle stays.
+   */
+  readonly residualStripM?: Decimal;
+  /** What the residual fill added. Set once, by `layoutParkingLevel`. */
+  readonly residual?: ResidualFill;
 }
 
 const ZERO = new Decimal(0);
@@ -1238,6 +1287,7 @@ function packLevel(o: PackOptions): Packing {
 
   // --- the leftover strip -------------------------------------------------
   let runCount = moduleCount * 2;
+  let residualStripM: Decimal | undefined;
   if (availableDepth.gte(singleLoadedDepth)) {
     bayRun(cursorY, row);
     rects.push({
@@ -1256,6 +1306,25 @@ function packLevel(o: PackOptions): Packing {
     );
     cursorY = cursorY.plus(singleLoadedDepth);
     availableDepth = availableDepth.minus(singleLoadedDepth);
+  } else if (aisleCount >= 2 && crossAisleWidth.gt(0) && availableDepth.gte(o.aisleWidth.plus(PARALLEL_BAY_DEPTH_M))) {
+    /*
+      A STRIP TOO SHALLOW FOR A SINGLE-LOADED ROW IS NOT YET WASTE. An aisle
+      along the back of the last bay row reaches it, and what fits beyond that
+      aisle — a row of 5.0 m bays under Table B.11 note *, or a row of parallel
+      bays — is laid by the residual fill (`residual.ts`), which drops this
+      aisle again if nothing stands against it. It spans the cross aisle's
+      column so the two meet across the cross aisle's full width; laid only
+      where a cross aisle exists, because nothing else would join it.
+    */
+    rects.push({
+      kind: RectKind.AISLE,
+      row: RESIDUAL_AISLE_ROW,
+      x: rampX,
+      y: cursorY,
+      width: o.widthM.minus(rampX),
+      height: o.aisleWidth,
+    });
+    residualStripM = availableDepth;
   } else if (availableDepth.gt(0)) {
     notes.push(
       `${availableDepth.toFixed(2)} m of depth is left unused — too shallow for a ` +
@@ -1405,6 +1474,7 @@ function packLevel(o: PackOptions): Packing {
     baysUnderCore,
     notes,
     refusal: undefined,
+    ...(residualStripM ? { residualStripM } : {}),
   };
 }
 
@@ -2606,7 +2676,71 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     FIELD_WIDTH: 'rows across the whole footprint, along the width',
     FIELD_DEPTH: 'rows across the whole footprint, along the depth',
   } as const;
-  const candidates = [
+  /*
+    THE RESIDUAL STRIPS, FILLED ON EVERY ARRANGEMENT BEFORE ANY IS CHOSEN. The
+    same fixed rule on each — 5.5 m bays, then 5.0 m under note *, then parallel,
+    against the sides of the aisles the arrangement drew — so the counts in the
+    list are what each arrangement places, and the comparison stays a choice
+    among fixed candidates. See `residual.ts`.
+  */
+  const perpendicularPitch: Pitch = { effectiveBayWidth, columnEvery, columnGapM };
+  const parallelPitch: Pitch = {
+    effectiveBayWidth: new Decimal(PARALLEL_BAY_LENGTH_M).plus(gridColumnPenalty),
+    columnEvery,
+    columnGapM,
+  };
+  const withResiduals = (p: Packing, reduced: ReducedBayMode | undefined): Packing => {
+    if (p.refusal !== undefined || p.bayCount === 0) return p;
+    const filled = fillResiduals({
+      rects: p.rects,
+      widthM: footprint.widthM,
+      depthM: footprint.depthM,
+      ...(p.wholeFootprint && field ? { polygonMm: field.polygonMm } : {}),
+      blocks: [...(p.reservedPieces ?? (p.reserved ? [p.reserved] : [])), ...(input.core ? [input.core.rect] : [])],
+      bayWidthM: bayWidth,
+      bayLengthM: bayLength,
+      aisleWidthM: aisleWidth,
+      perpendicular: { along: (k) => bayAlong(perpendicularPitch, k), fits: (l) => baysAlong(perpendicularPitch, l) },
+      parallel: { along: (k) => bayAlong(parallelPitch, k), fits: (l) => baysAlong(parallelPitch, l) },
+      ...(reduced ? { reduced } : {}),
+    });
+    const added = filled.standard + filled.reduced + filled.parallel;
+    const residualNotes: string[] = [];
+    if (p.residualStripM) {
+      residualNotes.push(
+        filled.residualAisles.kept > 0
+          ? `The ${p.residualStripM.toFixed(2)} m strip past the last bay row is too shallow for a single-loaded ` +
+              `row, so a ${aisleWidth.toString()} m aisle runs along that row to reach it.`
+          : `${p.residualStripM.toFixed(2)} m of depth is left unused — too shallow for a ` +
+              `bay (${bayLength.toString()} m) plus its aisle (${aisleWidth.toString()} m). ` +
+              'It is reported rather than quietly filled.',
+      );
+    }
+    if (filled.standard + filled.parallel > 0) {
+      residualNotes.push(
+        `Residual strips: ${filled.standard} more ${bayLength.toString()} m bay(s) and ${filled.parallel} parallel ` +
+          'bay(s) of 6 × 2.5 m (Table B.11) stand where no module reached, each with its open side on an aisle a car reaches.',
+      );
+    }
+    if (filled.reduced > 0) {
+      residualNotes.push(
+        `${filled.reduced} bay(s) are 5 × 2.5 m under Table B.11 note *, where a ${bayLength.toString()} m bay does not fit: ` +
+          (filled.reducedCap === null
+            ? 'the plot is under 30 m long, so every perpendicular bay may be.'
+            : `at most ${filled.reducedCap} on this level, 10% of its perpendicular bays.`),
+      );
+    }
+    return {
+      ...p,
+      rects: filled.rects,
+      bayCount: p.bayCount + added,
+      crossAisleAreaM2: p.crossAisleAreaM2.plus(filled.residualAisleAreaM2),
+      notes: [...p.notes, ...residualNotes],
+      residual: filled,
+    };
+  };
+  const allowedShort = input.reducedBays?.mode;
+  const packed = [
     { packing: alongWidth, name: ORIENTATION.WIDTH, id: ParkingArrangement.WIDTH },
     { packing: alongDepth, name: ORIENTATION.DEPTH, id: ParkingArrangement.DEPTH },
     { packing: perimeter, name: ORIENTATION.PERIMETER, id: ParkingArrangement.PERIMETER },
@@ -2614,6 +2748,7 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     ...(fieldWidth ? [{ packing: fieldWidth, name: ORIENTATION.FIELD_WIDTH, id: ParkingArrangement.FIELD_WIDTH }] : []),
     ...(fieldDepth ? [{ packing: fieldDepth, name: ORIENTATION.FIELD_DEPTH, id: ParkingArrangement.FIELD_DEPTH }] : []),
   ] as const;
+  const candidates = packed.map((c) => ({ ...c, unfilled: c.packing, packing: withResiduals(c.packing, allowedShort) }));
   const arrangements: readonly ArrangementCandidate[] = candidates.map((c) => ({
     id: c.id,
     name: c.name,
@@ -2781,13 +2916,69 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     );
   }
 
+  // --- the residual strips, on the winner -----------------------------------
+  const fill = packing.residual;
+  const reducedCount = fill?.reduced ?? 0;
+  const parallelCount = fill?.parallel ?? 0;
+  const allowance = input.reducedBays;
+  const reducedBays = allowance
+    ? tracer.computed('parking.reduced_bays', reducedCount, {
+        formula:
+          `${reducedCount} bay(s) of 5 m × 2.5 m where a ${bayLength.toString()} m bay does not fit` +
+          (fill?.reducedCap === null || fill?.reducedCap === undefined
+            ? ''
+            : `, at most ${fill.reducedCap} = floor(${fill.fullSizePerpendicular} full-size perpendicular bays ÷ 9) on this level`),
+        uses: { allowance: allowance.allowance },
+        unit: 'bays',
+        detail: {
+          note:
+            'Table B.11 note *: 10% of the perpendicular bays, short ones included, is at most ' +
+            'one short bay for every nine full-size ones. Used only where a full-size bay does not fit.',
+        },
+      })
+    : tracer.derived('parking.reduced_bays', 0, {
+        rule: { ruleId: 'DBC.B.7.2.4.TABLE_B11.NOTE', citation: TABLE_B11_REDUCED },
+        formula: 'no plot reached the layout, so Table B.11 note * was not applied',
+        unit: 'bays',
+      });
+  const parallelBays = tracer.derived('parking.parallel_bays', parallelCount, {
+    rule: { ruleId: 'DBC.B.7.2.4.TABLE_B11.PARALLEL', citation: TABLE_B11_PARALLEL },
+    formula: `${parallelCount} parallel bay(s) of ${PARALLEL_BAY_LENGTH_M} m × ${bayWidth.toString()} m, each with its long side on a drive aisle`,
+    unit: 'bays',
+  });
+  if (allowance?.mode === ReducedBayMode.ALL) {
+    notes.push(
+      'Under Table B.11 note * a) every perpendicular bay on this plot may be 5 × 2.5 m. The modules are ' +
+        `still laid with ${bayLength.toString()} m bays and the short bay is used only where that one does not ` +
+        'fit; an arrangement of 16 m modules is not packed. NOT ASSESSED.',
+    );
+  }
+  if (field) {
+    notes.push(
+      'Angled bays (Table B.11: 45°, 60° and 75°, each on a one-way driveway) are not placed: the level is laid ' +
+        'out in rectangles square to its rows, so a corner the rows do not meet square keeps only the bays that ' +
+        'fit square to it. NOT ASSESSED.',
+    );
+  }
+  const residualTotal = (fill?.standard ?? 0) + reducedCount + parallelCount;
+
   const bayCountTraced = tracer.derived('parking.laid_out_bays', packing.bayCount, {
     rule: { ruleId: 'DBC.B.7.2.4.TABLE_B11', citation: TABLE_B11 },
     formula:
       `${packing.rects.filter((r) => r.kind === RectKind.BAY).length} bays placed ` +
       `with the runs ${chosen}, each served by an aisle that reaches the way in` +
-      (columnGap ? `, ${columnGapM.toFixed(2)} m left after every ${columnEvery} bays for the columns` : ''),
-    uses: { moduleDepth, usableArea: chargedUsable, orientation, ...(columnGap ? { columnGap: columnGap.gapM } : {}) },
+      (columnGap ? `, ${columnGapM.toFixed(2)} m left after every ${columnEvery} bays for the columns` : '') +
+      (residualTotal > 0
+        ? `; ${residualTotal} of them in residual strips — ${reducedCount} at 5 m under note * and ${parallelCount} parallel`
+        : ''),
+    uses: {
+      moduleDepth,
+      usableArea: chargedUsable,
+      orientation,
+      ...(columnGap ? { columnGap: columnGap.gapM } : {}),
+      reducedBays,
+      parallelBays,
+    },
     unit: 'bays',
     detail: {
       note:
@@ -2796,6 +2987,34 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
         'fit — nor that the car cannot get to it.',
     },
   });
+
+  /*
+    THE PLOT-LENGTH READING, MEASURED. The other reading — the depth of the
+    plot's bounding rectangle — is filled on the same arrangement and the count
+    compared, so the register carries a measured effect rather than a null. It
+    is the arrangement laid out that is refilled; whether the other reading
+    would make another arrangement win is not measured, and the sentence says so.
+  */
+  if (allowance) {
+    const alt = allowance.alternative;
+    const altCount =
+      alt.mode === allowance.mode ? packing.bayCount : withResiduals(winner.unfilled, alt.mode).bayCount;
+    tracer.sensitiveTo(bayCountTraced, allowance.plotLengthM, {
+      relativeEffect: new Decimal(Math.abs(altCount - packing.bayCount)).div(packing.bayCount).toDecimalPlaces(4).toString(),
+      perturbation:
+        `the plot length read as the depth of its bounding rectangle, ${alt.lengthM.toFixed(2)} m, instead of its ` +
+        `longest side: ${altCount} bays on this arrangement against ${packing.bayCount}` +
+        (alt.mode === allowance.mode ? ' — note * applies the same way under both readings' : '') +
+        '. Whether another arrangement would then win is not measured.',
+    });
+  }
+  const residual: ParkingResidual = {
+    standardBays: fill?.standard ?? 0,
+    reducedBays,
+    parallelBays,
+    reducedCap: fill?.reducedCap ?? null,
+    ...(allowance ? { allowance } : {}),
+  };
 
   const areaPerBayValue = chargedGross.div(packing.bayCount);
   const areaPerBay = tracer.computed('parking.area_per_bay_m2', qArea(areaPerBayValue), {
@@ -2808,11 +3027,21 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
         run's provenance graph and read by whoever opens the derivation, and a
         developer's brief is that developer's confidential commercial expectation —
         the same reason `saleable_efficiency` basis strings name no brief. The
-        comparison, where a brief applies, is made on the standards screen.
+        comparison, where a run attaches a brief's target, is the pipeline's
+        `parking.gross_area_per_bay_gap_m2`, made on the car park's figure.
+
+        IT USED TO SAY "COMPARABLE TO A PARKING-EFFICIENCY TARGET", and it is not
+        quite. On a footprint that is not a rectangle it divides the rectangle
+        the level was packed in, not the level, so it flatters; and it is one
+        level, not the car park. The brief's figure is the car park's gross area
+        over its cars — `parking.gross_area_per_bay_m2`, from the pipeline.
       */
       note:
-        'Comparable to a parking-efficiency target in a developer brief, where one ' +
-        'applies: the gross level area each placed bay costs, in the same unit.',
+        'The area of the region this level was packed in — the whole level on a rectangular ' +
+        'footprint; otherwise the largest rectangle inside it, unless the rows were laid across ' +
+        'the whole footprint — divided by the bays laid on it. One level, not the car park: the ' +
+        "car park's gross area per bay, every parking level's whole footprint with its ramps and " +
+        'cores, is parking.gross_area_per_bay_m2.',
     },
   });
 
@@ -2985,5 +3214,6 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     arrangements,
     losses,
     notes,
+    residual,
   };
 }

@@ -196,6 +196,14 @@ const LABEL: Readonly<Record<string, Said>> = {
     en: 'Podium parking in the plan’s level count',
     ar: 'مواقف البوديوم ضمن عدد الأدوار في مخطط الأرض',
   },
+  'plot length, as Table B.11 note * is read': {
+    en: 'Plot length, as Table B.11 note * is read',
+    ar: 'طول القطعة كما تقرأ الحاشية * للجدول B.11',
+  },
+  'car park efficiency target of the attached developer standard': {
+    en: 'Car park efficiency target of the attached developer standard',
+    ar: 'هدف كفاءة المواقف في معيار المطور المرفق',
+  },
 };
 
 /* The register heads a value with its parameter id where the engine gave it no label. */
@@ -231,6 +239,19 @@ const PARAMETER: Readonly<Record<string, Said>> = {
   'parking.preferred_reading': { en: 'How the preferred-parking share is rounded', ar: 'تقريب نسبة المواقف المفضلة' },
   'parking.preferred_ratio': { en: 'Preferred parking share', ar: 'نسبة المواقف المفضلة' },
   'parking.preferred_required': { en: 'Preferred bays required', ar: 'المواقف المفضلة المطلوبة' },
+  'parking.reduced_bay_plot_length_m': { en: 'Plot length, as Table B.11 note * is read', ar: 'طول القطعة كما تقرأ الحاشية * للجدول B.11' },
+  'parking.reduced_bay_rule': { en: 'Table B.11 note *: 5 × 2.5 m bays', ar: 'الحاشية * للجدول B.11: مواقف 5 × 2.5 م' },
+  'parking.reduced_bay_allowance': { en: 'Short bays this plot may have', ar: 'المواقف القصيرة المسموحة لهذه القطعة' },
+  'parking.reduced_bays': { en: 'Bays of 5 × 2.5 m on a level', ar: 'مواقف 5 × 2.5 م في الدور' },
+  'parking.parallel_bays': { en: 'Parallel bays on a level', ar: 'المواقف الموازية في الدور' },
+  'parking.street_level_layout_bays': { en: 'Bays laid out on the level the street reaches', ar: 'المواقف الموزعة في الدور الذي يصله الشارع' },
+  'parking.reduced_bays_total': { en: 'Bays of 5 × 2.5 m in the building', ar: 'مواقف 5 × 2.5 م في المبنى' },
+  'parking.reduced_bay_share': { en: 'Share of perpendicular bays that are 5 m', ar: 'نسبة المواقف العمودية بطول 5 م' },
+  'parking.parallel_bays_total': { en: 'Parallel bays in the building', ar: 'المواقف الموازية في المبنى' },
+  'parking.gross_area_m2': { en: 'Car park gross area', ar: 'المساحة الإجمالية للمواقف' },
+  'parking.gross_area_per_bay_m2': { en: 'Car park gross area per bay', ar: 'المساحة الإجمالية للمواقف لكل موقف' },
+  'parking.target_area_per_bay_m2': { en: 'Car park efficiency target', ar: 'هدف كفاءة المواقف' },
+  'parking.gross_area_per_bay_gap_m2': { en: 'Car park area per bay against the target', ar: 'مساحة الموقف مقارنة بالهدف' },
 };
 
 /* Values the engine writes as words. */
@@ -247,6 +268,18 @@ const VALUE: Readonly<Record<string, Said>> = {
   'counted against the stated level count': {
     en: 'Counted against the stated level count',
     ar: 'تحسب ضمن عدد الأدوار المذكور',
+  },
+  'every perpendicular bay may be 5 m × 2.5 m': {
+    en: 'Every perpendicular bay may be 5 m × 2.5 m',
+    ar: 'يجوز أن يكون كل موقف عمودي 5 م × 2.5 م',
+  },
+  'up to 10% of perpendicular bays may be 5 m × 2.5 m': {
+    en: 'Up to 10% of perpendicular bays may be 5 m × 2.5 m',
+    ar: 'يجوز أن يكون حتى 10% من المواقف العمودية 5 م × 2.5 م',
+  },
+  'perpendicular bays 5 m × 2.5 m: all of them under 30 m, up to 10% at 30 m or more': {
+    en: 'Perpendicular bays 5 m × 2.5 m: all of them under 30 m, up to 10% at 30 m or more',
+    ar: 'مواقف عمودية 5 م × 2.5 م: كلها لقطعة دون 30 م، وحتى 10% منها لقطعة 30 م أو أكثر',
   },
 };
 
@@ -816,4 +849,104 @@ export const RUN_READERS: readonly Reader[] = [
     en: 'INV-02 needs what fills each level — units, core, circulation, services — and no unit is laid out, so it did not run and is not counted as a pass. INV-01, INV-11 and INV-18 read the engine’s own level schedule.',
     ar: 'يحتاج INV-02 ما يملأ كل دور: الوحدات والنواة والحركة والخدمات، ولا توزع وحدات، فلم يشغل ولا يحسب نجاحا. أما INV-01 وINV-11 وINV-18 فتقرأ جدول الأدوار الذي ينتجه المحرك.',
   }),
+
+  /* ── The residual strips, Table B.11 note * and the parallel bay (layout.ts, residual.ts) ── */
+  (t) => {
+    const m =
+      /^Residual strips: (\d+) more ([\d.]+) m bay\(s\) and (\d+) parallel bay\(s\) of 6 × 2\.5 m \(Table B\.11\) stand where no module reached, each with its open side on an aisle a car reaches\.$/.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en: `Leftover strips: ${m[1]} more ${m[2]} m bays and ${m[3]} parallel bays of 6 × 2.5 m where no module reached, each opening onto an aisle a car reaches.`,
+      ar: `الشرائط المتبقية: ${m[1]} مواقف إضافية بطول ${m[2]} م و${m[3]} مواقف موازية 6 × 2.5 م (الجدول B.11) حيث لم تصل الوحدات، وكل منها يفتح على ممر تصله السيارة.`,
+    };
+  },
+  (t) => {
+    const m =
+      /^(\d+) bay\(s\) are 5 × 2\.5 m under Table B\.11 note \*, where a ([\d.]+) m bay does not fit: (?:the plot is under 30 m long, so every perpendicular bay may be\.|at most (\d+) on this level, 10% of its perpendicular bays\.)$/.exec(
+        t,
+      );
+    if (!m) return null;
+    return m[3] === undefined
+      ? {
+          en: `${m[1]} bays are 5 × 2.5 m (Table B.11 note *) where a ${m[2]} m bay does not fit: the plot is under 30 m long, so any perpendicular bay may be.`,
+          ar: `${m[1]} مواقف بأبعاد 5 × 2.5 م (الحاشية * للجدول B.11) حيث لا يتسع موقف بطول ${m[2]} م: القطعة أقل من 30 م طولا، فيجوز ذلك لأي موقف عمودي.`,
+        }
+      : {
+          en: `${m[1]} bays are 5 × 2.5 m (Table B.11 note *) where a ${m[2]} m bay does not fit: at most ${m[3]} on this level, 10% of its perpendicular bays.`,
+          ar: `${m[1]} مواقف بأبعاد 5 × 2.5 م (الحاشية * للجدول B.11) حيث لا يتسع موقف بطول ${m[2]} م: بحد أقصى ${m[3]} في هذا الدور، أي 10% من مواقفه العمودية.`,
+        };
+  },
+  (t) => {
+    const m = /^The ([\d.]+) m strip past the last bay row is too shallow for a single-loaded row, so a ([\d.]+) m aisle runs along that row to reach it\.$/.exec(t);
+    return m
+      ? {
+          en: `The ${m[1]} m strip past the last bay row is too shallow for a row with its own aisle, so a ${m[2]} m aisle runs along that row to reach it.`,
+          ar: `الشريط بعمق ${m[1]} م بعد آخر صف مواقف لا يتسع لصف بممره، فيمتد ممر بعرض ${m[2]} م بمحاذاة ذلك الصف ليصل إليه.`,
+        }
+      : null;
+  },
+  (t) => {
+    const m = /^Under Table B\.11 note \* a\) every perpendicular bay on this plot may be 5 × 2\.5 m\. The modules are still laid with ([\d.]+) m bays/.exec(t);
+    return m
+      ? {
+          en: `Under Table B.11 note * a) every perpendicular bay here may be 5 × 2.5 m. The modules still use ${m[1]} m bays and a short bay only where one does not fit; 16 m modules are not tried. Not assessed.`,
+          ar: `وفق الحاشية * (أ) للجدول B.11 يجوز أن يكون كل موقف عمودي هنا 5 × 2.5 م. ما زالت الوحدات بمواقف ${m[1]} م، ولا يستخدم الموقف القصير إلا حيث لا يتسع ذلك، ولم تجرب وحدات بعمق 16 م. لم يقيم.`,
+        }
+      : null;
+  },
+  starts('Angled bays (Table B.11: 45°, 60° and 75°, each on a one-way driveway) are not placed', {
+    en: 'Angled bays (Table B.11: 45°, 60° and 75°, each on a one-way driveway) are not placed: the level is laid out square to its rows, so a corner the rows do not meet square keeps only the bays that fit square to it. Not assessed.',
+    ar: 'المواقف المائلة (الجدول B.11: 45° و60° و75°، كل منها على ممر باتجاه واحد) لا توضع: الدور يرسم متعامدا مع صفوفه، فالزاوية التي لا تلتقيها الصفوف قائمة لا تأخذ إلا المواقف المتعامدة التي تتسع لها. لم يقيم.',
+  }),
+  (t) => {
+    const m = /^(\d+) bay\(s\) of 5 m are not used on the level the street reaches: its drive, plant band and accessible bays change its count after the layout/.exec(t);
+    return m
+      ? {
+          en: `${m[1]} bays of 5 m are not used on the level the street reaches: its drive, plant band and accessible bays change its count after the layout, so the building stays within Table B.11 note *’s 10%.`,
+          ar: `${m[1]} مواقف بطول 5 م لا تستخدم في الدور الذي يصله الشارع: ممر الدخول وشريط المحطة ومواقف أصحاب الهمم تغير عدده بعد التوزيع، فيبقى المبنى ضمن 10% التي تسمح بها الحاشية * للجدول B.11.`,
+        }
+      : null;
+  },
+  (t) => {
+    const m =
+      /^DBC Table B\.11 note \* lets a perpendicular bay be 5 m × 2\.5 m .* It is read here as the plot's longest side, ([\d.]+) m, the reading that allows less\. Read as the depth of its bounding rectangle it would be ([\d.]+) m\./.exec(
+        t,
+      );
+    return m
+      ? {
+          en: `Table B.11 note * allows 5 m × 2.5 m perpendicular bays on every bay of a plot under 30 m long and on up to 10% of them at 30 m or more, without saying which dimension is the length. Read here as the longest side, ${m[1]} m, the reading that allows less; as the depth of the bounding rectangle it would be ${m[2]} m. A question for the client.`,
+          ar: `تسمح الحاشية * للجدول B.11 بمواقف عمودية 5 م × 2.5 م لكل مواقف القطعة إذا كان طولها أقل من 30 م، ولما يصل إلى 10% منها إذا كان 30 م أو أكثر، دون أن تحدد أي بعد هو الطول. يقرأ هنا كأطول ضلع، ${m[1]} م، وهي القراءة الأقل سماحا؛ وكعمق المستطيل المحيط لكان ${m[2]} م. سؤال للعميل.`,
+        }
+      : null;
+  },
+
+  /* ── The car park's gross area per bay, and the target beside it (pipeline.ts) ── */
+  (t) => {
+    const m = /^Car park: ([\d.]+) m² over (\d+) parking level\(s\), ramps, cores and plant included(?:, ([\d.]+) m² per bay provided\.|, and no bay is provided\.)$/.exec(t);
+    if (!m) return null;
+    return m[3] === undefined
+      ? {
+          en: `Car park: ${m[1]} m² over ${m[2]} parking levels, ramps, cores and plant included, and no bay provided.`,
+          ar: `المواقف: ${m[1]} م² على ${m[2]} أدوار مواقف شاملة المنحدرات والنوى والخدمات، ولا يتوفر أي موقف.`,
+        }
+      : {
+          en: `Car park: ${m[1]} m² over ${m[2]} parking levels, ramps, cores and plant included: ${m[3]} m² per bay provided.`,
+          ar: `المواقف: ${m[1]} م² على ${m[2]} أدوار مواقف شاملة المنحدرات والنوى والخدمات: ${m[3]} م² لكل موقف متوفر.`,
+        };
+  },
+  starts('No car park efficiency target is stated for this run, and none is assumed.', {
+    en: 'No car park efficiency target is stated for this run, and none is assumed.',
+    ar: 'لا يذكر لهذه الدراسة هدف لكفاءة المواقف، ولا يفترض أي هدف.',
+  }),
+  (t) => {
+    const m = /^Against the attached standard's target of ([\d.]+) m² per bay, the car park uses ([\d.]+) m² (more|less) per bay\. A developer's target, not a regulation\.$/.exec(t);
+    if (!m) return null;
+    const more = m[3] === 'more';
+    return {
+      en: `Against the attached standard’s target of ${m[1]} m² per bay, the car park uses ${m[2]} m² ${m[3]} per bay. A developer’s target, not a regulation.`,
+      ar: `مقارنة بهدف المعيار المرفق ${m[1]} م² لكل موقف، تستهلك المواقف ${m[2]} م² ${more ? 'أكثر' : 'أقل'} لكل موقف. هدف للمطور، لا لائحة.`,
+    };
+  },
 ];

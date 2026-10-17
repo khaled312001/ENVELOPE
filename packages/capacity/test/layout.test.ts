@@ -26,6 +26,7 @@ import {
   type PlacedRect,
   type Rect,
 } from '../src/layout.js';
+import { isParallelRow } from '../src/residual.js';
 
 const d = (v: string | number): Decimal => new Decimal(v);
 
@@ -173,7 +174,13 @@ describe('layoutParkingLevel', () => {
 
   it('charges the ramp its width in bays rather than getting it free', () => {
     const without = run('40', '51');
-    const withRamp = run('40', '51', { includeRamp: true });
+    /*
+      A RAMP STRIP, not the sloped ring. At 40 × 51 the ring itself can be the
+      ramp, and since the residual fill a sloped ring places more bays than a
+      flat level reached by a drive from the slab edge, which crosses three of
+      them — the ring has no strip to charge. The strip is what this measures.
+    */
+    const withRamp = run('40', '51', { includeRamp: true, slopedRing: false });
     expect(withRamp.bayCount.value).toBeLessThan(without.bayCount.value);
   });
 
@@ -276,7 +283,9 @@ describe('bays to the walls, one ring aisle', () => {
     const drive = out.rects.filter((r) => r.kind === RectKind.AISLE || r.kind === RectKind.RAMP);
     expect(bays.length).toBe(out.bayCount.value);
     for (const bay of bays) {
-      const upright = bay.width.lte(bay.height);
+      // A parallel bay (Table B.11, 6 m long) is entered along its long side; every other bay nose first.
+      const parallel = isParallelRow(bay.row);
+      const upright = bay.width.lte(bay.height) !== parallel;
       const onAisle = drive.some((a) => {
         const ox = Decimal.min(bay.x.plus(bay.width), a.x.plus(a.width)).minus(Decimal.max(bay.x, a.x));
         const oy = Decimal.min(bay.y.plus(bay.height), a.y.plus(a.height)).minus(Decimal.max(bay.y, a.y));

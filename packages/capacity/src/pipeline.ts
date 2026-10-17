@@ -1399,12 +1399,26 @@ export function runPipeline(input: RunInput): RunOutput {
     parkingResidual = { reducedBays, reducedShare, parallelBays };
   }
 
+  /*
+    The basements alone, counted off the drawn model, so the other reading of a
+    developer's target (its basement car park only) is a measured figure and not
+    a guess. Below grade is the level's own elevation, never a name.
+  */
+  const belowGrade = building.levels.filter((l) => l.parking && l.elevationMm < 0);
   const parkingEfficiency = carParkEfficiency(tracer, {
     footprint: envelope.podiumFootprint,
     levels: parking.levelsAvailable,
     providedBays: parking.providedBays,
     actor: input.actor,
     ...(input.parkingEfficiencyTarget ? { target: input.parkingEfficiencyTarget } : {}),
+    ...(belowGrade.length > 0
+      ? {
+          basements: {
+            levels: belowGrade.length,
+            bays: belowGrade.reduce((n, l) => n + Number(l.parking!.bayCount.value), 0),
+          },
+        }
+      : {}),
   });
 
   const isParking = (use: string): boolean =>
@@ -1500,6 +1514,8 @@ export function carParkEfficiency(
     readonly providedBays: Traced<number>;
     readonly actor: Actor;
     readonly target?: NonNullable<RunInput['parkingEfficiencyTarget']>;
+    /** The parking levels below grade and the bays drawn on them, where there are any — the target's other reading. */
+    readonly basements?: { readonly levels: number; readonly bays: number };
   },
 ): ParkingEfficiency {
   const qArea = (d: Decimal): Decimal => d.toDecimalPlaces(2);
@@ -1536,15 +1552,49 @@ export function carParkEfficiency(
       label: 'car park efficiency target of the attached developer standard',
       unit: 'm²/bay',
     });
+    /*
+      WHAT THE TARGET IS MEASURED OVER IS A READING, AND IT IS AMBER. The
+      standard gives a figure per car and does not say which levels it covers or
+      whether ramps and cores are inside it; the brief for one plot names its
+      basement car park. Comparing the whole car park with it, unflagged, would
+      answer the client's question for him in a figure that renders as computed.
+      So the reading is an assumption with a basis, the gap carries its class,
+      and the basements-only figure is measured beside it where the building
+      has basement parking.
+    */
+    const basementPerBay =
+      input.basements && input.basements.bays > 0
+        ? qArea(input.footprint.value.times(input.basements.levels).div(input.basements.bays))
+        : undefined;
+    const reading = tracer.assumed('parking.target_reading', 'every parking level, ramps, cores and plant included', {
+      basis:
+        "The developer standard's car park target does not say which parking levels it covers, or whether " +
+        'ramps, cores and plant are inside the area. It is compared here with every parking level whole, over ' +
+        'every bay provided. ' +
+        (basementPerBay && input.basements
+          ? `Over the ${input.basements.levels} basement level(s) alone it would be ${basementPerBay.toFixed(2)} m² ` +
+            `per bay (${input.basements.bays} bays). `
+          : 'This run has no basement parking to measure it over instead. ') +
+        'Which one the developer means is a question for the client.',
+      label: 'what the car park efficiency target is compared over',
+    });
     const gap = grossAreaPerBayM2.value.minus(m2PerBay.value);
     const gapM2 = tracer.computed('parking.gross_area_per_bay_gap_m2', qArea(gap), {
       formula:
         `${grossAreaPerBayM2.value.toString()} m² per bay achieved − ${m2PerBay.value.toString()} m² per bay ` +
         'targeted',
-      uses: { achieved: grossAreaPerBayM2, target: m2PerBay },
+      uses: { achieved: grossAreaPerBayM2, target: m2PerBay, reading },
       unit: 'm²/bay',
       detail: { clauseReference: input.target.clauseReference, verbatim: input.target.verbatim },
     });
+    if (basementPerBay) {
+      tracer.sensitiveTo(gapM2, reading, {
+        relativeEffect: basementPerBay.minus(grossAreaPerBayM2.value).abs().div(grossAreaPerBayM2.value).toDecimalPlaces(4).toString(),
+        perturbation:
+          `the target read as the basements only: ${basementPerBay.toFixed(2)} m² per bay achieved there, against ` +
+          `${grossAreaPerBayM2.value.toFixed(2)} over every parking level. Whether ramps and cores are inside it is not measured.`,
+      });
+    }
     target = { m2PerBay, gapM2 };
     notes.push(
       gap.gt(0)
@@ -1552,6 +1602,8 @@ export function carParkEfficiency(
             `${gap.abs().toFixed(2)} m² more per bay. A developer's target, not a regulation.`
         : `Against the attached standard's target of ${m2PerBay.value.toString()} m² per bay, the car park uses ` +
             `${gap.abs().toFixed(2)} m² less per bay. A developer's target, not a regulation.`,
+      'The target is compared over every parking level, ramps and cores included. That is assumed: the ' +
+        'standard does not say which levels its figure covers.',
     );
   } else {
     notes.push('No car park efficiency target is stated for this run, and none is assumed.');

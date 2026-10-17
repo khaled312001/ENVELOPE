@@ -204,6 +204,10 @@ const LABEL: Readonly<Record<string, Said>> = {
     en: 'Car park efficiency target of the attached developer standard',
     ar: 'هدف كفاءة المواقف في معيار المطور المرفق',
   },
+  'what the car park efficiency target is compared over': {
+    en: 'What the car park efficiency target is compared over',
+    ar: 'ما تقارن عليه كفاءة المواقف بالهدف',
+  },
 };
 
 /* The register heads a value with its parameter id where the engine gave it no label. */
@@ -252,6 +256,7 @@ const PARAMETER: Readonly<Record<string, Said>> = {
   'parking.gross_area_per_bay_m2': { en: 'Car park gross area per bay', ar: 'المساحة الإجمالية للمواقف لكل موقف' },
   'parking.target_area_per_bay_m2': { en: 'Car park efficiency target', ar: 'هدف كفاءة المواقف' },
   'parking.gross_area_per_bay_gap_m2': { en: 'Car park area per bay against the target', ar: 'مساحة الموقف مقارنة بالهدف' },
+  'parking.target_reading': { en: 'What the car park target is compared over', ar: 'ما يقارن عليه هدف المواقف' },
 };
 
 /* Values the engine writes as words. */
@@ -280,6 +285,10 @@ const VALUE: Readonly<Record<string, Said>> = {
   'perpendicular bays 5 m × 2.5 m: all of them under 30 m, up to 10% at 30 m or more': {
     en: 'Perpendicular bays 5 m × 2.5 m: all of them under 30 m, up to 10% at 30 m or more',
     ar: 'مواقف عمودية 5 م × 2.5 م: كلها لقطعة دون 30 م، وحتى 10% منها لقطعة 30 م أو أكثر',
+  },
+  'every parking level, ramps, cores and plant included': {
+    en: 'Every parking level, ramps, cores and plant included',
+    ar: 'كل أدوار المواقف، شاملة المنحدرات والنوى والخدمات',
   },
 };
 
@@ -892,13 +901,13 @@ export const RUN_READERS: readonly Reader[] = [
     return m
       ? {
           en: `Under Table B.11 note * a) every perpendicular bay here may be 5 × 2.5 m. The modules still use ${m[1]} m bays and a short bay only where one does not fit; 16 m modules are not tried. Not assessed.`,
-          ar: `وفق الحاشية * (أ) للجدول B.11 يجوز أن يكون كل موقف عمودي هنا 5 × 2.5 م. ما زالت الوحدات بمواقف ${m[1]} م، ولا يستخدم الموقف القصير إلا حيث لا يتسع ذلك، ولم تجرب وحدات بعمق 16 م. لم يقيم.`,
+          ar: `وفق الحاشية * (أ) للجدول B.11 يجوز أن يكون كل موقف عمودي هنا 5 × 2.5 م. ما زالت الوحدات بمواقف ${m[1]} م، ولا يستخدم الموقف القصير إلا حيث لا يتسع ذلك، ولم تجرب وحدات بعمق 16 م. لم يخضع للتقييم.`,
         }
       : null;
   },
   starts('Angled bays (Table B.11: 45°, 60° and 75°, each on a one-way driveway) are not placed', {
     en: 'Angled bays (Table B.11: 45°, 60° and 75°, each on a one-way driveway) are not placed: the level is laid out square to its rows, so a corner the rows do not meet square keeps only the bays that fit square to it. Not assessed.',
-    ar: 'المواقف المائلة (الجدول B.11: 45° و60° و75°، كل منها على ممر باتجاه واحد) لا توضع: الدور يرسم متعامدا مع صفوفه، فالزاوية التي لا تلتقيها الصفوف قائمة لا تأخذ إلا المواقف المتعامدة التي تتسع لها. لم يقيم.',
+    ar: 'المواقف المائلة (الجدول B.11: 45° و60° و75°، كل منها على ممر باتجاه واحد) لا توضع: الدور يرسم متعامدا مع صفوفه، فالزاوية التي لا تلتقيها الصفوف قائمة لا تأخذ إلا المواقف المتعامدة التي تتسع لها. لم يخضع للتقييم.',
   }),
   (t) => {
     const m = /^(\d+) bay\(s\) of 5 m are not used on the level the street reaches: its drive, plant band and accessible bays change its count after the layout/.exec(t);
@@ -948,5 +957,29 @@ export const RUN_READERS: readonly Reader[] = [
       en: `Against the attached standard’s target of ${m[1]} m² per bay, the car park uses ${m[2]} m² ${m[3]} per bay. A developer’s target, not a regulation.`,
       ar: `مقارنة بهدف المعيار المرفق ${m[1]} م² لكل موقف، تستهلك المواقف ${m[2]} م² ${more ? 'أكثر' : 'أقل'} لكل موقف. هدف للمطور، لا لائحة.`,
     };
+  },
+  starts('The target is compared over every parking level, ramps and cores included. That is assumed', {
+    en: 'The target is compared over every parking level, ramps and cores included. That is assumed: the standard does not say which levels its figure covers.',
+    ar: 'يقارن الهدف على كل أدوار المواقف شاملة المنحدرات والنوى. وهذا افتراض: لا يذكر المعيار أي أدوار يشملها رقمه.',
+  }),
+  (t) => {
+    const m =
+      /^The developer standard's car park target does not say which parking levels it covers, or whether ramps, cores and plant are inside the area\. It is compared here with every parking level whole, over every bay provided\. (?:Over the (\d+) basement level\(s\) alone it would be ([\d.]+) m² per bay \((\d+) bays\)\. |This run has no basement parking to measure it over instead\. )Which one the developer means is a question for the client\.$/.exec(
+        t,
+      );
+    if (!m) return null;
+    const lead = {
+      en: "The developer standard's car park target does not say which parking levels it covers, or whether ramps, cores and plant are inside the area. It is compared here with every parking level whole, over every bay provided.",
+      ar: 'لا يذكر معيار المطور أي أدوار مواقف يشملها هدفه، ولا إن كانت المنحدرات والنوى والخدمات داخل المساحة. يقارن هنا بكل أدوار المواقف كاملة على كل المواقف المتوفرة.',
+    };
+    return m[1] === undefined
+      ? {
+          en: `${lead.en} This run has no basement parking to measure it over instead. A question for the client.`,
+          ar: `${lead.ar} ولا مواقف في القبو في هذه الدراسة لقياسه عليها بدلا من ذلك. سؤال للعميل.`,
+        }
+      : {
+          en: `${lead.en} Over the ${m[1]} basement levels alone it would be ${m[2]} m² per bay (${m[3]} bays). A question for the client.`,
+          ar: `${lead.ar} وعلى أدوار القبو وحدها (${m[1]}) لكان ${m[2]} م² لكل موقف (${m[3]} موقفا). سؤال للعميل.`,
+        };
   },
 ];

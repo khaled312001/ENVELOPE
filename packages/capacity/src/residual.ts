@@ -105,8 +105,17 @@ export const PARALLEL_BAY_DEPTH_M = '2.5';
  * for a single-loaded row. Kept only where the fill puts a bay against it.
  */
 export const RESIDUAL_AISLE_ROW = -30;
-/** A 5.5 m bay the fill added: an ordinary bay, in a run of its own. */
-export const RESIDUAL_BAY_ROW = -31;
+/*
+  A 5.5 m BAY THE FILL ADDED IS AN ORDINARY BAY, AND EACH RUN OF THEM HAS ITS OWN
+  ROW. `accessible.ts` reads two bays as neighbours when they share a row and
+  touch, and tells side by side from end to end only by the row: one row for
+  every residual bay on the level would let a bay against one aisle and the bay
+  backing onto it from the next count as a run, and a van bay be widened along
+  its length into the other's back. So every free stretch the fill lays along
+  gets a row of its own, as every packer's run does.
+*/
+const RESIDUAL_ROW_BASE = -3000;
+export const isResidualRow = (row: number): boolean => row <= RESIDUAL_ROW_BASE && row > RESIDUAL_ROW_BASE - ROW_SPAN;
 /*
   A 5.0 m BAY AND A PARALLEL BAY EACH STAND IN A ROW OF ITS OWN. `accessible.ts`
   makes its bays out of runs of two or three neighbours in one row, and an
@@ -399,6 +408,7 @@ export function fillResiduals(input: ResidualInput): ResidualFill {
   let reduced = 0;
   let parallel = 0;
   let reducedCap: number | null = null;
+  let residualRuns = 0;
   const reducedLen = mmOf(new Decimal(REDUCED_BAY_LENGTH_M));
   const parLen = mmOf(new Decimal(PARALLEL_BAY_LENGTH_M));
   const parDepth = mmOf(new Decimal(PARALLEL_BAY_DEPTH_M));
@@ -424,13 +434,14 @@ export function fillResiduals(input: ResidualInput): ResidualFill {
         const free = subtractIntervals(intersectIntervals(inside(alongX, c0, c1), [[a0, a1]]), blocked);
         for (const [s0, s1] of free) {
           const n = pitch.fits(M(s1 - s0));
+          const run = n > 0 && phase === 'STANDARD' ? residualRuns++ : -1;
           for (let k = 0; k < n; k += 1) {
             if (phase === 'REDUCED' && reducedCap !== null && reduced >= reducedCap) return;
             const s = s0 + mmOf(pitch.along(k));
             const box: Box = alongX ? { x0: s, y0: c0, x1: s + along, y1: c1 } : { x0: c0, y0: s, x1: c1, y1: s + along };
             const row =
               phase === 'STANDARD'
-                ? RESIDUAL_BAY_ROW
+                ? RESIDUAL_ROW_BASE - run
                 : phase === 'REDUCED'
                   ? REDUCED_ROW_BASE - reduced
                   : PARALLEL_ROW_BASE - parallel;

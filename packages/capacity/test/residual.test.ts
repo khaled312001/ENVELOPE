@@ -15,6 +15,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { pt, RECT_80x40, runInput } from '../../../test-support/pipeline.js';
 import {
   countBays,
+  fillResiduals,
+  isResidualRow,
   isParallelRow,
   isReducedRow,
   layoutParkingLevel,
@@ -51,7 +53,7 @@ function level(widthM: number, depthM: number, allowance?: (t: Tracer) => Reduce
 /** Every bay the fill added is open, on its open side, onto an aisle the layout drew. */
 function everyResidualBayServed(r: ParkingLayoutResult): void {
   const aisles = r.rects.filter((x) => x.kind === RectKind.AISLE);
-  for (const bay of r.rects.filter((x) => x.kind === RectKind.BAY && (isReducedRow(x.row) || isParallelRow(x.row) || x.row === -31))) {
+  for (const bay of r.rects.filter((x) => x.kind === RectKind.BAY && (isReducedRow(x.row) || isParallelRow(x.row) || isResidualRow(x.row)))) {
     expect(aisles.some((a) => residualBayServedBy(bay, a)), `bay at ${bay.x.toString()}, ${bay.y.toString()}`).toBe(true);
   }
 }
@@ -102,6 +104,42 @@ describe('a strip 5.0–5.49 m deep past an aisle', () => {
     const r = level(W, D, (t) => reducedBayAllowance(t, [side(40), side(45.2)], {}));
     expect(r.notes.join('\n')).toMatch(/^The 11\.20 m strip past the last bay row is too shallow for a single-loaded row, so a 6 m aisle runs along that row to reach it\.$/m);
     expect(r.rects.some((x) => x.kind === RectKind.AISLE && x.row === -30)).toBe(true);
+  });
+});
+
+describe('the rows the fill gives its bays', () => {
+  /*
+    Two aisles 11 m apart with nothing between them: the fill puts a 5.5 m run
+    against each, back to back. `accessible.ts` takes two bays that share a row
+    and touch for neighbours side by side, so two runs in one row read as a pair
+    end to end — and a van bay widened along its length into the other's back.
+  */
+  it('gives every run its own row, so no two bays that meet end to end share one', () => {
+    const d = (v: number): Decimal => new Decimal(v);
+    const pitch = { along: (k: number) => d(k * 2.5), fits: (l: Decimal) => l.div(2.5).floor().toNumber() };
+    const filled = fillResiduals({
+      rects: [
+        { kind: RectKind.AISLE, row: 0, x: d(0), y: d(0), width: d(20), height: d(6) },
+        { kind: RectKind.AISLE, row: 1, x: d(0), y: d(17), width: d(20), height: d(6) },
+      ],
+      widthM: d(20),
+      depthM: d(23),
+      blocks: [],
+      bayWidthM: d(2.5),
+      bayLengthM: d(5.5),
+      aisleWidthM: d(6),
+      perpendicular: pitch,
+      parallel: { along: (k) => d(k * 6), fits: (l) => l.div(6).floor().toNumber() },
+    });
+    const bays = filled.rects.filter((r) => r.kind === RectKind.BAY);
+    expect(filled.standard).toBe(16);
+    expect(bays.every((b) => isResidualRow(b.row))).toBe(true);
+    for (const a of bays) {
+      for (const b of bays) {
+        const endToEnd = a.x.eq(b.x) && a.width.eq(b.width) && a.y.plus(a.height).eq(b.y);
+        if (endToEnd) expect(a.row, `bays at ${a.y.toString()} and ${b.y.toString()}`).not.toBe(b.row);
+      }
+    }
   });
 });
 
@@ -224,5 +262,32 @@ describe('the car park’s gross area per bay', () => {
     expect(eff.target!.m2PerBay.provenanceClass).toBe('USER_SET');
     expect(eff.target!.gapM2.value.toString()).toBe(eff.grossAreaPerBayM2!.value.minus('37.5').toDecimalPlaces(2).toString());
     expect(eff.notes.join(' ')).toMatch(/^Car park: [\d.]+ m² over 2 parking level\(s\).* Against the attached standard's target of 37\.5 m² per bay/);
+  });
+
+  /*
+    WHICH LEVELS A TARGET COVERS IS NOT STATED. The standard gives m² per car; one
+    brief names its basement car park; nothing says whether ramps and cores are in
+    it. Compared over the whole car park with no flag, the gap rendered as a
+    computed figure — the client's open question answered in ink. It is amber,
+    and the basements-only reading is measured beside it from the drawn levels.
+  */
+  it('compares with the target under an assumed reading, amber, with the basements-only figure measured', () => {
+    const out = runPipeline({
+      ...INPUT,
+      parkingEfficiencyTarget: { m2PerBay: new Decimal('37.5'), clauseReference: 'item 5', verbatim: 'a target' },
+    });
+    const eff = out.parkingEfficiency!;
+    expect(eff.target!.gapM2.provenanceClass).toBe('ASSUMED');
+    const below = out.building.levels.filter((l) => l.parking && l.elevationMm < 0);
+    expect(below.length).toBe(1);
+    const bays = below.reduce((n, l) => n + Number(l.parking!.bayCount.value), 0);
+    const basementPerBay = out.envelope.podiumFootprint.value.div(bays).toDecimalPlaces(2).toFixed(2);
+    const graph = out.graph;
+    const basis = [...graph.nodes].map((n) => n.label).find((l) => l.startsWith("The developer standard's car park target"));
+    expect(basis).toContain(`Over the 1 basement level(s) alone it would be ${basementPerBay} m² per bay (${bays} bays).`);
+    expect(eff.notes).toContain(
+      'The target is compared over every parking level, ramps and cores included. That is assumed: the standard ' +
+        'does not say which levels its figure covers.',
+    );
   });
 });

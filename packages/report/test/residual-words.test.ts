@@ -36,6 +36,8 @@ const NEW = [
   /^Car park: /,
   /^No car park efficiency target/,
   /^Against the attached standard's target/,
+  /^The target is compared over every parking level/,
+  /^The developer standard's car park target does not say/,
 ];
 
 function sentences(): string[] {
@@ -64,6 +66,7 @@ function sentences(): string[] {
     const run = runPipeline(input);
     for (const s of run.levelPlan?.notAssessed ?? []) out.add(s);
     for (const s of run.parkingEfficiency?.notes ?? []) out.add(s);
+    for (const n of run.graph.nodes) if (n.kind === NodeKind.BASIS) out.add(n.label);
   }
   // Note * a): a plot under 30 m long, every perpendicular bay may be short.
   const graph = new ProvenanceGraph();
@@ -93,6 +96,12 @@ describe('the residual strips and the car park, in both languages', () => {
   it.each(SAID)('says in Arabic and in English: %s', (s) => {
     expect(engineNote(s, 'ar')).toMatch(/[؀-ۿ]/);
     expect(engineNote(s, 'en')).not.toBeNull();
+    /*
+      NOT ASSESSED is «لم يخضع للتقييم» (docs/05-design/arabic-glossary.md). The
+      glossary rejects «لم يقيم» by name: unvowelled, as it ships, it reads "he did
+      not stay", on the one phrase the product's position rests on.
+    */
+    expect(engineNote(s, 'ar')).not.toContain('لم يقيم');
   });
 
   it.each(SAID)('keeps every figure: %s', (s) => {
@@ -114,6 +123,9 @@ describe('the residual strips and the car park, in both languages', () => {
       'parking.reduced_bay_share',
       'up to 10% of perpendicular bays may be 5 m × 2.5 m',
       'every perpendicular bay may be 5 m × 2.5 m',
+      'what the car park efficiency target is compared over',
+      'parking.target_reading',
+      'every parking level, ramps, cores and plant included',
     ]) {
       expect(engineNote(t, 'ar'), t).toMatch(/[؀-ۿ]/);
     }

@@ -107,6 +107,8 @@ describe('the car park’s gross area per bay', () => {
     expect(eff.target.m2PerBay.provenanceClass).toBe('USER_SET');
     const gap = Number(eff.grossAreaPerBayM2.value) - Number(TARGET.value);
     expect(Number(eff.target.gapM2.value)).toBeCloseTo(gap, 2);
+    // Which levels the target covers is not stated, so the comparison is amber.
+    expect(eff.target.gapM2.provenanceClass).toBe('ASSUMED');
     expect(eff.notes.join(' ')).toMatch(/Against the attached standard's target of 37\.5 m² per bay/);
     expect(eff.notes.join(' ')).toContain('A developer\'s target, not a regulation.');
   }, SLOW);

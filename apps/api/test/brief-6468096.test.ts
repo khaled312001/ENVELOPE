@@ -193,7 +193,7 @@ describe.skipIf(!BRIEF_PDF)('every citation’s box holds its figure (skipped: t
 });
 
 describe('the run, naming the brief', () => {
-  it('binds the brief’s GFA ÷ its plot area on the plot, marked as the brief’s', async () => {
+  it('binds the brief’s printed GFA on the plot, marked as the brief’s', async () => {
     const app = await build();
     try {
       const plot = await app.inject({ method: 'POST', url: '/api/plots', headers: ACTOR, payload: plotBody() });
@@ -207,8 +207,10 @@ describe('the run, naming the brief', () => {
       expect(r.statusCode, r.body).toBe(201);
       const run = r.json() as Json;
       expect(run['sheet'].briefBound).toMatchObject([{ parameterId: 'far.max', value: '4.837235' }]);
-      // 70 × 64 = 4,480 m² entered, × 4.837235: the brief's ratio, on this plot's own area.
-      expect(run['capacity'].bandA.value).toBe(new Decimal('4.837235').times(4480).toString());
+      // The brief prints its GFA, and a printed GFA governs as printed (`FarBasis`): band A is
+      // 21,604.61 m², not the ratio re-multiplied over the 4,480 m² entered here — re-multiplying
+      // is how 5180196's rounded FAR under-reports the GFA the developer priced.
+      expect(run['capacity'].bandA.value).toBe('21604.61');
     } finally {
       await app.close();
     }

@@ -103,7 +103,7 @@ describe('the refuse room is either drawn or said not to be, never both', () => 
 describe('what was claimed and never computed', () => {
   it('says bicycle parking is not assessed, with the clause that asks for it', () => {
     expect(notes().join(' | ')).toMatch(
-      /Bicycle parking — NOT ASSESSED\. DBC B\.7\.2\.7 asks for bicycle parking equal to 5% of the car parking requirement/,
+      /Bicycle parking — NOT ASSESSED\. DBC B\.7\.2\.7 asks for bicycle parking equal to a twentieth of the car parking requirement/,
     );
   });
 

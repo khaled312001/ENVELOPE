@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-17T11:49:57.702Z",
+  "generatedAt": "2026-10-17T13:18:50.877Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
-    "rulesTotal": 14,
+    "rulesTotal": 21,
     "definitionsSigned": 0,
     "definitionsTotal": 15,
     "annexVersion": "0.1.0-UNSIGNED",
@@ -32,10 +32,22 @@
       "basis": "the usable fraction of a parking level after cores, ramps and plant"
     },
     {
+      "parameterId": "envelope.far_max",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "No affection plan or brief stating a FAR is on file for this plot. 5 is a placeholder (R-FAR-MAX-RES) so a study can run before the sheet is to hand; no instrument prints it. Attach the plot’s affection plan, or type its FAR or GFA, to replace it."
+    },
+    {
       "parameterId": "building.core_area_m2",
       "runs": 1,
       "maxRelativeEffect": "0",
       "basis": "A core of 18% of the tower plate: the middle of the 15–22% a residential tower core takes for lift shafts, the lift lobby, escape stairs and risers, and the lower end of the 18–20% the architect this engine is built for stated on 4 October 2026. His statement is recorded as a practice statement, STMT-CORE-PLATE-FRACTION-2026-10-04, and is offered separately: a named practitioner agreeing with an assumption is agreement and not a citation, so this figure stays ASSUMED until somebody accepts his statement under his name. No clause of the Dubai Building Code states a core area and no developer standard on file gives one, so this is an assumption and not a derivation. At his upper end, 20%, the core is 11.1% larger and the two reconciliations below move with it; no capacity figure moves either way, because a core is inside GFA and outside saleable area and the saleable efficiency this run was given already carries it. Enter the core area to replace it."
+    },
+    {
+      "parameterId": "envelope.tower_plate_max_m2",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "1280 m² is a placeholder tower plate cap (R-TOWER-PLATE-MAX-RES); no instrument on file for this plot prints it. The tower plate is held to it until the plot’s own affection plan replaces it."
     },
     {
       "parameterId": "envelope.podium_placement",
@@ -101,7 +113,7 @@
       "parameterId": "building.ground_floor_program",
       "runs": 1,
       "maxRelativeEffect": "0",
-      "basis": "An indicative ground floor for a residential tower, drawn in the strip the parking layout reserves for plant and circulation. The SUBSTATION is the one room here that is not a typical figure: its area is the table in DEWA Regulations for Electrical Installations 2017 §11.4.1 read with the transformer count, its minimum width is the figure stated beside that area in the same clause, and the end of the strip it is laid at is §11.3.1 — \"Substation room/RMU room to be directly located on RTA/Public Road or Sikka\" — applied to the boundaries this plot classifies. Each is cited to a page, a bounding box and the verbatim clause. The LV ROOM is drawn hard against the substation because §11.2.3 requires that adjacency, but its own 5 m width is a typical figure: Section 11 states no LV room area. Every other room is a typical width and nothing more — ENTRANCE LOBBY 6 m, GENERATOR ROOM 5 m, PUMP ROOM 5 m, WATER TANK 6 m, GARBAGE ROOM 4 m, TEL ROOM 2.5 m, MM ROOM 2.5 m — each the depth of the strip up to 7 m, along its outer side; no DEWA, Civil Defence or municipality requirement on file sizes any of them. And no room in this program is ventilated, access-checked, height-checked or routed: §11.5.1 is PARTIALLY MECHANIZED in its own rule record and is not evaluated here, and DEWA_NOT_MECHANIZED names the clauses of Section 11 left out of the engine with the reason for each. REGULATORY VALIDITY: NOT ASSESSED. On this run the substation was read with 1 transformer(s) (assumed), which §11.4.1 sizes at 33 m², drawn 6.00 × 5.50 m, against boundary 2, which is classified ROAD (§11.3.1), with the LV room beside it on the same boundary (§11.2.3)."
+      "basis": "An indicative ground floor for a residential tower, drawn in the strip the parking layout reserves for plant and circulation. The SUBSTATION is the one room here that is not a typical figure: its area is the table in DEWA Regulations for Electrical Installations 2017 §11.4.1 read with the transformer count, its minimum width is the figure stated beside that area in the same clause, and the end of the strip it is laid at is §11.3.1 — \"Substation room/RMU room to be directly located on RTA/Public Road or Sikka\" — applied to the boundaries this plot classifies. Each is cited to a page, a bounding box and the verbatim clause. The LV ROOM is drawn hard against the substation because §11.2.3 requires that adjacency, but its own 5 m width is a typical figure: Section 11 states no LV room area. Every other room is a typical width and nothing more — ENTRANCE LOBBY 6 m, GENERATOR ROOM 5 m, PUMP ROOM 5 m, WATER TANK 6 m, GARBAGE ROOM 4 m, TEL ROOM 2.5 m, MM ROOM 2.5 m — each the depth of the strip up to 7 m, along its outer side, and none checked against a requirement. The garbage room and the water tank are sized by the Dubai Building Code, and this run does not apply it: B.8.5.2.3 sizes waste storage for two days of waste at a suggested 12 kg for each 100 m² of net area for residential use, with containers by Table B.29, and H.5.5.3 sizes a domestic water tank on 24 hours of demand at Table H.6's rates. Where they are drawn it is at a typical width, and their size against those clauses is NOT ASSESSED. And no room in this program is ventilated, access-checked, height-checked or routed: §11.5.1 is PARTIALLY MECHANIZED in its own rule record and is not evaluated here, and DEWA_NOT_MECHANIZED names the clauses of Section 11 left out of the engine with the reason for each. REGULATORY VALIDITY: NOT ASSESSED. On this run the substation was read with 1 transformer(s) (assumed), which §11.4.1 sizes at 33 m², drawn 6.00 × 5.50 m, against boundary 2, which is classified ROAD (§11.3.1), with the LV room beside it on the same boundary (§11.2.3)."
     }
   ],
   "deferred": [
@@ -110,18 +122,151 @@
       "parameterId": "egress.travel_distance.max",
       "isLifeSafety": true,
       "citation": {
-        "instrumentId": "PLACEHOLDER-NOT-A-REAL-INSTRUMENT",
-        "instrumentVersion": "0.0.0-draft",
-        "clauseReference": "UAE FLS Code, Chapter 2",
-        "documentUri": "urn:envelope:placeholder:unsourced",
-        "sourcePage": 0,
+        "instrumentId": "UAE_FLSC",
+        "instrumentVersion": "2011",
+        "documentUri": "docs/00-source/regulations/UAEFIRECODE_ENG.pdf",
+        "clauseReference": "Chapter 3, §11.8, Table 3.6A — Apartment Buildings, maximum travel distance to an exit",
+        "sourcePage": 182,
         "sourceBbox": [
-          0,
-          0,
-          0,
-          0
+          31.9,
+          220.4,
+          760,
+          509.3
         ],
-        "sourceTextVerbatim": "[NOT SOURCED] maximum travel distance to an exit"
+        "sourceTextVerbatim": "11.8 - Table 3.6A: Requirements for Arrangement of Means of Egress … Table 3.6A [OCCUPANCY | OCCUPANT LOAD (M2 PER PERSON) | WITH SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | WITHOUT SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | EXIT DISCHARGE CAPACITIES] … Table 3.6A [Apartment Buildings | 18.6 | 15m | 38m | 61m | 10.7m | 23m | 45m | 7.6 | 5 | 5]"
+      }
+    },
+    {
+      "ruleId": "R-EGRESS-COMMON-PATH",
+      "parameterId": "egress.common_path.max",
+      "isLifeSafety": true,
+      "citation": {
+        "instrumentId": "UAE_FLSC",
+        "instrumentVersion": "2011",
+        "documentUri": "docs/00-source/regulations/UAEFIRECODE_ENG.pdf",
+        "clauseReference": "Chapter 3, §11.8, Table 3.6A — Apartment Buildings, maximum common path of travel",
+        "sourcePage": 182,
+        "sourceBbox": [
+          31.9,
+          220.4,
+          760,
+          509.3
+        ],
+        "sourceTextVerbatim": "11.8 - Table 3.6A: Requirements for Arrangement of Means of Egress … Table 3.6A [OCCUPANCY | OCCUPANT LOAD (M2 PER PERSON) | WITH SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | WITHOUT SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | EXIT DISCHARGE CAPACITIES] … Table 3.6A [Apartment Buildings | 18.6 | 15m | 38m | 61m | 10.7m | 23m | 45m | 7.6 | 5 | 5]"
+      }
+    },
+    {
+      "ruleId": "R-EGRESS-DEAD-END",
+      "parameterId": "egress.dead_end.max",
+      "isLifeSafety": true,
+      "citation": {
+        "instrumentId": "UAE_FLSC",
+        "instrumentVersion": "2011",
+        "documentUri": "docs/00-source/regulations/UAEFIRECODE_ENG.pdf",
+        "clauseReference": "Chapter 3, §11.8, Table 3.6A — Apartment Buildings, maximum dead-end corridor",
+        "sourcePage": 182,
+        "sourceBbox": [
+          31.9,
+          220.4,
+          760,
+          509.3
+        ],
+        "sourceTextVerbatim": "11.8 - Table 3.6A: Requirements for Arrangement of Means of Egress … Table 3.6A [OCCUPANCY | OCCUPANT LOAD (M2 PER PERSON) | WITH SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | WITHOUT SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | EXIT DISCHARGE CAPACITIES] … Table 3.6A [Apartment Buildings | 18.6 | 15m | 38m | 61m | 10.7m | 23m | 45m | 7.6 | 5 | 5]"
+      }
+    },
+    {
+      "ruleId": "R-EGRESS-PARKING-TRAVEL-DISTANCE",
+      "parameterId": "egress.parking.travel_distance.max",
+      "isLifeSafety": true,
+      "citation": {
+        "instrumentId": "UAE_FLSC",
+        "instrumentVersion": "2011",
+        "documentUri": "docs/00-source/regulations/UAEFIRECODE_ENG.pdf",
+        "clauseReference": "Chapter 3, §11.8, Table 3.6A — Enclosed Parking Structures, maximum travel distance to an exit",
+        "sourcePage": 183,
+        "sourceBbox": [
+          31.9,
+          95.5,
+          760,
+          509.3
+        ],
+        "sourceTextVerbatim": "11.8 - Table 3.6A: Requirements for Arrangement of Means of Egress … Table 3.6A [OCCUPANCY | OCCUPANT LOAD (M2 PER PERSON) | WITH SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | WITHOUT SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | EXIT DISCHARGE CAPACITIES] … Table 3.6A [Enclosed Parking Structures | 27.9 | 15m | 15m | 60m | 15m | 15m | 45 | 7.6 | 5 | 5]"
+      }
+    },
+    {
+      "ruleId": "R-EGRESS-PARKING-COMMON-PATH",
+      "parameterId": "egress.parking.common_path.max",
+      "isLifeSafety": true,
+      "citation": {
+        "instrumentId": "UAE_FLSC",
+        "instrumentVersion": "2011",
+        "documentUri": "docs/00-source/regulations/UAEFIRECODE_ENG.pdf",
+        "clauseReference": "Chapter 3, §11.8, Table 3.6A — Enclosed Parking Structures, maximum common path of travel",
+        "sourcePage": 183,
+        "sourceBbox": [
+          31.9,
+          95.5,
+          760,
+          509.3
+        ],
+        "sourceTextVerbatim": "11.8 - Table 3.6A: Requirements for Arrangement of Means of Egress … Table 3.6A [OCCUPANCY | OCCUPANT LOAD (M2 PER PERSON) | WITH SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | WITHOUT SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | EXIT DISCHARGE CAPACITIES] … Table 3.6A [Enclosed Parking Structures | 27.9 | 15m | 15m | 60m | 15m | 15m | 45 | 7.6 | 5 | 5]"
+      }
+    },
+    {
+      "ruleId": "R-EGRESS-PARKING-DEAD-END",
+      "parameterId": "egress.parking.dead_end.max",
+      "isLifeSafety": true,
+      "citation": {
+        "instrumentId": "UAE_FLSC",
+        "instrumentVersion": "2011",
+        "documentUri": "docs/00-source/regulations/UAEFIRECODE_ENG.pdf",
+        "clauseReference": "Chapter 3, §11.8, Table 3.6A — Enclosed Parking Structures, maximum dead-end corridor",
+        "sourcePage": 183,
+        "sourceBbox": [
+          31.9,
+          95.5,
+          760,
+          509.3
+        ],
+        "sourceTextVerbatim": "11.8 - Table 3.6A: Requirements for Arrangement of Means of Egress … Table 3.6A [OCCUPANCY | OCCUPANT LOAD (M2 PER PERSON) | WITH SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | WITHOUT SPRINKLER PROTECTION: DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | EXIT DISCHARGE CAPACITIES] … Table 3.6A [Enclosed Parking Structures | 27.9 | 15m | 15m | 60m | 15m | 15m | 45 | 7.6 | 5 | 5]"
+      }
+    },
+    {
+      "ruleId": "R-DBC-B53-PARKING-CLEAR-HEIGHT",
+      "parameterId": "parking.clear_height.min",
+      "isLifeSafety": false,
+      "citation": {
+        "instrumentId": "DUBAI_BUILDING_CODE",
+        "instrumentVersion": "2021",
+        "clauseReference": "B.5.3, Table B.4 — Minimum clear heights (Common areas: Parking – for light vehicles)",
+        "documentUri": "docs/00-source/regulations/Dubai Building Code_English_2021 Edition_compressed.pdf",
+        "sourcePage": 59,
+        "sourceBbox": [
+          61.1,
+          397.5,
+          387,
+          465.1
+        ],
+        "sourceTextVerbatim": "Table B.4 [Common areas | Parking – for light vehicles | 2.3]"
+      }
+    },
+    {
+      "ruleId": "R-DBC-B53-LIVING-CLEAR-HEIGHT",
+      "parameterId": "residential.clear_height.min",
+      "isLifeSafety": false,
+      "citation": {
+        "instrumentId": "DUBAI_BUILDING_CODE",
+        "instrumentVersion": "2021",
+        "clauseReference": "B.5.3, Table B.4 — Minimum clear heights (Residential: Living and bedroom spaces)",
+        "documentUri": "docs/00-source/regulations/Dubai Building Code_English_2021 Edition_compressed.pdf",
+        "sourcePage": 58,
+        "sourceBbox": [
+          430.9,
+          186.7,
+          752.1,
+          470.6
+        ],
+        "sourceTextVerbatim": "The clear height of a space shall be not less than the minimum values given in Table B.4. … The clear heights shall be calculated from FFL to any structural suspended element or ceiling soffits, as shown in Figure B.25. … Table B.4 [Residential, hotel | Living and bedroom spaces | 2.7]"
       }
     },
     {

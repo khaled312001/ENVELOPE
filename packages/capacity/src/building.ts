@@ -335,9 +335,11 @@ const NOT_MODELLED: readonly string[] = [
   'Escape distances and the pedestrian route from the street to the entrance — NOT ' +
     "ASSESSED. The fire code's travel distance, common path and dead-end limits (Table " +
     '3.6A) are declared in the deferred-check list; no floor plan is drawn to measure them on.',
-  // INVENTORY.md listed B.7.2.7 as encoded. Nothing computed it; this says so.
-  'Bicycle parking — NOT ASSESSED. DBC B.7.2.7 asks for bicycle parking equal to 5% of the ' +
-    'car parking requirement, within 30 m of the building entrance; no bicycle space is ' +
+  // INVENTORY.md listed B.7.2.7 as encoded. Nothing computed it; this says so. The
+  // clause's 5% is written as a twentieth: /refusals prints this list and holds itself
+  // to no percentage at all, so a percentage-shaped accuracy claim cannot slip in there.
+  'Bicycle parking — NOT ASSESSED. DBC B.7.2.7 asks for bicycle parking equal to a twentieth ' +
+    'of the car parking requirement, within 30 m of the building entrance; no bicycle space is ' +
     'counted or drawn.',
 ];
 

@@ -894,8 +894,8 @@ export const RUN_READERS: readonly Reader[] = [
     ar: 'مسافات الإخلاء ومسار المشاة من الشارع إلى المدخل: لم تخضع للتقييم. حدود مسافة الانتقال والمسار المشترك والنهاية المسدودة في كود الحريق (الجدول 3.6A) مدرجة في الفحوص المؤجلة، ولا يرسم مسقط تقاس عليه.',
   }),
   starts('Bicycle parking — NOT ASSESSED.', {
-    en: 'Bicycle parking: not assessed. DBC B.7.2.7 asks for 5% of the car parking requirement, within 30 m of the building entrance; no bicycle space is counted or drawn.',
-    ar: 'مواقف الدراجات: لم تخضع للتقييم. يطلب كود دبي للمباني (B.7.2.7) مواقف دراجات تعادل 5% من المواقف المطلوبة للسيارات، على بعد لا يزيد عن 30 م من مدخل المبنى، ولا يحسب أي موقف دراجة ولا يرسم.',
+    en: 'Bicycle parking: not assessed. DBC B.7.2.7 asks for a twentieth of the car parking requirement, within 30 m of the building entrance; no bicycle space is counted or drawn.',
+    ar: 'مواقف الدراجات: لم تخضع للتقييم. يطلب كود دبي للمباني (B.7.2.7) مواقف دراجات تعادل جزءا من عشرين من المواقف المطلوبة للسيارات، على بعد لا يزيد عن 30 م من مدخل المبنى، ولا يحسب أي موقف دراجة ولا يرسم.',
   }),
   starts('The refuse room is not drawn on this run', {
     en: 'The refuse room is not drawn on this run; its size against DBC B.8.5.2.3 and Table B.29 is not assessed.',

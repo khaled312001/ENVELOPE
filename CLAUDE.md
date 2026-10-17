@@ -620,6 +620,41 @@ is a defect even when it makes something easier.
   stated. A report prints a measure to two decimals and a count whole; the exact value
   stays on the element, in the derivation, the JSON and the XLSX. The study report
   prints its drawings on A3 pages at full size, because reduced to A4 every scale bar lied.
+- **Band A stands on the instrument's own plot area, and a printed GFA governs as
+  printed.** A sheet's FAR is its GFA over its *printed* plot area, so FAR × the traced
+  boundary reports a GFA nobody printed (Warsan 6211383 on a 40×30 trace: 4,200.00 m²
+  against a printed 4,778.31). `envelope.farBasis` publishes the base, the traced area
+  and their difference; achieved FAR and INV-03 divide by the same base. Where an
+  instrument prints a GFA (a sheet, or BRIEF-6468096's 21,604.61 m²), band A *is* that
+  GFA. Coverage stays on the traced boundary. A plot with no instrument runs on the
+  seed's FAR and plate, `ASSUMED` with a basis that names them, never `DERIVED`.
+  `typedLimits {far, gfaM2, maxStoreys}` are `USER_SET` under the reader and set the
+  general rule aside visibly; a typed figure that contradicts the plot's own instrument
+  halts the run. A storey count typed by a reader gives a `USER_SET` height whose
+  derivation still reaches B.4.2.2 ¶6 through its own `DERIVED` 6 m-a-floor node.
+  Boundaries `offsetPerEdge` drops or holds to a neighbour's line are published, with
+  an `ASSUMED` register row bounding the footprint they cost.
+- **A sentence under a drawing says what this run did.** 3.20 m floor to floor is a
+  placeholder no instrument prints, and says so. Table B.4's 2.3 m parking and 2.7 m
+  living clear heights are `EVALUATIVE_ONLY` and every run with parking states what its
+  storey leaves above 2.3 m, NOT ASSESSED because no slab is modelled. Egress is FLSC
+  Table 3.6A with both sprinkler columns and no default, in the deferred list, never
+  checked. The substation's 3.70 m clear height against the storey is a conflict stated
+  in both figures and never repaired by raising a floor. When the code sizes a room the
+  run does not (refuse B.8.5.2.3, water tank H.5.5.3, bicycles B.7.2.7), the clause is
+  cited and said not applied — "no requirement on file" was false. A `DERIVED` saleable
+  figure must carry `cited` and reach it in the graph, or the run is refused. The
+  bicycle note writes B.7.2.7's 5% as "a twentieth" because `/refusals` prints that list
+  and holds itself to no percentage at all.
+- **A brief is chosen with a button and fills only the gap it prints.** BRIEF-6468096
+  (`packages/rules/src/standards/plot-6468096.ts`) names no party, prints its plot area
+  in ft² only (converted exactly) and no FAR, so `ProjectBrief.far` is optional and never
+  the quotient. Its "up to G+5P+45" is printed for the plots the request lists, which is
+  only this one, and binds nothing because a brief supplies only its GFA; the run on that
+  sheet stays refused on Height until the client answers. The button is `aria-pressed`
+  and opens unpressed. Title-block fields (project, client, consultant, description,
+  status) are optional on the run, printable ASCII only because the DXF prints them,
+  refused in a sentence otherwise, and changed only by a new run.
 - **Degenerate geometry raises.** Slivers, self-intersections and near-tangent offsets throw
   rather than return a plausible wrong answer (PRD §14.3).
 - **Invariant failure blocks emission.** Never a warning, never a configurable severity.

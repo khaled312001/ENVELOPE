@@ -177,7 +177,7 @@
     "levelPlan": {
       "bayCount": {
         "value": "52",
-        "node": "n121",
+        "node": "n127",
         "parameterId": "parking.laid_out_bays",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -185,7 +185,7 @@
       },
       "areaPerBayM2": {
         "value": "36.92",
-        "node": "n123",
+        "node": "n129",
         "parameterId": "parking.area_per_bay_m2",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -193,7 +193,7 @@
       },
       "deductionsM2": {
         "value": "288",
-        "node": "n87",
+        "node": "n93",
         "parameterId": "parking.layout_deductions_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -201,7 +201,7 @@
       },
       "moduleDepthM": {
         "value": "17",
-        "node": "n91",
+        "node": "n97",
         "parameterId": "parking.module_depth_m",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -209,7 +209,7 @@
       },
       "usableAreaM2": {
         "value": "1631.99",
-        "node": "n93",
+        "node": "n99",
         "parameterId": "parking.layout_usable_area_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -217,7 +217,7 @@
       },
       "orientation": {
         "value": "bays to the walls, the ring aisle sloped as the ramp",
-        "node": "n117",
+        "node": "n123",
         "parameterId": "parking.module_orientation",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION"
@@ -225,7 +225,7 @@
       "turning": {
         "innerRadiusM": {
           "value": "4",
-          "node": "n149",
+          "node": "n155",
           "parameterId": "parking.turning_inner_radius_m",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -233,7 +233,7 @@
         },
         "laneM": {
           "value": "3.5",
-          "node": "n152",
+          "node": "n158",
           "parameterId": "parking.turning_lane_m",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -241,7 +241,7 @@
         },
         "fitting": {
           "value": "8",
-          "node": "n154",
+          "node": "n160",
           "parameterId": "parking.turns_fitting",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -275,7 +275,7 @@
         "slopeBlocked": true,
         "required": {
           "value": "2",
-          "node": "n167",
+          "node": "n173",
           "parameterId": "parking.accessible_required",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -283,7 +283,7 @@
         },
         "placed": {
           "value": "0",
-          "node": "n177",
+          "node": "n183",
           "parameterId": "parking.accessible_bays",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -293,7 +293,7 @@
         "lost": 0,
         "bayCount": {
           "value": "48",
-          "node": "n179",
+          "node": "n185",
           "parameterId": "parking.entry_level_bays",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -303,7 +303,7 @@
         "preferred": {
           "required": {
             "value": "5",
-            "node": "n267",
+            "node": "n269",
             "parameterId": "parking.preferred_required",
             "provenanceClass": "ASSUMED",
             "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -1784,7 +1784,7 @@
           ],
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-          "node": "n146",
+          "node": "n152",
           "provenanceClass": "DERIVED"
         },
         "chosen": null,
@@ -1925,7 +1925,7 @@
       "grade": {
         "bayCount": {
           "value": "48",
-          "node": "n156",
+          "node": "n162",
           "parameterId": "parking.grade_bays",
           "provenanceClass": "DERIVED",
           "renderHint": "NEUTRAL_WITH_CITATION",
@@ -2021,7 +2021,7 @@
         ],
         "rank": 1,
         "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-        "node": "n146",
+        "node": "n152",
         "provenanceClass": "DERIVED"
       },
       "chosen": null,
@@ -2556,15 +2556,19 @@
         ],
         "units": "metres, Y up",
         "notModelled": [
-          "Columns, and therefore no grid bubbles. The layout charges Table B.11's 300 mm clearance per bay but places no column, so drawing one would be drawing structure nobody checked against the bays - and a grid bubble is read as a column line. Position on a parking sheet is given by bay number and by the dimensioned module.",
+          "No column is drawn, and so no grid bubbles: the layout places no column, and a bubble is read as a column line. Bays are packed side by side at Table B.11's 2.50 m. Its additional 300 mm for a bay bounded by a structural element or a wall is not charged anywhere, beside a column or at the end of a run against a wall, so where a wall or a column stops a car door opening the count is more than a drawn structure would allow. NOT ASSESSED. Position on a parking sheet is given by bay number and by the dimensioned module.",
           "Stairs and lifts as rooms, and plant. The run declares how much of each parking level they take — drawn as the reserved zone — not where each one goes.",
           "Slab thickness. Levels are planes at their floor level. The engine computes no slab depth, and a drawn thickness would be an invented one.",
           "Façades, windows, balconies and units. The engine computes none of them.",
           "Neighbouring buildings and the road. The run knows which edges of the plot face a road and which face a neighbour — the site plan writes that on the boundary — but not what stands beyond them, so neither is drawn.",
-          "Pedestrian entrance, refuse room and escape distances — NOT ASSESSED until their rules are encoded.",
+          "Escape distances and the pedestrian route from the street to the entrance — NOT ASSESSED. The fire code's travel distance, common path and dead-end limits (Table 3.6A) are declared in the deferred-check list; no floor plan is drawn to measure them on.",
+          "Bicycle parking — NOT ASSESSED. DBC B.7.2.7 asks for bicycle parking equal to a twentieth of the car parking requirement, within 30 m of the building entrance; no bicycle space is counted or drawn.",
+          "Clear height on the parking levels. Each is drawn 3.20 m floor to floor, a placeholder storey height that no instrument prints, and DBC Table B.4 asks 2.30 m clear for light-vehicle parking, measured to the underside of the lowest beam or soffit. That leaves 0.90 m for the slab, beams and services, which are not computed, so whether it is enough is NOT ASSESSED.",
           "The sloped ring is drawn level in 3D and in section. On plan the ring aisle and the bays on it climb one storey over each 112.46 m lap; the 3D view and the sections stand every parking level flat at its floor height, and where the core door meets the ring at each level is not drawn.",
           "The core, as a design. Its outline is the tower plate scaled to the core area, and only that area is a computed quantity. The stairs, lifts and lobby drawn inside it, and the door into it at ground level, are an indicative layout, assumed: egress, lift traffic and fire-fighting are NOT ASSESSED, no riser or core wall is placed, and no route from the street to the core's door is drawn.",
-          "The ground floor, as a services design. Every room in its reserved strip whose width is a typical figure is an assumption: it is not sized, ventilated or access-checked against a Civil Defence or municipality requirement. The substation and the LV room are sized from DEWA §11.4.1 and §11.2.3, and neither is ventilated or access-checked either — §11.5.1 is only partly mechanizable and is NOT ASSESSED. GARBAGE ROOM: GARBAGE ROOM needs 4.00 m along the strip and 2.43 m of its 8.43 m is left, so it was not drawn rather than drawn narrow."
+          "The ground floor, as a services design. Every room in its reserved strip whose width is a typical figure is an assumption: it is not sized, ventilated or access-checked against any requirement. The substation is sized from DEWA §11.4.1, and the LV room is drawn beside it (§11.2.3) at a typical width; neither is ventilated or access-checked — §11.5.1 is only partly mechanizable and is NOT ASSESSED. The garbage room and the water tank are sized by the Dubai Building Code, and this run does not apply it: B.8.5.2.3 sizes waste storage for two days of waste at a suggested 12 kg for each 100 m² of net area for residential use, with containers by Table B.29, and H.5.5.3 sizes a domestic water tank on 24 hours of demand at Table H.6's rates. Where they are drawn it is at a typical width, and their size against those clauses is NOT ASSESSED. GARBAGE ROOM: GARBAGE ROOM needs 4.00 m along the strip and 2.43 m of its 8.43 m is left, so it was not drawn rather than drawn narrow.",
+          "Clear height, in conflict. The substation is drawn on a ground storey of 3.20 m floor to floor, and DEWA §11.2.5 and DBC G.7.2.3 ask a single-room substation at ground floor for at least 3.70 m clear height — more than the whole storey, before any slab or services are taken off it. The two cannot both stand: the ground storey has to be taller, or the substation split, with its RMU room at 3.0 m clear. Neither change is made here; the storey height and the levels above it are as computed.",
+          "The refuse room is not drawn on this run, and its size against DBC B.8.5.2.3 and Table B.29 is NOT ASSESSED."
         ]
       },
       "jsonFields": [

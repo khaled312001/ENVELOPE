@@ -540,6 +540,48 @@ is a defect even when it makes something easier.
   silent, since printing the opener still opens a dialog and still looks right. The
   smoke gate reads the frame's document back and holds it to the report's own
   sentence.
+- **Which levels park is the schedule's answer, level for level** (17 Oct 2026). The
+  stack once filled `(g?1:0)+k` levels from G up, so plot 6468096 (shops on G, A-104;
+  parking P1–P5) drew bays, the drive, the transformer band and the accessible bays on
+  the shop floor and left P5 empty, with the count still right. `aboveGradeParkingOf`
+  holds the predicate; `entryLevelOf` picks the level the street reaches (G where it
+  parks, else B1, else P1). No ramp is drawn across a ground floor that does not park;
+  the street ramps to B1/P1 are said in words until they are modelled.
+- **No accessible bay on a floor steeper than 2%.** B.7.2.3.1 (p83) is a DERIVED
+  node. On the sloped ring none is designated and the shortfall is said with both
+  figures; the arrangement is never changed to pass the check. The unmet requirement
+  *raises* capacity on parking-governed plots (no aisle bays given up), which is
+  wrong in spirit. Holding bays back that are still drawn was tried and refused:
+  `pnpm parity` requires every drawn car to be a counted bay, and a reservation nobody
+  drew is an area figure dressed as a layout. The fix is a flat zone the layout
+  actually places (wave 3), not a deduction.
+- **Nothing stands on a bay.** The ring's slab-edge drive stood on three counted bays
+  per level; it is now drawn only where a car uses it, and every arrangement is tested
+  for bay ∩ (bay, aisle, drive, ramp, core, reserved) = ∅, in the engine and on the
+  drawn model. On a parking level the renderers draw the shafts the layout avoided,
+  never the whole residential core over bays.
+- **Table B.1 is read as printed, and nothing else may cite it.** DBC p41: road 0 m in
+  every row; neighbour 3 m to G+3, +0.75 m a floor, 7.50 m from G+9. The seed once cited
+  it for a 9/6/4.5/3 m road setback by hierarchy that it never prints, and every plot
+  was cut by it. `table-b1.test.ts` fails if another rule names the table. The height
+  is stated floors × 6 m (B.4.2.2 ¶6); with no count stated the 45 m placeholder is
+  `ASSUMED`. Every DBC verbatim is held piece for piece to `docs/02-reference/dbc` by
+  `test-support/dbc-reference.ts`, which is shown a doctored citation first.
+- **An affection plan prints two schedules, and each binds its own building.** The
+  tower row binds `setback.road`, `setback.adjacent_plot` and `tower_coverage.max`; the
+  podium row binds `setback.podium.<class>`, which only the podium line reads. Warsan's
+  tower went from 1,365 m² (the whole plot) to 819 m² (its 60%). "Front" is the road
+  only on a one-road plot; elsewhere front, and a side that differs from the rear, are
+  asked, never taken as the larger. A typed tower setback equal to the sheet's is the
+  sheet's; a different one is refused quoting the *tower* figure. What the sheet states
+  and the run does not apply is listed on the plot step and in the annex.
+- **A setback table is read cell by cell, and "SEE NOTES" is said only where printed.**
+  DISTANCE, SEE_NOTES and N/A are three states; one unreadable cell refuses the table.
+  Each SIDE n is placed on the boundary the drawing labels, one to one or not at all.
+  The sheet's typed `ParkingRequirement`, land-use split and sides are read and cited;
+  binding them is the rules layer's. The client's PDFs are never copied into the repo:
+  tests that need one skip by name (`ENVELOPE_SOURCE_ROOT`), and every reader is also
+  driven from an unbranded synthetic fixture.
 - **Degenerate geometry raises.** Slivers, self-intersections and near-tangent offsets throw
   rather than return a plausible wrong answer (PRD §14.3).
 - **Invariant failure blocks emission.** Never a warning, never a configurable severity.

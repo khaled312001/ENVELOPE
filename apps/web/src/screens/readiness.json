@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-16T14:54:34.308Z",
+  "generatedAt": "2026-10-17T10:18:40.561Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
-    "rulesTotal": 13,
+    "rulesTotal": 14,
     "definitionsSigned": 0,
     "definitionsTotal": 15,
     "annexVersion": "0.1.0-UNSIGNED",
@@ -28,7 +28,7 @@
     {
       "parameterId": "parking.usable_fraction",
       "runs": 1,
-      "maxRelativeEffect": "0.132075",
+      "maxRelativeEffect": "0.18",
       "basis": "the usable fraction of a parking level after cores, ramps and plant"
     },
     {
@@ -36,6 +36,18 @@
       "runs": 1,
       "maxRelativeEffect": "0",
       "basis": "A core of 18% of the tower plate: the middle of the 15–22% a residential tower core takes for lift shafts, the lift lobby, escape stairs and risers, and the lower end of the 18–20% the architect this engine is built for stated on 4 October 2026. His statement is recorded as a practice statement, STMT-CORE-PLATE-FRACTION-2026-10-04, and is offered separately: a named practitioner agreeing with an assumption is agreement and not a citation, so this figure stays ASSUMED until somebody accepts his statement under his name. No clause of the Dubai Building Code states a core area and no developer standard on file gives one, so this is an assumption and not a derivation. At his upper end, 20%, the core is 11.1% larger and the two reconciliations below move with it; no capacity figure moves either way, because a core is inside GFA and outside saleable area and the saleable efficiency this run was given already carries it. Enter the core area to replace it."
+    },
+    {
+      "parameterId": "envelope.podium_placement",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "The coverage cap fixes how much of the plot the podium may cover, not where it stands. The podium is drawn as the setback line scaled about its centre to the capped area, which keeps its proportions and an equal margin on every side. Its area is the cited figure; its position is this assumption."
+    },
+    {
+      "parameterId": "envelope.height_ceiling_m",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "no floor count is stated for this plot, and DBC B.4.2.2 ¶1 leaves height to the affection plan or DCR. 45 m is a placeholder (R-HEIGHT-MAX-RES) so a study can run before the sheet is to hand; no instrument prints it. With the sheet’s floor count, the ceiling is that count × 6 m (B.4.2.2 ¶6)."
     },
     {
       "parameterId": "building.core_placement",

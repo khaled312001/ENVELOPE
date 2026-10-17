@@ -240,26 +240,49 @@ describe('the reconciliation', () => {
     parkingLevelAreaM2: new Decimal('1900'),
   };
 
-  it('says the arithmetic holds when the core fits inside what the efficiency leaves', () => {
+  it('says the core fits when it is within what the efficiency leaves', () => {
     const [saleable] = reconcileCore({
       ...base,
       plateShare: new Decimal('0.18'),
       saleableEfficiency: new Decimal('0.75'),
     });
     expect(saleable).toContain('18.0% of the tower plate');
-    expect(saleable).toContain('25.0%');
-    expect(saleable).toContain('the arithmetic holding');
+    expect(saleable).toContain('within the 25.0%');
   });
 
-  it('says the two figures cannot both be right when the core alone exceeds it', () => {
+  /*
+    THIS ASSERTED "cannot both be right", and the sentence fired on every default
+    run — an assumed 18% core against the studio's assumed 0.95 — declaring the
+    product's own two defaults a contradiction. The arithmetic shows less than
+    that: the two hold if the share is measured on a larger base than this GFA, as
+    a brief that counts balconies outside GFA is. So the sentence states both
+    figures and the open question, and still changes neither.
+  */
+  it('states both figures and the open question when the core alone exceeds it, not a contradiction', () => {
     const [saleable] = reconcileCore({
       ...base,
       plateShare: new Decimal('0.18'),
       saleableEfficiency: new Decimal('0.95'),
     });
-    expect(saleable).toContain('cannot both be right');
+    expect(saleable).toContain('18.0% of the tower plate');
+    expect(saleable).toContain('leaves 5.0% of the gross');
+    expect(saleable).toContain('The core alone is more than that');
+    expect(saleable).toContain('measured on a larger base than this GFA');
+    expect(saleable).toContain('open question');
+    expect(saleable).not.toMatch(/cannot both be right/);
     // And it changes neither of them, which is the discipline this engine keeps.
-    expect(saleable).toContain('changed neither');
+    expect(saleable).toContain('changed neither figure');
+    // reconcileCore does not know who stated the core, so it may not call it assumed:
+    // a named person's 18% is not an assumption.
+    expect(saleable).not.toMatch(/than assumed/);
+    expect(saleable).toContain('smaller than this run takes it');
+  });
+
+  it('does not call a default run self-contradictory', () => {
+    // The studio's own defaults: the core unstated (ASSUMED 18%), the share 0.95.
+    const out = runPipeline(input({ saleableEfficiency: { value: new Decimal('0.95'), source: 'ASSUMED', basis: 'the studio default share, deferred out of this phase by the client' } }));
+    expect(out.core.reconciliation.join(' ')).not.toMatch(/cannot both be right/);
+    expect(out.core.reconciliation[0]).toMatch(/^Core and saleable share, compared on this GFA/);
   });
 
   it('says when the core is drawn over bays the layout placed', () => {

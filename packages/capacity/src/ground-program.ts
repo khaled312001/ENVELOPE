@@ -13,8 +13,11 @@
  *
  * It is still NOT a services design. But the header of this file used to say that
  * "no room here is sized from a DEWA, Civil Defence or municipality requirement
- * on file; each width is a typical figure", and **that is now only true of seven
- * of the nine rooms.**
+ * on file; each width is a typical figure", and **that was never true**: the
+ * Dubai Building Code — the Municipality's own code, on file — sizes the garbage
+ * room (B.8.5.2.3, Table B.29) and the water tank (H.5.5.3). This engine applies
+ * neither yet, and says so (`SIZED_BY_DBC_NOT_APPLIED`); it no longer says the
+ * requirement does not exist. What follows is how far the DEWA rooms go.
  *
  * ---------------------------------------------------------------------------
  * WHAT CHANGED, AND EXACTLY HOW FAR IT GOES.
@@ -50,8 +53,11 @@
  * 3. **Nothing here is ventilated, access-checked, height-checked or routed.**
  *    §11.5.1 (two sides of natural ventilation) is `PARTIALLY_MECHANIZED` in its
  *    own record and is not evaluated here at all; §11.3.3 (24-hour open-to-sky
- *    access), §11.5.3 (the louver door), §11.2.5 (3.7 m clear height) and §11.7
- *    (the transformer transport ramp) are not evaluated either. `DEWA_NOT_MECHANIZED`
+ *    access), §11.5.3 (the louver door) and §11.7 (the transformer transport
+ *    ramp) are not evaluated either. §11.2.5 (3.7 m clear height) is compared
+ *    with the ground storey's floor-to-floor and a storey lower than it is
+ *    reported as a conflict in both figures; a taller one is still NOT ASSESSED,
+ *    because no slab is computed to take off it. `DEWA_NOT_MECHANIZED`
  *    names the clauses of Section 11 that were deliberately left out with the
  *    reason for each, and `notAssessed` below is built **from that list** rather
  *    than re-typed from it — a published absence cannot drift from the record it
@@ -224,20 +230,32 @@ const SUBSTATION_NAME = 'SUBSTATION';
  */
 const LV_ROOM = { name: 'LV ROOM', widthMm: 5000 } as const;
 
+/** The refuse room's name on the drawing, which the building model's note keys on. */
+export const GARBAGE_ROOM = 'GARBAGE ROOM';
+
 /**
  * Name on the drawing, and width along the strip in millimetres.
  *
- * Every width here is a typical figure and nothing more. No clause of DEWA
- * Section 11, no Civil Defence requirement and no municipality requirement on
- * file sizes any of these rooms; the order is the laying order, from the end of
- * the strip away from the substation.
+ * Every width here is a typical figure and nothing more; the order is the laying
+ * order, from the end of the strip away from the substation.
+ *
+ * THIS COMMENT USED TO SAY NO REQUIREMENT ON FILE SIZES THESE ROOMS, AND TWO OF
+ * THEM ARE SIZED BY ONE. The Dubai Building Code is the Municipality's own code
+ * and it is on file: B.8.5.2.3 (PDF p116) sizes waste storage for two days of
+ * waste at a suggested 12 kg per 100 m² of net area for residential use, Table
+ * B.29 (p117) turns the weight into containers, and H.5.5.3 (p598) sizes a
+ * domestic water tank on 24 hours of demand at Table H.6's per-capita rates.
+ * This engine does not apply them yet — it would need a net area, a population
+ * and a collection method nobody has stated — so the GARBAGE ROOM and the WATER
+ * TANK stay typical widths, and their size against those clauses is published
+ * as NOT ASSESSED (`SIZED_BY_DBC_NOT_APPLIED`) instead of being denied.
  */
 const TYPICAL_ROOMS: readonly { readonly name: string; readonly widthMm: number }[] = [
   { name: 'ENTRANCE LOBBY', widthMm: 6000 },
   { name: 'GENERATOR ROOM', widthMm: 5000 },
   { name: 'PUMP ROOM', widthMm: 5000 },
   { name: 'WATER TANK', widthMm: 6000 },
-  { name: 'GARBAGE ROOM', widthMm: 4000 },
+  { name: GARBAGE_ROOM, widthMm: 4000 },
   { name: 'TEL ROOM', widthMm: 2500 },
   { name: 'MM ROOM', widthMm: 2500 },
 ];
@@ -245,6 +263,20 @@ const TYPICAL_ROOMS: readonly { readonly name: string; readonly widthMm: number 
 const MIN_DEPTH_MM = 3000;
 /** A plant room deeper than this is a corridor; the rest of the strip stays reserved. */
 const MAX_DEPTH_MM = 7000;
+
+/**
+ * What the Dubai Building Code says about the two typical rooms it sizes, and
+ * that this run does not apply it. One sentence, read by the basis, the
+ * published absence and the note under the drawings, so the three cannot say
+ * different things about the same room.
+ */
+export const SIZED_BY_DBC_NOT_APPLIED =
+  'The garbage room and the water tank are sized by the Dubai Building Code, and this run ' +
+  'does not apply it: B.8.5.2.3 sizes waste storage for two days of waste at a suggested ' +
+  '12 kg for each 100 m² of net area for residential use, with containers by Table B.29, ' +
+  'and H.5.5.3 sizes a domestic water tank on 24 hours of demand at Table H.6\'s rates. ' +
+  'Where they are drawn it is at a typical width, and their size against those clauses is ' +
+  'NOT ASSESSED.';
 
 /**
  * A width in metres, for a basis string. `6000 → "6"`, `2500 → "2.5"`.
@@ -300,9 +332,9 @@ export const GROUND_PROGRAM_NOT_MODELLED =
   'The ground floor, as a services design. The SUBSTATION is sized and positioned from ' +
   'DEWA Regulations for Electrical Installations 2017 §11.4.1 and §11.3.1, read with an ' +
   'assumed transformer count; every other room in the strip — the entrance lobby, the LV ' +
-  'room, the generator, pump, water tank, garbage, TEL and MM rooms — is a typical width ' +
-  'that no requirement on file states. No room is ventilated, access-checked, ' +
-  'height-checked or routed, and no lift, riser, duct, panel or door is placed. ' +
+  'room, the generator, pump, water tank, garbage, TEL and MM rooms — is a typical width, ' +
+  `not checked against any requirement. ${SIZED_BY_DBC_NOT_APPLIED} No room is ventilated, ` +
+  'access-checked, height-checked or routed, and no lift, riser, duct, panel or door is placed. ' +
   'REGULATORY VALIDITY: NOT ASSESSED.';
 
 export const GROUND_PROGRAM_BASIS =
@@ -322,8 +354,8 @@ export const GROUND_PROGRAM_BASIS =
   // the basis is reading one list and not two.
   TYPICAL_ROOMS.map((r) => `${r.name} ${widthWords(r.widthMm)} m`).join(', ') +
   ` — each the depth of the strip up to ${widthWords(MAX_DEPTH_MM)} m, along its outer ` +
-  'side; no DEWA, Civil Defence or ' +
-  'municipality requirement on file sizes any of them. And no room in this program is ' +
+  `side, and none checked against a requirement. ${SIZED_BY_DBC_NOT_APPLIED} ` +
+  'And no room in this program is ' +
   'ventilated, access-checked, height-checked or routed: §11.5.1 is PARTIALLY ' +
   'MECHANIZED in its own rule record and is not evaluated here, and DEWA_NOT_MECHANIZED ' +
   'names the clauses of Section 11 left out of the engine with the reason for each. ' +
@@ -393,6 +425,13 @@ export type GroundProgram =
       readonly substation?: SubstationSizing;
       /** What this program does not check, named rather than omitted. */
       readonly notAssessed: readonly string[];
+      /**
+       * Present when the substation is drawn on a ground storey lower than the
+       * clear height DEWA §11.2.5 asks of it: the conflict in its two figures, for
+       * the note under every drawing. Absent is not a pass — `notAssessed` says
+       * the clear height was not checked.
+       */
+      readonly heightConflict?: string;
     }
   | { readonly kind: 'NOT_LAID_OUT'; readonly reason: string };
 
@@ -446,6 +485,13 @@ export interface GroundProgramInput {
     readonly transformers: number;
     readonly actor?: Actor;
   };
+  /**
+   * The ground storey's floor-to-floor, in metres, so the substation's clear
+   * height (DEWA §11.2.5) is compared with the storey it is drawn in rather than
+   * left unsaid. Optional and additive: omitted, the clear height is reported as
+   * not held to anything, as before.
+   */
+  readonly storeyHeightM?: Decimal;
 }
 
 /* ==========================================================================
@@ -897,7 +943,11 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
     };
   }
 
-  const notAssessed = notAssessedFor(substationEnd);
+  const notAssessed = notAssessedFor(substationEnd, input.storeyHeightM, substationDrawn !== undefined);
+  const heightConflict =
+    substationDrawn !== undefined && input.storeyHeightM !== undefined && input.storeyHeightM.lt(citedClearHeightM())
+      ? substationHeightSentence(input.storeyHeightM, true)
+      : undefined;
   const program = tracer.assumed(
     'building.ground_floor_program',
     rooms.map((r) => r.name.toLowerCase()).join(', '),
@@ -947,6 +997,7 @@ export function layoutGroundProgram(input: GroundProgramInput): GroundProgram {
       ...(substationDrawn ? { drawn: substationDrawn } : {}),
     },
     notAssessed,
+    ...(heightConflict ? { heightConflict } : {}),
   };
 }
 
@@ -1219,7 +1270,65 @@ export function plantRunMm(depthMm: number, transformers: number = ASSUMED_TRANS
   return width + LV_ROOM.widthMm;
 }
 
-function notAssessedFor(end: SubstationEnd): readonly string[] {
+/** §11.2.5 — the clear height a single-room substation at ground floor needs. */
+const CLEAR_HEIGHT_RULE = dewaRule('R-DEWA-11.2.5-SUBSTATION-CLEAR-HEIGHT');
+
+/** That clear height, read off the record so the figure exists once. */
+function citedClearHeightM(): Decimal {
+  const v = CLEAR_HEIGHT_RULE.evaluatorArgs['value'];
+  if (typeof v !== 'number' && typeof v !== 'string') {
+    throw new Error(`${CLEAR_HEIGHT_RULE.ruleId} no longer carries a clear height as its value.`);
+  }
+  return new Decimal(v);
+}
+
+/**
+ * The substation's clear height against the storey it is drawn in.
+ *
+ * WHY THIS IS A SENTENCE WITH TWO FIGURES AND NOT A PASS OR A SILENCE. Every
+ * storey of a run stands on one floor-to-floor — 3.20 m on the seed, a
+ * placeholder — and DEWA §11.2.5, with DBC G.7.2.3 saying the same, asks a
+ * single-room substation at ground floor for 3.70 m CLEAR. A storey lower than
+ * the clear height alone cannot hold the room before a slab is taken off it, so
+ * the model's own numbers disagree, and the reader is told so in those numbers.
+ * The storey is not raised to fit: re-stacking the building is a height decision
+ * (a cap can cost a level) that is the client's to state, not this file's to
+ * make. Where the storey is at least the clear height, the slab and services
+ * still come off it and nothing here computes them, so it is NOT ASSESSED.
+ */
+function substationHeightSentence(storeyHeightM: Decimal | undefined, drawn: boolean): string {
+  const clear = citedClearHeightM();
+  const asked =
+    `DEWA §11.2.5 and DBC G.7.2.3 ask a single-room substation at ground floor for at least ` +
+    `${clear.toFixed(2)} m clear height`;
+  if (storeyHeightM === undefined) {
+    return (
+      `Clear height. ${asked}. The ground floor's floor-to-floor was not given to this ` +
+      'program, so the room is not held to it.'
+    );
+  }
+  if (drawn && storeyHeightM.lt(clear)) {
+    return (
+      `Clear height, in conflict. The substation is drawn on a ground storey of ` +
+      `${storeyHeightM.toFixed(2)} m floor to floor, and ${asked} — more than the whole ` +
+      'storey, before any slab or services are taken off it. The two cannot both stand: the ' +
+      'ground storey has to be taller, or the substation split, with its RMU room at 3.0 m ' +
+      'clear. Neither change is made here; the storey height and the levels above it are as ' +
+      'computed.'
+    );
+  }
+  return (
+    `Clear height. ${asked}; the ground storey is ${storeyHeightM.toFixed(2)} m floor to ` +
+    'floor, and the slab and services that come off it are not computed, so the clear ' +
+    'height is NOT ASSESSED.'
+  );
+}
+
+function notAssessedFor(
+  end: SubstationEnd,
+  storeyHeightM: Decimal | undefined,
+  substationDrawn: boolean,
+): readonly string[] {
   return [
     ...(end.againstBoundary
       ? []
@@ -1239,9 +1348,7 @@ function notAssessedFor(end: SubstationEnd): readonly string[] {
       'doors"). PARTIALLY_MECHANIZED in its own record and not evaluated here. It is ' +
       'the clause behind the client\'s own sentence that a substation "cannot sit in ' +
       'the middle", and this engine does not check that it does not.',
-    'Clear height (DEWA §11.2.5: 3.7 m minimum at ground floor for a single-room ' +
-      'substation). The ground floor\'s floor-to-floor is not held to it, so a level ' +
-      'that cannot take this room may still be reported as holding it.',
+    substationHeightSentence(storeyHeightM, substationDrawn),
     'Whether the main panel is private, which is the condition DEWA §11.2.3 attaches ' +
       'to the LV room adjacency. No affection plan states panel ownership, so the ' +
       `adjacency drawn here follows ${LV_ADJACENT_RULE.ruleId} without establishing ` +
@@ -1249,8 +1356,7 @@ function notAssessedFor(end: SubstationEnd): readonly string[] {
       'either way, since Section 11 states no LV room area.',
     'The size of every room other than the substation. The entrance lobby, generator ' +
       'room, pump room, water tank, garbage room, TEL room and MM room are typical ' +
-      'widths; no DEWA, Civil Defence or municipality requirement on file states any ' +
-      'of them.',
+      `widths, not checked against any requirement. ${SIZED_BY_DBC_NOT_APPLIED}`,
     'The transformer count, unless a named person entered one. It is a load ' +
       'calculation this engine does not perform, and §11.4.1 is a table read with it.',
     ...DEWA_NOT_MECHANIZED.map((c) => `DEWA ${c.clause}. ${c.why}`),

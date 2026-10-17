@@ -108,9 +108,16 @@ function groundFloorDesign(t: string): Said | null {
   const left = [...t.matchAll(/([A-Z][A-Z ]+): \1 needs ([\d.]+) m along the strip and ([\d.]+) m of its ([\d.]+) m is left/g)];
   const en = left.map((m) => `${m[1]!.toLowerCase()} not drawn (needs ${m[2]} m, ${m[3]} m left)`);
   const ar = left.map((m) => `${ROOM_AR[m[1]!] ?? m[1]} لم ترسم (تحتاج ${m[2]} م والمتبقي ${m[3]} م)`);
+  // The garbage room and the water tank: the code sizes them, and this run does not apply it.
+  const dbc = t.includes('B.8.5.2.3')
+    ? {
+        en: ' The garbage room and water tank are sized by the Dubai Building Code (B.8.5.2.3, Table B.29, H.5.5.3), which is not applied: their size is not assessed.',
+        ar: ' غرفة النفايات وخزان المياه يحدد كود دبي للمباني مقاسهما (B.8.5.2.3 والجدول B.29 وH.5.5.3)، ولا يطبق هنا: لم يخضع مقاسهما للتقييم.',
+      }
+    : { en: '', ar: '' };
   return {
-    en: `Ground-floor rooms are indicative and assumed; none is ventilated or access-checked.${en.length ? ` ${en.join('; ')}.` : ''}`,
-    ar: `غرف الدور الأرضي استرشادية ومفترضة، ولم يفحص تهويتها ولا الوصول إليها.${ar.length ? ` ${ar.join('؛ ')}.` : ''}`,
+    en: `Ground-floor rooms are indicative and assumed; none is ventilated or access-checked.${dbc.en}${en.length ? ` ${en.join('; ')}.` : ''}`,
+    ar: `غرف الدور الأرضي استرشادية ومفترضة، ولم يفحص تهويتها ولا الوصول إليها.${dbc.ar}${ar.length ? ` ${ar.join('؛ ')}.` : ''}`,
   };
 }
 
@@ -144,6 +151,14 @@ const PARAMETERS: Readonly<Record<string, Said>> = {
   'plant.substation.ventilated_sides': { en: 'Substation: ventilated sides', ar: 'المحطة الفرعية: الجوانب المهواة' },
   'plant.substation.basement_index': { en: 'Substation: basement level', ar: 'المحطة الفرعية: دور البدروم' },
   'plant.lv_room.adjacency': { en: 'Low-voltage room: beside the substation', ar: 'غرفة الجهد المنخفض: بجوار المحطة الفرعية' },
+  // Fire code Table 3.6A, both rows, and Table B.4's clear heights (seed records added Oct 2026).
+  'egress.common_path.max': { en: 'Common path of travel, maximum', ar: 'المسار المشترك، الحد الأقصى' },
+  'egress.dead_end.max': { en: 'Dead end, maximum', ar: 'النهاية المسدودة، الحد الأقصى' },
+  'egress.parking.travel_distance.max': { en: 'Parking: travel distance to an exit, maximum', ar: 'المواقف: مسافة الانتقال إلى المخرج، الحد الأقصى' },
+  'egress.parking.common_path.max': { en: 'Parking: common path of travel, maximum', ar: 'المواقف: المسار المشترك، الحد الأقصى' },
+  'egress.parking.dead_end.max': { en: 'Parking: dead end, maximum', ar: 'المواقف: النهاية المسدودة، الحد الأقصى' },
+  'parking.clear_height.min': { en: 'Parking clear height, minimum', ar: 'الارتفاع الصافي للمواقف، الحد الأدنى' },
+  'residential.clear_height.min': { en: 'Living-space clear height, minimum', ar: 'الارتفاع الصافي لمساحات المعيشة، الحد الأدنى' },
 };
 
 /** Why a rule was considered and not applied, as `apps/api/src/report.ts` (`reasonFor`) writes it. */
@@ -302,4 +317,21 @@ export const STUDY_READERS: readonly Reader[] = [
           ar: 'الدور الأرضي محدد بلا مواقف، ولا توضع عليه مساحة طابقية. ما فيه من محلات وبهو وخدمات غير ممثل، ولم يقيم كم منه مساحة طابقية ولا تحت أي مساحة مسموحة يحسب.',
         };
   },
+  /*
+    The deferred-check labels of the fire code's Table 3.6A records, as
+    `apps/api/src/report.ts` writes them: the parameter id, then "[LIFE SAFETY]".
+  */
+  exact({
+    'egress.common_path.max [LIFE SAFETY]': { en: 'Common path of travel (life safety)', ar: 'المسار المشترك (سلامة الأرواح)' },
+    'egress.dead_end.max [LIFE SAFETY]': { en: 'Dead end (life safety)', ar: 'النهاية المسدودة (سلامة الأرواح)' },
+    'egress.parking.travel_distance.max [LIFE SAFETY]': {
+      en: 'Parking: travel distance to an exit (life safety)',
+      ar: 'المواقف: مسافة الانتقال إلى المخرج (سلامة الأرواح)',
+    },
+    'egress.parking.common_path.max [LIFE SAFETY]': {
+      en: 'Parking: common path of travel (life safety)',
+      ar: 'المواقف: المسار المشترك (سلامة الأرواح)',
+    },
+    'egress.parking.dead_end.max [LIFE SAFETY]': { en: 'Parking: dead end (life safety)', ar: 'المواقف: النهاية المسدودة (سلامة الأرواح)' },
+  }),
 ];

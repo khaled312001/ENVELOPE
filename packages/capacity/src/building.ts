@@ -58,13 +58,14 @@ import {
   type Pt,
   subtractSpans,
 } from '@envelope/geometry';
+import { citesPlaceholder, PARKING_CLEAR_HEIGHT_M } from '@envelope/rules';
 
 import { type AccessiblePlan, ENTRY_LEVEL_WORDS, EntryLevel } from './accessible.js';
 import { CORE_NOT_MODELLED, type CoreResult } from './core.js';
 import { deadEnds } from './dead-ends.js';
 import type { CoreLayout } from './core-layout.js';
-import { layoutGroundProgram } from './ground-program.js';
-import { CROSS_AISLE_ROW } from './layout.js';
+import { GARBAGE_ROOM, layoutGroundProgram, SIZED_BY_DBC_NOT_APPLIED } from './ground-program.js';
+import { CROSS_AISLE_ROW, standardFor } from './layout.js';
 import type { EnvelopeSolution } from './envelope.js';
 import type { GradePlan } from './grade.js';
 import type { LevelPlan, WorldRect } from './level-plan.js';
@@ -188,6 +189,17 @@ export interface BuildingModelInput {
      */
     readonly shaftOnParking?: boolean;
   };
+  /**
+   * How the parking layout charged for columns on this run — the stated grid,
+   * the gap between groups of bays, or neither — so the note under every drawing
+   * says what the run did rather than what one mode of the layout does. Absent
+   * means neither, which is what every older run and every hand-built test model
+   * was given.
+   */
+  readonly columns?: {
+    readonly structuralGridM?: Decimal;
+    readonly gap?: { readonly everyBays: number; readonly gapM: Decimal };
+  };
 }
 
 const source = (t: Traced<unknown>): ElementSource => ({
@@ -221,12 +233,79 @@ export const SLOPED_RING_STOPS_AT_GROUND =
   'that climbs as the ramp on the parking levels does not continue across it; how a car passes ' +
   'the ground floor, to the street or to the parking on its other side, is NOT ASSESSED.';
 
+/**
+ * What the layout did about columns on this run, said under every drawing.
+ *
+ * THIS WAS ONE SENTENCE FOR EVERY RUN, AND ON THE STUDIO'S RUNS IT WAS FALSE. It
+ * said "the layout charges Table B.11's 300 mm clearance per bay", which is true
+ * only when a structural grid is stated (`layout.ts`: the penalty is zero
+ * otherwise). The studio sends the column-gap statement instead, whose own note
+ * says the 300 mm is NOT added — so two sentences on one sheet contradicted each
+ * other, and the false one was the one that made the count sound safe. Now the
+ * sentence follows the run: the grid, the gap, or neither. In every case no
+ * column is placed, so no grid bubble is drawn.
+ */
+function columnsNote(columns: BuildingModelInput['columns'], bayWidthM: Decimal): string {
+  const head =
+    'No column is drawn, and so no grid bubbles: the layout places no column, and a ' +
+    'bubble is read as a column line. ';
+  const tail = ' Position on a parking sheet is given by bay number and by the dimensioned module.';
+  const charged = bayWidthM.plus('0.3');
+  if (columns?.structuralGridM !== undefined) {
+    return (
+      head +
+      `On the stated ${columns.structuralGridM.toFixed(2)} m structural grid every bay is charged ` +
+      `Table B.11's additional 300 mm, ${charged.toFixed(2)} m rather than ${bayWidthM.toFixed(2)} m; ` +
+      'the columns themselves are neither placed nor sized.' +
+      tail
+    );
+  }
+  if (columns?.gap !== undefined) {
+    return (
+      head +
+      `${columns.gap.gapM.toFixed(2)} m is left clear after every ${columns.gap.everyBays} bays for ` +
+      "columns that are neither placed nor sized. Table B.11's additional 300 mm for a bay beside " +
+      'a structural element or a wall is not charged, beside the gap or at the end of a run ' +
+      `against a wall, and whether the ${columns.gap.gapM.toFixed(2)} m already includes it is ` +
+      'NOT ASSESSED.' +
+      tail
+    );
+  }
+  return (
+    head +
+    `Bays are packed side by side at Table B.11's ${bayWidthM.toFixed(2)} m. Its additional 300 mm ` +
+    'for a bay bounded by a structural element or a wall is not charged anywhere, beside a ' +
+    'column or at the end of a run against a wall, so where a wall or a column stops a car door ' +
+    'opening the count is more than a drawn structure would allow. NOT ASSESSED.' +
+    tail
+  );
+}
+
+/**
+ * What a parking storey leaves above Table B.4's clear height, said where the
+ * parking is drawn. A budget, not a check: no slab, beam or services depth is
+ * computed, so whether the difference holds them is NOT ASSESSED — and where the
+ * storey height is the seed's placeholder, that is said too, because the figure
+ * the budget is taken from is itself one nobody printed.
+ */
+function parkingClearHeightNote(storeyM: Decimal, placeholder: boolean): string {
+  const clear = new Decimal(PARKING_CLEAR_HEIGHT_M);
+  const left = storeyM.minus(clear);
+  return (
+    `Clear height on the parking levels. Each is drawn ${storeyM.toFixed(2)} m floor to floor` +
+    (placeholder ? ', a placeholder storey height that no instrument prints' : '') +
+    `, and DBC Table B.4 asks ${clear.toFixed(2)} m clear for light-vehicle parking, measured to ` +
+    'the underside of the lowest beam or soffit' +
+    (left.gt(0)
+      ? `. That leaves ${left.toFixed(2)} m for the slab, beams and services, which are not ` +
+        'computed, so whether it is enough is NOT ASSESSED.'
+      : `, more than the whole storey. The storey cannot hold the clear height the code asks, ` +
+        'before any slab; the storey height has not been changed for it.')
+  );
+}
+
 /** Always true of this model, whatever the run. Said with every drawing of it. */
 const NOT_MODELLED: readonly string[] = [
-  'Columns, and therefore no grid bubbles. The layout charges Table B.11\'s 300 mm ' +
-    'clearance per bay but places no column, so drawing one would be drawing structure ' +
-    'nobody checked against the bays - and a grid bubble is read as a column line. ' +
-    'Position on a parking sheet is given by bay number and by the dimensioned module.',
   /*
     THIS USED TO SAY THE CORE WAS NOT MODELLED AT ALL. It is now sized, placed
     and drawn on every level — see `core.ts` — so what survives here is the part
@@ -245,8 +324,21 @@ const NOT_MODELLED: readonly string[] = [
   'Neighbouring buildings and the road. The run knows which edges of the plot face a ' +
     'road and which face a neighbour — the site plan writes that on the boundary — but ' +
     'not what stands beyond them, so neither is drawn.',
-  'Pedestrian entrance, refuse room and escape distances — NOT ASSESSED until their ' +
-    'rules are encoded.',
+  /*
+    THIS SAID "Pedestrian entrance, refuse room and escape distances — NOT
+    ASSESSED until their rules are encoded", on runs that draw a GARBAGE ROOM on
+    the ground floor. The room is drawn and its size is not assessed; the
+    ground-floor sentence below says which, room by room. What stays true of
+    every run is this: the escape distances are in the deferred-check list from
+    the fire code's Table 3.6A, and no floor plan exists to measure them on.
+  */
+  'Escape distances and the pedestrian route from the street to the entrance — NOT ' +
+    "ASSESSED. The fire code's travel distance, common path and dead-end limits (Table " +
+    '3.6A) are declared in the deferred-check list; no floor plan is drawn to measure them on.',
+  // INVENTORY.md listed B.7.2.7 as encoded. Nothing computed it; this says so.
+  'Bicycle parking — NOT ASSESSED. DBC B.7.2.7 asks for bicycle parking equal to 5% of the ' +
+    'car parking requirement, within 30 m of the building entrance; no bicycle space is ' +
+    'counted or drawn.',
 ];
 
 /**
@@ -301,7 +393,14 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   const groundIsAnswer = answerAt.has(0) && above.podium > 0;
 
   const placements: BuildingModel['placements'][number][] = [];
-  const notModelled: string[] = [...NOT_MODELLED];
+  const bayWidthM = new Decimal(
+    levelPlan?.layout.standard.bayWidthM ?? standardFor('DEG_90', 'TWO_WAY').bayWidthM,
+  );
+  const notModelled: string[] = [columnsNote(input.columns, bayWidthM), ...NOT_MODELLED];
+  if (parkingCount > 0) {
+    const f2fRule = envelope.resolutions.get('floor_to_floor')?.governing?.rule;
+    notModelled.push(parkingClearHeightNote(f2f.value, f2fRule !== undefined && citesPlaceholder(f2fRule)));
+  }
 
   // --- where the parking goes ------------------------------------------------
   const placementText =
@@ -745,6 +844,8 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       ...(overflow.length > 0 ? { overflow } : {}),
       obstacles,
       edges: input.plot.edges,
+      // Every storey stands on one floor-to-floor; the ground storey is one of them.
+      storeyHeightM: f2f.value,
       ...(band ? { roadZone: band.world, roadEdgeSeq: band.edgeSeq } : {}),
       ...(core
         ? {
@@ -791,17 +892,39 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
             as `instrumentVersion` on every one of these clauses' citations, and
             the clause reference identifies the clause without it.
           */
-          'access-checked against a Civil Defence or municipality requirement. The ' +
-          'substation and the LV room are sized from DEWA §11.4.1 and §11.2.3, and ' +
-          'neither is ventilated or access-checked either — §11.5.1 is only partly ' +
-          'mechanizable and is NOT ASSESSED.' +
+          'access-checked against any requirement. ' +
+          /*
+            "sized from DEWA §11.4.1 and §11.2.3" WAS HALF FALSE: §11.2.3 puts the
+            LV room beside the substation and states no area for it, which is what
+            `ground-program.ts` has always said. And "a Civil Defence or
+            municipality requirement" read as though none exists; the Dubai
+            Building Code sizes the garbage room and the water tank, and the
+            sentence now says that this run does not apply it.
+          */
+          'The substation is sized from DEWA §11.4.1, and the LV room is drawn beside it ' +
+          '(§11.2.3) at a typical width; neither is ventilated or access-checked — §11.5.1 is ' +
+          `only partly mechanizable and is NOT ASSESSED. ${SIZED_BY_DBC_NOT_APPLIED}` +
           (program.refused.length
             ? ` ${program.refused.map((r) => `${r.name}: ${r.reason}`).join(' ')}`
             : ''),
       );
+      if (program.heightConflict) notModelled.push(program.heightConflict);
     } else {
       notModelled.push(`The ground floor's rooms. ${program.reason}`);
     }
+  }
+  /*
+    THE REFUSE ROOM, SAID ONCE AND SAID RIGHT. Where the ground floor's program
+    draws a GARBAGE ROOM, the sentence above says what it is: drawn, typical,
+    size not assessed. Where it does not — no parking at grade, no strip, or no
+    length left for it — the room is not drawn, and that is said here instead of
+    in a blanket "NOT ASSESSED" that also covered runs where it was drawn.
+  */
+  if (!groundRooms?.rooms.some((r) => r.name === GARBAGE_ROOM)) {
+    notModelled.push(
+      'The refuse room is not drawn on this run, and its size against DBC B.8.5.2.3 and ' +
+        'Table B.29 is NOT ASSESSED.',
+    );
   }
 
   // --- sections -----------------------------------------------------------------------

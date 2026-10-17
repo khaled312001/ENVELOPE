@@ -54,7 +54,15 @@ rule index possible rather than aspirational. It does decompose lam-alef and ham
 presentation forms, so a search for `الغلاف` must normalise to find text stored as `الغالف`.
 
 **Clauses encoded so far:** B.7.2.4 Table B.11 (bay and driveway dimensions),
-B.7.2.6.1 Table B.13 (parking ratios), B.7.2.6.2 (preferred parking 5%), B.7.2.7 (bicycles).
+B.7.2.6.1 Table B.13 (parking ratios), B.7.2.6.2 (preferred parking 5%), and B.5.3
+Table B.4 (clear heights: 2.3 m parking, 2.7 m living, declared and not checked). From the
+fire code, Chapter 3 Table 3.6A (travel distance, common path, dead end; apartments and
+enclosed parking), declared in the deferred-check list and never checked.
+
+**Not encoded, though it was listed here:** B.7.2.7 (bicycles, 5% of the car parking
+requirement). Nothing computes it; every drawing says so, NOT ASSESSED. B.8.5.2.3 / Table
+B.29 (waste room) and H.5.5.3 (water tank) size two ground-floor rooms the engine draws at
+typical widths; the engine says the clauses exist and that it does not apply them.
 
 **The precedence rule that governs all of them**, B.7.2.6.1 verbatim:
 

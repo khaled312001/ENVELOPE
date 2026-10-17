@@ -27,6 +27,7 @@
 import {
   type BuildingModel,
   type CapacityResult,
+  type Citation,
   Decimal,
   levelCode,
   type LevelSchedule,
@@ -148,6 +149,16 @@ export type SaleableEfficiencyInput = {
   readonly source: 'USER_SET' | 'DERIVED' | 'ASSUMED';
   readonly basis?: string;
   readonly actor?: { readonly id: string; readonly name: string };
+  /*
+    THE INSTRUMENT A DERIVED FIGURE COMES FROM, AND IT IS REQUIRED FOR ONE.
+    `DERIVED` used to be traced with `uses: {}` and the formula "from a cited
+    instrument" — a number claiming a citation it could not reach, the exact
+    defect `pipeline.test.ts` walks the graph to catch. A brief's SA/GFA line is
+    a citable instrument (`ProjectBrief` carries page and box); without one, the
+    figure is the reader's (`USER_SET`) or an assumption with a basis, and a
+    DERIVED one is refused. Optional and additive: every other source ignores it.
+  */
+  readonly cited?: { readonly ruleId: string; readonly citation: Citation };
 } & (
   | { readonly value: Decimal; readonly saleableAreaM2?: undefined }
   | { readonly saleableAreaM2: Decimal; readonly value?: undefined }
@@ -714,6 +725,14 @@ export function runPipeline(input: RunInput): RunOutput {
       'saleable_efficiency',
     );
   }
+  const cited = efficiency.cited;
+  if (efficiency.source === 'DERIVED' && cited === undefined) {
+    throw new RunBlockedError(
+      'a DERIVED saleable figure must name the instrument it is read from, with its page, so ' +
+        'it reaches a citation. Without one, enter it as yours, or assume a share with a basis.',
+      'saleable_efficiency',
+    );
+  }
   if (statedArea !== undefined && statedArea.lte(0)) {
     throw new RunBlockedError(
       `saleable area must be above zero; got ${statedArea.toString()} m².`,
@@ -771,11 +790,10 @@ export function runPipeline(input: RunInput): RunOutput {
             label: 'saleable area',
             unit: 'm²',
           })
-        : tracer.computed('capacity.saleable_area_m2', statedArea, {
-            formula: 'saleable area, from a cited instrument',
-            uses: {},
+        : tracer.derived('capacity.saleable_area_m2', statedArea, {
+            rule: cited!,
+            formula: `saleable area, as ${cited!.citation.clauseReference} states it`,
             unit: 'm²',
-            provenanceClass: 'DERIVED',
           });
 
   const efficiencyTraced =
@@ -801,11 +819,10 @@ export function runPipeline(input: RunInput): RunOutput {
             basis: efficiency.basis!,
             unit: 'ratio',
           })
-        : tracer.computed('capacity.saleable_efficiency', ratio, {
-            formula: 'saleable area over GFA, from a cited instrument',
-            uses: {},
+        : tracer.derived('capacity.saleable_efficiency', ratio, {
+            rule: cited!,
+            formula: `saleable area over GFA, as ${cited!.citation.clauseReference} states it`,
             unit: 'ratio',
-            provenanceClass: 'DERIVED',
           });
 
   /* The other direction: entered as a ratio, published as the area it implies. */
@@ -1272,6 +1289,13 @@ export function runPipeline(input: RunInput): RunOutput {
       stated schedule is the person saying where it goes.
     */
     ...(schedule ? { schedule, actor: input.actor } : {}),
+    // What the layout charged for columns, so the drawings' note says this run's mode.
+    columns: {
+      ...(input.levelPlan?.structuralGridM === undefined
+        ? {}
+        : { structuralGridM: input.levelPlan.structuralGridM }),
+      ...(columnGap ? { gap: { everyBays: columnGap.everyBays, gapM: columnGap.gapM.value } } : {}),
+    },
   });
 
   const isParking = (use: string): boolean =>

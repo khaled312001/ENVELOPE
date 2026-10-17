@@ -236,6 +236,226 @@ const T_DBC_B1_ROAD = tableB1Column('T-DBC-B1-ROAD', 'roadM');
  */
 const NOT_IN_TABLE_B1 = 'Not DBC Table B.1 — that table prints neighbour and road columns only';
 
+/** The clause `R-FLOOR-TO-FLOOR-RES` carries: it is not a figure the code prints. */
+export const NOT_A_DBC_STOREY_HEIGHT =
+  'Not DBC Part B — the code prints minimum clear heights (Table B.4), not a floor-to-floor';
+
+// ---------------------------------------------------------------------------
+// DBC 2021 B.5.3, Table B.4 — minimum clear heights
+// ---------------------------------------------------------------------------
+
+/**
+ * Table B.4's parking row, p59: "Parking – for light vehicles 2.3".
+ *
+ * Exported because the building model says, under every drawing, what a parking
+ * storey leaves once this is taken off it; the figure exists here once and the
+ * record and the sentence both read it.
+ */
+export const PARKING_CLEAR_HEIGHT_M = '2.3';
+
+/** Table B.4's residential row, p58: "Living and bedroom spaces 2.7". */
+export const LIVING_CLEAR_HEIGHT_M = '2.7';
+
+/**
+ * The parking row of Table B.4, p59. The table runs across p58–59 and B.5.3's two
+ * paragraphs — "shall be not less than", measured "from FFL to any structural
+ * suspended element or ceiling soffits" — are printed on p58, so they are quoted
+ * in `TABLE_B4_LIVING` and not here: a citation holds only what its page prints.
+ *
+ * `sourceBbox` is PDF user space, origin bottom-left, off the text layer: from the
+ * Parking row (y 397.5) to the continued table's header (y 465.1), across the
+ * occupancy, use and clear-height columns (x 61.1–387.0).
+ */
+export const TABLE_B4_PARKING: {
+  readonly instrumentId: string;
+  readonly instrumentVersion: string;
+  readonly clauseReference: string;
+  readonly documentUri: string;
+  readonly sourcePage: number;
+  readonly sourceBbox: readonly [number, number, number, number];
+  readonly sourceTextVerbatim: string;
+} = {
+  instrumentId: 'DUBAI_BUILDING_CODE',
+  instrumentVersion: '2021',
+  clauseReference: 'B.5.3, Table B.4 — Minimum clear heights (Common areas: Parking – for light vehicles)',
+  documentUri: DBC_PDF,
+  sourcePage: 59,
+  sourceBbox: [61.1, 397.5, 387.0, 465.1],
+  sourceTextVerbatim: `Table B.4 [Common areas | Parking – for light vehicles | ${PARKING_CLEAR_HEIGHT_M}]`,
+};
+
+/**
+ * B.5.3 and the residential row of Table B.4, p58. `sourceBbox` runs from the
+ * table's caption (y 186.7) to the B.5.3 heading (y 470.6) in the right-hand
+ * column (x 430.9–752.1).
+ */
+export const TABLE_B4_LIVING: typeof TABLE_B4_PARKING = {
+  instrumentId: 'DUBAI_BUILDING_CODE',
+  instrumentVersion: '2021',
+  clauseReference: 'B.5.3, Table B.4 — Minimum clear heights (Residential: Living and bedroom spaces)',
+  documentUri: DBC_PDF,
+  sourcePage: 58,
+  sourceBbox: [430.9, 186.7, 752.1, 470.6],
+  sourceTextVerbatim: [
+    'The clear height of a space shall be not less than the minimum values given in Table B.4.',
+    'The clear heights shall be calculated from FFL to any structural suspended element or ceiling ' +
+      'soffits, as shown in Figure B.25.',
+    `Table B.4 [Residential, hotel | Living and bedroom spaces | ${LIVING_CLEAR_HEIGHT_M}]`,
+  ].join(' … '),
+};
+
+// ---------------------------------------------------------------------------
+// UAE Fire and Life Safety Code of Practice — Chapter 3, Table 3.6A
+// ---------------------------------------------------------------------------
+
+/**
+ * THE CODE ON FILE IS THE 2011 EDITION, AND IT IS THE ONE CITED.
+ *
+ * `docs/00-source/regulations/UAEFIRECODE_ENG.pdf` says "Copyright © 2011" on
+ * every page. The travel-distance record used to hold 45 m under "UAE FLS Code,
+ * Chapter 2" with no page: 45 m is the column WITHOUT sprinkler protection,
+ * means of egress is Chapter 3, and §6.3.1 (PDF p168) has every high-rise
+ * building sprinklered — so the figure a residential tower would meet is 61 m.
+ * A later edition exists and is not on file; when it is, these records are
+ * re-transcribed from it rather than edited.
+ *
+ * Both columns of each row are transcribed, keyed on `building.sprinklered`.
+ * Nothing in the engine states whether a building is sprinklered, so neither is
+ * chosen for it: a run that does not say gets no value from these records, and
+ * they still reach the deferred-check list, which is decided by applicability
+ * alone. They are EVALUATIVE_ONLY: a travel distance is measured on a floor plan,
+ * and this phase draws none. Declared, never checked, never claimed met.
+ */
+const FLSC = {
+  instrumentId: 'UAE_FLSC',
+  instrumentVersion: '2011',
+  documentUri: 'docs/00-source/regulations/UAEFIRECODE_ENG.pdf',
+} as const;
+
+/** Table 3.6A's column heads, as printed above every page of the table. */
+const TABLE_3_6A_HEADS =
+  'Table 3.6A [OCCUPANCY | OCCUPANT LOAD (M2 PER PERSON) | WITH SPRINKLER PROTECTION: DEAD END ' +
+  '(MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | WITHOUT SPRINKLER PROTECTION: ' +
+  'DEAD END (MAXIMUM) | COMMON PATH (MAXIMUM) | TRAVEL DISTANCE (MAXIMUM) | EXIT DISCHARGE CAPACITIES]';
+
+interface EgressRow {
+  /** The occupancy, as the table prints it. */
+  readonly printed: string;
+  /** What the record's id and parameter call it. */
+  readonly key: 'APARTMENT' | 'PARKING';
+  readonly page: number;
+  readonly bbox: readonly [number, number, number, number];
+  /** [sprinklered, unsprinklered], each as printed in metres. */
+  readonly deadEnd: readonly [string, string];
+  readonly commonPath: readonly [string, string];
+  readonly travel: readonly [string, string];
+  /** The row's other cells, verbatim, for the citation. */
+  readonly cells: string;
+}
+
+/*
+  Read off the text layer by x-coordinate against the column heads (x 205.8,
+  275.9, 345.9 / 327.9 sprinklered; 415.9, 486.0, 556.1 / 538.1 unsprinklered),
+  and checked against the page render. The boxes run from the row up to the
+  column heads (PDF user space, origin bottom-left).
+*/
+const EGRESS_ROWS: readonly EgressRow[] = [
+  {
+    printed: 'Apartment Buildings',
+    key: 'APARTMENT',
+    page: 182,
+    bbox: [31.9, 220.4, 760.0, 509.3],
+    deadEnd: ['15', '10.7'],
+    commonPath: ['38', '23'],
+    travel: ['61', '45'],
+    cells: 'Apartment Buildings | 18.6 | 15m | 38m | 61m | 10.7m | 23m | 45m | 7.6 | 5 | 5',
+  },
+  {
+    printed: 'Enclosed Parking Structures',
+    key: 'PARKING',
+    page: 183,
+    bbox: [31.9, 95.5, 760.0, 509.3],
+    deadEnd: ['15', '15'],
+    commonPath: ['15', '15'],
+    travel: ['60', '45'],
+    cells: 'Enclosed Parking Structures | 27.9 | 15m | 15m | 60m | 15m | 15m | 45 | 7.6 | 5 | 5',
+  },
+];
+
+const EGRESS_MEASURES = [
+  { measure: 'travel', id: 'TRAVEL-DISTANCE', parameter: 'travel_distance', words: 'travel distance to an exit' },
+  { measure: 'commonPath', id: 'COMMON-PATH', parameter: 'common_path', words: 'common path of travel' },
+  { measure: 'deadEnd', id: 'DEAD-END', parameter: 'dead_end', words: 'dead-end corridor' },
+] as const;
+
+/**
+ * One EVALUATIVE_ONLY record per row and measure. The apartment travel distance
+ * keeps the id it always had, `R-EGRESS-TRAVEL-DISTANCE`, and its parameter, so
+ * every list that already named it still does.
+ */
+function egressRecords(): readonly RuleRecord[] {
+  return EGRESS_ROWS.flatMap((row) =>
+    EGRESS_MEASURES.map((m) => {
+      const [withSprinklers, without] = row[m.measure];
+      const ruleId =
+        row.key === 'APARTMENT' ? `R-EGRESS-${m.id}` : `R-EGRESS-${row.key}-${m.id}`;
+      const parameterId =
+        row.key === 'APARTMENT' ? `egress.${m.parameter}.max` : `egress.parking.${m.parameter}.max`;
+      return draft({
+        ruleId,
+        parameterId,
+        ruleClass: RuleClass.EVALUATIVE_ONLY,
+        operator: Operator.MAX,
+        evaluator: EvaluatorName.CONDITIONAL_SCALAR,
+        evaluatorArgs: {
+          cases: [
+            { path: 'building.sprinklered', eq: true, value: withSprinklers },
+            { path: 'building.sprinklered', eq: false, value: without },
+          ],
+        },
+        unit: 'm',
+        applicability: { all: [RESIDENTIAL] },
+        citation: {
+          ...FLSC,
+          clauseReference: `Chapter 3, §11.8, Table 3.6A — ${row.printed}, maximum ${m.words}`,
+          sourcePage: row.page,
+          sourceBbox: row.bbox,
+          sourceTextVerbatim: [
+            '11.8 - Table 3.6A: Requirements for Arrangement of Means of Egress',
+            TABLE_3_6A_HEADS,
+            `Table 3.6A [${row.cells}]`,
+          ].join(' … '),
+        },
+        jurisdiction: 'UAE_FLS',
+        isLifeSafety: true,
+        mechanization: Mechanization.MECHANIZED,
+        validFrom: '2011-01-01',
+        validTo: null,
+        tests: [
+          {
+            kind: 'POSITIVE',
+            context: { land_use: 'RESIDENTIAL_MULTI', building: { sprinklered: true } },
+            expected: Number(withSprinklers),
+            note: `${row.printed}, with sprinkler protection, as printed on p${row.page}.`,
+          },
+          {
+            kind: 'BOUNDARY',
+            context: { land_use: 'RESIDENTIAL_MULTI', building: { sprinklered: false } },
+            expected: Number(without),
+            note: 'The column without sprinkler protection. The figure this record used to hold for travel.',
+          },
+          { kind: 'NEGATIVE', context: { land_use: 'INDUSTRIAL', building: { sprinklered: true } }, expected: 'NOT_APPLICABLE' },
+        ],
+        note:
+          'EVALUATIVE_ONLY: topological, no constructive inverse (§11.3). It can only ' +
+          'reject a floor plan, and this phase draws none, so it is declared and never ' +
+          'applied. Whether the building is sprinklered is not stated by any input; ' +
+          'FLSC 2011 Ch.3 §6.3.1 (PDF p168) sprinklers every high-rise building.',
+      });
+    }),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // DBC 2021 B.4.2.2 — how tall
 // ---------------------------------------------------------------------------
@@ -606,6 +826,22 @@ export const SEED_RULES: readonly RuleRecord[] = [
     ],
   }),
 
+  /*
+    3.20 m WAS CITED TO "Part B", AND PART B PRINTS NO FLOOR-TO-FLOOR. B.5.3 and
+    Table B.4 (p58–59) state minimum CLEAR heights — 2.7 m for living and bedroom
+    spaces, 2.3 m for light-vehicle parking — measured from finished floor to the
+    soffit, and a storey is that plus a slab, beams and services nobody here has
+    sized. So the figure stays, because every storey of every run stands on it,
+    under a clause that says what it is: a placeholder storey height, the same on
+    every level, basements and ground floor included. The clear heights the code
+    does print are their own records below (`R-DBC-B53-*`). STILL OPEN:
+    `envelope.ts` traces `envelope.floor_to_floor_m` as DERIVED through this
+    record, so on screen it is not amber although no instrument prints it. It
+    should be `assumed()` with this clause as its basis; that change cascades
+    into the height ceiling and the level cap and belongs to the envelope, not
+    to this record. Until it lands, the note under every drawing says the
+    figure is a placeholder. The client's own storey heights are an open question.
+  */
   draft({
     ruleId: 'R-FLOOR-TO-FLOOR-RES',
     parameterId: 'floor_to_floor',
@@ -615,7 +851,11 @@ export const SEED_RULES: readonly RuleRecord[] = [
     evaluatorArgs: { value: '3.20' },
     unit: 'm',
     applicability: { all: [RESIDENTIAL] },
-    citation: draftCitation('Part B', 'minimum residential floor-to-floor height'),
+    citation: draftCitation(
+      NOT_A_DBC_STOREY_HEIGHT,
+      'a placeholder floor-to-floor height, used for every level; the code states minimum clear ' +
+        'heights (B.5.3, Table B.4), not a floor-to-floor',
+    ),
     jurisdiction: 'DM_MAINLAND',
     isLifeSafety: false,
     mechanization: Mechanization.MECHANIZED,
@@ -712,30 +952,66 @@ export const SEED_RULES: readonly RuleRecord[] = [
   // what populate it. Declaring them is the difference between "we did not check
   // this" being a published fact and being an omission.
 
+  ...egressRecords(),
+
+  /*
+    THE CLEAR HEIGHTS THE CODE PRINTS, DECLARED AND NOT CHECKED. A clear height
+    is floor to soffit, and the engine computes no slab, beam or services depth
+    (`notModelled` says so under every drawing), so there is nothing to measure
+    one against: EVALUATIVE_ONLY, in the deferred-check list of every run. The
+    building model states the parking one beside the storey it stands in, as a
+    budget, without calling it met.
+  */
   draft({
-    ruleId: 'R-EGRESS-TRAVEL-DISTANCE',
-    parameterId: 'egress.travel_distance.max',
+    ruleId: 'R-DBC-B53-PARKING-CLEAR-HEIGHT',
+    parameterId: 'parking.clear_height.min',
     ruleClass: RuleClass.EVALUATIVE_ONLY,
-    operator: Operator.MAX,
-    evaluator: EvaluatorName.SCALAR_MAX,
-    evaluatorArgs: { value: '45.00' },
+    operator: Operator.MIN,
+    evaluator: EvaluatorName.SCALAR_MIN,
+    evaluatorArgs: { value: PARKING_CLEAR_HEIGHT_M },
     unit: 'm',
     applicability: { all: [RESIDENTIAL] },
-    citation: draftCitation('UAE FLS Code, Chapter 2', 'maximum travel distance to an exit'),
-    jurisdiction: 'UAE_FLS',
-    isLifeSafety: true,
+    citation: TABLE_B4_PARKING,
+    jurisdiction: 'DM_MAINLAND',
+    isLifeSafety: false,
     mechanization: Mechanization.MECHANIZED,
-    validFrom: '2018-01-01',
+    validFrom: '2021-01-01',
     validTo: null,
     tests: [
-      { kind: 'POSITIVE', context: { land_use: 'RESIDENTIAL_MULTI' }, expected: 45 },
-      { kind: 'BOUNDARY', context: { land_use: 'RESIDENTIAL_MULTI', levels: { above_ground: 1 } }, expected: 45 },
+      { kind: 'POSITIVE', context: { land_use: 'RESIDENTIAL_MULTI' }, expected: 2.3, note: 'Table B.4, p59.' },
+      {
+        kind: 'BOUNDARY',
+        context: { land_use: 'RESIDENTIAL_MULTI', levels: { above_ground: 1 } },
+        expected: 2.3,
+        note: 'The same at every level: it is a clear height, not a storey height.',
+      },
       { kind: 'NEGATIVE', context: { land_use: 'INDUSTRIAL' }, expected: 'NOT_APPLICABLE' },
     ],
     note:
-      'EVALUATIVE_ONLY: topological, no constructive inverse (§11.3). It cannot ' +
-      'generate a floorplate — it can only reject one. In Phase 0 nothing generates ' +
-      'a floorplate, so this rule can only be declared, never applied.',
+      'B.7.2.3.1: "Parking areas clear height shall conform to B.5.3." Table B.9 asks ' +
+      '2.4 m over a ramp, which `ramp-rules.ts` already carries.',
+  }),
+
+  draft({
+    ruleId: 'R-DBC-B53-LIVING-CLEAR-HEIGHT',
+    parameterId: 'residential.clear_height.min',
+    ruleClass: RuleClass.EVALUATIVE_ONLY,
+    operator: Operator.MIN,
+    evaluator: EvaluatorName.SCALAR_MIN,
+    evaluatorArgs: { value: LIVING_CLEAR_HEIGHT_M },
+    unit: 'm',
+    applicability: { all: [RESIDENTIAL] },
+    citation: TABLE_B4_LIVING,
+    jurisdiction: 'DM_MAINLAND',
+    isLifeSafety: false,
+    mechanization: Mechanization.MECHANIZED,
+    validFrom: '2021-01-01',
+    validTo: null,
+    tests: [
+      { kind: 'POSITIVE', context: { land_use: 'RESIDENTIAL_MULTI' }, expected: 2.7, note: 'Table B.4, p58.' },
+      { kind: 'BOUNDARY', context: { land_use: 'RESIDENTIAL_MULTI', levels: { above_ground: 40 } }, expected: 2.7 },
+      { kind: 'NEGATIVE', context: { land_use: 'COMMERCIAL' }, expected: 'NOT_APPLICABLE' },
+    ],
   }),
 
   draft({

@@ -65,6 +65,7 @@ export const EN = {
     PARKING: 'Parking, counted toward FAR',
     COMMERCIAL: 'Commercial tenancy',
     ROOF: 'Roof floor',
+    PART_FLOOR: 'Part floor, a smaller top floor (assumed)',
   },
   /** "× 5" — the count beside the area of one level. */
   times: (count: string): string => `× ${count}`,

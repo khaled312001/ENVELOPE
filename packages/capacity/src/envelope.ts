@@ -2019,17 +2019,19 @@ interface FarLimit {
  *
  * Pure, so the fixpoint's seed and the final pass read the same arithmetic.
  *
- * A PRINTED GFA THAT GOVERNS IS THE GROSS ITSELF. A sheet printing a GFA binds
- * `far.max` as that GFA ÷ its printed area, rounded DOWN at six places
- * (`rules/instruments/sheet.ts`). Multiplying the rounded ratio back by the area
- * reproduces the GFA to within a millimetre-square or so, never above it — but
- * "Band A equals the printed GFA" is the claim a reader checks against the sheet,
- * and the printed figure is what the developer priced. So where the governing
- * ratio is exactly that rounding of the instrument's own two figures, the gross
- * is the printed GFA. (A governing GFA within that rounding of a whole number of
- * plates would put the achieved FAR above the rounded ratio by under a millionth;
- * the validator would then refuse, loudly. That is a refusal, never a wrong
- * figure, and has not been met on any plot on file.)
+ * A PRINTED GFA THAT GOVERNS IS HELD TO THE RATIO ITS RULE STATES. A sheet
+ * printing a GFA binds `far.max` as that GFA ÷ its printed area, rounded DOWN at
+ * six places (`rules/instruments/sheet.ts`). Until 17 Oct 2026 the gross here was
+ * the printed GFA itself, a hair above the rounded ratio × the area, on the
+ * argument that a governing figure would never land exactly on band A while it
+ * was held to whole plates, and that if it did the validator would refuse. Once
+ * the part floor stood and the governing figure became min(A, B, C) exactly,
+ * that refusal was met on a plot on file (DDA 5134565: achieved FAR above the
+ * rule by 3 × 10⁻⁷, emission blocked). So the gross is the rule's own figure,
+ * ratio × printed area: never above the printed GFA, short of it by less than a
+ * millionth of the plot area (under 0.005 m² below 5,000 m²), and the figure the
+ * validator and INV-17 hold the run to. The printed GFA stays in the formula, so
+ * a reader checking against the sheet sees both.
  */
 function farLimitOf(
   res: Resolution | undefined,
@@ -2074,7 +2076,7 @@ function farLimitOf(
     far,
     baseM2,
     tracedM2,
-    grossM2: gfaGoverns ? printedGfa : far.times(baseM2),
+    grossM2: far.times(baseM2),
     stated,
     gfaGoverns,
     typed: false,
@@ -2178,8 +2180,9 @@ function traceFarBasis(
     : undefined;
 
   const formula = limit.gfaGoverns
-    ? `GFA ${limit.grossM2.toFixed(2)} m² as printed — the instrument’s own limit, its FAR ` +
+    ? `GFA ${limit.stated!.gfa!.valueM2.toFixed(2)} m² as printed — the instrument’s own limit, its FAR ` +
       `${limit.far.toString()} being that GFA ÷ its printed plot area ${limit.baseM2.toFixed(2)} m² ` +
+      `rounded down at six places, and band A that ratio × the area, ${limit.grossM2.toString()} m² ` +
       `(${tracedAside(t, limit.baseM2)})`
     : limit.stated
       ? `FAR ${limit.far.toString()} × plot area ${limit.baseM2.toFixed(2)} m² as printed ` +

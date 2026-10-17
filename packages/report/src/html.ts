@@ -1008,6 +1008,7 @@ function gfaStatementBlock(run: RunReport, indexes: Indexes): string {
     PARKING: 'Parking, counted toward FAR',
     COMMERCIAL: 'Commercial tenancy',
     ROOF: 'Roof floor',
+    PART_FLOOR: 'Part floor, a smaller top floor (assumed)',
   };
   const CAP_LABEL: Readonly<Record<typeof s.caps[number]['kind'], string>> = {
     RESIDENTIAL: 'Residential G.F.A.',
@@ -1113,6 +1114,10 @@ function gfaStatementBlock(run: RunReport, indexes: Indexes): string {
     s.reconciliation.map((r) => `<p class="note">${esc(r)}</p>`).join('') +
     `<p class="note">Allowed is FAR × plot area, before the parking-in-FAR treatment. Proposed is ` +
     `whole floors of the tower plate` +
+    // The part floor stands as its own row; said so, rather than left under "whole floors".
+    (s.rows.some((r) => r.kind === 'PART_FLOOR')
+      ? ', and above them the part floor, drawn as a smaller top floor of its own area (assumed)'
+      : '') +
     (Number(s.partFloorNotPlaced.m2) > 0
       ? `; the ${plain(s.partFloorNotPlaced.m2, 'm²')} the governing capacity holds above the ` +
         `last whole floor is not placed and not counted`

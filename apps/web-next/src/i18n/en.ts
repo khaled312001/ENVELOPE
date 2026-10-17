@@ -572,6 +572,8 @@ export const EN = {
     assumptions: (n: number): string => (n === 1 ? '1 assumption — you may edit it' : `${n} assumptions — you may edit each one`),
     sensitivity: (p: string, lo: string, hi: string, rel: string): string =>
       `Moved by ${p}, the governing capacity ranges from ${lo} to ${hi} m² (${rel}).`,
+    // The level table's mark on the one level whose plate is not the tower plate; the area beside it is the engine's, amber.
+    partFloor: 'Part floor, assumed:',
   },
 
   sheets: {

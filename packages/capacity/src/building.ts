@@ -200,6 +200,18 @@ export interface BuildingModelInput {
     readonly structuralGridM?: Decimal;
     readonly gap?: { readonly everyBays: number; readonly gapM: Decimal };
   };
+  /**
+   * The part floor above the answer's whole levels, drawn as a smaller top
+   * floor — its ring (`partFloorRing`), its area and the assumed rule it is
+   * drawn by. It stands on the next storey that does not park.
+   */
+  readonly partFloor?: {
+    readonly ring: readonly Pt[];
+    readonly areaM2: TracedDecimal;
+    readonly rule: Traced<string>;
+  };
+  /** Why the part floor above the whole levels is not drawn, when it is not. Said under every drawing. */
+  readonly partFloorDropped?: string;
 }
 
 const source = (t: Traced<unknown>): ElementSource => ({
@@ -393,6 +405,14 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   const answerAt = new Set(freeAbove.slice(0, placedAboveParking));
   const unplacedAnswer = answerCount - placedAboveParking;
   const groundIsAnswer = answerAt.has(0) && above.podium > 0;
+  /*
+    THE PART FLOOR STANDS ON THE NEXT STOREY THAT DOES NOT PARK — the top of the
+    answer, because a smaller floor under a larger one would hang the plate above
+    it in the air. Where every free storey is taken it is not drawn, and that is
+    said; the engine's own runs never reach it, since a part floor exists only
+    under a band smaller than band B, which leaves a storey free.
+  */
+  const partAt = input.partFloor && unplacedAnswer === 0 ? freeAbove[placedAboveParking] : undefined;
 
   const placements: BuildingModel['placements'][number][] = [];
   const bayWidthM = new Decimal(
@@ -551,28 +571,40 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       carries between drawings.
     */
     const id = i === 0 ? 'G' : inPodium ? `P${i}` : `L${String(i).padStart(2, '0')}`;
+    const part = i === partAt ? input.partFloor : undefined;
     levels.push({
       id,
       name:
         (i === 0 ? 'Ground floor' : inPodium ? `Podium ${i}` : `Level ${i}`) +
-        (use === LevelUse.PODIUM_PARKING
-          ? ' · parking'
-          : use === LevelUse.PODIUM
-            ? ''
-            : ' · typical floor'),
+        (part
+          ? ' · part floor'
+          : use === LevelUse.PODIUM_PARKING
+            ? ' · parking'
+            : use === LevelUse.PODIUM
+              ? ''
+              : ' · typical floor'),
       use,
       elevationMm: (i * f2fMm) as Mm,
       heightMm: f2fMm,
       elevationM: toWire(elevation),
-      outline: (inPodium ? envelope.podiumRing : envelope.plateRing).map(pt),
-      outlineSource: inPodium ? podiumSource : towerSource,
-      placed: isParking || answerAt.has(i),
+      // The part floor at its own plate, in the class of the assumption it is drawn by.
+      outline: (part ? part.ring : inPodium ? envelope.podiumRing : envelope.plateRing).map(pt),
+      outlineSource: part ? source(part.areaM2) : inPodium ? podiumSource : towerSource,
+      placed: isParking || answerAt.has(i) || part !== undefined,
       parking: isParking ? contentOf(id) : null,
+      ...(part
+        ? {
+            partFloor: {
+              areaM2: toWire(part.areaM2),
+              label: `PART FLOOR - ${part.areaM2.value.toFixed(0)} SQ.M ASSUMED`,
+            },
+          }
+        : {}),
     });
   }
 
   // --- how much of the stack the answer uses -----------------------------------------
-  const permittedAbove = totalAbove - parkingInPodium - placedAboveParking;
+  const permittedAbove = totalAbove - parkingInPodium - placedAboveParking - (partAt === undefined ? 0 : 1);
   placements.push({
     subject: 'answer',
     source: source(input.answerLevels),
@@ -602,6 +634,23 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
           `parking, and ${unplacedAnswer === 1 ? 'is' : 'are'} not drawn.`
         : ''),
   });
+  const partLevel = partAt === undefined ? undefined : levels.find((l) => l.partFloor !== undefined);
+  if (input.partFloor && partLevel) {
+    placements.push({
+      subject: 'part floor',
+      source: source(input.partFloor.rule),
+      statement:
+        `Part floor: ${partLevel.id} is a smaller top floor of ${input.partFloor.areaM2.value.toFixed(2)} m², ` +
+        `the tower plate of ${envelope.towerPlateCap.value.toFixed(2)} m² scaled to that area — an assumption: ` +
+        'whether the architect draws a smaller top floor or shrinks every plate is a question still open.',
+    });
+  } else if (input.partFloor) {
+    notModelled.push(
+      `The part floor of ${input.partFloor.areaM2.value.toFixed(2)} m² above the answer's whole levels. ` +
+        'Every storey under the height ceiling that does not park is taken, so it is not drawn.',
+    );
+  }
+  if (input.partFloorDropped) notModelled.push(input.partFloorDropped);
 
   // --- ramps between consecutive parking levels ------------------------------------
   const parkingStack = levels.filter((l) => l.parking !== null);

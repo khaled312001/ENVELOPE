@@ -209,14 +209,23 @@ export interface CapacityClaim {
   readonly governingGfaM2: Numeric;
   readonly governingBand: CapacityBand;
   /**
-   * The plate the governing figure is placed in, when it is held to whole
-   * levels. A level is built whole or not at all, so the engine reports
-   * `plate × ⌊min(A, B, C) ÷ plate⌋` and names the part floor it leaves out.
+   * The plate the governing figure is placed in. The engine reports
+   * `plate × ⌊min(A, B, C) ÷ plate⌋` plus the part floor above it, or, where
+   * that part floor is too small or cannot hold the core, the whole levels alone.
    * Given this, INV-16 recomputes that floor from the three bands itself — it
    * does not take the engine's level count — and the value arm holds the
    * governing figure to it. Absent, the value arm is the bare minimum.
    */
   readonly wholeLevelPlateM2?: Numeric;
+  /**
+   * The smallest top floor the engine draws above the whole levels. Given with
+   * the plate, INV-16 expects the band minimum itself where the remainder above
+   * the whole levels is at least this, and the whole levels where it is less.
+   * Absent, the whole levels as before.
+   */
+  readonly partFloorMinimumM2?: Numeric;
+  /** The engine declares the part floor could not be drawn around the core; INV-16 then expects the whole levels. */
+  readonly partFloorNotPlaced?: boolean;
 }
 
 /** INV-18. */
@@ -1065,7 +1074,26 @@ const inv16: InvariantCheck = {
     const plateRaw = s.capacity.wholeLevelPlateM2;
     const plate = plateRaw === undefined ? undefined : dec(plateRaw);
     const wholeLevels = plate !== undefined && plate.gt(0) ? minimum.div(plate).floor() : undefined;
-    const target = plate !== undefined && wholeLevels !== undefined ? plate.times(wholeLevels) : minimum;
+    const wholeTarget = plate !== undefined && wholeLevels !== undefined ? plate.times(wholeLevels) : minimum;
+    /*
+      THE PART FLOOR, RECOMPUTED HERE TOO. Where the engine draws the remainder
+      above the whole levels as a smaller top floor, the governing figure is the
+      minimum itself; where the remainder is smaller than the stated smallest top
+      floor it is the whole levels. Both arms are recomputed from the bands, the
+      plate and the minimum, so a figure that kept a part floor it should have
+      dropped, or dropped one it should have kept, fails. A part floor the
+      engine declares it could not place is the one decision taken on its word,
+      and it is said in the detail.
+    */
+    const partMinimumRaw = s.capacity.partFloorMinimumM2;
+    const partMinimum = partMinimumRaw === undefined ? undefined : dec(partMinimumRaw);
+    const remainder = minimum.minus(wholeTarget);
+    const partStands =
+      partMinimum !== undefined &&
+      s.capacity.partFloorNotPlaced !== true &&
+      remainder.gt(0) &&
+      remainder.gte(partMinimum);
+    const target = partStands ? minimum : wholeTarget;
 
     // Two arms, because §12.2 says "and is labelled as such". The value arm
     // alone would accept a report whose number is right and whose named band is
@@ -1082,12 +1110,20 @@ const inv16: InvariantCheck = {
         `${show(governing)} labelled ${BAND_LETTER[s.capacity.governingBand]} ` +
         `(${s.capacity.governingBand})`,
       expected:
-        plate !== undefined && wholeLevels !== undefined
-          ? `${show(target)} = ${wholeLevels.toString()} whole level(s) of ${show(plate)} under ${show(minimum)} = ${bandsText}`
-          : `${show(minimum)} = ${bandsText}`,
+        partStands && plate !== undefined && wholeLevels !== undefined
+          ? `${show(minimum)} = ${bandsText}: ${wholeLevels.toString()} whole level(s) of ${show(plate)} ` +
+            `and a part floor of ${show(remainder)}`
+          : plate !== undefined && wholeLevels !== undefined
+            ? `${show(target)} = ${wholeLevels.toString()} whole level(s) of ${show(plate)} under ${show(minimum)} = ${bandsText}`
+            : `${show(minimum)} = ${bandsText}`,
       detail:
         `value arm ${valueHolds ? 'holds' : 'fails'}; label arm ` +
         `${labelHolds ? 'holds' : 'fails'}` +
+        (s.capacity.partFloorNotPlaced === true && remainder.gt(0)
+          ? `; the engine declares the part floor of ${show(remainder)} could not be drawn around the core`
+          : partMinimum !== undefined && remainder.gt(0) && !partStands
+            ? `; the part floor of ${show(remainder)} is under the smallest top floor of ${show(partMinimum)}`
+            : '') +
         (tied
           ? '. Two or more bands tie at the minimum, so more than one label is ' +
             'defensible; the tie is reported because a band that binds with zero ' +

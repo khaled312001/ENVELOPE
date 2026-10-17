@@ -234,7 +234,9 @@ describe('a project brief, named by the run', () => {
       expect(r.json['sheet'].briefBound[0].clause).toMatch(/^Developer brief, not an authority document/);
       // The brief's own GFA, 8,796.46 m², on the plot area the brief prints — not 1,200 m²
       // entered × 5.05381 (6,064.572, which it was), and not the placeholder's 5.00.
-      expect(r.json['capacity'].bandA.value).toBe('8796.46');
+      // To the cent; exactly, the rule's 5.05381 × 1,740.56, never above the printed 8,796.46.
+      expect(Number(r.json['capacity'].bandA.value).toFixed(2)).toBe('8796.46');
+      expect(r.json['capacity'].bandA.value).toBe('8796.4595336');
     } finally {
       await app.close();
     }

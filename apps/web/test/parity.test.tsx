@@ -599,3 +599,90 @@ describe('the cross aisle, removed', () => {
     expect(doctored, 'no parking level was doctored, so nothing was proved').toBeGreaterThan(0);
   });
 });
+
+/*
+  THE PART FLOOR, IN EVERY RENDERER. 17 Oct 2026.
+
+  The governing capacity above the last whole tower plate is drawn as a smaller
+  top floor, ASSUMED. Every renderer inks a slab by its source's class, so none
+  of them had to learn the part floor exists — which is exactly why this holds
+  each of them to it: the React sheet, the SVG sheet, the sheet's DXF, the
+  building DXF, the 3D view and the .glb each draw that level at its own plate,
+  in the assumed ink, and park no car on it.
+*/
+describe('the part floor above the last whole level', () => {
+  const ringArea = (ring: readonly XY[]): number =>
+    Math.abs(ring.reduce((s, p, i) => {
+      const q = ring[(i + 1) % ring.length]!;
+      return s + (p.x * q.y - q.x * p.y);
+    }, 0)) / 2;
+
+  it('stands at its own plate, in the assumed ink, on the sheets, the DXF, the 3D view and the .glb', async () => {
+    const out = runPipeline(runInput(RECT_80x40));
+    const model = out.building;
+    expect(out.partFloor?.kind).toBe('DRAWN');
+    const level = model.levels.find((l) => l.partFloor)!;
+    expect(level, 'no level carries the part floor').toBeDefined();
+    const areaM2 = Number(level.partFloor!.areaM2.value);
+    const typical = model.levels.find((l) => l.use === 'TYPICAL' && l.placed && !l.partFloor)!;
+    // Its own plate: smaller than the typical floor's, and the area the engine counted.
+    expect(ringArea(level.outline) / 1e6).toBeCloseTo(areaM2, 0);
+    expect(ringArea(level.outline)).toBeLessThan(ringArea(typical.outline));
+    expect(level.outlineSource.provenanceClass).toBe('ASSUMED');
+    expect(level.parking).toBeNull();
+
+    const sheets = composeSheets(model, META);
+    const sheet = sheets.find((s) => s.levelId === level.id && s.kind === 'TYPICAL')!;
+    expect(sheet.number).toBe('A-202');
+    const slab = sheet.items.find((i) => i.kind === 'shape' && i.role === 'slab')!;
+    expect(slab.kind === 'shape' && slab.points).toEqual(level.outline);
+    expect(slab.kind === 'shape' && slab.source?.provenanceClass).toBe('ASSUMED');
+    expect(sheet.facts.find((f) => f.label === 'Part floor plate')?.provenanceClass).toBe('ASSUMED');
+    // The SVG and the screen both carry the slab in the assumed class, and no car.
+    for (const markup of [
+      sheetSvg(sheet),
+      renderToStaticMarkup(<SheetView sheet={sheet} idPrefix="p" onInspect={() => {}} />),
+    ]) {
+      expect(markup).toMatch(/sh-c-assumed[^"]*"[^>]*data-node="[^"]*"|data-node="[^"]*"[^>]*sh-c-assumed/);
+      expect(markup).toContain(level.partFloor!.label);
+      expect(count(markup, 'data-car')).toBe(0);
+    }
+    // Its sheet's DXF: the slab in amber, on the level's own layers.
+    const own = parseDxf(sheetDxf(sheet, META));
+    const ownSlab = own.entities.filter((e) => e.layer === layerName(level.id, 'slab'));
+    expect(ownSlab.length).toBeGreaterThan(0);
+    // ACI 30 is the amber `CLASS_ACI.ASSUMED` writes, read as the worked-example check reads it.
+    expect(ownSlab.every((e) => (e as { colorIndex?: number }).colorIndex === 30)).toBe(true);
+
+    // The building DXF: the slab at its level, on an amber layer, at its own area.
+    const building = parseDxf(buildingDxf(model, sheets, META));
+    const layer = layerName(level.id, 'slab');
+    expect((building.tables?.layer?.layers as Record<string, { colorIndex?: number }> | undefined)?.[layer]?.colorIndex).toBe(30);
+    const poly = building.entities.find((e) => e.layer === layer && e.type === 'LWPOLYLINE' || (e.layer === layer && e.type === 'POLYLINE')) as
+      | { vertices: { x: number; y: number }[] }
+      | undefined;
+    expect(poly, 'no slab outline for the part floor in the building DXF').toBeDefined();
+    expect(ringArea(poly!.vertices)).toBeCloseTo(areaM2, 0);
+    expect(building.entities.filter((e) => e.layer === layerName(level.id, 'car'))).toHaveLength(0);
+
+    // The 3D view: the slab in the assumed ink, no car.
+    const scene = buildBuildingScene(model, PALETTE);
+    const group = scene.levels.find((l) => l.level.id === level.id)!.group;
+    const mesh = group.getObjectByName(`${level.id} slab`) as Mesh;
+    expect(`#${((mesh.material as unknown as { color: { getHexString(): string } }).color).getHexString()}`).toBe(PALETTE.assumed);
+    expect(carsPerLevel(scene).has(level.id)).toBe(false);
+    scene.dispose();
+
+    // The .glb, read back: the part floor's slab is there and is the smaller plate.
+    const gltf = await new GLTFLoader().parseAsync(await buildingGlb(model, META), '');
+    gltf.scene.updateMatrixWorld(true);
+    const slabOf = (id: string): Mesh | undefined =>
+      (gltf.scene.getObjectByName(`${id}_slab`) ?? gltf.scene.getObjectByName(`${id} slab`)) as Mesh | undefined;
+    const part = slabOf(level.id);
+    const whole = slabOf(typical.id);
+    expect(part && whole).toBeTruthy();
+    const size = (m: Mesh): Vector3 => new Box3().setFromObject(m).getSize(new Vector3());
+    const [p, w] = [size(part!), size(whole!)];
+    expect(p.x * p.z).toBeLessThan(w.x * w.z);
+  });
+});

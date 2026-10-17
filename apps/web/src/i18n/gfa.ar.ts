@@ -56,6 +56,7 @@ export const AR: GfaDictionary = {
     PARKING: 'المواقف، محتسبة ضمن معامل البناء',
     COMMERCIAL: 'وحدة تجارية',
     ROOF: 'دور السطح',
+    PART_FLOOR: 'دور جزئي، دور أخير أصغر (مفترض)',
   },
   times: (count: string): string => `× ${count}`,
   levelRange: (first: string, last: string): string => `من ${first} إلى ${last}`,

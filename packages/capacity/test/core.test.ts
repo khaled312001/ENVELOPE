@@ -66,14 +66,39 @@ describe('the core is sized, and said to be', () => {
   twice for one wall — and the failure would look like a fix.
 */
 describe('the core subtracts from nothing', () => {
-  it('moves no capacity figure, however large it is', () => {
+  it('moves no band and no whole level, however large it is', () => {
     const base = runPipeline(input());
     const big = runPipeline(input({ coreAreaM2: base.envelope.towerPlateCap.value.times('0.4') }));
-    expect(big.capacity.governingGfa.value.toString()).toBe(
-      base.capacity.governingGfa.value.toString(),
-    );
-    expect(big.governingUnitCount.value).toBe(base.governingUnitCount.value);
+    for (const band of ['regulationLimitedGfa', 'geometryLimitedGfa', 'parkingLimitedGfa'] as const) {
+      expect(big.capacity[band].value.toString(), band).toBe(base.capacity[band].value.toString());
+    }
     expect(big.capacity.levels.value).toBe(base.capacity.levels.value);
+  });
+
+  /*
+    THE ONE FIGURE A CORE CAN MOVE: WHETHER THE PART FLOOR IS A FLOOR.
+
+    The part floor above the last whole level is drawn as a smaller top floor,
+    and the core passes through it. A top floor that cannot hold its core and
+    one unit is not a floor anyone builds, so it is dropped, said with both
+    figures, and the governing capacity is the whole levels. Subtracting nothing
+    — the core is still inside GFA — but a core of 40% of the plate leaves this
+    fixture's part floor too small to be one.
+  */
+  it('can leave the part floor too small to draw, and says so with both figures', () => {
+    const base = runPipeline(input());
+    const big = runPipeline(input({ coreAreaM2: base.envelope.towerPlateCap.value.times('0.4') }));
+    expect(base.partFloor?.kind).toBe('DRAWN');
+    expect(big.partFloor?.kind).toBe('DROPPED');
+    if (big.partFloor?.kind !== 'DROPPED') return;
+    const plate = big.envelope.towerPlateCap.value;
+    const whole = plate.times(big.capacity.levels.value);
+    expect(big.capacity.governingGfa.value.toString()).toBe(whole.toString());
+    expect(big.capacity.integerGranularityLossM2.toString()).toBe(big.partFloor.remainderM2.toString());
+    expect(big.partFloor.reason).toContain(big.partFloor.remainderM2.toFixed(2));
+    expect(big.partFloor.reason).toContain(big.partFloor.minimum!.value.toFixed(2));
+    expect(big.building.notModelled).toContain(big.partFloor.reason);
+    expect(big.building.levels.some((l) => l.partFloor)).toBe(false);
   });
 
 });

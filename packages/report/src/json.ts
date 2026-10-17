@@ -428,7 +428,7 @@ export interface GfaStatementSection {
     readonly notes: readonly string[];
   }[];
   readonly rows: readonly {
-    readonly kind: 'GROUND' | 'PODIUM' | 'TYPICAL' | 'UNPLACED' | 'PARKING' | 'COMMERCIAL' | 'ROOF';
+    readonly kind: 'GROUND' | 'PODIUM' | 'TYPICAL' | 'UNPLACED' | 'PARKING' | 'COMMERCIAL' | 'ROOF' | 'PART_FLOOR';
     readonly cap: 'RESIDENTIAL' | 'COMMERCIAL';
     readonly levelIds: readonly string[];
     readonly count: number;
@@ -441,7 +441,7 @@ export interface GfaStatementSection {
   }[];
   /** Floors the table names and does not count. See the header. */
   readonly omissions: readonly {
-    readonly kind: 'GROUND' | 'PODIUM' | 'TYPICAL' | 'UNPLACED' | 'PARKING' | 'COMMERCIAL' | 'ROOF';
+    readonly kind: 'GROUND' | 'PODIUM' | 'TYPICAL' | 'UNPLACED' | 'PARKING' | 'COMMERCIAL' | 'ROOF' | 'PART_FLOOR';
     readonly cap: 'RESIDENTIAL' | 'COMMERCIAL';
     readonly reason: string;
   }[];
@@ -1157,6 +1157,7 @@ const GFA_ROW = {
   PARKING: 'PARKING',
   COMMERCIAL: 'COMMERCIAL',
   ROOF: 'ROOF',
+  PART_FLOOR: 'PART_FLOOR',
 } as const;
 
 function readStatedArea(value: unknown, at: string): StatedArea {

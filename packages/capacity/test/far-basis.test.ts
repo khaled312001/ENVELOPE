@@ -212,7 +212,9 @@ describe('band A on the area the sheet prints', () => {
 
   it('is the printed GFA on a 40 × 30 m outline, and publishes both areas and the difference', () => {
     const out = runPipeline(baseInput(warsanAt(40, 30), warsanRules(), { statedPlotAreas: [WARSAN_AREA] }));
-    expect(out.capacity.regulationLimitedGfa.value.toString()).toBe('4778.31');
+    // The printed GFA to the cent; exactly, the rule's 3.500003 × 1,365.23, never above it.
+    expect(out.capacity.regulationLimitedGfa.value.toFixed(2)).toBe('4778.31');
+    expect(out.capacity.regulationLimitedGfa.value.toString()).toBe('4778.30909569');
     const basis = out.envelope.farBasis;
     expect(basis.baseAreaM2.toString()).toBe('1365.23');
     expect(basis.tracedAreaM2.toString()).toBe('1200');
@@ -224,14 +226,34 @@ describe('band A on the area the sheet prints', () => {
     expect(cited.length).toBeGreaterThan(0);
     expect(basis.formula).toBe(
       'GFA 4778.31 m² as printed — the instrument’s own limit, its FAR 3.500003 being that GFA ÷ its printed ' +
-        'plot area 1365.23 m² (the boundary as traced measures 1200.00 m², 165.23 m² less)',
+        'plot area 1365.23 m² rounded down at six places, and band A that ratio × the area, 4778.30909569 m² ' +
+        '(the boundary as traced measures 1200.00 m², 165.23 m² less)',
     );
   });
 
   it('is the printed GFA on an outline entered at the sheet’s own area, too', () => {
     const out = runPipeline(baseInput(warsanAt(50.85, 26.85), warsanRules(), { statedPlotAreas: [WARSAN_AREA] }));
-    expect(out.capacity.regulationLimitedGfa.value.toString()).toBe('4778.31');
-    expect(out.gfaStatement.allowedGfaM2.value.toString()).toBe('4778.31');
+    expect(out.capacity.regulationLimitedGfa.value.toFixed(2)).toBe('4778.31');
+    expect(out.gfaStatement.allowedGfaM2.value.toFixed(2)).toBe('4778.31');
+  });
+
+  /*
+    THE GOVERNING FIGURE MAY LAND ON BAND A NOW, AND MUST NOT BREACH THE RULE
+    BAND A CITES. While the governing figure was held to whole plates it never
+    reached band A, so a printed GFA a hair above its rounded ratio × the area
+    was never met. With the part floor it is min(A, B, C) exactly; on a plot
+    where band A governs, a gross of the printed GFA put the achieved FAR above
+    `far.max` by under a millionth, and the validator blocked the run (DDA
+    5134565). Without the change in `farLimitOf` this fails.
+  */
+  it('never puts band A above the FAR the rule states × the area it is applied to', () => {
+    for (const plot of [warsanAt(40, 30), warsanAt(50.85, 26.85)]) {
+      const out = runPipeline(baseInput(plot, warsanRules(), { statedPlotAreas: [WARSAN_AREA] }));
+      const basis = out.envelope.farBasis;
+      const a = out.capacity.regulationLimitedGfa.value;
+      expect(a.div(basis.baseAreaM2).lte(out.capacity.permittedFar.value)).toBe(true);
+      expect(a.lte('4778.31')).toBe(true);
+    }
   });
 
   it('measures the FAR the answer reaches on the same base, so it never exceeds the FAR it is held to', () => {

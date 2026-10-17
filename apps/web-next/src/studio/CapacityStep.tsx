@@ -84,7 +84,15 @@ export function CapacityCanvas({ run }: { readonly run: RunView }): JSX.Element 
                   <th scope="row" className="figure py-1 text-start font-normal text-fg">
                     {l.id}
                   </th>
-                  <td className="py-1 text-secondary">{t.capacity.uses[l.use]}</td>
+                  <td className="py-1 text-secondary">
+                    {t.capacity.uses[l.use]}
+                    {/* The one level at its own plate: the engine's area, in its own (assumed) class. */}
+                    {l.partFloor ? (
+                      <span className="ms-2 inline-flex items-center gap-1">
+                        {t.capacity.partFloor} <Traced value={l.partFloor.areaM2} size="sm" places={2} />
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="py-1">
                     <Traced value={l.elevationM} size="sm" />
                   </td>

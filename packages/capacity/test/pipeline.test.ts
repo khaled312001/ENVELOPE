@@ -167,15 +167,16 @@ describe('a complete run', () => {
       out.capacity.parkingLimitedGfa.value,
     ];
     const smallest = bands.reduce((a, b) => (a.lt(b) ? a : b));
-    // §15.2: governing = min(A, B, C). Not an average, not the maximum — and
-    // §15.4: held to the whole levels the run places, the part floor reported
-    // as lost rather than sold.
+    // §15.2: governing = min(A, B, C), exactly. Not an average, not the maximum,
+    // and not cut to whole plates: §15.4's part floor above the last whole
+    // level stands on the drawn building as a smaller top floor, so nothing is lost.
     const plate = out.envelope.towerPlateCap.value;
-    expect(out.capacity.governingGfa.value.toString()).toBe(plate.times(out.capacity.levels.value).toString());
-    expect(out.capacity.governingGfa.value.plus(out.capacity.integerGranularityLossM2).toString()).toBe(
-      smallest.toString(),
-    );
-    expect(out.capacity.integerGranularityLossM2.lt(plate)).toBe(true);
+    expect(out.capacity.governingGfa.value.toString()).toBe(smallest.toString());
+    expect(out.partFloor?.kind).toBe('DRAWN');
+    expect(
+      plate.times(out.capacity.levels.value).plus(out.partFloor?.kind === 'DRAWN' ? out.partFloor.areaM2.value : 0).toString(),
+    ).toBe(smallest.toString());
+    expect(out.capacity.integerGranularityLossM2.isZero()).toBe(true);
     expect(out.capacity.governingConstraint.ruleId).toBeTruthy();
     expect(out.capacity.headroomToNextM2.gte(0)).toBe(true);
   });
@@ -595,10 +596,11 @@ describe('saleable efficiency', () => {
       efficiency. What must hold is that parking set the count at either
       efficiency.
 
-      AND SINCE 17 OCT 2026 THE COUNT IS PARKING'S BAND HELD TO WHOLE LEVELS.
-      The governing GFA is the levels the run places, so the units are those
-      levels' GFA over the GFA a unit costs — never more than parking supports,
-      and fewer by the part floor the drawings do not place.
+      AND THE COUNT IS PARKING'S BAND ITSELF AGAIN, the part floor drawn. For a
+      day of 17 Oct 2026 it was held to whole levels and lost the part floor's
+      units; the part floor now stands on the drawn building as a smaller top
+      floor, so the units are the band's GFA over the GFA a unit costs — never
+      more than parking supports.
     */
     for (const eff of ['0.93', '1']) {
       const out = runPipeline(
@@ -613,7 +615,10 @@ describe('saleable efficiency', () => {
       expect(out.capacity.levels.value, eff).toBe(levels);
       expect(out.governingUnitCount.value, eff).toBeLessThanOrEqual(out.parking.supportableUnitCeiling.value);
       const perUnit = out.graph.toJSON().nodes.find((n) => n.parameterId === 'capacity.gfa_per_unit_m2')!.value!;
-      expect(out.governingUnitCount.value, eff).toBe(plate.times(levels).div(perUnit).floor().toNumber());
+      expect(out.partFloor?.kind, eff).toBe('DRAWN');
+      expect(out.governingUnitCount.value, eff).toBe(
+        out.capacity.parkingLimitedGfa.value.div(perUnit).floor().toNumber(),
+      );
     }
 
     const bandCAt = (value: string): Decimal =>

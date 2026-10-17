@@ -180,6 +180,19 @@ export function buildMassing(input: MassingInput): MassingResult {
       formula: `${podiumHeightValue.toString()} m podium + ${towerHeightValue.toString()} m tower`,
       uses: { podium: podiumHeight, tower: towerHeight },
       unit: 'm',
+      /*
+        Named for what it is, because three heights reached one report and
+        disagreed: this is the ENVELOPE the ceiling permits, every storey under it
+        drawn whether or not the run places it. The building's own height — the
+        top of the highest placed level — is `capacity.achieved_height_m`, and
+        the two agree only where the run fills the ceiling.
+      */
+      detail: {
+        note:
+          'The height of the envelope the ceiling permits, every storey under it counted ' +
+          'whether or not this run places it — not the height of the building this run ' +
+          'places, which is capacity.achieved_height_m.',
+      },
     },
   );
 

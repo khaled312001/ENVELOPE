@@ -283,4 +283,23 @@ export const STUDY_READERS: readonly Reader[] = [
           ar: 'النواة: تحسب مساحتها فقط. الدرج والمصاعد والبهو داخلها استرشادية ومفترضة؛ والهروب ومكافحة الحريق لم يخضعا للتقييم.',
         }
       : null,
+  /*
+    Two variants, and the counted one keeps its figure. A reader whose shop floor
+    is inside the capacity at a full tower plate must be told so in either
+    language: dropping that clause told the reader only "not assessed" about an
+    area the headline figure already includes.
+  */
+  (t) => {
+    if (!t.startsWith('The level schedule states the ground floor does not park.')) return null;
+    const m = /It is counted here at the full tower plate of ([\d.]+) m²/.exec(t);
+    return m
+      ? {
+          en: `The ground floor is stated as not parking, and is counted at the full tower plate of ${m[1]} m², like every level of floor area. What it holds — shops, lobby, plant — is not modelled, and how much of it is GFA, and under which allowance, is not assessed.`,
+          ar: `الدور الأرضي محدد بلا مواقف، ويحسب بمسطح البرج كاملا ${m[1]} م² مثل كل دور ذي مساحة طابقية. ما فيه من محلات وبهو وخدمات غير ممثل، ولم يقيم كم منه مساحة طابقية ولا تحت أي مساحة مسموحة يحسب.`,
+        }
+      : {
+          en: 'The ground floor is stated as not parking, and no floor area is placed on it. What it holds — shops, lobby, plant — is not modelled, and how much of it is GFA, and under which allowance, is not assessed.',
+          ar: 'الدور الأرضي محدد بلا مواقف، ولا توضع عليه مساحة طابقية. ما فيه من محلات وبهو وخدمات غير ممثل، ولم يقيم كم منه مساحة طابقية ولا تحت أي مساحة مسموحة يحسب.',
+        };
+  },
 ];

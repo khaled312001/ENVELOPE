@@ -317,6 +317,20 @@ export interface GfaStatementInput {
    * without it.
    */
   readonly groundFloorNonParkingAreaM2?: TracedDecimal;
+  /**
+   * The part floor above the last whole level — `capacity.integerGranularityLossM2`.
+   *
+   * Passed, not recomputed, since the governing figure became the whole levels
+   * themselves: `governing − floors` is then zero by construction, and the loss
+   * is the smallest band less the floors, which only the bands know.
+   */
+  readonly partFloorNotPlacedM2?: Decimal;
+  /**
+   * The level schedule states the ground floor does not park. The sentence about
+   * the ground floor then says so, rather than one written for a parking ground
+   * floor or a ground floor nobody described.
+   */
+  readonly groundStatedNotParking?: boolean;
 }
 
 /** Raised when the stated allowances cannot both be true of one plot. */
@@ -369,6 +383,23 @@ export const groundFloorIsParkingNote = (boundM2: Decimal | null): string =>
   'How much of it is GFA is NOT ASSESSED — the annex is unsigned, and nothing on file splits ' +
   'the reserved strip between lobby, plant and ramp landing. The worked scheme on file counts ' +
   '118.00 m² of residential floor area on its ground floor, against none here.';
+
+/**
+ * The ground floor the level schedule says does not park — a shop floor, a lobby.
+ *
+ * Its own sentence, because the two above were written for a ground floor that
+ * parks or one nobody described, and one of them told a reader whose ground floor
+ * is shops that it was "a parking level".
+ */
+export const groundFloorNotParkingNote = (plateM2: Decimal, counted: boolean): string =>
+  'The level schedule states the ground floor does not park. ' +
+  (counted
+    ? `It is counted here at the full tower plate of ${plateM2.toFixed(2)} m², like every level ` +
+      'of floor area, because that is what the capacity was computed from. '
+    : 'This proposal places no floor area on it. ') +
+  'What it holds — shops, the entrance lobby, plant, the refuse room — is not modelled, and a ' +
+  'shop is commercial floor area that a sheet may cap separately from the residential. How much ' +
+  'of the ground floor is GFA, and against which allowance, is NOT ASSESSED.';
 
 /** Podium levels counted at the tower plate and drawn at the podium footprint. */
 export const PODIUM_AT_TOWER_PLATE_NOTE =
@@ -716,7 +747,11 @@ export function buildGfaStatement(input: GfaStatementInput): GfaStatement {
   // --- what the uniform plate does not model -------------------------------------
   const reconciliation: string[] = [];
   const groundRow = rows.find((r) => r.kind === GfaRowKind.GROUND);
-  if (groundRow) {
+  if (input.groundStatedNotParking) {
+    // Driven by what the schedule says the ground floor IS, never by whether
+    // some parking level happens to carry the id `G`.
+    reconciliation.push(groundFloorNotParkingNote(input.towerPlate.value, groundRow !== undefined));
+  } else if (groundRow) {
     reconciliation.push(groundFloorFullPlateNote(input.towerPlate.value));
   } else if (input.parkingLevelIds.some((id) => classifyLevelId(id) === LevelIdKind.GROUND)) {
     reconciliation.push(
@@ -727,10 +762,9 @@ export function buildGfaStatement(input: GfaStatementInput): GfaStatement {
     reconciliation.push(PODIUM_AT_TOWER_PLATE_NOTE);
   }
 
-  const partFloorNotPlacedM2 = Decimal.max(
-    new Decimal(0),
-    input.governingGfa.value.minus(residentialArea.value),
-  );
+  const partFloorNotPlacedM2 =
+    input.partFloorNotPlacedM2 ??
+    Decimal.max(new Decimal(0), input.governingGfa.value.minus(residentialArea.value));
   return {
     plotAreaM2: input.plotAreaM2,
     allowedGfaM2,

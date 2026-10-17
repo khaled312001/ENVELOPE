@@ -208,6 +208,15 @@ export interface CapacityClaim {
   readonly parkingLimitedGfaM2: Numeric;
   readonly governingGfaM2: Numeric;
   readonly governingBand: CapacityBand;
+  /**
+   * The plate the governing figure is placed in, when it is held to whole
+   * levels. A level is built whole or not at all, so the engine reports
+   * `plate × ⌊min(A, B, C) ÷ plate⌋` and names the part floor it leaves out.
+   * Given this, INV-16 recomputes that floor from the three bands itself — it
+   * does not take the engine's level count — and the value arm holds the
+   * governing figure to it. Absent, the value arm is the bare minimum.
+   */
+  readonly wholeLevelPlateM2?: Numeric;
 }
 
 /** INV-18. */
@@ -1049,21 +1058,33 @@ const inv16: InvariantCheck = {
     const minimum = Decimal.min(a, b, c);
     const governing = dec(s.capacity.governingGfaM2);
     const labelled = bands.get(s.capacity.governingBand);
+    // Held to whole levels: the figure a building of whole floors can reach
+    // under the smallest band. Recomputed here from the bands and the plate,
+    // so a governing figure that kept a part floor, or dropped a whole one,
+    // fails exactly as one that read the wrong band does.
+    const plateRaw = s.capacity.wholeLevelPlateM2;
+    const plate = plateRaw === undefined ? undefined : dec(plateRaw);
+    const wholeLevels = plate !== undefined && plate.gt(0) ? minimum.div(plate).floor() : undefined;
+    const target = plate !== undefined && wholeLevels !== undefined ? plate.times(wholeLevels) : minimum;
 
     // Two arms, because §12.2 says "and is labelled as such". The value arm
     // alone would accept a report whose number is right and whose named band is
     // wrong — and the named band is what a developer reads to decide where to
     // push (§15.2). A wrong label sends them to negotiate the wrong variance,
     // which is a more expensive mistake than a wrong number they would notice.
-    const valueHolds = governing.eq(minimum);
+    const valueHolds = governing.eq(target);
     const labelHolds = labelled !== undefined && labelled.eq(minimum);
     const tied = [a, b, c].filter((v) => v.eq(minimum)).length > 1;
+    const bandsText = `min(A ${show(a)}, B ${show(b)}, C ${show(c)})`;
 
     return verdict(valueHolds && labelHolds, {
       observed:
         `${show(governing)} labelled ${BAND_LETTER[s.capacity.governingBand]} ` +
         `(${s.capacity.governingBand})`,
-      expected: `${show(minimum)} = min(A ${show(a)}, B ${show(b)}, C ${show(c)})`,
+      expected:
+        plate !== undefined && wholeLevels !== undefined
+          ? `${show(target)} = ${wholeLevels.toString()} whole level(s) of ${show(plate)} under ${show(minimum)} = ${bandsText}`
+          : `${show(minimum)} = ${bandsText}`,
       detail:
         `value arm ${valueHolds ? 'holds' : 'fails'}; label arm ` +
         `${labelHolds ? 'holds' : 'fails'}` +

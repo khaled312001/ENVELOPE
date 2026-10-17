@@ -211,7 +211,11 @@ describe('the stack', () => {
   it('says so in words, citing the answer rather than an assumption', () => {
     const answer = out.building.placements.find((p) => p.subject === 'answer')!;
     expect(answer.source.node).toBe(out.capacity.levels.node);
-    expect(answer.source.provenanceClass).not.toBe('ASSUMED');
+    // The answer's own class, not the placement assumption's. It is amber here
+    // only because this fixture's height ceiling is the 45 m placeholder, and
+    // the level count now inherits that rather than claiming DERIVED.
+    expect(answer.source.provenanceClass).toBe(out.capacity.levels.provenanceClass);
+    expect(out.graph.node(answer.source.node).parameterId).toBe('capacity.levels');
     const unused = out.building.levels.filter((l) => !l.placed).length;
     expect(answer.statement).toContain(`places ${out.capacity.levels.value} level`);
     expect(answer.statement).toContain(`The ${unused} above them`);

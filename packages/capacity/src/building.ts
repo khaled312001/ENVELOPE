@@ -215,6 +215,12 @@ const TOWER_PLACEMENT_BASIS =
   'area. Where the tower actually sits is a design decision this engine does not ' +
   'make, and the massing has always said so.';
 
+/** Said where the ring is sloped as the ramp and the ground floor does not park. */
+export const SLOPED_RING_STOPS_AT_GROUND =
+  'The sloped ring across the ground floor. The ground floor does not park, so the ring aisle ' +
+  'that climbs as the ramp on the parking levels does not continue across it; how a car passes ' +
+  'the ground floor, to the street or to the parking on its other side, is NOT ASSESSED.';
+
 /** Always true of this model, whatever the run. Said with every drawing of it. */
 const NOT_MODELLED: readonly string[] = [
   'Columns, and therefore no grid bubbles. The layout charges Table B.11\'s 300 mm ' +
@@ -490,9 +496,9 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
           (unplacedAnswer === 1 ? 'does' : 'do') +
           ' not fit under the height ceiling ' +
           `above ${parkingInPodium} level${parkingInPodium === 1 ? '' : 's'} of podium ` +
-          `parking, and ${unplacedAnswer === 1 ? 'is' : 'are'} not drawn. The capacity figure does not count parking ` +
-          'levels against the height ceiling, so with the parking placed in the podium ' +
-          'the answer and its parking do not both fit under it.'
+          // The engine's own runs never reach this since band B counts the parking
+          // against the ceiling; a model built by hand still can, and is told.
+          `parking, and ${unplacedAnswer === 1 ? 'is' : 'are'} not drawn.`
         : ''),
   });
 
@@ -566,6 +572,14 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
         'the 3D view and the sections stand every parking level flat at its floor height, and ' +
         'where the core door meets the ring at each level is not drawn.',
     );
+    if (!above.ground && parkingCount > 0) {
+      /*
+        The ring is the ramp only between levels that park. A ground floor of
+        shops breaks it, and drawing the ring's lap across it would be a ramp
+        through a shop floor nobody laid out.
+      */
+      notModelled.push(SLOPED_RING_STOPS_AT_GROUND);
+    }
   }
   if (parkingBelow > 0 && !above.ground) {
     notModelled.push(

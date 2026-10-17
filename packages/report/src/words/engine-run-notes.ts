@@ -191,6 +191,11 @@ const LABEL: Readonly<Record<string, Said>> = {
     ar: 'قراءة جدول مواقف أصحاب الهمم حيث يسكت',
   },
   'how B.7.2.6.2 is rounded': { en: 'How the preferred-parking share is rounded', ar: 'تقريب نسبة المواقف المفضلة' },
+  'parking levels at or above grade': { en: 'Parking levels at or above grade', ar: 'أدوار المواقف على مستوى الأرض وفوقه' },
+  "podium parking in the plan's level count": {
+    en: 'Podium parking in the plan’s level count',
+    ar: 'مواقف البوديوم ضمن عدد الأدوار في مخطط الأرض',
+  },
 };
 
 /* The register heads a value with its parameter id where the engine gave it no label. */
@@ -239,6 +244,10 @@ const VALUE: Readonly<Record<string, Said>> = {
     ar: 'تقرب للأعلى؛ 10 لأول 500 موقف؛ وموقف واحد لما دون 25',
   },
   'rounded up': { en: 'Rounded up', ar: 'تقرب للأعلى' },
+  'counted against the stated level count': {
+    en: 'Counted against the stated level count',
+    ar: 'تحسب ضمن عدد الأدوار المذكور',
+  },
 };
 
 const SHEET: Readonly<Record<string, Said>> = {
@@ -782,4 +791,29 @@ export const RUN_READERS: readonly Reader[] = [
         `إن كان الحدان جهة واحدة من قطعة الأرض فأعطهما الارتداد نفسه.`,
     };
   },
+  /* ── The levels that hold floor area, and the building's height ── */
+  starts('The run states how many parking levels it has and how many levels stand on the podium, not which of them park.', {
+    en: 'The run says how many parking levels and podium levels there are, not which levels park. They are counted in the podium from the ground up, as the drawings place them, and each is a storey under the height ceiling with no floor area. Enter the level schedule to replace this.',
+    ar: 'تذكر الدراسة عدد أدوار المواقف وأدوار البوديوم، لا أيها للمواقف. فتحسب في البوديوم من الأرض صعودا كما ترسم، وكل منها دور تحت سقف الارتفاع بلا مساحة طابقية. أدخل جدول الأدوار ليحل محل هذا الافتراض.',
+  }),
+  starts('The affection plan states the level count as every storey above grade', {
+    en: 'The plan’s level count is every storey above grade, its podium levels among them, so a parking level at or above grade is one of the counted levels and the tower plate is counted on the rest. Whether the authority counts podium parking this way is not yet confirmed; if it does not, each parking level adds one tower plate to band B.',
+    ar: 'عدد الأدوار في مخطط الأرض يشمل كل دور فوق الأرض ومنها أدوار البوديوم، فدور المواقف على مستوى الأرض أو فوقه من الأدوار المحسوبة، ويحسب مسطح البرج على الباقي. لم يؤكد بعد أن الجهة المختصة تحسب مواقف البوديوم هكذا؛ وإن لم تفعل، يضيف كل دور مواقف مسطح برج واحدا إلى السعة B.',
+  }),
+  (t) => {
+    const m = /^the level schedule stands (\d+) level\(s\) on the podium footprint \(the ground floor and (\d+) podium level\(s\)\), and the height ceiling allows (\d+) level\(s\) above ground\./.exec(t);
+    if (!m) return null;
+    return {
+      en: `The schedule puts ${m[1]} levels on the podium (the ground floor and ${m[2]} podium levels), and the height ceiling allows ${m[3]} above ground. Remove podium levels, or put the parking below grade.`,
+      ar: `جدول الأدوار يضع ${m[1]} أدوار على مسطح البوديوم (الدور الأرضي و${m[2]} أدوار بوديوم)، وسقف الارتفاع يسمح بـ ${m[3]} أدوار فوق الأرض. احذف أدوارا من البوديوم، أو ضع المواقف تحت الأرض.`,
+    };
+  },
+  starts('The sloped ring across the ground floor.', {
+    en: 'The sloped ring does not continue across the ground floor, which does not park; how a car passes it, to the street or to the parking on its other side, is not assessed.',
+    ar: 'الممر الدائري المائل لا يستمر عبر الدور الأرضي لأنه بلا مواقف؛ ولم يقيم كيف تعبره السيارة إلى الشارع أو إلى المواقف في جهته الأخرى.',
+  }),
+  starts('INV-02 reads what fills each level: units, core, circulation and services.', {
+    en: 'INV-02 needs what fills each level — units, core, circulation, services — and no unit is laid out, so it did not run and is not counted as a pass. INV-01, INV-11 and INV-18 read the engine’s own level schedule.',
+    ar: 'يحتاج INV-02 ما يملأ كل دور: الوحدات والنواة والحركة والخدمات، ولا توزع وحدات، فلم يشغل ولا يحسب نجاحا. أما INV-01 وINV-11 وINV-18 فتقرأ جدول الأدوار الذي ينتجه المحرك.',
+  }),
 ];

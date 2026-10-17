@@ -245,6 +245,12 @@ function setbackForEdge(
 }
 
 /** "front 0 m; side 3 m; rear 3 m" — a decision's faces, as the sentences that ask for one print them. */
+/** Whether a rule reads its value off a table keyed on the level count above grade (Table B.1). */
+function keyedOnLevels(rule: RuleRecord): boolean {
+  const key = rule.evaluatorArgs['key'];
+  return Array.isArray(key) && key.includes('levels.above_ground');
+}
+
 function facesSaid(options: readonly FaceOption[]): string {
   return options.map((o) => `${o.face} ${o.metres === null ? 'not stated' : `${o.metres} m`}`).join('; ');
 }
@@ -687,6 +693,8 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
   const appliedPodiumSetbacks: NonNullable<BuildableEnvelope['appliedPodiumSetbacks']>[number][] = [];
 
   const edgeSetbacks = plot.edges.map((edge) => ({ edge, at: edgeSetbackAt(plot, edge.seq, rules, finalCtx, typed) }));
+  /** The level count a level-keyed setback row was read at: the fixpoint's. */
+  const levelsKey = (finalCtx['levels'] as { above_ground?: number } | undefined)?.above_ground;
 
   /*
     A BOUNDARY WHOSE FACE IS UNANSWERED STOPS THE RUN, IN A SENTENCE THAT ASKS.
@@ -802,13 +810,28 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
           ruleId: resolution.governing.rule.ruleId,
           citation: resolution.governing.rule.citation,
         },
-        formula: `setback for edge ${edge.seq} (${edge.classification})`,
+        /*
+          WHICH LEVEL COUNT KEYS A TABLE B.1 ROW, SAID IN THE FORMULA. The row is
+          read at the fixpoint's count — the levels the permitted GFA needs on
+          this plate — and not at the levels the run finally places, which a
+          parking or whole-level limit can bring lower (13 against 7 on the
+          worked example: 7.50 m rather than 5.25 m). Keying it on the placed
+          building would put the parking layout inside the fixpoint, a second
+          loop the solver does not run. Which count the authority reads the
+          table by is open with the client; until then the reader is told.
+        */
+        formula:
+          `setback for edge ${edge.seq} (${edge.classification})` +
+          (keyedOnLevels(resolution.governing.rule)
+            ? `, read at ${levelsKey ?? '?'} level(s) above ground — the levels the permitted GFA ` +
+              'needs on this plate (setback↔floor fixpoint), not the levels this run places'
+            : ''),
         unit: 'm',
         detail: {
           edgeSeq: edge.seq,
           classification: edge.classification,
           roadHierarchy: edge.roadHierarchy ?? null,
-          levelsAssumed: (finalCtx['levels'] as { above_ground?: number } | undefined)?.above_ground,
+          levelsAssumed: levelsKey,
         },
       });
       ownRuleId = resolution.governing.rule.ruleId;

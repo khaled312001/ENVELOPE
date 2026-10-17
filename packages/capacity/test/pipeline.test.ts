@@ -167,8 +167,15 @@ describe('a complete run', () => {
       out.capacity.parkingLimitedGfa.value,
     ];
     const smallest = bands.reduce((a, b) => (a.lt(b) ? a : b));
-    // §15.2: governing = min(A, B, C). Not an average, not the maximum.
-    expect(out.capacity.governingGfa.value.toString()).toBe(smallest.toString());
+    // §15.2: governing = min(A, B, C). Not an average, not the maximum — and
+    // §15.4: held to the whole levels the run places, the part floor reported
+    // as lost rather than sold.
+    const plate = out.envelope.towerPlateCap.value;
+    expect(out.capacity.governingGfa.value.toString()).toBe(plate.times(out.capacity.levels.value).toString());
+    expect(out.capacity.governingGfa.value.plus(out.capacity.integerGranularityLossM2).toString()).toBe(
+      smallest.toString(),
+    );
+    expect(out.capacity.integerGranularityLossM2.lt(plate)).toBe(true);
     expect(out.capacity.governingConstraint.ruleId).toBeTruthy();
     expect(out.capacity.headroomToNextM2.gte(0)).toBe(true);
   });
@@ -541,8 +548,13 @@ describe('saleable efficiency', () => {
       (17 Oct 2026) changed its geometry; now they are 31 and 32. Not the
       efficiency leaking in: bays per unit is the mix's bays at the GFA probe's
       unit count, rounded per type, and the probe's count does move with the
-      efficiency. What must hold is that the published count IS the parking
-      ceiling at either efficiency.
+      efficiency. What must hold is that parking set the count at either
+      efficiency.
+
+      AND SINCE 17 OCT 2026 THE COUNT IS PARKING'S BAND HELD TO WHOLE LEVELS.
+      The governing GFA is the levels the run places, so the units are those
+      levels' GFA over the GFA a unit costs — never more than parking supports,
+      and fewer by the part floor the drawings do not place.
     */
     for (const eff of ['0.93', '1']) {
       const out = runPipeline(
@@ -552,7 +564,12 @@ describe('saleable efficiency', () => {
         }),
       );
       expect(out.capacity.governingBand, eff).toBe('PARKING');
-      expect(out.governingUnitCount.value, eff).toBe(out.parking.supportableUnitCeiling.value);
+      const plate = out.envelope.towerPlateCap.value;
+      const levels = out.capacity.parkingLimitedGfa.value.div(plate).floor().toNumber();
+      expect(out.capacity.levels.value, eff).toBe(levels);
+      expect(out.governingUnitCount.value, eff).toBeLessThanOrEqual(out.parking.supportableUnitCeiling.value);
+      const perUnit = out.graph.toJSON().nodes.find((n) => n.parameterId === 'capacity.gfa_per_unit_m2')!.value!;
+      expect(out.governingUnitCount.value, eff).toBe(plate.times(levels).div(perUnit).floor().toNumber());
     }
 
     const bandCAt = (value: string): Decimal =>
@@ -661,10 +678,10 @@ describe('saleable efficiency', () => {
         an efficiency the scheme does not have. Asserted by multiplication so no
         rounding of the share can hide the wrong divisor.
       */
+      // Levels of floor area: a parking level under the ceiling holds none, so
+      // it is not in the divisor either.
       const out = ratioRun('0.93');
-      const envelopeGfa = out.envelope.towerPlateCap.value.times(
-        out.envelope.maxLevelsByHeight.value,
-      );
+      const envelopeGfa = out.envelope.towerPlateCap.value.times(out.floorAreaLevels.value);
       expect(out.saleableAreaM2.value.toString()).toBe(
         envelopeGfa.times('0.93').toDecimalPlaces(2).toString(),
       );

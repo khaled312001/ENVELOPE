@@ -24,6 +24,7 @@
 
 import type { DmGrid, Path } from './dm.js';
 import type { SurveyPoint } from './dda.js';
+import type { TextItem } from './pdf-text.js';
 
 /**
  * Page points (PDF user space: x right, y UP) to metres on the sheet's grid:
@@ -78,6 +79,9 @@ export function placementFromGrid(
 /** A drawn ring may sit this far from the table's, RMS, and still be the plot: ten centimetres. */
 const MATCH_RMS_M = 0.1;
 
+/** A corner number is printed within this of the corner it numbers. */
+const CORNER_LABEL_REACH_PT = 20;
+
 /**
  * The path on the page that IS the surveyed plot, and the placement it gives.
  *
@@ -91,16 +95,45 @@ export function matchDrawnRing(
   paths: readonly Path[],
   points: readonly SurveyPoint[],
   pageBoxPt: readonly [number, number, number, number],
+  /**
+   * The page's text, to read the corner numbers the drawing prints beside its
+   * corners. Optional: without it a tie is broken towards north-up.
+   */
+  items: readonly TextItem[] = [],
 ): PagePlacement | undefined {
   const G = points.map((p) => [Number(p.east), Number(p.north)] as const);
   const n = G.length;
   if (n < 3 || G.some(([e, nn]) => !Number.isFinite(e) || !Number.isFinite(nn))) return undefined;
   const mg = G.reduce((a, g) => [a[0] + g[0] / n, a[1] + g[1] / n] as const, [0, 0] as const);
 
-  let best: { rms: number; a: number; b: number; mp: readonly [number, number]; ring: readonly (readonly [number, number])[] } | undefined;
-  for (const path of paths) {
+  /*
+    A PARALLELOGRAM FITS ITS OWN DRAWING TWICE. Plot 6457790 is centrally
+    symmetric, so the drawing turned half a turn fits the coordinate table as
+    well as the drawing the right way up — to the millimetre — and taking the
+    lower residual of the two was a coin toss. It came down upside down: the
+    picture under the map was rotated 180°, and every `SIDE n` label was put on
+    the boundary opposite the one it is drawn against. Every fit within
+    tolerance is now kept, and the one whose corners carry the corner numbers
+    the drawing prints beside them wins; a sheet that prints none falls back to
+    the fit nearest north-up, which is how these sheets are drawn.
+  */
+  const fits: { rms: number; a: number; b: number; mp: readonly [number, number]; ring: readonly (readonly [number, number])[]; labelled: number }[] = [];
+  /*
+    A DRAWN BOUNDARY MAY BE SPLIT WHERE A NEIGHBOUR MEETS IT. Plot 6457790 is a
+    four-corner table drawn as a six-point path: two of its points sit on its
+    own boundaries, where the next plot's line arrives. Counting them as corners
+    refused the match, and with it the placement every `SIDE n` label needs. A
+    point on the straight line between its neighbours is not a corner; it is
+    taken out only when the path as drawn does not already have the table's
+    count, so a real short leg — 5134565's 0.42 m jog — is never smoothed away.
+  */
+  const rings = paths.flatMap((path) => {
     const ring = closedRing(path.points);
-    if (ring.length !== n) continue;
+    if (ring.length === n) return [ring];
+    const straight = withoutCollinear(ring);
+    return straight.length === n ? [straight] : [];
+  });
+  for (const ring of rings) {
     for (const dir of [ring, [...ring].reverse()]) {
       for (let k = 0; k < n; k += 1) {
         const P = [...dir.slice(k), ...dir.slice(0, k)];
@@ -128,11 +161,27 @@ export function matchDrawnRing(
           ss += (a * px - b * py + mg[0] - G[i]![0]) ** 2 + (b * px + a * py + mg[1] - G[i]![1]) ** 2;
         });
         const rms = Math.sqrt(ss / n);
-        if (!best || rms < best.rms) best = { rms, a, b, mp, ring: P };
+        if (rms > MATCH_RMS_M) continue;
+        // How many drawn corners carry, beside them, the number the table gives that corner.
+        const labelled = P.filter((p, i) =>
+          items.some((it) => {
+            if (it.text.trim() !== points[i]!.id) return false;
+            const cx = (it.bbox[0] + it.bbox[2]) / 2;
+            const cy = (it.bbox[1] + it.bbox[3]) / 2;
+            return Math.hypot(cx - p[0], cy - p[1]) <= CORNER_LABEL_REACH_PT;
+          }),
+        ).length;
+        fits.push({ rms, a, b, mp, ring: P, labelled });
       }
     }
   }
-  if (!best || best.rms > MATCH_RMS_M) return undefined;
+  const tilt = (f: { a: number; b: number }): number => Math.abs(Math.atan2(f.b, f.a));
+  /* Corner numbers first; then the residual, where it tells the fits apart by
+     more than a centimetre; only a true tie goes to north-up. */
+  const best = [...fits].sort(
+    (x, y) => y.labelled - x.labelled || (Math.abs(x.rms - y.rms) > 0.01 ? x.rms - y.rms : tilt(x) - tilt(y)),
+  )[0];
+  if (!best) return undefined;
   const { a, b, mp } = best;
   const xs = best.ring.map((p) => p[0]);
   const ys = best.ring.map((p) => p[1]);
@@ -187,6 +236,32 @@ export function drawingFrame(
     }
   }
   return [left, bottom, right, top];
+}
+
+/** How far off the line between its neighbours a point may sit and still be on it: a quarter point. */
+const COLLINEAR_PT = 0.25;
+
+/** A ring with every point that lies on the straight line between its neighbours taken out. */
+function withoutCollinear(ring: readonly (readonly [number, number])[]): readonly (readonly [number, number])[] {
+  let out = [...ring];
+  for (let changed = true; changed && out.length > 3; ) {
+    changed = false;
+    for (let i = 0; i < out.length; i += 1) {
+      const a = out[(i - 1 + out.length) % out.length]!;
+      const p = out[i]!;
+      const b = out[(i + 1) % out.length]!;
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (len === 0) continue;
+      const off = Math.abs((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / len;
+      const t = ((p[0] - a[0]) * (b[0] - a[0]) + (p[1] - a[1]) * (b[1] - a[1])) / (len * len);
+      if (off <= COLLINEAR_PT && t > 0 && t < 1) {
+        out = [...out.slice(0, i), ...out.slice(i + 1)];
+        changed = true;
+        break;
+      }
+    }
+  }
+  return out;
 }
 
 /** A path's corners with the repeated closing point taken off. */

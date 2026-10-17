@@ -22,7 +22,6 @@
  */
 
 import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 
 import {
   EdgeClassification,
@@ -52,10 +51,10 @@ import {
 } from '../src/affection-plan.js';
 import { locate, readPdfText, valueLeftOf, type PdfPageText } from '../src/pdf-text.js';
 
+import { absentNote, sourceSheet } from './source-sheets.js';
+
 /** As in `affection-plan.test.ts`: three real PDFs on a loaded machine. */
 const HOOK_TIMEOUT_MS = 60_000;
-
-const REPO = new URL('../../../', import.meta.url);
 
 const SHEETS = {
   warsan: 'docs/00-source/samples/affection-plan/IC1-CTYL-16_011-warsan1-621.pdf',
@@ -64,8 +63,17 @@ const SHEETS = {
 } as const;
 
 async function bytesOf(key: keyof typeof SHEETS): Promise<Uint8Array> {
-  return new Uint8Array(await readFile(fileURLToPath(new URL(SHEETS[key], REPO))));
+  const path = sourceSheet(SHEETS[key]);
+  if (path === undefined) throw new Error(`${SHEETS[key]} is not on this machine`);
+  return new Uint8Array(await readFile(path));
 }
+
+/* The two Azizi sheets are kept out of git: their blocks are skipped, by name, where absent. */
+const absent = (...keys: (keyof typeof SHEETS)[]): boolean => keys.some((k) => sourceSheet(SHEETS[k]) === undefined);
+const named = (title: string, ...keys: (keyof typeof SHEETS)[]): string => {
+  const missing = keys.find((k) => sourceSheet(SHEETS[k]) === undefined);
+  return missing === undefined ? title : `${title} ${absentNote(SHEETS[missing])}`;
+};
 
 /**
  * The graph each parse wrote, kept so the basis can be read back out of it.
@@ -332,11 +340,17 @@ describe('cellUnderLabel', () => {
       ['Access', 936, 71, 958],
       ['Side', 960, 71, 972],
     ]);
-    // The anchor is a box drawn across two rows 37 pt apart, because the run
-    // serialised before the label is the one the span starts from.
+    /*
+      The anchor WAS a box drawn across two rows 37 pt apart, because the run
+      serialised before the label is the one the span starts from. `locate` now
+      tries the label's words along one baseline before the stream span
+      (`locateOnRow`, 2026-10-17 — the same span had quoted "GF/" as a setback
+      line), so the anchor is the label's own row. The stream-order span is
+      still its last resort, which is why this function still exists.
+    */
     const anchor = locate(page, 'Access Side');
-    expect(anchor?.text).toContain('POSSESSOR');
-    expect((anchor?.bbox[3] ?? 0) - (anchor?.bbox[1] ?? 0)).toBeGreaterThan(20);
+    expect(anchor?.text).toBe('Access Side');
+    expect((anchor?.bbox[3] ?? 0) - (anchor?.bbox[1] ?? 0)).toBeLessThan(20);
     // Whatever `valueLeftOf` then finds is not this field's cell. The real
     // sheet's answer is in the `IC1-CTYL-16_011` block; here it finds nothing
     // at all, which is a different wrong answer to the same question.
@@ -430,7 +444,7 @@ describe('IC1-CTYL-16_011 — a front face, and three questions the sheet does n
   });
 });
 
-describe('DJAZ1TRE10RES022 — the sheet that says what it abuts', () => {
+describe.skipIf(absent('tre10'))(named('DJAZ1TRE10RES022 — the sheet that says what it abuts', 'tre10'), () => {
   let facts: AffectionPlanFacts;
   beforeAll(async () => {
     facts = await parse('tre10');
@@ -477,7 +491,7 @@ describe('DJAZ1TRE10RES022 — the sheet that says what it abuts', () => {
   });
 });
 
-describe('DJAZ1MED12RES011 — the sheet that omits its boundaries too', () => {
+describe.skipIf(absent('med12'))(named('DJAZ1MED12RES011 — the sheet that omits its boundaries too', 'med12'), () => {
   let facts: AffectionPlanFacts;
   beforeAll(async () => {
     facts = await parse('med12');
@@ -515,7 +529,7 @@ describe('DJAZ1MED12RES011 — the sheet that omits its boundaries too', () => {
 // Properties that must hold on every sheet
 // ---------------------------------------------------------------------------
 
-describe('every proposal, on every sheet', () => {
+describe.skipIf(absent('tre10', 'med12'))(named('every proposal, on every sheet', 'tre10', 'med12'), () => {
   const all: AffectionPlanFacts[] = [];
   beforeAll(async () => {
     for (const key of ['warsan', 'tre10', 'med12'] as const) all.push(await parse(key));

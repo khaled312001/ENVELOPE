@@ -77,6 +77,28 @@ function rampLabel(label: string): Said | null {
   return null;
 }
 
+/** What a `SEE NOTES` deferral on an affection plan names, and what follows from it, in Arabic. */
+const SEE_NOTES_WHAT: Readonly<Record<string, { readonly name: string; readonly consequence: string }>> = {
+  'maximum GFA': {
+    name: 'أقصى مساحة طابقية',
+    consequence:
+      'لا تقرأ من المخطط مساحة طابقية ولا معامل بناء. يؤخذان من المخطط الرئيسي المعتمد أو لائحة التطوير، أو يحددهما شخص مسمى، ولا يؤخذ أي منهما من قطعة مجاورة.',
+  },
+  'maximum height': {
+    name: 'أقصى ارتفاع',
+    consequence:
+      'لا يقرأ من المخطط عدد أدوار، فالغلاف بلا حد رأسي منه. يؤخذ من المخطط الرئيسي المعتمد أو لائحة التطوير، أو يحدده شخص مسمى.',
+  },
+  'maximum plot coverage': {
+    name: 'أقصى نسبة تغطية',
+    consequence: 'لا يقرأ من المخطط حد للتغطية. يؤخذ من المخطط الرئيسي المعتمد أو لائحة التطوير، أو يحدده شخص مسمى.',
+  },
+  'whole setback table': {
+    name: 'جدول الارتدادات كله',
+    consequence: 'لا يقرأ من المخطط أي ارتداد. تؤخذ الارتدادات من المخطط الرئيسي المعتمد أو لائحة التطوير، أو يحددها شخص مسمى.',
+  },
+};
+
 const READERS: readonly Reader[] = [
   // An arrangement's name on its own — the level plan's traced orientation.
   (t) => ORIENTATION[t] ?? null,
@@ -408,6 +430,126 @@ const READERS: readonly Reader[] = [
           ar: `هذا المخطط يحدد الارتداد بقاعدة لا بمسافة: «${m[1]}» — ربع ارتفاع المبنى من الجيران ومن منتصف السكك، بحد أقصى 7.5 م وحد أدنى 3 م. مدخلها عدد الأدوار، فلا تقرأ مسافة من المخطط. تكتب كقاعدة أو يحددها شخص مسمى.`,
         }
       : null;
+  },
+  /* A `SEE NOTES` cell on a DDA or unified sheet, said as the deferral it is. The notes
+     are quoted in the sheet's own English, as the Municipality's Arabic rule is above. */
+  (t) => {
+    const m =
+      /^This sheet prints "SEE NOTES" against its (maximum GFA|maximum height|maximum plot coverage|whole setback table) instead of a value\.(?: Its notes read: «([^»]*)»\.| None of its notes states one\.)/.exec(
+        t,
+      );
+    if (!m) return null;
+    const what = SEE_NOTES_WHAT[m[1] ?? ''];
+    if (!what) return null;
+    const notes = m[2] !== undefined ? ` وملاحظاته تقول: «${m[2]}».` : ' ولا تذكر أي من ملاحظاته قيمة.';
+    return { en: t, ar: `هذا المخطط يطبع «SEE NOTES» أمام ${what.name} بدل القيمة.${notes} ${what.consequence}` };
+  },
+  (t) => {
+    const m = /^The setback table prints "SEE NOTES" instead of a distance for (.+?)\. Those cells defer/.exec(t);
+    if (!m) return null;
+    const cells = (m[1] ?? '')
+      .split(', ')
+      .map((c) => /^side (\d+) \((building|podium)\)$/.exec(c))
+      .map((c) => (c ? `الجانب ${c[1]} (${c[2] === 'building' ? 'المبنى' : 'القاعدة'})` : null));
+    if (cells.some((c) => c === null)) return null;
+    return {
+      en: t,
+      ar: `جدول الارتدادات يطبع «SEE NOTES» بدل المسافة في: ${cells.join('، ')}. هذه الخانات تحيل إلى ملاحظات المخطط ولا تقرأ منها مسافة، وكل خانة أخرى تقرأ كما طبعت.`,
+    };
+  },
+  ...(
+    [
+      [
+        'No setback table was found on this sheet.',
+        'لم يوجد جدول ارتدادات في هذا المخطط. تؤخذ الارتدادات من إرشادات القطعة أو المخطط الرئيسي أو لائحة التطوير، أو يحددها شخص مسمى.',
+      ],
+      [
+        'The sheet prints a setback table whose BUILDING and PODIUM columns could not both be found',
+        'المخطط يطبع جدول ارتدادات لم يعثر فيه على عمودي المبنى (BUILDING) والقاعدة (PODIUM) معا، فلا تقرأ أي من خاناته.',
+      ],
+      [
+        'The sheet prints a setback table header with no SIDE rows under it',
+        'المخطط يطبع عنوان جدول ارتدادات بلا صفوف جوانب (SIDE) تحته، فلا يقرأ منه ارتداد.',
+      ],
+      [
+        'The surveyed ring has fewer than three corners',
+        'الحدود المساحية أقل من ثلاثة أركان، فلا يوضع عليها أي جانب.',
+      ],
+      [
+        'Two side labels on the drawing are nearest the same surveyed boundary',
+        'علامتا جانبين في الرسم أقرب إلى الحد المساحي نفسه، فلا يوضع أي جانب من الجدول على حد.',
+      ],
+      [
+        'This sheet prints no coordinate table, so no side of the setback table is placed on a boundary',
+        'هذا المخطط لا يطبع جدول إحداثيات، فلا يوضع أي جانب من جدول الارتدادات على حد. القارئ يحدد أي حد هو كل جانب.',
+      ],
+      [
+        'No surveyed ring was read from this sheet, so no side of the setback table is placed on a boundary',
+        'لم تقرأ حدود مساحية من هذا المخطط، فلا يوضع أي جانب من جدول الارتدادات على حد. القارئ يحدد أي حد هو كل جانب.',
+      ],
+      [
+        'The drawing could not be placed on the sheet’s coordinate table',
+        'تعذر وضع الرسم على جدول إحداثيات المخطط، فلا يوضع أي جانب من جدول الارتدادات على حد. القارئ يحدد أي حد هو كل جانب.',
+      ],
+    ] as const
+  ).map(
+    ([start, ar]): Reader =>
+      (t) =>
+        t.startsWith(start) ? { en: t, ar } : null,
+  ),
+  (t) => {
+    const m = /^The setback table's row for side (\d+) reads "(.*)" under BUILDING and "(.*)" under PODIUM/.exec(t);
+    return m
+      ? {
+          en: t,
+          ar: `صف الجانب ${m[1]} في جدول الارتدادات يقرأ «${m[2]}» تحت المبنى و«${m[3]}» تحت القاعدة، وهذه ليست مسافة ولا SEE NOTES ولا N/A. لا يقرأ الجدول كله، بدل أن يقرأ ناقصا جانبا.`,
+        }
+      : null;
+  },
+  (t) => {
+    const m = /^The drawing labels side (\d+) more than once/.exec(t);
+    return m ? { en: t, ar: `الرسم يكتب الجانب ${m[1]} أكثر من مرة، فلا يوضع أي جانب على حد.` } : null;
+  },
+  (t) => {
+    const m = /^The drawing does not label (.+?) against a surveyed boundary/.exec(t);
+    if (!m) return null;
+    const sides = (m[1] ?? '').split(', ').map((s) => s.replace(/^side /, ''));
+    return { en: t, ar: `الرسم لا يكتب الجانب ${sides.join('، ')} بجوار حد مساحي، فلا يوضع أي جانب من الجدول على حد.` };
+  },
+  (t) => {
+    const m = /^Each side of the table is the surveyed boundary the drawing labels with its number: (.+)\.$/.exec(t);
+    if (!m) return null;
+    const legs = (m[1] ?? '').split('; ').map((s) => /^side (\d+) runs from corner (\d+) to corner (\d+)$/.exec(s));
+    if (legs.some((l) => l === null)) return null;
+    return {
+      en: t,
+      ar: `كل جانب في الجدول هو الحد المساحي الذي يكتب الرسم رقمه بجواره: ${legs
+        .map((l) => `الجانب ${l?.[1]} من الركن ${l?.[2]} إلى الركن ${l?.[3]}`)
+        .join('؛ ')}.`,
+    };
+  },
+  (t) => {
+    const m = /^This sheet prints the height code "([^"]*)", which does not read as one building/.exec(t);
+    return m
+      ? {
+          en: t,
+          ar: `هذا المخطط يطبع رمز الارتفاع «${m[1]}»، ولا يقرأ كمبنى واحد: عددان للأدوار، أو حرف غير B وG وP وM وR، أو بلا دور أرضي. لا يقرأ منه عدد أدوار، ويجب أن يؤكده شخص مسمى.`,
+        }
+      : null;
+  },
+  (t) => {
+    const m = /^This sheet states a parking requirement this reader could not type: «([^»]*)»/.exec(t);
+    return m
+      ? {
+          en: t,
+          ar: `هذا المخطط يذكر متطلب مواقف لم يستطع القارئ تحويله إلى قاعدة: «${m[1]}». تحفظ كلماته، ولا يقرأ منها عدد مواقف حتى يؤكده شخص مسمى.`,
+        }
+      : null;
+  },
+  (t) => (t === 'gfa split = maximum GFA' ? { en: t, ar: 'مجموع توزيع المساحة الطابقية = أقصى مساحة طابقية' } : null),
+  (t) => {
+    const m = /^(.+) = ([\d.]+) m² against a printed maximum GFA of ([\d.]+) m²\.$/.exec(t);
+    return m ? { en: t, ar: `${m[1]} = ${m[2]} م² مقابل أقصى مساحة طابقية مطبوعة ${m[3]} م².` } : null;
   },
 ];
 

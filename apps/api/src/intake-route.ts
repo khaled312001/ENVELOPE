@@ -76,6 +76,10 @@ function present(facts: AffectionPlanFacts): unknown {
           provenanceClass: t.provenanceClass,
           ...(t.unit === undefined ? {} : { unit: t.unit }),
         };
+  const asJson = (t: Traced<unknown> | undefined): unknown => {
+    const wire = traced(t);
+    return wire === null ? null : (JSON.parse(JSON.stringify(wire)) as unknown);
+  };
 
   return {
     parcelId: fieldOf(facts.parcelId),
@@ -172,6 +176,25 @@ function present(facts: AffectionPlanFacts): unknown {
           },
         }
       : {}),
+
+    /*
+      WHAT THE READERS ADDED ON 17 OCT 2026: the developer plot number and the
+      expiry date as fields; the typed parking requirement, the per-side setback
+      table, the land-use split, the general notes, and on the unified site plan
+      the boundary dimensions and the road beside each side. Read and cited,
+      and bound by no rule yet — that is `rules/instruments/sheet.ts`'s next
+      step. Their Decimals are sent as the strings JSON makes of them, here
+      rather than by whoever serialises the response, so an in-process caller
+      and an HTTP one receive the same object.
+    */
+    developerPlotNo: fieldOf(facts.developerPlotNo),
+    expiryDate: fieldOf(facts.expiryDate),
+    parking: asJson(facts.parking),
+    sideSetbacks: asJson(facts.sideSetbacks),
+    landUseSplit: asJson(facts.landUseSplit),
+    generalNotes: asJson(facts.generalNotes),
+    boundaryDimensionsM: asJson(facts.boundaryDimensionsM),
+    sideRoads: asJson(facts.sideRoads),
 
     missing: facts.missing,
     crossChecks: facts.crossChecks,

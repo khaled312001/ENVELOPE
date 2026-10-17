@@ -7,6 +7,7 @@
  * could not find is more dangerous than one that fails outright.
  */
 
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
@@ -79,12 +80,13 @@ describe('POST /api/intake/affection-plan', () => {
   });
 });
 
+/* Kept out of git with the rest of the developer standards: skipped, by name, where absent. */
+const MED12 = 'docs/00-source/developer-standards/azizi/Plot DJAZ1MED12RES011-178.pdf';
+const med12Absent = !existsSync(fileURLToPath(new URL(MED12, REPO)));
+
 describe('a sheet that omits its own limits', () => {
-  it('returns 200 with the gaps named rather than failing', async () => {
-    const res = await upload(
-      'docs/00-source/developer-standards/azizi/Plot DJAZ1MED12RES011-178.pdf',
-      'DJAZ1MED12RES011.pdf',
-    );
+  it.skipIf(med12Absent)(`returns 200 with the gaps named rather than failing${med12Absent ? ` (skipped: ${MED12} is not in this checkout)` : ''}`, async () => {
+    const res = await upload(MED12, 'DJAZ1MED12RES011.pdf');
     expect(res.statusCode).toBe(200);
     const b = res.json();
 
@@ -122,6 +124,37 @@ describe("the Municipality's sheet over HTTP", () => {
     ]);
     expect(facts.parkingRequirement.value).toContain('موقف');
     expect(facts.blocking).toEqual([]);
+  });
+
+  /* Typed beside the words, with its figures as strings: B.7.2.6.1 puts this row above Table B.13. */
+  it('sends the parking row typed, not only as words', async () => {
+    const res = await upload('docs/00-source/samples/affection-plan/DM-1341556-al-mamzar.pdf', 'DM-1341556.pdf');
+    const { facts } = res.json();
+    expect(facts.parking).toMatchObject({
+      provenanceClass: 'DERIVED',
+      value: { dwelling: { baysAtOrBelow: 1, baysAbove: 2, thresholdM2: '150', measure: 'UNSTATED' } },
+    });
+    expect(facts.parking.value.byArea.map((r: { use: string; perM2: string }) => [r.use, r.perM2])).toEqual([
+      ['COMMERCIAL', '70'],
+      ['OFFICE', '50'],
+    ]);
+  });
+});
+
+describe('the DDA sheet over HTTP', () => {
+  it('sends the setback table side by side, each side on its surveyed boundary', async () => {
+    const res = await upload('docs/00-source/samples/affection-plan/DDA-5134565-saih-shuaib-1.pdf', 'DDA-5134565.pdf');
+    expect(res.statusCode).toBe(200);
+    const { facts } = res.json();
+    expect(facts.sideSetbacks.value.sides.map((s: { side: number; boundary?: number }) => [s.side, s.boundary])).toEqual([
+      [1, 4],
+      [2, 2],
+      [3, 0],
+      [4, 5],
+    ]);
+    expect(facts.parking.value.dwelling).toMatchObject({ thresholdM2: '150', measure: 'GFA' });
+    expect(facts.generalNotes.value).toHaveLength(2);
+    expect(facts.developerPlotNo).toBeNull();
   });
 });
 

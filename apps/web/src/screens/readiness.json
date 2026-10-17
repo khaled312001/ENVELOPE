@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-17T10:18:40.561Z",
+  "generatedAt": "2026-10-17T11:49:57.702Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
@@ -8,7 +8,7 @@
     "definitionsTotal": 15,
     "annexVersion": "0.1.0-UNSIGNED",
     "annexSigned": false,
-    "invariantsRan": 10,
+    "invariantsRan": 13,
     "invariantsTotal": 18,
     "blocking": "No rule in this deployment is approved and the metric definitions annex is unsigned. Every figure below is an engine demonstration. None of it is a capacity assessment and none of it may be quoted to a third party."
   },
@@ -28,7 +28,7 @@
     {
       "parameterId": "parking.usable_fraction",
       "runs": 1,
-      "maxRelativeEffect": "0.18",
+      "maxRelativeEffect": "0.142857",
       "basis": "the usable fraction of a parking level after cores, ramps and plant"
     },
     {

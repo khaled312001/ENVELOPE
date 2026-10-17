@@ -156,28 +156,28 @@
         "y": "5.967"
       }
     ],
-    "totalBays": "184",
+    "totalBays": "171",
     "bayAreaFactorM2": "31.3846",
     "bayAreaFactorClass": "ASSUMED",
     "bandAM2": "16000",
-    "bandBM2": "17920",
+    "bandBM2": "16640",
     "bandCM2": "9677.42",
     "governingBand": "PARKING",
-    "governingGfaM2": "9677.42",
+    "governingGfaM2": "8960",
     "headroomToNextM2": "6322.58",
     "nextBindingBand": "REGULATORY",
     "levels": "7",
     "formulas": {
       "bandA": "FAR 5 × plot area 3200.00 m² (parking excluded from FAR)",
-      "bandB": "tower plate 1280.00 m² × 14 level(s)",
+      "bandB": "tower plate 1280.00 m² × 13 level(s) of floor area (14 under the height ceiling, less 1 given to parking)",
       "bandC": "100 unit(s) supportable by parking × 96.77 m² GFA per unit",
-      "governingGfa": "min(band A, band B, band C)",
-      "levels": "floor(min(14, governing GFA ÷ tower plate))"
+      "governingGfa": "min(band A, band B, band C) = 9677.42 m², in whole levels: 7 level(s) × tower plate 1280.00 m²",
+      "levels": "floor(min(13 level(s) of floor area, smallest band 9677.42 m² ÷ tower plate 1280.00 m²))"
     },
     "levelPlan": {
       "bayCount": {
         "value": "52",
-        "node": "n116",
+        "node": "n121",
         "parameterId": "parking.laid_out_bays",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -185,7 +185,7 @@
       },
       "areaPerBayM2": {
         "value": "36.92",
-        "node": "n118",
+        "node": "n123",
         "parameterId": "parking.area_per_bay_m2",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -193,7 +193,7 @@
       },
       "deductionsM2": {
         "value": "288",
-        "node": "n82",
+        "node": "n87",
         "parameterId": "parking.layout_deductions_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -201,7 +201,7 @@
       },
       "moduleDepthM": {
         "value": "17",
-        "node": "n86",
+        "node": "n91",
         "parameterId": "parking.module_depth_m",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -209,7 +209,7 @@
       },
       "usableAreaM2": {
         "value": "1631.99",
-        "node": "n88",
+        "node": "n93",
         "parameterId": "parking.layout_usable_area_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -217,7 +217,7 @@
       },
       "orientation": {
         "value": "bays to the walls, the ring aisle sloped as the ramp",
-        "node": "n112",
+        "node": "n117",
         "parameterId": "parking.module_orientation",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION"
@@ -225,7 +225,7 @@
       "turning": {
         "innerRadiusM": {
           "value": "4",
-          "node": "n144",
+          "node": "n149",
           "parameterId": "parking.turning_inner_radius_m",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -233,7 +233,7 @@
         },
         "laneM": {
           "value": "3.5",
-          "node": "n147",
+          "node": "n152",
           "parameterId": "parking.turning_lane_m",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -241,7 +241,7 @@
         },
         "fitting": {
           "value": "8",
-          "node": "n149",
+          "node": "n154",
           "parameterId": "parking.turns_fitting",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -275,7 +275,7 @@
         "slopeBlocked": true,
         "required": {
           "value": "2",
-          "node": "n162",
+          "node": "n167",
           "parameterId": "parking.accessible_required",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -283,7 +283,7 @@
         },
         "placed": {
           "value": "0",
-          "node": "n172",
+          "node": "n177",
           "parameterId": "parking.accessible_bays",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -293,7 +293,7 @@
         "lost": 0,
         "bayCount": {
           "value": "48",
-          "node": "n174",
+          "node": "n179",
           "parameterId": "parking.entry_level_bays",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -303,7 +303,7 @@
         "preferred": {
           "required": {
             "value": "5",
-            "node": "n252",
+            "node": "n267",
             "parameterId": "parking.preferred_required",
             "provenanceClass": "ASSUMED",
             "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -1784,7 +1784,7 @@
           ],
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-          "node": "n141",
+          "node": "n146",
           "provenanceClass": "DERIVED"
         },
         "chosen": null,
@@ -1925,7 +1925,7 @@
       "grade": {
         "bayCount": {
           "value": "48",
-          "node": "n151",
+          "node": "n156",
           "parameterId": "parking.grade_bays",
           "provenanceClass": "DERIVED",
           "renderHint": "NEUTRAL_WITH_CITATION",
@@ -2021,7 +2021,7 @@
         ],
         "rank": 1,
         "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-        "node": "n141",
+        "node": "n146",
         "provenanceClass": "DERIVED"
       },
       "chosen": null,
@@ -2152,19 +2152,19 @@
     "bayAreaFactorBasis": "the usable fraction of a parking level after cores, ramps and plant",
     "parkingInFar": {
       "countsTowardFar": {
-        "regulatoryGfaM2": "10225.23",
-        "governingGfaM2": "9677.42",
+        "regulatoryGfaM2": "10633.23",
+        "governingGfaM2": "8960.00",
         "governingBand": "PARKING"
       },
       "excludedFromFar": {
         "regulatoryGfaM2": "16000.00",
-        "governingGfaM2": "9677.42",
+        "governingGfaM2": "8960.00",
         "governingBand": "PARKING"
       },
-      "regulatorySpreadM2": "5774.77",
+      "regulatorySpreadM2": "5366.77",
       "governingSpreadM2": "0.00",
       "governingSpreadRelative": "0.000000",
-      "verdict": "The parking-in-FAR treatment moves regulatory capacity by 5775 m², but not the governing capacity: the parking limit binds below both treatments. On this plot the open regulatory question does not change the answer — though it would on a plot where the FAR ceiling binds."
+      "verdict": "The parking-in-FAR treatment moves regulatory capacity by 5367 m², but not the governing capacity: the parking limit binds below both treatments. On this plot the open regulatory question does not change the answer — though it would on a plot where the FAR ceiling binds."
     },
     "exports": {
       "gateSequence": [

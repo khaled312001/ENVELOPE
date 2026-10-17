@@ -1213,6 +1213,7 @@ export function runPipeline(input: RunInput): RunOutput {
     providedBays: parking.providedBays,
     probeBays: parking.totalBays,
     probeVisitorBays: parking.visitorBays,
+    saleableEfficiency: efficiencyTraced,
   });
   const demandAtGoverningBays = atGoverning.totalBays;
 

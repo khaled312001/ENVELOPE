@@ -582,6 +582,44 @@ is a defect even when it makes something easier.
   binding them is the rules layer's. The client's PDFs are never copied into the repo:
   tests that need one skip by name (`ENVELOPE_SOURCE_ROOT`), and every reader is also
   driven from an unbranded synthetic fixture.
+- **What the plot's own sheet states binds; what it omits stops the run** (17 Oct
+  2026). Where a sheet prints GFA, FAR and plot area, the GFA governs: `far.max` is GFA
+  ÷ printed area, rounded down, and the FAR is its cross-check (the lower binds if they
+  disagree beyond rounding, said). The DDA per-side table binds onto the boundary that
+  *is* each surveyed leg, matched by length and bearing and only when unique; SEE NOTES
+  cells, unplaced sides and unnamed legs are listed, never defaulted. The sheet's own
+  parking requirement binds `parking.demand` over Table B.13 (B.7.2.6.1), counted by the
+  unit's area; where the sheet does not say which area and the readings differ, the run
+  stops with both figures. `POST /api/runs` refuses a plot whose bound sheet leaves
+  FAR/GFA/height open, in a sentence naming each, and the seed's placeholders are not
+  loaded on such a plot. A project brief binds only when the run names it
+  (`projectBriefId`), only where the sheet is silent. The pipeline context carries
+  `plot.plot_number`: without it every plot-fenced parking rule matched nothing and
+  Table B.13 answered silently. Do not drop it.
+- **Band B counts floor-area levels; the levels a run draws are the levels it sells.**
+  Band B is `plate × capacity.floor_area_levels` — the ceiling's levels less those given
+  to parking above grade (whether the plan's G+N counts podium parking is `ASSUMED`,
+  Q27). The engine emits a level-area schedule; INV-01, INV-11 and INV-18 run on it and
+  are tested to fail on a run doctored back into the defect. Do not put any of them
+  back to `DORMANT` to make a run pass. There is one height: `capacity.levels_above_ground`
+  counts every placed storey. Demand at the governing capacity is `Σ ratio × count` over
+  a largest-remainder schedule by type.
+- **A surveyed jog is offset; an unequal step is refused, not drawn.** `offsetPerEdge`
+  verifies every dropped boundary by distance to each boundary's own *segment*, so DDA
+  5134565's 0.42 m jog computes. A short boundary asking for less than its long, almost
+  collinear neighbour is held to the neighbour's line (conservative, verified, listed in
+  `OffsetResult.dropped`); any other unequal step is refused in a sentence naming both
+  boundaries by length and asking for one setback. Square step or wrap-around is the
+  client's drafting question; do not pick one in code.
+- **Lettering has a floor, and a label is moved, never shrunk.** 2.5 mm notes, 2.0 mm
+  dimension figures, nothing under 1.8 mm (`packages/sheets/src/lettering.ts`, held by
+  `lettering.test.ts` on six real runs). `settleLabels` moves a label along a fixed
+  ladder — drafting, not the 34:37 optimiser; it moves words, never geometry. Zero
+  collisions on every sheet (`collisions.test.ts`). The title block names the reader's
+  project; PROJECT, DESCRIPTION, CLIENT, CONSULTANT and STATUS print NOT STATED until
+  stated. A report prints a measure to two decimals and a count whole; the exact value
+  stays on the element, in the derivation, the JSON and the XLSX. The study report
+  prints its drawings on A3 pages at full size, because reduced to A4 every scale bar lied.
 - **Degenerate geometry raises.** Slivers, self-intersections and near-tangent offsets throw
   rather than return a plausible wrong answer (PRD §14.3).
 - **Invariant failure blocks emission.** Never a warning, never a configurable severity.

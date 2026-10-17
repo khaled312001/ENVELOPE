@@ -582,6 +582,12 @@ export interface DemandAtInput {
    * zero, and the demand at the governing count must carry that class.
    */
   readonly probeVisitorBays: TracedDecimal;
+  /**
+   * The saleable share the probe was evaluated with. A sheet's parking rule is
+   * set by the unit's area (GFA or saleable), so the schedule must carry the
+   * same areas the probe did, or the rule refuses every type as arealess.
+   */
+  readonly saleableEfficiency?: Traced<Decimal>;
 }
 
 export interface DemandAt {
@@ -619,9 +625,19 @@ export function demandAtUnits(input: DemandAtInput): DemandAt {
     },
   });
 
+  // The same areas the probe's context carried (solveParking): the probe and the
+  // answer are counted by one rule, so they must be shown the same unit.
+  const efficiency = input.saleableEfficiency?.value;
   const demandCtx: EvalContext = {
     ...context,
-    unit: { mix: entries.map((e) => ({ typeId: e.typeId, count: e.count })) },
+    unit: {
+      mix: entries.map((e) => ({
+        typeId: e.typeId,
+        count: e.count,
+        nsa_m2: e.nsaM2.toString(),
+        ...(efficiency && efficiency.gt(0) ? { gfa_m2: e.nsaM2.div(efficiency).toDecimalPlaces(4).toString() } : {}),
+      })),
+    },
   };
   const demandRes = resolveParameter('parking.demand', rules, demandCtx);
   const residentValue = num(demandRes);
@@ -631,10 +647,12 @@ export function demandAtUnits(input: DemandAtInput): DemandAt {
         'invent a parking ratio.',
     );
   }
+  const readsGfaShare =
+    demandRes.governing.rule.evaluatorArgs['fn'] === SHEET_PARKING_FN && input.saleableEfficiency !== undefined;
   const residentBays = tracer.derived('parking.resident_bays_at_governing', residentValue, {
     rule: { ruleId: demandRes.governing.rule.ruleId, citation: demandRes.governing.rule.citation },
     formula: entries.length > 0 ? entries.map((e) => `${e.count} × ${e.label}`).join(' + ') : 'no units',
-    uses: { schedule },
+    uses: readsGfaShare ? { schedule, efficiency: input.saleableEfficiency! } : { schedule },
     unit: 'bays',
   });
 

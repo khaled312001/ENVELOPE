@@ -1147,8 +1147,13 @@ describe('export — the §3.4 artifact', () => {
     const far = (run.provenance.nodes as { parameterId?: string; value?: string }[]).find(
       (n) => n.parameterId === 'capacity.achieved_far' && n.value !== undefined,
     )?.value;
-    expect(exact, 'the engine quantises area past two decimals').toMatch(/\.\d{3,}$/);
-    expect(far, 'the engine quantises FAR past two decimals').toMatch(/\.\d{3,}$/);
+    // Governing is held to whole levels of the plate since 17 Oct, so it and the
+    // FAR may come out round. What keeps this test from passing vacuously is that
+    // the engine still quantises SOME figure past two decimals.
+    expect(exact, 'the governing GFA is a figure').toMatch(/^\d+(\.\d+)?$/);
+    expect(far, 'the achieved FAR is a figure').toMatch(/^\d+(\.\d+)?$/);
+    const fine = (run.provenance.nodes as { value?: string }[]).filter((n) => /^\d+\.\d{3,}$/.test(n.value ?? ''));
+    expect(fine.length, 'the engine quantises some figure past two decimals').toBeGreaterThan(0);
 
     const twoDp = (s: string): string => {
       const [w, f = ''] = s.split('.');

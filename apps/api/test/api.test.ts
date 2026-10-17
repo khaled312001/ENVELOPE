@@ -627,6 +627,29 @@ describe('runs', () => {
     expect(body.building.core.levelIds).toEqual(placed);
   });
 
+  it('publishes what the reported answer needs and sells, beside the probe and the envelope', async () => {
+    /*
+      Every screen printed the probe's demand as "required" and the envelope's
+      saleable area beside the governing GFA (Warsan: 165 bays for a building
+      that needs 52; 14,161 m² saleable beside 4,743 m² of GFA). The answer's own
+      figures are engine nodes; this holds them on the wire, equal to the graph.
+    */
+    const plot = await createPlot();
+    const res = await app.inject({ method: 'POST', url: '/api/runs', headers: ACTOR, payload: { ...RUN_BODY, plotId: plot.plotId } });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    const node = (id: string): string | undefined =>
+      (body.provenance.nodes as { parameterId?: string; value?: string }[]).find((n) => n.parameterId === id)?.value;
+    expect(body.parking.demandAtGoverning.value).toBe(node('parking.demand_at_governing_capacity'));
+    expect(body.parking.providedBays.value).toBe(node('parking.provided_bays'));
+    expect(body.capacity.governingUnits.value).toBe(node('capacity.governing_unit_count'));
+    const saleable = Number(body.capacity.saleableAreaAtGoverningM2.value);
+    const governing = Number(body.capacity.governingGfa.value);
+    expect(saleable).toBeGreaterThan(0);
+    expect(saleable).toBeLessThanOrEqual(governing);
+    expect(saleable).toBeCloseTo(Number(body.capacity.saleableEfficiency.value) * governing, 1);
+  });
+
   it('changes no capacity figure, however large the core is', async () => {
     const plot = await createPlot();
     const run = async (extra: Record<string, unknown>) =>

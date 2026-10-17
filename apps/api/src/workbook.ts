@@ -281,13 +281,21 @@ const ENVELOPE_LABELS = {
   maxLevelsByHeight: 'Levels by height',
 };
 
+/*
+  "Required" is the demand of the building the run reports. The resident,
+  visitor and total rows are the PROBE's — the largest scheme the envelope
+  allows, which finds Band C — and were labelled "required" until plot 196
+  read 384 required against 297 provided for a scheme that needs 234.
+*/
 const PARKING_LABELS = {
-  residentBays: 'Resident bays required',
-  visitorBays: 'Visitor bays required',
-  totalBays: 'Total bays required',
+  demandAtGoverning: 'Bays required at the reported capacity',
+  providedBays: 'Bays provided by the parking levels',
+  residentBays: 'Resident bays, largest scheme the envelope allows',
+  visitorBays: 'Visitor bays, largest scheme the envelope allows',
+  totalBays: 'Total bays, largest scheme the envelope allows',
   bayAreaFactorM2: 'Area per bay factor (m²)',
-  requiredAreaM2: 'Parking area required (m²)',
-  levelsRequired: 'Parking levels required',
+  requiredAreaM2: 'Parking area, largest scheme the envelope allows (m²)',
+  levelsRequired: 'Parking levels, largest scheme the envelope allows',
   levelsAvailable: 'Parking levels available',
   supportableUnitCeiling: 'Units the parking can carry',
 };
@@ -306,6 +314,10 @@ const CAPACITY_LABELS = {
   bandC: 'Band C — parking limited (m²)',
   governingGfa: 'Governing GFA (m²)',
   levels: 'Levels',
+  governingUnits: 'Units at the reported capacity',
+  saleableAreaAtGoverningM2: 'Saleable area at the reported capacity (m²)',
+  saleableEfficiency: 'Saleable share of GFA',
+  saleableAreaM2: 'Saleable area at the envelope maximum GFA (m²)',
   userRealismDiscount: 'User realism discount',
 };
 

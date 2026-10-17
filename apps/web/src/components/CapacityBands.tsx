@@ -37,7 +37,12 @@ export interface CapacityView {
    * reader did not type is the one that tells them the other is wrong.
    */
   readonly saleableEfficiency: TracedWire;
+  /** The share applied to the ENVELOPE's GFA (plate × levels) — its maximum, not the answer's. */
   readonly saleableAreaM2: TracedWire;
+  /** The share applied to the governing GFA — the building the run reports. Absent on runs stored before it existed. */
+  readonly saleableAreaAtGoverningM2?: TracedWire;
+  /** Units at the reported capacity. Absent on runs stored before it was published. */
+  readonly governingUnits?: TracedWire;
   /**
    * The parking-in-FAR treatment, with the name of whoever answered it.
    *

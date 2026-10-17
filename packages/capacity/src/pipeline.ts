@@ -365,6 +365,8 @@ export interface RunOutput {
    */
   readonly saleableEfficiency: Traced<Decimal>;
   readonly saleableAreaM2: Traced<Decimal>;
+  /** The same share on the building the run reports (governing GFA), never larger than it. */
+  readonly saleableAreaAtGoverningM2: Traced<Decimal>;
   /**
    * The parking-in-FAR treatment, as a value a reader can click.
    *
@@ -1104,6 +1106,26 @@ export function runPipeline(input: RunInput): RunOutput {
     },
   );
 
+  /*
+    SALEABLE AREA AT THE REPORTED CAPACITY.
+
+    `capacity.saleable_area_m2` is the share applied to the ENVELOPE's GFA
+    (plate × levels) — the right divisor when an area is turned into a share,
+    and the wrong figure to print beside the answer: on a FAR-governed plot the
+    envelope is far larger than the building, and Warsan IC1-CTYL-16_011 showed
+    14,161 m² "saleable" beside a governing 4,743 m². This is the same share on
+    the building the run reports, which is the figure a reader asks for.
+  */
+  const saleableAtGoverning = tracer.computed(
+    'capacity.saleable_area_at_governing_m2',
+    efficiencyTraced.value.times(capacity.governingGfa.value).toDecimalPlaces(2),
+    {
+      formula: `${efficiencyTraced.value.toString()} × governing GFA ${capacity.governingGfa.value.toFixed(2)} m²`,
+      uses: { efficiency: efficiencyTraced, governing: capacity.governingGfa },
+      unit: 'm²',
+    },
+  );
+
   // The preferred bays of B.7.2.6.2 are counted off what the answer REQUIRES, so
   // they wait for it; marking one changes no count, so nothing above moves.
   if (levelPlan?.accessible) {
@@ -1170,6 +1192,7 @@ export function runPipeline(input: RunInput): RunOutput {
     demandAtGoverningBays,
     saleableEfficiency: efficiencyTraced,
     saleableAreaM2: saleableAreaTraced,
+    saleableAreaAtGoverningM2: saleableAtGoverning,
     parkingInFarTreatment: treatmentTraced,
     levelSchedule: schedule
       ? { schedule, code: levelCode(schedule, massing.towerLevels.value) }

@@ -527,12 +527,15 @@ export const EN = {
     headroom: (m2: string): string => `${m2} m² of headroom before the next band binds.`,
     levels: 'Levels',
     saleable: 'Saleable area',
+    // A run stored before the answer's figure existed shows the envelope's, and says so.
+    saleableEnvelope: 'Saleable area, at the envelope’s maximum GFA',
+    units: 'Units',
     saleableShare: 'Saleable share of GFA',
     farTreatment: 'Parking in FAR',
     height: 'Height ceiling',
     plate: 'Tower plate cap',
     core: 'Core area',
-    totalBays: 'Bays required',
+    totalBays: 'Bays the largest scheme the envelope allows would need',
     coreRec: 'Core comparison — nothing is subtracted',
     assumptions: (n: number): string => (n === 1 ? '1 assumption — you may edit it' : `${n} assumptions — you may edit each one`),
     sensitivity: (p: string, lo: string, hi: string, rel: string): string =>
@@ -556,7 +559,10 @@ export const EN = {
     baysPerLevel: 'Bays on a typical level',
     areaPerBay: 'Area per bay',
     required: 'Bays required',
-    levelsRequired: 'Parking levels required',
+    provided: 'Bays provided',
+    // The probe's demand, kept for a run stored before the answer's demand was published, and named for what it is.
+    probeRequired: 'Bays the largest scheme the envelope allows would need',
+    levelsRequired: 'Parking levels the largest scheme would need',
     orientation: 'Orientation kept',
     turns: (n: number): string => `Turns a car gets round, of ${n}`,
     options: {

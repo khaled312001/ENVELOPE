@@ -163,6 +163,16 @@ export function presentRun(
       residentBays: toWire(parking.residentBays),
       visitorBays: toWire(parking.visitorBays),
       totalBays: toWire(parking.totalBays),
+      /*
+        WHAT THE REPORTED ANSWER NEEDS, AND WHAT THE LEVELS HOLD.
+
+        `totalBays` is the demand of the probe — the largest scheme the envelope
+        allows, used to find the parking ceiling — and every screen and file
+        printed it as "required". On Warsan IC1-CTYL-16_011 that read 165 against
+        a building that needs 52. Both are engine nodes; nothing is computed here.
+      */
+      demandAtGoverning: toWire(output.demandAtGoverningBays),
+      providedBays: toWire(parking.providedBays),
       bayAreaFactorM2: toWire(parking.bayAreaFactorM2),
       requiredAreaM2: toWire(parking.requiredAreaM2),
       levelsRequired: toWire(parking.levelsRequired),
@@ -389,6 +399,10 @@ export function presentRun(
        */
       saleableEfficiency: toWire(output.saleableEfficiency),
       saleableAreaM2: toWire(output.saleableAreaM2),
+      /* The same share on the building the run reports — the figure printed beside the answer. */
+      saleableAreaAtGoverningM2: toWire(output.saleableAreaAtGoverningM2),
+      /* The units the reported capacity holds: floor(governing GFA ÷ GFA per unit). */
+      governingUnits: toWire(output.governingUnitCount),
       /**
        * `FR-DEF-002`'s blocking question, as a value a reader can click.
        *

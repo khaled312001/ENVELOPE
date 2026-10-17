@@ -225,7 +225,12 @@ export interface RunView {
   readonly parking: {
     readonly residentBays: TracedWire;
     readonly visitorBays: TracedWire;
+    /** Demand of the PROBE — the largest scheme the envelope allows — not of the reported answer. */
     readonly totalBays: TracedWire;
+    /** What the reported capacity needs. Absent on a run stored before it was published. */
+    readonly demandAtGoverning?: TracedWire;
+    /** What the parking levels hold, as laid out. Absent on a run stored before it was published. */
+    readonly providedBays?: TracedWire;
     readonly bayAreaFactorM2: TracedWire;
     readonly requiredAreaM2: TracedWire;
     readonly levelsRequired: TracedWire;

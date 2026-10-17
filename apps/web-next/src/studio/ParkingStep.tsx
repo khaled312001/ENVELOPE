@@ -169,15 +169,25 @@ export function ParkingPanel({
   const chosen = lp.access.chosen ?? null;
   const recommended = lp.access.recommended;
   const inUse = chosen ?? recommended;
-  // Supply against demand first; how the level was packed folds away — unless any of it was assumed.
+  /*
+    Supply against demand first — the demand of the building this run REPORTS.
+    `totalBays` is the probe's: the largest scheme the envelope allows, used to
+    find the parking ceiling. Printed as "required" it read 165 on Warsan for a
+    building that needs 52 and has 110 drawn. It stays, folded and named for
+    what it is; a run stored before the answer's demand was published shows it
+    under that name too, never as "required".
+  */
+  const { demandAtGoverning, providedBays } = run.parking;
   const { shown, folded } = assumedFirst(
     [
-      { key: 'required', label: t.parking.required, value: run.parking.totalBays },
+      ...(demandAtGoverning ? [{ key: 'required', label: t.parking.required, value: demandAtGoverning }] : []),
+      ...(providedBays ? [{ key: 'provided', label: t.parking.provided, value: providedBays }] : []),
       { key: 'perLevel', label: t.parking.baysPerLevel, value: lp.bayCount },
-      { key: 'levels', label: t.parking.levelsRequired, value: run.parking.levelsRequired },
       { key: 'perBay', label: t.parking.areaPerBay, value: lp.areaPerBayM2 },
     ],
     [
+      { key: 'probe', label: t.parking.probeRequired, value: run.parking.totalBays },
+      { key: 'levels', label: t.parking.levelsRequired, value: run.parking.levelsRequired },
       { key: 'orientation', label: t.parking.orientation, value: lp.orientation },
       { key: 'module', label: t.parking.module, value: lp.moduleDepthM },
       ...(lp.turning ? [{ key: 'turns', label: t.parking.turns(lp.turning.total), value: lp.turning.fitting }] : []),

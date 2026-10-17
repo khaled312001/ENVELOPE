@@ -1162,6 +1162,34 @@ describe('the study report', () => {
     );
   });
 
+  it('says "required" of the building it reports, never of the probe', () => {
+    /*
+      `parking.total_bays` is the demand of the largest scheme the envelope
+      allows — the probe that finds Band C. It was printed as "Parking required"
+      on the cover and as "Total required" in the parking section, so plot 196
+      read 384 required against 297 provided for a scheme that needs 234.
+    */
+    const base = makeRun();
+    // The run holds a copy of the graph, so the answer's demand is added to that copy.
+    wire('parking.demand_at_governing_capacity', '138', ProvenanceClass.DERIVED, 'bays');
+    const run: RunReport = { ...base, provenance: { ...base.provenance, nodes: [...base.provenance.nodes, ...nodes.slice(-2)] } };
+    const html = studyReportHtml(run, { locale: 'en', sheets: [], building: null });
+    const tileFor = (label: string): string | undefined =>
+      new RegExp(`<div class="tile-label">${label}</div><div class="tile-value">(.*?)</div>`).exec(html)?.[1];
+    expect(tileFor('Parking required')).toContain('138');
+    expect(tileFor('Parking required')).not.toContain('412');
+    expect(html).toContain('Bays the reported capacity needs');
+    // The probe's figures stay, under their own name.
+    expect(html).toContain('The largest scheme the envelope allows');
+    expect(tileFor('Parking the largest scheme would need')).toBeUndefined();
+  });
+
+  it('names the probe as the probe on a run stored before the answer’s demand existed', () => {
+    const html = studyReportHtml(makeRun(), { locale: 'en', sheets: [], building: null });
+    expect(html).not.toMatch(/<div class="tile-label">Parking required<\/div>/);
+    expect(html).toMatch(/<div class="tile-label">Parking the largest scheme would need<\/div><div class="tile-value"><span[^>]*><bdi class="num">412</);
+  });
+
   it('refuses what the audit report refuses: a failed invariant is not emitted in any language', () => {
     const run = makeRun();
     const failing: RunReport = {

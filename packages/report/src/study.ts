@@ -95,6 +95,7 @@ const EN = {
     farOf: (c: string): string => `of ${c} permitted`,
     plotArea: 'Plot area',
     bayRequired: 'Parking required',
+    bayProbe: 'Parking the largest scheme would need',
     bayDrawn: 'Parking laid out',
   },
   stampTitle: 'Regulatory validity: not assessed',
@@ -202,6 +203,10 @@ const EN = {
   parkingInFar: 'Parking in FAR',
   declaredBy: (n: string): string => `declared by ${n}`,
   demand: 'Parking required',
+  requiredAtAnswer: 'Bays the reported capacity needs',
+  probeTitle: 'The largest scheme the envelope allows',
+  probeNote:
+    'These figures find the parking ceiling (Band C). They are the demand of the largest scheme the envelope allows, not of the building this report describes.',
   resident: 'Resident bays',
   visitor: 'Visitor bays',
   totalRequired: 'Total required',
@@ -322,6 +327,7 @@ const AR: Words = {
     farOf: (c) => `من ${c} مسموح`,
     plotArea: 'مساحة القطعة',
     bayRequired: 'المواقف المطلوبة',
+    bayProbe: 'المواقف التي يحتاجها أكبر مخطط',
     bayDrawn: 'المواقف الموزعة',
   },
   stampTitle: 'الصلاحية التنظيمية: لم تخضع للتقييم',
@@ -429,6 +435,10 @@ const AR: Words = {
   parkingInFar: 'المواقف في معامل البناء',
   declaredBy: (n) => `حددها ${n}`,
   demand: 'المواقف المطلوبة',
+  requiredAtAnswer: 'المواقف التي تحتاجها السعة المعلنة',
+  probeTitle: 'أكبر مخطط يسمح به الغلاف',
+  probeNote:
+    'تحدد هذه الأرقام سقف المواقف (النطاق C). وهي طلب أكبر مخطط يسمح به الغلاف، لا طلب المبنى الذي يصفه هذا التقرير.',
   resident: 'مواقف السكان',
   visitor: 'مواقف الزوار',
   totalRequired: 'إجمالي المطلوب',
@@ -718,6 +728,7 @@ function cover(run: RunReport, o: StudyReportOptions): string {
   const ceiling = o.building?.heightCeilingM ?? fromGraph(run, 'envelope.height_ceiling_m');
   const far = fromGraph(run, 'capacity.achieved_far');
   const farCap = fromGraph(run, 'capacity.permitted_far');
+  const required = fromGraph(run, 'parking.demand_at_governing_capacity');
 
   const tiles = [
     tile(w.fig.governing, shown(run.capacity.governingGfa, L), esc(`${w.colBand} ${bandLetter(gov)}`)),
@@ -726,7 +737,8 @@ function cover(run: RunReport, o: StudyReportOptions): string {
     height ? tile(w.fig.height, shown(height, L), ceiling ? w.fig.heightOf(shown(ceiling, L)) : '') : '',
     far ? tile(w.fig.far, shown(far, L), farCap ? w.fig.farOf(shown(farCap, L)) : '') : '',
     tile(w.fig.plotArea, plain(run.plot.computedAreaM2, 'm²', L)),
-    tile(w.fig.bayRequired, shown(run.parking.totalBays, L)),
+    // The demand of the building this report describes; the probe's only when the run predates it, and named as such.
+    required ? tile(w.fig.bayRequired, shown(required, L)) : tile(w.fig.bayProbe, shown(run.parking.totalBays, L)),
     o.building ? tile(w.fig.bayDrawn, shown(o.building.drawnBays, L)) : '',
   ].join('');
 
@@ -876,6 +888,7 @@ function parkingSection(run: RunReport, o: StudyReportOptions, sources: Sources)
   const p = run.parking;
   // Two parking rules may cite the same table; it is named once.
   const ratios = [...new Set(p.ratioCitations.map((c) => source(c, w, sources)))].join(' · ');
+  const required = fromGraph(run, 'parking.demand_at_governing_capacity');
 
   const levels = (o.building?.levels ?? []).flatMap((l) =>
     l.parking ? [[`<bdi>${esc(l.id)}</bdi> · ${esc(say(l.name, L))}`, shown(l.parking.bayCount, L)]] : [],
@@ -897,11 +910,23 @@ function parkingSection(run: RunReport, o: StudyReportOptions, sources: Sources)
   return (
     // Joined to the drawings' short introduction on paper, so it does not take a page of its own.
     `<section class="page joined">${sectionHead(3, w)}` +
-    `<h3>${esc(w.demand)}</h3>` +
+    /*
+      Required = the demand of the building this report describes. The resident,
+      visitor and total rows below it belong to the PROBE — the largest scheme the
+      envelope allows, which finds Band C — and used to be the only "required"
+      on the page: plot 196 read 384 required against 297 provided, a shortage,
+      for a scheme that needs 234. They stay, under their own heading.
+    */
+    (required
+      ? `<h3>${esc(w.demand)}</h3>` +
+        facts([[w.requiredAtAnswer, `${shown(required, L)}${ratios ? ` <span class="muted">${ratios}</span>` : ''}`]])
+      : '') +
+    `<h3>${esc(w.probeTitle)}</h3>` +
+    `<p class="note">${esc(w.probeNote)}</p>` +
     facts([
       [w.resident, shown(p.residentBays, L)],
       [w.visitor, shown(p.visitorBays, L)],
-      [w.totalRequired, `${shown(p.totalBays, L)}${ratios ? ` <span class="muted">${ratios}</span>` : ''}`],
+      [w.totalRequired, `${shown(p.totalBays, L)}${!required && ratios ? ` <span class="muted">${ratios}</span>` : ''}`],
       [w.unitsSupported, shown(p.supportableUnitCeiling, L)],
     ]) +
     `<p class="note">${esc(say(p.podiumImplication, L))}</p>` +

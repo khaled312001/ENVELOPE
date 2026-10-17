@@ -129,7 +129,16 @@ export function CapacityPanel({
   const { shown, folded } = assumedFirst<Figure>(
     [
       { key: 'levels', label: t.capacity.levels, value: c.levels, places: 2 },
-      { key: 'saleable', label: t.capacity.saleable, value: c.saleableAreaM2, places: 0 },
+      ...(c.governingUnits ? [{ key: 'units', label: t.capacity.units, value: c.governingUnits, places: 0 }] : []),
+      /*
+        The answer's saleable area, never the envelope's: printed beside the
+        governing GFA, a share of the envelope's maximum read as three times the
+        building (Warsan: 14,161 m² beside 4,743). A run stored before the
+        answer's figure existed shows the envelope's, labelled as that.
+      */
+      c.saleableAreaAtGoverningM2
+        ? { key: 'saleable', label: t.capacity.saleable, value: c.saleableAreaAtGoverningM2, places: 0 }
+        : { key: 'saleable', label: t.capacity.saleableEnvelope, value: c.saleableAreaM2, places: 0 },
       { key: 'share', label: t.capacity.saleableShare, value: c.saleableEfficiency, places: 4 },
       { key: 'far', label: t.capacity.farTreatment, value: c.parkingInFarTreatment, places: 2 },
     ],

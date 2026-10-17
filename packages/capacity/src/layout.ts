@@ -2694,14 +2694,33 @@ function packOneWayLoop(o: LoopOptions, fromFar = false, shiftM: Decimal = ZERO)
     .map((r, n) => ((ramp ? r.kind === RectKind.RAMP : r.row === ENTRY_DRIVE_ROW) ? n : -1))
     .filter((n) => n >= 0);
   const circ = traceOneWay({ drivable, entries, minOpeningM: a });
-  // An aisle a car reaches and cannot leave, or cannot reach, leads nowhere: not drawn.
-  const usable = new Set(drivableIdx.filter((_, n) => circ.forward.has(n) && circ.back.has(n)));
+  /*
+    An aisle a car reaches and cannot leave, or cannot reach, leads nowhere: not
+    drawn. NOR IS ONE A CAR CAN ONLY NOSE INTO AND BACK OUT OF where it came on:
+    the stretch of an island aisle the core cuts off, whose only opening is the
+    end it is entered by, so the flood's earliest point on it is also its latest.
+    On plot 6468096 the core cut the island aisle in two, and both halves were
+    kept: drawn as "5.50M WIDE 1 WAY DRIVEWAY" with an arrow into the core,
+    serving no bay, under a note saying no aisle ends in a dead end. Such a
+    stretch serves no bay by construction (`oneWayServes` needs a bay between
+    the two points), so dropping it changes no count.
+  */
+  const passable = (n: number): boolean => {
+    if (!circ.forward.has(n) || !circ.back.has(n)) return false;
+    if (drivable[n]!.travel === undefined) return true;
+    return circ.latest.get(n)! > circ.earliest.get(n)! + 1e-6;
+  };
+  const usable = new Set(drivableIdx.filter((_, n) => passable(n)));
   const kept: PlacedRect[] = [];
   let bayCount = 0;
   let strandedBays = 0;
+  let cutOffAisles = 0;
   for (let i = 0; i < cut.length; i += 1) {
     const r = cut[i]!;
-    if (r.kind === RectKind.AISLE && !usable.has(i)) continue;
+    if (r.kind === RectKind.AISLE && !usable.has(i)) {
+      if (r.row >= LOOP_AISLE_ROW) cutOffAisles += 1;
+      continue;
+    }
     if (r.kind !== RectKind.BAY) {
       kept.push(r);
       continue;
@@ -2716,9 +2735,11 @@ function packOneWayLoop(o: LoopOptions, fromFar = false, shiftM: Decimal = ZERO)
   if (bayCount === 0) {
     return refused('every bay of the one-way loop was placed and none is passed by a car that came in and can get out');
   }
+  // Only an aisle still whole from one side of the ring to the other crosses the island.
+  const crossing = kept.filter((r) => r.kind === RectKind.AISLE && r.row >= LOOP_AISLE_ROW && r.width.eq(islandW)).length;
   notes.push(
     `A one-way loop: ${a.toString()} m aisles (DBC Table B.11, 90° parking, one way) run one way round the ` +
-      `level, and ${aisleAt.length} aisle(s) cross the island from one side of the ring to the other in the ` +
+      `level, and ${crossing} aisle(s) cross the island from one side of the ring to the other in the ` +
       `same direction, so no aisle ends in a dead end. ${acrossCount} bays stand to each long wall and ` +
       `${downCount} to each short one, and ${islandBays} on the island, less those the way in, the core and ` +
       'the turns take. The direction of travel is drawn on every aisle.',
@@ -2728,6 +2749,13 @@ function packOneWayLoop(o: LoopOptions, fromFar = false, shiftM: Decimal = ZERO)
       `${strandedBays} bay(s) were placed and then dropped: no car driving with the traffic passes them and ` +
         'gets back out — they stand behind a turn at a corner of the ring, or on an aisle the core cuts. ' +
         'They are not counted and not drawn.',
+    );
+  }
+  if (cutOffAisles > 0) {
+    notes.push(
+      `${cutOffAisles} stretch(es) of aisle across the island are cut off by the core: a car driving with the ` +
+        'traffic could only turn into one and back out where it came in, so they are not drawn as aisles and ' +
+        'no bay is counted along them.',
     );
   }
 
@@ -2779,6 +2807,25 @@ interface Landing {
 const accessibleInRun = (m: number): number => 2 * Math.floor(m / 3) + (m % 3 === 2 ? 1 : 0);
 
 function flatLanding(rects: readonly PlacedRect[], o: PackOptions, wanted: number, core: Rect | undefined): Landing | undefined {
+  /*
+    THE LONG SIDE, WHICHEVER AXIS IT RUNS ALONG. The ring is packed unreflected,
+    so on a level deeper than it is wide the runs along x (rows 0 and 1) are the
+    SHORT sides. Read as they were, a 34 × 50 m ring kept 10 m of a short side
+    level and held two of the accessible bays the 37 m long side would have held,
+    under a sentence saying "along one long side" (review, 17 Oct 2026). So such
+    a level is read reflected — the side runs (rows 2 and 3) become the runs
+    along x — and the stretch found is reflected back.
+  */
+  if (o.grossDepthM.gt(o.widthM)) {
+    const swapRow = (row: number): number => (row === 0 ? 2 : row === 1 ? 3 : row === 2 ? 0 : row === 3 ? 1 : row);
+    const found = flatLanding(
+      rects.map((r) => ({ ...r, ...flip(r), row: swapRow(r.row) })),
+      { ...o, widthM: o.grossDepthM, grossDepthM: o.widthM },
+      wanted,
+      core ? flip(core) : undefined,
+    );
+    return found ? { ...found, rect: flip(found.rect) } : undefined;
+  }
   const W = o.widthM;
   const D = o.grossDepthM;
   const L = o.bayLength;

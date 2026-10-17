@@ -72,7 +72,7 @@ describe('the default arrangement, ranked by B.7.2.3.3 ¶8', () => {
     expect(t).toMatch(/the most bays where every dead end serves 8 or fewer/);
     const ar = inArabic(t);
     expect(ar).toContain('B.7.2.3.3');
-    expect(ar).toMatch(/بممر مغلق يخدم \d+ موقفا/);
+    expect(ar).toMatch(/بممر مسدود يخدم \d+ موقفا/);
   });
 
   it('says so where no arrangement keeps within it', () => {
@@ -96,6 +96,8 @@ describe('the one-way loop', () => {
     // The leftover depth, the bays the core strands and the ramp on the island: all three, on this plot.
     expect(more).toHaveLength(3);
     for (const n of more) inArabic(n);
+    // And the island aisle the core cuts in two, not drawn (review, 17 Oct 2026).
+    inArabic(find(notes, '2 stretch(es) of aisle across the island are cut off by the core'));
   });
 
   it('says the drive in from the slab edge where no ramp reaches the level', () => {

@@ -613,8 +613,8 @@ const READERS: readonly Reader[] = [
         `Against: ${others.map((o) => `${o.n} as ${o.name.en}${o.dead ? ` (a dead end of ${o.dead} bays)` : ''}`).join(', ')}. ` +
         `Any of the ${total} may be picked.`,
       ar:
-        `رتب الدور (${chosen.ar}): ${head[3]} موقفا، وهو الأكثر بين الترتيبات التي لا يخدم فيها أي ممر مغلق أكثر من ${head[2]} مواقف ` +
-        `(كود دبي B.7.2.3.3). مقابل: ${others.map((o) => `${o.n} (${o.name.ar})${o.dead ? ` بممر مغلق يخدم ${o.dead} موقفا` : ''}`).join('، ')}. ` +
+        `رتب الدور (${chosen.ar}): ${head[3]} موقفا، وهو الأكثر بين الترتيبات التي لا يخدم فيها أي ممر مسدود أكثر من ${head[2]} مواقف ` +
+        `(كود دبي B.7.2.3.3). مقابل: ${others.map((o) => `${o.n} (${o.name.ar})${o.dead ? ` بممر مسدود يخدم ${o.dead} موقفا` : ''}`).join('، ')}. ` +
         `ويمكن اختيار أي من الترتيبات الـ ${total}.`,
     };
   },
@@ -626,7 +626,7 @@ const READERS: readonly Reader[] = [
     if (!m) return null;
     return {
       en: `No arrangement keeps every dead-end aisle to ${m[1]} bays (DBC B.7.2.3.3), so the one with the most bays is laid out; its dead ends serve ${m[2]} bays. The clause is a "should": every bay is counted, and each dead end is labelled on the drawing.`,
-      ar: `لا يوجد ترتيب يبقي كل ممر مغلق في حدود ${m[1]} مواقف (كود دبي B.7.2.3.3)، فرتب الدور بالترتيب الأكثر مواقف، وممراته المغلقة تخدم ${(m[2] ?? '').replace(/, /g, '، ')} موقفا. البند توصية لا إلزام: كل موقف محسوب، وكل ممر مغلق مكتوب على الرسم.`,
+      ar: `لا يوجد ترتيب يبقي كل ممر مسدود في حدود ${m[1]} مواقف (كود دبي B.7.2.3.3)، فرتب الدور بالترتيب الأكثر مواقف، وممراته المسدودة تخدم ${(m[2] ?? '').replace(/, /g, '، ')} موقفا. البند توصية لا إلزام: كل موقف محسوب، وكل ممر مسدود مكتوب على الرسم.`,
     };
   },
 
@@ -639,7 +639,7 @@ const READERS: readonly Reader[] = [
     if (!m) return null;
     return {
       en: `A one-way loop: ${m[1]} m one-way aisles (DBC Table B.11) run round the level and ${m[2]} cross the island, so no aisle is a dead end. ${m[3]} bays per long wall, ${m[4]} per short wall and ${m[5]} on the island, less those the entrance, the core and the turns take. Every aisle carries its direction.`,
-      ar: `حلقة باتجاه واحد: ممرات بعرض ${m[1]} م باتجاه واحد (جدول B.11 من كود دبي) تدور حول الدور، و${m[2]} ممر يعبر الجزيرة، فلا يوجد ممر مغلق. ${m[3]} موقفا لكل جدار طويل و${m[4]} لكل جدار قصير و${m[5]} على الجزيرة، ناقص ما يأخذه المدخل والنواة والانعطافات. اتجاه السير مرسوم على كل ممر.`,
+      ar: `حلقة باتجاه واحد: ممرات بعرض ${m[1]} م باتجاه واحد (جدول B.11 من كود دبي) تدور حول الدور، و${m[2]} ممر يعبر الجزيرة، فلا يوجد ممر مسدود. ${m[3]} موقفا لكل جدار طويل و${m[4]} لكل جدار قصير و${m[5]} على الجزيرة، ناقص ما يأخذه المدخل والنواة والانعطافات. اتجاه السير مرسوم على كل ممر.`,
     };
   },
   (t) => {
@@ -738,6 +738,16 @@ const READERS: readonly Reader[] = [
     return {
       en: `Bays stand side by side at ${m[1]} m: no column gap or grid was given, so no room is left for a column and Table B.11's 300 mm is not added.`,
       ar: `المواقف متلاصقة بعرض ${m[1]} م: لم تحدد مسافة للأعمدة ولا شبكة إنشائية، فلا يترك مكان لعمود ولا تضاف 300 مم من جدول B.11.`,
+    };
+  },
+
+  /* ── The one-way loop: an island aisle the core cuts off (review, 17 Oct 2026) ── */
+  (t) => {
+    const m = /^(\d+) stretch\(es\) of aisle across the island are cut off by the core: /.exec(t);
+    if (!m) return null;
+    return {
+      en: `${m[1]} stretch(es) of aisle across the island are cut off by the core: a car could only turn in and back out against the traffic, so they are not drawn and no bay is counted along them.`,
+      ar: `${m[1]} من مقاطع الممر العابر للجزيرة تقطعها النواة: لا تدخلها سيارة إلا لتخرج عكس اتجاه الحركة، فلا ترسم ممرات ولا يحسب عليها أي موقف.`,
     };
   },
 ];

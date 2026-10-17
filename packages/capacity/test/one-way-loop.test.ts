@@ -70,6 +70,35 @@ describe('the one-way loop on plot 6468096', () => {
     expect(level.bays).toHaveLength(out.levelPlan!.bayCount.value);
   });
 
+  /*
+    Review, 17 Oct 2026: the core stands across the island aisle on this plot,
+    and both halves of it were drawn — one-way arrows running into the core,
+    "5.50M WIDE 1 WAY DRIVEWAY" on each, no bay opening onto either — under a
+    note saying no aisle ends in a dead end. A one-way stretch a car can only
+    nose into and back out of is not an aisle.
+  */
+  it('draws no one-way aisle that no bay opens onto, and says what the core cut off', () => {
+    const rects = out.levelPlan!.rects;
+    const bays = rects.filter((r) => r.kind === RectKind.BAY || r.kind === RectKind.ACCESSIBLE_BAY);
+    const shared = (a: (typeof rects)[number], b: (typeof rects)[number]): number => {
+      const [ax1, ay1, bx1, by1] = [a.xM.plus(a.widthM), a.yM.plus(a.heightM), b.xM.plus(b.widthM), b.yM.plus(b.heightM)];
+      const ox = Decimal.min(ax1, bx1).minus(Decimal.max(a.xM, b.xM));
+      const oy = Decimal.min(ay1, by1).minus(Decimal.max(a.yM, b.yM));
+      // Touching along an edge: no depth one way, a length the other.
+      return ox.abs().lt('0.001') ? oy.toNumber() : oy.abs().lt('0.001') ? ox.toNumber() : 0;
+    };
+    const oneWay = rects.filter((r) => r.kind === RectKind.AISLE && r.travel !== undefined);
+    for (const a of oneWay) {
+      expect(
+        bays.some((b) => shared(a, b) >= 2),
+        `aisle ${a.xM.toString()},${a.yM.toString()} ${a.widthM.toString()} × ${a.heightM.toString()} serves no bay`,
+      ).toBe(true);
+    }
+    const notes = out.levelPlan!.layout.notes;
+    expect(notes.some((n) => /^2 stretch\(es\) of aisle across the island are cut off by the core/.test(n))).toBe(true);
+    expect(notes.some((n) => n.includes('and 0 aisle(s) cross the island'))).toBe(true);
+  });
+
   it('records its count beside the architect’s', () => {
     // Measured, 17 Oct 2026: 107 bays a typical level, against the 98 the
     // architect's level carries — 9 more. The engine places no stair, riser or

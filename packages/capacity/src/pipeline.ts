@@ -294,7 +294,9 @@ export interface RunInput {
     readonly rampType?: RampType;
     /**
      * The parking arrangement the run's actor picked from a previous run's
-     * `arrangements`, `USER_SET` under that actor. Absent, the most bays wins.
+     * `arrangements`, `USER_SET` under that actor. Absent, `DEFAULT_ARRANGEMENT_RULE`
+     * in layout.ts decides: the most bays among the arrangements whose dead ends
+     * each serve eight or fewer, or the most bays where none does.
      */
     readonly arrangement?: ParkingArrangement;
   };

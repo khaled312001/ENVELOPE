@@ -213,6 +213,33 @@ describe('accessible parking on the sloped ring', () => {
     expect(out.parking.providedBays.value).toBe(atGrade - plan.lost + perLevel);
   });
 
+  /*
+    Review, 17 Oct 2026: the ring is packed unreflected, so on a level deeper than
+    wide the runs along x are its SHORT sides — and the landing was laid on one,
+    5 m long and holding one accessible bay on 30 × 70 m, under a sentence saying
+    "along one long side". The same level turned the other way round held seven.
+  */
+  it('keeps the long side level whichever way the level runs', () => {
+    const landingOf = (w: string, dd: string) => {
+      const r = layoutParkingLevel({
+        tracer: new Tracer(new ProvenanceGraph()),
+        footprint: { widthM: new Decimal(w), depthM: new Decimal(dd) },
+        deductions: { areaM2: new Decimal(0), source: 'ASSUMED', basis: 'test fixture takes no deduction' },
+        includeRamp: true,
+        parkingLevelCount: 4,
+        arrangement: { id: ParkingArrangement.SLOPED },
+      });
+      return r.slopedFloor!.landing!;
+    };
+    const wide = landingOf('70', '30');
+    const deep = landingOf('30', '70');
+    expect(wide.rect.width.gt(wide.rect.height)).toBe(true);
+    // Along the 70 m side, which on the deep level runs along y.
+    expect(deep.rect.height.gt(deep.rect.width)).toBe(true);
+    expect(deep.lengthM.value.toString()).toBe(wide.lengthM.value.toString());
+    expect(deep.holds).toBe(wide.holds);
+  });
+
   it('says so in words where no landing fits, and lays none', () => {
     // 45 × 30 m: a lap short enough to climb 3.2 m just within 4%, so keeping
     // the stretch the accessible bays need level leaves the rest above it.

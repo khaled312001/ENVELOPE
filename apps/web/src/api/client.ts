@@ -429,6 +429,13 @@ export interface LevelPlanView {
    */
   readonly accessible?: {
     readonly onGrade: boolean;
+    /**
+     * Which level holds them: the ground floor where it parks, else the first
+     * basement, else P1. Optional: runs stored before it existed carry `onGrade` only.
+     */
+    readonly level?: 'GROUND' | 'FIRST_BASEMENT' | 'FIRST_PODIUM';
+    /** True where the level is the sloped ring above B.7.2.3.1's 2%, so none was placed. */
+    readonly slopeBlocked?: boolean;
     readonly required: TracedWire;
     readonly placed: TracedWire;
     readonly vans: number;

@@ -53,7 +53,7 @@ import {
 import { fromLocal, largestInscribedRectangle } from '@envelope/geometry';
 
 import { computeBands, type BandSource } from './bands.js';
-import { buildBuildingModel, parkingInPodiumOf } from './building.js';
+import { aboveGradeParkingOf, buildBuildingModel, entryLevelOf, parkingInPodiumOf } from './building.js';
 import { planGrade } from './grade.js';
 import { buildGfaStatement, type GfaStatement } from './gfa-statement.js';
 import { layoutCore } from './core-layout.js';
@@ -66,7 +66,7 @@ import {
   type RampType,
 } from './layout.js';
 import { AccessChoiceRefusedError, type AccessChoice } from './access.js';
-import { designateAccessible, designatePreferred } from './accessible.js';
+import { designateAccessible, designatePreferred, ENTRY_LEVEL_WORDS } from './accessible.js';
 import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './core.js';
 import { solveEnvelope, type EnvelopeSolution, type StatementRef } from './envelope.js';
 import { planParkingLevel, type LevelPlan } from './level-plan.js';
@@ -864,7 +864,17 @@ export function runPipeline(input: RunInput): RunOutput {
       : { podiumLevels: { value: podiumFootprint, actor: input.actor } }),
   });
   const podiumMassLevels = massing.masses.find((m) => m.id === 'podium')?.levels.value ?? 0;
-  const groundParks = parkingInPodiumOf(schedule, parkingLevelsAvailable, podiumMassLevels) >= 1;
+  /*
+    The ground floor parks by its own answer when a schedule states one — never
+    because some podium level above it parks. That conflation put the drive, the
+    transformer band and the accessible bays on plot 6468096's shop floor.
+  */
+  const aboveGrade = aboveGradeParkingOf(schedule, parkingLevelsAvailable, podiumMassLevels);
+  const groundParks = aboveGrade.ground;
+  const entryLevel = entryLevelOf(
+    aboveGrade,
+    schedule ? schedule.basements : parkingLevelsAvailable - parkingInPodiumOf(schedule, parkingLevelsAvailable, podiumMassLevels),
+  );
 
   /*
     THE COLUMN GAP, UNDER HIS NAME. USER_SET by the statement's author and quoted
@@ -938,13 +948,14 @@ export function runPipeline(input: RunInput): RunOutput {
       off the building's whole supply, placed on one level, and paid for in bays:
       each takes a neighbour as its access aisle. See `accessible.ts`.
     */
-    if (parkingLevelsAvailable >= 1) {
+    if (parkingLevelsAvailable >= 1 && entryLevel) {
       const plan = levelPlan;
       levelPlan = {
         ...plan,
         accessible: designateAccessible({
           tracer,
-          onGrade: plan.grade !== undefined,
+          level: entryLevel,
+          ...(plan.slopedFloor ? { floorGradientPct: plan.slopedFloor.gradientPct } : {}),
           rects: plan.grade?.rects ?? plan.rects,
           levelBays: plan.grade?.bayCount ?? plan.bayCount,
           others: { perLevel: plan.bayCount, levels: parkingLevelsAvailable - 1 },
@@ -990,7 +1001,7 @@ export function runPipeline(input: RunInput): RunOutput {
             ...(levelPlan.accessible
               ? {
                   groundBays: levelPlan.accessible.bayCount,
-                  firstLevel: levelPlan.accessible.onGrade ? 'the ground floor' : 'the first basement',
+                  firstLevel: ENTRY_LEVEL_WORDS[levelPlan.accessible.level],
                 }
               : levelPlan.grade
                 ? { groundBays: levelPlan.grade.bayCount }

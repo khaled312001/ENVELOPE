@@ -102,6 +102,82 @@ describe('the automatic fix, read off the refusal', () => {
   });
 });
 
+/*
+  The sentences a level schedule with a ground floor that does not park writes,
+  and the accessible bays the 2% of B.7.2.3.1 keeps off the sloped ring. Copied
+  from the engine's own output (packages/capacity/test/level-schedule-parking
+  and accessible tests pin the English), so a change to either wording fails here.
+*/
+describe('which levels park, and accessible bays on a slope', () => {
+  const said = (t: string): string => engineNote(t, 'ar') ?? '';
+  const noEnglish = /[A-Za-z]{4,} [A-Za-z]{4,}/;
+
+  it('says the parking placement above a ground floor that does not park', () => {
+    const ar = said('Parking levels: 5 in the podium above a ground floor that does not park, 3 below grade.');
+    expect(ar).toContain('فوق دور أرضي بلا مواقف');
+    expect(ar).toContain('5');
+    expect(ar).toContain('3');
+  });
+
+  it('says both street ramps are not modelled', () => {
+    expect(said('The ramp from the street down to the first basement. Only ramps between two parking levels are modelled.')).toContain('البدروم الأول');
+    const up = said(
+      'The ramp from the street up to the first podium parking level (P1). The ground floor does not park, and only ramps between two parking levels are modelled.',
+    );
+    expect(up).toContain('P1');
+    expect(up).not.toMatch(noEnglish);
+  });
+
+  it('says the substation is not placed on a ground floor that does not park', () => {
+    const ar = said(
+      'The substation and the LV room. The ground floor does not park, and the band against the road is cut only ' +
+        'from a ground floor that does; where they stand on this one is NOT ASSESSED.',
+    );
+    expect(ar).toContain('غرفة المحول');
+    expect(ar).not.toMatch(noEnglish);
+  });
+
+  it('says the answer drawn on the ground floor first', () => {
+    const ar = said(
+      'The answer places 9 levels of floor area, drawn as the ground floor and the lowest 8 above the podium parking. ' +
+        'The 4 above them are what the height ceiling permits and this answer does not use.',
+    );
+    expect(ar).toContain('الدور الأرضي و8');
+    expect(ar).toContain('و4 أخرى');
+  });
+
+  it('says a one-level answer drawn as the ground floor alone', () => {
+    const ar = said(
+      'The answer places 1 level of floor area, drawn as the ground floor. ' +
+        'The 12 above them are what the height ceiling permits and this answer does not use.',
+    );
+    expect(ar).toContain('يرسم منها الدور الأرضي.');
+    expect(ar).toContain('و12 أخرى');
+    expect(ar).not.toMatch(noEnglish);
+  });
+
+  it('says the accessible bays the slope kept off, with both figures', () => {
+    const ar = said(
+      'None of the 2 accessible bays Table C.17 asks for is placed: the ground floor is the sloped ring, whose floor ' +
+        'falls 2.68%, and DBC B.7.2.3.1 limits accessible parking to 2%. Every parking level shares that layout, so no ' +
+        'level is flatter. The arrangement was not changed to make room for them; the reader may pick one with a flat floor.',
+    );
+    expect(ar).toContain('2.68%');
+    expect(ar).toContain('ويمكنك اختيار توزيع بأرضية مستوية');
+    expect(ar).toContain('2%');
+    expect(ar).toContain('الدور الأرضي');
+    expect(ar).not.toMatch(noEnglish);
+  });
+
+  it('says a shortfall on the first podium parking level', () => {
+    const ar = said(
+      '1 of the 3 accessible bays Table C.17 asks for could not be placed on the first podium parking level: it has no ' +
+        'further run of bays side by side to take one with its access aisle.',
+    );
+    expect(ar).toContain('أول دور مواقف في البوديوم');
+  });
+});
+
 describe('a parking option the level cannot lay out', () => {
   const REFUSED =
     'the parking arrangement SLOPED is not one this level can be packed in: the ring may be the ramp only where there ' +

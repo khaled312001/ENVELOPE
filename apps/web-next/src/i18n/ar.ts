@@ -1,4 +1,4 @@
-import type { Dict } from './en.js';
+import type { AccessibleLevel, Dict } from './en.js';
 
 /**
  * Plotlogic — بالعربية.
@@ -619,14 +619,23 @@ export const AR: Dict = {
     },
     accessible: {
       title: 'مواقف أصحاب الهمم والمواقف المفضلة',
-      hint: (onGrade: boolean): string =>
-        onGrade
-          ? 'في الدور الأرضي، الأقرب إلى النواة، كما يطلب كود دبي للمباني.'
-          : 'في البدروم الأول، الأقرب إلى النواة: الدور الأرضي بلا مواقف.',
+      hint: (level: AccessibleLevel, slopeBlocked: boolean): string =>
+        slopeBlocked
+          ? 'لم يوزع أي منها: كل أدوار المواقف ممر دائري مائل أشد ميلا مما يسمح به الكود لمواقف أصحاب الهمم. الأرقام أدناه.'
+          : level === 'GROUND'
+            ? 'في الدور الأرضي، الأقرب إلى النواة، كما يطلب كود دبي للمباني.'
+            : level === 'FIRST_PODIUM'
+              ? 'في أول دور مواقف في البوديوم، الأقرب إلى النواة: الدور الأرضي بلا مواقف ولا يوجد بدروم.'
+              : 'في البدروم الأول، الأقرب إلى النواة: الدور الأرضي بلا مواقف.',
       placed: 'مواقف أصحاب الهمم الموزعة',
       required: 'مواقف أصحاب الهمم المطلوبة',
       preferred: 'المواقف المفضلة: الهجينة والكهربائية والمشتركة',
-      level: (onGrade: boolean): string => (onGrade ? 'المواقف في الدور الأرضي' : 'المواقف في البدروم الأول'),
+      level: (level: AccessibleLevel): string =>
+        level === 'GROUND'
+          ? 'المواقف في الدور الأرضي'
+          : level === 'FIRST_PODIUM'
+            ? 'المواقف في أول دور مواقف في البوديوم'
+            : 'المواقف في البدروم الأول',
       // The count after a colon, as elsewhere: a figure is never reworded to agree with its noun.
       lost: (n: number): string => `المواقف التي تحولت إلى ممرات وصول بجانبها: ${n}`,
       vans: (n: number): string => `منها بعرض يتسع لشاحنة صغيرة: ${n}`,

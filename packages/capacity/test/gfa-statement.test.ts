@@ -597,16 +597,25 @@ describe('a small plot', () => {
 */
 describe('a run with a stated level schedule', () => {
   it('groups the podium apart from the typical floors, and still sums to the answer', () => {
+    /*
+      THREE podium levels, two of them parking. This schedule used to read two
+      podium levels both parking, and produced a podium row only because the
+      model parked G and P1 instead of P1 and P2 — leaving P2 a podium level of
+      floor area. With the parking on the levels the schedule names, a podium
+      row needs a podium level that does not park: P3 here. The ground floor,
+      which does not park either, is its own row.
+    */
     const out = runPipeline(
       runInput(RECT_120x80, {
         levelSchedule: {
           basements: 1,
           groundIsParking: false,
-          podiumAboveGround: 2,
+          podiumAboveGround: 3,
           podiumParkingLevels: 2,
         },
       }),
     );
+    expect(out.building.levels.filter((l) => l.parking).map((l) => l.id)).toEqual(['B1', 'P1', 'P2']);
     const s = out.gfaStatement;
     const kinds = s.rows.map((r) => r.kind);
     expect(kinds).toContain(GfaRowKind.PODIUM);

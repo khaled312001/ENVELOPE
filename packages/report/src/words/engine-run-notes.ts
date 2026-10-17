@@ -22,6 +22,13 @@ const starts =
   (t) =>
     t.startsWith(start) ? said : null;
 
+/** The level the street reaches, as `ENTRY_LEVEL_WORDS` in `packages/capacity/src/accessible.ts` names it. */
+const ENTRY_LEVEL: Readonly<Record<string, Said>> = {
+  'ground floor': { en: 'the ground floor', ar: 'الدور الأرضي' },
+  'first basement': { en: 'the first basement', ar: 'البدروم الأول' },
+  'first podium parking level': { en: 'the first podium parking level', ar: 'أول دور مواقف في البوديوم' },
+};
+
 /** The eighteen invariants, by id. Their statements are fixed strings in `packages/invariants`. */
 export const INVARIANT: Readonly<Record<string, Said>> = {
   'INV-01': { en: 'Level GFAs add up to the total GFA', ar: 'مجموع المساحة الطابقية للأدوار = الإجمالي' },
@@ -554,6 +561,26 @@ export const RUN_READERS: readonly Reader[] = [
       ar: `أدوار المواقف: ${m[1]} من الأرضي صعودا${m[2] ? `، و${m[2]} تحت الأرض` : ''}.`,
     };
   },
+  (t) => {
+    const m = /^Parking levels: (\d+) in the podium above a ground floor that does not park(?:, (\d+) below grade)?\.$/.exec(t);
+    if (!m) return null;
+    return {
+      en: `Parking levels: ${m[1]} in the podium above a ground floor without parking${m[2] ? `, ${m[2]} below ground` : ''}.`,
+      ar: `أدوار المواقف: ${m[1]} في البوديوم فوق دور أرضي بلا مواقف${m[2] ? `، و${m[2]} تحت الأرض` : ''}.`,
+    };
+  },
+  starts('The ramp from the street down to the first basement.', {
+    en: 'The ramp from the street down to the first basement is not modelled: only ramps between two parking levels are.',
+    ar: 'المنحدر (الرامب) من الشارع نزولا إلى البدروم الأول غير ممثل: تمثل فقط المنحدرات بين دوري مواقف.',
+  }),
+  starts('The substation and the LV room. The ground floor does not park', {
+    en: 'The substation and the LV room are not placed: the ground floor does not park, and the band on the road is cut only from a parking ground floor. Not assessed.',
+    ar: 'غرفة المحول وغرفة الجهد المنخفض غير موضوعة: الدور الأرضي بلا مواقف، وشريط الطريق يقتطع فقط من دور أرضي للمواقف. لم يخضع للتقييم.',
+  }),
+  starts('The ramp from the street up to the first podium parking level (P1).', {
+    en: 'The ramp from the street up to P1 is not modelled: the ground floor does not park, and only ramps between two parking levels are.',
+    ar: 'المنحدر (الرامب) من الشارع صعودا إلى P1 غير ممثل: الدور الأرضي بلا مواقف، وتمثل فقط المنحدرات بين دوري مواقف.',
+  }),
   starts('Tower: area from the plate cap; drawn centred on the podium.', {
     en: 'Tower: area from the plate cap, drawn centred on the podium.',
     ar: 'البرج: المساحة من حد المسطح، مرسوم في وسط البوديوم.',
@@ -562,6 +589,26 @@ export const RUN_READERS: readonly Reader[] = [
     en: 'Podium: area from the coverage cap, drawn centred in the setback line.',
     ar: 'البوديوم: المساحة من حد التغطية، مرسوم في وسط خط الارتداد.',
   }),
+  (t) => {
+    // The ground floor first where it does not park and podium parking stands over it.
+    // A one-level answer is the ground floor alone, and says so without "the lowest 0".
+    const g = /^The answer places (\d+) levels? of floor area, drawn as the ground floor(?: and the lowest (\d+) above the podium parking)?\./.exec(t);
+    if (!g) return null;
+    const free = /The (\d+) above (?:it is|them are) what the height ceiling permits/.exec(t)?.[1];
+    const over = /(\d+) of the answer's levels (?:does|do) not fit under the height ceiling above (\d+) level/.exec(t);
+    return {
+      en:
+        `The study places ${g[1]} levels of floor area, drawn as the ground floor` +
+        (g[2] ? ` and the lowest ${g[2]} above the podium parking.` : '.') +
+        (free ? ` ${free} more fit under the height ceiling and are unused.` : '') +
+        (over ? ` ${over[1]} do not fit under the ceiling above ${over[2]} parking level(s) and are not drawn.` : ''),
+      ar:
+        `تضع الدراسة ${g[1]} دورا من المساحة الطابقية، يرسم منها الدور الأرضي` +
+        (g[2] ? ` و${g[2]} فوق مواقف البوديوم.` : '.') +
+        (free ? ` و${free} أخرى يسمح بها حد الارتفاع ولا تستخدم.` : '') +
+        (over ? ` و${over[1]} لا يتسع تحت حد الارتفاع فوق ${over[2]} دور مواقف فلا يرسم.` : ''),
+    };
+  },
   (t) => {
     const m = /^The answer places (\d+) levels? of floor area(?:, drawn as the lowest (\d+) above (the podium parking|the ground))?\./.exec(t);
     if (!m) return null;
@@ -654,9 +701,18 @@ export const RUN_READERS: readonly Reader[] = [
     ar: 'لا يرسم المسار الميسر من كل ممر وصول إلى النواة ولا اللافتة، ولا تقيم مسافة المشي: تقاس المسافة المستقيمة إلى النواة فقط.',
   }),
   (t) => {
-    const m = /^(\d+) of the (\d+) accessible bays Table C\.17 asks for could not be placed on the (ground floor|first basement):/.exec(t);
+    const m = /^None of the (\d+) accessible bays Table C\.17 asks for is placed: the (ground floor|first basement|first podium parking level) is the sloped ring, whose floor falls ([\d.]+)%, and DBC B\.7\.2\.3\.1 limits accessible parking to ([\d.]+)%\./.exec(t);
     if (!m) return null;
-    const level = m[3] === 'ground floor' ? { en: 'the ground floor', ar: 'الدور الأرضي' } : { en: 'the first basement', ar: 'البدروم الأول' };
+    const level = ENTRY_LEVEL[m[2] ?? ''] ?? { en: m[2] ?? '', ar: m[2] ?? '' };
+    return {
+      en: `None of the ${m[1]} accessible bays required is placed: ${level.en} is the sloped ring at ${m[3]}%, and the code limits accessible parking to ${m[4]}%. Every parking level shares that layout. The arrangement was not changed for them; you may pick one with a flat floor.`,
+      ar: `لم يوزع أي من ${m[1]} موقفا مطلوبا لأصحاب الهمم: ${level.ar} هو الممر الدائري المائل بميل ${m[3]}%، والكود يحد ميل مواقف أصحاب الهمم بـ ${m[4]}%. كل أدوار المواقف بنفس التوزيع. لم يغير التوزيع من أجلها، ويمكنك اختيار توزيع بأرضية مستوية.`,
+    };
+  },
+  (t) => {
+    const m = /^(\d+) of the (\d+) accessible bays Table C\.17 asks for could not be placed on the (ground floor|first basement|first podium parking level):/.exec(t);
+    if (!m) return null;
+    const level = ENTRY_LEVEL[m[3] ?? ''] ?? { en: 'the first basement', ar: 'البدروم الأول' };
     return {
       en: `${m[1]} of the ${m[2]} accessible bays required could not be placed on ${level.en}: no further run of bays side by side can take one with its access aisle.`,
       ar: `تعذر توزيع ${m[1]} من ${m[2]} موقفا مطلوبا لأصحاب الهمم في ${level.ar}: لا توجد مواقف متجاورة أخرى تتسع لموقف مع ممر الوصول بجانبه.`,

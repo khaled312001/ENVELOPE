@@ -14,6 +14,7 @@ import type {
 import { PlotSketch } from '../components/PlotSketch.js';
 import { SheetViewer, useSheets } from '../components/SheetViewer.js';
 import { Traced } from '../components/Traced.js';
+import type { AccessibleLevel } from '../i18n/en.js';
 import { cn } from '../lib/cn.js';
 import { ARRANGEMENT_NAME, engineNote } from '../lib/engine-notes.js';
 import { grouped } from '../lib/figures.js';
@@ -25,6 +26,11 @@ import { AdvisorBox } from './AdvisorBox.js';
 import { assumedFirst, Footer, Heading, More, NextStep, Row } from './parts.js';
 
 export type VehicleAccessBody = NonNullable<RunRequestBody['vehicleAccess']>;
+
+/** The level the accessible bays stand on. A run stored before `level` existed says only whether it is grade. */
+function accessibleLevel(a: NonNullable<LevelPlanView['accessible']>): AccessibleLevel {
+  return a.level ?? (a.onGrade ? 'GROUND' : 'FIRST_BASEMENT');
+}
 
 /*
   THE OPTIONS, EACH ONE A WHOLE LAYOUT (16 Oct 2026: «كذا اوبشن واكتر من رسمه …
@@ -250,7 +256,9 @@ export function ParkingPanel({
         {lp.accessible ? (
           <section className="grid min-w-0 gap-2" aria-labelledby="accessible">
             <Heading id="accessible">{t.parking.accessible.title}</Heading>
-            <p className="text-[12px] text-secondary">{t.parking.accessible.hint(lp.accessible.onGrade)}</p>
+            <p className="text-[12px] text-secondary">
+              {t.parking.accessible.hint(accessibleLevel(lp.accessible), lp.accessible.slopeBlocked === true)}
+            </p>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
               <Row label={t.parking.accessible.placed}>
                 <Traced value={lp.accessible.placed} />
@@ -264,7 +272,7 @@ export function ParkingPanel({
                 </Row>
               ) : null}
               {lp.grade && lp.accessible.onGrade ? null : (
-                <Row label={t.parking.accessible.level(lp.accessible.onGrade)}>
+                <Row label={t.parking.accessible.level(accessibleLevel(lp.accessible))}>
                   <Traced value={lp.accessible.bayCount} />
                 </Row>
               )}

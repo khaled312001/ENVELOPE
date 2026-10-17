@@ -13,7 +13,14 @@ import { initGeometry, type Pt } from '@envelope/geometry';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { RECT_80x40, runInput } from '../../../test-support/pipeline.js';
-import { accessibleRequired, deadEnds, RectKind, runPipeline, type WorldRect } from '../src/index.js';
+import {
+  accessibleRequired,
+  deadEnds,
+  ParkingArrangement,
+  RectKind,
+  runPipeline,
+  type WorldRect,
+} from '../src/index.js';
 
 beforeAll(async () => {
   await initGeometry();
@@ -59,7 +66,14 @@ describe('the accessible bays on the level the street reaches', () => {
   let plan: NonNullable<NonNullable<typeof out.levelPlan>['accessible']>;
   let grade: NonNullable<(typeof out.building.levels)[number]['parking']>;
   beforeAll(() => {
-    out = runPipeline(runInput(RECT_80x40, { podiumLevels: 2 }));
+    /*
+      On a flat floor, picked by the reader. The default on this plot is the
+      sloped ring at 2.68%, where B.7.2.3.1 allows no accessible bay at all —
+      see 'accessible parking on the sloped ring' below. These tests are about
+      the designation itself, which only a floor at 2% or less receives.
+    */
+    out = runPipeline(runInput(RECT_80x40, { podiumLevels: 2, levelPlan: { arrangement: ParkingArrangement.DEPTH } }));
+    expect(out.levelPlan!.slopedFloor).toBeUndefined();
     plan = out.levelPlan!.accessible!;
     grade = out.building.levels.find((l) => l.id === 'G')!.parking!;
   });
@@ -117,6 +131,71 @@ describe('the accessible bays on the level the street reaches', () => {
     expect(plan.farthestM).not.toBeNull();
     expect(plan.farthestM!.value.toNumber()).toBeGreaterThan(0);
     expect(plan.notes.some((n) => n.includes('NOT ASSESSED'))).toBe(true);
+  });
+});
+
+/*
+  DBC B.7.2.3.1, p83: "Accessible parking slopes shall be limited to a maximum
+  of 2%." The sloped ring is the default on this plot because it places the most
+  bays, and its floor falls 2.68% — the engine's own figure. Accessible bays and
+  their aisles were designated on it with no check and no note.
+*/
+describe('accessible parking on the sloped ring', () => {
+  let out: ReturnType<typeof runPipeline>;
+  beforeAll(() => {
+    out = runPipeline(runInput(RECT_80x40, { podiumLevels: 2 }));
+  });
+
+  it('is the default arrangement here, and falls more than 2%', () => {
+    expect(out.levelPlan!.layout.arrangement).toBe(ParkingArrangement.SLOPED);
+    expect(out.levelPlan!.slopedFloor!.gradientPct.value.gt(2)).toBe(true);
+  });
+
+  it('designates no accessible bay and no access aisle on a floor steeper than 2%', () => {
+    const plan = out.levelPlan!.accessible!;
+    expect(plan.placed.value).toBe(0);
+    expect(plan.lost).toBe(0);
+    expect(plan.slope!.blocked).toBe(true);
+    for (const level of out.building.levels) {
+      expect(level.parking?.bays.some((b) => b.accessible) ?? false).toBe(false);
+      expect(level.parking?.accessAisles).toBeUndefined();
+    }
+  });
+
+  it('says the shortfall in words, with both figures and the clause', () => {
+    const plan = out.levelPlan!.accessible!;
+    const g = out.levelPlan!.slopedFloor!.gradientPct.value.toFixed(2);
+    expect(plan.notes.join(' ')).toContain(
+      `None of the ${plan.required.value} accessible bays Table C.17 asks for is placed: the ground floor is the ` +
+        `sloped ring, whose floor falls ${g}%, and DBC B.7.2.3.1 limits accessible parking to 2%.`,
+    );
+    // No flat arrangement was tried for them, so the note may not promise one would take them.
+    expect(plan.notes.join(' ')).toContain('the reader may pick one with a flat floor.');
+    expect(plan.notes.join(' ')).not.toMatch(/flat floor would/);
+  });
+
+  it('cites the 2% on page 83 in the graph, not only in the sentence', () => {
+    const plan = out.levelPlan!.accessible!;
+    expect(plan.slope!.limitPct.provenanceClass).toBe('DERIVED');
+    const tree = JSON.stringify(out.graph.derivationOf(plan.placed.node));
+    expect(tree).toContain('B.7.2.3.1');
+    expect(tree).toContain('"sourcePage":83');
+  });
+
+  it('does not change the arrangement to dodge the check, and keeps every bay in the supply', () => {
+    expect(out.levelPlan!.layout.arrangement).toBe(ParkingArrangement.SLOPED);
+    const perLevel = out.levelPlan!.bayCount.value;
+    const atGrade = out.levelPlan!.grade!.bayCount.value;
+    expect(out.parking.providedBays.value).toBe(atGrade + perLevel);
+  });
+
+  it('designates them as before once the reader picks a flat floor', () => {
+    const flat = runPipeline(
+      runInput(RECT_80x40, { podiumLevels: 2, levelPlan: { arrangement: ParkingArrangement.DEPTH } }),
+    );
+    const plan = flat.levelPlan!.accessible!;
+    expect(plan.slope).toBeUndefined();
+    expect(plan.placed.value).toBe(plan.required.value);
   });
 });
 

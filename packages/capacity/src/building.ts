@@ -59,7 +59,7 @@ import {
   subtractSpans,
 } from '@envelope/geometry';
 
-import type { AccessiblePlan } from './accessible.js';
+import { type AccessiblePlan, ENTRY_LEVEL_WORDS, EntryLevel } from './accessible.js';
 import { CORE_NOT_MODELLED, type CoreResult } from './core.js';
 import { deadEnds } from './dead-ends.js';
 import type { CoreLayout } from './core-layout.js';
@@ -71,20 +71,71 @@ import type { LevelPlan, WorldRect } from './level-plan.js';
 import type { MassingResult } from './massing.js';
 
 /**
- * How many parking levels stand in the podium, from the ground up. One place,
- * because the pipeline asks the same question before the model exists — does the
- * ground floor park, and so carry the drive from the entrance — and two answers
- * would be a ground floor counted with one layout and drawn with another.
+ * Which above-grade levels park: the ground floor or not, and how many podium
+ * levels above it (P1 up). One place, because the pipeline asks the same
+ * question before the model exists — does the ground floor park, and so carry
+ * the drive from the entrance — and two answers would be a ground floor counted
+ * with one layout and drawn with another.
+ *
+ * THE GROUND FLOOR AND THE PODIUM PARKING ARE TWO ANSWERS, NOT ONE COUNT. This
+ * used to return `(groundIsParking ? 1 : 0) + podiumParkingLevels` and the stack
+ * filled that many levels from G up. With the ground floor *not* parking that
+ * put the parking on G..P(k−1) instead of P1..Pk: on plot 6468096, whose
+ * architect draws shops on G (A-104) and 97–98 bays on each of P1–P5, the model
+ * drew 87 bays, the drive and the accessible bays on the shop floor and left P5
+ * empty. The level count was right, which is why nothing caught it.
+ *
+ * Without a schedule only two integers exist, and the declared assumption stands:
+ * the podium fills from the ground up, so the ground floor parks whenever any
+ * podium level does.
  */
+export interface AboveGradeParking {
+  /** Whether the ground floor holds parking. */
+  readonly ground: boolean;
+  /** Parking levels above the ground floor, from P1 up. */
+  readonly podium: number;
+}
+
+export function aboveGradeParkingOf(
+  schedule: LevelSchedule | undefined,
+  parkingCount: number,
+  podiumLevels: number,
+): AboveGradeParking {
+  if (schedule) return { ground: schedule.groundIsParking, podium: schedule.podiumParkingLevels };
+  const inPodium = Math.max(0, Math.min(parkingCount, podiumLevels));
+  return { ground: inPodium >= 1, podium: Math.max(0, inPodium - 1) };
+}
+
+/** How many parking levels stand at or above grade. */
 export function parkingInPodiumOf(
   schedule: LevelSchedule | undefined,
   parkingCount: number,
   podiumLevels: number,
 ): number {
-  return schedule
-    ? (schedule.groundIsParking ? 1 : 0) + schedule.podiumParkingLevels
-    : Math.min(parkingCount, podiumLevels);
+  const above = aboveGradeParkingOf(schedule, parkingCount, podiumLevels);
+  return (above.ground ? 1 : 0) + above.podium;
 }
+
+/**
+ * The parking level a car reaches first from the street, by the stated rule
+ * C.6.4.2 e) leads to: the ground floor where it parks, else the first basement,
+ * else the first podium parking level. The accessible bays stand on it, and the
+ * level counted apart from the shared layout is this one. (`EntryLevel` itself
+ * lives in `accessible.ts`, which names the level in its own sentences.)
+ */
+export function entryLevelOf(above: AboveGradeParking, basements: number): EntryLevel | null {
+  if (above.ground) return EntryLevel.GROUND;
+  if (basements > 0) return EntryLevel.FIRST_BASEMENT;
+  if (above.podium > 0) return EntryLevel.FIRST_PODIUM;
+  return null;
+}
+
+/** The model's id for that level. */
+const ENTRY_LEVEL_ID: Readonly<Record<EntryLevel, string>> = {
+  GROUND: 'G',
+  FIRST_BASEMENT: 'B1',
+  FIRST_PODIUM: 'P1',
+};
 
 /** What each opening's label says, in the drawings' ASCII. */
 const OPENING_WORDS: Readonly<Record<AccessOpeningRole, string>> = {
@@ -217,21 +268,40 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     rule stands: fill the podium first, put the rest below grade, and declare it.
   */
   const stated = input.schedule;
-  const parkingInPodium = parkingInPodiumOf(stated, parkingCount, podiumLevels.value);
+  const above = aboveGradeParkingOf(stated, parkingCount, podiumLevels.value);
+  const parkingInPodium = (above.ground ? 1 : 0) + above.podium;
   const parkingBelow = stated ? stated.basements : parkingCount - parkingInPodium;
-  // The answer's levels stand on the parking. Where the podium parking and the
-  // answer together need more levels than the ceiling permits, the shortfall is said
-  // in words below rather than drawn above the ceiling.
+  const entry = entryLevelOf(above, parkingBelow);
+  /** Above-grade level `i` (0 = G) parks: the ground floor by its own answer, P1..Pk by theirs. */
+  const parksAt = (i: number): boolean =>
+    i < podiumLevels.value && (i === 0 ? above.ground : i <= above.podium);
+  /*
+    THE ANSWER'S LEVELS FILL THE ABOVE-GRADE LEVELS THAT DO NOT PARK, from the
+    bottom up. Where the parking is contiguous from G that is "above the podium
+    parking", as it always was. Where the ground floor does not park it is the
+    ground floor first and then above the podium parking — the same rule the
+    model has always applied to a ground floor with no parking over it, now
+    applied whether or not parking stands above it.
+  */
+  const freeAbove: number[] = [];
+  for (let i = 0; i < totalAbove; i += 1) if (!parksAt(i)) freeAbove.push(i);
+  // Where the podium parking and the answer together need more levels than the
+  // ceiling permits, the shortfall is said in words below rather than drawn above
+  // the ceiling.
   const answerCount = Math.max(0, input.answerLevels.value);
-  const placedAboveParking = Math.min(answerCount, Math.max(0, totalAbove - parkingInPodium));
+  const placedAboveParking = Math.min(answerCount, freeAbove.length);
+  const answerAt = new Set(freeAbove.slice(0, placedAboveParking));
   const unplacedAnswer = answerCount - placedAboveParking;
+  const groundIsAnswer = answerAt.has(0) && above.podium > 0;
 
   const placements: BuildingModel['placements'][number][] = [];
   const notModelled: string[] = [...NOT_MODELLED];
 
   // --- where the parking goes ------------------------------------------------
   const placementText =
-    `${parkingInPodium} in the podium from the ground up` +
+    (above.ground || parkingInPodium === 0
+      ? `${parkingInPodium} in the podium from the ground up`
+      : `${parkingInPodium} in the podium above a ground floor that does not park`) +
     (parkingBelow > 0 ? `, ${parkingBelow} below grade` : '');
   const parkingPlacement =
     parkingCount === 0
@@ -286,8 +356,10 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
   // --- the parking content, identical on every parking level -------------------
   // Which way a sloped ring climbs from grade: one answer for the whole stack, or
   // none where parking stands both above and below it.
+  // Parking strictly above grade (P1 up) against parking below it: the ground
+  // floor is where a car enters, so it is neither.
   const climbs: 'UP' | 'DOWN' | null =
-    parkingBelow > 0 && parkingInPodium <= 1 ? 'DOWN' : parkingBelow === 0 && parkingInPodium > 1 ? 'UP' : null;
+    parkingBelow > 0 && above.podium === 0 ? 'DOWN' : parkingBelow === 0 && above.podium > 0 ? 'UP' : null;
   const parkingContent: ModelLevel['parking'] = levelPlan ? parkingOf(levelPlan, climbs) : null;
   /*
     The accessible bays stand on the level the street reaches, which the pipeline
@@ -295,20 +367,29 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     on one level and drawn on another, so a disagreement is a defect, not a case.
   */
   const accessible = levelPlan?.accessible;
-  if (accessible && accessible.onGrade !== parkingInPodium >= 1) {
+  if (accessible && accessible.level !== entry) {
     throw new Error(
-      `the accessible bays were placed ${accessible.onGrade ? 'at grade' : 'below grade'} and the model ` +
-        `puts ${parkingInPodium} parking level(s) in the podium`,
+      `the accessible bays were placed on ${ENTRY_LEVEL_WORDS[accessible.level]} and the model's ` +
+        `level schedule makes ${entry ? ENTRY_LEVEL_WORDS[entry] : 'no level'} the one the street reaches`,
     );
+  }
+  if (levelPlan?.grade && !above.ground) {
+    throw new Error('a grade plan was laid out for a ground floor the level schedule does not give to parking');
   }
   // The level at grade, when it parks: its own content, the drive and the plant on it.
   const gradeContent: ModelLevel['parking'] =
-    levelPlan && parkingInPodium >= 1 && (levelPlan.grade || accessible)
+    levelPlan && above.ground && (levelPlan.grade || accessible)
       ? parkingOf(levelPlan, climbs, levelPlan.grade, accessible)
       : parkingContent;
-  // The first basement, where the ground floor does not park: the accessible bays are there.
-  const firstBelowContent: ModelLevel['parking'] =
-    levelPlan && accessible && !accessible.onGrade ? parkingOf(levelPlan, climbs, undefined, accessible) : parkingContent;
+  // The first basement or first podium parking level, where the ground floor does
+  // not park: the accessible bays are there.
+  const entryContent: ModelLevel['parking'] =
+    levelPlan && accessible && entry !== EntryLevel.GROUND
+      ? parkingOf(levelPlan, climbs, undefined, accessible)
+      : parkingContent;
+  const entryId = entry ? ENTRY_LEVEL_ID[entry] : null;
+  const contentOf = (id: string): ModelLevel['parking'] =>
+    id === 'G' ? gradeContent : id === entryId ? entryContent : parkingContent;
   if (parkingCount > 0 && !levelPlan) {
     notModelled.push(
       `Parking bays. The level could not be laid out: ${input.levelPlanRefusal ?? 'no reason was recorded'}`,
@@ -336,13 +417,13 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       outline: envelope.podiumRing.map(pt),
       outlineSource: podiumSource,
       placed: true,
-      parking: k === 1 ? firstBelowContent : parkingContent,
+      parking: contentOf(`B${k}`),
     });
   }
 
   for (let i = 0; i < totalAbove; i += 1) {
     const inPodium = i < podiumLevels.value;
-    const isParking = inPodium && i < parkingInPodium;
+    const isParking = parksAt(i);
     const use = isParking ? LevelUse.PODIUM_PARKING : inPodium ? LevelUse.PODIUM : LevelUse.TYPICAL;
     const elevation = elevationOf(i, {
       f2f,
@@ -378,8 +459,8 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       elevationM: toWire(elevation),
       outline: (inPodium ? envelope.podiumRing : envelope.plateRing).map(pt),
       outlineSource: inPodium ? podiumSource : towerSource,
-      placed: isParking || i - parkingInPodium < placedAboveParking,
-      parking: isParking ? (i === 0 ? gradeContent : parkingContent) : null,
+      placed: isParking || answerAt.has(i),
+      parking: isParking ? contentOf(id) : null,
     });
   }
 
@@ -391,8 +472,13 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     statement:
       `The answer places ${answerCount} level${answerCount === 1 ? '' : 's'} of floor area` +
       (placedAboveParking > 0
-        ? `, drawn as the lowest ${placedAboveParking} above ` +
-          (parkingInPodium > 0 ? 'the podium parking' : 'the ground')
+        ? groundIsAnswer
+          ? // One level is the ground floor alone: "and the lowest 0 above" is a count of nothing.
+            placedAboveParking === 1
+            ? ', drawn as the ground floor'
+            : `, drawn as the ground floor and the lowest ${placedAboveParking - 1} above the podium parking`
+          : `, drawn as the lowest ${placedAboveParking} above ` +
+            (parkingInPodium > 0 ? 'the podium parking' : 'the ground')
         : '') +
       '.' +
       (permittedAbove > 0
@@ -432,8 +518,16 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
     for (let i = 0; i + 1 < parkingStack.length; i += 1) {
       const low = parkingStack[i]!;
       const high = parkingStack[i + 1]!;
+      /*
+        ONE STOREY OR NONE. Where the ground floor does not park, B1 and P1 are
+        consecutive in the parking stack and two storeys apart, and a ramp drawn
+        between them would be one plane through a shop floor at twice the slope
+        the strip was sized for. A car reaches each of them from the street at
+        grade, and those two ramps are said, below, not drawn.
+      */
+      if (high.elevationMm - low.elevationMm !== low.heightMm) continue;
       ramps.push({
-        id: `R${i + 1}`,
+        id: `R${ramps.length + 1}`,
         fromLevelId: low.id,
         toLevelId: high.id,
         outline: strip.world.map(pt),
@@ -445,14 +539,18 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
         label,
       });
     }
-    notModelled.push(
-      'The structure over each ramp. DBC Table B.9 asks 2.4 m clear above any point of ' +
-        'it, which fixes how deep the slab over it may be — that budget is on every ' +
-        'parking sheet — but no slab or beam is drawn, so whether a design fits it is ' +
-        'NOT ASSESSED, nor is the approach from the street. The 3D view and the sections ' +
-        'draw each ramp as one plane from foot to head; its 6% transitions are in the ' +
-        'run, not drawn.',
-    );
+    // None where the only neighbours in the stack were B1 and P1 across a ground
+    // floor that does not park: the street ramps are said below instead.
+    if (ramps.length > 0) {
+      notModelled.push(
+        'The structure over each ramp. DBC Table B.9 asks 2.4 m clear above any point of ' +
+          'it, which fixes how deep the slab over it may be — that budget is on every ' +
+          'parking sheet — but no slab or beam is drawn, so whether a design fits it is ' +
+          'NOT ASSESSED, nor is the approach from the street. The 3D view and the sections ' +
+          'draw each ramp as one plane from foot to head; its 6% transitions are in the ' +
+          'run, not drawn.',
+      );
+    }
   } else if (strip && parkingStack.length === 1) {
     notModelled.push(
       'A ramp. The strip is reserved on the one parking level, but there is no second ' +
@@ -469,23 +567,44 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
         'where the core door meets the ring at each level is not drawn.',
     );
   }
-  if (parkingBelow > 0 && parkingInPodium === 0) {
+  if (parkingBelow > 0 && !above.ground) {
     notModelled.push(
       'The ramp from the street down to the first basement. Only ramps between two ' +
         'parking levels are modelled.',
     );
   }
+  if (above.podium > 0 && !above.ground) {
+    // Said rather than drawn: the strip is sized for one storey between two
+    // parking levels, and this ramp leaves a ground floor that holds no bays.
+    notModelled.push(
+      'The ramp from the street up to the first podium parking level (P1). The ground floor ' +
+        'does not park, and only ramps between two parking levels are modelled.',
+    );
+  }
+  if (parkingCount > 0 && !above.ground) {
+    /*
+      The band against the road is cut from a parking ground floor's bays
+      (`grade.ts`); a ground floor that does not park has no bays to cut it
+      from, and laying it out among shops nobody drew would be a plan this
+      engine did not compute. DEWA still wants the substation at grade.
+    */
+    notModelled.push(
+      'The substation and the LV room. The ground floor does not park, and the band against ' +
+        'the road is cut only from a ground floor that does; where they stand on this one is NOT ASSESSED.',
+    );
+  }
 
   // --- what is drawn, counted once -------------------------------------------------
   const perLevel = levelPlan?.bayCount;
-  // The one level that differs from the shared layout: grade, or the first basement.
+  // The one level that differs from the shared layout: grade, or the first level
+  // the street reaches where the ground floor does not park.
   const atGrade =
-    gradeContent !== parkingContent
+    above.ground && gradeContent !== parkingContent
       ? (accessible?.bayCount ?? levelPlan?.grade?.bayCount)
-      : firstBelowContent !== parkingContent
+      : entryContent !== parkingContent
         ? accessible?.bayCount
         : undefined;
-  const entryWords = firstBelowContent !== parkingContent ? 'on the first basement' : 'at grade';
+  const entryWords = !above.ground && entry ? `on ${ENTRY_LEVEL_WORDS[entry]}` : 'at grade';
   const drawnBays = perLevel
     ? atGrade
       ? tracer.computed('building.drawn_bays', atGrade.value + perLevel.value * (parkingCount - 1), {

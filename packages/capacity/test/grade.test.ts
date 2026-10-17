@@ -26,7 +26,7 @@ import { analysePlot, area, containsPoint, initGeometry, intersect, type Ring } 
 import { asOfNow, loadSeedRulesForDevelopment, RuleStore } from '@envelope/rules';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { runPipeline, type RunInput, type RunOutput } from '../src/index.js';
+import { ParkingArrangement, runPipeline, type RunInput, type RunOutput } from '../src/index.js';
 
 const ACK = 'I understand these rules are not approved';
 const m = (v: number): Mm => asMm(Math.round(v * 1000));
@@ -338,6 +338,8 @@ describe('the supply the answer rests on', () => {
     const out = runPipeline(
       input(TWO_ROADS, {
         levelSchedule: { basements: 2, groundIsParking: false, podiumAboveGround: 0, podiumParkingLevels: 0 },
+        // A flat floor: on the sloped ring B.7.2.3.1 lets no accessible bay stand.
+        levelPlan: { arrangement: ParkingArrangement.DEPTH },
       }),
     );
     expect(out.levelPlan!.grade).toBeUndefined();

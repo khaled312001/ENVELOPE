@@ -56,18 +56,24 @@
  *
  * ## This module renders. It does not compute.
  *
- * There is no arithmetic anywhere below. The one transformation applied to a
- * magnitude is {@link groupDigits}, which inserts thousands separators by string
- * surgery on a matched `-?\d+(\.\d+)?` and returns its input untouched
- * otherwise. It never calls `Number()`, never rounds, and cannot change a digit.
- * Quantities arrive already quantised by `qArea` / `qRatio` upstream; a report
- * that re-rounded could print a different number from the one the engine traced,
- * which is the failure the package boundary exists to prevent.
+ * There is no arithmetic anywhere below. Two transformations are applied to a
+ * magnitude, both for the page alone. {@link groupDigits} inserts thousands
+ * separators by string surgery. `forDisplay` (`precision.ts`) PRINTS a measure
+ * to two decimals and a count whole: a governing GFA of `6774.194` reads
+ * `6,774.19`, a FAR of `4.2339` reads `4.23`. That is a choice of how many digits
+ * to show and not a new value: the traced `Decimal` is untouched, the JSON
+ * export and the workbook carry it exactly, and the derivation index (section
+ * 10) prints the exact figure beside every footnote, so a rounded figure is one
+ * link from the digits the engine produced. Until 17 Oct 2026 this said "never
+ * rounds" and printed three decimals of square metres; the client's own sheets
+ * print two.
  */
 
 import { CapacityBand, ClaimStatus, RenderHint, metric } from '@envelope/core';
 import type { Citation, MetricDefinition, TracedWire } from '@envelope/core';
 import { type Sheet, sheetSvg } from '@envelope/sheets';
+
+import { forDisplay } from './precision.js';
 
 import {
   InvariantStatus,
@@ -278,7 +284,7 @@ function value(wire: TracedWire, indexes: Indexes): string {
   const unit = wire.unit !== undefined ? `<span class="unit"> ${esc(wire.unit)}</span>` : '';
   return (
     `<span class="qty ${treatment.className}">${glyph}` +
-    `<span class="num">${esc(groupDigits(wire.value))}</span>${unit}${badge}` +
+    `${num(wire.value, wire.unit, false)}${unit}${badge}` +
     `<span class="sr-only"> (${esc(treatment.label)})</span>` +
     `<sup class="fn"><a id="fnref-${ordinal}" href="#fn-${ordinal}">${ordinal}</a></sup></span>`
   );
@@ -297,9 +303,19 @@ function value(wire: TracedWire, indexes: Indexes): string {
  * That is a real gap in the model, not a rendering shortcut, and it is worth
  * closing upstream when those fields become `Traced` in `core`.
  */
-function plain(text: string, unit?: string): string {
+function plain(text: string, unit?: string, exact = false): string {
   const suffix = unit !== undefined ? `<span class="unit"> ${esc(unit)}</span>` : '';
-  return `<span class="qty v-plain"><span class="num">${esc(groupDigits(text))}</span>${suffix}</span>`;
+  return `<span class="qty v-plain">${num(text, unit, exact)}${suffix}</span>`;
+}
+
+/**
+ * A figure at the precision the page prints it (`precision.ts`), with the exact
+ * one kept on the element when the two differ. `exact` prints it as given.
+ */
+function num(text: string, unit: string | undefined, exact: boolean): string {
+  const printed = exact ? text : forDisplay(text, unit);
+  const kept = printed !== text ? ` data-exact="${esc(text)}"` : '';
+  return `<span class="num"${kept}>${esc(groupDigits(printed))}</span>`;
 }
 
 /** A short citation marker; the full clause goes in the citations appendix. */
@@ -1238,8 +1254,10 @@ function invariantsSection(invariants: readonly InvariantOutcome[]): string {
       )}</span> ${esc(treatment.label)}</span>`,
       outcome.observed === null && outcome.expected === null
         ? esc(outcome.detail)
-        : `${outcome.observed === null ? '—' : plain(outcome.observed)} vs ` +
-          `${outcome.expected === null ? '—' : plain(outcome.expected)}` +
+        : // Exact: a check compares two figures to a tolerance, and rounding both
+          // would print two equal numbers beside a FAIL.
+          `${outcome.observed === null ? '—' : plain(outcome.observed, undefined, true)} vs ` +
+          `${outcome.expected === null ? '—' : plain(outcome.expected, undefined, true)}` +
           (outcome.detail === '' ? '' : `<div class="note">${esc(outcome.detail)}</div>`),
     ];
   });
@@ -1404,6 +1422,8 @@ function provenanceAppendix(run: RunReport, indexes: Indexes): string {
       `<span class="mono">${esc(entry.item.parameterId)}</span>`,
       `${esc(entry.item.provenanceClass)} <span class="note">(${esc(treatment.label)})</span>`,
       `<span class="mono">${esc(entry.key)}</span>`,
+      // The figure as the engine traced it, every digit — the page above rounds it.
+      `<span class="mono">${esc(entry.item.value)}</span>${entry.item.unit !== undefined ? ` ${esc(entry.item.unit)}` : ''}`,
       node === undefined
         ? notAssessedChip('node not in the exported graph')
         : esc(node.formula ?? node.label),
@@ -1428,7 +1448,7 @@ function provenanceAppendix(run: RunReport, indexes: Indexes): string {
     `<code>FR-OUT-001 AC2</code> — every number footnoted to its provenance.</p>` +
     table(
       'Derivation index — every figure in this report',
-      ['№', 'Parameter', 'Provenance class', 'Node', 'Derivation'],
+      ['№', 'Parameter', 'Provenance class', 'Node', 'Exact value', 'Derivation'],
       provenanceRows,
     ) +
     `<h3>Citations</h3>` +

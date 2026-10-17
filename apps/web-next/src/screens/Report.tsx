@@ -20,7 +20,8 @@ import { Notice, Spinner } from '../ui/primitives.js';
   because a document a user may forward is not a place to run code. So the
   button cannot live inside it. It lives here, above it, and prints the FRAME:
   printing raises the dialog on the frame's own document, so it is the report's
-  `@page` rules — A4 portrait for the text, A4 landscape for each drawing, the
+  `@page` rules — A4 portrait for the text, A3 landscape at full size for each
+  drawing (reduced to A4, its lettering fell under 1.8 mm), the
   running footer with the stamp — that decide the paper, never this page's.
   The browser writes the PDF; a second writer on the server would lay the same
   report out twice and the two would drift (see `apps/web/src/documents.ts`).

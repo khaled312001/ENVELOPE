@@ -1131,6 +1131,58 @@ describe('export — the §3.4 artifact', () => {
     }
   });
 
+  it('prints computed figures to two decimals and keeps every digit in the derivation', async () => {
+    /*
+      The reports printed the engine's quantisation: a governing GFA to the
+      thousandth of a square metre, a FAR to four decimals. A figure the page
+      rounds must still be found exactly — on the element, and in the audit
+      report's derivation index beside its footnote.
+    */
+    const plot = await createPlot();
+    const run = (
+      await app.inject({ method: 'POST', url: '/api/runs', headers: ACTOR, payload: { ...RUN_BODY, plotId: plot.plotId } })
+    ).json();
+    await openGates(run.runId, run);
+    const exact = run.capacity.governingGfa.value as string;
+    const far = (run.provenance.nodes as { parameterId?: string; value?: string }[]).find(
+      (n) => n.parameterId === 'capacity.achieved_far' && n.value !== undefined,
+    )?.value;
+    expect(exact, 'the engine quantises area past two decimals').toMatch(/\.\d{3,}$/);
+    expect(far, 'the engine quantises FAR past two decimals').toMatch(/\.\d{3,}$/);
+
+    const twoDp = (s: string): string => {
+      const [w, f = ''] = s.split('.');
+      const rounded = (Math.round(Number(`${w}.${f}`) * 100) / 100).toFixed(2);
+      return rounded.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    };
+    // Every computed figure, i.e. every `num` the page did not quote as given.
+    const computed = (html: string): string[] =>
+      [...html.matchAll(/class="num"( data-exact="[^"]*")?>([^<]*)</g)].map((m) => m[2]!);
+
+    const audit = (
+      await app.inject({ method: 'POST', url: `/api/runs/${run.runId}/export?format=audit`, headers: REVIEWER })
+    ).body;
+    expect(audit).toContain(`>${twoDp(exact)}</span>`);
+    expect(audit).toContain(`data-exact="${exact}"`);
+    // The derivation index prints the traced figure, every digit.
+    expect(audit).toMatch(/<th[^>]*>Exact value<\/th>/);
+    expect(audit).toContain(`<span class="mono">${exact}</span> m²`);
+
+    for (const lang of ['en', 'ar'] as const) {
+      const study = (
+        await app.inject({ method: 'POST', url: `/api/runs/${run.runId}/export?format=html&lang=${lang}`, headers: REVIEWER })
+      ).body;
+      expect(study).toContain(`>${twoDp(exact)}</bdi>`);
+      expect(study).toContain(`>${twoDp(far!)}</bdi>`);
+      // Sections 1 to 7: nothing past two decimals. Section 8, the annex, QUOTES
+      // the reader's inputs and the instruments' figures as given.
+      const annex = study.indexOf('id="s8"');
+      expect(annex).toBeGreaterThan(0);
+      const long = computed(study.slice(0, annex)).filter((t) => /\d\.\d{3,}$/.test(t));
+      expect(long, `${lang}: figures printed past two decimals`).toEqual([]);
+    }
+  });
+
   it('produces the same bytes twice — §13.4', async () => {
     const plot = await createPlot();
     const run = (

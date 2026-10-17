@@ -1131,6 +1131,22 @@ describe('the study report', () => {
     expect(html.split('<svg').length - 1).toBeGreaterThanOrEqual(set.length);
   });
 
+  it('prints each drawing on its own A3 page at full size, so no letter falls under 1.8 mm', () => {
+    /*
+      The sheets were reduced onto A4 landscape at 172 mm tall: 0.58 of the A3
+      sheet, so 2.5 mm notes printed at 1.45 mm and 2 mm dimension figures at
+      1.16 mm. `packages/sheets/test/lettering.test.ts` holds every letter of
+      every sheet to 1.8 mm on A3; this holds the report to printing A3 at A3.
+      Measured once in Chromium's PDF: the 80.00 M figure printed 2.00 mm tall
+      on a 420.2 × 297.0 mm page.
+    */
+    const html = studyReportHtml(makeRun(), { locale: 'en', sheets: composeSheets(built().building, META), building: null });
+    expect(html).toContain('@page sheet { size: 420mm 297mm; margin: 0; }');
+    expect(html).toMatch(/\.sheet-frame svg \{ border: none; width: 420mm; height: 296\.8mm;/);
+    expect(html).not.toMatch(/A4 landscape/);
+    expect(html).not.toMatch(/Reduced from A3/);
+  });
+
   it('ends with an annex holding the inputs, every rule considered and every area definition used', () => {
     const run = makeRun();
     for (const locale of ['en', 'ar'] as const) {

@@ -283,4 +283,11 @@ export const STUDY_READERS: readonly Reader[] = [
           ar: 'النواة: تحسب مساحتها فقط. الدرج والمصاعد والبهو داخلها استرشادية ومفترضة؛ والهروب ومكافحة الحريق لم يخضعا للتقييم.',
         }
       : null,
+  (t) =>
+    t.startsWith('The level schedule states the ground floor does not park.')
+      ? {
+          en: 'The ground floor is stated as not parking. What it holds — shops, lobby, plant — is not modelled, and how much of it is GFA, and under which allowance, is not assessed.',
+          ar: 'الدور الأرضي محدد بلا مواقف. ما فيه من محلات وبهو وخدمات غير ممثل، ولم يقيم كم منه مساحة طابقية ولا تحت أي مساحة مسموحة يحسب.',
+        }
+      : null,
 ];

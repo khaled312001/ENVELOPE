@@ -16,6 +16,16 @@ import { z } from 'zod';
 
 import { affectionPlanAttachment } from './instrument.js';
 
+/** The most basements, and podium levels above the ground floor, a schedule may state. */
+export const BASEMENTS_MAX = 8;
+export const PODIUM_LEVELS_MAX = 20;
+/**
+ * The most parking levels a run may state: every basement, the ground floor and
+ * every podium level. Derived from the two above so the integer and the schedule
+ * cannot disagree about what is accepted.
+ */
+export const PARKING_LEVELS_MAX = BASEMENTS_MAX + 1 + PODIUM_LEVELS_MAX;
+
 /** A decimal carried as a string. Rejects anything a `Decimal` cannot parse. */
 export const decimalString = z
   .string()
@@ -209,7 +219,15 @@ export const runRequest = z.object({
         'write down why this mix and not another, you have a guess, not an assumption.',
       path: ['basis'],
     }),
-  parkingLevelsAvailable: z.number().int().min(0).max(8),
+  /*
+    UP TO 29, THE MOST THE SCHEDULE BELOW CAN SAY: 8 basements, the ground floor
+    and 20 podium parking levels. It was 8, and the studio sends basements +
+    ground + podium parking here alongside `levels`, so a scheme of three
+    basements, a parked ground floor and five podium parking levels (nine) was
+    refused with "Too big" before the engine saw it. A limit tighter than the
+    schedule's own would refuse buildings the schedule describes.
+  */
+  parkingLevelsAvailable: z.number().int().min(0).max(PARKING_LEVELS_MAX),
   /**
    * Levels standing on the podium footprint, **the ground floor included**.
    *
@@ -236,10 +254,10 @@ export const runRequest = z.object({
    */
   levels: z
     .object({
-      basements: z.number().int().min(0).max(8),
+      basements: z.number().int().min(0).max(BASEMENTS_MAX),
       groundIsParking: z.boolean(),
-      podiumAboveGround: z.number().int().min(0).max(20),
-      podiumParkingLevels: z.number().int().min(0).max(20),
+      podiumAboveGround: z.number().int().min(0).max(PODIUM_LEVELS_MAX),
+      podiumParkingLevels: z.number().int().min(0).max(PODIUM_LEVELS_MAX),
     })
     .optional(),
   /**

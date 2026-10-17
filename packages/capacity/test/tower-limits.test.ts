@@ -237,7 +237,11 @@ describe('Warsan 6211383: the tower inside the sheet’s tower row', () => {
     expect(out.envelope.fixpoint.history.at(-1)?.note).toMatch(/plate 819\.19 m² → 6 level\(s\) needed/);
     // The regulatory band is the sheet's own, and the geometric one is the plate the sheet allows.
     expect(out.capacity.regulationLimitedGfa.value.toFixed(2)).toBe('4778.63');
-    expect(out.capacity.geometryLimitedGfa.value.toFixed(2)).toBe(new Decimal('819.1935').times(11).toFixed(2));
+    // Eleven storeys under G+2P+8, less the ground floor the three parking levels
+    // are placed on (the podium is unstated, so one podium level, parked): ten
+    // hold floor area. Band B counted all eleven, the parked ground floor too.
+    expect(out.floorAreaLevels.value).toBe(10);
+    expect(out.capacity.geometryLimitedGfa.value.toFixed(2)).toBe(new Decimal('819.1935').times(10).toFixed(2));
     // The tower line names the boundary that cuts it — a neighbour's 3 m, not the road's 0 m.
     const line = out.envelope.bindingConstraints.find((b) => b.dimension === 'tower_plate')?.runnerUp;
     expect(line?.label).toBe('tower setback line');

@@ -556,6 +556,24 @@ describe('each check fires on its own breakage, and only its own', () => {
     only('INV-16', appendixAFull({ capacity: { ...CAPACITY, governingGfaM2: 30540 } }));
   });
 
+  // Held to whole levels of a 1,000 m² plate, 15,700 m² is fifteen levels:
+  // 15,000 m². The part floor no level carries is not capacity.
+  it('INV-16 — whole levels: the floor of the minimum passes', () => {
+    const report = runInvariants(
+      appendixAFull({ capacity: { ...CAPACITY, governingGfaM2: 15000, wholeLevelPlateM2: 1000 } }),
+    );
+    expect(statusOf(report, 'INV-16')).toBe('PASS');
+    expect(report.results.find((r) => r.id === 'INV-16')!.expected).toContain('15 whole level(s)');
+  });
+
+  it('INV-16 — whole levels: a governing figure that keeps the part floor', () => {
+    only('INV-16', appendixAFull({ capacity: { ...CAPACITY, wholeLevelPlateM2: 1000 } }));
+  });
+
+  it('INV-16 — whole levels: a governing figure that drops a whole level', () => {
+    only('INV-16', appendixAFull({ capacity: { ...CAPACITY, governingGfaM2: 14000, wholeLevelPlateM2: 1000 } }));
+  });
+
   it('INV-17 — an achieved FAR over the permitted cap', () => {
     only('INV-17', appendixAFull({ far: { ...FAR, permittedFar: '4.5' } }));
   });

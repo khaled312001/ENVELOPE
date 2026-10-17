@@ -25,12 +25,13 @@
  *    concrete, and it is declined explicitly — see {@link LEVEL_SCHEDULE_NOTE}.
  */
 
-import { Decimal, type Plot, type Traced, UnitType } from '@envelope/core';
+import { Decimal, LevelUse, type Plot, type Traced, UnitType } from '@envelope/core';
 import type { RunInput, RunOutput } from '@envelope/capacity';
 import type { GeometryCheckCounters } from '@envelope/geometry';
 import {
   formatInvariantReport,
   InvariantStatus,
+  LevelKind,
   runInvariants,
   type InvariantReport,
   type InvariantSubject,
@@ -44,37 +45,46 @@ import {
 } from '@envelope/validation';
 
 /**
- * Why no level schedule is supplied, and why that costs four checks.
+ * Which level checks run, and why one still does not.
  *
- * INV-01, INV-02, INV-11 and INV-18 read a per-level schedule. Phase 0 produces
- * none (§3.2 — it generates no configuration), so all four are DORMANT.
+ * INV-01, INV-02, INV-11 and INV-18 read a per-level schedule. For as long as the
+ * engine produced none, all four were DORMANT, and this note said why a schedule
+ * was not synthesised here from the level count and the tower plate: INV-01
+ * would then PASS against a total derived from the very numbers it is meant to
+ * be checking — the vacuous truth §12.2's DORMANT status exists to keep out of
+ * the pass column, wearing a tick. That argument still holds, and nothing below
+ * synthesises anything.
  *
- * A schedule *could* be synthesised: the engine emits a level count, a tower
- * plate and a floor-to-floor, and "n levels of `plate` m² at `floorToFloor` m"
- * is one line away. It is not written, and the reason is worth keeping.
+ * Its premise stopped holding. The engine now stacks the building
+ * (`BuildingModel.levels`: every level at its elevation, parking or not, placed
+ * or not) and emits what each level counts (`RunOutput.levelAreas`), on a code
+ * path separate from the one that computes the capacity. The two disagreed — the
+ * 3B+G+5P scheme reported 17,920 m² on levels that held 11,520 — and the check
+ * that would have said so was switched off by this note. So INV-01, INV-11 and
+ * INV-18 now read the engine's own schedule, mapped below with no arithmetic.
  *
- * On the deck's own plot the governing capacity is 6,352.5 m² while the level
- * count times the plate is 5,120 m² — a gap the engine already reports honestly
- * as `integerGranularityLossM2`. A synthesised schedule forces a choice between
- * two dishonest options: feed the band figure and INV-01 FAILS on a discrepancy
- * that is disclosed and correct, or feed `levels × plate` and INV-01 PASSES
- * against a total derived from the very numbers it is meant to be checking. The
- * second is worse. It is the vacuous truth §12.2's DORMANT status exists to
- * keep out of the pass column, wearing a tick.
- *
- * So four checks stay dormant, every report says so, and the coverage claim
- * stays PARTIAL. When Phase 2.5 generates a real massing these become genuine
- * checks, and the only change is that the schedule arrives from the generator
- * instead of from here.
+ * INV-02 stays DORMANT: it reads each level's composition (units, core,
+ * circulation, services), and the engine lays out no unit, so no level has one.
  */
 export const LEVEL_SCHEDULE_NOTE =
-  'INV-01, INV-02, INV-11 and INV-18 read a per-level schedule. Phase 0 generates no ' +
-  'configuration (§3.2), so no schedule exists to read and these checks are DORMANT — ' +
-  'they did not run, and they are not counted as passes. A schedule could be ' +
-  'synthesised from the level count and the tower plate; it is not, because the check ' +
-  'would then be verifying the engine against its own output.';
+  'INV-02 reads what fills each level: units, core, circulation and services. The engine ' +
+  'lays out no unit, so no level has that composition and INV-02 is DORMANT — it did not ' +
+  'run, and it is not counted as a pass. INV-01, INV-11 and INV-18 read the level schedule ' +
+  'the engine emits with the building it draws.';
 
 const str = (t: Traced<Decimal>): string => t.value.toString();
+
+/**
+ * The model's level use, in the invariant layer's vocabulary. A lookup, not a
+ * judgement: every parking level is PARKING to INV-18 whether it is below grade
+ * or in the podium, because the declaration is about parking, not about where.
+ */
+const LEVEL_KIND: Readonly<Record<LevelUse, LevelKind>> = {
+  [LevelUse.BASEMENT_PARKING]: LevelKind.PARKING,
+  [LevelUse.PODIUM_PARKING]: LevelKind.PARKING,
+  [LevelUse.PODIUM]: LevelKind.PODIUM,
+  [LevelUse.TYPICAL]: LevelKind.TYPICAL,
+};
 
 /**
  * The area terms this run computed, for INV-15's independent re-check.
@@ -111,14 +121,39 @@ export function buildInvariantSubject(
 
     /**
      * The GFA this run reports, so INV-03 can recompute the FAR from first
-     * principles.
+     * principles and INV-01 can sum the levels against it.
      *
      * Both operands come from here and the division is done there, in a package
      * that cannot see `bands.ts`. That is not circular: it catches the wiring
      * defect where the achieved FAR is computed against the wrong band — a
      * mistake that produces a plausible number and no other symptom.
+     *
+     * The GFA statement's proposed total: the governing capacity, and the
+     * parking area where the declaration counts parking toward FAR — the figure
+     * the area table prints and the parking levels below carry.
      */
-    totalGfaM2: str(capacity.governingGfa),
+    totalGfaM2: str(output.gfaStatement.proposedGfaM2),
+
+    /**
+     * The engine's level schedule, level for level. Lifted, not computed: what a
+     * level counts, whether it is inside GFA and whether it stands in the
+     * building's height are all decided in `level-areas.ts`, off the model the
+     * drawings are made from.
+     */
+    levels: output.levelAreas.map((l) => ({
+      label: l.levelId,
+      kind: LEVEL_KIND[l.use],
+      grossAreaM2: l.gfaM2 ? str(l.gfaM2) : '0',
+      countedInGfa: l.countedInGfa,
+      aboveGround: l.standsInHeight,
+      heightM: str(l.heightM),
+    })),
+
+    /** INV-11: the height the run reports, against the ceiling it was held to. */
+    height: {
+      reportedTotalHeightM: str(capacity.achievedHeightM),
+      heightCeilingM: str(envelope.heightCeilingM),
+    },
 
     far: {
       plotAreaM2: plotAreaM2.toString(),
@@ -188,6 +223,10 @@ export function buildInvariantSubject(
       parkingLimitedGfaM2: str(capacity.parkingLimitedGfa),
       governingGfaM2: str(capacity.governingGfa),
       governingBand: capacity.governingBand,
+      // The engine holds the governing figure to whole levels of this plate;
+      // INV-16 recomputes that floor from the three bands rather than reading
+      // the engine's level count.
+      wholeLevelPlateM2: str(output.envelope.towerPlateCap),
     },
 
     composition: {
@@ -197,7 +236,9 @@ export function buildInvariantSubject(
 
     areaTermsUsed: [...AREA_TERMS_USED],
 
-    // `levels` and `units` are deliberately absent. See LEVEL_SCHEDULE_NOTE.
+    // `units` is deliberately absent: INV-04 to INV-07 read a unit schedule with
+    // NSA and scoped efficiencies the engine does not lay out. See LEVEL_SCHEDULE_NOTE
+    // for the levels.
   };
 }
 
@@ -257,6 +298,10 @@ function observationsFrom(output: RunOutput): Record<string, Observation> {
   // engine emits the share the plate covers beside the cap; nothing is divided here.
   if (envelope.towerCoveragePct) obs['tower_coverage.max'] = quantity(envelope.towerCoveragePct, '%');
   obs['height.max'] = quantity(capacity.achievedHeightM, UnitType.LENGTH_M);
+  // The storeys the building stands above grade, against the plan's own G+N
+  // (`levels.max_above_ground`, unit "levels"). Without it the one limit an
+  // affection plan always prints reached the validator as NO_OBSERVATION.
+  obs['levels.max_above_ground'] = quantity(output.levelsAboveGround, 'levels');
   obs['floor_to_floor'] = quantity(envelope.floorToFloorM, UnitType.LENGTH_M);
 
   // Parking demand and the visitor ratio are `MIN` bounds on a bay count: the

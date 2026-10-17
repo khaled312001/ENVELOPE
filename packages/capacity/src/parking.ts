@@ -137,7 +137,7 @@ const num = (r: Resolution | undefined): Decimal | undefined => {
  * to argue with the authority about", and that is only answerable if each step
  * carries its own provenance.
  */
-export function solveParking(input: ParkingInput): ParkingResult {
+export function solveParking(input: ParkingInput): ParkingSolution {
   const { rules, tracer, context, mix } = input;
 
   metric('PARKING_AREA');
@@ -168,10 +168,14 @@ export function solveParking(input: ParkingInput): ParkingResult {
   }
 
   // --- Unit counts by type -------------------------------------------------
-  const counts = mix.entries.map((e) => ({
-    ...e,
-    count: e.share.times(input.targetUnits).toDecimalPlaces(0, Decimal.ROUND_HALF_EVEN).toNumber(),
-  }));
+  /*
+    LARGEST REMAINDER, SO THE TYPES SUM TO THE UNITS. Rounding each share half-
+    even on its own let the counts sum to one more or one fewer than the units,
+    and the bays-per-unit ratio built on them drifted: a one- and two-bedroom mix,
+    one bay each under Table B.13, came out at 0.99459 bays a unit.
+  */
+  const countsByType = apportionUnits(mix.entries, input.targetUnits);
+  const counts = mix.entries.map((e, i) => ({ ...e, count: countsByType[i]! }));
 
   const mixTraced: Traced<readonly typeof counts[number][]> =
     mix.source === 'USER_SET'
@@ -470,6 +474,7 @@ export function solveParking(input: ParkingInput): ParkingResult {
         `level(s), with headroom for ${headroomBays.toString()} further bay(s).`;
 
   return {
+    unitMix: mixTraced,
     residentBays,
     visitorBays,
     totalBays,
@@ -487,4 +492,149 @@ export function solveParking(input: ParkingInput): ParkingResult {
     supportableUnitCeiling,
     podiumImplication,
   };
+}
+
+/** One type's whole-unit count, as the schedule at a given unit total states it. */
+export interface UnitScheduleEntry {
+  readonly typeId: string;
+  readonly label: string;
+  readonly share: Decimal;
+  readonly nsaM2: Decimal;
+  readonly count: number;
+}
+
+/** The parking result, and the unit mix node every count by type hangs from. */
+export interface ParkingSolution extends ParkingResult {
+  /** The probe's counts by type, traced — USER_SET or ASSUMED with the mix. */
+  readonly unitMix: Traced<readonly UnitScheduleEntry[]>;
+}
+
+/**
+ * Whole units by type that sum to `units` exactly — the largest-remainder method.
+ *
+ * Each type takes the floor of its share × units, and the units left over go one
+ * each to the types with the largest fractional remainders, ties to the type
+ * listed first. A stated rule, not a choice: it is the apportionment that keeps
+ * every count within one of its exact share and the total exact.
+ */
+export function apportionUnits(
+  entries: readonly { readonly share: Decimal }[],
+  units: number,
+): readonly number[] {
+  const total = Math.max(0, Math.floor(units));
+  const exact = entries.map((e) => e.share.times(total));
+  const counts = exact.map((x) => x.floor().toNumber());
+  let left = total - counts.reduce((s, c) => s + c, 0);
+  const byRemainder = exact
+    .map((x, i) => ({ i, rem: x.minus(x.floor()) }))
+    .sort((a, b) => b.rem.comparedTo(a.rem) || a.i - b.i);
+  for (const { i } of byRemainder) {
+    if (left <= 0) break;
+    counts[i] = counts[i]! + 1;
+    left -= 1;
+  }
+  return counts;
+}
+
+export interface DemandAtInput {
+  readonly rules: readonly RuleRecord[];
+  readonly tracer: Tracer;
+  readonly context: EvalContext;
+  /** The mix the probe was built on, traced, so the schedule hangs from it. */
+  readonly mix: Traced<readonly UnitScheduleEntry[]>;
+  /** The unit total to schedule — the governing capacity's unit count. */
+  readonly units: Traced<number>;
+  /** Supply, quoted beside the demand so the note can set them side by side. */
+  readonly providedBays: Traced<number>;
+  /** The probe's demand, named in the note so the two are never confused. */
+  readonly probeBays: Traced<number>;
+}
+
+export interface DemandAt {
+  /** Whole units by type at `units`, summing to it. */
+  readonly schedule: Traced<readonly UnitScheduleEntry[]>;
+  readonly residentBays: TracedDecimal;
+  readonly visitorBays: TracedDecimal;
+  readonly totalBays: Traced<number>;
+}
+
+/**
+ * Parking demand at a given unit total, from whole units by type.
+ *
+ * The demand of the answer used to be `ceil(units × bays per unit)`, the ratio
+ * taken from the probe's counts. That is the probe's rounding carried onto a
+ * different total, and it was out by a bay either way: 99 against the 98 Table
+ * B.13 gives by type on 87 units. So the governing unit count is apportioned by
+ * type (largest remainder), and the demand rule is evaluated on that schedule —
+ * Σ ratio × count, the way the code states it.
+ */
+export function demandAtUnits(input: DemandAtInput): DemandAt {
+  const { rules, tracer, context } = input;
+  const units = input.units.value;
+  const counts = apportionUnits(input.mix.value, units);
+  const entries = input.mix.value.map((e, i) => ({ ...e, count: counts[i]! }));
+  const schedule = tracer.computed('capacity.unit_schedule', entries as readonly UnitScheduleEntry[], {
+    formula:
+      `${units} unit(s) by type, largest remainder: ` +
+      (entries.length > 0 ? entries.map((e) => `${e.count} × ${e.label}`).join(' + ') : 'none'),
+    uses: { units: input.units, mix: input.mix },
+    detail: {
+      note:
+        'Each type takes the floor of its share of the units; the units left over go one ' +
+        'each to the largest remainders. The counts sum to the unit total exactly.',
+    },
+  });
+
+  const demandCtx: EvalContext = {
+    ...context,
+    unit: { mix: entries.map((e) => ({ typeId: e.typeId, count: e.count })) },
+  };
+  const demandRes = resolveParameter('parking.demand', rules, demandCtx);
+  const residentValue = num(demandRes);
+  if (residentValue === undefined || !demandRes.governing) {
+    throw new ParkingHaltedError(
+      'no approved rule governs parking.demand at the governing capacity. The engine does not ' +
+        'invent a parking ratio.',
+    );
+  }
+  const residentBays = tracer.derived('parking.resident_bays_at_governing', residentValue, {
+    rule: { ruleId: demandRes.governing.rule.ruleId, citation: demandRes.governing.rule.citation },
+    formula: entries.length > 0 ? entries.map((e) => `${e.count} × ${e.label}`).join(' + ') : 'no units',
+    uses: { schedule },
+    unit: 'bays',
+  });
+
+  const visitorRes = resolveParameter('parking.visitor_fraction', rules, demandCtx);
+  const visitorFraction = num(visitorRes);
+  const visitorValue = visitorFraction ? residentValue.times(visitorFraction).ceil() : new Decimal(0);
+  const visitorBays = visitorFraction
+    ? tracer.derived('parking.visitor_bays_at_governing', visitorValue, {
+        rule: { ruleId: visitorRes.governing!.rule.ruleId, citation: visitorRes.governing!.rule.citation },
+        formula: `ceil(${residentValue.toString()} resident bays × ${visitorFraction.toString()})`,
+        uses: { resident: residentBays },
+        unit: 'bays',
+      })
+    : tracer.computed('parking.visitor_bays_at_governing', visitorValue, {
+        formula: 'no visitor-parking rule applies, so no visitor bays are added',
+        uses: { resident: residentBays },
+        unit: 'bays',
+      });
+
+  const totalValue = residentValue.plus(visitorValue).ceil().toNumber();
+  const totalBays = tracer.computed('parking.demand_at_governing_capacity', totalValue, {
+    formula:
+      `${residentValue.toString()} resident + ${visitorValue.toString()} visitor bay(s) for ` +
+      `${units} unit(s) by type (Table B.13: Σ ratio × count)`,
+    uses: { resident: residentBays, visitor: visitorBays, units: input.units, provided: input.providedBays },
+    unit: 'bays',
+    provenanceClass: 'DERIVED',
+    detail: {
+      note:
+        'Parking the reported capacity actually needs, as against ' +
+        `parking.total_bays (${input.probeBays.value}), which is the demand of the ` +
+        'larger scheme used to probe for the parking ceiling.',
+    },
+  });
+
+  return { schedule, residentBays, visitorBays, totalBays };
 }

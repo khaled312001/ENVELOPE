@@ -52,7 +52,8 @@ import {
 } from '@envelope/rules';
 import { fromLocal, largestInscribedRectangle } from '@envelope/geometry';
 
-import { computeBands, type BandSource } from './bands.js';
+import { computeBands, traceFloorAreaLevels, type BandSource } from './bands.js';
+import { levelAreasOf, type LevelArea } from './level-areas.js';
 import { aboveGradeParkingOf, buildBuildingModel, entryLevelOf, parkingInPodiumOf } from './building.js';
 import { planGrade } from './grade.js';
 import { buildGfaStatement, type GfaStatement } from './gfa-statement.js';
@@ -71,7 +72,28 @@ import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './c
 import { solveEnvelope, type EnvelopeSolution, type StatementRef } from './envelope.js';
 import { planParkingLevel, type LevelPlan } from './level-plan.js';
 import { buildMassing, type MassingResult } from './massing.js';
-import { solveParking, traceUsableFraction } from './parking.js';
+import { demandAtUnits, solveParking, traceUsableFraction, type UnitScheduleEntry } from './parking.js';
+
+/**
+ * Why the parking at and above grade is counted from the ground up when nobody
+ * said which levels park. Quoted in the assumption register.
+ */
+export const ABOVE_GRADE_PARKING_BASIS =
+  'The run states how many parking levels it has and how many levels stand on the podium, not ' +
+  'which of them park. They are counted in the podium from the ground up — the rule the drawings ' +
+  'place them by — and each one is a storey under the height ceiling that holds no floor area. ' +
+  'Enter the level schedule to replace it.';
+
+/**
+ * Why a podium parking level is counted against the plan's own level count.
+ * Q27 with the client; quoted in the assumption register.
+ */
+export const PARKING_IN_LEVEL_COUNT_BASIS =
+  'The affection plan states the level count as every storey above grade — G+1P+16 is eighteen, ' +
+  'the ground floor and the podium levels among them — so a parking level at or above grade is ' +
+  'one of the counted levels and the tower plate is counted on the rest. Whether the authority ' +
+  'counts a podium parking level against the plan’s level count has not been confirmed (Q27). If ' +
+  'it does not, each one adds a tower plate to band B.';
 
 export interface Actor {
   readonly id: string;
@@ -354,6 +376,14 @@ export interface RunOutput {
    */
   readonly governingUnitCount: Traced<number>;
   readonly demandAtGoverningBays: Traced<number>;
+  /** The governing unit count by type, in whole units summing to it — what the demand above is read on. */
+  readonly unitSchedule: Traced<readonly UnitScheduleEntry[]>;
+  /** Storeys under the height ceiling that hold floor area: band B's level count. */
+  readonly floorAreaLevels: Traced<number>;
+  /** Storeys from grade to the top of the highest placed level — observed against the plan's G+N. */
+  readonly levelsAboveGround: TracedDecimal;
+  /** Each level of the model with what the run counts on it — INV-01, INV-11, INV-18 read it. */
+  readonly levelAreas: readonly LevelArea[];
   /**
    * Saleable area, both ways round — the ratio and the square metres.
    *
@@ -545,6 +575,95 @@ export function runPipeline(input: RunInput): RunOutput {
   const plateM2 = envelope.towerPlateCap.value;
   const levels = envelope.maxLevelsByHeight.value;
 
+  /*
+    A PODIUM TALLER THAN THE CEILING IS REFUSED, NOT CLAMPED. The massing would
+    cut it to the ceiling and draw a building whose podium is shorter than the
+    schedule says — with the parking on it moved or lost — and every figure
+    after that would be about a building nobody entered.
+  */
+  if (schedule && podiumFootprintLevels(schedule) > levels) {
+    throw new RunBlockedError(
+      `the level schedule stands ${podiumFootprintLevels(schedule)} level(s) on the podium footprint ` +
+        `(the ground floor and ${schedule.podiumAboveGround} podium level(s)), and the height ceiling ` +
+        `allows ${levels} level(s) above ground. Take podium levels out of the schedule, or put the ` +
+        'parking below grade.',
+      'G2:level-schedule',
+    );
+  }
+
+  // Before the saleable share and the bands: the massing settles how many levels
+  // stand on the podium, and so which storeys under the ceiling are parking.
+  const massing = buildMassing({
+    tracer,
+    podiumRing: envelope.podiumRing,
+    plateRing: envelope.plateRing,
+    floorToFloorM: envelope.floorToFloorM,
+    maxLevelsByHeight: envelope.maxLevelsByHeight,
+    ...(podiumFootprint === undefined
+      ? {}
+      : { podiumLevels: { value: podiumFootprint, actor: input.actor } }),
+  });
+  const podiumMassLevels = massing.masses.find((m) => m.id === 'podium')?.levels.value ?? 0;
+  /*
+    The ground floor parks by its own answer when a schedule states one — never
+    because some podium level above it parks. That conflation put the drive, the
+    transformer band and the accessible bays on plot 6468096's shop floor.
+  */
+  const aboveGrade = aboveGradeParkingOf(schedule, parkingLevelsAvailable, podiumMassLevels);
+  const groundParks = aboveGrade.ground;
+  const entryLevel = entryLevelOf(
+    aboveGrade,
+    schedule ? schedule.basements : parkingLevelsAvailable - parkingInPodiumOf(schedule, parkingLevelsAvailable, podiumMassLevels),
+  );
+
+  /*
+    THE STOREYS UNDER THE CEILING THAT HOLD FLOOR AREA.
+
+    Every parking level at or above grade is a storey of the height the ceiling
+    allows, and holds no floor area. Band B, the envelope's own GFA (the saleable
+    share's divisor) and the probe all count the plate on the storeys left.
+
+    Where the count comes from is said in its class. A schedule is the reader
+    saying which levels park: USER_SET. Without one, two integers cannot say it,
+    and the podium-from-the-ground-up rule the drawings place them by is
+    ASSUMED, with that basis. And where the ceiling is the affection plan's level
+    count rather than a height in metres, counting a podium parking level against
+    it is the reading of `G+nP+n` this engine takes — the P levels are in the
+    count — and is ASSUMED until the client confirms the authority reads it so.
+  */
+  const aboveGradeCount = (aboveGrade.ground ? 1 : 0) + aboveGrade.podium;
+  const aboveGradeParking: Traced<number> =
+    schedule || parkingLevelsAvailable === 0
+      ? tracer.userSet('capacity.above_grade_parking_levels', aboveGradeCount, {
+          actor: input.actor,
+          label: 'parking levels at or above grade',
+          unit: 'levels',
+        })
+      : tracer.assumed('capacity.above_grade_parking_levels', aboveGradeCount, {
+          label: 'parking levels at or above grade',
+          basis: ABOVE_GRADE_PARKING_BASIS,
+          unit: 'levels',
+        });
+  const levelsGoverning = envelope.resolutions.get('levels.max_above_ground')?.governing;
+  const levelsCited: BandSource | undefined =
+    levelsGoverning &&
+    envelope.bindingConstraints.some((b) => b.dimension === 'levels' && b.ruleId === levelsGoverning.rule.ruleId)
+      ? { ruleId: levelsGoverning.rule.ruleId, citation: levelsGoverning.rule.citation }
+      : undefined;
+  const parkingInLevelCount =
+    levelsCited && aboveGradeCount > 0
+      ? tracer.assumed('capacity.parking_in_stated_level_count', 'counted against the stated level count', {
+          label: 'podium parking in the plan\'s level count',
+          basis: PARKING_IN_LEVEL_COUNT_BASIS,
+        })
+      : undefined;
+  const floorAreaLevels = traceFloorAreaLevels(
+    tracer,
+    envelope.maxLevelsByHeight,
+    aboveGradeParking,
+    parkingInLevelCount,
+  );
+
   // --- Saleable area per unit, and the GFA one unit actually consumes -------
   //
   // Two different numbers, and conflating them was a real defect. `weightedNsa`
@@ -571,9 +690,10 @@ export function runPipeline(input: RunInput): RunOutput {
 
     `plateM2 x levels` is the same quantity the unit count divides two statements
     below, which is what makes the two figures consistent rather than merely
-    plausible.
+    plausible. The levels are the ones that hold floor area — band B's — not
+    every storey under the ceiling, the parking ones included.
   */
-  const envelopeGfa = plateM2.times(levels);
+  const envelopeGfa = plateM2.times(floorAreaLevels.value);
 
   const statedArea = efficiency.saleableAreaM2;
   if (efficiency.source === 'ASSUMED' && (statedArea !== undefined || !efficiency.basis?.trim())) {
@@ -657,7 +777,7 @@ export function runPipeline(input: RunInput): RunOutput {
           uses: {
             saleableArea: areaTraced,
             plate: envelope.towerPlateCap,
-            levels: envelope.maxLevelsByHeight,
+            levels: floorAreaLevels,
           },
           unit: 'ratio',
         })
@@ -688,7 +808,7 @@ export function runPipeline(input: RunInput): RunOutput {
       uses: {
         efficiency: efficiencyTraced,
         plate: envelope.towerPlateCap,
-        levels: envelope.maxLevelsByHeight,
+        levels: floorAreaLevels,
       },
       unit: 'm²',
     });
@@ -721,7 +841,7 @@ export function runPipeline(input: RunInput): RunOutput {
 
   const targetUnits = gfaPerUnit.isZero()
     ? 0
-    : plateM2.times(levels).div(gfaPerUnit).floor().toNumber();
+    : envelopeGfa.div(gfaPerUnit).floor().toNumber();
 
   // Each band must reach a cited rule (§13.3). The envelope solver already
   // resolved these, so the citation is carried through rather than re-derived —
@@ -850,31 +970,6 @@ export function runPipeline(input: RunInput): RunOutput {
   // replace a finding with an outage — the supply then falls back to an area
   // estimate, and says so.
   const usableTraced = traceUsableFraction(tracer, input.parkingUsableFraction);
-
-  // Before the level plan, because it settles whether the ground floor parks —
-  // and the ground floor is where the drive from the entrance stands.
-  const massing = buildMassing({
-    tracer,
-    podiumRing: envelope.podiumRing,
-    plateRing: envelope.plateRing,
-    floorToFloorM: envelope.floorToFloorM,
-    maxLevelsByHeight: envelope.maxLevelsByHeight,
-    ...(podiumFootprint === undefined
-      ? {}
-      : { podiumLevels: { value: podiumFootprint, actor: input.actor } }),
-  });
-  const podiumMassLevels = massing.masses.find((m) => m.id === 'podium')?.levels.value ?? 0;
-  /*
-    The ground floor parks by its own answer when a schedule states one — never
-    because some podium level above it parks. That conflation put the drive, the
-    transformer band and the accessible bays on plot 6468096's shop floor.
-  */
-  const aboveGrade = aboveGradeParkingOf(schedule, parkingLevelsAvailable, podiumMassLevels);
-  const groundParks = aboveGrade.ground;
-  const entryLevel = entryLevelOf(
-    aboveGrade,
-    schedule ? schedule.basements : parkingLevelsAvailable - parkingInPodiumOf(schedule, parkingLevelsAvailable, podiumMassLevels),
-  );
 
   /*
     THE COLUMN GAP, UNDER HIS NAME. USER_SET by the statement's author and quoted
@@ -1037,13 +1132,6 @@ export function runPipeline(input: RunInput): RunOutput {
       ? Decimal.max(new Decimal(0), grossPermittedGfa.minus(parkingAreaM2))
       : grossPermittedGfa;
 
-  const levelsGoverning = envelope.resolutions.get('levels.max_above_ground')?.governing;
-  const levelsCited: BandSource | undefined =
-    levelsGoverning &&
-    envelope.bindingConstraints.some((b) => b.dimension === 'levels' && b.ruleId === levelsGoverning.rule.ruleId)
-      ? { ruleId: levelsGoverning.rule.ruleId, citation: levelsGoverning.rule.citation }
-      : undefined;
-
   const capacity = computeBands({
     tracer,
     permittedGfaM2: availableGfaM2,
@@ -1054,8 +1142,11 @@ export function runPipeline(input: RunInput): RunOutput {
     farMax: farMaxOf(envelope),
     plotAreaM2: plotAreaOf(input.plot),
     farRule: bandSource('far.max'),
-    towerPlateM2: plateM2,
-    maxLevels: levels,
+    towerPlate: envelope.towerPlateCap,
+    floorAreaLevels,
+    aboveGradeParking: aboveGrade,
+    maxLevels: envelope.maxLevelsByHeight,
+    parkingArea: parking.requiredAreaM2,
     /*
       THE RULE BAND B STANDS ON IS THE ONE THAT BOUND THE LEVELS. Where the plot's
       own plan states the level count and it governs, citing the generic height
@@ -1098,24 +1189,22 @@ export function runPipeline(input: RunInput): RunOutput {
     provenanceClass: 'DERIVED',
   });
 
-  const baysPerUnit = parking.baysPerUnit.value;
-  const demandAtGoverningValue = baysPerUnit.times(governingUnitsValue).ceil().toNumber();
-  const demandAtGoverningBays = tracer.computed(
-    'parking.demand_at_governing_capacity',
-    demandAtGoverningValue,
-    {
-      formula: `ceil(${governingUnitsValue} unit(s) × ${baysPerUnit.toFixed(4)} bays per unit)`,
-      uses: { units: governingUnitCount, perUnit: parking.baysPerUnit, provided: parking.providedBays },
-      unit: 'bays',
-      provenanceClass: 'DERIVED',
-      detail: {
-        note:
-          'Parking the reported capacity actually needs, as against ' +
-          `parking.total_bays (${parking.totalBays.value}), which is the demand of the ` +
-          'larger scheme used to probe for the parking ceiling.',
-      },
-    },
-  );
+  /*
+    BY TYPE, NOT BY RATIO. The answer's units are apportioned to the mix in whole
+    units and Table B.13 is read on that schedule, Σ ratio × count — the same
+    rule the probe's demand was read by, on the answer's own units. A bays-per-
+    unit ratio carried over from the probe's rounding was a bay out either way.
+  */
+  const atGoverning = demandAtUnits({
+    rules: input.rules,
+    tracer,
+    context,
+    mix: parking.unitMix,
+    units: governingUnitCount,
+    providedBays: parking.providedBays,
+    probeBays: parking.totalBays,
+  });
+  const demandAtGoverningBays = atGoverning.totalBays;
 
   /*
     SALEABLE AREA AT THE REPORTED CAPACITY.
@@ -1190,6 +1279,22 @@ export function runPipeline(input: RunInput): RunOutput {
     parkingArea: parking.requiredAreaM2,
     parkingLevelIds: building.levels.filter((l) => isParking(l.use)).map((l) => l.id),
     governingGfa: capacity.governingGfa,
+    partFloorNotPlacedM2: capacity.integerGranularityLossM2,
+    ...(schedule && !schedule.groundIsParking ? { groundStatedNotParking: true } : {}),
+  });
+
+  /*
+    THE LEVEL SCHEDULE, FROM THE MODEL. What each drawn level counts, so INV-01,
+    INV-11 and INV-18 can hold the capacity figure to the building the drawings
+    stand rather than stay dormant. See `level-areas.ts`.
+  */
+  const levelAreas = levelAreasOf({
+    tracer,
+    building,
+    towerPlate: envelope.towerPlateCap,
+    floorToFloorM: envelope.floorToFloorM,
+    parkingInFar: input.parkingInFar,
+    parkingArea: parking.requiredAreaM2,
   });
 
   return {
@@ -1201,6 +1306,10 @@ export function runPipeline(input: RunInput): RunOutput {
     context: envelope.finalContext,
     governingUnitCount,
     demandAtGoverningBays,
+    unitSchedule: atGoverning.schedule,
+    floorAreaLevels,
+    levelsAboveGround: capacity.levelsAboveGround,
+    levelAreas,
     saleableEfficiency: efficiencyTraced,
     saleableAreaM2: saleableAreaTraced,
     saleableAreaAtGoverningM2: saleableAtGoverning,

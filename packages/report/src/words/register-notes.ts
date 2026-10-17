@@ -119,10 +119,11 @@ const REGISTER: Readonly<Record<string, Said>> = {
     en: 'Wheel stoppers are not placed or drawn.',
     ar: 'مصدات العجلات لا توضع ولا ترسم.',
   },
-  'The 6 m straight run before a barrier or ramp is not reserved or checked.': {
-    en: 'The 6 m straight run before a barrier or ramp is not reserved or checked.',
-    ar: 'المسافة المستقيمة 6 m قبل الحاجز أو المنحدر لا تحجز ولا تفحص.',
-  },
+  'The 6 m straight run is reserved before each ramp from the street, where the ground floor does not park. The drive into a ground floor that parks reserves none, and there it is not checked.':
+    {
+      en: 'The 6 m straight run is reserved before each ramp from the street, where the ground floor does not park. The drive into a ground floor that parks reserves none, and there it is not checked.',
+      ar: 'تحجز المسافة المستقيمة 6 م قبل كل منحدر من الشارع حيث لا يكون الدور الأرضي مواقف. أما المدخل إلى دور أرضي فيه مواقف فلا يحجز لها شيئا، ولا تفحص هناك.',
+    },
   'The extra 300 mm beside a wall, a column or the core is not added to any bay. Beside a column, whether the 0.50 m gap after every three bays (STMT-COLUMN-GAP-2026-10-16) already includes it is an open question; beside a wall or the core it is simply not encoded.':
     {
       en: 'The extra 300 mm beside a wall, a column or the core is not added to any bay. Beside a column, whether the 0.50 m gap after every three bays (STMT-COLUMN-GAP-2026-10-16) already includes it is an open question; beside a wall or the core it is simply not encoded.',

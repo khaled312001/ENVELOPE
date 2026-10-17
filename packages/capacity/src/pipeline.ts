@@ -346,6 +346,12 @@ export interface RunInput {
      * each serve eight or fewer, or the most bays where none does.
      */
     readonly arrangement?: ParkingArrangement;
+    /**
+     * Set by `runPipeline`'s own second pass only, never by a caller: the
+     * accessible bays the sloped ring's level landing must hold. See
+     * `runPipeline` and `LANDING_REGROWN`.
+     */
+    readonly landingHoldsAtLeast?: number;
   };
   /**
    * Levels standing on the podium footprint, **the ground floor included**.
@@ -557,6 +563,30 @@ export class RunBlockedError extends Error {
  * not guess on things that matter."
  */
 export function runPipeline(input: RunInput): RunOutput {
+  const first = runPipelineOnce(input);
+  /*
+    THE LEVEL LANDING, LAID OUT AGAIN ONCE WHERE THE STREET LEVEL CUT IT. The
+    sloped ring's landing is sized in the layout, before the level the street
+    reaches is cut by its drive and its plant band (`grade.ts`), so a landing
+    that holds Table C.17's count in the layout can hold fewer once that level is
+    drawn. The fix is one more pass under a stated rule — the landing sized for
+    the shortfall too (`LANDING_REGROWN`) — kept only where it places more
+    accessible bays and still has a landing, so the lap stays within 4%. Never a
+    loop that searches: one pass, and the run's own graph is the second pass's,
+    whole, so no node of the discarded first pass survives into the register.
+  */
+  const a = first.levelPlan?.accessible;
+  const landing = first.levelPlan?.layout.slopedFloor?.landing;
+  if (!a || !landing || a.placed.value >= a.required.value || input.levelPlan?.landingHoldsAtLeast !== undefined) {
+    return first;
+  }
+  const atLeast = landing.holds + (a.required.value - a.placed.value);
+  const second = runPipelineOnce({ ...input, levelPlan: { ...input.levelPlan, landingHoldsAtLeast: atLeast } });
+  const b = second.levelPlan?.accessible;
+  return b && second.levelPlan?.layout.slopedFloor?.landing && b.placed.value > a.placed.value ? second : first;
+}
+
+function runPipelineOnce(input: RunInput): RunOutput {
   if (input.parkingInFar === 'OPEN_REGULATORY_QUESTION') {
     throw new RunBlockedError(
       'capacity cannot be computed until the parking-in-FAR treatment is declared. ' +
@@ -1095,6 +1125,9 @@ export function runPipeline(input: RunInput): RunOutput {
       slopedRing: parkingLevelsAvailable >= 2,
       // Sizes the sloped ring's level landing for the accessible bays of every level that shares it.
       parkingLevelCount: parkingLevelsAvailable,
+      ...(input.levelPlan?.landingHoldsAtLeast === undefined
+        ? {}
+        : { landingHoldsAtLeast: input.levelPlan.landingHoldsAtLeast }),
       ...(input.levelPlan?.rampType === undefined
         ? {}
         : { rampType: { type: input.levelPlan.rampType, actor: input.actor } }),

@@ -157,35 +157,35 @@
       }
     ],
     "totalBays": "171",
-    "bayAreaFactorM2": "31.3846",
+    "bayAreaFactorM2": "29.1428",
     "bayAreaFactorClass": "ASSUMED",
     "bandAM2": "16000",
     "bandBM2": "16640",
-    "bandCM2": "9677.42",
+    "bandCM2": "10258.0652",
     "governingBand": "PARKING",
-    "governingGfaM2": "8960",
-    "headroomToNextM2": "6322.58",
+    "governingGfaM2": "10240",
+    "headroomToNextM2": "5741.93",
     "nextBindingBand": "REGULATORY",
-    "levels": "7",
+    "levels": "8",
     "formulas": {
       "bandA": "FAR 5 × plot area 3200.00 m² (parking excluded from FAR)",
       "bandB": "tower plate 1280.00 m² × 13 level(s) of floor area (14 under the height ceiling, less 1 given to parking)",
-      "bandC": "100 unit(s) supportable by parking × 96.77 m² GFA per unit",
-      "governingGfa": "min(band A, band B, band C) = 9677.42 m², in whole levels: 7 level(s) × tower plate 1280.00 m²",
-      "levels": "floor(min(13 level(s) of floor area, smallest band 9677.42 m² ÷ tower plate 1280.00 m²))"
+      "bandC": "106 unit(s) supportable by parking × 96.77 m² GFA per unit",
+      "governingGfa": "min(band A, band B, band C) = 10258.07 m², in whole levels: 8 level(s) × tower plate 1280.00 m²",
+      "levels": "floor(min(13 level(s) of floor area, smallest band 10258.07 m² ÷ tower plate 1280.00 m²))"
     },
     "levelPlan": {
       "bayCount": {
-        "value": "52",
-        "node": "n127",
+        "value": "56",
+        "node": "n146",
         "parameterId": "parking.laid_out_bays",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
         "unit": "bays"
       },
       "areaPerBayM2": {
-        "value": "36.92",
-        "node": "n129",
+        "value": "34.29",
+        "node": "n148",
         "parameterId": "parking.area_per_bay_m2",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -201,7 +201,7 @@
       },
       "moduleDepthM": {
         "value": "17",
-        "node": "n97",
+        "node": "n106",
         "parameterId": "parking.module_depth_m",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION",
@@ -209,7 +209,7 @@
       },
       "usableAreaM2": {
         "value": "1631.99",
-        "node": "n99",
+        "node": "n108",
         "parameterId": "parking.layout_usable_area_m2",
         "provenanceClass": "ASSUMED",
         "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -217,7 +217,7 @@
       },
       "orientation": {
         "value": "bays to the walls, the ring aisle sloped as the ramp",
-        "node": "n123",
+        "node": "n136",
         "parameterId": "parking.module_orientation",
         "provenanceClass": "DERIVED",
         "renderHint": "NEUTRAL_WITH_CITATION"
@@ -225,7 +225,7 @@
       "turning": {
         "innerRadiusM": {
           "value": "4",
-          "node": "n155",
+          "node": "n185",
           "parameterId": "parking.turning_inner_radius_m",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -233,7 +233,7 @@
         },
         "laneM": {
           "value": "3.5",
-          "node": "n158",
+          "node": "n188",
           "parameterId": "parking.turning_lane_m",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -241,7 +241,7 @@
         },
         "fitting": {
           "value": "8",
-          "node": "n160",
+          "node": "n190",
           "parameterId": "parking.turns_fitting",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
@@ -253,11 +253,19 @@
       "arrangements": [
         {
           "id": "WIDTH",
-          "bayCount": 37
+          "bayCount": 41,
+          "deadEnds": [
+            27,
+            10
+          ]
         },
         {
           "id": "DEPTH",
-          "bayCount": 24
+          "bayCount": 28,
+          "deadEnds": [
+            16,
+            8
+          ]
         },
         {
           "id": "PERIMETER",
@@ -266,53 +274,108 @@
         },
         {
           "id": "SLOPED",
-          "bayCount": 52
+          "bayCount": 56,
+          "deadEnds": [
+            2,
+            2
+          ]
+        },
+        {
+          "id": "ONE_WAY_LOOP",
+          "bayCount": 0,
+          "refusal": "a straight ramp climbing a 3.2 m storey needs 6.30 × 30.27 m (DBC Tables B.9 and B.10) at one end of the island, clear of the core and of the aisles across it, and the 33.86 × 12.37 m island does not have it"
         }
       ],
+      "defaultArrangement": "SLOPED",
+      "residual": {
+        "standardBays": 0,
+        "reducedBays": {
+          "value": "0",
+          "node": "n138",
+          "parameterId": "parking.reduced_bays",
+          "provenanceClass": "ASSUMED",
+          "renderHint": "AMBER_DOTTED_EDITABLE",
+          "unit": "bays"
+        },
+        "parallelBays": {
+          "value": "4",
+          "node": "n142",
+          "parameterId": "parking.parallel_bays",
+          "provenanceClass": "DERIVED",
+          "renderHint": "NEUTRAL_WITH_CITATION",
+          "unit": "bays"
+        },
+        "reducedCap": 5,
+        "allowance": {
+          "mode": "TEN_PERCENT",
+          "plotLengthM": {
+            "value": "80",
+            "node": "n96",
+            "parameterId": "parking.reduced_bay_plot_length_m",
+            "provenanceClass": "ASSUMED",
+            "renderHint": "AMBER_DOTTED_EDITABLE",
+            "unit": "m"
+          },
+          "allowance": {
+            "value": "up to 10% of perpendicular bays may be 5 m × 2.5 m",
+            "node": "n102",
+            "parameterId": "parking.reduced_bay_allowance",
+            "provenanceClass": "ASSUMED",
+            "renderHint": "AMBER_DOTTED_EDITABLE"
+          }
+        }
+      },
       "accessible": {
         "onGrade": true,
         "level": "GROUND",
-        "slopeBlocked": true,
+        "slopeBlocked": false,
         "required": {
-          "value": "2",
-          "node": "n173",
+          "value": "3",
+          "node": "n203",
           "parameterId": "parking.accessible_required",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
           "unit": "bays"
         },
         "placed": {
-          "value": "0",
-          "node": "n183",
+          "value": "3",
+          "node": "n213",
           "parameterId": "parking.accessible_bays",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
           "unit": "bays"
         },
-        "vans": 0,
-        "lost": 0,
+        "vans": 1,
+        "lost": 2,
         "bayCount": {
-          "value": "48",
-          "node": "n185",
+          "value": "50",
+          "node": "n215",
           "parameterId": "parking.entry_level_bays",
           "provenanceClass": "ASSUMED",
           "renderHint": "AMBER_DOTTED_EDITABLE",
           "unit": "bays"
         },
-        "farthestM": null,
+        "farthestM": {
+          "value": "11.8",
+          "node": "n217",
+          "parameterId": "parking.accessible_farthest_m",
+          "provenanceClass": "ASSUMED",
+          "renderHint": "AMBER_DOTTED_EDITABLE",
+          "unit": "m"
+        },
         "preferred": {
           "required": {
-            "value": "5",
-            "node": "n269",
+            "value": "6",
+            "node": "n301",
             "parameterId": "parking.preferred_required",
             "provenanceClass": "ASSUMED",
             "renderHint": "AMBER_DOTTED_EDITABLE",
             "unit": "bays"
           },
-          "placed": 5
+          "placed": 6
         },
         "notes": [
-          "None of the 2 accessible bays Table C.17 asks for is placed: the ground floor is the sloped ring, whose floor falls 2.85%, and DBC B.7.2.3.1 limits accessible parking to 2%. Every parking level shares that layout, so no level is flatter. The arrangement was not changed to make room for them; the reader may pick one with a flat floor."
+          "The accessible route from each access aisle to the core (C.6.4.2 f) and the sign at 2,100 mm (C.6.4.2 h) are not drawn, and walking distance is NOT ASSESSED: only the straight line to the core is measured."
         ]
       },
       "deadEnds": [
@@ -1728,6 +1791,102 @@
               "y": "14.313"
             }
           ]
+        },
+        {
+          "kind": "BAY",
+          "row": -2000,
+          "widthM": "6.000",
+          "heightM": "2.500",
+          "outline": [
+            {
+              "x": "48.000",
+              "y": "25.687"
+            },
+            {
+              "x": "42.000",
+              "y": "25.687"
+            },
+            {
+              "x": "42.000",
+              "y": "23.187"
+            },
+            {
+              "x": "48.000",
+              "y": "23.187"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": -2001,
+          "widthM": "6.000",
+          "heightM": "2.500",
+          "outline": [
+            {
+              "x": "42.000",
+              "y": "25.687"
+            },
+            {
+              "x": "36.000",
+              "y": "25.687"
+            },
+            {
+              "x": "36.000",
+              "y": "23.187"
+            },
+            {
+              "x": "42.000",
+              "y": "23.187"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": -2002,
+          "widthM": "6.000",
+          "heightM": "2.500",
+          "outline": [
+            {
+              "x": "48.000",
+              "y": "16.813"
+            },
+            {
+              "x": "42.000",
+              "y": "16.813"
+            },
+            {
+              "x": "42.000",
+              "y": "14.313"
+            },
+            {
+              "x": "48.000",
+              "y": "14.313"
+            }
+          ]
+        },
+        {
+          "kind": "BAY",
+          "row": -2003,
+          "widthM": "6.000",
+          "heightM": "2.500",
+          "outline": [
+            {
+              "x": "42.000",
+              "y": "16.813"
+            },
+            {
+              "x": "36.000",
+              "y": "16.813"
+            },
+            {
+              "x": "36.000",
+              "y": "14.313"
+            },
+            {
+              "x": "42.000",
+              "y": "14.313"
+            }
+          ]
         }
       ],
       "access": {
@@ -1784,7 +1943,7 @@
           ],
           "rank": 1,
           "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-          "node": "n152",
+          "node": "n182",
           "provenanceClass": "DERIVED"
         },
         "chosen": null,
@@ -1912,11 +2071,14 @@
         ]
       },
       "notAssessed": [
+        "Bays stand side by side at 2.50 m: no column gap and no structural grid was given, so no space is left for a column and Table B.11's 300 mm beside a structural element is not added.",
         "The ring aisle is the ramp: it climbs one 3.2 m storey over one 112.46 m lap, 2.85%, within the 4% a floor with parked cars on it may fall (DBC B.7.2.3.1, Figure B.55). No ramp strip is needed.",
         "Of the 205 m² reserved for plant and circulation, 185 m² is drawn on the island in 4 piece(s) and 19 m² has no room on it at all. The deduction is still charged in full against the bay count.",
         "Bays stand against all four walls and one 6 m ring aisle serves them: 22 to each long wall and 4 to each short one, less the 0 the way in and the core take. The island the ring encloses is 32.86 × 11.37 m.",
-        "Laid out as bays to the walls, the ring aisle sloped as the ramp: 52 bays, against 37 modules along the width; 24 modules along the depth; 0 bays to the walls, one ring aisle (a straight ramp climbing a 3.2 m storey needs 6.30 × 30.27 m (DBC Tables B.9 and B.10), reached from the ring at one end of the island, and the 32.86 × 11.37 m island does not have it clear of the core), on the same level. All 4 were packed.",
+        "Residual strips: 0 more 5.5 m bay(s) and 4 parallel bay(s) of 6 × 2.5 m (Table B.11) stand where no module reached, each with its open side on an aisle a car reaches.",
+        "Laid out as bays to the walls, the ring aisle sloped as the ramp: 56 bays, against 41 modules along the width; 28 modules along the depth; 0 bays to the walls, one ring aisle (a straight ramp climbing a 3.2 m storey needs 6.30 × 30.27 m (DBC Tables B.9 and B.10), reached from the ring at one end of the island, and the 32.86 × 11.37 m island does not have it clear of the core); 0 bays to the walls and on islands, one-way aisles round them (a straight ramp climbing a 3.2 m storey needs 6.30 × 30.27 m (DBC Tables B.9 and B.10) at one end of the island, clear of the core and of the aisles across it, and the 33.86 × 12.37 m island does not have it), on the same level. All 5 were packed.",
         "The 288 m² deducted for cores, plant and the ramp landing costs about 13 bays at 21.25 m² each — the area one more bay takes inside a module, not the gross area per bay. Of it, 83 m² is the core, standing where it is drawn (0 bay(s) were not placed there), and 205 m² is the strip reserved at the edge.",
+        "The ring is kept level for 15.00 m along one long side, centred on the core, so the accessible bays stand on a floor within the 2% DBC B.7.2.3.1 allows; the rest of the 112.46 m lap climbs the 3.2 m storey at 3.29%, within 4%.",
         "Headroom (Table B.9, 2.4 m clear above any point of a ramp): the ramps stand in one strip on every level, so over each is the next, one 3.20 m storey up. The slab, its beams and anything hung below them over the ramp may be at most 0.80 m deep. No structure is drawn: this is the budget a design must fit in, not a statement that one does.",
         "Whether a T junction sits opposite the chosen opening (B.7.2.1: \"Vehicle access shall not be located opposite a T junction\"). That needs the surrounding road network, which no affection plan carries.",
         "RTA approval. B.7.2.1 defers the location to RTA requirements and the Dubai access management manual; nothing here substitutes for that.",
@@ -1924,8 +2086,8 @@
       ],
       "grade": {
         "bayCount": {
-          "value": "48",
-          "node": "n162",
+          "value": "52",
+          "node": "n192",
           "parameterId": "parking.grade_bays",
           "provenanceClass": "DERIVED",
           "renderHint": "NEUTRAL_WITH_CITATION",
@@ -2021,7 +2183,7 @@
         ],
         "rank": 1,
         "rationale": "LOCAL road; B.7.2.1 prefers the more secondary frontage where a plot faces more than one",
-        "node": "n152",
+        "node": "n182",
         "provenanceClass": "DERIVED"
       },
       "chosen": null,
@@ -2152,19 +2314,19 @@
     "bayAreaFactorBasis": "the usable fraction of a parking level after cores, ramps and plant",
     "parkingInFar": {
       "countsTowardFar": {
-        "regulatoryGfaM2": "10633.23",
-        "governingGfaM2": "8960.00",
+        "regulatoryGfaM2": "11016.58",
+        "governingGfaM2": "10240.00",
         "governingBand": "PARKING"
       },
       "excludedFromFar": {
         "regulatoryGfaM2": "16000.00",
-        "governingGfaM2": "8960.00",
+        "governingGfaM2": "10240.00",
         "governingBand": "PARKING"
       },
-      "regulatorySpreadM2": "5366.77",
+      "regulatorySpreadM2": "4983.42",
       "governingSpreadM2": "0.00",
       "governingSpreadRelative": "0.000000",
-      "verdict": "The parking-in-FAR treatment moves regulatory capacity by 5367 m², but not the governing capacity: the parking limit binds below both treatments. On this plot the open regulatory question does not change the answer — though it would on a plot where the FAR ceiling binds."
+      "verdict": "The parking-in-FAR treatment moves regulatory capacity by 4983 m², but not the governing capacity: the parking limit binds below both treatments. On this plot the open regulatory question does not change the answer — though it would on a plot where the FAR ceiling binds."
     },
     "exports": {
       "gateSequence": [
@@ -2187,10 +2349,10 @@
         }
       ],
       "cars": {
-        "engine": 100,
-        "drawingSet": 100,
-        "dxf": 100,
-        "modelFile": 100
+        "engine": 106,
+        "drawingSet": 106,
+        "dxf": 106,
+        "modelFile": 106
       },
       "stampedIn": [
         "json",
@@ -2332,6 +2494,10 @@
             "assumedInk": false
           },
           {
+            "name": "ENV-G-ACCESS-AISLE",
+            "assumedInk": false
+          },
+          {
             "name": "ENV-G-BAY",
             "assumedInk": false
           },
@@ -2345,6 +2511,10 @@
           },
           {
             "name": "ENV-G-BAY-PREFERRED",
+            "assumedInk": false
+          },
+          {
+            "name": "ENV-G-BAY-ACCESSIBLE",
             "assumedInk": false
           },
           {
@@ -2456,8 +2626,16 @@
             "assumedInk": true
           },
           {
-            "name": "ENV-L08-CONTEXT",
-            "assumedInk": false
+            "name": "ENV-L08-SLAB",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L08-MASS",
+            "assumedInk": true
+          },
+          {
+            "name": "ENV-L08-CORE",
+            "assumedInk": true
           },
           {
             "name": "ENV-L09-CONTEXT",

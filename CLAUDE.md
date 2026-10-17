@@ -655,6 +655,51 @@ is a defect even when it makes something easier.
   and opens unpressed. Title-block fields (project, client, consultant, description,
   status) are optional on the run, printable ASCII only because the DXF prints them,
   refused in a sentence otherwise, and changed only by a new run.
+- **The default arrangement is ranked by the dead-end clause, then by bays** (B.7.2.3.3
+  ¶8, p85). `DEFAULT_ARRANGEMENT_RULE` takes the most bays among arrangements whose every
+  dead end serves 8 or fewer, the most bays outright only where none does, and says so.
+  The most-bays arrangement is always still packed, published with its dead ends and
+  pickable: a "should" ranks candidates and never removes one. The client's answer
+  (compliant default, or maximum in red) is a one-line change.
+- **The one-way loop is a seventh fixed candidate, not a search.** Table B.11's 90°
+  one-way row (5.5 m), as the 6468096 drawings use. Its aisles are flooded in the
+  direction of traffic (`traceOneWay`); never check a one-way level with the two-way
+  flood, which calls a cut ring reached. Residual strips are **not** filled on it: the
+  filler only knows two-way aisles, so the loop is packed as it is and says so.
+- **The sloped ring keeps a level landing for the accessible bays**, traced at 0%
+  against B.7.2.3.1's 2%; the rest of the lap climbs storey ÷ (lap − landing), held to
+  4%. The layout sizes it before the street level is cut, so where the drive or plant
+  band takes bays off it and fewer are placed than Table C.17 asks, `runPipeline` lays
+  the run out **once** more with the landing sized for the shortfall
+  (`LANDING_REGROWN`, said in the basis) and keeps that pass only if it places more and
+  still has a landing. One pass, a whole fresh graph, never a loop that searches.
+- **A strip no module reached takes Table B.11's own bays, and only those**
+  (`residual.ts`): 5.5 m first, then 5 × 2.5 m under note * only where 5.5 m does not
+  fit, then 6 × 2.5 m parallel, each with its open side wholly on an aisle a car
+  reaches. Note *'s "plot length" is read as the longest side, `ASSUMED`, the depth
+  reading measured into its sensitivity. Under note *(b) each level holds one short bay
+  per nine, and the levels the street reaches (G, or B1/P1 cut by a ramp from the
+  street) hold none, so the building stays within 10% by construction and a run over it
+  throws. Angled bays are NOT ASSESSED. The car park's gross area per bay (podium
+  footprint × parking levels ÷ bays provided) is published beside the one-level figure;
+  a developer's target is compared only when a named brief states one, its reading
+  `ASSUMED`. Never default the 37.5.
+- **Where the ground floor does not park, the ramps from the street are placed**
+  (`street-ramp.ts`): down to B1 and up to P1 from the entrance, after B.7.2.3.3 ¶4's 6 m
+  approach, at Tables B.9/B.10's length for the floor-to-floor. Two fixed placements,
+  both reported, the fewer bays given up wins — not a search. Bays under a ramp, its
+  run-out and what its cut strands are given up on B1/P1 and counted out of the supply.
+  They are `ModelRamp.street` in every renderer; a renderer finding the strip's ramp
+  must skip them.
+- **Every DBC clause in scope is in the register, and silence is not a status**
+  (`packages/rules/src/register/`): APPLIED (naming what uses it), NOT ASSESSED (with a
+  reason) or NOT APPLICABLE. It binds nothing. Every exported DBC `Citation` in the engine
+  and every binding DBC seed rule must be named by an APPLIED entry on its page, so a new
+  citation constant fails the suite until it is registered; an `EVALUATIVE_ONLY` rule
+  (Table B.4's clear heights) must instead sit under its table as NOT ASSESSED, never as
+  applied. It prints in the audit report (8a) and the study report, both languages, with
+  what the 31 Aug proposal promised beside what exists (IFC: not built). Changing a
+  status is a decision: bump `CLAUSE_REGISTER_VERSION`.
 - **Degenerate geometry raises.** Slivers, self-intersections and near-tangent offsets throw
   rather than return a plausible wrong answer (PRD §14.3).
 - **Invariant failure blocks emission.** Never a warning, never a configurable severity.

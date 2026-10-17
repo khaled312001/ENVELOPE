@@ -189,7 +189,8 @@ export const CLAUSE_DETAIL: Readonly<Record<ClauseDetail, string>> = {
   SETBACK_PODIUM:
     'Held for the tower. The ground floor and podium stand on the boundary under STMT-PODIUM-SETBACK-2026-10-16, a named practitioner’s statement listed wherever it applies.',
   WHEEL_STOPPERS: 'Wheel stoppers are not placed or drawn.',
-  ENTRY_RUN: 'The 6 m straight run before a barrier or ramp is not reserved or checked.',
+  ENTRY_RUN:
+    'The 6 m straight run is reserved before each ramp from the street, where the ground floor does not park. The drive into a ground floor that parks reserves none, and there it is not checked.',
   BAY_BESIDE_STRUCTURE:
     'The extra 300 mm beside a wall, a column or the core is not added to any bay. Beside a column, whether the 0.50 m gap after every three bays (STMT-COLUMN-GAP-2026-10-16) already includes it is an open question; beside a wall or the core it is simply not encoded.',
   BICYCLE:

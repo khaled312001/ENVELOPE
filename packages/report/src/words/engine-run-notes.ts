@@ -1210,6 +1210,24 @@ export const RUN_READERS: readonly Reader[] = [
     }
     return null;
   },
+  /* ── The level landing's size, as the register prints its basis (layout.ts `LANDING_SIZE_BASIS`, `LANDING_REGROWN`) ── */
+  (t) => {
+    const m =
+      /^The landing is sized before the building's supply is known, so it is sized on the most the supply can be: this level's bays on every parking level that shares the layout, under Table C\.17 read as the accessible bays themselves are read \(a fraction rounded up, 10 for the first 500, one under 25\)\. The ground floor and the access aisles only ever take bays away, so the count placed on it, Table C\.17 on the real supply, is never more than this\. Here: (\d+) bays × (\d+) parking level\(s\) = (\d+) bays\.( No level count reached the layout, so two are taken: the fewest levels a sloped ring serves\.)?( Laid out for that count first, the level the street reaches lost bays on the landing to its drive or plant band and placed fewer than Table C\.17 asks, so the landing is sized here for the shortfall too\.)?$/.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en: t,
+      ar:
+        'يحدد طول المنطقة المستوية قبل معرفة عدد مواقف المبنى، فيحدد على أكبر عدد ممكن: مواقف هذا الدور في كل دور مواقف يشترك في التوزيع نفسه، مع قراءة الجدول C.17 كما تقرأ مواقف أصحاب الهمم نفسها (الكسر يقرب للأعلى، و10 لأول 500، وموقف واحد لما دون 25). الدور الأرضي وممرات الوصول لا تفعل إلا إنقاص المواقف، فالعدد الموضوع عليها، أي الجدول C.17 على العدد الفعلي، لا يزيد عن هذا.' +
+        ` هنا: ${m[1]} موقفا × ${m[2]} دور مواقف = ${m[3]} موقفا.` +
+        (m[4] ? ' لم يصل عدد الأدوار إلى التوزيع، فيؤخذ دوران: أقل عدد يخدمه ممر دائري مائل.' : '') +
+        (m[5]
+          ? ' عند توزيعها لذلك العدد أولا، فقد الدور الذي يصله الشارع مواقف على المنطقة المستوية لصالح مدخله أو شريط الخدمات، ووضع أقل مما يطلبه الجدول C.17، فيحدد طولها هنا ليشمل النقص أيضا.'
+          : ''),
+    };
+  },
   /* ── The one-way loop is not given residual bays (layout.ts, `candidate`) ── */
   starts('Residual strips are not filled on the one-way loop', {
     en: 'Residual strips are not filled on the one-way loop: a bay there is reached only if traffic passes it in the direction of travel, and the strip filler checks only that a bay stands on a two-way aisle. Whatever a strip could hold is not counted. Not assessed.',

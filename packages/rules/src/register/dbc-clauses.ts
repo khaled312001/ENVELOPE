@@ -44,6 +44,8 @@ const LAYOUT = 'packages/capacity/src/layout.ts';
 const RAMPS = 'packages/capacity/src/ramp-rules.ts';
 const DEAD_ENDS = 'packages/capacity/src/dead-ends.ts';
 const GROUND = 'packages/capacity/src/ground-program.ts';
+const RESIDUAL = 'packages/capacity/src/residual.ts';
+const STREET_RAMP = 'packages/capacity/src/street-ramp.ts';
 
 const cite = (name: string, module: string): ClauseApplication => ({ kind: 'CITATION', name, module });
 const rule = (ruleId: string): ClauseApplication => ({ kind: 'RULE', ruleId });
@@ -326,12 +328,16 @@ export const DBC_CLAUSE_REGISTER: readonly ClauseRegisterEntry[] = Object.freeze
   notAssessed('B.7.2.3.3 ¶2', 84, SHALL, R.NOT_LAID_OUT, LIFE),
   notAssessed('B.7.2.3.3 ¶3 — sentence 1', 84, SHALL, R.NOT_ENCODED, { detail: D.WHEEL_STOPPERS }),
   notAssessed('B.7.2.3.3 ¶3 — sentence 2', 84, SHOULD, R.NOT_LAID_OUT),
-  notAssessed('B.7.2.3.3 ¶4 — sentence 1', 84, SHOULD, R.NOT_ENCODED, { detail: D.ENTRY_RUN }),
+  // Applied where the street ramps are placed; the drive into a parking ground floor reserves no run (`rest`).
+  applied('B.7.2.3.3 ¶4 — sentence 1', 84, SHOULD, AppliedIn.RAMPS, [cite('CLAUSE_B_7_2_3_3_4', STREET_RAMP)], {
+    rest: R.NOT_ENCODED,
+    detail: D.ENTRY_RUN,
+  }),
   notAssessed('B.7.2.3.3 ¶4 — sentence 2', 84, SHALL, R.NOT_LAID_OUT),
   notAssessed('B.7.2.3.3 ¶5', 84, SHALL, R.DETAIL),
   notAssessed('B.7.2.3.3 ¶6', 84, SHALL, R.BY_CONSTRUCTION),
   notAssessed('B.7.2.3.3 ¶7', 84, SHALL, R.NOT_LAID_OUT),
-  applied('B.7.2.3.3 ¶8', 85, SHOULD, AppliedIn.DEAD_ENDS, [mod(DEAD_ENDS)]),
+  applied('B.7.2.3.3 ¶8', 85, SHOULD, AppliedIn.DEAD_ENDS, [mod(DEAD_ENDS), cite('DEAD_END_B7233', DEAD_ENDS)]),
   notApplicable('B.7.2.3.3 ¶8 a)', 85, MAY, P.PERMISSION_NOT_TAKEN),
   notApplicable('B.7.2.3.3 ¶8 b)', 85, MAY, P.USE_NOT_STUDIED),
 
@@ -343,8 +349,10 @@ export const DBC_CLAUSE_REGISTER: readonly ClauseRegisterEntry[] = Object.freeze
   applied('Table B.11 Minimum dimensions for parking', 86, SHALL, AppliedIn.PARKING_LAYOUT, [
     cite('TABLE_B11', LAYOUT),
     cite('TABLE_B11_DRIVEWAY', ACCESS),
+    cite('TABLE_B11_PARALLEL', RESIDUAL),
   ]),
-  notApplicable('Table B.11 note *', 86, MAY, P.PERMISSION_NOT_TAKEN),
+  // Taken since 17 Oct 2026: 5 × 2.5 m bays where a full-size one does not fit (`residual.ts`).
+  applied('Table B.11 note *', 86, MAY, AppliedIn.PARKING_LAYOUT, [cite('TABLE_B11_REDUCED', RESIDUAL)]),
   /*
     NOT_ENCODED, not OPEN_QUESTION. The clause plainly applies: a bay bounded by
     a wall or column, or at the end of a driveway, gets 300 mm more. The client's

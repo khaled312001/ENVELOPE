@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-17T13:18:50.877Z",
+  "generatedAt": "2026-10-17T14:25:56.166Z",
   "engineVersion": "0.1.0",
   "readiness": {
     "rulesApproved": 0,
@@ -28,7 +28,7 @@
     {
       "parameterId": "parking.usable_fraction",
       "runs": 1,
-      "maxRelativeEffect": "0.142857",
+      "maxRelativeEffect": "0.125",
       "basis": "the usable fraction of a parking level after cores, ramps and plant"
     },
     {
@@ -72,6 +72,18 @@
       "runs": 1,
       "maxRelativeEffect": "0",
       "basis": "An indicative core for a residential tower, drawn so a reader can see where the lifts and stairs stand: two stairs of 5.6 × 2.8 m (two flights of about 1.2 m and a landing at each end), lift shafts of 2.4 × 2.4 m for a 13-person car, and a lift lobby 2.4 m deep across their front, entered at ground level through a 1.8 m pair of doors a quarter of the way along its open side. No clause of the Dubai Building Code on file is applied and no developer standard gives a core layout, so this is an assumption. Egress capacity, travel distance, lift traffic and fire-fighting provisions are NOT ASSESSED: the stairs drawn are not an egress design."
+    },
+    {
+      "parameterId": "parking.reduced_bay_plot_length_m",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "DBC Table B.11 note * lets a perpendicular bay be 5 m × 2.5 m on every bay of a plot less than 30 m in length and on up to 10% of them on a plot 30 m or longer, and does not say which dimension is a plot's length. It is read here as the plot's longest side, 80.00 m, the reading that allows less. Read as the depth of its bounding rectangle it would be 40.00 m. Which one the authority means is a question for the client."
+    },
+    {
+      "parameterId": "parking.landing_accessible_bays",
+      "runs": 1,
+      "maxRelativeEffect": "0",
+      "basis": "The landing is sized before the building's supply is known, so it is sized on the most the supply can be: this level's bays on every parking level that shares the layout, under Table C.17 read as the accessible bays themselves are read (a fraction rounded up, 10 for the first 500, one under 25). The ground floor and the access aisles only ever take bays away, so the count placed on it, Table C.17 on the real supply, is never more than this. Here: 56 bays × 2 parking level(s) = 112 bays. Laid out for that count first, the level the street reaches lost bays on the landing to its drive or plant band and placed fewer than Table C.17 asks, so the landing is sized here for the shortfall too."
     },
     {
       "parameterId": "parking.turning_inner_radius_m",

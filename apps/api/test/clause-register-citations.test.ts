@@ -90,7 +90,15 @@ describe('every Dubai Building Code citation in the engine is in the register', 
   });
 
   it('names each DBC seed rule in an APPLIED entry on the rule’s own page', () => {
-    const dbcRules = SEED_RULES.filter((r) => r.citation.instrumentId === 'DUBAI_BUILDING_CODE');
+    /*
+      An EVALUATIVE_ONLY record binds nothing and checks nothing — Table B.4's
+      clear heights are stated against the storey under every drawing, NOT
+      ASSESSED. Registering one as APPLIED would say the engine applies a
+      clause it only quotes, so those are held to the other side below.
+    */
+    const dbcRules = SEED_RULES.filter(
+      (r) => r.citation.instrumentId === 'DUBAI_BUILDING_CODE' && r.ruleClass !== 'EVALUATIVE_ONLY',
+    );
     expect(dbcRules.length).toBeGreaterThan(0);
     const unregistered = dbcRules
       .filter(
@@ -101,6 +109,22 @@ describe('every Dubai Building Code citation in the engine is in the register', 
       )
       .map((r) => `${r.ruleId} (p${r.citation.sourcePage})`);
     expect(unregistered).toEqual([]);
+  });
+
+  it('lists each evaluative-only DBC seed rule as NOT ASSESSED under the table it quotes, never as applied', () => {
+    const evaluative = SEED_RULES.filter(
+      (r) => r.citation.instrumentId === 'DUBAI_BUILDING_CODE' && r.ruleClass === 'EVALUATIVE_ONLY',
+    );
+    expect(evaluative.length).toBeGreaterThan(0);
+    const misfiled = evaluative.filter((r) => {
+      const table = /Table B\.\d+/.exec(r.citation.clauseReference)?.[0];
+      if (!table) return true;
+      const named = (e: (typeof DBC_REGISTER.entries)[number]): boolean => e.clause.startsWith(table);
+      const notAssessed = DBC_REGISTER.entries.some((e) => e.status === ClauseStatus.NOT_ASSESSED && named(e));
+      const claimedApplied = applications('RULE').some(({ by }) => by.kind === 'RULE' && by.ruleId === r.ruleId);
+      return !notAssessed || claimedApplied;
+    });
+    expect(misfiled.map((r) => r.ruleId)).toEqual([]);
   });
 });
 

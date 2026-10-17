@@ -350,6 +350,8 @@ export interface LevelPlanInput {
   readonly slopedRing?: boolean;
   /** See `ParkingLayoutInput.parkingLevelCount`. */
   readonly parkingLevelCount?: number;
+  /** See `ParkingLayoutInput.landingHoldsAtLeast`. */
+  readonly landingHoldsAtLeast?: number;
 }
 
 /**
@@ -481,6 +483,7 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     ...(input.rampPlan ? { rampPlan: input.rampPlan } : {}),
     ...(input.slopedRing === undefined ? {} : { slopedRing: input.slopedRing }),
     ...(input.parkingLevelCount === undefined ? {} : { parkingLevelCount: input.parkingLevelCount }),
+    ...(input.landingHoldsAtLeast === undefined ? {} : { landingHoldsAtLeast: input.landingHoldsAtLeast }),
     ...(input.rampType
       ? {
           rampType: input.rampType.type,

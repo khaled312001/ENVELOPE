@@ -366,6 +366,12 @@ export interface ParkingLayoutInput {
    */
   readonly parkingLevelCount?: number;
   /**
+   * The accessible bays the level landing must hold at least — set only on the
+   * pipeline's second pass, where the first landing lost bays to the ground
+   * floor's drive or plant. See `LANDING_REGROWN`.
+   */
+  readonly landingHoldsAtLeast?: number;
+  /**
    * The core, where it stands on this level, in the footprint's local metres —
    * x along the width, y along the depth.
    *
@@ -2960,6 +2966,17 @@ const LANDING_SIZE_BASIS =
   'it, Table C.17 on the real supply, is never more than this.';
 
 /**
+ * Said after `LANDING_SIZE_BASIS` where the pipeline laid the level out a second
+ * time: the first landing held the count in the layout, but the ground floor's
+ * drive or plant band took bays out of it, so fewer were placed than Table C.17
+ * asks. One fixed rule — grow it by the shortfall and lay it out again — not a
+ * search; kept only where it places more and the lap stays within 4%.
+ */
+export const LANDING_REGROWN =
+  ' Laid out for that count first, the level the street reaches lost bays on the landing to its drive or ' +
+  'plant band and placed fewer than Table C.17 asks, so the landing is sized here for the shortfall too.';
+
+/**
  * The sloped ring's level landing, traced, or a sentence saying why there is none.
  * `flatLanding` finds the stretch; this checks what the rest of the lap then climbs.
  */
@@ -2973,6 +2990,7 @@ function levelLanding(
     readonly perLevel: number;
     readonly core?: Rect;
     readonly levels: number | undefined;
+    readonly atLeast?: number;
   },
 ): {
   readonly landing?: {
@@ -2988,7 +3006,8 @@ function levelLanding(
   if (lapPct.lte(MAX_ACCESSIBLE_SLOPE_PCT)) return {};
   const levels = input.levels ?? 2;
   const upper = input.perLevel * levels;
-  const wanted = accessibleRequired(upper);
+  const regrown = input.atLeast !== undefined && input.atLeast > accessibleRequired(upper);
+  const wanted = regrown ? input.atLeast! : accessibleRequired(upper);
   const found = flatLanding(input.rects, input.geometry, wanted, input.core);
   const storeyM = input.storey.value.toString();
   if (!found) {
@@ -3015,7 +3034,8 @@ function levelLanding(
       ` Here: ${input.perLevel} bays × ${levels} parking level(s) = ${upper} bays.` +
       (input.levels === undefined
         ? ' No level count reached the layout, so two are taken: the fewest levels a sloped ring serves.'
-        : ''),
+        : '') +
+      (regrown ? LANDING_REGROWN : ''),
     label: 'accessible bays the level landing is sized for',
     unit: 'bays',
   });
@@ -3977,6 +3997,7 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
       perLevel: packing.bayCount,
       ...(input.core ? { core: input.core.rect } : {}),
       levels: input.parkingLevelCount ?? (input.rampPlan ? parkingLevels(input.rampPlan.schedule) : undefined),
+      ...(input.landingHoldsAtLeast === undefined ? {} : { atLeast: input.landingHoldsAtLeast }),
     });
     if (level.note) notes.push(level.note);
     const gradientPct = level.landing?.slopedGradientPct ?? slopedFloorGradient(tracer, storey, lap).gradientPct;

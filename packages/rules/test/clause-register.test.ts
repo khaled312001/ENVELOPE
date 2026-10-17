@@ -105,10 +105,18 @@ describe('what the register says about bicycles and loading (B.7.2.7, B.7.3.1)',
   });
 
   it('names the clauses the audit found absent: clear heights, the 6 m entry, wheel stoppers, gate level, the basement soffit', () => {
-    for (const c of ['B.5.3 ¶1', 'B.7.2.3.3 ¶4 — sentence 1', 'B.7.2.3.3 ¶3 — sentence 1', 'B.4.2.1 ¶2', 'B.4.3.2 ¶4']) {
+    for (const c of ['B.5.3 ¶1', 'B.7.2.3.3 ¶3 — sentence 1', 'B.4.2.1 ¶2', 'B.4.3.2 ¶4']) {
       expect(entry(c).status, c).toBe(ClauseStatus.NOT_ASSESSED);
       expect(entry(c).detail, c).not.toBeNull();
     }
+    /*
+      The 6 m entry is applied since the ramps from the street (17 Oct 2026),
+      and only there: the drive into a ground floor that parks reserves none,
+      which the entry says as its rest and in its detail.
+    */
+    const entryRun = entry('B.7.2.3.3 ¶4 — sentence 1');
+    expect(entryRun).toMatchObject({ status: ClauseStatus.APPLIED, rest: 'NOT_ENCODED' });
+    expect(entryRun.detail).not.toBeNull();
   });
 });
 

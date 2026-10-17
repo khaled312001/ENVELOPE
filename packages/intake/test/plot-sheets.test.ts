@@ -78,9 +78,9 @@ describe.skipIf(sourceSheet(WADI) === undefined)(title(WADI, 'plot 6457790 — a
     nothing yet, so the gap says the eight figures are on the sheet and not in
     the study; with no gap, the sheet step printed "Not printed" beside them.
   */
-  it('says the per-side table is read and not yet applied, and never that the sheet prints "SEE NOTES"', () => {
+  it('says when the per-side table binds and what governs where it does not, and never that the sheet prints "SEE NOTES"', () => {
     expect(facts.missing.find((m) => m.field === 'setbacks')?.consequence).toBe(
-      'This sheet prints its setbacks per numbered side, not per face: «SETBACK (M) BUILDING / PODIUM — SIDE ( 1 ): 5 / 4; SIDE ( 2 ): 7 / 6; SIDE ( 3 ): 7 / 6; SIDE ( 4 ): 7 / 6». The table is read, but no setback from it is applied to the study yet. Until it is, the study’s setbacks do not come from this sheet: they come from the general rules, and a tower setback typed on the plot step under a named user overrides them.',
+      'This sheet prints its setbacks per numbered side, not per face: «SETBACK (M) BUILDING / PODIUM — SIDE ( 1 ): 5 / 4; SIDE ( 2 ): 7 / 6; SIDE ( 3 ): 7 / 6; SIDE ( 4 ): 7 / 6». Each side binds the boundary the drawing places it on, the building row the tower and the podium row the podium, where the plot is entered from the sheet’s coordinate table. On a side the drawing does not place, or a plot entered another way, the setback comes from the general rules, and a tower setback typed on the plot step under a named user overrides them.',
     );
     expect(facts.missing.map((m) => m.consequence).join(' ')).not.toContain('SEE NOTES');
   });

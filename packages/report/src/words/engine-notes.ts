@@ -1,3 +1,4 @@
+import { BINDING_READERS } from './binding-notes.js';
 import { RUN_READERS } from './engine-run-notes.js';
 import type { Locale } from './locale.js';
 import { STUDY_READERS } from './study-notes.js';
@@ -506,13 +507,13 @@ const READERS: readonly Reader[] = [
       (t) =>
         t.startsWith(start) ? { en: t, ar } : null,
   ),
-  /* A per-side table read whole and bound by nothing yet: said, so "not printed" is never the only word on it. */
+  /* A per-side table, and when it binds (17 Oct 2026): said, so "not printed" is never the only word on it. */
   (t) => {
-    const m = /^This sheet prints its setbacks per numbered side, not per face: «([^»]*)»\. The table is read, but no setback from it is applied to the study yet\./.exec(t);
+    const m = /^This sheet prints its setbacks per numbered side, not per face: «([^»]*)»\. Each side binds the boundary the drawing places it on/.exec(t);
     return m
       ? {
           en: t,
-          ar: `هذا المخطط يطبع ارتداداته لكل جانب مرقم لا لكل واجهة: «${m[1]}». الجدول مقروء، لكن لا يطبق أي ارتداد منه على الدراسة بعد. وإلى أن يطبق، لا تأتي ارتدادات الدراسة من هذا المخطط بل من القواعد العامة، وارتداد البرج الذي يكتبه شخص مسمى في خطوة القطعة يحل محلها.`,
+          ar: `هذا المخطط يطبع ارتداداته لكل جانب مرقم لا لكل واجهة: «${m[1]}». كل جانب يلزم الحد الذي يضعه الرسم عليه، صف المبنى للبرج وصف البوديوم للبوديوم، متى أدخلت القطعة من جدول إحداثيات المخطط. وعلى جانب لا يضعه الرسم، أو قطعة أدخلت بطريقة أخرى، يؤخذ الارتداد من القواعد العامة، وارتداد البرج الذي يكتبه شخص مسمى في خطوة القطعة يحل محلها.`,
         }
       : null;
   },
@@ -581,7 +582,7 @@ const READERS: readonly Reader[] = [
 
 /** The engine's sentence, short and in `locale`; null when its wording is not one this file knows. */
 export function engineNote(text: string, locale: Locale): string | null {
-  for (const read of [...READERS, ...RUN_READERS, ...STUDY_READERS, ...TOWER_READERS]) {
+  for (const read of [...READERS, ...RUN_READERS, ...STUDY_READERS, ...TOWER_READERS, ...BINDING_READERS]) {
     const said = read(text);
     if (said) return said[locale];
   }

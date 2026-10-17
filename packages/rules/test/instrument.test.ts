@@ -353,11 +353,24 @@ describe('a sheet that prints a GFA and no FAR', () => {
     expect(resolution.governing!.value).toEqual({ kind: 'scalar', value: new Decimal('2.199992') });
   });
 
-  it('a printed FAR still wins over the quotient', () => {
+  /*
+    Decided 17 Oct 2026, reversing "a printed FAR still wins": where a sheet prints
+    both, the GFA governs and the FAR is its cross-check, because a FAR rounded to
+    two places re-multiplied under-reports the GFA. One rule either way, and a
+    FAR that disagrees beyond its rounding binds only where it is the lower.
+  */
+  it('a printed FAR that agrees to its rounding is the cross-check, and the quotient binds', () => {
+    const both: StatedLimits = { ...DDA, far: { value: new Decimal('2.20'), citation: citation('far', 'FAR 2.20') } };
+    const far = rulesFromInstrument(both, DDA_BINDING).rules.filter((r) => r.parameterId === 'far.max');
+    expect(far).toHaveLength(1);
+    expect(far[0]!.evaluatorArgs['value']).toBe('2.199992');
+  });
+
+  it('a printed FAR above the quotient does not lift the GFA the sheet prints', () => {
     const both: StatedLimits = { ...DDA, far: { value: new Decimal('2.5'), citation: citation('far', 'FAR 2.5') } };
     const far = rulesFromInstrument(both, DDA_BINDING).rules.filter((r) => r.parameterId === 'far.max');
     expect(far).toHaveLength(1);
-    expect(far[0]!.evaluatorArgs['value']).toBe('2.5');
+    expect(far[0]!.evaluatorArgs['value']).toBe('2.199992');
   });
 
   it('a GFA with no plot area binds nothing and says why', () => {

@@ -40,8 +40,13 @@
  *    access is on, so a reader who is asked to mark it is being asked for
  *    something the instrument genuinely does not contain.
  *
- * 4. **Road hierarchy is never printed.** No road name, no road number, no
- *    carriageway width, no classification word, on any of the three. `RoadHierarchy`
+ *    (17 Oct 2026: rendered, the cell holds a drawn `*` the text layer does not
+ *    carry. "Blank" was true of the text and false of the sheet; what the mark
+ *    means is a question with the client, and it is not read.)
+ *
+ * 4. **Road hierarchy is never printed.** No classification word on any of the
+ *    three. Some sheets print a road's width (`ROAD 8.60M`), and a width is not
+ *    a rank. `RoadHierarchy`
  *    keys the setback table, and nothing on an affection plan ranks a road. It is
  *    reported as a gap on every sheet, permanently.
  *
@@ -734,15 +739,21 @@ function roleGap(
   };
 }
 
-const ROAD_HIERARCHY_GAP: MissingField = {
+/*
+  17 OCT 2026: "THIS SHEET PRINTS NO … CARRIAGEWAY WIDTH" WAS FALSE. Plot 6457790
+  prints "ROAD 8.60M" in its text layer, 5134565 "ROAD 21.00M", the Municipality
+  79.25 and 30.48. What stays true on every sheet is narrower: none of them RANKS
+  a road, and a width is not a rank. The sentence now says only that.
+*/
+export const ROAD_HIERARCHY_GAP: MissingField = {
   field: 'boundary.road_hierarchy',
   label: 'Road hierarchy',
   consequence:
-    'No affection plan ranks a road. This sheet prints no road name, no road number ' +
-    'and no carriageway width, and the setback table is keyed on the rank — arterial, ' +
-    'collector, local or access. Take it from the master plan or the DCR; it is not ' +
-    'inferred here, and Dubai Building Code B.7.2.1 reads the same rank when it ' +
-    'recommends which boundary the vehicle access goes on.',
+    'No affection plan ranks a road. A sheet may print a road’s name or its width, but ' +
+    'neither is a rank, and the setback table is keyed on the rank — arterial, collector, ' +
+    'local or access. Take it from the master plan or the DCR; it is not inferred here, ' +
+    'and Dubai Building Code B.7.2.1 reads the same rank when it recommends which ' +
+    'boundary the vehicle access goes on.',
 };
 
 /*
@@ -756,13 +767,23 @@ const ROAD_HIERARCHY_GAP: MissingField = {
   panel would make "the drawing carries no text" false, and a sentence that is
   usually true is a sentence a reader learns to skip.
 */
-const ACCESS_SIDE_GAP: MissingField = {
+/*
+  17 OCT 2026: "THE BOX IS EMPTY" WAS FALSE. Rendered, the Trakhees `Access Side`
+  cell holds a large `*`, and the same mark sits beside a boundary on the
+  drawing. It is drawn, not typed, so the text layer this module reads has
+  nothing in the cell. The sentence now says what was and was not read, and
+  that what the mark means — the side the issuer requires, or one it permits —
+  is not established. Reading the mark is not built.
+*/
+export const ACCESS_SIDE_GAP: MissingField = {
   field: 'boundary.access_side',
   label: 'Access side',
   consequence:
-    'The sheet has a box for this and the box is empty, so the issuer did not say ' +
-    'which boundary the access is on. Mark the frontage yourself — nothing here ' +
-    'infers it, and Dubai Building Code B.7.2.1 reads it when it recommends which ' +
+    'The sheet’s Access Side box holds no text this reader can read. On the sheets seen ' +
+    'so far it holds a mark (*), drawn rather than typed, with a matching mark beside a ' +
+    'boundary on the drawing; whether it means the side the issuer requires or one it ' +
+    'permits is not established, so it is not read. Mark the frontage yourself, ' +
+    'against the sheet — Dubai Building Code B.7.2.1 reads it when it recommends which ' +
     'boundary the vehicle access goes on.',
 };
 

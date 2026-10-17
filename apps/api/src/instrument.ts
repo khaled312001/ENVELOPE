@@ -42,24 +42,33 @@ import {
   type Citation,
   type CoverageSchedule,
   type HeightAllowance,
+  type ParkingRequirement,
+  type PlotEdge,
+  type SetbackCell,
   type SetbackSchedule,
   type SetbackValue,
+  type SideSetbackTable,
   type StatedLimit,
   type StatedLimits,
   type Traced,
 } from '@envelope/core';
-import { parseAffectionPlan, type AffectionPlanFacts } from '@envelope/intake';
+import { blockingGaps, parseAffectionPlan, type AffectionPlanFacts } from '@envelope/intake';
 import {
+  citesPlaceholder,
   decisionKindOf,
   DecisionKind,
   faceOptionsOf,
+  isApplicable,
   podiumSetbackParameter,
   resolveParameter,
   ResolutionStatus,
   rulesFromInstrument,
+  SHEET_PARKING_FN,
   type FaceOption,
+  type InstrumentEdge,
   type InstrumentRules,
   type RuleRecord,
+  type UnboundLimit,
 } from '@envelope/rules';
 import { z } from 'zod';
 
@@ -96,6 +105,65 @@ export interface ReadSheet {
   /** The sheet's issue date, or `UNDATED` — the parser's own word for it. */
   readonly issuedOn: string;
   readonly documentUri: string;
+  /** The surveyed ring's legs, where the sheet prints a coordinate table. See {@link SurveyLegWire}. */
+  readonly surveyLegs?: readonly SurveyLegWire[];
+  /** `blockingGaps(facts)`, kept so `POST /api/runs` refuses what intake refused. */
+  readonly blocking: readonly GapWire[];
+  /** What the sheet states that no rule binds, read from intake's own sentences. */
+  readonly unapplied: readonly UnboundLimit[];
+}
+
+/** One leg of the sheet's surveyed ring: metres, and degrees clockwise from grid north. */
+export interface SurveyLegWire {
+  readonly lengthM: string;
+  readonly bearingDeg: string;
+}
+
+/** A gap intake reported, as `MissingField` has it. */
+export interface GapWire {
+  readonly field: string;
+  readonly label: string;
+  readonly consequence: string;
+}
+
+/*
+  TWO THINGS A SHEET STATES THAT NO RULE BINDS, READ FROM INTAKE'S OWN WORDS.
+
+  Neither has a typed field to bind from, and that is the point of listing them:
+  a run that applied Table B.13 and Table B.1 to a plot whose sheet says otherwise
+  must say it did (CLAUDE.md, "set aside is never dropped").
+*/
+
+/** The sheet refers parking to the master developer's DCR, which is not on file. */
+export const PARKING_DEFERRED_REASON =
+  'The sheet refers parking to the master developer’s DCR alongside the Dubai Building Code. ' +
+  'B.7.2.6.1 puts a DCR’s parking requirement above Table B.13, and no DCR is on file, so ' +
+  'Table B.13 is applied. Where the DCR sets other ratios, the demand shown is not the DCR’s.';
+/** The sheet states its setback as a quarter of the building's height. */
+export const SETBACK_RULE_REASON =
+  'The sheet states the setback as a rule, a quarter of the building height within a minimum ' +
+  'and a maximum, whose input is the storey count. It is not encoded, so it is not applied: ' +
+  'the study’s setbacks come from the general rules, or from a tower setback typed on the plot step.';
+
+function unappliedFrom(facts: AffectionPlanFacts): UnboundLimit[] {
+  const out: UnboundLimit[] = [];
+  if (facts.parkingDeferredTo && !facts.parking) {
+    out.push({ field: 'parking.deferred', stated: facts.parkingDeferredTo.value, reason: PARKING_DEFERRED_REASON });
+  }
+  /* Intake's sentence for a setback stated as a rule quotes the rule («…») or names the quarter-height note. */
+  const setbackGap = facts.missing.find((m) => m.field === 'setbacks');
+  if (setbackGap && /quarter of the building height/i.test(setbackGap.consequence)) {
+    const quoted = /«([^»]+)»/.exec(setbackGap.consequence)?.[1];
+    out.push({
+      field: 'setbacks.rule',
+      stated:
+        quoted && !quoted.startsWith('SETBACK')
+          ? quoted
+          : 'SEE NOTES: a quarter of the building height, at most 7.5 m and at least 3 m',
+      reason: SETBACK_RULE_REASON,
+    });
+  }
+  return out;
 }
 
 /**
@@ -147,6 +215,11 @@ export async function readAttachedSheet(
     parcelId: facts.parcelId?.value,
     issuedOn: facts.issueDate?.value ?? 'UNDATED',
     documentUri: attachment.filename,
+    ...(facts.survey
+      ? { surveyLegs: facts.survey.legs.value.map((l) => ({ lengthM: l.lengthM, bearingDeg: l.bearingDeg })) }
+      : {}),
+    blocking: blockingGaps(facts).map((m) => ({ field: m.field, label: m.label, consequence: m.consequence })),
+    unapplied: unappliedFrom(facts),
   };
 }
 
@@ -174,6 +247,9 @@ export function statedLimitsFrom(
   const coverage = lift<CoverageSchedule>(facts.coverage);
   const setbacks = lift<SetbackSchedule>(facts.setbacks);
   const height = lift<HeightAllowance>(facts.height);
+  /* The two Wave 1 readings `rules/instruments/sheet.ts` now binds (17 Oct 2026). */
+  const setbacksBySide = lift<SideSetbackTable>(facts.sideSetbacks);
+  const parking = lift<ParkingRequirement>(facts.parking);
 
   return {
     ...(far ? { far } : {}),
@@ -181,7 +257,9 @@ export function statedLimitsFrom(
     ...(plotAreaM2 ? { plotAreaM2 } : {}),
     ...(coverage ? { coverage } : {}),
     ...(setbacks ? { setbacks } : {}),
+    ...(setbacksBySide ? { setbacksBySide } : {}),
     ...(height ? { height } : {}),
+    ...(parking ? { parking } : {}),
   };
 }
 
@@ -194,6 +272,122 @@ export interface StoredSheet {
   readonly parcelId: string | null;
   readonly issuedOn: string;
   readonly documentUri: string;
+  /** Absent on a sheet stored before 17 Oct 2026; such a sheet binds no per-side setback. */
+  readonly surveyLegs?: readonly SurveyLegWire[];
+  /** Absent on a sheet stored before 17 Oct 2026: see {@link blockingOf}. */
+  readonly blocking?: readonly GapWire[];
+  /** Absent on a sheet stored before 17 Oct 2026, which then lists nothing here. */
+  readonly unapplied?: readonly UnboundLimit[];
+}
+
+/**
+ * What still stops a run on this sheet: intake's `blockingGaps`, as stored with it.
+ *
+ * A sheet stored before 17 Oct 2026 kept no gaps, and is held to the same
+ * predicate on the limits it did keep — a FAR, or a GFA with the plot area to
+ * divide it by, and a storey count — so an old plot is not let through what a
+ * new upload of the same sheet would refuse.
+ */
+export function blockingOf(sheet: StoredSheet): readonly GapWire[] {
+  if (sheet.blocking) return sheet.blocking;
+  const l = sheet.limits;
+  const gaps: GapWire[] = [];
+  if (!l.far && !(l.gfaM2 && l.plotAreaM2)) {
+    gaps.push({ field: 'far', label: 'FAR', consequence: 'Floor area ratio is not printed on this sheet.' });
+  }
+  if (!l.height) {
+    gaps.push({ field: 'height_allowance', label: 'Height', consequence: 'Permitted storey count is not printed.' });
+  }
+  return gaps;
+}
+
+/** The parameters a sheet is the instrument for, whose seed placeholder must not stand in for it. */
+export const SHEET_PARAMETERS: ReadonlySet<string> = new Set(['far.max', 'coverage.max', 'tower_plate.max', 'height.max']);
+
+/**
+ * The seed rules a run on an attached, bound sheet may not use: the placeholders
+ * (`PLACEHOLDER-NOT-A-REAL-INSTRUMENT`) for a limit the sheet is the instrument
+ * for. Where the sheet states the limit it wins anyway; where it is silent, a
+ * placeholder FAR of 5.00, a 60% coverage or a 1,280 m² plate from the PRD's
+ * appendix would govern a reported capacity on a plot whose own document says
+ * nothing of the kind (CLAUDE.md: "An affection plan that omits a limit does not
+ * get one"). Table B.1, B.4.2.2 and B.13 are not placeholders — they cite the
+ * code's page — and stay.
+ */
+export function placeholdersForSheet(rules: readonly RuleRecord[]): readonly RuleRecord[] {
+  return rules.filter((r) => citesPlaceholder(r) && SHEET_PARAMETERS.has(r.parameterId));
+}
+
+/** Why a placeholder was not loaded for this run, said on the run's sheet report. */
+export const PLACEHOLDER_SET_ASIDE_REASON =
+  'A placeholder figure no instrument prints. This plot has its own affection plan, so the ' +
+  'placeholder is not applied to it: where the sheet states this limit the sheet’s figure is ' +
+  'used, and where it is silent the limit is left open rather than filled.';
+
+/*
+  WHICH BOUNDARY IS WHICH SURVEYED LEG.
+
+  "SIDE 1" on a DDA sheet names a leg of its coordinate table, and the plot's
+  edge 0 is whichever boundary its author entered first. The two rings are matched
+  by length and bearing, both ways round and from every starting corner, and the
+  match is used only when exactly one exists — on a rectangle entered from a
+  traced outline, two do, and choosing between them would be choosing which
+  neighbour gets the street's figure.
+*/
+const LEG_LENGTH_TOLERANCE_M = new Decimal('0.10');
+const LEG_BEARING_TOLERANCE_DEG = 1;
+
+/** Degrees clockwise from grid north of the direction start → end. */
+function directionDeg(e: PlotEdge): number {
+  const deg = (Math.atan2(e.end.x - e.start.x, e.end.y - e.start.y) * 180) / Math.PI;
+  return (deg + 360) % 360;
+}
+
+const angleApart = (a: number, b: number): number => {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+};
+
+/** Why the plot's boundaries could not be placed on the survey's legs. Said on `notBound`. */
+export const RING_NOT_SURVEY_REASON =
+  'This plot’s boundaries are not the sheet’s surveyed ring, leg for leg by length and bearing, ' +
+  'so no side of the table can be placed on one of them. Enter the plot from the sheet’s ' +
+  'coordinate table to apply it.';
+
+/**
+ * Each plot edge with the surveyed leg it is, or a sentence saying why none could be told.
+ */
+export function edgesOnSurvey(
+  edges: readonly PlotEdge[],
+  legs: readonly SurveyLegWire[] | undefined,
+): { readonly edges: readonly InstrumentEdge[]; readonly unmatched?: string } {
+  const plain = edges.map((e) => ({ seq: e.seq, classification: e.classification }));
+  if (!legs || legs.length === 0) return { edges: plain };
+  const n = legs.length;
+  if (edges.length !== n || edges.some((e) => e.arc !== undefined)) {
+    return { edges: plain, unmatched: RING_NOT_SURVEY_REASON };
+  }
+  const fits = (edge: PlotEdge, leg: SurveyLegWire, reversed: boolean): boolean => {
+    const length = new Decimal(edge.lengthMm).div(1000);
+    const want = Number(leg.bearingDeg) + (reversed ? 180 : 0);
+    return (
+      length.minus(leg.lengthM).abs().lte(LEG_LENGTH_TOLERANCE_M) &&
+      angleApart(directionDeg(edge), want) <= LEG_BEARING_TOLERANCE_DEG
+    );
+  };
+  const matches: number[][] = [];
+  for (const reversed of [false, true]) {
+    for (let k = 0; k < n; k += 1) {
+      // Forward: edge i is leg (i + k). Reversed: edge i walks leg (k − i) backwards.
+      const legOf = (i: number): number => (reversed ? (((k - i) % n) + n) % n : (i + k) % n);
+      if (edges.every((e, i) => fits(e, legs[legOf(i)]!, reversed))) {
+        matches.push(edges.map((_, i) => legOf(i)));
+      }
+    }
+  }
+  if (matches.length !== 1) return { edges: plain, unmatched: RING_NOT_SURVEY_REASON };
+  const legOfEdge = matches[0]!;
+  return { edges: edges.map((e, i) => ({ seq: e.seq, classification: e.classification, surveyLeg: legOfEdge[i]! })) };
 }
 
 /**
@@ -227,6 +421,8 @@ export function bindSheet(
   authoredBy: string,
   /** How many of the plot's boundaries are roads; decides whether "which is the front?" is reported. */
   roadBoundaries?: number,
+  /** The plot's boundaries, so a per-side table can be placed on them. See {@link edgesOnSurvey}. */
+  plotEdges?: readonly PlotEdge[],
 ): BoundSheet | SheetRefusal {
   if (sheet.parcelId !== null && !sameParcel(sheet.parcelId, plotNumber)) {
     return {
@@ -238,6 +434,10 @@ export function bindSheet(
     };
   }
 
+  const onSurvey = plotEdges ? edgesOnSurvey(plotEdges, sheet.surveyLegs) : undefined;
+  const placed = onSurvey
+    ? { edges: onSurvey.edges, ...(onSurvey.unmatched ? { edgesUnmatched: onSurvey.unmatched } : {}) }
+    : {};
   const built = rulesFromInstrument(sheet.limits, {
     plotNumber,
     instrumentId: `${sheet.parcelId ?? plotNumber}@${sheet.issuedOn}`,
@@ -250,9 +450,16 @@ export function bindSheet(
     issuedOn: sheet.issuedOn === 'UNDATED' ? '1970-01-01' : sheet.issuedOn,
     authoredBy,
     ...(roadBoundaries === undefined ? {} : { roadBoundaries }),
+    ...placed,
   });
 
-  return { ...built, documentUri: sheet.documentUri, issuedOn: sheet.issuedOn };
+  return {
+    ...built,
+    /* What intake read and no rule binds, listed beside what the binder declined. */
+    notBound: [...built.notBound, ...(sheet.unapplied ?? [])],
+    documentUri: sheet.documentUri,
+    issuedOn: sheet.issuedOn,
+  };
 }
 
 export function isRefusal(b: BoundSheet | SheetRefusal): b is SheetRefusal {
@@ -273,6 +480,16 @@ export type SheetSetback =
 export interface SheetSetbacks {
   readonly tower: Readonly<Record<string, SheetSetback>>;
   readonly podium: Readonly<Record<string, SheetSetback>>;
+  /**
+   * The same, per boundary, keyed by `seq` (17 Oct 2026). A per-side table binds
+   * one boundary and not its class — side 1 is 5 m and side 2 is 7 m, both
+   * neighbours — so the plot step reads this first. Absent where the caller gave
+   * no boundaries.
+   */
+  readonly bySeq?: {
+    readonly tower: Readonly<Record<string, SheetSetback>>;
+    readonly podium: Readonly<Record<string, SheetSetback>>;
+  };
 }
 
 const EDGE_CLASSES = ['ROAD', 'ADJACENT_PLOT', 'OPEN_SPACE', 'OTHER'] as const;
@@ -292,37 +509,87 @@ export function sheetSetbacksFor(
   rules: readonly RuleRecord[],
   plotNumber: string,
   frontageCount: number,
+  edges?: readonly { readonly seq: number; readonly classification: string }[],
 ): SheetSetbacks {
+  const one = (parameterId: string, edge: Record<string, unknown>): SheetSetback | undefined => {
+    const r = resolveParameter(parameterId, rules, {
+      plot: { plot_number: plotNumber, frontage_count: frontageCount },
+      edge,
+    });
+    const g = r.governing;
+    if (r.status !== ResolutionStatus.RESOLVED || !g) return undefined;
+    const clause = g.rule.citation.sourceTextVerbatim;
+    const faces = faceOptionsOf(g.rule);
+    if (faces) {
+      return { kind: decisionKindOf(g.rule) === DecisionKind.FACADE ? 'BY_FACADE' : 'BY_FACE', faces, clause };
+    }
+    return g.value.kind === 'scalar' ? { kind: 'FIXED', metres: g.value.value.toString(), clause } : undefined;
+  };
   const read = (parameterOf: (cls: string) => string): Record<string, SheetSetback> => {
     const out: Record<string, SheetSetback> = {};
     for (const cls of EDGE_CLASSES) {
-      const r = resolveParameter(parameterOf(cls), rules, {
-        plot: { plot_number: plotNumber, frontage_count: frontageCount },
-        edge: { classification: cls },
-      });
-      const g = r.governing;
-      if (r.status !== ResolutionStatus.RESOLVED || !g) continue;
-      const clause = g.rule.citation.sourceTextVerbatim;
-      const faces = faceOptionsOf(g.rule);
-      if (faces) {
-        out[cls] = { kind: decisionKindOf(g.rule) === DecisionKind.FACADE ? 'BY_FACADE' : 'BY_FACE', faces, clause };
-      } else if (g.value.kind === 'scalar') {
-        out[cls] = { kind: 'FIXED', metres: g.value.value.toString(), clause };
-      }
+      const s = one(parameterOf(cls), { classification: cls });
+      if (s) out[cls] = s;
+    }
+    return out;
+  };
+  const readSeq = (parameterOf: (cls: string) => string): Record<string, SheetSetback> => {
+    const out: Record<string, SheetSetback> = {};
+    for (const e of edges ?? []) {
+      const s = one(parameterOf(e.classification), { classification: e.classification, seq: e.seq });
+      if (s) out[String(e.seq)] = s;
     }
     return out;
   };
   return {
     tower: read((cls) => `setback.${cls.toLowerCase()}`),
     podium: read(podiumSetbackParameter),
+    ...(edges
+      ? { bySeq: { tower: readSeq((cls) => `setback.${cls.toLowerCase()}`), podium: readSeq(podiumSetbackParameter) } }
+      : {}),
   };
+}
+
+/**
+ * Whether a bound rule applies to THIS plot, on at least one of its boundaries.
+ *
+ * The sheet report's `bound` list printed every rule the binder emitted, which on
+ * a one-road plot included the "which road is the front?" rule fenced to plots
+ * with two — two `setback.road` rows, one of them for a plot this is not. Each
+ * rule is held to the plot's own context: its number and road count, and, for a
+ * boundary rule, each boundary's class and `seq` in turn.
+ */
+export function appliesToPlot(
+  rule: RuleRecord,
+  plot: {
+    readonly plotNumber: string;
+    readonly frontageCount: number;
+    readonly edges?: readonly { readonly seq: number; readonly classification: string }[];
+  },
+): boolean {
+  const plotCtx = { plot: { plot_number: plot.plotNumber, frontage_count: plot.frontageCount } };
+  if (isApplicable(rule.applicability, plotCtx)) return true;
+  return (plot.edges ?? []).some((e) =>
+    isApplicable(rule.applicability, { ...plotCtx, edge: { classification: e.classification, seq: e.seq } }),
+  );
 }
 
 /** A bound rule's value as the sheet panel prints it: the figure, or the figures by face. */
 export function boundValueOf(rule: RuleRecord): string {
   const faces = faceOptionsOf(rule);
   if (faces) return faces.map((f) => `${f.face} ${f.metres === null ? 'not stated' : f.metres}`).join('; ');
-  return String(rule.evaluatorArgs['value']);
+  /*
+    The sheet's dwelling-parking rule carries no single `value`: it is a
+    threshold, and printing "undefined" beside it would read as a blank the
+    sheet left. Its own terms are printed instead.
+  */
+  const a = rule.evaluatorArgs;
+  if (a['fn'] === SHEET_PARKING_FN) {
+    const on = a['measure'] === 'GFA' ? ' (GFA)' : a['measure'] === 'SALEABLE' ? ' (saleable)' : '';
+    const studio = a['studioBays'] !== undefined ? `; studio ${String(a['studioBays'])}` : '';
+    return `${String(a['baysAtOrBelow'])} per dwelling ≤ ${String(a['thresholdM2'])} m²${on}, ${String(a['baysAbove'])} above${studio}`;
+  }
+  return String(a['value']);
 }
 
 /**
@@ -365,6 +632,116 @@ export interface StoredSheetWire {
     readonly citation: Citation;
   };
   readonly height?: { readonly value: HeightAllowance; readonly citation: Citation };
+  /* Since 17 Oct 2026. Absent on every sheet stored before, which binds neither. */
+  readonly setbacksBySide?: { readonly value: SideSetbackTableWire; readonly citation: Citation };
+  readonly parking?: { readonly value: ParkingRequirementWire; readonly citation: Citation };
+  readonly surveyLegs?: readonly SurveyLegWire[];
+  readonly blocking?: readonly GapWire[];
+  readonly unapplied?: readonly UnboundLimit[];
+}
+
+type SetbackCellWire =
+  | { readonly kind: 'DISTANCE'; readonly metres: string }
+  | { readonly kind: 'SEE_NOTES' | 'NOT_APPLICABLE'; readonly verbatim: string };
+
+interface SideSetbackTableWire {
+  readonly sides: readonly {
+    readonly side: number;
+    readonly building: SetbackCellWire;
+    readonly podium: SetbackCellWire;
+    readonly boundary?: number;
+  }[];
+  readonly raw: string;
+  readonly placement: string;
+}
+
+interface ParkingRequirementWire {
+  readonly dwelling?: {
+    readonly baysAtOrBelow: number;
+    readonly baysAbove: number;
+    readonly thresholdM2: string;
+    readonly measure: 'GFA' | 'UNSTATED';
+    readonly studioBays?: number;
+  };
+  readonly byArea: readonly {
+    readonly use: 'RETAIL' | 'COMMERCIAL' | 'OFFICE';
+    readonly bays: number;
+    readonly perM2: string;
+    readonly measure: 'NET_AREA' | 'GFA' | 'UNSTATED';
+  }[];
+  readonly unread: readonly string[];
+  readonly raw: string;
+}
+
+const cellOut = (c: SetbackCell): SetbackCellWire =>
+  c.kind === 'DISTANCE' ? { kind: 'DISTANCE', metres: c.metres.toString() } : { kind: c.kind, verbatim: c.verbatim };
+const cellIn = (c: SetbackCellWire): SetbackCell =>
+  c.kind === 'DISTANCE' ? { kind: 'DISTANCE', metres: new Decimal(c.metres) } : { kind: c.kind, verbatim: c.verbatim };
+
+function sidesOut(t: SideSetbackTable): SideSetbackTableWire {
+  return {
+    sides: t.sides.map((s) => ({
+      side: s.side,
+      building: cellOut(s.building),
+      podium: cellOut(s.podium),
+      ...(s.boundary === undefined ? {} : { boundary: s.boundary }),
+    })),
+    raw: t.raw,
+    placement: t.placement,
+  };
+}
+
+function sidesIn(t: SideSetbackTableWire): SideSetbackTable {
+  return {
+    sides: t.sides.map((s) => ({
+      side: s.side,
+      building: cellIn(s.building),
+      podium: cellIn(s.podium),
+      ...(s.boundary === undefined ? {} : { boundary: s.boundary }),
+    })),
+    raw: t.raw,
+    placement: t.placement,
+  };
+}
+
+function parkingOut(p: ParkingRequirement): ParkingRequirementWire {
+  const d = p.dwelling;
+  return {
+    ...(d
+      ? {
+          dwelling: {
+            baysAtOrBelow: d.baysAtOrBelow,
+            baysAbove: d.baysAbove,
+            thresholdM2: d.thresholdM2.toString(),
+            measure: d.measure,
+            ...(d.studioBays === undefined ? {} : { studioBays: d.studioBays }),
+          },
+        }
+      : {}),
+    byArea: p.byArea.map((a) => ({ use: a.use, bays: a.bays, perM2: a.perM2.toString(), measure: a.measure })),
+    unread: p.unread,
+    raw: p.raw,
+  };
+}
+
+function parkingIn(p: ParkingRequirementWire): ParkingRequirement {
+  const d = p.dwelling;
+  return {
+    ...(d
+      ? {
+          dwelling: {
+            baysAtOrBelow: d.baysAtOrBelow,
+            baysAbove: d.baysAbove,
+            thresholdM2: new Decimal(d.thresholdM2),
+            measure: d.measure,
+            ...(d.studioBays === undefined ? {} : { studioBays: d.studioBays }),
+          },
+        }
+      : {}),
+    byArea: p.byArea.map((a) => ({ use: a.use, bays: a.bays, perM2: new Decimal(a.perM2), measure: a.measure })),
+    unread: p.unread,
+    raw: p.raw,
+  };
 }
 
 type SetbackValueWire =
@@ -456,6 +833,13 @@ export function serialiseSheet(sheet: StoredSheet): StoredSheetWire {
         }
       : {}),
     ...(l.height ? { height: { value: l.height.value, citation: l.height.citation } } : {}),
+    ...(l.setbacksBySide
+      ? { setbacksBySide: { value: sidesOut(l.setbacksBySide.value), citation: l.setbacksBySide.citation } }
+      : {}),
+    ...(l.parking ? { parking: { value: parkingOut(l.parking.value), citation: l.parking.citation } } : {}),
+    ...(sheet.surveyLegs ? { surveyLegs: sheet.surveyLegs } : {}),
+    ...(sheet.blocking ? { blocking: sheet.blocking } : {}),
+    ...(sheet.unapplied ? { unapplied: sheet.unapplied } : {}),
   };
 }
 
@@ -492,11 +876,18 @@ export function deserialiseSheet(w: StoredSheetWire): StoredSheet {
         }
       : {}),
     ...(w.height ? { height: { value: w.height.value, citation: w.height.citation } } : {}),
+    ...(w.setbacksBySide
+      ? { setbacksBySide: { value: sidesIn(w.setbacksBySide.value), citation: w.setbacksBySide.citation } }
+      : {}),
+    ...(w.parking ? { parking: { value: parkingIn(w.parking.value), citation: w.parking.citation } } : {}),
   };
   return {
     limits,
     parcelId: w.parcelId,
     issuedOn: w.issuedOn,
     documentUri: w.documentUri,
+    ...(w.surveyLegs ? { surveyLegs: w.surveyLegs } : {}),
+    ...(w.blocking ? { blocking: w.blocking } : {}),
+    ...(w.unapplied ? { unapplied: w.unapplied } : {}),
   };
 }

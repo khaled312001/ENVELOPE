@@ -52,15 +52,18 @@ import {
   SEED_RULES,
   SEED_RULES_WARNING,
   PRACTICE_STATEMENTS,
+  rulesFromBrief,
   statementById,
   statementFor,
   StatementSubject,
+  type RuleRecord,
 } from '@envelope/rules';
 import {
   buildAssumptionRegister,
   compareParkingInFar,
   explainGoverningBand,
   runPipeline,
+  RunBlockedError,
   type RunInput,
 } from '@envelope/capacity';
 import {
@@ -94,14 +97,19 @@ import { gateAck, plotInput, runRequest, shareRequest, type RunRequest } from '.
 import { registerGeoRoutes } from './geo-route.js';
 import { registerIntakeRoutes } from './intake-route.js';
 import {
+  appliesToPlot,
   AttachmentError,
   bindSheet,
+  blockingOf,
   boundValueOf,
   deserialiseSheet,
   isRefusal,
+  PLACEHOLDER_SET_ASIDE_REASON,
+  placeholdersForSheet,
   readAttachedSheet,
   serialiseSheet,
   sheetSetbacksFor,
+  type GapWire,
   type SheetSetbacks,
   type StoredSheet,
   type StoredSheetWire,
@@ -358,6 +366,8 @@ export async function build(
       name === 'UnidentifiedActorError' ? 401
       : name === 'GateNotSatisfiedError' || name === 'GateStaleError' ? 409
       : name === 'RunBlockedError' || name === 'EnvelopeHaltedError' || name === 'ParkingHaltedError' ? 422
+      // The plot's own sheet leaves a figure open that changes the answer: a question, said with both readings.
+      : name === 'InstrumentQuestionError' ? 422
       : name === 'EmissionBlockedError' ? 422
       : name === 'UnsupportedShapeError' || name === 'DegenerateGeometryError' ? 422
       : name === 'UnapprovedRuleError' || name === 'RuleIntegrityError' ? 409
@@ -662,6 +672,9 @@ export async function build(
           parcelId: read.parcelId ?? null,
           issuedOn: read.issuedOn,
           documentUri: read.documentUri,
+          ...(read.surveyLegs ? { surveyLegs: read.surveyLegs } : {}),
+          blocking: read.blocking,
+          unapplied: read.unapplied,
         };
       } catch (error) {
         if (error instanceof AttachmentError) {
@@ -779,7 +792,11 @@ export async function build(
         is how a sheet for the wrong parcel is caught at upload rather than three
         steps later.
       */
-      sheet: sheetReport(sheet ? bindSheet(sheet, plot.plotNumber, actor.name, plot.frontageCount) : undefined, plot),
+      sheet: sheetReport(
+        sheet ? bindSheet(sheet, plot.plotNumber, actor.name, plot.frontageCount, plot.edges) : undefined,
+        plot,
+        sheet ? blockingOf(sheet) : [],
+      ),
     };
   });
 
@@ -880,7 +897,7 @@ export async function build(
       ...(body.useDraftRules ? loadSeedRulesForDevelopment(DEV_ACK) : SEED_RULES),
     );
     const asOf = asOfNow(new Date().toISOString().slice(0, 10));
-    const rules = store.load(asOf);
+    const library = store.load(asOf);
 
     /*
       THE PLOT'S OWN SHEET, APPLIED — THE HIGHEST-SEVERITY DEFECT IN THE PLAN.
@@ -897,10 +914,52 @@ export async function build(
       no sheet at all.
     */
     const stored = await loadSheet(repo, body.plotId);
-    const bound = stored ? bindSheet(stored, plot.plotNumber, actor.name, plot.frontageCount) : undefined;
+    const bound = stored ? bindSheet(stored, plot.plotNumber, actor.name, plot.frontageCount, plot.edges) : undefined;
     const instrumentRules = bound && !isRefusal(bound) ? bound.rules : [];
 
-    const input = runInputFrom(body, plot, [...rules, ...instrumentRules], actor);
+    /*
+      A PROJECT BRIEF, WHERE THE RUN NAMES ONE (17 Oct 2026). Offered, never
+      pre-selected, and refused in a sentence when it is not this plot's — see
+      `rules/instruments/brief.ts`. It binds only what the sheet left unbound.
+    */
+    const briefRules = projectBriefRulesFor(body, plot.plotNumber, actor.name, instrumentRules, standardsOffered);
+
+    /*
+      WHAT THE SHEET DOES NOT STATE STOPS THE RUN — HERE, NOT ONLY AT INTAKE.
+
+      `blockingGaps()` was called by the intake route and nowhere else, so a plot
+      whose own sheet prints no FAR (MED12, 6468096) was computed anyway, on the
+      seed's placeholder FAR of 5.00 and its 45 m, every number shown DERIVED. A
+      sheet attached and bound is the plot's instrument: what it omits is a gap,
+      and a gap a brief the run named does not fill refuses the run, naming each
+      limit. A plot with no sheet, or a sheet refused for the wrong parcel, runs
+      as before — Step 0 is not gated — and says so on the run.
+    */
+    const sheetBound = bound !== undefined && !isRefusal(bound);
+    if (stored && sheetBound) {
+      const briefBinds = new Set(briefRules.map((r) => r.parameterId));
+      const open = blockingOf(stored).filter(
+        (g) => !(briefBinds.has('far.max') && (g.field === 'far' || g.field === 'gfa_permitted_sqm')),
+      );
+      if (open.length > 0) throw new RunBlockedError(sheetGapsSentence(open, plot.plotNumber), 'G2:sheet');
+    }
+    /*
+      AND NO PLACEHOLDER STANDS IN FOR THE SHEET. On a plot with a bound sheet the
+      seed's placeholder FAR, coverage, plate and height are not loaded: where the
+      sheet speaks it wins anyway, and where it is silent a figure no instrument
+      prints would govern a reported capacity. Named on the run's sheet report.
+    */
+    const setAsidePlaceholders = sheetBound ? placeholdersForSheet(library) : [];
+    const rules = library.filter((r) => !setAsidePlaceholders.includes(r));
+
+    /*
+      The plot's own instruments FIRST. Resolution does not care about order —
+      §11.5 step 1 hands a plot-specific rule the parameter wherever it stands —
+      but Band C names "the" parking rule by finding the first one loaded, and
+      with the library first that was Table B.13 on a plot whose sheet beat it.
+    */
+    const runRules = [...instrumentRules, ...briefRules, ...rules];
+    const input = runInputFrom(body, plot, runRules, actor);
 
     // The baseline must be taken immediately before the run and read
     // immediately after, with no await between: the geometry counters are
@@ -966,7 +1025,7 @@ export async function build(
       body.useDraftRules,
       checks,
     );
-    const sheetSaid = sheetReport(bound, plot);
+    const sheetSaid = sheetReport(bound, plot, [], setAsidePlaceholders, briefRules);
 
     // --- The §3.4 artifact, built now and stored -------------------------
     //
@@ -991,7 +1050,7 @@ export async function build(
         version of the rule base was loaded. What the sheet added is identified
         by `sheet` on the payload, which names the document and its issue date.
       */
-      rules: [...rules, ...instrumentRules],
+      rules: runRules,
       ruleSetHash,
       engineVersion: ENGINE_VERSION,
       draftRules: body.useDraftRules,
@@ -2002,8 +2061,34 @@ function vehicleAccessOf(body: RunRequest): Pick<RunInput, 'levelPlan'> {
  */
 function sheetReport(
   bound: ReturnType<typeof bindSheet> | undefined,
-  plot?: { readonly plotNumber: string; readonly frontageCount: number },
+  plot?: {
+    readonly plotNumber: string;
+    readonly frontageCount: number;
+    readonly edges?: readonly { readonly seq: number; readonly classification: string }[];
+  },
+  /** What the sheet leaves open that stops a run, said at upload so the reader meets it on the plot step. */
+  blocking: readonly GapWire[] = [],
+  /** Seed placeholders this run did not load because the plot has its own sheet. */
+  placeholders: readonly RuleRecord[] = [],
+  /** Rules a project brief supplied, where the run named one. */
+  brief: readonly RuleRecord[] = [],
 ): SheetReportWire {
+  const extras = {
+    blocking,
+    placeholdersNotApplied: placeholders.map((r) => ({
+      ruleId: r.ruleId,
+      parameterId: r.parameterId,
+      value: boundValueOf(r),
+      unit: r.unit,
+      reason: PLACEHOLDER_SET_ASIDE_REASON,
+    })),
+    briefBound: brief.map((r) => ({
+      parameterId: r.parameterId,
+      value: boundValueOf(r),
+      unit: r.unit,
+      clause: r.citation.sourceTextVerbatim,
+    })),
+  };
   if (!bound) {
     return {
       attached: false,
@@ -2013,6 +2098,7 @@ function sheetReport(
       bound: [],
       notBound: [],
       setbacks: null,
+      ...extras,
     };
   }
   if (isRefusal(bound)) {
@@ -2024,14 +2110,21 @@ function sheetReport(
       bound: [],
       notBound: [],
       setbacks: null,
+      ...extras,
     };
   }
+  /*
+    ONLY WHAT APPLIES TO THIS PLOT. A one-road plot listed two `setback.road`
+    rows: the front's figure and the "which road is the front?" rule fenced to
+    plots with two roads. Each rule is held to this plot's own context first.
+  */
+  const applying = plot ? bound.rules.filter((r) => appliesToPlot(r, plot)) : bound.rules;
   return {
     attached: true,
     documentUri: bound.documentUri,
     issuedOn: bound.issuedOn,
     refused: null,
-    bound: bound.rules.map((r) => ({
+    bound: applying.map((r) => ({
       parameterId: r.parameterId,
       value: boundValueOf(r),
       unit: r.unit,
@@ -2045,7 +2138,8 @@ function sheetReport(
       sheet was the podium row's 0 m. Resolved here against this plot's road
       count, so a front the sheet cannot place is shown as the question it is.
     */
-    setbacks: plot ? sheetSetbacksFor(bound.rules, plot.plotNumber, plot.frontageCount) : null,
+    setbacks: plot ? sheetSetbacksFor(bound.rules, plot.plotNumber, plot.frontageCount, plot.edges) : null,
+    ...extras,
   };
 }
 
@@ -2058,6 +2152,68 @@ interface SheetReportWire {
   readonly bound: readonly { readonly parameterId: string; readonly value: string; readonly unit: string; readonly clause: string }[];
   readonly notBound: readonly { readonly field: string; readonly stated: string; readonly reason: string }[];
   readonly setbacks: SheetSetbacks | null;
+  /** The gaps that stop a run on this plot until an instrument fills them (17 Oct 2026). */
+  readonly blocking: readonly GapWire[];
+  /** Seed placeholders this run did not load, each with the reason. Empty at upload. */
+  readonly placeholdersNotApplied: readonly {
+    readonly ruleId: string;
+    readonly parameterId: string;
+    readonly value: string;
+    readonly unit: string;
+    readonly reason: string;
+  }[];
+  /** What a named project brief bound, marked as the brief's. Empty unless the run named one. */
+  readonly briefBound: readonly { readonly parameterId: string; readonly value: string; readonly unit: string; readonly clause: string }[];
+}
+
+/**
+ * The sentence a run on a sheet that omits a limit is refused with.
+ *
+ * It names each limit by what the sheet calls it and says what would supply it,
+ * because "blocked" with no way forward teaches a reader to detach the sheet —
+ * which would run the plot on placeholders again, the defect this refuses.
+ */
+export function sheetGapsSentence(gaps: readonly GapWire[], plotNumber: string): string {
+  const labels = gaps.map((g) => g.label);
+  const names = labels.length < 2 ? labels.join('') : `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+  return (
+    `plot ${plotNumber}: its affection plan does not state ${names}, and the study does not fill a limit ` +
+    'the plot’s own instrument leaves out. Supply it from the instrument that states it (the master ' +
+    'plan or the DCR), or select this plot’s project brief where one is on file; a placeholder figure ' +
+    'is not used in its place.'
+  );
+}
+
+/**
+ * The rules the project brief a run names supplies, or a refusal in a sentence.
+ *
+ * Refused when the brief is not on file for this plot, or when this deployment
+ * does not serve developer standards — a brief is a developer's confidential
+ * document, and binding one through a run would serve its figures by another door.
+ */
+function projectBriefRulesFor(
+  body: RunRequest,
+  plotNumber: string,
+  actorName: string,
+  sheetRules: readonly RuleRecord[],
+  standardsOffered: boolean,
+): readonly RuleRecord[] {
+  if (body.projectBriefId === undefined) return [];
+  const brief = standardsOffered ? briefFor(PROJECT_BRIEFS, plotNumber) : undefined;
+  if (!brief || brief.briefId !== body.projectBriefId) {
+    throw Object.assign(
+      new Error(
+        `no project brief "${body.projectBriefId}" is on file for plot ${plotNumber}. Send the id of ` +
+          'this plot’s brief, or none.',
+      ),
+      { statusCode: 422 },
+    );
+  }
+  return rulesFromBrief(brief, {
+    plotNumber,
+    authoredBy: actorName,
+    sheetBinds: new Set(sheetRules.map((r) => r.parameterId)),
+  });
 }
 
 async function loadSheet(repo: RunRepository, plotId: string): Promise<StoredSheet | undefined> {

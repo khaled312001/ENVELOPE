@@ -143,6 +143,26 @@ export interface SheetReport {
    * states" off `tower` only, never off `podium`.
    */
   readonly setbacks?: SheetSetbacks | null;
+  /**
+   * What the sheet leaves open that stops a run on this plot until an instrument
+   * fills it (17 Oct 2026). Absent from an older response.
+   */
+  readonly blocking?: readonly { readonly field: string; readonly label: string; readonly consequence: string }[];
+  /** Seed placeholders a run on this plot did not load, because the plot has its own sheet. */
+  readonly placeholdersNotApplied?: readonly {
+    readonly ruleId: string;
+    readonly parameterId: string;
+    readonly value: string;
+    readonly unit: string;
+    readonly reason: string;
+  }[];
+  /** What a project brief the run named bound — a developer's document, not a regulation. */
+  readonly briefBound?: readonly {
+    readonly parameterId: string;
+    readonly value: string;
+    readonly unit: string;
+    readonly clause: string;
+  }[];
 }
 
 /** One face a sheet states a setback for — "front", "side", or a face with the sheet's condition. */
@@ -159,6 +179,14 @@ export type SheetSetback =
 export interface SheetSetbacks {
   readonly tower: Readonly<Record<string, SheetSetback>>;
   readonly podium: Readonly<Record<string, SheetSetback>>;
+  /**
+   * The same per boundary, keyed by `seq` (17 Oct 2026): a per-side table binds a
+   * boundary, not its class, so the plot step reads this first.
+   */
+  readonly bySeq?: {
+    readonly tower: Readonly<Record<string, SheetSetback>>;
+    readonly podium: Readonly<Record<string, SheetSetback>>;
+  };
 }
 
 export interface PlotCreated {
@@ -791,6 +819,19 @@ export interface AffectionPlanRead {
     };
     /** The sheet's own parking row, verbatim (the Municipality's sheet has one). */
     readonly parkingRequirement?: TracedWire | null;
+    /** The developer's own plot number, where the sheet prints one beside the parcel id (17 Oct 2026). */
+    readonly developerPlotNo?: TracedWire | null;
+    /** The date the sheet stops being valid, as printed. */
+    readonly expiryDate?: TracedWire | null;
+    /**
+     * The DDA's per-side setback table: the rows as printed and how each side was
+     * placed on a surveyed boundary, or why none was. Its cells are plain JSON.
+     */
+    readonly sideSetbacks?: { readonly value: { readonly raw: string; readonly placement: string } } | null;
+    /** `LAND USE / GFA SPLIT`, line by line, as printed. */
+    readonly landUseSplit?: { readonly value: readonly { readonly use: string; readonly areaM2: string }[] } | null;
+    /** Road labels no numbered side claims, as printed, with the sentence that says they are placed on nothing. */
+    readonly unplacedRoads?: { readonly value: readonly string[]; readonly note: string } | null;
     readonly missing: readonly {
       readonly field: string;
       readonly label: string;

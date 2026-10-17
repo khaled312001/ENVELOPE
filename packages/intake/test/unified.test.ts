@@ -187,6 +187,14 @@ describe('the unified site plan, read', () => {
     expect(facts.boundaryDimensionsM?.value).toEqual(['40.00', '30.00']);
   });
 
+  /* 17 Oct 2026: a road no side claims used to be dropped, so the sheet read as printing one road fewer. */
+  it('publishes a road no side claims, as printed, and places it on nothing', () => {
+    const facts = read(unifiedSheet([at('ROAD 30.00M', 600, 200, 60)]));
+    expect(facts.unplacedRoads?.value).toEqual(['ROAD 30.00M']);
+    expect(facts.sideRoads?.value.map((r) => r.verbatim)).toEqual(['ROAD 20.00M', 'ROAD 12.00M']);
+    expect(read(unifiedSheet()).unplacedRoads).toBeUndefined();
+  });
+
   /* A road whose nearest side is nearer another road is not given that side. */
   it('pairs a road with a side only where each is the other’s nearest', () => {
     const { paired, unpaired } = unifiedSideRoads(page([at('SIDE 1', 0, 0, 30), at('ROAD 10.00M', 0, 20, 60), at('ROAD 30.00M', 0, 60, 60)]));

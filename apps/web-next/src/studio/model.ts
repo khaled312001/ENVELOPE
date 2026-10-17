@@ -224,6 +224,12 @@ export function requestBody(
     parkingUsableFraction: { value: '0.85', source: 'ASSUMED', basis: USABLE_FRACTION_BASIS },
     saleableEfficiency: { value: SALEABLE_ASSUMED, source: 'ASSUMED', basis: SALEABLE_BASIS },
     realismDiscount: '1.00',
+    /*
+      Still sent (17 Oct 2026): every seed rule is DRAFT and nothing approved exists to
+      load instead. What changed is the server's side of it: on a plot with its own
+      sheet, the seed's placeholder FAR, coverage, plate and height are set aside and
+      listed, and a limit the sheet omits refuses the run in a sentence.
+    */
     useDraftRules: true,
   };
 }

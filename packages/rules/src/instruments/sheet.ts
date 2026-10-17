@@ -55,10 +55,11 @@
  *   `levels.max_above_ground`, a count, and is never converted into `height.max`.
  *   It used to bind nothing at all, which is how `G+4` reported thirteen levels;
  *   see the height block below.
- * - **A stated GFA beside a stated FAR binds nothing more**, because there is no
- *   `gfa.max` parameter: the FAR binds and the GFA is a cross-check against it.
- *   A GFA printed with NO FAR (every DDA sheet) binds `far.max` as the sheet's own
- *   GFA ÷ its own printed plot area — see the FAR block below.
+ * - **A stated GFA beside a stated FAR governs, and the FAR is its cross-check**
+ *   (17 Oct 2026; it was the other way round). There is still no `gfa.max`
+ *   parameter, so the GFA binds `far.max` as the sheet's own GFA ÷ its own printed
+ *   plot area — as it always did for a sheet printing a GFA and NO FAR (every DDA
+ *   sheet). See the FAR block below.
  * - **A face the sheet names and the plot cannot tell apart is a question, not a
  *   number.** "Front = 0m, Sides & Rear = 3m" on a plot with two roads does not
  *   say which road is the front; a sheet stating a side and a rear figure does not
@@ -94,8 +95,9 @@
  * where a reader meets it next to the number it produced.
  */
 
-import { Decimal, type StatedLimits, type SetbackValue } from '@envelope/core';
+import { Decimal, type SetbackCell, type StatedLimits, type SetbackValue } from '@envelope/core';
 
+import { NOT_APPLICABLE, readPath, registerCustomFunction, RuleEvaluationError } from '../evaluators.js';
 import {
   ApprovalStatus,
   EvaluatorName,
@@ -143,6 +145,35 @@ export interface InstrumentBinding {
    * reporting one anyway would teach a reader to ignore the list.
    */
   readonly roadBoundaries?: number;
+  /**
+   * The plot's boundaries, each with the leg of the sheet's surveyed ring it IS,
+   * where the caller could tell (17 Oct 2026).
+   *
+   * Read only by the per-side setback table: "SIDE 1 is 5 m" names a surveyed
+   * leg, and a rule can only bind it on the plot's boundary that is that leg.
+   * The caller matches the two rings by length and bearing (`apps/api`), because
+   * a plot entered from a traced outline or started at another corner numbers its
+   * boundaries differently from the survey, and binding side 1's figure to the
+   * plot's edge 1 by index would put the street's figure on a neighbour. Absent,
+   * or with `surveyLeg` absent on every boundary, the table binds nothing and
+   * says why in `notBound`.
+   */
+  readonly edges?: readonly InstrumentEdge[];
+  /**
+   * Why `edges` carries no survey leg, when the caller tried and could not tell —
+   * a sentence for `notBound`. Absent where the caller had no ring to try.
+   */
+  readonly edgesUnmatched?: string;
+}
+
+/** One boundary of the plot, as the per-side table needs it. */
+export interface InstrumentEdge {
+  /** `PlotEdge.seq`. */
+  readonly seq: number;
+  /** `PlotEdge.classification`: which `setback.<class>` parameter its figure binds. */
+  readonly classification: string;
+  /** The leg of the sheet's surveyed ring this boundary is, `points[i] → points[i+1]`. */
+  readonly surveyLeg?: number;
 }
 
 /**
@@ -208,6 +239,141 @@ export const PODIUM_SIDE_REAR_REASON =
   'The sheet states a different podium setback for the side and for the rear, and which ' +
   'neighbour is the rear is not on the sheet. Applying either figure to both would choose for ' +
   'the reader.';
+
+/*
+  THE REASONS THE 17 OCT 2026 BINDINGS GIVE. Exported so `apps/api/test` can hold
+  each one to its Arabic in `@envelope/report/words`, which may not import this
+  package.
+*/
+
+/** The FAR, where the sheet also prints the GFA it rounds. */
+export const FAR_CROSS_CHECK_REASON =
+  'The sheet prints both its maximum GFA and its FAR, and the GFA governs: the FAR is that GFA ' +
+  'divided by the plot area and rounded, so multiplying it back under-reports. The study applies ' +
+  'the printed GFA ÷ the printed plot area; the printed FAR agrees with it to its own rounding.';
+/** A FAR and a GFA the sheet prints that do not agree to the FAR's rounding. */
+export const FAR_GFA_DISAGREE_REASON =
+  'The sheet’s FAR and its GFA ÷ plot area disagree by more than the FAR’s rounding. Both are ' +
+  'limits printed on the sheet, so the lower one binds. Check the sheet.';
+/** A cell of the per-side table that defers to the notes. */
+export const SIDE_SEE_NOTES_REASON =
+  'The sheet prints "SEE NOTES" in this cell instead of a distance, so no setback is read from it. ' +
+  'The study’s setback on this boundary comes from the general rules, or from a tower setback ' +
+  'typed on the plot step.';
+/** A side the drawing does not place on one surveyed boundary. */
+export const SIDE_NOT_PLACED_REASON =
+  'The drawing does not place this side on one surveyed boundary, so its figure is applied to no ' +
+  'boundary of this plot. The study’s setback there comes from the general rules, or from a tower ' +
+  'setback typed on the plot step.';
+/** Surveyed legs no side of the table names. */
+export const UNNAMED_LEGS_REASON =
+  'No side of the sheet’s setback table names these boundaries, so none of its figures is used ' +
+  'for them. Their setbacks come from the general rules, or from a tower setback typed on the ' +
+  'plot step.';
+/** The sheet's dwelling threshold, on an area the sheet does not name. */
+export const PARKING_MEASURE_REASON =
+  'The sheet sets its dwelling threshold on the unit’s area without saying which area: saleable ' +
+  'area or the unit’s share of GFA. The study applies the sheet’s rule where both readings give ' +
+  'the same number of bays, and stops where they do not.';
+/** A rate per area for a use the study does not model. */
+export const PARKING_AREA_USE_REASON =
+  'This study models no retail, commercial or office floor area, so the sheet’s rate per area ' +
+  'adds no bays. Where the scheme has such space, its bays are not in the demand shown.';
+/** A clause of the sheet's parking text the reader could not type. */
+export const PARKING_UNREAD_REASON =
+  'This clause of the sheet’s parking requirement could not be read into a rule, so it adds no ' +
+  'bays. Read it on the sheet.';
+
+/**
+ * The custom evaluator the sheet's dwelling parking rule runs under.
+ *
+ * A custom function, not a thirteenth evaluator: §11.4 caps the registry at
+ * twelve, and `custom_fn` is the registered, tested and reviewed escape hatch it
+ * names. Registered once, at module load, as `R-DBC-B422-HEIGHT`'s is.
+ */
+export const SHEET_PARKING_FN = 'sheet_parking_by_unit_area';
+
+/**
+ * Raised where the sheet's own words leave a figure open AND the open point
+ * changes the answer. Not a defect in the rule and not the engine's to choose;
+ * the API returns it as 422 with the sentence, which names both readings.
+ */
+export class InstrumentQuestionError extends Error {
+  override readonly name = 'InstrumentQuestionError';
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+/** One unit type as the demand context carries it: `parking.ts` writes these. */
+interface DemandMixEntry {
+  readonly typeId?: string;
+  readonly count?: number;
+  /** Saleable area of one unit of the type, m², as a decimal string. */
+  readonly nsa_m2?: string;
+  /** The unit's share of GFA, m²: saleable area ÷ the run's saleable share. */
+  readonly gfa_m2?: string;
+}
+
+/*
+  THE SHEET'S DWELLING RULE, EVALUATED. "One bay for each unit ≤ 150 m² GFA and two
+  above" (DDA), «موقف لكل شقة … وموقفين لكل شقة تزيد مساحتها عن 150 متر مربع» (DM).
+
+  NOTHING IS CONVERTED TO BEDROOMS. A 151 m² one-bedroom and a 149 m² three-bedroom
+  are exactly the cases a bedroom table gets wrong, and Table B.13 is a bedroom
+  table — which is why B.7.2.6.1 puts the sheet above it.
+
+  "GFA" for one unit is the unit's share of the building's GFA, saleable area ÷
+  the run's saleable share: the same `capacity.gfa_per_unit_m2` the unit count is
+  divided out of, per type. A sheet that says "its area" and not which (the DM
+  row) is read both ways; where the two readings give the same bays, nothing
+  turns on the question and the rule binds; where they differ, the run stops
+  with both figures, because taking either is choosing what the sheet meant.
+*/
+registerCustomFunction(SHEET_PARKING_FN, (rule, ctx) => {
+  const args = rule.evaluatorArgs;
+  const mix = readPath(ctx, String(args['mixPath'] ?? 'unit.mix'));
+  if (!Array.isArray(mix)) return NOT_APPLICABLE;
+  const threshold = new Decimal(String(args['thresholdM2']));
+  const atOrBelow = new Decimal(String(args['baysAtOrBelow']));
+  const above = new Decimal(String(args['baysAbove']));
+  const studio = args['studioBays'] === undefined ? undefined : new Decimal(String(args['studioBays']));
+  const measure = String(args['measure']);
+  const bays = (area: Decimal): Decimal => (area.gt(threshold) ? above : atOrBelow);
+
+  let total = new Decimal(0);
+  for (const entry of mix as readonly DemandMixEntry[]) {
+    if (!entry.typeId || typeof entry.count !== 'number') continue;
+    if (studio !== undefined && entry.typeId === 'STUDIO') {
+      total = total.plus(studio.times(entry.count));
+      continue;
+    }
+    const gfa = entry.gfa_m2 === undefined ? undefined : new Decimal(entry.gfa_m2);
+    const nsa = entry.nsa_m2 === undefined ? undefined : new Decimal(entry.nsa_m2);
+    if (gfa === undefined || (measure !== 'GFA' && nsa === undefined)) {
+      throw new RuleEvaluationError(
+        rule.ruleId,
+        `unit type "${entry.typeId}" reaches the sheet's parking rule without its area. The rule ` +
+          'is set by area, and a type with no area must not silently count as either side of it.',
+      );
+    }
+    const byGfa = bays(gfa);
+    if (measure !== 'GFA') {
+      const byNsa = bays(nsa!);
+      if (!byNsa.eq(byGfa)) {
+        throw new InstrumentQuestionError(
+          `parking: the affection plan requires ${atOrBelow.toString()} bay(s) for a dwelling of ` +
+            `${threshold.toString()} m² or less and ${above.toString()} above, and does not say on which area. ` +
+            `A ${entry.typeId} unit is ${nsa!.toFixed(2)} m² saleable and ${gfa.toFixed(2)} m² of GFA, so the ` +
+            `answer turns on it (${byNsa.toString()} or ${byGfa.toString()} bays each). The study does not ` +
+            'choose: change that unit’s area, or have the sheet’s threshold confirmed.',
+        );
+      }
+    }
+    total = total.plus(byGfa.times(entry.count));
+  }
+  return { kind: 'scalar', value: total };
+});
 
 /** One face's offer: its figure, each condition's figure, or a face the sheet names with none. */
 function faceOptionsFor(face: string, v: SetbackValue | undefined): readonly FaceOption[] {
@@ -334,8 +500,39 @@ export function rulesFromInstrument(
     that the ratio was divided out of two printed figures, so the provenance tree
     shows a reader the arithmetic rather than a FAR the sheet never printed.
   */
+  /*
+    AND A SHEET THAT PRINTS BOTH: THE GFA GOVERNS, THE FAR IS ITS CROSS-CHECK
+    (17 Oct 2026). Plot 5180196 prints GFA 8,796.46 m² and FAR 5.05 on 1,740.56
+    m²; 5.05 × 1,740.56 = 8,789.83, which is 6.63 m² short, because 5.0538 was
+    printed to two places. The GFA is the figure the developer priced and the FAR
+    is a rounded description of it — re-multiplying the rounded FAR under-reports
+    on every plot whose ratio does not divide evenly (CLAUDE.md). So where both
+    are printed and agree to the FAR's own rounding, the ratio applied is the GFA
+    ÷ the plot area, exactly as for a sheet that prints no FAR, and the FAR goes
+    to `notBound` as the cross-check it passed. Where they disagree beyond that
+    rounding, both are limits the sheet prints and the lower binds — most
+    restrictive, §11.5 step 2 — and the disagreement is said.
+  */
+  const printedBoth =
+    limits.far && limits.gfaM2 && limits.plotAreaM2 && limits.plotAreaM2.value.gt(0)
+      ? { far: limits.far, gfa: limits.gfaM2, area: limits.plotAreaM2 }
+      : undefined;
+  const ratioOfPrinted = printedBoth
+    ? printedBoth.gfa.value.div(printedBoth.area.value).toDecimalPlaces(6, Decimal.ROUND_DOWN)
+    : undefined;
+  /* The FAR's own precision, at least two places: "FAR=3.50" parses to 3.5. */
+  const farPlaces = printedBoth ? Math.max(2, printedBoth.far.value.decimalPlaces()) : 0;
+  const printedAgree =
+    printedBoth !== undefined &&
+    ratioOfPrinted !== undefined &&
+    printedBoth.gfa.value
+      .div(printedBoth.area.value)
+      .toDecimalPlaces(farPlaces, Decimal.ROUND_HALF_UP)
+      .eq(printedBoth.far.value.toDecimalPlaces(farPlaces, Decimal.ROUND_HALF_UP));
+  const gfaGoverns = printedBoth !== undefined && (printedAgree || ratioOfPrinted!.lt(printedBoth.far.value));
+
   const farFromGfa =
-    !limits.far && limits.gfaM2 && limits.plotAreaM2 && limits.plotAreaM2.value.gt(0)
+    (!limits.far || gfaGoverns) && limits.gfaM2 && limits.plotAreaM2 && limits.plotAreaM2.value.gt(0)
       ? {
           value: limits.gfaM2.value
             .div(limits.plotAreaM2.value)
@@ -345,14 +542,27 @@ export function rulesFromInstrument(
             clauseReference:
               `${limits.gfaM2.citation.clauseReference} ÷ ${limits.plotAreaM2.citation.clauseReference}`,
             sourceTextVerbatim:
-              `FAR not printed; taken from the sheet's own figures: max GFA ` +
+              (limits.far
+                ? `the printed GFA governs and the printed FAR ${limits.far.value.toString()} is its cross-check; ` +
+                  `ratio taken from the sheet's own figures: max GFA `
+                : `FAR not printed; taken from the sheet's own figures: max GFA `) +
               `${limits.gfaM2.value.toString()} m² ÷ plot area ` +
               `${limits.plotAreaM2.value.toString()} m² (rounded down at 6 places). ` +
               `GFA as printed: "${limits.gfaM2.citation.sourceTextVerbatim}"`,
           },
         }
       : undefined;
-  const farStated = limits.far ?? farFromGfa;
+  const farStated = farFromGfa ?? limits.far;
+
+  if (printedBoth) {
+    notBound.push({
+      field: 'far',
+      stated:
+        `FAR ${printedBoth.far.value.toString()}; GFA ${printedBoth.gfa.value.toString()} m² ÷ plot area ` +
+        `${printedBoth.area.value.toString()} m² = ${ratioOfPrinted!.toString()}`,
+      reason: printedAgree ? FAR_CROSS_CHECK_REASON : FAR_GFA_DISAGREE_REASON,
+    });
+  }
 
   // --- FAR -----------------------------------------------------------------
   if (farStated) {
@@ -385,7 +595,7 @@ export function rulesFromInstrument(
     );
   }
 
-  if (limits.gfaM2 && !farFromGfa) {
+  if (limits.gfaM2 && !farFromGfa && !printedBoth) {
     notBound.push({
       field: 'gfaSqm',
       stated: `${limits.gfaM2.value.toString()} m²`,
@@ -774,6 +984,204 @@ export function rulesFromInstrument(
       ] as const) {
         if (v && v.kind === 'CONDITIONAL') notBound.push(conditional(name, v, raw));
       }
+    }
+  }
+
+  // --- Setbacks per numbered side (the DDA's SETBACK (M) table) -------------
+  /*
+    A SIDE IS A SURVEYED LEG, AND IT BINDS ONLY THE BOUNDARY THAT IS THAT LEG.
+
+    Plot 6457790 prints 5 / 4 m on side 1 and 7 / 6 m on sides 2–4 (BUILDING /
+    PODIUM). The BUILDING column is the tower's and binds `setback.<class>`; the
+    PODIUM column binds `setback.podium.<class>` — the same split the Trakhees
+    rows get above, so a tower row is never re-bound differently here. Each rule
+    is fenced to one boundary by `edge.seq` as well as to its class, because two
+    neighbours of one class carry different figures and a class-wide rule would
+    give both the larger, through `byPartialOrder`, silently.
+
+    A cell that defers ("SEE NOTES") binds nothing and says so; N/A is the sheet
+    setting none, and binds nothing either. A leg no side names gets none of the
+    table's figures — a neighbouring side's 7 m is not this leg's — and is listed.
+  */
+  if (limits.setbacksBySide) {
+    const table = limits.setbacksBySide.value;
+    const cite = limits.setbacksBySide.citation;
+    const edges = binding.edges ?? [];
+    const byLeg = new Map(edges.flatMap((e) => (e.surveyLeg === undefined ? [] : [[e.surveyLeg, e] as const])));
+    const sideRule = (
+      parameterId: string,
+      suffix: string,
+      metres: Decimal,
+      edge: InstrumentEdge,
+      side: number,
+      column: string,
+    ): RuleRecord => {
+      const ctx = { plot: { plot_number: binding.plotNumber }, edge: { classification: edge.classification, seq: edge.seq } };
+      return record({
+        ruleId: `INSTRUMENT.${binding.instrumentId}.${suffix}`,
+        parameterId,
+        operator: Operator.MIN,
+        evaluator: EvaluatorName.POLYGON_OFFSET_INWARD,
+        evaluatorArgs: { value: metres.toString() },
+        unit: 'm',
+        applicability: {
+          all: [thisPlot, { 'edge.classification': { eq: edge.classification } }, { 'edge.seq': { eq: edge.seq } }],
+        },
+        citation: {
+          ...cite,
+          clauseReference: `${cite.clauseReference} (side ${side}, ${column})`,
+          sourceTextVerbatim: `SIDE ( ${side} ): ${column} ${metres.toString()} m — ${table.placement}`,
+        },
+        tests: [
+          { kind: 'POSITIVE', context: ctx, expected: metres.toNumber() },
+          {
+            kind: 'BOUNDARY',
+            context: { ...ctx, levels: { above_ground: 12 } },
+            expected: metres.toNumber(),
+            note: 'The sheet states one distance per side, not a tier by level count.',
+          },
+          {
+            kind: 'NEGATIVE',
+            context: { ...ctx, edge: { classification: edge.classification, seq: edge.seq + 1000 } },
+            expected: 'NOT_APPLICABLE',
+            note: 'Another boundary of the same class is another side.',
+          },
+        ],
+      });
+    };
+    const cell = (c: SetbackCell): string => (c.kind === 'DISTANCE' ? `${c.metres.toString()} m` : c.verbatim);
+
+    const states = table.sides.flatMap((s) => [s.building.kind, s.podium.kind]);
+    const anyDistance = states.includes('DISTANCE');
+    if (!anyDistance) {
+      /* Nothing to place: a table of deferrals (and N/A, which sets none) is said once, whole. */
+      if (states.includes('SEE_NOTES')) {
+        notBound.push({ field: 'setbacks.by_side', stated: table.raw, reason: SIDE_SEE_NOTES_REASON });
+      }
+    } else if (byLeg.size === 0) {
+      notBound.push({
+        field: 'setbacks.by_side',
+        stated: table.raw,
+        reason: binding.edgesUnmatched ?? SIDE_NOT_PLACED_REASON,
+      });
+    }
+    if (anyDistance && byLeg.size > 0) {
+      for (const s of table.sides) {
+        const edge = s.boundary === undefined ? undefined : byLeg.get(s.boundary);
+        if (!edge) {
+          if (s.building.kind === 'DISTANCE' || s.podium.kind === 'DISTANCE') {
+            notBound.push({
+              field: `setbacks.side_${s.side}`,
+              stated: `SIDE ( ${s.side} ): ${cell(s.building)} / ${cell(s.podium)}`,
+              reason: SIDE_NOT_PLACED_REASON,
+            });
+          }
+          continue;
+        }
+        if (s.building.kind === 'DISTANCE') {
+          rules.push(
+            sideRule(`setback.${edge.classification.toLowerCase()}`, `tower.setback.side_${s.side}`, s.building.metres, edge, s.side, 'BUILDING'),
+          );
+        } else if (s.building.kind === 'SEE_NOTES') {
+          notBound.push({
+            field: `setbacks.side_${s.side}.building`,
+            stated: `SIDE ( ${s.side} ): ${s.building.verbatim}`,
+            reason: SIDE_SEE_NOTES_REASON,
+          });
+        }
+        if (s.podium.kind === 'DISTANCE') {
+          rules.push(
+            sideRule(podiumSetbackParameter(edge.classification), `podium.setback.side_${s.side}`, s.podium.metres, edge, s.side, 'PODIUM'),
+          );
+        } else if (s.podium.kind === 'SEE_NOTES') {
+          notBound.push({
+            field: `setbacks.side_${s.side}.podium`,
+            stated: `SIDE ( ${s.side} ): ${s.podium.verbatim}`,
+            reason: SIDE_SEE_NOTES_REASON,
+          });
+        }
+      }
+    }
+    /* Legs no side names — 5134565's two short jogs, legs 1 and 3 — get none of the table's figures, said by edge. */
+    if (byLeg.size > 0) {
+      const named = new Set(table.sides.flatMap((s) => (s.boundary === undefined ? [] : [s.boundary])));
+      const unnamed = edges.filter((e) => e.surveyLeg !== undefined && !named.has(e.surveyLeg));
+      if (unnamed.length > 0) {
+        notBound.push({
+          field: 'setbacks.unnamed_sides',
+          stated: `edges ${unnamed.map((e) => e.seq).join(', ')}`,
+          reason: UNNAMED_LEGS_REASON,
+        });
+      }
+    }
+  }
+
+  // --- Parking (B.7.2.6.1: the sheet's requirement over Table B.13) ---------
+  /*
+    "Parking requirements set out in the affection plan or DCR shall take
+    precedent over Table B.13" (DBC B.7.2.6.1 ¶1, p89). The seed's B.13 rule
+    quotes that sentence; this is the affection plan's side of it. The rule is
+    plot-specific, so `resolveParameter` hands it `parking.demand` under §11.5
+    step 1 and records B.13 as superseded — visible, named and beaten.
+
+    Only the dwelling rule binds: the engine counts dwellings and models no retail,
+    commercial or office floor area, so a rate per m² of those has nothing to
+    multiply and is listed in `notBound` rather than bound to a zero.
+  */
+  if (limits.parking) {
+    const p = limits.parking.value;
+    const d = p.dwelling;
+    if (d) {
+      const args = {
+        fn: SHEET_PARKING_FN,
+        mixPath: 'unit.mix',
+        thresholdM2: d.thresholdM2.toString(),
+        baysAtOrBelow: String(d.baysAtOrBelow),
+        baysAbove: String(d.baysAbove),
+        measure: d.measure,
+        ...(d.studioBays === undefined ? {} : { studioBays: String(d.studioBays) }),
+      };
+      const at = (area: string): Record<string, unknown> => ({
+        plot: { plot_number: binding.plotNumber },
+        unit: { mix: [{ typeId: '2BED', count: 1, nsa_m2: area, gfa_m2: area }] },
+      });
+      const over = d.thresholdM2.plus(1).toString();
+      rules.push({
+        ...record({
+          ruleId: `INSTRUMENT.${binding.instrumentId}.parking.demand`,
+          parameterId: 'parking.demand',
+          operator: Operator.MIN,
+          evaluator: EvaluatorName.CUSTOM_FN,
+          evaluatorArgs: args,
+          unit: 'bays',
+          applicability: { all: [thisPlot] },
+          citation: { ...limits.parking.citation, clauseReference: `${limits.parking.citation.clauseReference} (DBC B.7.2.6.1 ¶1: over Table B.13)` },
+          tests: [
+            { kind: 'POSITIVE', context: at(over), expected: d.baysAbove, note: `A unit over ${d.thresholdM2.toString()} m².` },
+            {
+              kind: 'BOUNDARY',
+              context: at(d.thresholdM2.toString()),
+              expected: d.baysAtOrBelow,
+              note: `Exactly ${d.thresholdM2.toString()} m² is "less than or equal".`,
+            },
+            { kind: 'NEGATIVE', context: { ...otherPlot, unit: at(over)['unit'] }, expected: 'NOT_APPLICABLE' },
+          ],
+        }),
+        ruleClass: RuleClass.FILTERING,
+      });
+      if (d.measure !== 'GFA') {
+        notBound.push({ field: 'parking.dwelling_area', stated: p.raw, reason: PARKING_MEASURE_REASON });
+      }
+    }
+    for (const a of p.byArea) {
+      notBound.push({
+        field: `parking.${a.use.toLowerCase()}`,
+        stated: `${a.bays} bay(s) per ${a.perM2.toString()} m² (${a.use.toLowerCase()})`,
+        reason: PARKING_AREA_USE_REASON,
+      });
+    }
+    for (const clause of p.unread) {
+      notBound.push({ field: 'parking.unread', stated: clause, reason: PARKING_UNREAD_REASON });
     }
   }
 

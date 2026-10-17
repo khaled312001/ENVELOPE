@@ -236,11 +236,12 @@ export interface StatedLimits {
   readonly setbacks?: StatedLimit<SetbackSchedule>;
   /**
    * Setbacks the sheet states per numbered side (the DDA's `SETBACK (M)` table).
-   * Additive, and bound by nothing yet: `rules/instruments/sheet.ts` does not read
-   * it as of 2026-10-17. Carried typed and cited so binding it is mechanical.
+   * Bound since 2026-10-17 by `rules/instruments/sheet.ts`, side by side, onto the
+   * plot boundary that IS each surveyed leg — the building cell the tower, the
+   * podium cell the podium — and only where the plot was entered as that ring.
    */
   readonly setbacksBySide?: StatedLimit<SideSetbackTable>;
   readonly height?: StatedLimit<HeightAllowance>;
-  /** The sheet's own parking requirement, which B.7.2.6.1 puts above Table B.13. Not yet bound. */
+  /** The sheet's own parking requirement, which B.7.2.6.1 puts above Table B.13. Its dwelling rule binds `parking.demand` (17 Oct 2026). */
   readonly parking?: StatedLimit<ParkingRequirement>;
 }

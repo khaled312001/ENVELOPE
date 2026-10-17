@@ -14,7 +14,7 @@ import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
 import { LocaleProvider } from '../src/lib/locale.js';
-import { NotBoundList, TowerSetbackField } from '../src/studio/sheet-setbacks.js';
+import { NotBoundList, SheetBlockingList, TowerSetbackField } from '../src/studio/sheet-setbacks.js';
 
 const sheet = (setbacks: SheetSetbacks | undefined, notBound: PlotCreated['sheet']['notBound'] = []): PlotCreated['sheet'] => ({
   attached: true,
@@ -133,5 +133,77 @@ describe('what the sheet states and the run does not apply', () => {
 
   it('shows nothing when the sheet left nothing out', () => {
     expect(render(<NotBoundList sheet={sheet(WARSAN, [])} />)).toBe('');
+  });
+
+  /*
+    17 Oct 2026: "None of them limits the envelope until it is decided" was false
+    once a printed FAR became the GFA's cross-check — the limit it states binds.
+  */
+  it('no longer says that nothing listed limits the envelope', () => {
+    const far = [
+      {
+        field: 'far',
+        stated: 'FAR 3.5; GFA 4778.31 m² ÷ plot area 1365.23 m² = 3.500003',
+        reason:
+          'The sheet prints both its maximum GFA and its FAR, and the GFA governs: the FAR is that GFA divided by the plot area and rounded, so multiplying it back under-reports. The study applies the printed GFA ÷ the printed plot area; the printed FAR agrees with it to its own rounding.',
+      },
+    ];
+    const en = render(<NotBoundList sheet={sheet(WARSAN, far)} />);
+    expect(en).not.toContain('None of them limits the envelope');
+    expect(en).toContain('is not applied as printed');
+    expect(en).toContain('Floor area ratio, as printed');
+    const ar = render(<NotBoundList sheet={sheet(WARSAN, far)} />, '/ar/studio');
+    expect(ar).not.toContain('ولا يحد أي منها الغلاف');
+    expect(ar).toContain('معامل البناء كما طبع');
+    expect(ar).not.toContain('the GFA governs');
+  });
+});
+
+describe('a per-side table on the plot step', () => {
+  /* 6457790: two neighbours, side 1 at 5 / 4 m and side 2 at 7 / 6 m. By class, both read whichever resolved. */
+  const perSide: SheetSetbacks = {
+    tower: {},
+    podium: {},
+    bySeq: {
+      tower: {
+        '0': { kind: 'FIXED', metres: '5', clause: 'SIDE ( 1 ): BUILDING 5 m' },
+        '1': { kind: 'FIXED', metres: '7', clause: 'SIDE ( 2 ): BUILDING 7 m' },
+      },
+      podium: {
+        '0': { kind: 'FIXED', metres: '4', clause: 'SIDE ( 1 ): PODIUM 4 m' },
+        '1': { kind: 'FIXED', metres: '6', clause: 'SIDE ( 2 ): PODIUM 6 m' },
+      },
+    },
+  };
+  const at = (seq: number): string =>
+    render(<TowerSetbackField created={created(sheet(perSide))} cls="ADJACENT_PLOT" seq={seq} value="" onChange={() => undefined} inline />);
+
+  it('shows each boundary its own side’s figures, not its class’s', () => {
+    expect(at(0)).toMatch(/data-sheet-row="tower">Tower setback, as the affection plan states:.*5 m/);
+    expect(at(0)).toMatch(/data-sheet-row="podium">Podium setback, as the affection plan states:.*4 m/);
+    expect(at(1)).toMatch(/data-sheet-row="tower">Tower setback, as the affection plan states:.*7 m/);
+    // A boundary no side names is typed, as before any sheet.
+    expect(at(3)).toContain('<input');
+  });
+});
+
+describe('what the sheet leaves open that stops the run', () => {
+  const blocking = {
+    blocking: [
+      { field: 'far', label: 'FAR', consequence: 'Floor area ratio is not printed on this sheet. Required before any capacity figure may be produced.' },
+    ],
+  };
+
+  it('is said on the plot step, before the run is refused', () => {
+    const en = render(<SheetBlockingList sheet={{ ...sheet(WARSAN), ...blocking }} />);
+    expect(en).toContain('Limits the affection plan leaves open, which stop the study');
+    expect(en).toContain('does not borrow one from a neighbouring plot');
+    const ar = render(<SheetBlockingList sheet={{ ...sheet(WARSAN), ...blocking }} />, '/ar/studio');
+    expect(ar).toContain('حدود يتركها مخطط الأفكشن مفتوحة وتوقف الدراسة');
+  });
+
+  it('shows nothing for a sheet that leaves nothing open, or a response older than the field', () => {
+    expect(render(<SheetBlockingList sheet={{ ...sheet(WARSAN), blocking: [] }} />)).toBe('');
+    expect(render(<SheetBlockingList sheet={sheet(WARSAN)} />)).toBe('');
   });
 });

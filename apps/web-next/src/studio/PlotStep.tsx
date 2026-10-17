@@ -18,7 +18,7 @@ import type { DraftPlot, EdgeClass, Hierarchy } from './model.js';
 import type { VehicleAccessBody } from './ParkingStep.js';
 import { Footer, Heading, NextStep, Row } from './parts.js';
 import type { SheetState } from './SheetStep.js';
-import { NotBoundList, TowerSetbackField } from './sheet-setbacks.js';
+import { NotBoundList, SheetBlockingList, TowerSetbackField } from './sheet-setbacks.js';
 
 // maplibre is the heaviest thing the studio loads; it comes down only when the map is opened.
 const PlotMapView = lazy(() => import('../components/PlotMapView.js').then((m) => ({ default: m.PlotMapView })));
@@ -446,6 +446,7 @@ export function PlotPanel({
           stating six limits read as one stating four. A list, never collapsed:
           an omission a reader must open to find is still an omission.
         */}
+        {plot && created ? <SheetBlockingList sheet={created.sheet} /> : null}
         {plot && created ? <NotBoundList sheet={created.sheet} /> : null}
 
         {sheet ? (

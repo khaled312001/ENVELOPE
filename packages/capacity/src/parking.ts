@@ -39,6 +39,7 @@ import {
 import {
   resolveParameter,
   ResolutionStatus,
+  SHEET_PARKING_FN,
   type EvalContext,
   type Resolution,
   type RuleRecord,
@@ -58,6 +59,14 @@ export interface ParkingInput {
   };
   /** Total units the envelope could hold, before parking is considered. */
   readonly targetUnits: number;
+  /**
+   * Saleable area ÷ GFA, as the run resolved it. Optional and additive (17 Oct
+   * 2026): it puts each unit type's share of GFA — its saleable area ÷ this — into
+   * the demand context, because an affection plan's parking rule is set by a
+   * dwelling's AREA ("one bay for each unit ≤ 150 m² GFA"), not by its bedrooms.
+   * Absent, only the saleable area is there, and a rule that needs GFA says so.
+   */
+  readonly saleableEfficiency?: Traced<Decimal>;
   /** Gross area available per parking level, m². Usually the podium footprint. */
   readonly areaPerLevelM2: Decimal;
   /** Levels of parking the scheme can physically provide (basement + podium). */
@@ -190,9 +199,22 @@ export function solveParking(input: ParkingInput): ParkingResult {
         });
 
   // --- Resident bays -------------------------------------------------------
+  /*
+    Each type's area travels with its count: Table B.13 reads only the type, and
+    the plot's own sheet reads the area (`rules/instruments/sheet.ts`). Strings,
+    because the context is data and a Decimal is the engine's number type.
+  */
+  const efficiency = input.saleableEfficiency?.value;
   const demandCtx: EvalContext = {
     ...context,
-    unit: { mix: counts.map((c) => ({ typeId: c.typeId, count: c.count })) },
+    unit: {
+      mix: counts.map((c) => ({
+        typeId: c.typeId,
+        count: c.count,
+        nsa_m2: c.nsaM2.toString(),
+        ...(efficiency && efficiency.gt(0) ? { gfa_m2: c.nsaM2.div(efficiency).toDecimalPlaces(4).toString() } : {}),
+      })),
+    },
   };
   const demandRes = resolveParameter('parking.demand', rules, demandCtx);
   const residentBaysValue = num(demandRes);
@@ -202,13 +224,20 @@ export function solveParking(input: ParkingInput): ParkingResult {
         'ratio — a wrong ratio moves the governing capacity band without anyone noticing.',
     );
   }
+  /* A rule set by the dwelling's share of GFA reads the saleable share too, so the bays name it. */
+  const readsGfaShare =
+    demandRes.governing.rule.evaluatorArgs['fn'] === SHEET_PARKING_FN && input.saleableEfficiency !== undefined;
   const residentBays = tracer.derived('parking.resident_bays', residentBaysValue, {
     rule: {
       ruleId: demandRes.governing.rule.ruleId,
       citation: demandRes.governing.rule.citation,
     },
-    formula: counts.map((c) => `${c.count} × ${c.label}`).join(' + '),
-    uses: { mix: mixTraced },
+    formula: readsGfaShare
+      ? counts
+          .map((c) => `${c.count} × ${c.label} (${c.nsaM2.toString()} m² saleable ÷ ${efficiency!.toString()})`)
+          .join(' + ') + ', bays by the sheet’s area threshold'
+      : counts.map((c) => `${c.count} × ${c.label}`).join(' + '),
+    uses: readsGfaShare ? { mix: mixTraced, efficiency: input.saleableEfficiency! } : { mix: mixTraced },
     unit: 'bays',
   });
 

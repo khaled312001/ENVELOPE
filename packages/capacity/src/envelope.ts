@@ -249,6 +249,17 @@ function facesSaid(options: readonly FaceOption[]): string {
   return options.map((o) => `${o.face} ${o.metres === null ? 'not stated' : `${o.metres} m`}`).join('; ');
 }
 
+/** Why a setback rule every edge of whose class was typed is set aside: the reader typed over it. */
+export const TYPED_OVER_RULE_REASON =
+  'every edge this rule governs on this plot carries a tower setback typed on the ' +
+  'plot step, USER_SET by the person who ran it.';
+/** Why the sheet's "which face?" rule is set aside once every boundary it asks about is answered. */
+export const ANSWERED_BY_FACE_REASON =
+  'the affection plan states this setback by face and does not say which face each boundary is; ' +
+  'the reader answered it on the plot step, face by face.';
+/** The relative effect a sensitivity edge records when the perturbed geometry cannot be built. */
+export const NOT_MEASURABLE = 'not measurable';
+
 /** Where one boundary's podium setback came from. */
 const PodiumSource = {
   /** The plot's own sheet states the podium's figure for this boundary. */
@@ -672,6 +683,8 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
    * or the tower's line (no statement, sheet silent).
    */
   const podiumSetbacks: { seq: number; valueM: Decimal; from: PodiumSource; traced: Traced<Decimal> | undefined }[] = [];
+  /** The podium setbacks a sheet rule set, published so the validator can hold the podium to its row. */
+  const appliedPodiumSetbacks: NonNullable<BuildableEnvelope['appliedPodiumSetbacks']>[number][] = [];
 
   const edgeSetbacks = plot.edges.map((edge) => ({ edge, at: edgeSetbackAt(plot, edge.seq, rules, finalCtx, typed) }));
 
@@ -860,6 +873,15 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
       podiumInsets.push({ seq: span.from + k, insetMm: toMm(podium!) });
     }
     appliedSetbacks.push({ seq: edge.seq, valueM: towerM, ruleId, parameterId, traced });
+    if (stated && podiumTraced) {
+      appliedPodiumSetbacks.push({
+        seq: edge.seq,
+        valueM: stated.value,
+        ruleId: stated.resolution.governing!.rule.ruleId,
+        parameterId: podiumSetbackParameter(edge.classification),
+        traced: podiumTraced,
+      });
+    }
     podiumSetbacks.push({
       seq: edge.seq,
       valueM: podium!,
@@ -1026,16 +1048,27 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
         });
         return edge && entry.seqs.includes(edge.seq) ? { seq: i.seq, insetMm: toMm(new Decimal(other.metres)) } : i;
       });
+      /*
+        WHERE THE OTHER ANSWER CANNOT BE DRAWN, ITS EFFECT IS NOT MEASURABLE — NOT
+        −100%. The re-offset throws when the other figure consumes the podium
+        (§14.3: degenerate geometry raises). This wrote '-1', which a register
+        ranking by magnitude reads as "the podium vanishes", a measurement nobody
+        made. The reason travels in the perturbation instead.
+      */
       let relativeEffect: string;
+      let unmeasurable: string | undefined;
       try {
         const alt = mm2ToM2(offsetPerEdge(plot.ring, altInsets, arcs).areaMm2);
         relativeEffect = podiumSetbackM2.isZero() ? '0' : alt.minus(podiumSetbackM2).div(podiumSetbackM2).toFixed(4);
-      } catch {
-        relativeEffect = '-1';
+      } catch (error) {
+        relativeEffect = NOT_MEASURABLE;
+        unmeasurable = error instanceof Error ? error.message : String(error);
       }
       tracer.sensitiveTo(podiumSetbackFootprint, entry.traced, {
         relativeEffect,
-        perturbation: `${other.metres} m (${other.face}) on edges ${entry.seqs.join(', ')} instead of ${podiumAssumption(entry.decision).taken.metres} m`,
+        perturbation:
+          `${other.metres} m (${other.face}) on edges ${entry.seqs.join(', ')} instead of ${podiumAssumption(entry.decision).taken.metres} m` +
+          (unmeasurable === undefined ? '' : ` — not measurable: the podium line cannot be drawn with it (${unmeasurable})`),
       });
     }
   }
@@ -1115,9 +1148,14 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
       setAside.push({
         parameterId,
         rule: entry.rule,
-        reason:
-          `every edge this rule governs on this plot carries a tower setback typed on the ` +
-          `plot step, USER_SET by the person who ran it.`,
+        /*
+          A QUESTION ANSWERED IS NOT A RULE OVERRULED. The sheet's "which face?"
+          rule on a two-road plot is set aside once the reader has named the face
+          of every road, with one of the sheet's own figures — and the generic
+          sentence read as though the reader had typed over the sheet. Its own
+          reason says what happened (17 Oct 2026).
+        */
+        reason: faceOptionsOf(entry.rule) ? ANSWERED_BY_FACE_REASON : TYPED_OVER_RULE_REASON,
       });
     }
   }
@@ -1467,6 +1505,7 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     maxLevelsByHeight: maxLevels,
     bindingConstraints: bindings,
     appliedSetbacks,
+    ...(appliedPodiumSetbacks.length > 0 ? { appliedPodiumSetbacks } : {}),
     fixpointIterations: fixpoint.iterations,
     fixpointConverged: fixpoint.status === FixpointStatus.CONVERGED,
     fixpoint,

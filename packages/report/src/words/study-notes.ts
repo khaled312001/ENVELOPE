@@ -1,4 +1,5 @@
 import type { Reader, Said } from './engine-notes.js';
+import { REGISTER_READERS } from './register-notes.js';
 
 /*
   THE SENTENCES THE STUDY REPORT READS THAT THE SCREEN HAD NOT YET NEEDED.
@@ -302,4 +303,6 @@ export const STUDY_READERS: readonly Reader[] = [
           ar: 'الدور الأرضي محدد بلا مواقف، ولا توضع عليه مساحة طابقية. ما فيه من محلات وبهو وخدمات غير ممثل، ولم يقيم كم منه مساحة طابقية ولا تحت أي مساحة مسموحة يحسب.',
         };
   },
+  // The DBC clause register's reasons, details, scope and the proposal's promises.
+  ...REGISTER_READERS,
 ];

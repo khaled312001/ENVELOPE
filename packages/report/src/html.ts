@@ -77,12 +77,15 @@ import { forDisplay } from './precision.js';
 
 import {
   InvariantStatus,
+  RegisterClauseStatus,
   RuleDisposition,
   RuleSetApproval,
+  WrittenPromiseStatus,
   assertEmittable,
   unsignedAnnexNotice,
   type AssumptionEntry,
   type BindingConstraintView,
+  type ClauseRegisterSection,
   type DeferredCheckEntry,
   type InvariantOutcome,
   type RunReport,
@@ -1377,6 +1380,68 @@ function deferredSection(checks: readonly DeferredCheckEntry[], indexes: Indexes
   );
 }
 
+const REGISTER_STATUS_LABEL: Readonly<Record<RegisterClauseStatus, string>> = {
+  APPLIED: 'Applied',
+  NOT_ASSESSED: 'Not assessed',
+  NOT_APPLICABLE: 'Not applicable',
+};
+
+const PROMISE_STATUS_LABEL: Readonly<Record<WrittenPromiseStatus, string>> = {
+  BUILT: 'Built',
+  PARTLY_BUILT: 'Partly built',
+  NOT_BUILT: 'Not built',
+};
+
+/**
+ * Every Dubai Building Code clause in the register's scope, one row each.
+ *
+ * Printed whole, because the alternative was the defect: the rule-coverage line
+ * counted nine seed records, and every clause outside them — encoded as a cited
+ * constant or not encoded at all — appeared nowhere. A NOT ASSESSED row carries
+ * the same hatching as a deferred check, since that is what it is.
+ */
+function clauseRegisterSection(register: ClauseRegisterSection | undefined): string {
+  if (register === undefined) {
+    return (
+      `<section data-prd="3.4-8-register"><h2>8a · Dubai Building Code clause register</h2>` +
+      `<p class="note">${notAssessedChip('not recorded')} This run was computed before the clause ` +
+      `register existed, so it does not list the code clauses it did not assess. Compute it again ` +
+      `to list them. No clause is implied checked by this absence.</p></section>`
+    );
+  }
+  const c = register.counts;
+  const rows = register.entries.map((e) => [
+    `<span class="rule-id">${esc(e.clause)}</span>`,
+    `<span class="mono">p${e.page}</span>`,
+    esc(e.obligation.toLowerCase()) + (e.lifeSafety ? ' · life safety' : ''),
+    e.status === RegisterClauseStatus.NOT_ASSESSED
+      ? notAssessedChip()
+      : esc(REGISTER_STATUS_LABEL[e.status]),
+    esc(e.reason) +
+      (e.appliedBy.length > 0 ? `<div class="mono">${e.appliedBy.map(esc).join('<br>')}</div>` : '') +
+      (e.rest === null ? '' : `<div>The rest is not assessed: ${esc(e.rest)}</div>`) +
+      (e.detail === null ? '' : `<div>${esc(e.detail)}</div>`),
+  ]);
+  const promises = register.promises.items.map((p) => [
+    esc(p.promised),
+    p.status === WrittenPromiseStatus.BUILT ? esc(PROMISE_STATUS_LABEL[p.status]) : notAssessedChip(PROMISE_STATUS_LABEL[p.status]),
+    esc(p.exists),
+  ]);
+  return (
+    `<section data-prd="3.4-8-register"><h2>8a · Dubai Building Code clause register</h2>` +
+    `<p>${esc(register.scope)}</p>` +
+    `<p>Register <span class="mono">${esc(register.version)}</span>: ${c.total} clauses — ` +
+    `${c.applied} applied, ${c.notAssessed} not assessed (${c.notAssessedMandatory} of them ` +
+    `mandatory), ${c.notApplicable} not applicable. Applied means the engine uses the clause; it ` +
+    `does not mean the scheme complies with it.</p>` +
+    table('Dubai Building Code clause register', ['Clause', 'Page', 'Form', 'Status', 'What the engine does'], rows) +
+    `<h3>Written in the proposal of ${esc(register.promises.date)}, and what exists</h3>` +
+    `<p class="note">Listed so that no output of this system can be read as delivering what it does not.</p>` +
+    table('Proposal promises and what exists', ['Promised', 'Status', 'What exists'], promises) +
+    `</section>`
+  );
+}
+
 function definitionsSection(run: RunReport): string {
   const definitions: readonly MetricDefinition[] = run.areaTermsUsed.map((id) => metric(id));
   const rows = definitions.map((definition) => [
@@ -1651,6 +1716,7 @@ export function toHtml(run: RunReport, drawings?: ReportDrawings): string {
     invariantsSection(run.invariants),
     claimSection(run),
     deferredSection(run.deferredChecks, indexes),
+    clauseRegisterSection(run.clauseRegister),
     definitionsSection(run),
   ].join('');
 

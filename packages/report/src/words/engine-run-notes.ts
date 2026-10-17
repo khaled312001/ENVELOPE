@@ -678,9 +678,30 @@ export const RUN_READERS: readonly Reader[] = [
   (t) => {
     const m = /^PARTIAL\. We encoded (\d+) of (\d+) requirements identified as applicable \(coverage ([\d.]+%)\)\. (\d+) are deferred/.exec(t);
     if (!m) return null;
+    /*
+      The clause register's counts, appended by `clauseCoverageSentence` in
+      `packages/validation/src/claims.ts` (17 Oct 2026). Said in both languages,
+      because a coverage line that dropped them in Arabic would put back the bare
+      ratio the register was added to qualify.
+    */
+    const r =
+      /the Dubai Building Code clause register \(([^)]+)\) lists (\d+) clauses of B\.4, B\.5, B\.7 and C\.6\.4: (\d+) applied by the engine, (\d+) not assessed \((\d+) of them mandatory\), (\d+) not applicable/.exec(
+        t,
+      );
+    const none = t.includes('No Dubai Building Code clause register was supplied');
+    const en = r
+      ? ` Outside that ratio, the code clause register (${r[1]}) lists ${r[2]} clauses: ${r[3]} applied, ${r[4]} not assessed (${r[5]} mandatory), ${r[6]} not applicable. The ratio counts rule records, not clauses.`
+      : none
+        ? ' No code clause register was supplied, so no clause outside the rule records is listed.'
+        : '';
+    const ar = r
+      ? ` وخارج هذه النسبة، يذكر سجل بنود الكود (${r[1]}) ${r[2]} بندا: ${r[3]} يطبقها المحرك، و${r[4]} لم تخضع للتقييم (${r[5]} منها إلزامية)، و${r[6]} لا تنطبق. النسبة تعد سجلات القواعد لا البنود.`
+      : none
+        ? ' لم يقدم سجل لبنود الكود، فلا يذكر أي بند خارج سجلات القواعد.'
+        : '';
     return {
-      en: `Partial: ${m[1]} of ${m[2]} identified requirements are encoded (${m[3]}); ${m[4]} are deferred. Measured against our own list, not completeness.`,
-      ar: `جزئي: رمز ${m[1]} من ${m[2]} متطلبا محددا (${m[3]})، و${m[4]} مؤجلة. مقيس على قائمتنا لا على الاكتمال.`,
+      en: `Partial: ${m[1]} of ${m[2]} identified requirements are encoded (${m[3]}); ${m[4]} are deferred. Measured against our own list, not completeness.${en}`,
+      ar: `جزئي: رمز ${m[1]} من ${m[2]} متطلبا محددا (${m[3]})، و${m[4]} مؤجلة. مقيس على قائمتنا لا على الاكتمال.${ar}`,
     };
   },
   (t) => {

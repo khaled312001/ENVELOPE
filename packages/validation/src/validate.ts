@@ -51,7 +51,15 @@ import {
   UnitType,
   within,
 } from '@envelope/core';
-import { Operator, ResolutionStatus, type ConstraintSet, type RuleValue } from '@envelope/rules';
+import {
+  Operator,
+  ResolutionStatus,
+  type ClauseRegister,
+  type ConstraintSet,
+  type RuleValue,
+} from '@envelope/rules';
+
+import { clauseRegisterReport, type ClauseRegisterReport } from './register.js';
 
 import {
   ConstraintCategory,
@@ -323,6 +331,11 @@ export interface ValidationReport {
    * emission, never a warning and never a configurable severity.
    */
   readonly emissionBlocked: readonly string[];
+  /**
+   * Every Dubai Building Code clause in the register's scope, with what the engine
+   * does with it. Beside `outcomes`, not inside it — see `register.ts`.
+   */
+  readonly clauseRegister: ClauseRegisterReport;
 }
 
 export interface ValidationInput {
@@ -337,6 +350,13 @@ export interface ValidationInput {
   /** Required-but-nullable: `undefined` is the current, honest state. */
   readonly professionalAgreement: GoldenSetMeasurement | undefined;
   readonly validatedAt: string;
+  /**
+   * The clause register the run is stated against. Required, and passed in as
+   * data like the constraint set: a validator that reached for a module-level
+   * register would state one the caller never saw. An empty register is allowed
+   * and is said in the claim line, never read as "nothing outstanding".
+   */
+  readonly clauseRegister: ClauseRegister;
 }
 
 // ---------------------------------------------------------------------------
@@ -805,6 +825,8 @@ export function validateConfiguration(input: ValidationInput): ValidationReport 
     violatedRuleIds: violated.map((o) => o.ruleId),
   };
 
+  const clauseRegister = clauseRegisterReport(input.clauseRegister);
+
   const claims = buildClaimStatement({
     selfConsistency: {
       invariants: input.invariants,
@@ -815,6 +837,7 @@ export function validateConfiguration(input: ValidationInput): ValidationReport 
       encoded: encodedRuleCount(constraintSet),
       applicable: applicableRuleCount(constraintSet),
       deferred: deferredConstraints,
+      clauses: { version: clauseRegister.version, counts: clauseRegister.counts },
     },
     geometry: input.geometry,
     professionalAgreement: input.professionalAgreement,
@@ -834,6 +857,7 @@ export function validateConfiguration(input: ValidationInput): ValidationReport 
     independenceLimit: INDEPENDENCE_LIMIT,
     selfConsistencyNotice: SELF_CONSISTENCY_IS_NOT_COMPLIANCE,
     emissionBlocked: emissionBlockers(summary, notEvaluableOutcomes, input),
+    clauseRegister,
   };
 }
 

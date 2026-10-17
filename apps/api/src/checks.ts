@@ -28,6 +28,7 @@
 import { Decimal, LevelUse, type Plot, type Traced, UnitType } from '@envelope/core';
 import type { RunInput, RunOutput } from '@envelope/capacity';
 import type { GeometryCheckCounters } from '@envelope/geometry';
+import { DBC_REGISTER } from '@envelope/rules';
 import {
   formatInvariantReport,
   InvariantStatus,
@@ -405,6 +406,12 @@ export function runChecks(args: RunChecksInput): RunChecks {
      */
     professionalAgreement: undefined,
     validatedAt: args.validatedAt,
+    /*
+      Every DBC clause of B.4, B.5, B.7 and C.6.4, stated with what the engine
+      does with it. Passed as data, like the constraint set: the claim line counts
+      the register this run was stated against, and the report prints that one.
+    */
+    clauseRegister: DBC_REGISTER,
   });
 
   return { invariants, validation };
@@ -486,6 +493,14 @@ export function presentChecks(checks: RunChecks) {
       independenceLimit: validation.independenceLimit,
       selfConsistencyNotice: validation.selfConsistencyNotice,
       emissionBlocked: emissionBlockers(checks),
+      /*
+        The register's counts only. Its line per clause is the report's,
+        stored with it; the claim line above already says the counts in words.
+      */
+      clauseRegister: {
+        version: validation.clauseRegister.version,
+        counts: validation.clauseRegister.counts,
+      },
     },
   };
 }

@@ -54,8 +54,11 @@ import {
   toJson,
   toJsonString,
   type AssumptionEntry,
+  type ClauseRegisterSection,
   type RunReport,
 } from '../src/index.js';
+import { CLAUSE_DETAIL, DBC_REGISTER, PROPOSAL_DATE, WRITTEN_PROMISES } from '@envelope/rules';
+import { clauseRegisterReport } from '@envelope/validation';
 
 // ---------------------------------------------------------------------------
 // Fixture builders
@@ -1278,5 +1281,81 @@ describe('groupDigits', () => {
     expect(groupDigits('1e5')).toBe('1e5');
     expect(groupDigits('EXCLUDED_FROM_FAR')).toBe('EXCLUDED_FROM_FAR');
     expect(groupDigits('28–35')).toBe('28–35');
+  });
+});
+
+describe('the Dubai Building Code clause register in both reports', () => {
+  /*
+    Before 17 Oct 2026 a clause nobody encoded — bicycle parking, the loading
+    area, clear heights — appeared in no output at all, and an absence reads as
+    "fine". The register is the validator's, stated whole; these hold both
+    reports to printing it, in both languages, and to saying so when a stored
+    run predates it rather than printing an empty table.
+  */
+  const stated = clauseRegisterReport(DBC_REGISTER);
+  const register: ClauseRegisterSection = {
+    version: stated.version,
+    scope: stated.scope,
+    counts: stated.counts,
+    entries: stated.entries.map((e) => ({ ...e, appliedBy: [...e.appliedBy] })),
+    promises: {
+      date: PROPOSAL_DATE,
+      items: WRITTEN_PROMISES.map((p) => ({ id: p.id, promised: p.promised, status: p.status, exists: p.exists })),
+    },
+  };
+  const withRegister = (): RunReport => ({ ...makeRun(), clauseRegister: register });
+
+  it('lists the clauses a parking study is read for beside the deferred checks, bicycle parking and loading among them', () => {
+    const html = studyReportHtml(withRegister(), { locale: 'en', sheets: [], building: null });
+    const checks = html.slice(html.indexOf('id="s6"'), html.indexOf('id="s7"'));
+    expect(checks).toContain('Code clauses not assessed');
+    expect(checks).toContain(`${register.counts.notAssessedMandatory} mandatory clauses`);
+    expect(checks).toContain('B.7.2.7 ¶4');
+    expect(checks).toContain(esc(CLAUSE_DETAIL.BICYCLE));
+    expect(checks).toContain('B.7.3.1.1 ¶2');
+    expect(checks).toContain(esc(CLAUSE_DETAIL.LOADING));
+  });
+
+  it('prints every clause of the register in the annex, with its page and status', () => {
+    const html = studyReportHtml(withRegister(), { locale: 'en', sheets: [], building: null });
+    const annex = html.slice(html.indexOf('id="s8"'));
+    for (const e of register.entries) expect(annex, e.clause).toContain(`<bdi>${esc(e.clause)}</bdi>`);
+    expect(annex).toContain(register.version);
+    expect(annex).toContain('No IFC file is written');
+  });
+
+  it('says every register sentence in Arabic, leaving only identifiers and the proposal’s own words in English', () => {
+    const ar = studyReportHtml(withRegister(), { locale: 'ar', sheets: [], building: null });
+    const sentences = new Set(
+      register.entries.flatMap((e) => [e.reason, e.rest, e.detail]).filter((s): s is string => s !== null),
+    );
+    for (const s of [...sentences, register.scope, ...register.promises.items.map((p) => p.exists)]) {
+      expect(ar, s).not.toContain(esc(s));
+    }
+    expect(ar).toContain('سجل بنود كود دبي للبناء');
+    expect(ar).toContain('مواقف الدراجات لا تحسب');
+  });
+
+  it('says a stored run predates the register instead of printing an empty one', () => {
+    for (const locale of ['en', 'ar'] as const) {
+      const html = studyReportHtml(makeRun(), { locale, sheets: [], building: null });
+      expect(html).toContain(locale === 'en' ? 'computed before the clause register existed' : 'قبل وجود سجل البنود');
+    }
+    expect(toHtml(makeRun())).toContain('computed before the clause register existed');
+  });
+
+  it('prints the register and the written promises in the audit report', () => {
+    const html = toHtml(withRegister());
+    expect(html).toContain('8a · Dubai Building Code clause register');
+    expect(html).toContain('B.7.2.7 ¶4');
+    expect(html).toContain('NOT BUILT');
+    expect(html).toContain(esc(WRITTEN_PROMISES[0]!.promised));
+  });
+
+  it('survives the JSON export and its re-import, fingerprint unchanged', () => {
+    const run = withRegister();
+    const back = fromJson(JSON.parse(toJsonString(run)));
+    expect(back.clauseRegister).toEqual(run.clauseRegister);
+    expect(runFingerprint(back).digest).toBe(runFingerprint(makeRun()).digest);
   });
 });

@@ -38,9 +38,11 @@ import {
   type ConstraintOutcome,
 } from '@envelope/validation';
 import {
+  PROPOSAL_DATE,
   ResolutionStatus,
   type RuleRecord,
   SEED_RULES_WARNING,
+  WRITTEN_PROMISES,
 } from '@envelope/rules';
 import {
   decimalString,
@@ -51,6 +53,7 @@ import {
   type AssumptionEntry,
   type BindingConstraintView,
   type CapacityBandView,
+  type ClauseRegisterSection,
   type DecimalString,
   type DeferredCheckEntry,
   type EnvelopeDimensionView,
@@ -606,10 +609,41 @@ export function buildRunReport(args: BuildReportInput): RunReport {
     invariants: invariantView(checks.invariants.results),
     claim,
     deferredChecks,
+    clauseRegister: clauseRegisterSection(checks),
     provenance: output.graph.toJSON() as RunReport['provenance'],
     structuredInputs: args.structuredInputs as RunReport['structuredInputs'],
     userInputs,
     areaTermsUsed: [...AREA_TERMS],
+  };
+}
+
+/**
+ * The DBC clause register the validator stated this run against, and the
+ * proposal's written promises beside what exists. Copied, never recomputed:
+ * the counts are the validator's, so the claim line and the annex cannot
+ * disagree on the same page.
+ */
+function clauseRegisterSection(checks: RunChecks): ClauseRegisterSection {
+  const register = checks.validation.clauseRegister;
+  return {
+    version: register.version,
+    scope: register.scope,
+    counts: register.counts,
+    entries: register.entries.map((e) => ({
+      clause: e.clause,
+      page: e.page,
+      obligation: e.obligation,
+      status: e.status,
+      reason: e.reason,
+      appliedBy: e.appliedBy,
+      rest: e.rest,
+      detail: e.detail,
+      lifeSafety: e.lifeSafety,
+    })),
+    promises: {
+      date: PROPOSAL_DATE,
+      items: WRITTEN_PROMISES.map((p) => ({ id: p.id, promised: p.promised, status: p.status, exists: p.exists })),
+    },
   };
 }
 

@@ -26,6 +26,7 @@ import {
   ResolutionStatus,
   RuleClass,
   ApprovalStatus,
+  DBC_REGISTER,
   type ConstraintSet,
   type Resolution,
   type RuleRecord,
@@ -202,9 +203,17 @@ function input(
     geometry: CLEAN_GEOMETRY,
     professionalAgreement: undefined,
     validatedAt: '2026-08-30T00:00:00Z',
+    // The real register: a validator test that stated an empty one would test nothing about it.
+    clauseRegister: DBC_REGISTER,
     ...extra,
   };
 }
+
+/** No register supplied — the claim line must say so, not fall silent. */
+const NO_CLAUSES = {
+  version: 'none',
+  counts: { total: 0, applied: 0, notAssessed: 0, notAssessedMandatory: 0, notApplicable: 0 },
+} as const;
 
 const evidence = (overrides: Partial<ClaimEvidence> = {}): ClaimEvidence => ({
   selfConsistency: {
@@ -212,7 +221,7 @@ const evidence = (overrides: Partial<ClaimEvidence> = {}): ClaimEvidence => ({
     hardConstraintsChecked: 9,
     hardConstraintsViolated: 0,
   },
-  ruleCoverage: { encoded: 9, applicable: 11, deferred: [] },
+  ruleCoverage: { encoded: 9, applicable: 11, deferred: [], clauses: NO_CLAUSES },
   geometry: CLEAN_GEOMETRY,
   professionalAgreement: undefined,
   ...overrides,
@@ -777,7 +786,7 @@ describe('the five-way claim statement (§2.2, §16.5, Principle 8)', () => {
     const set = constraintSet({ evaluative: [TRAVEL_DISTANCE], deferred: [FACADE] });
     const claims = buildClaimStatement(
       evidence({
-        ruleCoverage: { encoded: 9, applicable: 11, deferred: deferredConstraintsFrom(set) },
+        ruleCoverage: { encoded: 9, applicable: 11, deferred: deferredConstraintsFrom(set), clauses: NO_CLAUSES },
       }),
     );
     expect(claims.ruleCoverage.status).toBe(ClaimStatus.PARTIAL);
@@ -791,7 +800,7 @@ describe('the five-way claim statement (§2.2, §16.5, Principle 8)', () => {
     // The denominator is our own inventory. Encoding every requirement we
     // thought of says nothing about the one we did not.
     const claims = buildClaimStatement(
-      evidence({ ruleCoverage: { encoded: 40, applicable: 40, deferred: [] } }),
+      evidence({ ruleCoverage: { encoded: 40, applicable: 40, deferred: [], clauses: NO_CLAUSES } }),
     );
     expect(claims.ruleCoverage.status).toBe(ClaimStatus.PARTIAL);
     expect(claims.ruleCoverage.detail).toContain('100%');
@@ -869,7 +878,7 @@ describe('regulatory validity is NEVER_CLAIMED and cannot be set by any caller',
         hardConstraintsViolated: 9,
       },
     }),
-    evidence({ ruleCoverage: { encoded: 999, applicable: 999, deferred: [] } }),
+    evidence({ ruleCoverage: { encoded: 999, applicable: 999, deferred: [], clauses: NO_CLAUSES } }),
     evidence({
       professionalAgreement: {
         goldenSetVersion: 'gs-perfect',
@@ -1037,5 +1046,57 @@ describe('the contradiction battery is declared and not wired (§16.2, Phase 1)'
         input(set, { 'coverage.max': o.quantity('coverage.max', '55', '%') }),
       ),
     ).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The DBC clause register — the silence beside the ratio
+// ---------------------------------------------------------------------------
+
+describe('the Dubai Building Code clause register', () => {
+  const report = validateConfiguration(input(constraintSet({ deferred: [FACADE] }), {}));
+  const clause = (id: string) => report.clauseRegister.entries.find((e) => e.clause === id);
+
+  it('is stated whole, beside the deferred list and not inside it', () => {
+    expect(report.clauseRegister.entries).toHaveLength(DBC_REGISTER.entries.length);
+    expect(report.clauseRegister.counts.total).toBe(DBC_REGISTER.entries.length);
+    // The deferred list is still the rule records': two units are never one list.
+    expect(report.summary.deferredDeclared).toBe(1);
+  });
+
+  it('lists bicycle parking and the loading area as not assessed, each with its sentence', () => {
+    expect(clause('B.7.2.7 ¶4')).toMatchObject({ status: 'NOT_ASSESSED', obligation: 'SHALL', page: 91 });
+    expect(clause('B.7.2.7 ¶4')?.detail).toMatch(/5% of the building’s required car bays/);
+    expect(clause('B.7.3.1.1 ¶2')?.reason).toMatch(/open question with the client/);
+    expect(clause('B.7.3.1.1 ¶2')?.detail).toMatch(/9 m truck/);
+  });
+
+  it('names what applies an applied clause, so it can be found', () => {
+    expect(clause('Table B.11 Minimum dimensions for parking')?.appliedBy).toContain(
+      'TABLE_B11 (packages/capacity/src/layout.ts)',
+    );
+    expect(clause('Table B.13 Parking ratios')?.appliedBy).toContain('R-PARKING-RATIO-RES');
+  });
+
+  it('puts its counts in the rule-coverage line, so the ratio is never read alone', () => {
+    // Before 17 Oct 2026 this line was "We encoded N of M … (77.8%)" and nothing else
+    // about the code: every clause outside nine seed records was absent from it.
+    const c = report.clauseRegister.counts;
+    const detail = report.claims.ruleCoverage.detail;
+    expect(detail).toContain(
+      `the Dubai Building Code clause register (${DBC_REGISTER.version}) lists ${c.total} clauses of B.4, B.5, B.7 and C.6.4: ` +
+        `${c.applied} applied by the engine, ${c.notAssessed} not assessed (${c.notAssessedMandatory} of them mandatory), ` +
+        `${c.notApplicable} not applicable`,
+    );
+    expect(detail).toContain('The ratio above counts rule records, not clauses.');
+    expect(c.notAssessedMandatory).toBeGreaterThan(50);
+  });
+
+  it('says so when no register was supplied, rather than falling silent', () => {
+    const empty = validateConfiguration(
+      input(constraintSet({}), {}, { clauseRegister: { version: 'none', scope: '', entries: [] } }),
+    );
+    expect(empty.claims.ruleCoverage.detail).toContain('No Dubai Building Code clause register was supplied');
+    expect(empty.claims.ruleCoverage.status).toBe(ClaimStatus.PARTIAL);
   });
 });

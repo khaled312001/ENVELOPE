@@ -187,8 +187,11 @@ export interface Provenance {
 class GraphIndex {
   readonly #byId = new Map<string, ProvenanceNode>();
   readonly #out = new Map<string, ProvenanceEdge[]>();
+  /** The run's assumption register: what an assumption is called and why, as the reader acknowledged it. */
+  readonly register: readonly Assumption[];
 
-  constructor(graph: Provenance | undefined) {
+  constructor(graph: Provenance | undefined, register: readonly Assumption[] = []) {
+    this.register = register;
     for (const n of graph?.nodes ?? []) this.#byId.set(n.id, n);
     for (const e of graph?.edges ?? []) {
       const list = this.#out.get(e.from);
@@ -221,11 +224,69 @@ class GraphIndex {
     }
     return undefined;
   }
+
+  /**
+   * Every node of `kind` reachable from `id`, breadth first, in the order met —
+   * not walking on past one, since what lies behind it is its own derivation.
+   */
+  findAll(id: string, kind: string, via: readonly string[]): ProvenanceNode[] {
+    const seen = new Set<string>([id]);
+    const queue = [id];
+    const found: ProvenanceNode[] = [];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const e of this.#out.get(current) ?? []) {
+        if (!via.includes(e.kind)) continue;
+        const next = this.#byId.get(e.to);
+        if (!next || seen.has(e.to)) continue;
+        seen.add(e.to);
+        if (next.kind === kind) found.push(next);
+        else queue.push(e.to);
+      }
+    }
+    return found;
+  }
 }
 
 const CITATION_PATH = [EdgeKind.DERIVED_FROM, EdgeKind.USES, EdgeKind.CITED_IN];
-const BASIS_PATH = [EdgeKind.DERIVED_FROM, EdgeKind.JUSTIFIED_BY];
+/*
+  AN ASSUMED VALUE IS OFTEN COMPUTED. A value the engine marks ASSUMED because one
+  of its INPUTS was assumed — the parking demand from the usable fraction, a
+  level's packable area from the core's share — reaches its assumption through a
+  computation: VALUE derivedFrom COMPUTATION uses VALUE derivedFrom ASSUMPTION.
+  The lookup followed `derivedFrom` alone, so it found no basis on nine rows of a
+  real run and printed "assumed with no basis recorded", which is false: the
+  engine refuses an assumption without one. So the walk takes `uses` too, and
+  stops at each assumption it meets.
+*/
+const ASSUMPTION_PATH = [EdgeKind.DERIVED_FROM, EdgeKind.USES];
 const USER_PATH = [EdgeKind.DERIVED_FROM, EdgeKind.ENTERED_BY];
+
+/** No assumption could be reached: said in words, because a blank reads as "nothing to say". */
+export const NO_BASIS = 'assumed with no basis recorded — treat as unverified';
+
+/**
+ * The assumptions an ASSUMED value rests on, each by its name and its basis —
+ * read from the run's assumption register by parameter id, the list the reader
+ * acknowledged at G3, and from the graph's own basis node only where the
+ * register has no entry for it.
+ */
+function assumedText(t: TracedWire, index: GraphIndex): string {
+  const said = index.findAll(t.node, NodeKind.ASSUMPTION, ASSUMPTION_PATH).map((node) => {
+    const entry = index.register.find((a) => a.parameterId === node.parameterId);
+    const basis = entry?.basis ?? index.find(node.id, NodeKind.BASIS, [EdgeKind.JUSTIFIED_BY])?.label;
+    return basis === undefined ? null : { name: entry?.label ?? node.label, basis };
+  });
+  const known = said.filter((s): s is { name: string; basis: string } => s !== null);
+  if (known.length === 0) return NO_BASIS;
+  // The value IS the assumption: its basis alone, as the register prints it.
+  const direct = index.find(t.node, NodeKind.ASSUMPTION, [EdgeKind.DERIVED_FROM]);
+  if (known.length === 1 && direct !== undefined) return known[0]!.basis;
+  const unique = [...new Map(known.map((k) => [`${k.name}|${k.basis}`, k])).values()];
+  return `computed from ${unique.length === 1 ? 'an assumption' : `${unique.length} assumptions`}: ${unique
+    .map((k) => `${k.name} — ${k.basis}`)
+    .join('; ')}`;
+}
 
 /**
  * The sentence in the "source / basis" column.
@@ -244,10 +305,8 @@ function sourceText(t: TracedWire, index: GraphIndex): string {
         ? `${c.instrumentId} ${c.clauseReference} (p. ${c.sourcePage}) — "${c.sourceTextVerbatim}"`
         : 'DERIVED, but no citation is reachable from this value. Do not rely on it.';
     }
-    case ProvenanceClass.ASSUMED: {
-      const basis = index.find(t.node, NodeKind.BASIS, BASIS_PATH);
-      return basis?.label ?? 'assumed with no basis recorded — treat as unverified';
-    }
+    case ProvenanceClass.ASSUMED:
+      return assumedText(t, index);
     case ProvenanceClass.USER_SET: {
       const user = index.find(t.node, NodeKind.USER, USER_PATH);
       return user ? `entered by ${user.label}` : 'entered by a user';
@@ -322,7 +381,7 @@ const CAPACITY_LABELS = {
 };
 
 export function runWorkbookSpec(run: ExportableRun, generatedAt: string): WorkbookSpec {
-  const index = new GraphIndex(run.provenance);
+  const index = new GraphIndex(run.provenance, run.assumptions);
   const sheets: SheetSpec[] = [
     {
       name: 'Capacity',

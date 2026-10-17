@@ -449,6 +449,56 @@ describe('XLSX export', () => {
   });
 });
 
+describe('XLSX: every assumed row names the assumption it rests on', () => {
+  /*
+    Six assumed rows of a real run said "assumed with no basis recorded" — each
+    an ASSUMED value COMPUTED from an assumption (the parking demand from the
+    usable fraction, the bands from the core's share), so the basis sat one
+    computation away and the lookup only followed `derivedFrom`. Every
+    assumption has a basis: the engine refuses one without. A row that says
+    otherwise tells a modeller the opposite of the truth.
+  */
+  const assumedRows = async () => {
+    const view = (
+      await app.inject({ method: 'GET', url: `/api/runs/${run.runId}`, headers: REVIEWER })
+    ).json() as ExportableRun;
+    const spec = runWorkbookSpec(view, '2026-10-02T00:00:00.000Z');
+    return { view, rows: spec.sheets.flatMap((s) => s.rows).filter((r) => r.traced.provenanceClass === 'ASSUMED') };
+  };
+
+  it('finds a basis for every assumed row of a real run', async () => {
+    const { rows } = await assumedRows();
+    expect(rows.length).toBeGreaterThan(0);
+    const unbased = rows.filter((r) => /no basis recorded/.test(r.source ?? '')).map((r) => r.label);
+    expect(unbased).toEqual([]);
+  });
+
+  it('quotes the register: the assumption by name and its basis, word for word', async () => {
+    const { view, rows } = await assumedRows();
+    for (const row of rows) {
+      const named = view.assumptions.filter((a) => (row.source ?? '').includes(a.basis));
+      expect(named.length, `${row.label}: ${row.source}`).toBeGreaterThan(0);
+    }
+  });
+
+  it('still says so when the graph holds no basis at all', () => {
+    const spec = runWorkbookSpec(
+      {
+        runId: 'r',
+        plot: { plotNumber: 'p', community: 'c', areaM2: '1' },
+        envelope: {},
+        parking: {},
+        capacity: { levels: { value: '9', provenanceClass: 'ASSUMED', node: 'n1', renderHint: 'AMBER_DOTTED_EDITABLE' } },
+        levelPlan: null,
+        assumptions: [],
+        provenance: { nodes: [], edges: [] },
+      },
+      '2026-10-02T00:00:00.000Z',
+    );
+    expect(spec.sheets[0]!.rows[0]!.source).toMatch(/no basis recorded/);
+  });
+});
+
 describe('glTF export', () => {
   it('returns the massing as a .glb with no extension a viewer is required to support', async () => {
     const res = await app.inject({

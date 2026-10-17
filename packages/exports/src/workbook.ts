@@ -88,6 +88,15 @@ function styleHeader(row: ExcelJS.Row): void {
   row.height = 20;
 }
 
+/*
+  THE PRODUCT'S PUBLIC NAME. ENVELOPE is the codebase's working name; what a
+  reader opens is Plotlogic (plotlogic.dev since 14 Oct 2026), and a workbook
+  forwarded to a modeller headed with a name he never saw on the site reads as
+  somebody else's file. The cover title and the file's author property both.
+*/
+export const WORKBOOK_TITLE = 'Plotlogic — capacity study';
+export const WORKBOOK_CREATOR = 'Plotlogic';
+
 /**
  * The first sheet of every workbook.
  *
@@ -102,7 +111,7 @@ function addCoverSheet(wb: ExcelJS.Workbook, spec: WorkbookSpec): void {
   ws.getColumn(1).width = 24;
   ws.getColumn(2).width = 96;
 
-  ws.addRow(['ENVELOPE — capacity study']).font = { bold: true, size: 16 };
+  ws.addRow([WORKBOOK_TITLE]).font = { bold: true, size: 16 };
   ws.addRow([]);
   ws.addRow(['Plot', spec.plotLabel]);
   ws.addRow(['Run', spec.runId]);
@@ -248,7 +257,7 @@ function addAssumptionRegister(wb: ExcelJS.Workbook, spec: WorkbookSpec): void {
 /** Build the workbook and return it as bytes. */
 export async function writeWorkbook(spec: WorkbookSpec): Promise<Uint8Array> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'ENVELOPE';
+  wb.creator = WORKBOOK_CREATOR;
   wb.created = new Date(spec.generatedAt);
 
   addCoverSheet(wb, spec);

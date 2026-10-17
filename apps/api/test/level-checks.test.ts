@@ -14,6 +14,7 @@ import { runPipeline, type RunInput, type RunOutput } from '@envelope/capacity';
 import { initGeometry } from '@envelope/geometry';
 import { InvariantStatus, runInvariants } from '@envelope/invariants';
 import { rulesFromInstrument } from '@envelope/rules';
+import { engineNote } from '@envelope/report/words';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { RECT_80x40, plotOf, runInput } from '../../../test-support/pipeline.js';
@@ -112,6 +113,25 @@ describe('the level checks read the engine’s schedule', () => {
     const levels = subject.levels!.map((l) => (l.kind === 'PARKING' ? { ...l, countedInGfa: true } : l));
     const result = runInvariants({ ...subject, levels }).results.find((r) => r.id === 'INV-18')!;
     expect(result.status).toBe(InvariantStatus.FAIL);
+  });
+});
+
+describe('what the reader is told about a shop floor counted at the plate', () => {
+  /*
+    The A-104 ground floor (shops) is one of the levels the capacity counts, at a
+    full tower plate. The engine says so; the reader's sentence in either language
+    must say it too, with the figure, rather than only "not assessed".
+  */
+  it('keeps the plate figure in English and in Arabic', () => {
+    const input = runInput(RECT_80x40, { levelSchedule: A_104 });
+    const out = runPipeline(input);
+    const said = out.gfaStatement.reconciliation.find((s) =>
+      s.startsWith('The level schedule states the ground floor does not park.'),
+    )!;
+    expect(said).toContain('counted here at the full tower plate');
+    const plate = out.envelope.towerPlateCap.value.toFixed(2);
+    expect(engineNote(said, 'en')).toContain(`full tower plate of ${plate} m²`);
+    expect(engineNote(said, 'ar')).toContain(`${plate} م²`);
   });
 });
 

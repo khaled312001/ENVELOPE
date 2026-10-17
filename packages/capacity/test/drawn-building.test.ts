@@ -265,6 +265,28 @@ describe('demand at the governing capacity, by type', () => {
   });
 });
 
+describe('an assumed zero for visitors stays amber at the governing count', () => {
+  /*
+    Review fix. With no visitor rule the probe records zero visitor bays as
+    ASSUMED; the demand at the governing count was computed off the resident
+    bays alone and forced DERIVED, so the same zero arrived at the figure set
+    against the supply as a cited value.
+  */
+  it('is ASSUMED where no visitor rule applies, DERIVED where one does', () => {
+    const base = runInput(RECT_80x40);
+    const ruled = runPipeline(base);
+    expect(ruled.demandAtGoverningBays.provenanceClass).toBe('DERIVED');
+
+    const out = runPipeline({
+      ...base,
+      rules: base.rules.filter((r) => r.parameterId !== 'parking.visitor_fraction'),
+    });
+    expect(out.parking.visitorBays.provenanceClass).toBe('ASSUMED');
+    expect(out.demandAtGoverningBays.provenanceClass).toBe('ASSUMED');
+    expect(out.graph.hasKindBelow(out.demandAtGoverningBays.node, 'ASSUMPTION')).toBe(true);
+  });
+});
+
 describe('what the ground floor is, in the GFA statement and the notes', () => {
   it('says a stated shop floor does not park, and never calls it a parking level', () => {
     const out = runPipeline(runInput(RECT_80x40, { levelSchedule: A_104 }));

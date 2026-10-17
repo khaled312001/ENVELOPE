@@ -1203,6 +1203,7 @@ export function runPipeline(input: RunInput): RunOutput {
     units: governingUnitCount,
     providedBays: parking.providedBays,
     probeBays: parking.totalBays,
+    probeVisitorBays: parking.visitorBays,
   });
   const demandAtGoverningBays = atGoverning.totalBays;
 

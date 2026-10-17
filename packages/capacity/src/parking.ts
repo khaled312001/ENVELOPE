@@ -548,6 +548,11 @@ export interface DemandAtInput {
   readonly providedBays: Traced<number>;
   /** The probe's demand, named in the note so the two are never confused. */
   readonly probeBays: Traced<number>;
+  /**
+   * The probe's visitor bays. Where no visitor rule applies it is the ASSUMED
+   * zero, and the demand at the governing count must carry that class.
+   */
+  readonly probeVisitorBays: TracedDecimal;
 }
 
 export interface DemandAt {
@@ -614,9 +619,17 @@ export function demandAtUnits(input: DemandAtInput): DemandAt {
         uses: { resident: residentBays },
         unit: 'bays',
       })
-    : tracer.computed('parking.visitor_bays_at_governing', visitorValue, {
+    : /*
+        NO VISITOR RULE IS AN ASSUMPTION HERE TOO. The probe records "no visitor
+        bays" as ASSUMED with the basis that the demand may be understated. This
+        node used to be computed off the resident bays alone, so it — and the
+        demand total, forced DERIVED below — took the rule's class and the
+        zero stopped being amber at the figure a reader actually compares with
+        the supply. It now hangs from the probe's assumption and takes its class.
+      */
+      tracer.computed('parking.visitor_bays_at_governing', visitorValue, {
         formula: 'no visitor-parking rule applies, so no visitor bays are added',
-        uses: { resident: residentBays },
+        uses: { resident: residentBays, assumed: input.probeVisitorBays },
         unit: 'bays',
       });
 
@@ -627,7 +640,9 @@ export function demandAtUnits(input: DemandAtInput): DemandAt {
       `${units} unit(s) by type (Table B.13: Σ ratio × count)`,
     uses: { resident: residentBays, visitor: visitorBays, units: input.units, provided: input.providedBays },
     unit: 'bays',
-    provenanceClass: 'DERIVED',
+    // DERIVED only where both halves reach a cited rule; an assumed zero for
+    // visitors leaves the total to take the weakest class it stands on.
+    ...(visitorFraction ? { provenanceClass: 'DERIVED' as const } : {}),
     detail: {
       note:
         'Parking the reported capacity actually needs, as against ' +

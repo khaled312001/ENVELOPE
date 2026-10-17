@@ -70,7 +70,9 @@ export const ENVELOPE_PARAMETERS = [
   /*
     A ceiling stated as a COUNT — an affection plan's `G+4`. Optional: no seed rule
     states one, so on a plot without a sheet it resolves to nothing and the metres
-    ceiling governs alone. Never converted to metres; see `instruments/sheet.ts`.
+    ceiling governs alone. The sheet never converts it to metres (see
+    `instruments/sheet.ts`); the code does, by its own factor — B.4.2.2 ¶6's
+    `R-DBC-B422-HEIGHT` reads it as floors × 6 m, and that is the only conversion.
   */
   'levels.max_above_ground',
   'floor_to_floor',
@@ -985,8 +987,14 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
             count stated, the only height on file is the seed's 45 m, which no
             instrument prints (B.4.2.2 ¶1 leaves height to the affection plan or
             DCR). It was shown DERIVED. It is shown for what it is: ASSUMED, amber,
-            with the reason and what replaces it — and every value computed from it
-            inherits that, which is the honest propagation rule.
+            with the reason and what replaces it — and every value `computed` from
+            it (the level count by height) inherits that. NOT YET Band B: `bands.ts`
+            traces it with `tracer.derived` citing the height rule, which here is
+            the placeholder, so a geometry-bound plot with no floor count still
+            shows its governing GFA DERIVED. Left open on purpose: the governing GFA
+            is `computed` over all three bands, so making Band B ASSUMED turns it
+            amber on every plot with no floor count, whichever band binds — a
+            decision to take, not a side effect to slip in.
           */
           !statedLevelsT && citesPlaceholder(heightRes.governing!.rule)
           ? tracer.assumed('envelope.height_ceiling_m', heightCeiling, {

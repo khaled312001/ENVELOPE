@@ -134,11 +134,17 @@ export interface GapWire {
   must say it did (CLAUDE.md, "set aside is never dropped").
 */
 
-/** The sheet refers parking to the master developer's DCR, which is not on file. */
+/*
+  The sheet refers parking to the master developer's DCR, whose ratios are not encoded.
+  Not "no DCR is on file": the 2008 Jebel Ali development code IS held with the source
+  documents, and whether it is the DCR in force is the client's question. What is true
+  is that no DCR's ratios are rules here (review, 17 Oct 2026).
+*/
 export const PARKING_DEFERRED_REASON =
   'The sheet refers parking to the master developer’s DCR alongside the Dubai Building Code. ' +
-  'B.7.2.6.1 puts a DCR’s parking requirement above Table B.13, and no DCR is on file, so ' +
-  'Table B.13 is applied. Where the DCR sets other ratios, the demand shown is not the DCR’s.';
+  'B.7.2.6.1 puts a DCR’s parking requirement above Table B.13, and no DCR’s parking ratios are ' +
+  'encoded in this study, so Table B.13 is applied. Where the DCR sets other ratios, the demand ' +
+  'shown is not the DCR’s.';
 /** The sheet states its setback as a quarter of the building's height. */
 export const SETBACK_RULE_REASON =
   'The sheet states the setback as a rule, a quarter of the building height within a minimum ' +

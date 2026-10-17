@@ -778,13 +778,19 @@ export const ROAD_HIERARCHY_GAP: MissingField = {
 export const ACCESS_SIDE_GAP: MissingField = {
   field: 'boundary.access_side',
   label: 'Access side',
+  /*
+    Reported on EVERY sheet with no readable cell, the Municipality's and the DDA's
+    among them, which have no Access Side box at all. So the sentence may not open
+    by asserting the box exists: it says what was read (nothing) and confines the
+    `*` to the sheets that carry the box (review, 17 Oct 2026).
+  */
   consequence:
-    'The sheet’s Access Side box holds no text this reader can read. On the sheets seen ' +
-    'so far it holds a mark (*), drawn rather than typed, with a matching mark beside a ' +
-    'boundary on the drawing; whether it means the side the issuer requires or one it ' +
-    'permits is not established, so it is not read. Mark the frontage yourself, ' +
-    'against the sheet — Dubai Building Code B.7.2.1 reads it when it recommends which ' +
-    'boundary the vehicle access goes on.',
+    'No access side is read from this sheet. Where a sheet has an Access Side box (the ' +
+    'Trakhees sheets seen so far), the box holds a mark (*), drawn rather than typed, with ' +
+    'a matching mark beside a boundary on the drawing; whether it means the side the ' +
+    'issuer requires or one it permits is not established, so it is not read. Mark the ' +
+    'frontage yourself, against the sheet — Dubai Building Code B.7.2.1 reads it when it ' +
+    'recommends which boundary the vehicle access goes on.',
 };
 
 // ---------------------------------------------------------------------------

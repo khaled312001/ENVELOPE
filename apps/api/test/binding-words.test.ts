@@ -65,6 +65,20 @@ describe('the binding’s sentences, said in Arabic', () => {
     }
   });
 
+  /*
+    The plot step's blocking list prints each gap's LABEL through the dictionary
+    too, and three of the four labels `blockingGaps` can return had no entry: the
+    Arabic page showed "GFA", "Height" and "Total Area" (review, 17 Oct 2026).
+  */
+  it('names every limit that can stop a run, as the blocking list prints it', () => {
+    for (const label of ['Total Area', 'GFA', 'FAR', 'Height']) inArabic(label);
+  });
+
+  it('does not say no DCR is on file: the 2008 code is held, and only its ratios are not encoded', () => {
+    expect(PARKING_DEFERRED_REASON).not.toMatch(/no DCR is on file/);
+    expect(PARKING_DEFERRED_REASON).toMatch(/no DCR’s parking ratios are encoded in this study/);
+  });
+
   it('tells the two set-aside reasons apart, as the validator prints them', () => {
     const typed = inArabic(`set aside for this run and not checked: ${TYPED_OVER_RULE_REASON}`);
     const answered = inArabic(`set aside for this run and not checked: ${ANSWERED_BY_FACE_REASON}`);

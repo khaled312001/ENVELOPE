@@ -447,7 +447,10 @@ describe('IC1-CTYL-16_011 — a front face, and three questions the sheet does n
   it('never says the access box is empty or that no road width is printed', () => {
     const access = facts.edges.missing.find((m) => m.field === 'boundary.access_side')!.consequence;
     expect(access).not.toMatch(/box is empty/);
-    expect(access).toMatch(/holds no text this reader can read/);
+    // Said on the Municipality's and the DDA's sheets too, which have no Access Side box: it may not claim one.
+    expect(access).toMatch(/^No access side is read from this sheet\./);
+    expect(access).not.toMatch(/^The sheet’s Access Side box/);
+    expect(access).toMatch(/Where a sheet has an Access Side box/);
     expect(access).toMatch(/\(\*\), drawn rather than typed/);
     const rank = facts.edges.missing.find((m) => m.field === 'boundary.road_hierarchy')!.consequence;
     expect(rank).not.toMatch(/no carriageway width/);

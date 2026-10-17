@@ -41,6 +41,17 @@ const FIELDS: Readonly<Record<string, Said>> = {
   'parking.demand': { en: 'Parking demand', ar: 'الطلب على المواقف' },
 };
 
+/*
+  The labels of the gaps that stop a run (intake's `blockingGaps`), as the plot
+  step's blocking list prints them. 'FAR' already has its entry; the other three
+  showed in English on the Arabic page (review, 17 Oct 2026).
+*/
+const GAP_LABELS: Readonly<Record<string, Said>> = {
+  GFA: { en: 'GFA', ar: 'إجمالي المساحة الطابقية' },
+  Height: { en: 'Height', ar: 'الارتفاع' },
+  'Total Area': { en: 'Total Area', ar: 'مساحة القطعة' },
+};
+
 /** A field named for one side of the per-side table. */
 const SIDE_FIELDS: Reader = (t) => {
   const m = /^setbacks\.side_(\d+)(?:\.(building|podium))?$/.exec(t);
@@ -93,10 +104,10 @@ const REASONS: Readonly<Record<string, Said>> = {
       en: 'This clause of the sheet’s parking requirement could not be read into a rule, so it adds no bays. Read it on the sheet.',
       ar: 'هذا البند من متطلب المواقف في المخطط لم يمكن تحويله إلى قاعدة، فلا يضيف أي موقف. اقرأه على المخطط.',
     },
-  'The sheet refers parking to the master developer’s DCR alongside the Dubai Building Code. B.7.2.6.1 puts a DCR’s parking requirement above Table B.13, and no DCR is on file, so Table B.13 is applied. Where the DCR sets other ratios, the demand shown is not the DCR’s.':
+  'The sheet refers parking to the master developer’s DCR alongside the Dubai Building Code. B.7.2.6.1 puts a DCR’s parking requirement above Table B.13, and no DCR’s parking ratios are encoded in this study, so Table B.13 is applied. Where the DCR sets other ratios, the demand shown is not the DCR’s.':
     {
-      en: 'The sheet refers parking to the master developer’s DCR alongside the Dubai Building Code. B.7.2.6.1 puts a DCR’s requirement above Table B.13; no DCR is on file, so Table B.13 is applied. Where the DCR sets other ratios, the demand shown is not the DCR’s.',
-      ar: 'المخطط يحيل المواقف إلى اشتراطات المطور الرئيسي (DCR) مع كود دبي للبناء. البند B.7.2.6.1 يقدم متطلب الاشتراطات على الجدول B.13، ولا توجد اشتراطات في الملف، فيطبق الجدول B.13. إن كانت الاشتراطات تحدد نسبا أخرى، فالطلب المعروض ليس طلبها.',
+      en: 'The sheet refers parking to the master developer’s DCR alongside the Dubai Building Code. B.7.2.6.1 puts a DCR’s requirement above Table B.13; no DCR’s parking ratios are encoded in this study, so Table B.13 is applied. Where the DCR sets other ratios, the demand shown is not the DCR’s.',
+      ar: 'المخطط يحيل المواقف إلى اشتراطات المطور الرئيسي (DCR) مع كود دبي للبناء. البند B.7.2.6.1 يقدم متطلب الاشتراطات على الجدول B.13، ولم ترمز نسب المواقف لأي اشتراطات في هذه الدراسة، فيطبق الجدول B.13. إن كانت الاشتراطات تحدد نسبا أخرى، فالطلب المعروض ليس طلبها.',
     },
   'The sheet states the setback as a rule, a quarter of the building height within a minimum and a maximum, whose input is the storey count. It is not encoded, so it is not applied: the study’s setbacks come from the general rules, or from a tower setback typed on the plot step.':
     {
@@ -130,10 +141,10 @@ const REASONS: Readonly<Record<string, Said>> = {
       en: 'No affection plan ranks a road. A sheet may print a road’s name or width, but neither is a rank, and the setback table is keyed on the rank: arterial, collector, local or access. Take it from the master plan or the DCR; it is not inferred here, and B.7.2.1 reads the same rank when it recommends the access boundary.',
       ar: 'لا يرتب أي مخطط أفكشن الطرق. قد يطبع المخطط اسم الطريق أو عرضه، لكن أيا منهما ليس رتبة، وجدول الارتدادات مبني على الرتبة: شرياني أو تجميعي أو محلي أو خدمة. تؤخذ من المخطط الرئيسي أو اشتراطات المطور الرئيسي، ولا تستنتج هنا، والبند B.7.2.1 يقرأ الرتبة نفسها حين يوصي بحد مدخل المركبات.',
     },
-  'The sheet’s Access Side box holds no text this reader can read. On the sheets seen so far it holds a mark (*), drawn rather than typed, with a matching mark beside a boundary on the drawing; whether it means the side the issuer requires or one it permits is not established, so it is not read. Mark the frontage yourself, against the sheet — Dubai Building Code B.7.2.1 reads it when it recommends which boundary the vehicle access goes on.':
+  'No access side is read from this sheet. Where a sheet has an Access Side box (the Trakhees sheets seen so far), the box holds a mark (*), drawn rather than typed, with a matching mark beside a boundary on the drawing; whether it means the side the issuer requires or one it permits is not established, so it is not read. Mark the frontage yourself, against the sheet — Dubai Building Code B.7.2.1 reads it when it recommends which boundary the vehicle access goes on.':
     {
-      en: 'The sheet’s Access Side box holds no text this reader can read. On the sheets seen so far it holds a drawn mark (*), with a matching mark beside a boundary; whether it means the side the issuer requires or one it permits is not established, so it is not read. Mark the frontage yourself, against the sheet; B.7.2.1 reads it when it recommends the access boundary.',
-      ar: 'خانة جهة المدخل في المخطط لا تحمل نصا يمكن قراءته. في المخططات التي رأيناها تحمل علامة (*) مرسومة لا مكتوبة، تقابلها علامة بجانب أحد الحدود في الرسم؛ ولم يثبت هل تعني الجهة التي تشترطها الجهة المصدرة أم جهة تسمح بها، فلا تقرأ. حدد الواجهة بنفسك مقابل المخطط؛ والبند B.7.2.1 يقرأها حين يوصي بحد مدخل المركبات.',
+      en: 'No access side is read from this sheet. Where a sheet has an Access Side box (the Trakhees sheets seen so far), it holds a drawn mark (*), with a matching mark beside a boundary; whether it means the side the issuer requires or one it permits is not established, so it is not read. Mark the frontage yourself, against the sheet; B.7.2.1 reads it when it recommends the access boundary.',
+      ar: 'لا تقرأ جهة المدخل من هذا المخطط. حيث يكون في المخطط خانة لجهة المدخل (مخططات تراخيص التي رأيناها)، تحمل الخانة علامة (*) مرسومة لا مكتوبة، تقابلها علامة بجانب أحد الحدود في الرسم؛ ولم يثبت هل تعني الجهة التي تشترطها الجهة المصدرة أم جهة تسمح بها، فلا تقرأ. حدد الواجهة بنفسك مقابل المخطط؛ والبند B.7.2.1 يقرأها حين يوصي بحد مدخل المركبات.',
     },
   'set aside for this run and not checked: every edge this rule governs on this plot carries a tower setback typed on the plot step, USER_SET by the person who ran it.':
     {
@@ -201,7 +212,7 @@ const PATTERNS: readonly Reader[] = [
   },
 ];
 
-export const BINDING_READERS: readonly Reader[] = [exact(FIELDS), SIDE_FIELDS, exact(REASONS), ...PATTERNS];
+export const BINDING_READERS: readonly Reader[] = [exact(FIELDS), SIDE_FIELDS, exact(REASONS), exact(GAP_LABELS), ...PATTERNS];
 
 /** The fixed field names, for the test that holds every binder field to a name. */
 export const BINDING_FIELD: Readonly<Record<string, Said>> = FIELDS;

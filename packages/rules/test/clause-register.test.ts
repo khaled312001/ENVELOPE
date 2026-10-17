@@ -132,4 +132,25 @@ describe('the written promises of 31 Aug 2026', () => {
     expect(by.get('CODED_CLAUSES')?.exists).toMatch(/placeholders that cite no instrument/);
     expect(by.get('RAMP_CHECK')?.status).toBe(PromiseStatus.PARTLY_BUILT);
   });
+
+  it('says every ramp requirement the register leaves unassessed, not only the finish and the drainage', () => {
+    // A written disclosure that names three of six unassessed requirements reads as
+    // "the other three are checked". The register is the list; the promise must cover it.
+    const numbered = DBC_CLAUSE_REGISTER.filter((e) => /^B\.7\.2\.2 [1-6]\)$/.test(e.clause));
+    expect(numbered).toHaveLength(6);
+    for (const e of numbered) expect(e.status, e.clause).toBe(ClauseStatus.NOT_ASSESSED);
+    const ramp = WRITTEN_PROMISES.find((p) => p.id === 'RAMP_CHECK')?.exists ?? '';
+    expect(ramp).toMatch(/B\.7\.2\.2 numbers 1\) to 6\) is assessed/);
+  });
+});
+
+describe('the 300 mm beside a wall, a column or the core (B.7.2.4 ¶2)', () => {
+  it('is not encoded, not an open question: only the column half waits on the client', () => {
+    // The clause plainly applies; OPEN_QUESTION's sentence says "whether it applies
+    // to this building is an open question", which is false of a bay against a wall.
+    const e = entry('B.7.2.4 ¶2');
+    expect(e).toMatchObject({ status: ClauseStatus.NOT_ASSESSED, obligation: ClauseObligation.SHALL });
+    expect(e.status === ClauseStatus.NOT_ASSESSED && e.reason).toBe(NotAssessedReason.NOT_ENCODED);
+    expect(e.detail && CLAUSE_DETAIL[e.detail]).toMatch(/beside a wall or the core it is simply not encoded/);
+  });
 });

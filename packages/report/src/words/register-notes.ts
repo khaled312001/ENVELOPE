@@ -123,10 +123,10 @@ const REGISTER: Readonly<Record<string, Said>> = {
     en: 'The 6 m straight run before a barrier or ramp is not reserved or checked.',
     ar: 'المسافة المستقيمة 6 m قبل الحاجز أو المنحدر لا تحجز ولا تفحص.',
   },
-  'The extra 300 mm beside a wall or column is not added: whether the 0.50 m gap after every three bays (STMT-COLUMN-GAP-2026-10-16) includes it is an open question.':
+  'The extra 300 mm beside a wall, a column or the core is not added to any bay. Beside a column, whether the 0.50 m gap after every three bays (STMT-COLUMN-GAP-2026-10-16) already includes it is an open question; beside a wall or the core it is simply not encoded.':
     {
-      en: 'The extra 300 mm beside a wall or column is not added: whether the 0.50 m gap after every three bays (STMT-COLUMN-GAP-2026-10-16) includes it is an open question.',
-      ar: 'لا تضاف مسافة 300 mm الإضافية بجوار الجدار أو العمود: وهل تشملها مسافة 0.50 m بعد كل ثلاثة مواقف (STMT-COLUMN-GAP-2026-10-16) سؤال مفتوح.',
+      en: 'The extra 300 mm beside a wall, a column or the core is not added to any bay. Beside a column, whether the 0.50 m gap after every three bays (STMT-COLUMN-GAP-2026-10-16) already includes it is an open question; beside a wall or the core it is simply not encoded.',
+      ar: 'لا تضاف مسافة 300 mm الإضافية بجوار الجدار أو العمود أو النواة إلى أي موقف. بجوار العمود، هل تشملها مسافة 0.50 m بعد كل ثلاثة مواقف (STMT-COLUMN-GAP-2026-10-16) سؤال مفتوح؛ أما بجوار الجدار أو النواة فهي ببساطة غير مرمزة.',
     },
   'Bicycle parking is not computed. The code asks for 5% of the building’s required car bays (¶4), at stands no smaller than Table B.14 and within 30 m of the entrance (¶1); it states no rounding.':
     {
@@ -161,10 +161,10 @@ const REGISTER: Readonly<Record<string, Said>> = {
       en: 'Parking ratios (Table B.13, p89) and setbacks from a road and from a neighbour (Table B.1, p41) are dated rule records with page and verbatim text, still drafts no named architect has approved. Bay and aisle dimensions (Table B.11, p86), access (B.7.2.1, p78) and ramps (Tables B.9 and B.10, p80 and p82) are cited constants with page and verbatim text, not dated records. Setbacks to open space and to an unclassified boundary, the height in metres where a sheet states none, and the floor-to-floor height are placeholders that cite no instrument.',
       ar: 'نسب المواقف (الجدول B.13، ص89) والارتداد عن الطريق وعن الجار (الجدول B.1، ص41) سجلات قواعد مؤرخة مع الصفحة والنص الحرفي، وما زالت مسودات لم يعتمدها معماري مسمى. أبعاد المواقف والممرات (الجدول B.11، ص86) والمداخل (B.7.2.1، ص78) والمنحدرات (الجدولان B.9 وB.10، ص80 وص82) ثوابت مستشهد بها مع الصفحة والنص الحرفي، وليست سجلات مؤرخة. أما الارتداد عن المساحة المفتوحة وعن حد غير مصنف، والارتفاع بالمتر حين لا يذكره المخطط، والارتفاع من دور إلى دور، فقيم مؤقتة لا تستند إلى أي مرجع.',
     },
-  'Since 15 Oct 2026 the ramp is sized from Table B.9 (12% and 2.4 m clear height, p80) and Table B.10 (transitions, p82). Its rise is the floor-to-floor height, which is a development placeholder. Finish and drainage (B.7.2.2 1), 5) and 6)) are not assessed.':
+  'Since 15 Oct 2026 the ramp is sized from Table B.9 (12% and 2.4 m clear height, p80) and Table B.10 (transitions, p82). Its rise is the floor-to-floor height, which is a development placeholder. None of the six requirements B.7.2.2 numbers 1) to 6) is assessed: the floor finish, obstructions, corner protection, mirrors and drainage.':
     {
-      en: 'Since 15 Oct 2026 the ramp is sized from Table B.9 (12% and 2.4 m clear height, p80) and Table B.10 (transitions, p82). Its rise is the floor-to-floor height, which is a development placeholder. Finish and drainage (B.7.2.2 1), 5) and 6)) are not assessed.',
-      ar: 'منذ 15 أكتوبر 2026 يحدد المنحدر من الجدول B.9 (ميل 12% وارتفاع صاف 2.4 m، ص80) والجدول B.10 (الانتقالات، ص82). ارتفاعه هو الارتفاع من دور إلى دور، وهو قيمة مؤقتة للتطوير. التشطيب والتصريف (B.7.2.2 البنود 1 و5 و6) لم تخضع للتقييم.',
+      en: 'Since 15 Oct 2026 the ramp is sized from Table B.9 (12% and 2.4 m clear height, p80) and Table B.10 (transitions, p82). Its rise is the floor-to-floor height, which is a development placeholder. None of the six requirements B.7.2.2 numbers 1) to 6) is assessed: the floor finish, obstructions, corner protection, mirrors and drainage.',
+      ar: 'منذ 15 أكتوبر 2026 يحدد المنحدر من الجدول B.9 (ميل 12% وارتفاع صاف 2.4 m، ص80) والجدول B.10 (الانتقالات، ص82). ارتفاعه هو الارتفاع من دور إلى دور، وهو قيمة مؤقتة للتطوير. لم يخضع للتقييم أي من الاشتراطات الستة التي يرقمها B.7.2.2 من 1 إلى 6: تشطيب الأرضية والعوائق وحماية الزوايا والمرايا والتصريف.',
     },
 };
 

@@ -345,7 +345,16 @@ export const DBC_CLAUSE_REGISTER: readonly ClauseRegisterEntry[] = Object.freeze
     cite('TABLE_B11_DRIVEWAY', ACCESS),
   ]),
   notApplicable('Table B.11 note *', 86, MAY, P.PERMISSION_NOT_TAKEN),
-  notAssessed('B.7.2.4 ¶2', 86, SHALL, R.OPEN_QUESTION, { detail: D.BAY_BESIDE_STRUCTURE }),
+  /*
+    NOT_ENCODED, not OPEN_QUESTION. The clause plainly applies: a bay bounded by
+    a wall or column, or at the end of a driveway, gets 300 mm more. The client's
+    open question is only whether his 0.50 m column gap already provides it
+    beside a column. Beside a podium wall or the core nothing is open and nothing
+    adds it, and OPEN_QUESTION's sentence ("whether it applies … is an open
+    question") would have said otherwise about a mandatory clause that moves the
+    bay count.
+  */
+  notAssessed('B.7.2.4 ¶2', 86, SHALL, R.NOT_ENCODED, { detail: D.BAY_BESIDE_STRUCTURE }),
 
   // B.7.2.5 Bus parking — the study lays out no bus bay
   notApplicable('B.7.2.5 ¶1', 88, SHALL, P.ELEMENT_NOT_PROPOSED),

@@ -191,7 +191,7 @@ export const CLAUSE_DETAIL: Readonly<Record<ClauseDetail, string>> = {
   WHEEL_STOPPERS: 'Wheel stoppers are not placed or drawn.',
   ENTRY_RUN: 'The 6 m straight run before a barrier or ramp is not reserved or checked.',
   BAY_BESIDE_STRUCTURE:
-    'The extra 300 mm beside a wall or column is not added: whether the 0.50 m gap after every three bays (STMT-COLUMN-GAP-2026-10-16) includes it is an open question.',
+    'The extra 300 mm beside a wall, a column or the core is not added to any bay. Beside a column, whether the 0.50 m gap after every three bays (STMT-COLUMN-GAP-2026-10-16) already includes it is an open question; beside a wall or the core it is simply not encoded.',
   BICYCLE:
     'Bicycle parking is not computed. The code asks for 5% of the building’s required car bays (¶4), at stands no smaller than Table B.14 and within 30 m of the entrance (¶1); it states no rounding.',
   LOADING:
@@ -366,6 +366,6 @@ export const WRITTEN_PROMISES: readonly WrittenPromise[] = [
       'Ramp gradient and headroom are checked against B.7.2.2, from the ramp run and the floor-to-floor height.',
     status: PromiseStatus.PARTLY_BUILT,
     exists:
-      'Since 15 Oct 2026 the ramp is sized from Table B.9 (12% and 2.4 m clear height, p80) and Table B.10 (transitions, p82). Its rise is the floor-to-floor height, which is a development placeholder. Finish and drainage (B.7.2.2 1), 5) and 6)) are not assessed.',
+      'Since 15 Oct 2026 the ramp is sized from Table B.9 (12% and 2.4 m clear height, p80) and Table B.10 (transitions, p82). Its rise is the floor-to-floor height, which is a development placeholder. None of the six requirements B.7.2.2 numbers 1) to 6) is assessed: the floor finish, obstructions, corner protection, mirrors and drainage.',
   },
 ];

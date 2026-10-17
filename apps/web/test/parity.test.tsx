@@ -142,16 +142,30 @@ function served(bay: readonly XY[], nodes: readonly (readonly XY[])[]): boolean 
  */
 const AISLE_MM = 6000 - 10;
 
+/*
+  Plot 6468096's schedule: three basements, shops on G (A-104), parking on P1-P5.
+  The model once parked G and left P5 empty; every renderer drew that faithfully,
+  which is why counting renderers against each other never caught it. The case is
+  here so they are also counted on a stack whose parking skips a level.
+*/
+const A_104 = { basements: 3, groundIsParking: false, podiumAboveGround: 5, podiumParkingLevels: 5 } as const;
+
 const CASES = [
-  { name: '80 x 40', ring: RECT_80x40, podiumLevels: undefined },
-  { name: '80 x 40, two podium levels', ring: RECT_80x40, podiumLevels: 2 },
-  { name: '120 x 80', ring: RECT_120x80, podiumLevels: undefined },
-  { name: 'skewed', ring: SKEWED, podiumLevels: undefined },
+  { name: '80 x 40', ring: RECT_80x40, podiumLevels: undefined, levelSchedule: undefined },
+  { name: '80 x 40, two podium levels', ring: RECT_80x40, podiumLevels: 2, levelSchedule: undefined },
+  { name: '120 x 80', ring: RECT_120x80, podiumLevels: undefined, levelSchedule: undefined },
+  { name: 'skewed', ring: SKEWED, podiumLevels: undefined, levelSchedule: undefined },
+  { name: '80 x 40, ground floor not parking (6468096)', ring: RECT_80x40, podiumLevels: undefined, levelSchedule: A_104 },
 ] as const;
 
-describe.each(CASES)('$name', ({ ring, podiumLevels }) => {
+describe.each(CASES)('$name', ({ ring, podiumLevels, levelSchedule }) => {
   const out = (): ReturnType<typeof runPipeline> =>
-    runPipeline(runInput(ring, podiumLevels === undefined ? {} : { podiumLevels }));
+    runPipeline(
+      runInput(ring, {
+        ...(podiumLevels === undefined ? {} : { podiumLevels }),
+        ...(levelSchedule === undefined ? {} : { levelSchedule }),
+      }),
+    );
 
   it('draws, on every parking level, in every renderer, exactly the bays the engine placed', () => {
     const model = out().building;
@@ -352,6 +366,26 @@ describe.each(CASES)('$name', ({ ring, podiumLevels }) => {
       const react = renderToStaticMarkup(<SheetView sheet={sheet} idPrefix="p" onInspect={() => {}} />);
       expect(d(react), sheet.number).toEqual(d(sheetSvg(sheet, 'p')));
     }
+  });
+});
+
+describe('a ground floor the schedule does not give to parking', () => {
+  it('has no car on G in the building DXF or the 3D view, and cars on P1 to P5', () => {
+    const model = runPipeline(runInput(RECT_80x40, { levelSchedule: A_104 })).building;
+    const sheets = composeSheets(model, META);
+    expect(sheets.some((s) => s.kind === 'PARKING' && s.levelId === 'G')).toBe(false);
+    const cars = parseDxf(buildingDxf(model, sheets, META)).entities.filter(
+      (e) => e.type === 'INSERT' && (e as { name?: string }).name === 'CAR',
+    );
+    expect(cars.filter((c) => c.layer === layerName('G', 'car'))).toHaveLength(0);
+    const scene = buildBuildingScene(model, PALETTE);
+    const perLevel = carsPerLevel(scene);
+    expect(perLevel.has('G')).toBe(false);
+    for (const id of ['P1', 'P2', 'P3', 'P4', 'P5']) {
+      expect(perLevel.get(id)?.count ?? 0, id).toBeGreaterThan(0);
+      expect(cars.filter((c) => c.layer === layerName(id, 'car')).length, id).toBeGreaterThan(0);
+    }
+    scene.dispose();
   });
 });
 

@@ -12,6 +12,10 @@
  * you may edit this" — because those labels carry the whole trust proposition,
  * and a second front end with softer words would undo it.
  */
+
+/** The parking level the street reaches, as the engine names it. */
+export type AccessibleLevel = 'GROUND' | 'FIRST_BASEMENT' | 'FIRST_PODIUM';
+
 export const EN = {
   common: {
     close: 'Close',
@@ -596,14 +600,23 @@ export const EN = {
     },
     accessible: {
       title: 'Accessible and preferred bays',
-      hint: (onGrade: boolean): string =>
-        onGrade
-          ? 'On the ground floor, nearest the core, as the Dubai Building Code asks.'
-          : 'On the first basement, nearest the core: the ground floor holds no parking.',
+      hint: (level: AccessibleLevel, slopeBlocked: boolean): string =>
+        slopeBlocked
+          ? 'None placed: every parking level is the sloped ring, steeper than the code allows for accessible bays. The figures are below.'
+          : level === 'GROUND'
+            ? 'On the ground floor, nearest the core, as the Dubai Building Code asks.'
+            : level === 'FIRST_PODIUM'
+              ? 'On the first podium parking level, nearest the core: the ground floor holds no parking and there is no basement.'
+              : 'On the first basement, nearest the core: the ground floor holds no parking.',
       placed: 'Accessible bays placed',
       required: 'Accessible bays required',
       preferred: 'Preferred bays: hybrid, electric, carpool',
-      level: (onGrade: boolean): string => (onGrade ? 'Bays on the ground floor' : 'Bays on the first basement'),
+      level: (level: AccessibleLevel): string =>
+        level === 'GROUND'
+          ? 'Bays on the ground floor'
+          : level === 'FIRST_PODIUM'
+            ? 'Bays on the first podium parking level'
+            : 'Bays on the first basement',
       lost: (n: number): string => `${n} ${n === 1 ? 'bay' : 'bays'} given to the access aisles beside them`,
       vans: (n: number): string => `${n} of them wide enough for a van`,
       farthest: (m: string): string => `The farthest is ${m} m from the core in a straight line.`,

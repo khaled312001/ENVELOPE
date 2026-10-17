@@ -28,7 +28,7 @@
  * straight line is a floor on any walk, never a proof of one.
  */
 
-import { Decimal, type Citation, type Traced, type Tracer } from '@envelope/core';
+import { Decimal, type Citation, type Traced, type TracedDecimal, type Tracer } from '@envelope/core';
 import type { Pt } from '@envelope/geometry';
 
 import { RectKind } from './layout.js';
@@ -68,6 +68,40 @@ export const CLAUSE_B_7_2_6_2: Citation = {
   sourceTextVerbatim: 'The percentage required for preferred parking is 5%.',
 };
 
+export const ACCESSIBLE_SLOPE_B7231: Citation = {
+  instrumentId: 'DUBAI_BUILDING_CODE',
+  instrumentVersion: '2021',
+  clauseReference: 'B.7.2.3.1 — Parking at slope, accessible parking',
+  documentUri: DBC_PDF,
+  sourcePage: 83,
+  sourceBbox: [0, 0, 842, 595],
+  sourceTextVerbatim:
+    'The slope in areas where vehicles are parked shall be not more than 4% (as shown in ' +
+    'Figure B.55). Accessible parking slopes shall be limited to a maximum of 2%.',
+};
+
+/** B.7.2.3.1: the steepest an accessible bay's floor may fall, percent. */
+export const MAX_ACCESSIBLE_SLOPE_PCT = '2';
+
+/**
+ * The parking level a car reaches first from the street: the ground floor where
+ * it parks, which C.6.4.2 e) asks for, else the first basement, else the first
+ * podium parking level. The accessible bays stand on it.
+ */
+export const EntryLevel = {
+  GROUND: 'GROUND',
+  FIRST_BASEMENT: 'FIRST_BASEMENT',
+  FIRST_PODIUM: 'FIRST_PODIUM',
+} as const;
+export type EntryLevel = (typeof EntryLevel)[keyof typeof EntryLevel];
+
+/** How a sentence names that level. `packages/report/src/words` reads these. */
+export const ENTRY_LEVEL_WORDS: Readonly<Record<EntryLevel, string>> = {
+  GROUND: 'the ground floor',
+  FIRST_BASEMENT: 'the first basement',
+  FIRST_PODIUM: 'the first podium parking level',
+};
+
 /** Table C.18: an accessible van bay is 3.35 m wide. */
 export const VAN_BAY_WIDTH_M = new Decimal('3.35');
 /** C.6.4.2 f): the access aisle beside an accessible bay. */
@@ -97,8 +131,19 @@ export function accessibleRequired(total: number, roundUp = true): number {
 }
 
 export interface AccessiblePlan {
-  /** Which parking level holds them: the ground floor, or the first basement. */
+  /** Whether the level that holds them is the ground floor. Kept for readers of `level`'s older form. */
   readonly onGrade: boolean;
+  /** Which parking level holds them. */
+  readonly level: EntryLevel;
+  /**
+   * Where the level's parked floor is the sloped ring: its gradient against
+   * B.7.2.3.1's 2%, and whether that kept the bays off it. Absent on a flat level.
+   */
+  readonly slope?: {
+    readonly gradientPct: TracedDecimal;
+    readonly limitPct: TracedDecimal;
+    readonly blocked: boolean;
+  };
   /** That level's rectangles, with the accessible bays, their aisles and the preferred bays marked. */
   readonly rects: readonly WorldRect[];
   /** That level's bays once the aisles are taken from it. */
@@ -117,7 +162,14 @@ export interface AccessiblePlan {
 
 export interface AccessibleInput {
   readonly tracer: Tracer;
-  readonly onGrade: boolean;
+  /** The level the street reaches, by `entryLevelOf` in `building.ts`. */
+  readonly level: EntryLevel;
+  /**
+   * The gradient of the level's parked floor, where the arrangement is the
+   * sloped ring. Absent on a flat level. Every parking level shares one layout,
+   * so a sloped ring here is a sloped ring on every level the bays could go to.
+   */
+  readonly floorGradientPct?: TracedDecimal;
   /** The level's rectangles before any designation: the grade plan's, or the shared layout's. */
   readonly rects: readonly WorldRect[];
   readonly levelBays: Traced<number>;
@@ -185,7 +237,7 @@ function widenInto(a: WorldRect, b: WorldRect, extraM: Decimal): [WorldRect, Wor
 export function designateAccessible(input: AccessibleInput): AccessiblePlan {
   const { tracer } = input;
   const notes: string[] = [];
-  const level = input.onGrade ? 'the ground floor' : 'the first basement';
+  const level = ENTRY_LEVEL_WORDS[input.level];
 
   // --- how many ----------------------------------------------------------------
   const otherBays = input.others.perLevel.value * input.others.levels;
@@ -259,6 +311,32 @@ export function designateAccessible(input: AccessibleInput): AccessiblePlan {
   const extra = Decimal.max(new Decimal(0), VAN_BAY_WIDTH_M.minus(input.bayWidthM));
   const vanFits = input.bayWidthM.minus(extra).gte(ACCESS_AISLE_MIN_M);
 
+  /*
+    B.7.2.3.1: "Accessible parking slopes shall be limited to a maximum of 2%."
+    The sloped ring falls at up to the 4% a parked floor may, so on that
+    arrangement every bay — against the walls and on the island, which faces the
+    ring — stands on a floor the engine itself reports above 2%. The model has no
+    flat landing: one would be a zone nobody laid out. And every parking level
+    shares the layout, so there is no flatter level to move them to by the rule
+    above. So none is designated, and the shortfall is said with both figures.
+    The arrangement is NOT changed to make room: choosing a layout to pass a
+    check is the search `PHASE_0_CLASSES` refuses, and the reader may pick
+    another arrangement themselves.
+  */
+  let slope: AccessiblePlan['slope'];
+  if (input.floorGradientPct) {
+    const limitPct = tracer.derived('parking.accessible_max_slope_pct', new Decimal(MAX_ACCESSIBLE_SLOPE_PCT), {
+      rule: { ruleId: 'DBC.B.7.2.3.1.ACCESSIBLE', citation: ACCESSIBLE_SLOPE_B7231 },
+      formula: 'accessible parking falls at no more than 2%',
+      unit: '%',
+    });
+    slope = {
+      gradientPct: input.floorGradientPct,
+      limitPct,
+      blocked: input.floorGradientPct.value.gt(limitPct.value),
+    };
+  }
+
   let placedValue = 0;
   let vans = 0;
   let lost = 0;
@@ -275,7 +353,7 @@ export function designateAccessible(input: AccessibleInput): AccessiblePlan {
     rects[aisle] = { ...b, kind: RectKind.ACCESS_AISLE };
     accessibleIdx.push(accessible);
   };
-  while (placedValue < requiredValue) {
+  while (!slope?.blocked && placedValue < requiredValue) {
     if (requiredValue - placedValue >= 2) {
       const g = groups(3)[0];
       if (g) {
@@ -299,14 +377,25 @@ export function designateAccessible(input: AccessibleInput): AccessiblePlan {
   }
 
   const placed = tracer.computed('parking.accessible_bays', placedValue, {
-    formula:
-      `${placedValue} of ${requiredValue} placed on ${level}, at the bays nearest the core, ` +
-      `${lost} bay(s) given up to the access aisle(s) of C.6.4.2 f)` +
-      (vans > 0 ? `; ${vans} of them ${VAN_BAY_WIDTH_M.toString()} m wide for a van` : ''),
-    uses: { required, vanRatio },
+    formula: slope?.blocked
+      ? `0 of ${requiredValue} placed: ${level} is the sloped ring at ${slope.gradientPct.value.toFixed(2)}%, ` +
+        `above the ${slope.limitPct.value.toString()}% B.7.2.3.1 allows accessible parking`
+      : `${placedValue} of ${requiredValue} placed on ${level}, at the bays nearest the core, ` +
+        `${lost} bay(s) given up to the access aisle(s) of C.6.4.2 f)` +
+        (vans > 0 ? `; ${vans} of them ${VAN_BAY_WIDTH_M.toString()} m wide for a van` : ''),
+    uses: slope
+      ? { required, vanRatio, gradient: slope.gradientPct, limit: slope.limitPct }
+      : { required, vanRatio },
     unit: 'bays',
   });
-  if (placedValue < requiredValue) {
+  if (slope?.blocked && requiredValue > 0) {
+    notes.push(
+      `None of the ${requiredValue} accessible bays Table C.17 asks for is placed: ${level} is the sloped ring, ` +
+        `whose floor falls ${slope.gradientPct.value.toFixed(2)}%, and DBC B.7.2.3.1 limits accessible parking to ` +
+        `${slope.limitPct.value.toString()}%. Every parking level shares that layout, so no level is flatter. ` +
+        'The arrangement was not changed to make room for them; an arrangement with a flat floor would.',
+    );
+  } else if (placedValue < requiredValue) {
     notes.push(
       `${requiredValue - placedValue} of the ${requiredValue} accessible bays Table C.17 asks for could not be ` +
         `placed on ${level}: it has no further run of bays side by side to take one with its access aisle.`,
@@ -354,7 +443,9 @@ export function designateAccessible(input: AccessibleInput): AccessiblePlan {
   }
 
   return {
-    onGrade: input.onGrade,
+    onGrade: input.level === EntryLevel.GROUND,
+    level: input.level,
+    ...(slope ? { slope } : {}),
     rects,
     bayCount,
     required,

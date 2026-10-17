@@ -224,6 +224,9 @@ export function presentRun(
             ? {
                 accessible: {
                   onGrade: levelPlan.accessible.onGrade,
+                  // Which level, now that it can be P1; and whether B.7.2.3.1's 2% kept them off a sloped ring.
+                  level: levelPlan.accessible.level,
+                  slopeBlocked: levelPlan.accessible.slope?.blocked ?? false,
                   required: toWire(levelPlan.accessible.required),
                   placed: toWire(levelPlan.accessible.placed),
                   vans: levelPlan.accessible.vans,

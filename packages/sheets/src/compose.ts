@@ -49,7 +49,10 @@ import {
   type Box,
 } from './plane.js';
 import { placeCars } from './cars.js';
-import { PAPER, paperFurniture, VIEWPORT } from './strip.js';
+import { settleLabels, withRule, type LabelRule } from './placement.js';
+import { textLengthMm } from './text-box.js';
+import { LETTERING } from './lettering.js';
+import { drawingArea, PAPER, paperFurniture } from './strip.js';
 import {
   type LegendEntry,
   type ModelItem,
@@ -93,6 +96,30 @@ const CAD_LAYERS = 'In the DXF of this sheet, layers are named ENV-<level>-<elem
 
 /** Paper millimetres of margin kept round the geometry for the labels outside it. */
 const MARGIN = 14;
+
+/**
+ * Every label on the drawing is set at the note height (`lettering.ts`): 2.5 mm
+ * on A3. Room names were 1.2 mm, bay numbers 1.6 mm and the caveats 1.2 mm, which
+ * printed below ISO 3098's smallest height. A label that does not fit at this
+ * height is moved or left to the key — it is not shrunk.
+ */
+const NOTE = LETTERING.noteMm;
+
+/**
+ * How far a label may move to clear another (`placement.ts`), in paper
+ * millimetres. NEAR keeps a label beside what it names; ALONG lets the words of
+ * a long, narrow thing — an aisle, a ramp — slide down its length and no further
+ * off it.
+ */
+const NEAR: LabelRule = { alongMm: 10, acrossMm: 10 };
+const ALONG: LabelRule = { alongMm: 30, acrossMm: 0 };
+/**
+ * A ramp's words: a little down its run, inside its strip, either side of the
+ * arrow. Not far: where the module dimension's witness lines cross the strip,
+ * the line is broken under the words rather than the words sent away from the
+ * arrow they describe (`placement.ts`).
+ */
+const RAMP_WORDS: LabelRule = { alongMm: 12, acrossMm: 4 };
 
 const shape = (
   role: Role,
@@ -140,17 +167,34 @@ export function signedLevel(value: string): string {
   return `${zero ? '±' : negative ? '-' : '+'}${whole}.${two}`;
 }
 
-/** Scale and centre a sheet on the box its model items occupy. */
-function frame(box: Box, margin = MARGIN): Pick<Sheet, 'view' | 'viewport'> & { scale: number } {
-  const scale = fitScale(box, VIEWPORT, margin);
+/**
+ * The general notes each kind of sheet prints under its drawing — the same list
+ * the drawing is fitted around (`frame`) and the band prints, so the two cannot
+ * disagree about how much paper the notes take. SITE_NOTES serves every sheet
+ * that is not a parking level.
+ */
+const SITE_NOTES: readonly string[] = [CAD_LAYERS];
+const PARKING_NOTES: readonly string[] = [BAY_NUMBERING, NO_GRID, CAD_LAYERS];
+
+/**
+ * Scale and centre a sheet on the box its model items occupy, in the paper its
+ * notes leave for the drawing (`drawingArea`).
+ */
+function frame(
+  box: Box,
+  notes: readonly string[],
+  margin = MARGIN,
+): Pick<Sheet, 'view' | 'viewport'> & { scale: number } {
+  const area = drawingArea(notes);
+  const scale = fitScale(box, area, margin);
   return {
     scale,
     view: {
       scale,
       centreModel: { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 },
-      centrePaper: { x: VIEWPORT.x + VIEWPORT.width / 2, y: VIEWPORT.y + VIEWPORT.height / 2 },
+      centrePaper: { x: area.x + area.width / 2, y: area.y + area.height / 2 },
     },
-    viewport: VIEWPORT,
+    viewport: area,
   };
 }
 
@@ -175,6 +219,11 @@ export function composeSheets(model: BuildingModel, meta: SheetMeta): Sheet[] {
   */
   return sheets.map((sheet, i) => ({
     ...sheet,
+    /*
+      LABELS SETTLED LAST, on the finished sheet: only once every figure, number
+      and paper item is down can a label be moved clear of them (`placement.ts`).
+    */
+    items: settleLabels(sheet.items, sheet.view, sheet.viewport, sheet.paperItems),
     paperItems: sheet.paperItems.map((item) =>
       item.kind === 'text' && item.field === TitleField.SHEET_OF
         ? { ...item, value: `${i + 1} OF ${sheets.length}` }
@@ -267,7 +316,7 @@ function plotContext(model: BuildingModel, s: number, withDimensions: boolean): 
     const mid = midpointOf(edge.start, edge.end);
     const along = angleOf(edge.start, edge.end);
     // Outside the boundary, one and a half text heights clear of it.
-    items.push(label(Role.EDGE_LABEL, offsetPoint(mid, n, -2.6 * 2.4 * s), edge.label, 2.4, along));
+    items.push(label(Role.EDGE_LABEL, offsetPoint(mid, n, -2.6 * NOTE * s), edge.label, NOTE, along));
 
     if (withDimensions) {
       /*
@@ -384,7 +433,7 @@ function coreItems(model: BuildingModel, levelId: string, s: number): ModelItem[
   const at = coreLabelAt(core.outline, lobby);
   const items: ModelItem[] = [
     shape(Role.CORE, core.outline, true, { source: core.source, name: core.label }),
-    label(Role.CORE, at, core.label, 1.8, wide ? 0 : 90, 'middle', core.source),
+    withRule(label(Role.CORE, at, core.label, NOTE, wide ? 0 : 90, 'middle', core.source), NEAR),
   ];
   if (rooms.length > 0) {
     for (const room of rooms) items.push(...coreRoomItems(room, core.roomsSource));
@@ -395,7 +444,7 @@ function coreItems(model: BuildingModel, levelId: string, s: number): ModelItem[
     */
     const below = wide ? { x: at.x, y: at.y - 3 * s } : { x: at.x + 3 * s, y: at.y };
     items.push(
-      label(Role.CORE_ROOM, mm(below.x, below.y), CORE_CAVEAT, 1.2, wide ? 0 : 90, 'middle', core.roomsSource),
+      withRule(label(Role.CORE_ROOM, mm(below.x, below.y), CORE_CAVEAT, NOTE, wide ? 0 : 90, 'middle', core.roomsSource), NEAR),
     );
   }
   items.push(...coreEntranceItems(core, levelId, s));
@@ -456,7 +505,10 @@ function coreEntranceItems(
     items.push(shape(Role.CORE_ROOM, swing, false, opts));
   }
   items.push(
-    label(Role.CORE_ROOM, offsetPoint(mid, inward, -2.4 * s), CORE_ENTRANCE_LABEL, 1.2, angleOf(a, b), 'middle', core.roomsSource),
+    withRule(
+      label(Role.CORE_ROOM, offsetPoint(mid, inward, -2.4 * s), CORE_ENTRANCE_LABEL, NOTE, angleOf(a, b), 'middle', core.roomsSource),
+      NEAR,
+    ),
   );
   return items;
 }
@@ -481,8 +533,11 @@ function shaftItems(
   const items: ModelItem[] = [shape(Role.CORE, shaft.outline, true, { source, name: shaft.label })];
   for (const room of core.rooms ?? []) items.push(...coreRoomItems(room, core.roomsSource));
   items.push(
-    label(Role.CORE, mm(farMid.x + v.x * 2.6 * s, farMid.y + v.y * 2.6 * s), shaft.label, 1.6, along, 'middle', source),
-    label(Role.CORE_ROOM, mm(farMid.x + v.x * 4.6 * s, farMid.y + v.y * 4.6 * s), CORE_CAVEAT, 1.2, along, 'middle', core.roomsSource),
+    withRule(label(Role.CORE, mm(farMid.x + v.x * 2.6 * s, farMid.y + v.y * 2.6 * s), shaft.label, NOTE, along, 'middle', source), NEAR),
+    withRule(
+      label(Role.CORE_ROOM, mm(farMid.x + v.x * 6 * s, farMid.y + v.y * 6 * s), CORE_CAVEAT, NOTE, along, 'middle', core.roomsSource),
+      NEAR,
+    ),
   );
   return items;
 }
@@ -513,7 +568,12 @@ function groundRoomItems(room: ModelGroundRoom, source: ElementSource): ModelIte
   const rotation = lengthOf(o, a) >= lengthOf(o, b) ? angleOf(o, a) : angleOf(o, b);
   return [
     shape(Role.GROUND_ROOM, room.outline, true, { source, name: `${room.name} - indicative` }),
-    label(Role.GROUND_ROOM, centroidOf(room.outline), room.name, 1.2, rotation, 'middle', source),
+    // Nothing but its name tells the substation from the water tank: if the name
+    // will not fit inside, it stands beside the room on a leader (`placement.ts`).
+    withRule(label(Role.GROUND_ROOM, centroidOf(room.outline), room.name, NOTE, rotation, 'middle', source), {
+      within: room.outline,
+      leaderMm: 30,
+    }),
   ];
 }
 
@@ -566,7 +626,11 @@ function coreRoomItems(room: ModelCoreRoom, source: ElementSource | undefined): 
   // A stair's label sits on its landing, clear of the treads, read along the landing.
   const labelAt = room.kind === 'STAIR' ? at(LANDING_MM / 2, across / 2) : centroidOf(room.outline);
   const rotation = room.kind === 'STAIR' ? angleOf(o, b) : angleOf(o, a);
-  items.push(label(Role.CORE_ROOM, labelAt, ROOM_LABEL[room.kind], 1.2, rotation, 'middle', source));
+  items.push(
+    withRule(label(Role.CORE_ROOM, labelAt, ROOM_LABEL[room.kind], NOTE, rotation, 'middle', source), {
+      within: room.outline,
+    }),
+  );
   return items;
 }
 
@@ -576,7 +640,16 @@ function coreRoomItems(room: ModelCoreRoom, source: ElementSource | undefined): 
   Two lanes side by side are 3 m apart, closer than a label is long, so the
   second label on a boundary steps further out instead of printing over the first.
 */
-function accessItems(model: BuildingModel, s: number): ModelItem[] {
+/*
+  THE LABEL OUTSIDE THE DIMENSION. On the site plan the boundary is measured by
+  a chain outside it, and the entrance's words were set 15.6 mm out — the same
+  band as that chain's figure. On the worked example VEHICLE ENTRY / EXIT - 6.00M
+  covered 96% of the 80.00 M measuring the frontage, the one length the access
+  rule is read off. So on a sheet with the chain the label stands a text height
+  beyond the chain's reach (`labelOutMm`); a parking sheet draws no chain and
+  keeps the old offset.
+*/
+function accessItems(model: BuildingModel, s: number, labelOutMm = 6.5 * 2.4): ModelItem[] {
   const access = model.access;
   if (!access) return [];
   const arrowLength = Math.max(4000, 10 * s);
@@ -599,7 +672,10 @@ function accessItems(model: BuildingModel, s: number): ModelItem[] {
         rotationDeg: round2(angleOf(mid, offsetPoint(mid, n, outward ? -1000 : 1000))),
         scale: arrowLength,
       },
-      label(Role.ACCESS, offsetPoint(mid, n, -(6.5 + 3 * step) * 2.4 * s), o.label, 2.2, angleOf(a, b), 'middle', access.source),
+      withRule(
+        label(Role.ACCESS, offsetPoint(mid, n, -(labelOutMm + step * 1.4 * NOTE) * s), o.label, NOTE, angleOf(a, b), 'middle', access.source),
+        { alongMm: 20, acrossMm: 2.5 },
+      ),
     );
   }
   return items;
@@ -635,7 +711,7 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
     a ladder of standard scales, so the second pass either keeps the scale or steps
     down one rung — it cannot oscillate, and 1:237 is not on the ladder to land on.
   */
-  const f = frame(box, MARGIN + dimensionReachMm(model, frame(box).scale));
+  const f = frame(box, SITE_NOTES, MARGIN + dimensionReachMm(model, frame(box, SITE_NOTES).scale));
   const s = f.scale;
   const items: ModelItem[] = [...plotContext(model, s, true)];
 
@@ -647,7 +723,7 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
   if (tower && !sameRing(tower.outline, ground?.outline ?? [])) {
     items.push(shape(Role.TOWER, tower.outline, true, { source: tower.outlineSource, name: 'Tower plate' }));
   }
-  items.push(...accessItems(model, s));
+  items.push(...accessItems(model, s, dimensionReachMm(model, s) + NOTE));
 
   for (const section of model.sections) {
     const [a, b] = section.line;
@@ -697,7 +773,7 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
       meta,
       facts,
       legend,
-      legendNotes: [CAD_LAYERS],
+      legendNotes: SITE_NOTES,
       north: true,
     }),
     facts,
@@ -853,7 +929,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     took the worked example's ground floor from 1:250 to 1:500 for 1.5 m of
     substation, which is the scale the comment above exists to avoid.
   */
-  const f = frame(box, outside.length > 0 ? 1 : 4);
+  const f = frame(box, PARKING_NOTES, outside.length > 0 ? 1 : 4);
   const s = f.scale;
   const items: ModelItem[] = [...plotContext(model, s, false)];
 
@@ -867,7 +943,12 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     const wide = rb.maxX - rb.minX >= rb.maxY - rb.minY;
     // On the ground floor the rooms carry the labels; the strip's own would sit across them.
     if (!groundRooms) {
-      items.push(label(Role.RESERVED, centroidOf(r.outline), r.label, 1.8, wide ? 0 : 90, 'middle', sourceOf(r.areaM2)));
+      items.push(
+        withRule(label(Role.RESERVED, centroidOf(r.outline), r.label, NOTE, wide ? 0 : 90, 'middle', sourceOf(r.areaM2)), {
+          alongMm: 20,
+          acrossMm: 10,
+        }),
+      );
     }
     // The other pieces of the same area: hatched alike, labelled once, on the largest.
     (r.pieces ?? []).forEach((piece, i) => {
@@ -910,20 +991,24 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       // Clear of the arrowhead, whose half-width grows with the ramp's run: on a
       // long ramp a fixed offset put the label's first word through the head.
       const head = 0.09 * Math.round(run * 0.5);
-      items.push(label(Role.RAMP, offsetPoint(c, across, Math.max(2.2 * s, head + 1.6 * s)), words, 2, along));
+      const rampWords: LabelRule = { ...RAMP_WORDS, within: parking.rampStrip, withhold: false };
+      items.push(withRule(label(Role.RAMP, offsetPoint(c, across, Math.max(2.6 * s, head + 1.9 * s)), words, NOTE, along), rampWords));
       items.push(
-        label(
-          Role.RAMP,
-          offsetPoint(c, across, -Math.max(2.6 * s, head + 1.5 * s)),
-          ramp.label,
-          1.8,
-          along,
-          'middle',
-          sourceOf(ramp.gradientPct),
+        withRule(
+          label(
+            Role.RAMP,
+            offsetPoint(c, across, -Math.max(3 * s, head + 1.9 * s)),
+            ramp.label,
+            NOTE,
+            along,
+            'middle',
+            sourceOf(ramp.gradientPct),
+          ),
+          rampWords,
         ),
       );
     } else {
-      items.push(label(Role.RAMP, c, 'RAMP STRIP RESERVED - NO SECOND PARKING LEVEL TO REACH', 1.8, 0));
+      items.push(withRule(label(Role.RAMP, c, 'RAMP STRIP RESERVED - NO SECOND PARKING LEVEL TO REACH', NOTE, 0), NEAR));
     }
   }
 
@@ -941,7 +1026,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       label already says which way the aisle runs. The label's length is
       estimated from its characters at the 2 mm text height.
     */
-    const labelHalf = (aisle.label.length * 2 * 0.62 * s) / 2;
+    const labelHalf = (textLengthMm(aisle.label, NOTE) * s) / 2;
     const clear = (at: number): boolean => Math.abs(0.5 - at) * len - arrow / 2 > labelHalf + 500;
     const ends = (arrow / 2 + 500) / len;
     const spots = clear(0.2) ? [0.2, 0.8] : clear(ends) ? [ends, 1 - ends] : [];
@@ -955,7 +1040,13 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
         scale: arrow,
       });
     }
-    items.push(label(Role.AISLE, midpointOf(a, b), aisle.label, 2, along));
+    /*
+      On the aisle and no further: a label longer than its piece of aisle ran
+      across the bays at its ends (Warsan, between bays 3 and 4). Such a label is
+      left off; the aisle's other pieces, the module dimension and the key all
+      say what it is.
+    */
+    items.push(withRule(label(Role.AISLE, midpointOf(a, b), aisle.label, NOTE, along), { ...ALONG, within: aisle.outline }));
   }
 
   /*
@@ -971,7 +1062,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       items.push(shape(Role.TURN, turn.outer, false, { source: turnSource }));
       if (!turn.fits) {
         const mid = turn.outer[Math.floor(turn.outer.length / 2)]!;
-        items.push(label(Role.TURN, mid, 'TURN LEAVES THE AISLE AT THIS RADIUS', 1.8, 0, 'middle', turnSource));
+        items.push(withRule(label(Role.TURN, mid, 'TURN LEAVES THE AISLE AT THIS RADIUS', NOTE, 0, 'middle', turnSource), NEAR));
       }
     }
   }
@@ -989,7 +1080,12 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     // A quarter of the way across, not on the centre line: the entrance's arrow runs there.
     const wide = lengthOf(p0, p1) || 1;
     const across = { x: (p1.x - p0.x) / wide, y: (p1.y - p0.y) / wide };
-    items.push(label(Role.AISLE, offsetPoint(midpointOf(from, to), across, wide / 4), drive.label, 1.8, angleOf(from, to)));
+    items.push(
+      withRule(label(Role.AISLE, offsetPoint(midpointOf(from, to), across, wide / 4), drive.label, NOTE, angleOf(from, to)), {
+        alongMm: 12,
+        acrossMm: 2,
+      }),
+    );
   }
 
   /*
@@ -1017,7 +1113,12 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
         scale: 4000,
       });
       const across = { x: -Math.sin((along * Math.PI) / 180), y: Math.cos((along * Math.PI) / 180) };
-      items.push(label(Role.RAMP, offsetPoint(at, across, 1.4 * s), words, 1.6, along, 'middle', sourceOf(rampedFloor.gradientPct)));
+      items.push(
+        withRule(label(Role.RAMP, offsetPoint(at, across, 1.8 * s), words, NOTE, along, 'middle', sourceOf(rampedFloor.gradientPct)), {
+          alongMm: 6,
+          acrossMm: 4,
+        }),
+      );
     }
   }
 
@@ -1031,7 +1132,9 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     const [p0, p1, p2] = aisle as readonly [ModelPoint, ModelPoint, ModelPoint];
     const long = lengthOf(p1, p2) >= lengthOf(p0, p1);
     const centre = midpointOf(p0, p2);
-    items.push(label(Role.ACCESS_AISLE, centre, 'ACCESS AISLE', 1.2, long ? angleOf(p1, p2) : angleOf(p0, p1)));
+    items.push(
+      withRule(label(Role.ACCESS_AISLE, centre, 'ACCESS AISLE', NOTE, long ? angleOf(p1, p2) : angleOf(p0, p1)), { within: aisle }),
+    );
   }
 
   // --- bays: outline, car, number -----------------------------------------------------------
@@ -1048,10 +1151,16 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       }),
     );
     items.push({ kind: 'symbol', role: Role.CAR, symbol: SymbolName.CAR, at: c, rotationDeg: axis, scale: 1, bay: bay.number });
-    items.push(label(Role.BAY_NUMBER, tail, String(bay.number), 1.6, axis + 90));
-    // In words as well as in ink (1.4.1): the van bay and the preferred bays say what they are.
+    items.push(label(Role.BAY_NUMBER, tail, String(bay.number), NOTE, axis + 90));
+    /*
+      In words as well as in ink (1.4.1): the van bay and the preferred bays say
+      what they are. Down the bay's length, on the car: across it, at the note
+      height, PREF is 6.6 mm and a bay at 1:500 is 5 mm, so every tag ran into
+      the next bay's. Along it the bay is 11 mm, and the number stays clear at the
+      aisle end.
+    */
     const tag = bay.accessible ? (bay.use === 'VAN' ? 'VAN' : null) : bay.use === 'PREFERRED' ? 'PREF' : null;
-    if (tag) items.push(label(role, midpointOf(c, tail), tag, 1.2, axis + 90));
+    if (tag) items.push(label(role, c, tag, NOTE, axis));
   }
 
   /*
@@ -1067,14 +1176,17 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
     const angle = angleOf(end.at, end.along);
     const upright = Math.cos((angle * Math.PI) / 180) >= 0;
     items.push(
-      label(
-        Role.DEAD_END,
-        // Off the centre line, where the aisle's own label and arrow run.
-        offsetPoint(offsetPoint(end.at, dir, 1000), { x: -dir.y, y: dir.x }, 1800),
-        `DEAD END - ${end.bays} BAYS, 8 ADVISED`,
-        1.4,
-        upright ? angle : angle + 180,
-        upright ? 'start' : 'end',
+      withRule(
+        label(
+          Role.DEAD_END,
+          // Off the centre line, where the aisle's own label and arrow run.
+          offsetPoint(offsetPoint(end.at, dir, 1000), { x: -dir.y, y: dir.x }, 1800),
+          `DEAD END - ${end.bays} BAYS, 8 ADVISED`,
+          NOTE,
+          upright ? angle : angle + 180,
+          upright ? 'start' : 'end',
+        ),
+        { alongMm: 12, acrossMm: 3 },
       ),
     );
   }
@@ -1238,7 +1350,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       // needed the room for the accessible and preferred bays' rows of the key.
       facts: facts.filter((f) => f.label !== 'Level'),
       legend,
-      legendNotes: [BAY_NUMBERING, NO_GRID, CAD_LAYERS],
+      legendNotes: PARKING_NOTES,
       north: true,
     }),
     facts,
@@ -1259,7 +1371,7 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
   if (!first) return null;
   const podiumBelow = [...model.levels].reverse().find((l) => l.use !== 'TYPICAL' && l.elevationMm >= 0);
   const box = grow(boxOf((podiumBelow ?? first).outline), 2000);
-  const f = frame(box, 4);
+  const f = frame(box, SITE_NOTES, 4);
   const s = f.scale;
   const podium = podiumBelow;
   const items: ModelItem[] = [...plotContext(model, s, false)];
@@ -1273,14 +1385,23 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
     of the plate, which is exactly where the core now sits, so leaving it would
     have printed "CORES NOT MODELLED" across the core. What is still true — units
     and façades — is still said, and it is moved off the centre.
+
+    INSIDE THE PLATE, a third of the way from its southern edge to its centre. It
+    was set ON that edge, and the plate's 0.5 mm line ran through every letter of
+    it — a note struck through reads as a note withdrawn.
   */
+  const plateCentre = centroidOf(first.outline);
+  const plateFoot = boxOf(first.outline).minY;
   items.push(
-    label(
-      Role.ANNOTATION,
-      { x: centroidOf(first.outline).x, y: asMm(boxOf(first.outline).minY) },
-      'UNITS AND FACADES NOT MODELLED',
-      2,
-      0,
+    withRule(
+      label(
+        Role.ANNOTATION,
+        { x: plateCentre.x, y: asMm(Math.round(plateFoot + (plateCentre.y - plateFoot) / 3)) },
+        'UNITS AND FACADES NOT MODELLED',
+        NOTE,
+        0,
+      ),
+      NEAR,
     ),
   );
 
@@ -1327,7 +1448,7 @@ function typicalSheet(model: BuildingModel, meta: SheetMeta): Sheet | null {
       meta,
       facts,
       legend,
-      legendNotes: [CAD_LAYERS],
+      legendNotes: SITE_NOTES,
       north: true,
     }),
     facts,
@@ -1360,7 +1481,7 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
     maxX: section.lengthMm + 3000,
     maxY: Math.max(top, ceiling) + 3000,
   };
-  const f = frame(box);
+  const f = frame(box, SITE_NOTES);
   const s = f.scale;
   const items: ModelItem[] = [];
 
@@ -1369,7 +1490,7 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
     items.push(shape(Role.GROUND, [P(a - 4000, 0), P(b + 4000, 0)], false, { name: 'Ground' }));
     for (const x of [a, b]) {
       items.push(shape(Role.PLOT, [P(x, bottom - 1500), P(x, 0)], false));
-      items.push(label(Role.PLOT, P(x, bottom - 1500 - 2.8 * s), 'BOUNDARY', 1.8));
+      items.push(withRule(label(Role.PLOT, P(x, bottom - 1500 - 2.8 * s), 'BOUNDARY', NOTE), { alongMm: 8, acrossMm: 3 }));
     }
   }
   // Setback line, where the cut crosses it.
@@ -1377,7 +1498,7 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
     for (const x of [a, b]) {
       items.push(shape(Role.SETBACK, [P(x, 0), P(x, Math.max(top, ceiling))], false, { source: model.setbackSource }));
     }
-    items.push(label(Role.SETBACK, P(a, Math.max(top, ceiling) + 1.6 * s), 'SETBACK', 1.8, 0, 'start'));
+    items.push(withRule(label(Role.SETBACK, P(a, Math.max(top, ceiling) + 1.8 * s), 'SETBACK', NOTE, 0, 'start'), NEAR));
   }
 
   // Each level: beyond, then cut, then openings.
@@ -1410,9 +1531,9 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
     items.push(
       label(
         Role.LEVEL_MARK,
-        P(-1500, e0 + 1.2 * s),
+        P(-1500, e0 + 1.4 * s),
         `${level.id}  ${signedLevel(level.elevationM.value)}`,
-        2,
+        NOTE,
         0,
         'end',
         sourceOf(level.elevationM),
@@ -1446,14 +1567,17 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
   if (firstRamp && section.ramps[0]) {
     const r = section.ramps[0];
     items.push(
-      label(
-        Role.RAMP,
-        P((r.foot.alongMm + r.head.alongMm) / 2, Math.max(r.foot.elevationMm, r.head.elevationMm) + 1.8 * s),
-        firstRamp.label,
-        1.8,
-        0,
-        'middle',
-        sourceOf(firstRamp.gradientPct),
+      withRule(
+        label(
+          Role.RAMP,
+          P((r.foot.alongMm + r.head.alongMm) / 2, Math.max(r.foot.elevationMm, r.head.elevationMm) + 1.8 * s),
+          firstRamp.label,
+          NOTE,
+          0,
+          'middle',
+          sourceOf(firstRamp.gradientPct),
+        ),
+        NEAR,
       ),
     );
   }
@@ -1469,7 +1593,10 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
       }),
     );
     items.push(
-      label(Role.CEILING, P(last[1], ceiling + 1.2 * s), `HEIGHT CEILING +${model.heightCeilingM.value} M`, 2, 0, 'end', sourceOf(model.heightCeilingM)),
+      withRule(
+        label(Role.CEILING, P(last[1], ceiling + 1.4 * s), `HEIGHT CEILING +${model.heightCeilingM.value} M`, NOTE, 0, 'end', sourceOf(model.heightCeilingM)),
+        { alongMm: 20, acrossMm: 0 },
+      ),
     );
   }
 
@@ -1509,7 +1636,7 @@ function sectionSheet(model: BuildingModel, section: ModelSection, meta: SheetMe
       meta,
       facts,
       legend,
-      legendNotes: [CAD_LAYERS],
+      legendNotes: SITE_NOTES,
       north: false,
     }),
     facts,

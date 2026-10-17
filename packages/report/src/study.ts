@@ -28,16 +28,23 @@
  *
  * Every figure is a value the engine traced: off the stored report, off the
  * provenance graph by its parameter id (and only when exactly one node carries
- * it), or off the building model. Nothing here adds, rounds or converts. The only
- * numbers this module produces are counts of the rows it prints.
+ * it), or off the building model. Nothing here adds or converts. A computed
+ * figure is PRINTED to two decimals, a count whole (`precision.ts`); the exact
+ * figure stays on the element and in the JSON export, and the annex quotes
+ * inputs and instruments as given. The only numbers this module produces are
+ * counts of the rows it prints.
  *
  * ## The drawings
  *
- * Each sheet is printed whole on an A4 landscape page. A3 to A4 is the A-series
- * √2, so a sheet reduces without distortion — and its title strip's scale is then
- * wrong by exactly that factor, which the caption says in words rather than
- * leaving a scale bar to lie. The A3 set and the DXF remain the documents to
- * measure from. The drawings stay in English, as their DXF layers do.
+ * Each sheet is printed on its own A3 landscape page, at full size, inside the
+ * A4 report (`@page sheet`). It used to be reduced onto A4, and A3 to A4 is the
+ * A-series √2: 2.5 mm notes printed at 1.77 mm and 2 mm dimension figures at
+ * 1.41 mm, under ISO 3098's 1.8 mm floor (`packages/sheets/src/lettering.ts`),
+ * with every title strip's scale wrong by the same factor. At full size the
+ * lettering is what the sheet set it at and the scale bar tells the truth. The
+ * sheet carries its own frame, title strip and stamp, so the page has no margin
+ * and no running footer. The DXF remains the file to measure from. The drawings
+ * stay in English, as their DXF layers do.
  */
 
 import {
@@ -53,6 +60,7 @@ import {
 import { type Sheet, sheetSvg } from '@envelope/sheets';
 
 import { CLAIM_STATEMENT_VERBATIM, esc, groupDigits, treatmentFor } from './html.js';
+import { forDisplay } from './precision.js';
 import {
   InvariantStatus,
   RuleSetApproval,
@@ -234,7 +242,7 @@ const EN = {
   noModel: 'This run was computed before the building model existed. Compute it again to lay out and draw the parking.',
   drawingsLede:
     'Every drawing comes from the one building model the figures were computed from — the drawing the screen shows and the DXF carries.',
-  reduced: 'Reduced from A3 to fit this page: the scale in the title strip applies to the A3 set. Measure from the A3 set or the DXF.',
+  fullSize: 'Each is printed on its own A3 page at full size, so the scale in its title strip holds on paper. The DXF remains the file to measure from.',
   drawingsInEnglish: '',
   sheetCount: (n: number): string => `${n} sheet${n === 1 ? '' : 's'}, one to a page.`,
   noDrawings: 'This run has no drawings: it was computed before drawings were made from the building model.',
@@ -469,7 +477,7 @@ const AR: Words = {
   module: (w, l, a) => `الموقف ${w} × ${l} م، وممر المناورة بعرض ${a} م (كود دبي للبناء، جدول B.11).`,
   noModel: 'حسب هذا الحساب قبل وجود نموذج المبنى. أعد حسابه لتوزيع المواقف ورسمها.',
   drawingsLede: 'كل رسم مأخوذ من نموذج المبنى نفسه الذي حسبت منه الأرقام، وهو ما تعرضه الشاشة ويحمله ملف DXF.',
-  reduced: 'مصغر من A3 ليناسب الصفحة: المقياس المكتوب في إطار العنوان يخص مجموعة A3. للقياس استخدم مجموعة A3 أو ملف DXF.',
+  fullSize: 'تطبع كل لوحة على صفحة A3 خاصة بها بالحجم الكامل، فيبقى المقياس المكتوب في إطار العنوان صحيحا على الورق. ويبقى ملف DXF هو المرجع للقياس.',
   drawingsInEnglish: 'تكتب الرسومات بالإنجليزية، كما تكتب طبقات ملف DXF.',
   sheetCount: (n) => `${n} لوحة، كل لوحة في صفحة.`,
   noDrawings: 'لا رسومات لهذا الحساب: حسب قبل أن ترسم اللوحات من نموذج المبنى.',
@@ -585,8 +593,26 @@ function unitOf(unit: string | undefined, w: Words): string {
   return w.units[unit] ?? unit;
 }
 
-function figure(text: string, locale: Locale): string {
-  return NUMBER.test(text) ? groupDigits(text) : say(text, locale);
+/*
+  HOW A FIGURE IS PRINTED (`precision.ts`): a measure to two decimals, a count
+  whole. `exact` prints the figure as given instead, for the annex, where a
+  value is QUOTED — what the reader typed, what the instrument states — rather
+  than computed; rounding a quotation changes what somebody said. The exact
+  figure of everything rounded is in the JSON export, which carries the graph.
+*/
+function digits(text: string, unit: string | undefined, exact: boolean): string {
+  return groupDigits(exact ? text : forDisplay(text, unit));
+}
+
+/** The figure itself, with the exact one on the element when the page rounded it. */
+function num(text: string, unit: string | undefined, exact: boolean): string {
+  const printed = digits(text, unit, exact);
+  const kept = !exact && NUMBER.test(text) && forDisplay(text, unit) !== text ? ` data-exact="${esc(text)}"` : '';
+  return `<bdi class="num"${kept}>${esc(printed)}</bdi>`;
+}
+
+function figure(text: string, unit: string | undefined, locale: Locale, exact: boolean): string {
+  return NUMBER.test(text) ? num(text, unit, exact) : `<bdi class="num">${esc(say(text, locale))}</bdi>`;
 }
 
 function hintLabel(hint: RenderHint, w: Words): string {
@@ -605,7 +631,7 @@ function hintLabel(hint: RenderHint, w: Words): string {
 }
 
 /** The one path by which a traced figure reaches the page. */
-function shown(s: Shown, locale: Locale): string {
+function shown(s: Shown, locale: Locale, exact = false): string {
   const w = WORDS[locale];
   // `treatmentFor` throws for the two classes Phase 0 may not draw.
   const t = treatmentFor(s.renderHint);
@@ -613,7 +639,7 @@ function shown(s: Shown, locale: Locale): string {
   const unit = unitOf(s.unit, w);
   const badge = s.renderHint === RenderHint.USER_BADGE ? `<span class="badge">${esc(w.userBadge)}</span>` : '';
   return (
-    `<span class="qty ${t.className}">${glyph}<bdi class="num">${esc(figure(s.value, locale))}</bdi>` +
+    `<span class="qty ${t.className}">${glyph}${figure(s.value, s.unit, locale, exact)}` +
     (unit ? `<span class="unit"> ${esc(unit)}</span>` : '') +
     badge +
     `<span class="sr-only"> (${esc(hintLabel(s.renderHint, w))})</span></span>`
@@ -621,9 +647,14 @@ function shown(s: Shown, locale: Locale): string {
 }
 
 /** A magnitude restated from a traced one elsewhere — no provenance of its own, so no marking. */
-function plain(text: string, unit: string | undefined, locale: Locale): string {
+function plain(
+  text: string,
+  unit: string | undefined,
+  locale: Locale,
+  how: { readonly measuredIn?: string; readonly exact?: boolean } = {},
+): string {
   const u = unitOf(unit, WORDS[locale]);
-  return `<span class="qty v-plain"><bdi class="num">${esc(groupDigits(text))}</bdi>${u ? `<span class="unit"> ${esc(u)}</span>` : ''}</span>`;
+  return `<span class="qty v-plain">${num(text, how.measuredIn ?? unit, how.exact ?? false)}${u ? `<span class="unit"> ${esc(u)}</span>` : ''}</span>`;
 }
 
 function chip(text: string): string {
@@ -854,7 +885,8 @@ function gfaBlock(s: GfaStatementSection, L: Locale): string {
     esc(w.row[r.kind]) + (r.levelIds.length === 0 ? '' : ` <span class="muted"><bdi>${esc(r.levelIds.length === 1 ? r.levelIds[0]! : `${r.levelIds[0]!}–${r.levelIds[r.levelIds.length - 1]!}`)}</bdi></span>`),
     r.perLevel ? `${shown(r.perLevel, L)} <bdi>× ${r.count}</bdi>` : '—',
     shown(r.area, L),
-    plain(r.areaFt2, undefined, L),
+    // The column heading names the unit; the figure is still an area.
+    plain(r.areaFt2, undefined, L, { measuredIn: 'ft²' }),
   ]);
   const omitted = s.omissions.map((m) => [esc(w.row[m.kind]), chip(w.notCounted), esc(say(m.reason, L)), '']);
   const notes = [...s.caps.flatMap((c) => c.notes), ...s.reconciliation];
@@ -965,7 +997,7 @@ function drawingPages(o: StudyReportOptions): string {
     `<p class="lede">${esc(w.drawingsLede)}</p>` +
     (o.sheets.length === 0
       ? `<p class="note">${chip(w.key.notAssessed)} ${esc(w.noDrawings)}</p>`
-      : `<p class="note">${esc(w.sheetCount(o.sheets.length))} ${esc(w.reduced)}${w.drawingsInEnglish ? ` ${esc(w.drawingsInEnglish)}` : ''}</p>` +
+      : `<p class="note">${esc(w.sheetCount(o.sheets.length))} ${esc(w.fullSize)}${w.drawingsInEnglish ? ` ${esc(w.drawingsInEnglish)}` : ''}</p>` +
         `<ol class="sheet-list">${o.sheets
           .map((s) => `<li><bdi class="mono">${esc(s.number)}</bdi> ${esc(say(s.title, o.locale))}</li>`)
           .join('')}</ol>`) +
@@ -1124,14 +1156,15 @@ function annexSection(run: RunReport, o: StudyReportOptions): string {
     const said = engineNote(id, L);
     return said === null ? `<bdi class="mono">${esc(id)}</bdi>` : esc(said);
   };
+  // Quoted, not computed: an instrument's figure and the reader's own entry print as given.
   const valueOf = (value: string, unit: string | null): string =>
-    NUMBER.test(value) ? plain(value, unit ?? undefined, L) : esc(say(value, L));
+    NUMBER.test(value) ? plain(value, unit ?? undefined, L, { exact: true }) : esc(say(value, L));
   const cited = (c: Citation): string =>
     `<span class="cite">${esc(instrumentName(c, w))} <bdi>${esc(clauseNumber(c))}</bdi></span>`;
 
   const inputs = run.userInputs.map((u) => [
     name(u.parameterId),
-    shown({ value: u.value, unit: u.unit ?? undefined, renderHint: RenderHint.USER_BADGE }, L),
+    shown({ value: u.value, unit: u.unit ?? undefined, renderHint: RenderHint.USER_BADGE }, L, true),
     esc(u.enteredBy.name),
     `<bdi class="mono">${esc(u.enteredAt.slice(0, 10))}</bdi>`,
   ]);
@@ -1322,7 +1355,8 @@ ul.terms li { margin-bottom: 2px; }
 
 @media print {
   @page { size: A4; margin: 14mm 14mm 18mm; }
-  @page sheet { size: A4 landscape; margin: 8mm 10mm 14mm; }
+  /* A3 at full size: reduced to A4, the sheets' lettering fell under 1.8 mm. */
+  @page sheet { size: 420mm 297mm; margin: 0; }
   html { font-size: 10pt; }
   body { background: var(--paper); }
   main { max-width: none; padding: 0; }
@@ -1332,7 +1366,10 @@ ul.terms li { margin-bottom: 2px; }
   /* The last section ends the document: a break after it would leave the closing line alone on a blank page. */
   main > section:last-child { break-after: auto; }
   .drawings-intro { margin-top: 10mm; break-inside: avoid; }
-  .sheet-frame svg { border: none; width: auto; height: 172mm; margin: 0 auto; }
+  /* The sheet's own strip names it; a caption would push it onto a second page. */
+  .sheet-caption { display: none; }
+  /* A hair under the page, so rounding cannot push a sheet onto a second page. */
+  .sheet-frame svg { border: none; width: 420mm; height: 296.8mm; margin: 0; }
   .end-footer { padding: 0; }
 }
 @media (max-width: 760px) {
@@ -1364,6 +1401,9 @@ function pageFooter(run: RunReport, w: Words): string {
   const boxes =
     `@bottom-left { content: ${cssString(left)}; ${box} } ` +
     `@bottom-right { content: "REGULATORY VALIDITY: NOT ASSESSED   ·   " ${cssString(w.page)} " " counter(page) " " ${cssString(w.of)} " " counter(pages); ${box} }`;
+  // Declared on `@page sheet` too, though a full-size drawing page has no margin
+  // to show it in: should that page ever gain one, the stamp is already there.
+  // Until then the sheet's own title strip carries the plot, the run and the stamp.
   return `@media print { @page { ${boxes} } @page sheet { ${boxes} } }`;
 }
 

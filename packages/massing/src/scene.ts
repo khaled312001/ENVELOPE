@@ -371,7 +371,18 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
       shaft.name = `${level.id} core`;
       shaft.castShadow = true;
       shaft.receiveShadow = true;
-      pickable(shaft, { node: core.areaM2.node, rank: 4, name: core.label });
+      /*
+        A click opens the value the drawn thing IS. On a parking level that is
+        the shafts — drawn from `shaft.outline`, coloured by `shaft.areaM2` — so
+        it opened the whole core's area under the core's name, a figure for an
+        outline the picture does not show on that level.
+      */
+      pickable(
+        shaft,
+        onParking
+          ? { node: core.shaft!.areaM2.node, rank: 4, name: core.shaft!.label }
+          : { node: core.areaM2.node, rank: 4, name: core.label },
+      );
       group.add(shaft);
       /*
         The same ring the walls stand on. It was the whole residential core on

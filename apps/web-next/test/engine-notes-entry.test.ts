@@ -15,9 +15,18 @@ const ENTRY =
   'circulation loss, not as bays.';
 
 describe('the drive from the slab edge to the ring', () => {
-  it('is said in both languages', () => {
-    expect(engineNote(ENTRY, 'ar')).toMatch(/[؀-ۿ]/);
-    expect(engineNote(ENTRY, 'en')).not.toBeNull();
+  /*
+    The whole sentence, not "some Arabic": a test that only asked for an Arabic
+    letter passed on an entry that dropped the figures, swapped them, or said
+    something else entirely, as long as it said it in Arabic.
+  */
+  it('is said in both languages, word for word', () => {
+    expect(engineNote(ENTRY, 'ar')).toBe(
+      '3 مواقف تقع حيث يعبر ممر الدخول (6 × 5.5 م) صف المواقف من حافة الدور إلى الممر الدائري. لا تحسب، فالسيارة تمر من خلالها.',
+    );
+    expect(engineNote(ENTRY, 'en')).toBe(
+      '3 bays stand where the 6 × 5.5 m drive from the slab edge crosses to the ring. They are not counted: a car drives through them.',
+    );
   });
 
   it('keeps the bays it cost and the drive it measured', () => {

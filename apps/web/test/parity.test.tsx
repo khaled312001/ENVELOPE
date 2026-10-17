@@ -508,6 +508,34 @@ describe.each(CASES)('$name', ({ ring, podiumLevels, levelSchedule }) => {
     expect(measured, 'no core was measured on a parking level, so nothing was proved').toBeGreaterThan(0);
   });
 
+  /*
+    A CLICK OPENS WHAT WAS CLICKED. On a parking level the 3D view draws the
+    shafts and colours them by the shafts' area, and a click on them opened the
+    whole core's area under the core's name — a figure for an outline that level
+    does not show.
+  */
+  it("opens the shafts' own value from the shafts, and the core's from the core", () => {
+    const model = out().building;
+    const core = model.core!;
+    const scene = buildBuildingScene(model, PALETTE);
+    let parkingSeen = 0;
+    for (const level of model.levels) {
+      if (!core.levelIds.includes(level.id)) continue;
+      const group = scene.levels.find((l) => l.level.id === level.id)!.group;
+      const mesh = group.getObjectByName(`${level.id} core`)!;
+      const pick = mesh.userData['pick'] as { node: string; name: string };
+      if (level.parking !== null && core.shaft !== undefined) {
+        parkingSeen += 1;
+        expect(pick, level.id).toMatchObject({ node: core.shaft.areaM2.node, name: core.shaft.label });
+        expect(pick.node).not.toBe(core.areaM2.node);
+      } else {
+        expect(pick, level.id).toMatchObject({ node: core.areaM2.node, name: core.label });
+      }
+    }
+    scene.dispose();
+    if (core.shaft !== undefined) expect(parkingSeen, 'no parking level carried the shafts').toBeGreaterThan(0);
+  });
+
   it('draws the same geometry on screen as on paper, path for path', () => {
     const model = out().building;
     for (const sheet of composeSheets(model, META)) {

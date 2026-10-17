@@ -253,6 +253,9 @@ function observationsFrom(output: RunOutput): Record<string, Observation> {
   // come from UnitType wherever one exists.
   obs['coverage.max'] = quantity(capacity.achievedCoveragePct, '%');
   obs['tower_plate.max'] = quantity(envelope.towerPlateCap, UnitType.AREA_M2, 'TOWER_PLATE');
+  // The tower's own coverage — an affection plan's "Tower: Maximum 60%". The
+  // engine emits the share the plate covers beside the cap; nothing is divided here.
+  if (envelope.towerCoveragePct) obs['tower_coverage.max'] = quantity(envelope.towerCoveragePct, '%');
   obs['height.max'] = quantity(capacity.achievedHeightM, UnitType.LENGTH_M);
   obs['floor_to_floor'] = quantity(envelope.floorToFloorM, UnitType.LENGTH_M);
 

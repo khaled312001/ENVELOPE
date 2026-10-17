@@ -70,6 +70,13 @@ export interface StudyReportOptions {
   readonly sheets: readonly Sheet[];
   /** The building model the sheets were drawn from; null on a run stored before it existed. */
   readonly building: BuildingModel | null;
+  /**
+   * What the plot's own affection plan states that this run did not apply, as
+   * the API's sheet report lists it. Null when no sheet was attached, or on a
+   * run stored before 17 Oct 2026 that did not keep the list — said in a line,
+   * not left as an empty table that would read as "nothing was left out".
+   */
+  readonly notBound?: readonly { readonly field: string; readonly stated: string; readonly reason: string }[] | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +150,11 @@ const EN = {
     `${applied} rule${applied === 1 ? '' : 's'} set a value in this run, and ${considered} more ${considered === 1 ? 'was' : 'were'} considered and not applied — listed, because a rule that did not apply is a fact, not a silence.`,
   colParameter: 'Parameter',
   excludedTitle: 'Rules considered and not applied',
+  notBoundTitle: 'Limits the affection plan states that this study does not apply',
+  notBoundLede:
+    'Each is printed on the plot’s own sheet and was read; none of them cut the envelope. They are listed so the sheet is not reported as saying less than it does.',
+  colField: 'Limit',
+  colStated: 'As printed',
   colOutcome: 'Outcome',
   disposition: {
     APPLIED: 'Applied',
@@ -375,6 +387,11 @@ const AR: Words = {
     `حددت ${applied} من القواعد قيما في هذا الحساب، ودرست ${considered} أخرى ولم تطبق — وهي مذكورة، لأن عدم انطباق قاعدة حقيقة تذكر لا صمت.`,
   colParameter: 'العنصر',
   excludedTitle: 'قواعد درست ولم تطبق',
+  notBoundTitle: 'حدود يذكرها مخطط الأفكشن ولا تطبقها هذه الدراسة',
+  notBoundLede:
+    'كل منها مطبوع في مخطط القطعة نفسها وقرئ، ولم يقطع أي منها الغلاف. تذكر هنا حتى لا ينقل عن المخطط أقل مما يقول.',
+  colField: 'الحد',
+  colStated: 'كما طبع',
   colOutcome: 'النتيجة',
   disposition: {
     APPLIED: 'طبقت',
@@ -1099,7 +1116,8 @@ function sourcesSection(run: RunReport, L: Locale, sources: Sources): string {
   beside it rather than added to section 7: those are the clauses the figures
   rest on, these are the ones the engine looked at.
 */
-function annexSection(run: RunReport, L: Locale): string {
+function annexSection(run: RunReport, o: StudyReportOptions): string {
+  const L = o.locale;
   const w = WORDS[L];
   const name = (id: string): string => {
     const said = engineNote(id, L);
@@ -1123,6 +1141,15 @@ function annexSection(run: RunReport, L: Locale): string {
     esc(say(r.reason, L)),
     cited(r.citation),
   ]);
+  /* The sheet's own words stay as printed, in its language and direction: a translated quote is no longer a quote. */
+  const notBound = (o.notBound ?? []).map((n) => {
+    const stated = say(n.stated, L);
+    return [
+      name(n.field),
+      stated === n.stated ? `<bdi dir="ltr" lang="en">${esc(stated)}</bdi>` : `<bdi>${esc(stated)}</bdi>`,
+      esc(say(n.reason, L)),
+    ];
+  });
   const list = (items: readonly string[]): string =>
     items.length === 0 ? '—' : `<ul class="terms">${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`;
   const definitions = run.areaTermsUsed.map((id) => {
@@ -1149,6 +1176,10 @@ function annexSection(run: RunReport, L: Locale): string {
       ? ''
       : `<h3>${esc(w.excludedTitle)}</h3>` +
         table(w.excludedTitle, [w.colParameter, w.colOutcome, w.colWhy, w.colSource], excluded, '', ['26%', '16%', '36%', '22%'])) +
+    (notBound.length === 0
+      ? ''
+      : `<h3>${esc(w.notBoundTitle)}</h3><p class="note">${esc(w.notBoundLede)}</p>` +
+        table(w.notBoundTitle, [w.colField, w.colStated, w.colWhy], notBound, 'not-bound', ['24%', '30%', '46%'])) +
     `<h3>${esc(w.definitionsTitle)}</h3>` +
     `<p class="note">${esc(w.definitionsLede(run.metricDefinitionsVersion))}</p>` +
     table(w.definitionsTitle, [w.colTerm, w.colDefinition, w.colIncludes, w.colExcludes], definitions, 'definitions', [
@@ -1365,7 +1396,7 @@ export function studyReportHtml(run: RunReport, options: StudyReportOptions): st
     checksSection(run, L, sources),
   ].join('');
   // After the sections, so it lists every clause they cited; the annex prints its own beside each rule.
-  const end = sourcesSection(run, L, sources) + annexSection(run, L);
+  const end = sourcesSection(run, L, sources) + annexSection(run, options);
 
   const title = `${w.docType} — ${w.plot(run.plot.plotNumber)}, ${run.plot.community}`;
   return (

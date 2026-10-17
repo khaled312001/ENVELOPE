@@ -80,6 +80,7 @@ const BINDING: Readonly<Record<string, Said>> = {
   'height ceiling': { en: 'height ceiling', ar: 'حد الارتفاع' },
   'tower plate': { en: 'tower plate', ar: 'مسطح البرج' },
   'tower plate cap': { en: 'tower plate cap', ar: 'حد مسطح البرج' },
+  'tower coverage cap': { en: 'tower coverage cap', ar: 'حد تغطية البرج' },
   'plot coverage cap': { en: 'coverage cap', ar: 'حد التغطية' },
   'setback-permitted footprint': { en: 'setback line', ar: 'خط الارتداد' },
   'podium setback line': { en: 'podium setback line', ar: 'خط ارتداد البوديوم' },

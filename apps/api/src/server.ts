@@ -96,10 +96,13 @@ import { registerIntakeRoutes } from './intake-route.js';
 import {
   AttachmentError,
   bindSheet,
+  boundValueOf,
   deserialiseSheet,
   isRefusal,
   readAttachedSheet,
   serialiseSheet,
+  sheetSetbacksFor,
+  type SheetSetbacks,
   type StoredSheet,
   type StoredSheetWire,
 } from './instrument.js';
@@ -776,7 +779,7 @@ export async function build(
         is how a sheet for the wrong parcel is caught at upload rather than three
         steps later.
       */
-      sheet: sheetReport(sheet ? bindSheet(sheet, plot.plotNumber, actor.name) : undefined),
+      sheet: sheetReport(sheet ? bindSheet(sheet, plot.plotNumber, actor.name, plot.frontageCount) : undefined, plot),
     };
   });
 
@@ -894,7 +897,7 @@ export async function build(
       no sheet at all.
     */
     const stored = await loadSheet(repo, body.plotId);
-    const bound = stored ? bindSheet(stored, plot.plotNumber, actor.name) : undefined;
+    const bound = stored ? bindSheet(stored, plot.plotNumber, actor.name, plot.frontageCount) : undefined;
     const instrumentRules = bound && !isRefusal(bound) ? bound.rules : [];
 
     const input = runInputFrom(body, plot, [...rules, ...instrumentRules], actor);
@@ -963,6 +966,7 @@ export async function build(
       body.useDraftRules,
       checks,
     );
+    const sheetSaid = sheetReport(bound, plot);
 
     // --- The §3.4 artifact, built now and stored -------------------------
     //
@@ -1017,7 +1021,14 @@ export async function build(
       annexVersion: ANNEX_VERSION,
       ruleSetHash,
       input: JSON.stringify(body),
-      output: JSON.stringify(payload),
+      /*
+        The sheet's report travels with the stored run since 17 Oct 2026, so the
+        study report can print, in its annex, every limit the sheet states and
+        this run did not apply — as the run saw them, not as a re-read of the
+        plot's sheet at download time would. A run stored before has none, and
+        the annex says nothing rather than reconstructing it.
+      */
+      output: JSON.stringify({ ...payload, sheet: sheetSaid }),
       report: reportJson,
       fingerprint: subjectHash({ body, engine: ENGINE_VERSION, annex: ANNEX_VERSION }),
       draftRules: body.useDraftRules,
@@ -1039,7 +1050,7 @@ export async function build(
     });
 
     reply.header('X-Run-Id', runId).status(201);
-    return { ...payload, sheet: sheetReport(bound), issuedAt: createdAt };
+    return { ...payload, sheet: sheetSaid, issuedAt: createdAt };
   });
 
   /**
@@ -1481,10 +1492,13 @@ export async function build(
     */
     if (format === 'html') {
       reply.header('content-type', 'text/html; charset=utf-8');
+      const said = payload['sheet'] as Partial<SheetReportWire> | undefined;
       return studyReportHtml(reviewed, {
         locale: query.lang === 'ar' ? 'ar' : 'en',
         sheets: runSheets(drawable),
         building: drawable.building ?? null,
+        // As the run saw it; null on a run stored before the sheet was kept with it.
+        notBound: said?.attached && said.notBound ? said.notBound : null,
       });
     }
 
@@ -1988,14 +2002,8 @@ function vehicleAccessOf(body: RunRequest): Pick<RunInput, 'levelPlan'> {
  */
 function sheetReport(
   bound: ReturnType<typeof bindSheet> | undefined,
-): {
-  readonly attached: boolean;
-  readonly documentUri: string | null;
-  readonly issuedOn: string | null;
-  readonly refused: string | null;
-  readonly bound: readonly { readonly parameterId: string; readonly value: string; readonly unit: string; readonly clause: string }[];
-  readonly notBound: readonly { readonly field: string; readonly stated: string; readonly reason: string }[];
-} {
+  plot?: { readonly plotNumber: string; readonly frontageCount: number },
+): SheetReportWire {
   if (!bound) {
     return {
       attached: false,
@@ -2004,6 +2012,7 @@ function sheetReport(
       refused: null,
       bound: [],
       notBound: [],
+      setbacks: null,
     };
   }
   if (isRefusal(bound)) {
@@ -2014,6 +2023,7 @@ function sheetReport(
       refused: bound.reason,
       bound: [],
       notBound: [],
+      setbacks: null,
     };
   }
   return {
@@ -2023,12 +2033,31 @@ function sheetReport(
     refused: null,
     bound: bound.rules.map((r) => ({
       parameterId: r.parameterId,
-      value: String(r.evaluatorArgs['value']),
+      value: boundValueOf(r),
       unit: r.unit,
       clause: r.citation.sourceTextVerbatim,
     })),
     notBound: bound.notBound,
+    /*
+      THE TOWER'S FIGURES AND THE PODIUM'S, APART, FOR THIS PLOT. The plot step
+      read `bound` by parameter id and printed whatever `setback.<class>` held as
+      "Tower setback, as the affection plan states" — which on every Trakhees
+      sheet was the podium row's 0 m. Resolved here against this plot's road
+      count, so a front the sheet cannot place is shown as the question it is.
+    */
+    setbacks: plot ? sheetSetbacksFor(bound.rules, plot.plotNumber, plot.frontageCount) : null,
   };
+}
+
+/** What `sheetReport` returns, and what a stored run now keeps of it. */
+interface SheetReportWire {
+  readonly attached: boolean;
+  readonly documentUri: string | null;
+  readonly issuedOn: string | null;
+  readonly refused: string | null;
+  readonly bound: readonly { readonly parameterId: string; readonly value: string; readonly unit: string; readonly clause: string }[];
+  readonly notBound: readonly { readonly field: string; readonly stated: string; readonly reason: string }[];
+  readonly setbacks: SheetSetbacks | null;
 }
 
 async function loadSheet(repo: RunRepository, plotId: string): Promise<StoredSheet | undefined> {

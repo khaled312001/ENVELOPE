@@ -49,7 +49,18 @@ import {
   type Traced,
 } from '@envelope/core';
 import { parseAffectionPlan, type AffectionPlanFacts } from '@envelope/intake';
-import { rulesFromInstrument, type InstrumentRules } from '@envelope/rules';
+import {
+  decisionKindOf,
+  DecisionKind,
+  faceOptionsOf,
+  podiumSetbackParameter,
+  resolveParameter,
+  ResolutionStatus,
+  rulesFromInstrument,
+  type FaceOption,
+  type InstrumentRules,
+  type RuleRecord,
+} from '@envelope/rules';
 import { z } from 'zod';
 
 /** The upload, as `POST /api/plots` accepts it. Optional: a plot needs no sheet. */
@@ -214,6 +225,8 @@ export function bindSheet(
   sheet: StoredSheet,
   plotNumber: string,
   authoredBy: string,
+  /** How many of the plot's boundaries are roads; decides whether "which is the front?" is reported. */
+  roadBoundaries?: number,
 ): BoundSheet | SheetRefusal {
   if (sheet.parcelId !== null && !sameParcel(sheet.parcelId, plotNumber)) {
     return {
@@ -236,6 +249,7 @@ export function bindSheet(
     */
     issuedOn: sheet.issuedOn === 'UNDATED' ? '1970-01-01' : sheet.issuedOn,
     authoredBy,
+    ...(roadBoundaries === undefined ? {} : { roadBoundaries }),
   });
 
   return { ...built, documentUri: sheet.documentUri, issuedOn: sheet.issuedOn };
@@ -243,6 +257,72 @@ export function bindSheet(
 
 export function isRefusal(b: BoundSheet | SheetRefusal): b is SheetRefusal {
   return 'reason' in b;
+}
+
+/** What the plot's own sheet states for the boundaries of one class: one figure, or one per face. */
+export type SheetSetback =
+  | { readonly kind: 'FIXED'; readonly metres: string; readonly clause: string }
+  | {
+      /** `BY_FACE`: which face the boundary is. `BY_FACADE`: what its façade will be. */
+      readonly kind: 'BY_FACE' | 'BY_FACADE';
+      readonly faces: readonly FaceOption[];
+      readonly clause: string;
+    };
+
+/** The sheet's setbacks per boundary class, the tower's and the podium's kept apart. */
+export interface SheetSetbacks {
+  readonly tower: Readonly<Record<string, SheetSetback>>;
+  readonly podium: Readonly<Record<string, SheetSetback>>;
+}
+
+const EDGE_CLASSES = ['ROAD', 'ADJACENT_PLOT', 'OPEN_SPACE', 'OTHER'] as const;
+
+/**
+ * What the sheet's rules say about each class of boundary on THIS plot.
+ *
+ * Resolved, not re-read: the same `resolveParameter` the envelope calls, over the
+ * sheet's own rules only, in a context carrying this plot's number and its count
+ * of road boundaries — so a "Front" that binds only on a one-road plot is shown
+ * as a question on a two-road one, exactly as the engine will treat it. The plot
+ * step reads this to say "tower setback, as the affection plan states" only
+ * where the tower row states one, and "podium" where the figure is the podium's.
+ * Nothing is computed: each figure is the rule's own.
+ */
+export function sheetSetbacksFor(
+  rules: readonly RuleRecord[],
+  plotNumber: string,
+  frontageCount: number,
+): SheetSetbacks {
+  const read = (parameterOf: (cls: string) => string): Record<string, SheetSetback> => {
+    const out: Record<string, SheetSetback> = {};
+    for (const cls of EDGE_CLASSES) {
+      const r = resolveParameter(parameterOf(cls), rules, {
+        plot: { plot_number: plotNumber, frontage_count: frontageCount },
+        edge: { classification: cls },
+      });
+      const g = r.governing;
+      if (r.status !== ResolutionStatus.RESOLVED || !g) continue;
+      const clause = g.rule.citation.sourceTextVerbatim;
+      const faces = faceOptionsOf(g.rule);
+      if (faces) {
+        out[cls] = { kind: decisionKindOf(g.rule) === DecisionKind.FACADE ? 'BY_FACADE' : 'BY_FACE', faces, clause };
+      } else if (g.value.kind === 'scalar') {
+        out[cls] = { kind: 'FIXED', metres: g.value.value.toString(), clause };
+      }
+    }
+    return out;
+  };
+  return {
+    tower: read((cls) => `setback.${cls.toLowerCase()}`),
+    podium: read(podiumSetbackParameter),
+  };
+}
+
+/** A bound rule's value as the sheet panel prints it: the figure, or the figures by face. */
+export function boundValueOf(rule: RuleRecord): string {
+  const faces = faceOptionsOf(rule);
+  if (faces) return faces.map((f) => `${f.face} ${f.metres === null ? 'not stated' : f.metres}`).join('; ');
+  return String(rule.evaluatorArgs['value']);
 }
 
 /**

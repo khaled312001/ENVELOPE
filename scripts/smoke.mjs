@@ -603,11 +603,14 @@ await step('a plot can be entered boundary by boundary, and the misclose is stat
 await step('classifying every edge and submitting the plot', async () => {
   // The four boundaries typed above — what an architect would type, and which
   // the 2% check then confirms against the printed area rather than itself.
+  //
+  // One road, as Warsan 6211383 has. The sheet's tower row says "Front = 0m,
+  // Sides & Rear = 3m", and since 17 Oct 2026 it binds: on a plot with two
+  // roads the run asks which road is the front, which this form cannot answer.
   await page.getByLabel('Edge 1 faces').selectOption('ROAD');
   await page.getByLabel('Road type').first().selectOption('LOCAL');
   await page.getByLabel('Edge 2 faces').selectOption('ADJACENT_PLOT');
-  await page.getByLabel('Edge 3 faces').selectOption('ROAD');
-  await page.getByLabel('Road type').last().selectOption('COLLECTOR');
+  await page.getByLabel('Edge 3 faces').selectOption('ADJACENT_PLOT');
   await page.getByLabel('Edge 4 faces').selectOption('ADJACENT_PLOT');
   await page.getByRole('button', { name: /^Continue$/ }).click();
   await page.getByRole('heading', { name: /confirm the plot/i }).waitFor({ timeout: wait(8000) });
@@ -690,10 +693,14 @@ await step('the plot’s own sheet binds the run, and names what it does not bin
     throw new Error('the stated level count is not shown as applied');
   }
 
-  // Stated on this sheet and applied by nothing: a stated GFA and the tower’s
-  // own setback schedule.
-  for (const field of ['gfaSqm', 'setbacks.tower']) {
+  // Stated on this sheet and applied by nothing: a stated GFA, checked against
+  // FAR × plot area rather than set as a second ceiling.
+  for (const field of ['gfaSqm']) {
     if (!t.includes(field)) throw new Error(`${field} is stated on the sheet and not reported`);
+  }
+  // The tower's own row binds since 17 Oct 2026, so it is applied, not listed as unapplied.
+  for (const field of ['tower_coverage.max', 'setback.adjacent_plot']) {
+    if (!t.includes(field)) throw new Error(`the sheet's tower row (${field}) is not shown as applied`);
   }
 
   // Amber means ASSUMED and nothing here is assumed. §13.1.

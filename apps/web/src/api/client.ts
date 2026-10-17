@@ -136,6 +136,29 @@ export interface SheetReport {
     readonly stated: string;
     readonly reason: string;
   }[];
+  /**
+   * The sheet's setbacks for this plot by boundary class, the TOWER row and the
+   * PODIUM row apart (17 Oct 2026). Absent from a response older than that and
+   * null where no plot was in hand; a screen reads "as the affection plan
+   * states" off `tower` only, never off `podium`.
+   */
+  readonly setbacks?: SheetSetbacks | null;
+}
+
+/** One face a sheet states a setback for — "front", "side", or a face with the sheet's condition. */
+export interface SheetFace {
+  readonly face: string;
+  readonly metres: string | null;
+}
+
+/** A class's setback as the sheet states it: one figure, or a choice it leaves to the reader. */
+export type SheetSetback =
+  | { readonly kind: 'FIXED'; readonly metres: string; readonly clause: string }
+  | { readonly kind: 'BY_FACE' | 'BY_FACADE'; readonly faces: readonly SheetFace[]; readonly clause: string };
+
+export interface SheetSetbacks {
+  readonly tower: Readonly<Record<string, SheetSetback>>;
+  readonly podium: Readonly<Record<string, SheetSetback>>;
 }
 
 export interface PlotCreated {

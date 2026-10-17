@@ -309,6 +309,18 @@ export const AR: Dict = {
     towerSetbackOf: (i: number): string => `ارتداد البرج على الحد ${i}، بالمتر`,
     towerSetbackBlank: 'من القاعدة',
     towerSetbackFromSheet: 'ارتداد البرج كما يذكره مخطط الأرض:',
+    towerSetbackOnly: 'ارتداد البرج (م)',
+    towerByFace: (faces: string): string =>
+      `مخطط الأفكشن يحدد ارتداد البرج حسب الواجهة (${faces}) ولا يذكر أي واجهة هذا الحد. اكتب رقم واجهته.`,
+    podiumFromSheet: 'ارتداد البوديوم كما يذكره مخطط الأرض:',
+    podiumByFacade: (faces: string): string => `مخطط الأفكشن يحدد ارتداد البوديوم هنا حسب نوع الواجهة (${faces}).`,
+    podiumByFace: (faces: string): string => `مخطط الأفكشن يحدد ارتداد البوديوم هنا حسب الواجهة (${faces}).`,
+    face: { front: 'الأمامي', side: 'الجانبي', rear: 'الخلفي' },
+    faceNotStated: 'غير محدد',
+    notBound: {
+      title: 'ما يذكره مخطط الأفكشن ولا تطبقه هذه الدراسة',
+      lede: 'كل منها قرئ من المخطط، ولا يحد أي منها الغلاف حتى يحسم.',
+    },
     planPick: 'اختر رقم الحد لتصنيفه هنا.',
     edgeMarker: (i: number, cls: string | null): string =>
       cls ? `الحد ${i}: ${cls}. اختره لتغييره.` : `الحد ${i}: لم يصنف بعد. اختره لتصنيفه.`,

@@ -204,8 +204,10 @@ export interface BuildableEnvelope {
   /**
    * The setback line the PODIUM (basements, ground, podium levels) is held to.
    *
-   * Absent on runs computed without a podium statement, where the podium was held
-   * to the tower's line — every run before 16 Oct 2026. Present, it is the plot
+   * Absent on runs computed without a podium statement where the plot's own sheet
+   * states no podium setback, where the podium was held to the tower's line —
+   * every run before 16 Oct 2026. (A sheet's own podium row gives the podium its
+   * own line with or without the statement, since 17 Oct 2026.) Present, it is the plot
    * itself on every edge the plot's own instrument sets no setback for: Eng.
    * Mohamed, «ال دور ال ارضي و البوديوم و البدروم بياخدو مساحه الارض كلها».
    */
@@ -213,6 +215,16 @@ export interface BuildableEnvelope {
   readonly coverageCap: TracedDecimal;
   readonly podiumFootprint: TracedDecimal;
   readonly towerPlateCap: TracedDecimal;
+  /**
+   * The tower's own coverage cap in m² — an affection plan's "Tower: Maximum
+   * 60%" × the plot area. Absent where no instrument states a tower coverage.
+   */
+  readonly towerCoverageCap?: TracedDecimal;
+  /**
+   * The share of the plot the tower plate covers, in per cent. Published beside
+   * `towerCoverageCap` so the validator can hold the plate to it; absent with it.
+   */
+  readonly towerCoveragePct?: TracedDecimal;
   readonly heightCeilingM: TracedDecimal;
   readonly floorToFloorM: TracedDecimal;
   readonly maxLevelsByHeight: Traced<number>;

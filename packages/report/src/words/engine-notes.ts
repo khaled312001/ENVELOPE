@@ -450,7 +450,7 @@ const READERS: readonly Reader[] = [
     const cells = (m[1] ?? '')
       .split(', ')
       .map((c) => /^side (\d+) \((building|podium)\)$/.exec(c))
-      .map((c) => (c ? `الجانب ${c[1]} (${c[2] === 'building' ? 'المبنى' : 'القاعدة'})` : null));
+      .map((c) => (c ? `الجانب ${c[1]} (${c[2] === 'building' ? 'المبنى' : 'البوديوم'})` : null));
     if (cells.some((c) => c === null)) return null;
     return {
       en: t,
@@ -465,7 +465,7 @@ const READERS: readonly Reader[] = [
       ],
       [
         'The sheet prints a setback table whose BUILDING and PODIUM columns could not both be found',
-        'المخطط يطبع جدول ارتدادات لم يعثر فيه على عمودي المبنى (BUILDING) والقاعدة (PODIUM) معا، فلا تقرأ أي من خاناته.',
+        'المخطط يطبع جدول ارتدادات لم يعثر فيه على عمودي المبنى (BUILDING) والبوديوم (PODIUM) معا، فلا تقرأ أي من خاناته.',
       ],
       [
         'The sheet prints a setback table header with no SIDE rows under it',
@@ -497,12 +497,29 @@ const READERS: readonly Reader[] = [
       (t) =>
         t.startsWith(start) ? { en: t, ar } : null,
   ),
+  /* A per-side table read whole and bound by nothing yet: said, so "not printed" is never the only word on it. */
+  (t) => {
+    const m = /^This sheet prints its setbacks per numbered side, not per face: «([^»]*)»\. The table is read, but no setback from it is applied to the study yet\./.exec(t);
+    return m
+      ? {
+          en: t,
+          ar: `هذا المخطط يطبع ارتداداته لكل جانب مرقم لا لكل واجهة: «${m[1]}». الجدول مقروء، لكن لا يطبق أي ارتداد منه على الدراسة بعد. وإلى أن يطبق، لا تأتي ارتدادات الدراسة من هذا المخطط بل من القواعد العامة، وارتداد البرج الذي يكتبه شخص مسمى في خطوة القطعة يحل محلها.`,
+        }
+      : null;
+  },
+  (t) =>
+    t.startsWith('This sheet prints "N/A" in every cell of its setback table')
+      ? {
+          en: t,
+          ar: 'هذا المخطط يطبع «N/A» في كل خانات جدول الارتدادات: لا يحدد أي ارتداد. تؤخذ الارتدادات من إرشادات القطعة أو المخطط الرئيسي أو لائحة التطوير، أو يحددها شخص مسمى.',
+        }
+      : null,
   (t) => {
     const m = /^The setback table's row for side (\d+) reads "(.*)" under BUILDING and "(.*)" under PODIUM/.exec(t);
     return m
       ? {
           en: t,
-          ar: `صف الجانب ${m[1]} في جدول الارتدادات يقرأ «${m[2]}» تحت المبنى و«${m[3]}» تحت القاعدة، وهذه ليست مسافة ولا SEE NOTES ولا N/A. لا يقرأ الجدول كله، بدل أن يقرأ ناقصا جانبا.`,
+          ar: `صف الجانب ${m[1]} في جدول الارتدادات يقرأ «${m[2]}» تحت المبنى و«${m[3]}» تحت البوديوم، وهذه ليست مسافة ولا SEE NOTES ولا N/A. لا يقرأ الجدول كله، بدل أن يقرأ ناقصا جانبا.`,
         }
       : null;
   },

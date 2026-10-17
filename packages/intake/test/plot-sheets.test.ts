@@ -73,8 +73,15 @@ describe.skipIf(sourceSheet(WADI) === undefined)(title(WADI, 'plot 6457790 — a
     expect(facts.survey?.onPage?.residualM).toBeLessThan(0.01);
   });
 
-  it('says nothing is missing about setbacks, and never that the sheet prints "SEE NOTES"', () => {
-    expect(facts.missing.map((m) => m.field)).not.toContain('setbacks');
+  /*
+    Never "SEE NOTES" — and never silence either. The table is read and bound by
+    nothing yet, so the gap says the eight figures are on the sheet and not in
+    the study; with no gap, the sheet step printed "Not printed" beside them.
+  */
+  it('says the per-side table is read and not yet applied, and never that the sheet prints "SEE NOTES"', () => {
+    expect(facts.missing.find((m) => m.field === 'setbacks')?.consequence).toBe(
+      'This sheet prints its setbacks per numbered side, not per face: «SETBACK (M) BUILDING / PODIUM — SIDE ( 1 ): 5 / 4; SIDE ( 2 ): 7 / 6; SIDE ( 3 ): 7 / 6; SIDE ( 4 ): 7 / 6». The table is read, but no setback from it is applied to the study yet. Until it is, the study’s setbacks do not come from this sheet: they come from the general rules, and a tower setback typed on the plot step under a named user overrides them.',
+    );
     expect(facts.missing.map((m) => m.consequence).join(' ')).not.toContain('SEE NOTES');
   });
 

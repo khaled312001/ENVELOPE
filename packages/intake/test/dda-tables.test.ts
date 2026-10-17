@@ -9,6 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { blockingGaps } from '../src/affection-plan.js';
 import { placeSides, readGeneralNotes, readLandUseLines, readSetbackTable, setbackCell } from '../src/dda.js';
 
 import { DWELLING_NOTE, QUARTER_NOTE, at, ddaSheet, page, read } from './fixtures.js';
@@ -37,7 +38,7 @@ describe('the SETBACK (M) table', () => {
     "SEE NOTES" against every face, because that sentence was said of every DDA
     sheet without opening the table. The podium then went onto the boundary.
   */
-  it('reads a numeric table, and says nothing is missing', () => {
+  it('reads a numeric table, and says it is read and not yet applied', () => {
     const facts = read(ddaSheet(NUMERIC));
     const sides = facts.sideSetbacks?.value.sides ?? [];
     expect(
@@ -52,14 +53,26 @@ describe('the SETBACK (M) table', () => {
       [3, '7', '6'],
       [4, '7', '6'],
     ]);
-    expect(facts.missing.map((m) => m.field)).not.toContain('setbacks');
+    /* Read is not applied: `facts.setbacks` stays empty and nothing binds the
+       table yet, so a gap with no word about it would leave "Not printed" as the
+       sheet step's only sentence beside eight printed figures. */
+    expect(facts.setbacks).toBeUndefined();
+    expect(facts.missing.find((m) => m.field === 'setbacks')?.consequence).toMatch(
+      /^This sheet prints its setbacks per numbered side, not per face: «SETBACK \(M\) BUILDING \/ PODIUM — SIDE \( 1 \): 5 \/ 4;.*». The table is read, but no setback from it is applied to the study yet\./,
+    );
     expect(facts.missing.map((m) => m.consequence).join(' ')).not.toContain('SEE NOTES');
+    expect(blockingGaps(facts).map((m) => m.field)).not.toContain('setbacks');
     expect(facts.sideSetbacks?.value.raw).toBe('SETBACK (M) BUILDING / PODIUM — SIDE ( 1 ): 5 / 4; SIDE ( 2 ): 7 / 6; SIDE ( 3 ): 7 / 6; SIDE ( 4 ): 7 / 6');
   });
 
   it('places no side on a boundary when there is no surveyed ring, and says so', () => {
     expect(read(ddaSheet(NUMERIC)).sideSetbacks?.value.placement).toMatch(/^No surveyed ring was read from this sheet/);
     expect(read(ddaSheet(NUMERIC)).sideSetbacks?.value.sides.every((s) => s.boundary === undefined)).toBe(true);
+  });
+
+  it('says a table of N/A in every cell sets no setback', () => {
+    const facts = read(ddaSheet(NUMERIC.map(() => ['N/A', 'N/A'] as const)));
+    expect(facts.missing.find((m) => m.field === 'setbacks')?.consequence).toMatch(/^This sheet prints "N\/A" in every cell of its setback table: it sets no setback\./);
   });
 
   it('still says the quarter-of-the-height rule where every building cell defers to it', () => {

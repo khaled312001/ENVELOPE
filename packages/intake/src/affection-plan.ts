@@ -1119,10 +1119,6 @@ export function readFacts(
   const setbacks =
     parsedSetbacks !== undefined
       ? fromSheet('setbacks', parsedSetbacks, parsedSetbacks.raw.split(' | ')[0] ?? '')
-      : sideTable?.ok && !sideTable.sides.some((s) => s.building.kind === 'SEE_NOTES' || s.podium.kind === 'SEE_NOTES')
-      ? /* Every cell a distance or N/A: the table IS the schedule, published as
-           `sideSetbacks` below. Nothing is missing, so nothing is said here. */
-        undefined
       : absent(
           'setbacks',
           'Setback',
@@ -1143,6 +1139,21 @@ export function readFacts(
             ? `This sheet states its setback as a rule, not a distance: «${dmRows.Setback.lines.join(' ')}» — a quarter of the building height from the neighbours and from the middle of the sikkas, at most 7.5 m and at least 3 m, as the DDA note says it. Its input is the storey count, so no distance is read from the sheet. It must be authored as a rule or set under a named user.`
             : sideTable?.ok === false
             ? sideTable.reason
+            : /*
+                A TABLE READ IS NOT A TABLE APPLIED. Where every cell is a
+                distance or N/A the table is published whole as `sideSetbacks`,
+                but nothing binds it yet (`StatedLimits.setbacksBySide` waits for
+                `rules/instruments/sheet.ts`), and `facts.setbacks` stays empty
+                because a front / side / rear schedule cannot say "side 1 is 5 m".
+                Saying nothing here left the sheet step printing "Not printed"
+                beside a sheet with eight numbers on it, while the run took its
+                setbacks from the general rules without a word. So the gap stays,
+                and says exactly that, until the binder lands.
+              */
+              sideTable?.ok && sideCells.every((c) => c.kind === 'NOT_APPLICABLE')
+            ? 'This sheet prints "N/A" in every cell of its setback table: it sets no setback. Setbacks must come from the plot guidelines, the master plan or the DCR, or be set by a named user.'
+            : sideTable?.ok && !sideCells.some((c) => c.kind === 'SEE_NOTES')
+            ? `This sheet prints its setbacks per numbered side, not per face: «${sideTable.raw}». The table is read, but no setback from it is applied to the study yet. Until it is, the study’s setbacks do not come from this sheet: they come from the general rules, and a tower setback typed on the plot step under a named user overrides them.`
             : sideTable?.ok &&
               quarterNote &&
               sideTable.sides.every((s) => s.building.kind === 'SEE_NOTES' && s.podium.kind !== 'DISTANCE')

@@ -50,6 +50,9 @@ const sentences: readonly string[] = [
   String(placeSides(page([...labels.slice(0, 3), at('SIDE 4', 25, 2, 10, 2)]), [1, 2, 3, 4], ring, identity)),
   String(placeSides(page([...labels, at('SIDE 2', 15, 36, 10, 2)]), [1, 2, 3, 4], ring, identity)),
   String(placeSides(page(labels), [1, 2, 3, 4], ring.slice(0, 2), identity)),
+  // Appended, so the indices the assertions below name do not move.
+  consequence(read(ddaSheet(NUMERIC)), 'setbacks'),
+  consequence(read(ddaSheet(NUMERIC.map(() => ['N/A', 'N/A'] as const))), 'setbacks'),
 ];
 
 describe('the new intake sentences, in Arabic', () => {
@@ -64,8 +67,10 @@ describe('the new intake sentences, in Arabic', () => {
 
   it('keeps the sheet’s own words and figures in the Arabic', () => {
     expect(engineNote(sentences[0]!, 'ar')).toContain('«APPROVED MASTER PLAN IS REQUIRED PRIOR TO ANY SUBMITTALS.»');
-    expect(engineNote(sentences[4]!, 'ar')).toMatch(/الجانب 1 \(المبنى\)، الجانب 3 \(القاعدة\)/);
+    // البوديوم, per docs/05-design/arabic-glossary.md — not «القاعدة».
+    expect(engineNote(sentences[4]!, 'ar')).toMatch(/الجانب 1 \(المبنى\)، الجانب 3 \(البوديوم\)/);
     expect(engineNote(sentences[9]!, 'ar')).toContain('«G+4+5»');
+    expect(engineNote(sentences[15]!, 'ar')).toContain('«SETBACK (M) BUILDING / PODIUM — SIDE ( 1 ): 5 / 4;');
   });
 
   it('says where each side was placed, corner to corner', () => {

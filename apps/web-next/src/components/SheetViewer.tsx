@@ -1,5 +1,5 @@
 import type { BuildingModel } from '@envelope/core';
-import { composeSheets, type Sheet, sheetSvg } from '@envelope/sheets';
+import { composeSheets, type Sheet, type SheetMeta, sheetSvg } from '@envelope/sheets';
 import { Maximize2, Minus, Plus } from 'lucide-react';
 import { type PointerEvent as ReactPointerEvent, useMemo, useRef, useState, type WheelEvent as ReactWheelEvent } from 'react';
 
@@ -19,14 +19,26 @@ import { Tab, Tabs, TabsList } from '../ui/radix.js';
 
   Zoom and pan move the picture, never the model: no figure is measured off it.
 */
-export function useSheets(
-  model: BuildingModel | undefined,
-  meta: { plotNumber: string; community: string; runId: string; issuedAt: string; checkedBy?: string },
-): Sheet[] {
-  const { plotNumber, community, runId, issuedAt, checkedBy } = meta;
+export function useSheets(model: BuildingModel | undefined, meta: SheetMeta): Sheet[] {
+  const { plotNumber, community, runId, issuedAt, checkedBy, projectName, client, consultant, description, status } = meta;
   return useMemo(
-    () => (model ? composeSheets(model, { plotNumber, community, runId, issuedAt, ...(checkedBy ? { checkedBy } : {}) }) : []),
-    [model, plotNumber, community, runId, issuedAt, checkedBy],
+    () =>
+      model
+        ? composeSheets(model, {
+            plotNumber,
+            community,
+            runId,
+            issuedAt,
+            ...(checkedBy ? { checkedBy } : {}),
+            /* The reader's title-block words, as the run stored them; the paper's strip is filled from the same field. */
+            ...(projectName ? { projectName } : {}),
+            ...(client ? { client } : {}),
+            ...(consultant ? { consultant } : {}),
+            ...(description ? { description } : {}),
+            ...(status ? { status } : {}),
+          })
+        : [],
+    [model, plotNumber, community, runId, issuedAt, checkedBy, projectName, client, consultant, description, status],
   );
 }
 

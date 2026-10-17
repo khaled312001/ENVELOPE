@@ -85,6 +85,17 @@ export interface StudyReportOptions {
    * not left as an empty table that would read as "nothing was left out".
    */
   readonly notBound?: readonly { readonly field: string; readonly stated: string; readonly reason: string }[] | null;
+  /**
+   * The general rules' placeholder limits the run did not load, because the
+   * plot has its own sheet (17 Oct 2026). Absent or empty prints nothing.
+   */
+  readonly placeholdersNotApplied?:
+    | readonly { readonly ruleId: string; readonly parameterId: string; readonly value: string; readonly unit: string; readonly reason: string }[]
+    | null;
+  /** What a project brief the run named bound, each with its clause. Absent or empty prints nothing. */
+  readonly briefBound?:
+    | readonly { readonly parameterId: string; readonly value: string; readonly unit: string; readonly clause: string }[]
+    | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -325,6 +336,15 @@ const EN = {
     'PLACEHOLDER-NOT-A-REAL-INSTRUMENT': 'Placeholder, not yet sourced —',
   } as Readonly<Record<string, string>>,
   units: {} as Readonly<Record<string, string>>,
+  // 17 Oct 2026: the run's sheet report, printed in the annex beside what the sheet states and the run does not apply.
+  placeholdersTitle: 'Placeholder limits not loaded for this plot',
+  placeholdersLede:
+    'The general rules carry placeholder figures no instrument prints. This plot has its own affection plan, so none of these was loaded: where the sheet states the limit its figure is used, and where it is silent the limit is left open.',
+  colRule: 'Rule',
+  briefTitle: 'Limits taken from a developer brief',
+  briefLede:
+    'Named by the person who ran this study. A developer brief is not a regulation: it is applied only where the plot’s own affection plan states nothing, and every value it supplies is marked as the brief’s.',
+  colBound: 'Bound',
 };
 
 type Words = typeof EN;
@@ -566,6 +586,14 @@ const AR: Words = {
     transformers: 'محول',
     'ft²': 'قدم²',
   },
+  placeholdersTitle: 'حدود مؤقتة لم تحمل لهذه القطعة',
+  placeholdersLede:
+    'تحمل القواعد العامة أرقاما مؤقتة لا تطبعها أي وثيقة. لهذه القطعة مخطط أفكشن خاص بها، فلم يحمل أي منها: حيث يذكر المخطط الحد يستخدم رقمه، وحيث يسكت يترك الحد مفتوحا.',
+  colRule: 'القاعدة',
+  briefTitle: 'حدود مأخوذة من موجز المشروع',
+  briefLede:
+    'اختاره من شغل هذه الدراسة. موجز المشروع ليس لائحة نظامية: لا يطبق إلا حيث لا يذكر مخطط الأفكشن الخاص بالقطعة شيئا، وكل قيمة يقدمها معلمة بأنها من الموجز.',
+  colBound: 'القيمة المطبقة',
 };
 
 const WORDS: Readonly<Record<Locale, Words>> = { en: EN, ar: AR };
@@ -1184,6 +1212,14 @@ function annexSection(run: RunReport, o: StudyReportOptions): string {
       esc(say(n.reason, L)),
     ];
   });
+  /* What the run did not load, and what a brief it named bound — the run's own sheet report, as stored with it. */
+  const placeholders = (o.placeholdersNotApplied ?? []).map((p) => [
+    name(p.parameterId),
+    valueOf(p.value, p.unit),
+    `<bdi class="mono">${esc(p.ruleId)}</bdi>`,
+    esc(say(p.reason, L)),
+  ]);
+  const briefBound = (o.briefBound ?? []).map((b) => [name(b.parameterId), valueOf(b.value, b.unit), esc(say(b.clause, L))]);
   const list = (items: readonly string[]): string =>
     items.length === 0 ? '—' : `<ul class="terms">${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`;
   const definitions = run.areaTermsUsed.map((id) => {
@@ -1214,6 +1250,19 @@ function annexSection(run: RunReport, o: StudyReportOptions): string {
       ? ''
       : `<h3>${esc(w.notBoundTitle)}</h3><p class="note">${esc(w.notBoundLede)}</p>` +
         table(w.notBoundTitle, [w.colField, w.colStated, w.colWhy], notBound, 'not-bound', ['24%', '30%', '46%'])) +
+    (briefBound.length === 0
+      ? ''
+      : `<h3>${esc(w.briefTitle)}</h3><p class="note">${esc(w.briefLede)}</p>` +
+        table(w.briefTitle, [w.colParameter, w.colBound, w.colSource], briefBound, 'brief-bound', ['24%', '16%', '60%'])) +
+    (placeholders.length === 0
+      ? ''
+      : `<h3>${esc(w.placeholdersTitle)}</h3><p class="note">${esc(w.placeholdersLede)}</p>` +
+        table(w.placeholdersTitle, [w.colParameter, w.colValue, w.colRule, w.colWhy], placeholders, 'placeholders', [
+          '24%',
+          '14%',
+          '22%',
+          '40%',
+        ])) +
     `<h3>${esc(w.definitionsTitle)}</h3>` +
     `<p class="note">${esc(w.definitionsLede(run.metricDefinitionsVersion))}</p>` +
     table(w.definitionsTitle, [w.colTerm, w.colDefinition, w.colIncludes, w.colExcludes], definitions, 'definitions', [

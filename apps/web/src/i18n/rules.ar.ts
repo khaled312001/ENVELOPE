@@ -171,6 +171,7 @@ export const AR: RulesDictionary = {
       /* «خيارات», not «سيناريوهات»: no transliteration where Arabic has the word. */
       replaces:
         'تحل خياراته محل خيارات المعيار العام — فالتوزيع الأوسع لا ينطبق على هذه القطعة.',
+      statesGfaOnly: 'لا يطبع معامل بناء، وينص على ',
     },
     none: {
       label: 'لا شيء — استخدم توزيعا عاما',

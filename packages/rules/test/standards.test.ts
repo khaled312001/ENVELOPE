@@ -169,14 +169,14 @@ describe('project briefs', () => {
       prints FAR 5 and 11,829.35 m², and the two agree exactly.
     */
     const b = BRIEF_DJAZ1MED12RES011;
-    expect(b.far.value).toBe('5');
-    const implied = new Decimal(b.far.value).times(b.plotAreaM2.value);
+    expect(b.far!.value).toBe('5');
+    const implied = new Decimal(b.far!.value).times(b.plotAreaM2.value);
     expect(implied.toFixed(2)).toBe(new Decimal(b.gfaM2.value).toFixed(2));
   });
 
   it('marks that FAR as coming from a developer brief, not an authority', () => {
-    expect(BRIEF_DJAZ1MED12RES011.far.note).toMatch(/developer brief rather than an authority/);
-    expect(BRIEF_DJAZ1MED12RES011.far.citation.instrumentId).toMatch(/^AZIZI\//);
+    expect(BRIEF_DJAZ1MED12RES011.far!.note).toMatch(/developer brief rather than an authority/);
+    expect(BRIEF_DJAZ1MED12RES011.far!.citation.instrumentId).toMatch(/^AZIZI\//);
   });
 
   it('does not reconcile on the second plot, and records why', () => {
@@ -193,7 +193,7 @@ describe('project briefs', () => {
       evenly.
     */
     const b = BRIEF_DJAZ1TRE10RES022;
-    const implied = new Decimal(b.far.value).times(b.plotAreaM2.value);
+    const implied = new Decimal(b.far!.value).times(b.plotAreaM2.value);
     const printed = new Decimal(b.gfaM2.value);
     expect(implied.equals(printed)).toBe(false);
 

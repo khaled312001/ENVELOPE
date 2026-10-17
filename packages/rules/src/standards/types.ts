@@ -147,9 +147,24 @@ export interface ProjectBrief {
   readonly citation: Citation;
   readonly plotAreaM2: Target;
   readonly gfaM2: Target;
-  readonly far: Target;
+  /**
+   * The FAR as the brief prints it — absent where the brief prints none.
+   *
+   * Optional since 17 Oct 2026, because plot 6468096's brief prints a plot area
+   * and a GFA and no ratio. The ratio the run binds was never this field anyway:
+   * `rulesFromBrief` divides the brief's GFA by its plot area and uses a printed
+   * FAR only as the cross-check. Filling the field with that quotient would put
+   * a figure under the brief's citation that the brief does not print.
+   */
+  readonly far?: Target;
   readonly heightCode: Target;
   readonly landUse: Target;
+  /**
+   * The level schedule the brief states, as printed — "3 Basements, Ground and 5
+   * podium levels". Information for the reader; nothing binds it, and a run's
+   * levels are still the reader's to enter.
+   */
+  readonly levels?: Target;
   /** Overrides the standard's scenarios for this plot. */
   readonly scenarios: readonly MixScenario[];
   readonly notMechanized: readonly string[];

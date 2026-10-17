@@ -1,4 +1,4 @@
-import type { PlotCreated, SheetFace, SheetSetback } from '@web/api/client.js';
+import type { PlotCreated, RunView, SheetFace, SheetSetback } from '@web/api/client.js';
 
 import { cn } from '../lib/cn.js';
 import { EngineNote, useLocale } from '../lib/locale.js';
@@ -108,6 +108,60 @@ export function SheetBlockingList({ sheet }: { readonly sheet: PlotCreated['shee
         ))}
       </ul>
     </section>
+  );
+}
+
+/**
+ * WHAT THE LAST COMPUTATION DID WITH THE SHEET (17 Oct 2026): the general rules'
+ * placeholder limits it did not load because the plot has its own affection
+ * plan, and what a project brief the reader chose bound. Both were on the run's
+ * sheet report from the day the binder learned them, and no screen showed them,
+ * so a run on a brief read exactly like a run on the sheet. Listed, never
+ * collapsed; nothing at all for a run that set nothing aside and named no brief.
+ */
+export function RunSheetLists({ sheet }: { readonly sheet: RunView['sheet'] | null | undefined }): JSX.Element | null {
+  const { t } = useLocale();
+  const placeholders = sheet?.placeholdersNotApplied ?? [];
+  const brief = sheet?.briefBound ?? [];
+  if (placeholders.length === 0 && brief.length === 0) return null;
+  return (
+    <>
+      {brief.length > 0 ? (
+        <section aria-labelledby="plot-brief-bound" className="grid gap-2" data-brief-bound="">
+          <Heading id="plot-brief-bound">{t.runSheet.briefTitle}</Heading>
+          <p className="text-[12px] text-secondary">{t.runSheet.briefLede}</p>
+          <ul className="grid gap-1.5 text-[12.5px]">
+            {brief.map((b) => (
+              <li key={b.parameterId} className="rounded-md border border-line bg-raised px-3 py-2">
+                <span className="flex items-baseline justify-between gap-3">
+                  <EngineNote className="font-medium text-fg" text={b.parameterId} />
+                  <bdi className="figure text-fg" dir="ltr">
+                    {b.value}
+                  </bdi>
+                </span>
+                <EngineNote className="block text-[11.5px] leading-snug text-secondary" text={b.clause} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {placeholders.length > 0 ? (
+        <section aria-labelledby="plot-placeholders" className="grid gap-2" data-placeholders="">
+          <Heading id="plot-placeholders">{t.runSheet.placeholdersTitle}</Heading>
+          <p className="text-[12px] text-secondary">{t.runSheet.placeholdersLede}</p>
+          <ul className="grid gap-1.5 text-[12.5px]">
+            {placeholders.map((p) => (
+              <li key={p.ruleId} className="flex items-baseline justify-between gap-3 rounded-md border border-line bg-raised px-3 py-2">
+                <EngineNote className="text-fg" text={p.parameterId} />
+                <bdi className="figure text-[11.5px] text-tertiary" dir="ltr">
+                  {p.ruleId} · {p.value} {p.unit}
+                </bdi>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </>
   );
 }
 

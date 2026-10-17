@@ -52,6 +52,7 @@ import { AdvisorBox, AdvisorProvider } from '../studio/AdvisorBox.js';
 import { applyEdits, editableFields, refilesPlot } from '../studio/advisor-edits.js';
 import { RefusalNotice } from '../studio/RefusalNotice.js';
 import { RulesPanel } from '../studio/RulesStep.js';
+import { BriefPicker } from '../studio/BriefPicker.js';
 import { SHEET_MAX_BYTES, SheetCanvas, SheetPanel, type SheetState } from '../studio/SheetStep.js';
 
 /*
@@ -220,6 +221,8 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
       const view = await api.getPlot(actor, made.plotId);
       setCreated(made);
       setPlot(view);
+      // A brief chosen for the previous plot is not this plot's: each filed plot opens with none chosen.
+      setRules((r) => ({ ...r, projectBriefId: '' }));
       setRun(null);
       setRequest(null);
       setEntrance(null);
@@ -627,6 +630,7 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                 onFile={fileplot}
                 onNext={() => setStep('rules')}
                 roads={mapRoads}
+                runSheet={run?.sheet ?? null}
               />
             ) : step === 'rules' && plotId ? (
               <RulesPanel
@@ -637,9 +641,20 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                   void compute({
                     ...requestBody(plotId, rules, undefined, typedSetbacksOf(draft)),
                     ...(entrance ? { vehicleAccess: entrance } : {}),
+                    // The title block the reader stated on the export step travels with every recomputation.
+                    ...(request?.titleBlock ? { titleBlock: request.titleBlock } : {}),
                   })
                 }
                 hasRun={run !== null}
+                brief={
+                  <BriefPicker
+                    actor={actor}
+                    plotNumber={plot?.plotNumber ?? draft.plotNumber}
+                    value={rules.projectBriefId}
+                    onChange={(projectBriefId) => setRules({ ...rules, projectBriefId })}
+                    sheetOmitsFar={(created?.sheet.blocking ?? []).some((g) => g.field === 'far' || g.field === 'gfa_permitted_sqm')}
+                  />
+                }
               />
             ) : step === 'capacity' && run ? (
               <CapacityPanel run={run} onNext={() => setStep('parking')} />
@@ -663,7 +678,21 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
             ) : step === 'checks' && run ? (
               <ChecksPanel run={run} onNext={() => setStep('export')} />
             ) : step === 'export' && run ? (
-              <ExportPanel actor={actor} run={run} onSigned={refresh} />
+              <ExportPanel
+                actor={actor}
+                run={run}
+                onSigned={refresh}
+                titleBlock={{
+                  canSave: request !== null,
+                  busy: busy === 'run',
+                  // The same request again with only the title block changed: a new run, whose gates are signed again.
+                  onSave: (titleBlock) => {
+                    if (!request) return;
+                    const { titleBlock: _previous, ...rest } = request;
+                    void compute(titleBlock ? { ...rest, titleBlock } : rest);
+                  },
+                }}
+              />
             ) : null}
             {/*
               Claude on the steps whose panels do not carry it: the sheet as read (or

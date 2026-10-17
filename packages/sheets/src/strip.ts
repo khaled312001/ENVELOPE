@@ -340,8 +340,14 @@ const CLASS_WORD: Partial<Record<ProvenanceClass, string>> = {
   USER_SET: 'ENTERED',
 };
 
-/** A field the reader states, or NOT STATED. Whitespace is not a statement. */
-const stated = (value: string | undefined): string =>
+/**
+ * A field the reader states, or NOT STATED. Whitespace is not a statement.
+ *
+ * Exported (17 Oct 2026) so the DXF's title lines print a field by the same rule
+ * as the strip: one function, or the file and the paper disagree about which
+ * blank is a blank.
+ */
+export const stated = (value: string | undefined): string =>
   value !== undefined && value.trim() !== '' ? value.trim() : NOT_STATED;
 
 type FieldRow = readonly [FieldSpec] | readonly [FieldSpec, FieldSpec];

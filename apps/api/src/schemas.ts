@@ -202,6 +202,13 @@ export const runRequest = z.object({
    */
   projectBriefId: z.string().min(1).max(120).optional(),
   /**
+   * What the reader calls the job, for the drawings' title block (17 Oct 2026).
+   * Every field optional, none defaulted: absent, the strip prints NOT STATED.
+   * Stored with the run under the actor's name — USER_SET, never inferred from a
+   * brief or a height code. See `titleBlockInput`.
+   */
+  titleBlock: z.lazy(() => titleBlockInput).optional(),
+  /**
    * The parking arrangement the actor picked from a previous run's
    * `levelPlan.arrangements` — USER_SET under the actor. Absent, the one placing
    * the most bays is laid out. One this level cannot pack comes back 422.
@@ -356,6 +363,46 @@ export const runRequest = z.object({
   /** Set only in development, and only against DRAFT rules. */
   useDraftRules: z.boolean().default(false),
 });
+
+/*
+  THE TITLE BLOCK'S WORDS, AND WHY THEY ARE PLAIN ASCII.
+
+  They print in three places: the screen's sheet, the A3 set and the DXF. R12 is
+  not Unicode, and the DXF writer turns any letter outside printable ASCII into a
+  visible '?' — right for a community name read off a sheet, wrong for a name the
+  reader is typing now and could type otherwise. So a value outside that set is
+  REFUSED here, in a sentence, rather than printed as question marks in the file
+  an architect x-refs. `%%` is refused for the same reason: a CAD reader takes it
+  as a control code (`%%d` is a degree sign) and would print something else.
+  Drawings and title strips stay in English ASCII by the same rule as the layers.
+*/
+const TITLE_ASCII = /^[\x20-\x7E]*$/;
+
+/** The sentence a title-block field outside printable ASCII is refused with. */
+export const TITLE_NOT_ASCII =
+  'is printed in the drawings’ title block and in the DXF, whose text is plain ASCII. Write it in ' +
+  'Latin letters, digits and punctuation; a letter outside that set would print as "?" in the CAD file.';
+/** The sentence a title-block field carrying a DXF control code is refused with. */
+export const TITLE_CONTROL_CODE =
+  'contains "%%", which a CAD reader takes as a control code and would print as something else. ' +
+  'Write it without the doubled percent sign.';
+
+const titleText = (max: number) =>
+  z
+    .string()
+    .max(max)
+    .refine((s) => TITLE_ASCII.test(s), { message: TITLE_NOT_ASCII })
+    .refine((s) => !s.includes('%%'), { message: TITLE_CONTROL_CODE });
+
+export const titleBlockInput = z
+  .object({
+    projectName: titleText(80).optional(),
+    client: titleText(80).optional(),
+    consultant: titleText(80).optional(),
+    description: titleText(160).optional(),
+    status: titleText(40).optional(),
+  })
+  .strict();
 
 export const gateAck = z.object({
   gate: z.enum([

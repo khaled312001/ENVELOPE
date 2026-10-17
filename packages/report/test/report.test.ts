@@ -1213,6 +1213,58 @@ describe('the study report', () => {
     }
   });
 
+  it('lists in the annex the placeholders the run did not load and what a named brief bound, in both languages', () => {
+    /*
+      Both were on the run's sheet report from 17 Oct 2026 and printed nowhere a
+      reader of the study looks. The sentences are the API's and the binder's own.
+    */
+    const placeholdersNotApplied = [
+      {
+        ruleId: 'R-FAR-MAX-RES',
+        parameterId: 'far.max',
+        value: '5',
+        unit: 'ratio',
+        reason:
+          'A placeholder figure no instrument prints. This plot has its own affection plan, so the placeholder is not ' +
+          'applied to it: where the sheet states this limit the sheet’s figure is used, and where it is silent the limit ' +
+          'is left open rather than filled.',
+      },
+    ];
+    const briefBound = [
+      {
+        parameterId: 'far.max',
+        value: '4.837235',
+        unit: 'ratio',
+        clause:
+          'Developer brief, not an authority document: issued by the developer’s consultant and applied only where the ' +
+          'plot’s own affection plan states nothing. GFA 21604.61 m² ÷ plot area 4466.313648 m² (rounded down at 6 ' +
+          'places); the brief prints no FAR to cross-check it against. As printed: "Plot No. 6468096-Z6-04, Plot Area ' +
+          'ft² 48,075, GFA (m²) 21,604.61, GFA (ft²) 232,552"',
+      },
+    ];
+    const run = makeRun();
+    const en = studyReportHtml(run, { locale: 'en', sheets: [], building: null, placeholdersNotApplied, briefBound });
+    expect(en).toContain('Placeholder limits not loaded for this plot');
+    expect(en).toContain('R-FAR-MAX-RES');
+    expect(en).toContain('Limits taken from a developer brief');
+    expect(en).toContain('4.837235');
+    expect(en).toContain('the brief prints no FAR to cross-check it against');
+    const ar = studyReportHtml(run, { locale: 'ar', sheets: [], building: null, placeholdersNotApplied, briefBound });
+    expect(ar).toContain('حدود مؤقتة لم تحمل لهذه القطعة');
+    expect(ar).toContain('حدود مأخوذة من موجز المشروع');
+    expect(ar).toContain('موجز مطور، وليس وثيقة نظامية');
+    // The reasons are said in Arabic; the brief's own words stay as printed.
+    expect(ar).not.toContain('A placeholder figure no instrument prints');
+    expect(ar).not.toContain('the brief prints no FAR');
+    expect(ar).toContain(esc('Plot No. 6468096-Z6-04'));
+    // Nothing named, nothing set aside: no heading that would read as a list with nothing in it.
+    for (const none of [{}, { placeholdersNotApplied: [], briefBound: [] }, { placeholdersNotApplied: null, briefBound: null }]) {
+      const html = studyReportHtml(run, { locale: 'en', sheets: [], building: null, ...none });
+      expect(html).not.toContain('Placeholder limits not loaded');
+      expect(html).not.toContain('Limits taken from a developer brief');
+    }
+  });
+
   it('says every area definition in Arabic line for line, so no term loses an inclusion in translation', () => {
     for (const d of ALL_DEFINITIONS) {
       const ar = METRIC_AR[d.metricId];

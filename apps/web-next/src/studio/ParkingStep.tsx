@@ -129,6 +129,12 @@ export function ParkingCanvas({ run, initialKind = 'PARKING' }: { readonly run: 
     runId: run.runId,
     issuedAt: run.issuedAt,
     ...(run.gates?.['G4_REVIEWER_NAMED']?.actorName ? { checkedBy: run.gates['G4_REVIEWER_NAMED'].actorName } : {}),
+    // What the API's `titleFieldsOf` puts on the paper, field for field, so the screen's strip is the A3's.
+    ...(run.titleBlock?.projectName ? { projectName: run.titleBlock.projectName } : {}),
+    ...(run.titleBlock?.client ? { client: run.titleBlock.client } : {}),
+    ...(run.titleBlock?.consultant ? { consultant: run.titleBlock.consultant } : {}),
+    ...(run.titleBlock?.description ? { description: run.titleBlock.description } : {}),
+    ...(run.titleBlock?.status ? { status: run.titleBlock.status } : {}),
   });
   if (!run.building) return <p className="grid h-full place-items-center p-6 text-center text-secondary">{t.capacity.noModel}</p>;
   return <SheetViewer sheets={sheets} initialKind={initialKind} />;

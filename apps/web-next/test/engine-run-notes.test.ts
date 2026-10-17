@@ -146,13 +146,24 @@ describe('which levels park, and accessible bays on a slope', () => {
     expect(ar).toContain('و4 أخرى');
   });
 
+  it('says a one-level answer drawn as the ground floor alone', () => {
+    const ar = said(
+      'The answer places 1 level of floor area, drawn as the ground floor. ' +
+        'The 12 above them are what the height ceiling permits and this answer does not use.',
+    );
+    expect(ar).toContain('يرسم منها الدور الأرضي.');
+    expect(ar).toContain('و12 أخرى');
+    expect(ar).not.toMatch(noEnglish);
+  });
+
   it('says the accessible bays the slope kept off, with both figures', () => {
     const ar = said(
       'None of the 2 accessible bays Table C.17 asks for is placed: the ground floor is the sloped ring, whose floor ' +
         'falls 2.68%, and DBC B.7.2.3.1 limits accessible parking to 2%. Every parking level shares that layout, so no ' +
-        'level is flatter. The arrangement was not changed to make room for them; an arrangement with a flat floor would.',
+        'level is flatter. The arrangement was not changed to make room for them; the reader may pick one with a flat floor.',
     );
     expect(ar).toContain('2.68%');
+    expect(ar).toContain('ويمكنك اختيار توزيع بأرضية مستوية');
     expect(ar).toContain('2%');
     expect(ar).toContain('الدور الأرضي');
     expect(ar).not.toMatch(noEnglish);

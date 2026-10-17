@@ -122,6 +122,20 @@ describe('a ground floor that does not park, with no basement', () => {
     expect(out.building.notModelled.join(' ')).toMatch(/The ramp from the street up to the first podium parking level/);
     expect(out.building.notModelled.join(' ')).not.toMatch(/street down to the first basement/);
   });
+
+  it('says a one-level answer is the ground floor, not "the ground floor and the lowest 0"', () => {
+    const out = runPipeline(
+      runInput(RECT_80x40, {
+        levelSchedule: { basements: 0, groundIsParking: false, podiumAboveGround: 1, podiumParkingLevels: 1 },
+        levelPlan: FLAT,
+      }),
+    );
+    expect(out.capacity.levels.value).toBe(1);
+    const statement = out.building.placements.find((p) => p.subject === 'answer')!.statement;
+    expect(statement).toMatch(/^The answer places 1 level of floor area, drawn as the ground floor\./);
+    expect(statement).not.toMatch(/lowest 0/);
+    expect(out.building.levels.find((l) => l.id === 'G')!.placed).toBe(true);
+  });
 });
 
 describe('a ground floor the schedule does give to parking', () => {

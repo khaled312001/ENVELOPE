@@ -393,7 +393,9 @@ export function designateAccessible(input: AccessibleInput): AccessiblePlan {
       `None of the ${requiredValue} accessible bays Table C.17 asks for is placed: ${level} is the sloped ring, ` +
         `whose floor falls ${slope.gradientPct.value.toFixed(2)}%, and DBC B.7.2.3.1 limits accessible parking to ` +
         `${slope.limitPct.value.toString()}%. Every parking level shares that layout, so no level is flatter. ` +
-        'The arrangement was not changed to make room for them; an arrangement with a flat floor would.',
+        // "May", not "would": no flat arrangement was tried for them, and one with too
+        // few runs side by side would place fewer than C.17 asks for too.
+        'The arrangement was not changed to make room for them; the reader may pick one with a flat floor.',
     );
   } else if (placedValue < requiredValue) {
     notes.push(

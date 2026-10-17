@@ -473,7 +473,10 @@ export function buildBuildingModel(input: BuildingModelInput): BuildingModel {
       `The answer places ${answerCount} level${answerCount === 1 ? '' : 's'} of floor area` +
       (placedAboveParking > 0
         ? groundIsAnswer
-          ? `, drawn as the ground floor and the lowest ${placedAboveParking - 1} above the podium parking`
+          ? // One level is the ground floor alone: "and the lowest 0 above" is a count of nothing.
+            placedAboveParking === 1
+            ? ', drawn as the ground floor'
+            : `, drawn as the ground floor and the lowest ${placedAboveParking - 1} above the podium parking`
           : `, drawn as the lowest ${placedAboveParking} above ` +
             (parkingInPodium > 0 ? 'the podium parking' : 'the ground')
         : '') +

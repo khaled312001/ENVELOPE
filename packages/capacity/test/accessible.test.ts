@@ -169,6 +169,9 @@ describe('accessible parking on the sloped ring', () => {
       `None of the ${plan.required.value} accessible bays Table C.17 asks for is placed: the ground floor is the ` +
         `sloped ring, whose floor falls ${g}%, and DBC B.7.2.3.1 limits accessible parking to 2%.`,
     );
+    // No flat arrangement was tried for them, so the note may not promise one would take them.
+    expect(plan.notes.join(' ')).toContain('the reader may pick one with a flat floor.');
+    expect(plan.notes.join(' ')).not.toMatch(/flat floor would/);
   });
 
   it('cites the 2% on page 83 in the graph, not only in the sentence', () => {

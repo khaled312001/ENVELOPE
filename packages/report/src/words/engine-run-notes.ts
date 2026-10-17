@@ -569,17 +569,20 @@ export const RUN_READERS: readonly Reader[] = [
   }),
   (t) => {
     // The ground floor first where it does not park and podium parking stands over it.
-    const g = /^The answer places (\d+) levels? of floor area, drawn as the ground floor and the lowest (\d+) above the podium parking\./.exec(t);
+    // A one-level answer is the ground floor alone, and says so without "the lowest 0".
+    const g = /^The answer places (\d+) levels? of floor area, drawn as the ground floor(?: and the lowest (\d+) above the podium parking)?\./.exec(t);
     if (!g) return null;
     const free = /The (\d+) above (?:it is|them are) what the height ceiling permits/.exec(t)?.[1];
     const over = /(\d+) of the answer's levels (?:does|do) not fit under the height ceiling above (\d+) level/.exec(t);
     return {
       en:
-        `The study places ${g[1]} levels of floor area, drawn as the ground floor and the lowest ${g[2]} above the podium parking.` +
+        `The study places ${g[1]} levels of floor area, drawn as the ground floor` +
+        (g[2] ? ` and the lowest ${g[2]} above the podium parking.` : '.') +
         (free ? ` ${free} more fit under the height ceiling and are unused.` : '') +
         (over ? ` ${over[1]} do not fit under the ceiling above ${over[2]} parking level(s) and are not drawn.` : ''),
       ar:
-        `تضع الدراسة ${g[1]} دورا من المساحة الطابقية، يرسم منها الدور الأرضي و${g[2]} فوق مواقف البوديوم.` +
+        `تضع الدراسة ${g[1]} دورا من المساحة الطابقية، يرسم منها الدور الأرضي` +
+        (g[2] ? ` و${g[2]} فوق مواقف البوديوم.` : '.') +
         (free ? ` و${free} أخرى يسمح بها حد الارتفاع ولا تستخدم.` : '') +
         (over ? ` و${over[1]} لا يتسع تحت حد الارتفاع فوق ${over[2]} دور مواقف فلا يرسم.` : ''),
     };
@@ -680,8 +683,8 @@ export const RUN_READERS: readonly Reader[] = [
     if (!m) return null;
     const level = ENTRY_LEVEL[m[2] ?? ''] ?? { en: m[2] ?? '', ar: m[2] ?? '' };
     return {
-      en: `None of the ${m[1]} accessible bays required is placed: ${level.en} is the sloped ring at ${m[3]}%, and the code limits accessible parking to ${m[4]}%. Every parking level shares that layout; a flat-floor arrangement would take them.`,
-      ar: `لم يوزع أي من ${m[1]} موقفا مطلوبا لأصحاب الهمم: ${level.ar} هو الممر الدائري المائل بميل ${m[3]}%، والكود يحد ميل مواقف أصحاب الهمم بـ ${m[4]}%. كل أدوار المواقف بنفس التوزيع، وتوزيع بأرضية مستوية يستوعبها.`,
+      en: `None of the ${m[1]} accessible bays required is placed: ${level.en} is the sloped ring at ${m[3]}%, and the code limits accessible parking to ${m[4]}%. Every parking level shares that layout. The arrangement was not changed for them; you may pick one with a flat floor.`,
+      ar: `لم يوزع أي من ${m[1]} موقفا مطلوبا لأصحاب الهمم: ${level.ar} هو الممر الدائري المائل بميل ${m[3]}%، والكود يحد ميل مواقف أصحاب الهمم بـ ${m[4]}%. كل أدوار المواقف بنفس التوزيع. لم يغير التوزيع من أجلها، ويمكنك اختيار توزيع بأرضية مستوية.`,
     };
   },
   (t) => {

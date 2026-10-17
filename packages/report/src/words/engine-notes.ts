@@ -244,6 +244,14 @@ const READERS: readonly Reader[] = [
     };
   },
   (t) => {
+    const m = /^(\d+) bay\(s\) stand where the drive from the slab edge crosses the wall run to reach the ring \(([\d.]+ × [\d.]+) m\)/.exec(t);
+    if (!m) return null;
+    return {
+      en: `${m[1]} bays stand where the ${m[2]} m drive from the slab edge crosses to the ring. They are not counted: a car drives through them.`,
+      ar: `${m[1]} مواقف تقع حيث يعبر ممر الدخول (${m[2]} م) صف المواقف من حافة الدور إلى الممر الدائري. لا تحسب، فالسيارة تمر من خلالها.`,
+    };
+  },
+  (t) => {
     const m = /^(\d+) bay\(s\) were placed and then dropped: no aisle a car can reach/.exec(t);
     if (!m) return null;
     return {

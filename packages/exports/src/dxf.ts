@@ -652,8 +652,19 @@ export function buildingDxf(model: BuildingModel, sheets: readonly Sheet[], meta
     */
     if (model.core && model.core.levelIds.includes(level.id)) {
       const coreLayer = layerName(level.id, 'core');
-      layers.set(coreLayer, CLASS_ACI[model.core.source.provenanceClass]);
-      const shaft = model.core.outline;
+      /*
+        On a parking level, what passes through is the stairs, lifts and lobby —
+        the shafts the layout keeps its bays clear of, and the outline the sheet
+        draws. The whole core's walls used to stand there, over bays the layout had
+        rightly placed beside the shafts. Inked in the shafts' own class there, as
+        the 3D view inks them.
+      */
+      const onParking = level.parking !== null && model.core.shaft !== undefined;
+      layers.set(
+        coreLayer,
+        CLASS_ACI[onParking ? model.core.shaft!.areaM2.provenanceClass : model.core.source.provenanceClass],
+      );
+      const shaft = onParking ? model.core.shaft!.outline : model.core.outline;
       shaft.forEach((p, i) => {
         const q = shaft[(i + 1) % shaft.length]!;
         entities.push({

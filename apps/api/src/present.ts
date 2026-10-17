@@ -260,6 +260,8 @@ export function presentRun(
               areaM2: levelPlan.losses.circulation.areaM2.toFixed(0),
               bays: levelPlan.losses.circulation.bays,
               strandedBays: levelPlan.losses.circulation.strandedBays,
+              // Of `bays`: those the drive from the slab edge to a ring crosses, not placed.
+              entryDriveBays: levelPlan.losses.circulation.entryDriveBays,
             },
             footprint: {
               areaM2: levelPlan.losses.footprint.areaM2.toFixed(0),

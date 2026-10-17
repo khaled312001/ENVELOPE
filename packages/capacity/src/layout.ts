@@ -233,8 +233,16 @@ export interface ParkingLosses {
   /** The cross aisle that joins every run to the way in, and anything stranded. */
   readonly circulation: {
     readonly areaM2: Decimal;
+    /** Every bay circulation cost, `entryDriveBays` among them. */
     readonly bays: number;
     readonly strandedBays: number;
+    /**
+     * Of `bays`, those the drive from the slab edge to a ring crosses — not
+     * placed, because a car drives through them. Published on its own because it
+     * was the one circulation cost that used to be counted as bays: three a level,
+     * drawn with a car in each under the drive.
+     */
+    readonly entryDriveBays: number;
   };
 }
 
@@ -1007,6 +1015,8 @@ interface Packing {
   readonly slopedLapM?: Decimal;
   readonly crossAisleAreaM2: Decimal;
   readonly baysLostToCrossAisle: number;
+  /** Bays the drive from the slab edge to the ring crosses, which were not placed. Ring only. */
+  readonly entryDriveBays?: number;
   readonly strandedBays: number;
   readonly baysUnderCore: number;
   readonly notes: readonly string[];
@@ -1550,20 +1560,54 @@ function packPerimeter(o: PackOptions): Packing {
 
   /*
     THE WAY IN CROSSES THE BAY RUN, because the ring does not touch the slab
-    edge — the bays do. On the ground floor that crossing is the driveway, and
-    the client's own ground floor draws it exactly so: the entrance cuts through
-    the wall run to reach the loop. It costs the bays it crosses, which are not
-    placed rather than placed and then found unreachable.
+    edge — the bays do. The client's own ground floor draws it exactly so: the
+    entrance cuts through the wall run to reach the loop.
+
+    IT USED TO STAND ON THREE BAYS THAT WERE STILL COUNTED. The comment here said
+    the crossed bays were "not placed"; nothing removed them. The long-wall run
+    starts at the corner, so the two bays under the 6 m drive and the one half
+    under it were counted, numbered and drawn with a car in each, on every ring
+    level of every run — and the no-overlap test ran on a level that picks
+    modules, so nothing looked. Now they are not placed, and the count of them is
+    published as its own figure (`losses.circulation.entryDriveBays`).
+
+    AND IT IS DRAWN ONLY WHERE IT IS THE WAY ON. One layout serves every parking
+    level but the one at grade. Where the level has a ramp on its island, or its
+    ring is the ramp, a car arrives by that; a drive from the slab edge on such a
+    level runs into a basement wall, and taking three bays for it is taking them
+    for a drive nobody uses. At grade the street's own drive is laid by
+    `grade.ts`, from the opening the reader placed, and gives up the bays it
+    actually crosses there. So the stub is placed only on a level nothing else
+    reaches — a ring with no ramp — where it is the level's one way on.
   */
-  const entryWidth = Decimal.min(o.aisleWidth, W);
-  rects.push({
-    kind: RectKind.AISLE,
-    row: ENTRY_DRIVE_ROW,
-    x: ZERO,
-    y: ZERO,
-    width: entryWidth,
-    height: o.bayLength,
-  });
+  let entryDriveBays = 0;
+  let entryDriveAreaM2 = ZERO;
+  if (!o.includeRamp) {
+    const drive: PlacedRect = {
+      kind: RectKind.AISLE,
+      row: ENTRY_DRIVE_ROW,
+      x: ZERO,
+      y: ZERO,
+      width: Decimal.min(o.aisleWidth, W),
+      height: o.bayLength,
+    };
+    for (let i = rects.length - 1; i >= 0; i -= 1) {
+      const r = rects[i]!;
+      if ((r.kind === RectKind.BAY || r.kind === RectKind.ACCESSIBLE_BAY) && collides(r, drive)) {
+        rects.splice(i, 1);
+        entryDriveBays += 1;
+      }
+    }
+    rects.push(drive);
+    entryDriveAreaM2 = drive.width.times(drive.height);
+    if (entryDriveBays > 0) {
+      notes.push(
+        `${entryDriveBays} bay(s) stand where the drive from the slab edge crosses the wall run to ` +
+          `reach the ring (${drive.width.toString()} × ${drive.height.toString()} m), and are not placed: ` +
+          'a car drives through them. They are counted as a circulation loss, not as bays.',
+      );
+    }
+  }
 
   /*
     THE ISLAND IS WORKED ALONG ITS LONG AXIS. The first version stood the ramp
@@ -1774,7 +1818,7 @@ function packPerimeter(o: PackOptions): Packing {
   notes.push(
     `Bays stand against all four walls and one ${o.aisleWidth.toString()} m ring aisle serves ` +
       `them: ${acrossCount} to each long wall and ${downCount} to each short one, less the ` +
-      `${strandedBays + baysUnderCore} the way in and the core take. The island the ring ` +
+      `${strandedBays + baysUnderCore + entryDriveBays} the way in and the core take. The island the ring ` +
       `encloses is ${Decimal.max(ZERO, islandW).toFixed(2)} × ${Decimal.max(ZERO, islandD).toFixed(2)} m` +
       (islandBays > 0 ? `, and ${islandBays} more bays stand on it facing the ring.` : '.'),
   );
@@ -1792,8 +1836,11 @@ function packPerimeter(o: PackOptions): Packing {
     reservedPieces,
     ramp,
     ...(slopedLapM ? { slopedLapM } : {}),
-    crossAisleAreaM2: Decimal.max(ZERO, ringArea),
+    // The ring and the drive that reaches it are both circulation; only the
+    // drive cost bays, and those are its own figure.
+    crossAisleAreaM2: Decimal.max(ZERO, ringArea).plus(entryDriveAreaM2),
     baysLostToCrossAisle: 0,
+    entryDriveBays,
     strandedBays,
     baysUnderCore,
     notes,
@@ -2693,8 +2740,9 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
     },
     circulation: {
       areaM2: packing.crossAisleAreaM2,
-      bays: packing.baysLostToCrossAisle,
+      bays: packing.baysLostToCrossAisle + (packing.entryDriveBays ?? 0),
       strandedBays: packing.strandedBays,
+      entryDriveBays: packing.entryDriveBays ?? 0,
     },
   };
   if (whole) {
@@ -2722,11 +2770,12 @@ export function layoutParkingLevel(input: ParkingLayoutInput): ParkingLayoutResu
           : ''),
     );
   }
-  if (losses.circulation.bays > 0) {
+  // The drive from the slab edge says its own cost (`packPerimeter`); this is the cross aisle's.
+  if (packing.baysLostToCrossAisle > 0) {
     // Rows across the footprint have no cross aisle; what joins them is the
     // connectors through the bay rows, and the note names what was drawn.
     notes.push(
-      `The ${whole ? 'connectors between the rows cost' : 'cross aisle costs'} ${losses.circulation.bays} bays across ` +
+      `The ${whole ? 'connectors between the rows cost' : 'cross aisle costs'} ${packing.baysLostToCrossAisle} bays across ` +
         `${packing.crossAisleAreaM2.toFixed(0)} m². That is the price of every bay on ` +
         'the level being reachable, and it is stated rather than folded into a ratio.',
     );

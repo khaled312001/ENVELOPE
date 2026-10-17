@@ -373,7 +373,13 @@ export function buildBuildingScene(model: BuildingModel, palette: ScenePalette):
       shaft.receiveShadow = true;
       pickable(shaft, { node: core.areaM2.node, rank: 4, name: core.label });
       group.add(shaft);
-      group.add(named(new THREE.LineLoop(track(ringLine(core.outline, at, 0)), ink(coreColour)), `${level.id} core outline`));
+      /*
+        The same ring the walls stand on. It was the whole residential core on
+        every level, so on a parking level it was traced round bays and aisles the
+        layout had placed beside the shafts — eight bays a level on Al Mamzar —
+        while the sheet of the same level drew only the shafts.
+      */
+      group.add(named(new THREE.LineLoop(track(ringLine(outline, at, 0)), ink(coreColour)), `${level.id} core outline`));
     }
 
     // Every level is named; three are named in the whole-building view — the lowest,

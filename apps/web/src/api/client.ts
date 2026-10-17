@@ -454,6 +454,8 @@ export interface LevelPlanView {
       readonly areaM2: string;
       readonly bays: number;
       readonly strandedBays: number;
+      /** Of `bays`, those a ring's drive from the slab edge crosses. Absent on runs stored before 17 Oct 2026. */
+      readonly entryDriveBays?: number;
     };
     readonly footprint: { readonly areaM2: string; readonly bays: number };
   };

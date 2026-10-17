@@ -150,6 +150,65 @@ const AISLE_MM = 6000 - 10;
 */
 const A_104 = { basements: 3, groundIsParking: false, podiumAboveGround: 5, podiumParkingLevels: 5 } as const;
 
+// --- what stands on a bay, measured on the drawing --------------------------
+/*
+  AREA, NOT TOUCH. A bay and the aisle it opens onto share an edge, and every
+  corner here is a millimetre rounding of a rotated point, so two outlines that
+  only meet can overlap by a sliver a few millimetres wide along a 5.5 m edge.
+  0.1 m² is above any such sliver and far below what was found: the ring's drive
+  from the slab edge stood on 13.75 m² of each of two bays and 5.5 m² of a third.
+*/
+const ON_A_BAY_MM2 = 100_000;
+
+const signedArea = (p: readonly XY[]): number =>
+  p.reduce((s, a, i) => {
+    const b = p[(i + 1) % p.length]!;
+    return s + a.x * b.y - b.x * a.y;
+  }, 0) / 2;
+
+/** The area two convex outlines share, mm² — Sutherland–Hodgman, both wound anticlockwise. */
+function sharedArea(subject: readonly XY[], clipper: readonly XY[]): number {
+  const ccw = (p: readonly XY[]): readonly XY[] => (signedArea(p) < 0 ? [...p].reverse() : p);
+  let out: XY[] = [...ccw(subject)];
+  const c = ccw(clipper);
+  for (let i = 0; i < c.length && out.length > 0; i += 1) {
+    const a = c[i]!;
+    const b = c[(i + 1) % c.length]!;
+    const side = (p: XY): number => (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+    const input = out;
+    out = [];
+    for (let k = 0; k < input.length; k += 1) {
+      const p = input[k]!;
+      const q = input[(k + 1) % input.length]!;
+      const sp = side(p);
+      const sq = side(q);
+      if (sp >= 0) out.push(p);
+      if (sp >= 0 !== sq >= 0) {
+        const t = sp / (sp - sq);
+        out.push({ x: p.x + t * (q.x - p.x), y: p.y + t * (q.y - p.y) });
+      }
+    }
+  }
+  return out.length > 2 ? Math.abs(signedArea(out)) : 0;
+}
+
+/** The convex hull of what a renderer drew, so a wall drawn as faces still closes into a footprint. */
+function hull(points: readonly XY[]): XY[] {
+  const p = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+  if (p.length < 3) return p;
+  const cross = (o: XY, a: XY, b: XY): number => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const half = (pts: readonly XY[]): XY[] => {
+    const h: XY[] = [];
+    for (const q of pts) {
+      while (h.length >= 2 && cross(h[h.length - 2]!, h[h.length - 1]!, q) <= 0) h.pop();
+      h.push(q);
+    }
+    return h.slice(0, -1);
+  };
+  return [...half(p), ...half([...p].reverse())];
+}
+
+// 80 x 40 is laid out as the sloped ring, so the ring's way in is measured here too.
 const CASES = [
   { name: '80 x 40', ring: RECT_80x40, podiumLevels: undefined, levelSchedule: undefined },
   { name: '80 x 40, two podium levels', ring: RECT_80x40, podiumLevels: 2, levelSchedule: undefined },
@@ -357,6 +416,96 @@ describe.each(CASES)('$name', ({ ring, podiumLevels, levelSchedule }) => {
         expect(served(bay.outline, nodes), `${level.id} bay ${bay.number}`).toBe(true);
       }
     }
+  });
+
+  /*
+    A CAR WAS DRAWN UNDER THE DRIVE. The ring's way in crossed the wall run over
+    three bays that stayed counted and numbered, on every ring level of the worked
+    example and of four real plots, and every count in this file agreed — because
+    the engine counted them too. So this measures area on the drawing itself: no
+    aisle, drive, ramp or accessible bay's aisle may share any with a bay.
+  */
+  it('stands no aisle, drive, ramp or access aisle on a bay, on every parking level', () => {
+    const model = out().building;
+    let measured = 0;
+    for (const level of model.levels) {
+      if (!level.parking) continue;
+      const p = level.parking;
+      const solid = [
+        ...p.aisles.map((a) => ({ what: 'aisle', ring: a.outline })),
+        ...(p.drives ?? []).map((d) => ({ what: d.label, ring: d.outline })),
+        ...(p.accessAisles ?? []).map((ring) => ({ what: 'access aisle', ring })),
+        ...(p.rampStrip ? [{ what: 'ramp', ring: p.rampStrip }] : []),
+      ];
+      for (const bay of p.bays) {
+        for (const s of solid) {
+          expect(sharedArea(bay.outline, s.ring), `${level.id}: ${s.what} on bay ${bay.number}`).toBeLessThanOrEqual(
+            ON_A_BAY_MM2,
+          );
+        }
+        for (const other of p.bays) {
+          if (other.number <= bay.number) continue;
+          expect(sharedArea(bay.outline, other.outline), `${level.id}: bay ${other.number} on bay ${bay.number}`).toBeLessThanOrEqual(
+            ON_A_BAY_MM2,
+          );
+        }
+        measured += 1;
+      }
+    }
+    expect(measured, 'no bay was measured, so nothing was proved').toBeGreaterThan(0);
+  });
+
+  /*
+    THE CORE AS EACH RENDERER DRAWS IT ON A PARKING LEVEL. The engine keeps bays
+    clear of the shafts that pass through a car park, and the sheet draws those
+    shafts — but the 3D view traced the whole residential core round every level,
+    and the building DXF stood its walls up there, over bays the layout had
+    rightly placed: eight a level on Al Mamzar. Each renderer's own geometry is
+    read back here, closed into a footprint, and held off every bay.
+  */
+  it('draws the core on no bay, on every parking level, in the sheet, the 3D view and the DXF', () => {
+    const model = out().building;
+    const core = model.core;
+    expect(core, 'every run has a core').not.toBeNull();
+    const sheets = composeSheets(model, META);
+    const scene = buildBuildingScene(model, PALETTE);
+    const dxf = parseDxf(buildingDxf(model, sheets, META));
+    let measured = 0;
+    for (const level of model.levels) {
+      if (!level.parking || !core!.levelIds.includes(level.id)) continue;
+      const drawn: Record<string, XY[]> = { sheet: [], '3d': [], dxf: [] };
+      const sheet = sheets.find((s) => s.levelId === level.id)!;
+      for (const item of sheet.items) {
+        if (item.kind === 'shape' && item.role === 'core' && item.closed) drawn['sheet']!.push(...item.points);
+      }
+      const group = scene.levels.find((l) => l.level.id === level.id)!.group;
+      group.traverse((o) => {
+        if (o.name !== `${level.id} core` && o.name !== `${level.id} core outline`) return;
+        const pos = (o as Mesh).geometry.getAttribute('position');
+        for (let i = 0; i < pos.count; i += 1) {
+          drawn['3d']!.push({ x: pos.getX(i) * 1000 + scene.originMm.x, y: pos.getY(i) * 1000 + scene.originMm.y });
+        }
+      });
+      for (const e of dxf.entities) {
+        if (e.layer !== layerName(level.id, 'core')) continue;
+        // dxf-parser hands a 3DFACE a fifth, empty vertex; a NaN in the hull would make it pass on nothing.
+        for (const v of (e as { vertices?: { x?: number; y?: number }[] }).vertices ?? []) {
+          if (Number.isFinite(v.x) && Number.isFinite(v.y)) drawn['dxf']!.push({ x: v.x! * 1000, y: v.y! * 1000 });
+        }
+      }
+      for (const [renderer, points] of Object.entries(drawn)) {
+        expect(points.length, `${renderer} draws no core on ${level.id}`).toBeGreaterThan(2);
+        const footprint = hull(points);
+        for (const bay of level.parking.bays) {
+          expect(sharedArea(bay.outline, footprint), `${renderer}: the core on bay ${bay.number}, ${level.id}`).toBeLessThanOrEqual(
+            ON_A_BAY_MM2,
+          );
+        }
+        measured += 1;
+      }
+    }
+    scene.dispose();
+    expect(measured, 'no core was measured on a parking level, so nothing was proved').toBeGreaterThan(0);
   });
 
   it('draws the same geometry on screen as on paper, path for path', () => {

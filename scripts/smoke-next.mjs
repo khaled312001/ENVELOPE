@@ -112,7 +112,9 @@ const watch = (p) => {
     if (m.type() !== 'error' || passingHostCheck) return;
     // The one 404 this walk asks for; its status is asserted below rather than counted here.
     if (expectingNotFound && /status of 404/.test(m.text())) return;
-    errors.push(`console on ${p.url()}: ${m.text()}`);
+    // "Failed to load resource" names no resource; the message's location does.
+    const where = m.location()?.url;
+    errors.push(`console on ${p.url()}: ${m.text()}${where && where !== p.url() ? ` (${where})` : ''}`);
   });
   p.on('pageerror', (e) => errors.push(`pageerror on ${p.url()}: ${e.message}`));
   p.on('request', (r) => {

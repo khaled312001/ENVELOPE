@@ -58,3 +58,17 @@ scripts/.*.tmp.mjs
 # Ad-hoc screenshot scripts written while reviewing a deployment.
 .shoot-*.mjs
 .shots-*/
+
+# The client's own sheets, drawings and recordings dropped at the repo root
+# (question 32, 17 Oct 2026). The drawings say they are the consultant's and may
+# not be copied beyond their purpose, and no written consent to keep them is on
+# file, so they stay on this disk only. Tests that read one skip by name when it
+# is absent (ENVELOPE_SOURCE_ROOT).
+/A-1*.pdf
+/A-3*.pdf
+/ground.pdf
+/COA-*.pdf
+/6457790-12.pdf
+/updated affection plan.pdf
+/dewa-regulations-*.pdf
+/*.mp4

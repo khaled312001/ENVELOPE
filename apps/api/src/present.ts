@@ -214,7 +214,11 @@ export function presentRun(
             id: a.id,
             bayCount: a.bayCount,
             ...(a.refusal ? { refusal: a.refusal } : {}),
+            // The bays each dead-end driveway serves (B.7.2.3.3 ¶8), measured before the default was chosen.
+            ...(a.deadEnds ? { deadEnds: a.deadEnds } : {}),
           })),
+          // The one laid out when nobody picks, ranked by the dead-end clause first.
+          defaultArrangement: levelPlan.layout.defaultArrangement,
           /*
             The bays set aside on the level the street reaches (DBC C.6.4, B.7.2.6.2),
             what the access aisles cost, and every dead-end driveway's bays

@@ -8,7 +8,7 @@
  * Table C.18's width, and a supply that pays for the aisles.
  */
 
-import { Decimal } from '@envelope/core';
+import { Decimal, ProvenanceGraph, Tracer } from '@envelope/core';
 import { initGeometry, type Pt } from '@envelope/geometry';
 import { beforeAll, describe, expect, it } from 'vitest';
 
@@ -16,6 +16,7 @@ import { RECT_80x40, runInput } from '../../../test-support/pipeline.js';
 import {
   accessibleRequired,
   deadEnds,
+  layoutParkingLevel,
   ParkingArrangement,
   RectKind,
   runPipeline,
@@ -136,9 +137,12 @@ describe('the accessible bays on the level the street reaches', () => {
 
 /*
   DBC B.7.2.3.1, p83: "Accessible parking slopes shall be limited to a maximum
-  of 2%." The sloped ring is the default on this plot because it places the most
-  bays, and its floor falls 2.68% — the engine's own figure. Accessible bays and
-  their aisles were designated on it with no check and no note.
+  of 2%." The sloped ring is the default on this plot, and its lap climbs more
+  than 2%. Accessible bays were first designated on it with no check; then none
+  was designated at all, and the bays their aisles would have taken stayed in
+  the supply. Now a stretch of the ring is kept LEVEL, the rest of the lap climbs
+  the storey — checked against 4% again — and the bays stand on the level stretch:
+  placed, drawn, and paid for.
 */
 describe('accessible parking on the sloped ring', () => {
   let out: ReturnType<typeof runPipeline>;
@@ -146,32 +150,50 @@ describe('accessible parking on the sloped ring', () => {
     out = runPipeline(runInput(RECT_80x40, { podiumLevels: 2 }));
   });
 
-  it('is the default arrangement here, and falls more than 2%', () => {
+  it('is the default arrangement here, and climbs more than 2% off its level landing', () => {
     expect(out.levelPlan!.layout.arrangement).toBe(ParkingArrangement.SLOPED);
     expect(out.levelPlan!.slopedFloor!.gradientPct.value.gt(2)).toBe(true);
+    expect(out.levelPlan!.slopedFloor!.gradientPct.value.lte(4)).toBe(true);
   });
 
-  it('designates no accessible bay and no access aisle on a floor steeper than 2%', () => {
+  it('keeps a stretch of the ring level, traced at 0% against the 2% of B.7.2.3.1', () => {
+    const landing = out.levelPlan!.slopedFloor!.landing!;
+    expect(landing).toBeDefined();
+    expect(landing.gradientPct.value.toString()).toBe('0');
+    expect(landing.lengthM.value.gt(0)).toBe(true);
+    const tree = JSON.stringify(out.graph.derivationOf(landing.lengthM.node));
+    expect(tree).toContain('B.7.2.3.1');
+    // The rest of the lap climbs the whole storey: steeper than the lap, and said.
+    const lap = out.levelPlan!.slopedFloor!.lapM;
+    expect(
+      out.levelPlan!.layout.notes.some((n) =>
+        n.startsWith(`The ring is kept level for ${landing.lengthM.value.toFixed(2)} m along one long side`) &&
+        n.includes(`the rest of the ${lap.toFixed(2)} m lap climbs`),
+      ),
+    ).toBe(true);
+  });
+
+  it('places every accessible bay Table C.17 asks for on the landing, with its 1.2 m aisle, and draws it', () => {
     const plan = out.levelPlan!.accessible!;
-    expect(plan.placed.value).toBe(0);
-    expect(plan.lost).toBe(0);
-    expect(plan.slope!.blocked).toBe(true);
-    for (const level of out.building.levels) {
-      expect(level.parking?.bays.some((b) => b.accessible) ?? false).toBe(false);
-      expect(level.parking?.accessAisles).toBeUndefined();
+    expect(plan.slope!.blocked).toBe(false);
+    expect(plan.slope!.landingPct?.value.toString()).toBe('0');
+    expect(plan.placed.value).toBe(plan.required.value);
+    expect(plan.placed.value).toBeGreaterThan(0);
+    const grade = out.building.levels.find((l) => l.id === 'G')!.parking!;
+    const drawn = grade.bays.filter((b) => b.accessible);
+    expect(drawn).toHaveLength(plan.placed.value);
+    expect(grade.accessAisles ?? []).toHaveLength(plan.lost);
+    for (const aisle of grade.accessAisles ?? []) expect(Math.min(...edgesMm(aisle))).toBeGreaterThanOrEqual(1200);
+    // Every one inside the level stretch, none on the climbing floor.
+    const world = out.levelPlan!.slopedFloor!.landing!.world;
+    const [lo, hi] = [
+      { x: Math.min(...world.map((p) => p.x)), y: Math.min(...world.map((p) => p.y)) },
+      { x: Math.max(...world.map((p) => p.x)), y: Math.max(...world.map((p) => p.y)) },
+    ];
+    for (const b of drawn) {
+      const c = centre(b.outline);
+      expect(c.x >= lo.x && c.x <= hi.x && c.y >= lo.y && c.y <= hi.y).toBe(true);
     }
-  });
-
-  it('says the shortfall in words, with both figures and the clause', () => {
-    const plan = out.levelPlan!.accessible!;
-    const g = out.levelPlan!.slopedFloor!.gradientPct.value.toFixed(2);
-    expect(plan.notes.join(' ')).toContain(
-      `None of the ${plan.required.value} accessible bays Table C.17 asks for is placed: the ground floor is the ` +
-        `sloped ring, whose floor falls ${g}%, and DBC B.7.2.3.1 limits accessible parking to 2%.`,
-    );
-    // No flat arrangement was tried for them, so the note may not promise one would take them.
-    expect(plan.notes.join(' ')).toContain('the reader may pick one with a flat floor.');
-    expect(plan.notes.join(' ')).not.toMatch(/flat floor would/);
   });
 
   it('cites the 2% on page 83 in the graph, not only in the sentence', () => {
@@ -182,11 +204,58 @@ describe('accessible parking on the sloped ring', () => {
     expect(tree).toContain('"sourcePage":83');
   });
 
-  it('does not change the arrangement to dodge the check, and keeps every bay in the supply', () => {
+  it('does not change the arrangement to dodge the check, and pays for the access aisles in the supply', () => {
     expect(out.levelPlan!.layout.arrangement).toBe(ParkingArrangement.SLOPED);
+    const plan = out.levelPlan!.accessible!;
     const perLevel = out.levelPlan!.bayCount.value;
     const atGrade = out.levelPlan!.grade!.bayCount.value;
-    expect(out.parking.providedBays.value).toBe(atGrade + perLevel);
+    expect(plan.lost).toBeGreaterThan(0);
+    expect(out.parking.providedBays.value).toBe(atGrade - plan.lost + perLevel);
+  });
+
+  /*
+    Review, 17 Oct 2026: the ring is packed unreflected, so on a level deeper than
+    wide the runs along x are its SHORT sides — and the landing was laid on one,
+    5 m long and holding one accessible bay on 30 × 70 m, under a sentence saying
+    "along one long side". The same level turned the other way round held seven.
+  */
+  it('keeps the long side level whichever way the level runs', () => {
+    const landingOf = (w: string, dd: string) => {
+      const r = layoutParkingLevel({
+        tracer: new Tracer(new ProvenanceGraph()),
+        footprint: { widthM: new Decimal(w), depthM: new Decimal(dd) },
+        deductions: { areaM2: new Decimal(0), source: 'ASSUMED', basis: 'test fixture takes no deduction' },
+        includeRamp: true,
+        parkingLevelCount: 4,
+        arrangement: { id: ParkingArrangement.SLOPED },
+      });
+      return r.slopedFloor!.landing!;
+    };
+    const wide = landingOf('70', '30');
+    const deep = landingOf('30', '70');
+    expect(wide.rect.width.gt(wide.rect.height)).toBe(true);
+    // Along the 70 m side, which on the deep level runs along y.
+    expect(deep.rect.height.gt(deep.rect.width)).toBe(true);
+    expect(deep.lengthM.value.toString()).toBe(wide.lengthM.value.toString());
+    expect(deep.holds).toBe(wide.holds);
+  });
+
+  it('says so in words where no landing fits, and lays none', () => {
+    // 45 × 30 m: a lap short enough to climb 3.2 m just within 4%, so keeping
+    // the stretch the accessible bays need level leaves the rest above it.
+    const r = layoutParkingLevel({
+      tracer: new Tracer(new ProvenanceGraph()),
+      footprint: { widthM: new Decimal('45'), depthM: new Decimal('30') },
+      deductions: { areaM2: new Decimal(0), source: 'ASSUMED', basis: 'test fixture takes no deduction' },
+      includeRamp: true,
+      arrangement: { id: ParkingArrangement.SLOPED },
+    });
+    expect(r.slopedFloor).toBeDefined();
+    expect(r.slopedFloor!.landing).toBeUndefined();
+    expect(r.slopedFloor!.gradientPct.value.lte(4)).toBe(true);
+    expect(r.notes.join(' ')).toMatch(
+      /No level landing fits on the sloped ring: the \d+ accessible bays Table C\.17 asks for need [\d.]+ m of it kept level, and the rest of the [\d.]+ m lap would climb the 3\.2 m storey at [\d.]+%, above the 4% a parked floor may fall \(DBC B\.7\.2\.3\.1\)\./,
+    );
   });
 
   it('designates them as before once the reader picks a flat floor', () => {

@@ -85,6 +85,8 @@ export interface WorldRect {
    * hybrid, electric and carpool vehicles (B.7.2.6.2). Absent on every other bay.
    */
   readonly use?: 'VAN' | 'PREFERRED';
+  /** On a one-way aisle, the way the traffic runs along it; see `PlacedRect.travel`. */
+  readonly travel?: 1 | -1;
 }
 
 export interface LevelPlan {
@@ -136,6 +138,12 @@ export interface LevelPlan {
     readonly lapM: Decimal;
     readonly gradientPct: TracedDecimal;
     readonly centreLine: readonly Pt[];
+    /** The stretch kept level for the accessible bays, in plot millimetres; see `ParkingLayoutResult.slopedFloor`. */
+    readonly landing?: {
+      readonly world: readonly Pt[];
+      readonly lengthM: TracedDecimal;
+      readonly gradientPct: TracedDecimal;
+    };
   };
   /** Table B.9's clear height over the stacked ramps, as a structural budget. */
   readonly headroom?: RampHeadroom;
@@ -339,6 +347,8 @@ export interface LevelPlanInput {
   readonly arrangement?: { readonly id: ParkingArrangement; readonly actor?: Actor };
   /** See `ParkingLayoutInput.slopedRing`. */
   readonly slopedRing?: boolean;
+  /** See `ParkingLayoutInput.parkingLevelCount`. */
+  readonly parkingLevelCount?: number;
 }
 
 /**
@@ -460,6 +470,7 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     ...(input.storeyHeightM ? { storeyHeightM: input.storeyHeightM } : {}),
     ...(input.rampPlan ? { rampPlan: input.rampPlan } : {}),
     ...(input.slopedRing === undefined ? {} : { slopedRing: input.slopedRing }),
+    ...(input.parkingLevelCount === undefined ? {} : { parkingLevelCount: input.parkingLevelCount }),
     ...(input.rampType
       ? {
           rampType: input.rampType.type,
@@ -537,6 +548,7 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
     widthM: r.width,
     heightM: r.height,
     world: toWorld(r),
+    ...(r.travel ? { travel: r.travel } : {}),
   }));
 
   const local = (x: Decimal, y: Decimal): Pt =>
@@ -615,10 +627,20 @@ export function planParkingLevel(input: LevelPlanInput): LevelPlan {
           const cy = (r: PlacedRect): Decimal => r.y.plus(r.height.div(2));
           const [xs, ys] = alongX ? [links.map(cx), runs.map(cy)] : [runs.map(cx), links.map(cy)];
           const [x0, x1, y0, y1] = [Decimal.min(...xs), Decimal.max(...xs), Decimal.min(...ys), Decimal.max(...ys)];
+          const landing = layout.slopedFloor!.landing;
           return {
             lapM: layout.slopedFloor!.lapM,
             gradientPct: layout.slopedFloor!.gradientPct,
             centreLine: [local(x0, y0), local(x1, y0), local(x1, y1), local(x0, y1)],
+            ...(landing
+              ? {
+                  landing: {
+                    world: toWorld({ ...landing.rect, kind: 'OBSTRUCTION', row: -1 }),
+                    lengthM: landing.lengthM,
+                    gradientPct: landing.gradientPct,
+                  },
+                }
+              : {}),
           };
         })()
       : undefined;

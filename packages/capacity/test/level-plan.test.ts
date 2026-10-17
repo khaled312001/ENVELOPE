@@ -112,9 +112,10 @@ describe('planParkingLevel on a rectangular podium', () => {
     }
   });
 
-  it('reports more than one bay, with a ramp reserved', () => {
+  it('reports more than one bay, with a ramp reserved or the ring sloped as the ramp', () => {
     expect(p.bayCount.value).toBeGreaterThan(20);
-    expect(p.rects.some((r) => r.kind === RectKind.RAMP)).toBe(true);
+    // The default here is the sloped ring (no dead end, B.7.2.3.3 ¶8), which is its own ramp.
+    expect(p.rects.some((r) => r.kind === RectKind.RAMP) || p.slopedFloor !== undefined).toBe(true);
     expect(p.rects.some((r) => r.kind === RectKind.AISLE)).toBe(true);
   });
 });

@@ -157,3 +157,160 @@ export function bayIsServed(
 ): boolean {
   return servingNode(bay, drivable, reachable) !== null;
 }
+
+// ---------------------------------------------------------------------------
+// One-way circulation
+// ---------------------------------------------------------------------------
+
+/**
+ * A drivable rectangle with a direction of travel along its long axis: `1`
+ * towards larger x (or y), `-1` towards smaller. Absent on what is two-way — the
+ * ramp, the drive from the slab edge.
+ */
+export interface OneWayRect extends CircRect {
+  readonly travel?: 1 | -1;
+}
+
+export interface OneWayInput {
+  readonly drivable: readonly OneWayRect[];
+  /** The way onto the level, which is also the way off it: the ramp, or the drive. Two-way. */
+  readonly entries: readonly number[];
+  /** An opening narrower than this is not a way through: the one-way aisle's width. */
+  readonly minOpeningM: Decimal;
+}
+
+export interface OneWayCirculation {
+  /** Nodes a car reaches from the way in, driving with the traffic. */
+  readonly forward: ReadonlySet<number>;
+  /** Nodes from which a car gets back to the way out, driving with the traffic. */
+  readonly back: ReadonlySet<number>;
+  /**
+   * Per one-way node, how far up it a car can first be (`earliest`) and how far
+   * down it a car can still leave towards the way out (`latest`), in the node's
+   * own direction of travel. A bay between the two is passed by a car that came
+   * in and can get out; one before `earliest` is behind every way in.
+   */
+  readonly earliest: ReadonlyMap<number, number>;
+  readonly latest: ReadonlyMap<number, number>;
+}
+
+const along = (r: CircRect): boolean => r.width.gte(r.height);
+
+/** The contact between two rectangles, as an interval along each one's own axis, in its direction of travel. */
+function contact(a: OneWayRect, b: OneWayRect): { readonly onA: [number, number]; readonly onB: [number, number] } {
+  const x0 = Decimal.max(a.x, b.x).toNumber();
+  const x1 = Decimal.min(a.x.plus(a.width), b.x.plus(b.width)).toNumber();
+  const y0 = Decimal.max(a.y, b.y).toNumber();
+  const y1 = Decimal.min(a.y.plus(a.height), b.y.plus(b.height)).toNumber();
+  const on = (r: OneWayRect): [number, number] => {
+    const [lo, hi] = along(r) ? [x0, x1] : [y0, y1];
+    const t = r.travel ?? 1;
+    return [Math.min(t * lo, t * hi), Math.max(t * lo, t * hi)];
+  };
+  return { onA: on(a), onB: on(b) };
+}
+
+/**
+ * The aisle network of a one-way level, flooded WITH THE TRAFFIC.
+ *
+ * `traceCirculation` asks only whether two aisles touch, which on a one-way loop
+ * is not the question: a car entering an aisle at one end cannot drive back to
+ * a bay behind it, and an aisle whose only way out is upstream of its only way in
+ * is a trap. So each one-way aisle carries a position along it, in its direction
+ * of travel. Forwards from the way in, the EARLIEST point a car can be on each
+ * aisle: it may leave an aisle only at an opening that is not behind where it
+ * came on. Backwards from the way out, the LATEST point from which a car can
+ * still get off it towards the exit. A bay is served when its mouth lies between
+ * the two (`oneWayServes`): a car that came in passes it, and the loop leads it
+ * back out.
+ *
+ * Openings are measured as in `traceCirculation`: an edge shared for at least
+ * the aisle's width. The directions are the packer's, written on each aisle; the
+ * openings are measured, so a direction can never join two aisles that do not
+ * touch.
+ */
+export function traceOneWay(input: OneWayInput): OneWayCirculation {
+  const n = input.drivable.length;
+  const links: { readonly to: number; readonly onFrom: [number, number]; readonly onTo: [number, number] }[][] =
+    Array.from({ length: n }, () => []);
+  for (let i = 0; i < n; i += 1) {
+    for (let j = 0; j < n; j += 1) {
+      if (i === j) continue;
+      const a = input.drivable[i]!;
+      const b = input.drivable[j]!;
+      if (openingM(a, b).lt(input.minOpeningM)) continue;
+      const c = contact(a, b);
+      links[i]!.push({ to: j, onFrom: c.onA, onTo: c.onB });
+    }
+  }
+  const oneWay = (i: number): boolean => input.drivable[i]!.travel !== undefined;
+  const EPS = 1e-6;
+
+  // --- forwards: the earliest point a car can be on each node ---------------------
+  const earliest = new Map<number, number>();
+  const queue: number[] = [];
+  for (const e of input.entries) {
+    earliest.set(e, -Infinity);
+    queue.push(e);
+  }
+  while (queue.length > 0) {
+    const i = queue.shift()!;
+    const at = earliest.get(i)!;
+    for (const l of links[i]!) {
+      // It leaves where the opening is not wholly behind it.
+      if (oneWay(i) && l.onFrom[1] < at - EPS) continue;
+      const on = oneWay(l.to) ? l.onTo[0] : -Infinity;
+      const before = earliest.get(l.to);
+      if (before === undefined || on < before - EPS) {
+        earliest.set(l.to, on);
+        queue.push(l.to);
+      }
+    }
+  }
+
+  // --- backwards: the latest point from which a car still gets out ------------------
+  const latest = new Map<number, number>();
+  for (const e of input.entries) {
+    latest.set(e, Infinity);
+    queue.push(e);
+  }
+  while (queue.length > 0) {
+    const j = queue.shift()!;
+    const out = latest.get(j)!;
+    for (let i = 0; i < n; i += 1) {
+      for (const l of links[i]!) {
+        if (l.to !== j) continue;
+        // Coming onto j here, a car must still be able to leave j further on.
+        if (oneWay(j) && l.onTo[0] > out + EPS) continue;
+        const leave = oneWay(i) ? l.onFrom[1] : Infinity;
+        const before = latest.get(i);
+        if (before === undefined || leave > before + EPS) {
+          latest.set(i, leave);
+          queue.push(i);
+        }
+      }
+    }
+  }
+
+  const forward = new Set(earliest.keys());
+  const back = new Set(latest.keys());
+  return { forward, back, earliest, latest };
+}
+
+/**
+ * Whether a one-way level serves a bay: its mouth is wholly on an aisle that is
+ * both reached and left (`traceOneWay`), and its centre lies between where a car
+ * can first be on that aisle and where it can last leave it.
+ */
+export function oneWayServes(bay: CircRect, drivable: readonly OneWayRect[], circ: OneWayCirculation): boolean {
+  const usable = new Set([...circ.forward].filter((i) => circ.back.has(i)));
+  for (let i = 0; i < drivable.length; i += 1) {
+    if (!usable.has(i)) continue;
+    if (servingNode(bay, [drivable[i]!]) === null) continue;
+    const r = drivable[i]!;
+    if (r.travel === undefined) return true;
+    const c = (along(r) ? bay.x.plus(bay.width.div(2)) : bay.y.plus(bay.height.div(2))).toNumber() * r.travel;
+    if (c >= circ.earliest.get(i)! - 1e-6 && c <= circ.latest.get(i)! + 1e-6) return true;
+  }
+  return false;
+}

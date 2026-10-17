@@ -109,7 +109,9 @@ describe('layoutParkingLevel', () => {
   });
 
   it('fits three modules into 51 m of depth and reports nothing left over', () => {
-    const r = run('40', '51'); // exactly 3 × 17 m
+    // Pinned: what is measured is the module packer, which since the dead-end
+    // rule (B.7.2.3.3 ¶8) is not this level's default.
+    const r = run('40', '51', { arrangement: { id: 'WIDTH' } }); // exactly 3 × 17 m
     // Module rows only: the cross aisle serves every module and carries a row of
     // its own, so counting it here would report four modules in 51 m of depth.
     const rows = new Set(
@@ -124,12 +126,12 @@ describe('layoutParkingLevel', () => {
     island now places more, and the module packer's leftover is never reported.
   */
   it('reports leftover depth rather than quietly filling it', () => {
-    const r = run('80', '55'); // 3 modules = 51 m, 4 m spare: too shallow for anything
+    const r = run('80', '55', { arrangement: { id: 'WIDTH' } }); // 3 modules = 51 m, 4 m spare: too shallow for anything
     expect(r.notes.join(' ')).toMatch(/4\.00 m of depth is left unused/);
   });
 
   it('takes a single-loaded row when the remainder can hold one', () => {
-    const r = run('80', '63'); // 3 modules = 51, remainder 12 m >= 5.5 + 6
+    const r = run('80', '63', { arrangement: { id: 'WIDTH' } }); // 3 modules = 51, remainder 12 m >= 5.5 + 6
     expect(r.notes.join(' ')).toMatch(/single-loaded/);
   });
 
@@ -172,8 +174,8 @@ describe('layoutParkingLevel', () => {
   });
 
   it('charges the ramp its width in bays rather than getting it free', () => {
-    const without = run('40', '51');
-    const withRamp = run('40', '51', { includeRamp: true });
+    const without = run('40', '51', { arrangement: { id: 'WIDTH' } });
+    const withRamp = run('40', '51', { includeRamp: true, arrangement: { id: 'WIDTH' } });
     expect(withRamp.bayCount.value).toBeLessThan(without.bayCount.value);
   });
 
@@ -236,7 +238,7 @@ describe('bays to the walls, one ring aisle', () => {
     });
     const sweep = graph.nodes
       .map((n) => n.formula)
-      .find((f): f is string => typeof f === 'string' && f.startsWith('max('));
+      .find((f): f is string => typeof f === 'string' && f.includes('modules along the width') && f.includes('one ring aisle'));
     expect(sweep).toBeDefined();
     return { result, sweep: sweep! };
   }
@@ -250,16 +252,18 @@ describe('bays to the walls, one ring aisle', () => {
     expect(Number(ring)).toBeGreaterThan(Number(width));
   });
 
-  it('names all three arrangements and what each came to', () => {
+  it('names every arrangement and what each came to', () => {
     const { sweep } = sweepOf(...CLIENT);
+    // Ranked by the dead-end clause first (B.7.2.3.3 ¶8), so a candidate with a
+    // dead end over eight bays says so beside its count.
     expect(sweep).toMatch(
-      /^max\(\d+ modules along the width, \d+ modules along the depth, \d+ bays to the walls, one ring aisle\)$/,
+      /\d+ modules along the width( \(a dead end serving \d+ bays\))?, \d+ modules along the depth( \(a dead end serving \d+ bays\))?, \d+ bays to the walls, one ring aisle, \d+ bays to the walls and on islands, one-way aisles round them$/,
     );
   });
 
-  it('loses on a plot deep enough for stacked modules, and is still reported', () => {
+  it('loses on a plot deep enough for more, and is still reported', () => {
     const { result: out, sweep } = sweepOf('80', '60');
-    expect(out.orientation.value).toMatch(/^modules along the (width|depth)$/);
+    expect(out.orientation.value).not.toBe('bays to the walls, one ring aisle');
     expect(sweep).toContain('bays to the walls, one ring aisle');
   });
 

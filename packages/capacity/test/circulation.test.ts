@@ -22,15 +22,20 @@ import { describe, expect, it } from 'vitest';
 
 import {
   bayIsServed,
+  oneWayServes,
   openingM,
   servingNode,
   traceCirculation,
+  traceOneWay,
   type CircRect,
+  type OneWayRect,
 } from '../src/circulation.js';
 import {
   CROSS_AISLE_ROW,
+  ENTRY_DRIVE_ROW,
   layoutParkingLevel,
   RectKind,
+  RING_AISLE_ROW,
   type ParkingLayoutResult,
   type PlacedRect,
 } from '../src/layout.js';
@@ -59,6 +64,8 @@ function run(
     ...extra,
   });
 }
+
+const WIDTH = { arrangement: { id: 'WIDTH' } } as const;
 
 const drivableOf = (result: ParkingLayoutResult): PlacedRect[] =>
   result.rects.filter((x) => x.kind === RectKind.AISLE || x.kind === RectKind.RAMP);
@@ -159,8 +166,10 @@ describe('which aisle serves a bay', () => {
 
 describe('a laid-out level', () => {
   it('reserves a cross aisle as soon as there is more than one module to join', () => {
-    const one = run('40', '17');
-    const three = run('40', '51');
+    // Module tests pin the module packer: since the dead-end rule ranks the
+    // default, these levels may lay out another arrangement by default.
+    const one = run('40', '17', WIDTH);
+    const three = run('40', '51', WIDTH);
     expect(one.rects.some((x) => x.row === CROSS_AISLE_ROW)).toBe(false);
     expect(three.rects.some((x) => x.row === CROSS_AISLE_ROW)).toBe(true);
   });
@@ -172,7 +181,7 @@ describe('a laid-out level', () => {
       ['80', '40'],
       ['40', '63'],
     ] as const) {
-      const level = run(w, h);
+      const level = run(w, h, WIDTH);
       const drivable = drivableOf(level);
       const entries = drivable
         .map((x, i) => (x.x.isZero() ? i : -1))
@@ -195,7 +204,7 @@ describe('a laid-out level', () => {
       joining them, every bay counted. If deleting the cross aisle does not
       strand anything, the check is not measuring what it claims to.
     */
-    const level = run('40', '51');
+    const level = run('40', '51', WIDTH);
     const honest = drivableOf(level);
     const doctored = honest.filter((x) => x.row !== CROSS_AISLE_ROW);
     const entries = doctored.map((x, i) => (x.x.isZero() ? i : -1)).filter((i) => i >= 0);
@@ -224,7 +233,7 @@ describe('a laid-out level', () => {
   });
 
   it('charges the cross aisle in bays rather than absorbing it', () => {
-    const level = run('40', '51');
+    const level = run('40', '51', WIDTH);
     expect(level.losses.circulation.bays).toBeGreaterThan(0);
     expect(level.losses.circulation.areaM2.toNumber()).toBeGreaterThan(0);
     expect(level.notes.join(' ')).toMatch(/cross aisle costs \d+ bays/);
@@ -247,7 +256,7 @@ describe('a laid-out level', () => {
   });
 
   it('never reports a bay it then dropped', () => {
-    const level = run('40', '51');
+    const level = run('40', '51', WIDTH);
     expect(baysOf(level)).toHaveLength(level.bayCount.value);
     expect(level.losses.circulation.strandedBays).toBe(0);
   });
@@ -266,7 +275,7 @@ describe('the orientation sweep', () => {
       },
     });
     expect(level.orientation.value).toMatch(
-      /^(modules along the (width|depth)|bays to the walls, one ring aisle)$/,
+      /^(modules along the (width|depth)|bays to the walls, one ring aisle|bays to the walls and on islands, one-way aisles round them)$/,
     );
     expect(level.orientation.provenanceClass).toBe('DERIVED');
 
@@ -275,12 +284,12 @@ describe('the orientation sweep', () => {
     const formulas = graph.nodes
       .filter((n) => n.formula !== undefined)
       .map((n) => n.formula as string);
-    const sweep = formulas.find((f) => f.startsWith('max('));
+    const sweep = formulas.find((f) => f.includes('modules along the width') && f.includes('one ring aisle'));
     expect(sweep).toBeDefined();
-    // All three arrangements, each with what it came to. A sweep that only
-    // reported its winner would be indistinguishable from one that never tried.
+    // Every arrangement, each with what it came to, and any dead end over the
+    // eight bays B.7.2.3.3 ¶8 asks beside its count.
     expect(sweep).toMatch(
-      /^max\(\d+ modules along the width, \d+ modules along the depth, \d+ bays to the walls, one ring aisle\)$/,
+      /\d+ modules along the width( \(a dead end serving \d+ bays\))?, \d+ modules along the depth( \(a dead end serving \d+ bays\))?, \d+ bays to the walls, one ring aisle, \d+ bays to the walls and on islands, one-way aisles round them$/,
     );
   });
 
@@ -299,5 +308,100 @@ describe('the orientation sweep', () => {
       expect(rect.x.plus(rect.width).lte(d('40'))).toBe(true);
       expect(rect.y.plus(rect.height).lte(d('80'))).toBe(true);
     }
+  });
+});
+
+/*
+  ONE WAY. Touching is not the question on a one-way loop: a car that came on an
+  aisle at one end cannot drive back to a bay behind it, and an aisle whose only
+  way out is upstream of its way in is a trap. These hold `traceOneWay` to that,
+  and — because a check that cannot fail is worth nothing — cut the loop once and
+  require the level to fall apart where the two-way flood would still say "reached".
+*/
+describe('one-way circulation', () => {
+  const ow = (x: number, y: number, width: number, height: number, travel?: 1 | -1): OneWayRect => ({
+    ...r(x, y, width, height),
+    ...(travel ? { travel } : {}),
+  });
+  // A 40 × 30 m ring of 5.5 m one-way aisles, anticlockwise, and a 6 m two-way drive in at x 10–16.
+  const bottom = ow(0, 0, 40, 5.5, 1);
+  const right = ow(34.5, 5.5, 5.5, 19, 1);
+  const top = ow(0, 24.5, 40, 5.5, -1);
+  const left = ow(0, 5.5, 5.5, 19, -1);
+  const drive = ow(10, -6, 6, 6);
+  /** A bay below the bottom aisle, its mouth on it, centred at x + 1.25. */
+  const bayAt = (x: number): CircRect => r(x, -5.5, 2.5, 5.5);
+  const behind = bayAt(2); // upstream of the way in
+  const beyond = bayAt(20); // downstream of it
+  const atTheDoor = bayAt(11);
+
+  it('serves a bay behind the way in once the loop brings a car back round to it', () => {
+    const drivable = [drive, bottom, right, top, left];
+    const circ = traceOneWay({ drivable, entries: [0], minOpeningM: d('5.5') });
+    expect(circ.forward.size).toBe(5);
+    expect(circ.back.size).toBe(5);
+    for (const bay of [behind, beyond, atTheDoor]) expect(oneWayServes(bay, drivable, circ)).toBe(true);
+  });
+
+  it('strands everything but the stretch at the door when one side of the loop is taken away', () => {
+    const drivable = [drive, bottom, right, top]; // the left side, deleted
+    const circ = traceOneWay({ drivable, entries: [0], minOpeningM: d('5.5') });
+    // Behind the door: no car reaches it without driving against the arrows.
+    expect(oneWayServes(behind, drivable, circ)).toBe(false);
+    // Past the door: a car reaches it and can never get back out.
+    expect(oneWayServes(beyond, drivable, circ)).toBe(false);
+    expect(oneWayServes(atTheDoor, drivable, circ)).toBe(true);
+    // The two-way flood says all four aisles are reached — exactly the answer that is wrong here.
+    const { reachable } = traceCirculation({ drivable, entries: [0], minOpeningM: d('5.5') });
+    expect(bayIsServed(behind, drivable, reachable)).toBe(true);
+    expect(bayIsServed(beyond, drivable, reachable)).toBe(true);
+  });
+
+  const loopLevel = (): ParkingLayoutResult => run('80', '60', { arrangement: { id: 'ONE_WAY_LOOP' } });
+
+  it('lays the loop on Table B.11’s 5.5 m one-way aisles, each with its direction', () => {
+    const level = loopLevel();
+    expect(level.arrangement).toBe('ONE_WAY_LOOP');
+    const aisles = level.rects.filter((x) => x.kind === RectKind.AISLE && x.row !== ENTRY_DRIVE_ROW);
+    expect(aisles.length).toBeGreaterThan(4);
+    for (const a of aisles) {
+      expect(Decimal.min(a.width, a.height).toString()).toBe('5.5');
+      expect(a.travel === 1 || a.travel === -1).toBe(true);
+    }
+    // The drive in is two-way and keeps Table B.11's 6 m.
+    const drive = level.rects.find((x) => x.row === ENTRY_DRIVE_ROW);
+    expect(drive?.width.toString()).toBe('6');
+    expect(drive?.travel).toBeUndefined();
+    expect(level.notes.join(' ')).toMatch(/5\.5 m aisles \(DBC Table B\.11, 90° parking, one way\)/);
+  });
+
+  it('places every bay it reports where a car driving with the traffic passes it and gets out', () => {
+    const level = loopLevel();
+    const drivable = drivableOf(level);
+    const entries = drivable.map((x, i) => (x.row === ENTRY_DRIVE_ROW ? i : -1)).filter((i) => i >= 0);
+    expect(entries).toHaveLength(1);
+    const circ = traceOneWay({ drivable, entries, minOpeningM: d('5.5') });
+    const bays = baysOf(level);
+    expect(bays).toHaveLength(level.bayCount.value);
+    for (const bay of bays) expect(oneWayServes(bay, drivable, circ)).toBe(true);
+  });
+
+  it('falls apart the moment one side of the ring is deleted', () => {
+    const level = loopLevel();
+    const honest = drivableOf(level);
+    // The near short side of the ring, the one that brings a car back to the start.
+    const side = honest.find((x) => x.row === RING_AISLE_ROW && x.travel === -1 && x.height.gt(x.width));
+    expect(side).toBeDefined();
+    const doctored = honest.filter((x) => x !== side);
+    const entries = doctored.map((x, i) => (x.row === ENTRY_DRIVE_ROW ? i : -1)).filter((i) => i >= 0);
+    const circ = traceOneWay({ drivable: doctored, entries, minOpeningM: d('5.5') });
+    const stranded = baysOf(level).filter((b) => !oneWayServes(b, doctored, circ));
+    expect(stranded.length).toBeGreaterThan(baysOf(level).length / 2);
+  });
+
+  it('has no dead end: every aisle is on the loop', () => {
+    const level = run('80', '60');
+    const loop = level.arrangements.find((a) => a.id === 'ONE_WAY_LOOP');
+    expect(loop?.deadEnds).toEqual([]);
   });
 });

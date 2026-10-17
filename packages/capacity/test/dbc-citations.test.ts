@@ -14,7 +14,8 @@ import { describe, expect, it } from 'vitest';
 
 import { unfoundOnPage } from '../../../test-support/dbc-reference.js';
 import { CLAUSE_B_7_2_1, TABLE_B11_DRIVEWAY } from '../src/access.js';
-import { CLAUSE_B_7_2_6_2, CLAUSE_C_6_4_1_4, TABLE_C17 } from '../src/accessible.js';
+import { ACCESSIBLE_SLOPE_B7231, CLAUSE_B_7_2_6_2, CLAUSE_C_6_4_1_4, TABLE_C17 } from '../src/accessible.js';
+import { DEAD_END_B7233 } from '../src/dead-ends.js';
 import { TABLE_B11 } from '../src/layout.js';
 import { PARKED_SLOPE_B7231, STRAIGHT_RAMP, TABLE_B10, TABLE_B9 } from '../src/ramp-rules.js';
 import { CLAUSE_B_7_2_3_3_4 } from '../src/street-ramp.js';
@@ -36,6 +37,8 @@ const CITATIONS: Readonly<Record<string, Citation>> = {
   CLAUSE_C_6_4_1_4,
   CLAUSE_B_7_2_6_2,
   CLAUSE_B_7_2_3_3_4,
+  ACCESSIBLE_SLOPE_B7231,
+  DEAD_END_B7233,
 };
 
 describe('DBC citations in the engine', () => {

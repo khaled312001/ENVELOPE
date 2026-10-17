@@ -37,6 +37,7 @@ export const ARRANGEMENT_NAME: Readonly<Record<string, string>> = {
   SLOPED: 'bays to the walls, the ring aisle sloped as the ramp',
   FIELD_WIDTH: 'rows across the whole footprint, along the width',
   FIELD_DEPTH: 'rows across the whole footprint, along the depth',
+  ONE_WAY_LOOP: 'bays to the walls and on islands, one-way aisles round them',
 };
 
 const ORIENTATION: Readonly<Record<string, Said>> = {
@@ -54,6 +55,10 @@ const ORIENTATION: Readonly<Record<string, Said>> = {
   'rows across the whole footprint, along the depth': {
     en: 'rows across the whole footprint, along the depth',
     ar: 'صفوف على كامل المسقط بموازاة العمق',
+  },
+  'bays to the walls and on islands, one-way aisles round them': {
+    en: 'bays to the walls and on islands, one-way aisles round them',
+    ar: 'مواقف على الجدران وفي الجزر حولها ممرات باتجاه واحد',
   },
 };
 
@@ -577,6 +582,173 @@ const READERS: readonly Reader[] = [
   (t) => {
     const m = /^(.+) = ([\d.]+) m² against a printed maximum GFA of ([\d.]+) m²\.$/.exec(t);
     return m ? { en: t, ar: `${m[1]} = ${m[2]} م² مقابل أقصى مساحة طابقية مطبوعة ${m[3]} م².` } : null;
+  },
+
+  /* ── The default ranked by the dead-end clause, B.7.2.3.3 ¶8 (17 Oct 2026) ── */
+  (t) => {
+    const head =
+      /^Laid out as (.+?), the most bays where every dead end serves (\d+) or fewer \(DBC B\.7\.2\.3\.3 ¶8\): (\d+) bays, against /.exec(
+        t,
+      );
+    const total = /All (\d+) were packed, and any may be picked\.$/.exec(t)?.[1];
+    const chosen = head ? ORIENTATION[head[1] ?? ''] : undefined;
+    if (!head || !total || !chosen) return null;
+    const names = Object.keys(ORIENTATION).sort((a, b) => b.length - a.length);
+    // One loser to a segment; its refusal, if any, sits in brackets after it and is not said again.
+    const others = t
+      .slice(head[0].length)
+      .replace(/, on the same level\. All \d+ were packed, and any may be picked\.$/, '')
+      .split('; ')
+      .map((s) => {
+        const n = /^(\d+) /.exec(s)?.[1];
+        const name = names.find((k) => s.startsWith(`${n} ${k}`));
+        const dead = /^\d+ [^(]*\(a dead end serving (\d+) bays\)/.exec(s)?.[1];
+        return n && name ? { n, name: ORIENTATION[name]!, dead } : null;
+      })
+      .filter((o): o is { n: string; name: Said; dead: string | undefined } => o !== null);
+    if (others.length === 0) return null;
+    return {
+      en:
+        `Laid out as ${chosen.en}: ${head[3]} bays, the most where no dead end serves more than ${head[2]} (DBC B.7.2.3.3). ` +
+        `Against: ${others.map((o) => `${o.n} as ${o.name.en}${o.dead ? ` (a dead end of ${o.dead} bays)` : ''}`).join(', ')}. ` +
+        `Any of the ${total} may be picked.`,
+      ar:
+        `رتب الدور (${chosen.ar}): ${head[3]} موقفا، وهو الأكثر بين الترتيبات التي لا يخدم فيها أي ممر مسدود أكثر من ${head[2]} مواقف ` +
+        `(كود دبي B.7.2.3.3). مقابل: ${others.map((o) => `${o.n} (${o.name.ar})${o.dead ? ` بممر مسدود يخدم ${o.dead} موقفا` : ''}`).join('، ')}. ` +
+        `ويمكن اختيار أي من الترتيبات الـ ${total}.`,
+    };
+  },
+  (t) => {
+    const m =
+      /^No arrangement keeps every dead-end driveway to the (\d+) bays DBC B\.7\.2\.3\.3 ¶8 asks, so the one with the most bays is laid out, and its dead ends serve ([\d, ]+) bays\./.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en: `No arrangement keeps every dead-end aisle to ${m[1]} bays (DBC B.7.2.3.3), so the one with the most bays is laid out; its dead ends serve ${m[2]} bays. The clause is a "should": every bay is counted, and each dead end is labelled on the drawing.`,
+      ar: `لا يوجد ترتيب يبقي كل ممر مسدود في حدود ${m[1]} مواقف (كود دبي B.7.2.3.3)، فرتب الدور بالترتيب الأكثر مواقف، وممراته المسدودة تخدم ${(m[2] ?? '').replace(/, /g, '، ')} موقفا. البند توصية لا إلزام: كل موقف محسوب، وكل ممر مسدود مكتوب على الرسم.`,
+    };
+  },
+
+  /* ── The one-way loop, Table B.11's 90° one-way row (17 Oct 2026) ── */
+  (t) => {
+    const m =
+      /^A one-way loop: ([\d.]+) m aisles \(DBC Table B\.11, 90° parking, one way\) run one way round the level, and (\d+) aisle\(s\) cross the island .*?(\d+) bays stand to each long wall and (\d+) to each short one, and (\d+) on the island/.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en: `A one-way loop: ${m[1]} m one-way aisles (DBC Table B.11) run round the level and ${m[2]} cross the island, so no aisle is a dead end. ${m[3]} bays per long wall, ${m[4]} per short wall and ${m[5]} on the island, less those the entrance, the core and the turns take. Every aisle carries its direction.`,
+      ar: `حلقة باتجاه واحد: ممرات بعرض ${m[1]} م باتجاه واحد (جدول B.11 من كود دبي) تدور حول الدور، و${m[2]} ممر يعبر الجزيرة، فلا يوجد ممر مسدود. ${m[3]} موقفا لكل جدار طويل و${m[4]} لكل جدار قصير و${m[5]} على الجزيرة، ناقص ما يأخذه المدخل والنواة والانعطافات. اتجاه السير مرسوم على كل ممر.`,
+    };
+  },
+  (t) => {
+    const m = /^(\d+) bay\(s\) were placed and then dropped: no car driving with the traffic passes them and gets back out/.exec(t);
+    if (!m) return null;
+    return {
+      en: `${m[1]} bays were dropped: no car driving with the traffic passes them and gets back out (behind a turn, or on an aisle the core cuts). They are not counted.`,
+      ar: `استبعد ${m[1]} موقفا: لا تمر أمامها سيارة تسير مع اتجاه الحركة ثم تخرج (خلف انعطاف، أو على ممر تقطعه النواة). لا تحسب ولا ترسم.`,
+    };
+  },
+  (t) => {
+    const m = /^(\d+) bay\(s\) stand where the drive from the slab edge crosses the wall run to reach the loop \(([\d.]+ × [\d.]+) m\)/.exec(t);
+    if (!m) return null;
+    return {
+      en: `${m[1]} bays stand where the ${m[2]} m drive from the slab edge crosses to the loop. They are not counted: a car drives through them.`,
+      ar: `${m[1]} مواقف تقع حيث يعبر ممر الدخول (${m[2]} م) صف المواقف من حافة الدور إلى الحلقة. لا تحسب، فالسيارة تمر من خلالها.`,
+    };
+  },
+  (t) => {
+    const m =
+      /^([\d.]+) m of the island's ([\d.]+) m depth is left between its rows: too shallow for another row of ([\d.]+) m bays and the ([\d.]+) m aisle it would face\.(?: ([\d,.]+) m² of the strip reserved for plant and circulation stands there, where it costs no bay\.)?$/.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en:
+        `${m[1]} m of the island's ${m[2]} m depth is left between its rows: too shallow for another row of ${m[3]} m bays and a ${m[4]} m aisle.` +
+        (m[5] ? ` ${m[5]} m² of the plant and circulation reserve stands there, at no cost in bays.` : ''),
+      ar:
+        `يبقى ${m[1]} م من عمق الجزيرة (${m[2]} م) بين صفوفها: لا يتسع لصف آخر من مواقف بطول ${m[3]} م وممر بعرض ${m[4]} م.` +
+        (m[5] ? ` وتقع فيه ${m[5]} م² من المساحة المحجوزة للمعدات والحركة، دون أن تأخذ موقفا.` : ''),
+    };
+  },
+  (t) => {
+    const m = /^A ([\d.]+) × ([\d.]+) m straight ramp stands at one end of the island, two-way, met by the loop on two sides/.exec(t);
+    if (!m) return null;
+    return {
+      en: `Straight ramp ${m[1]} × ${m[2]} m at one end of the island, two-way, met by the loop on two sides: 12%, with a 3.6 m transition at 6% at each end (DBC Tables B.9, B.10). Headroom is not assessed here.`,
+      ar: `رامب مستقيم ${m[1]} × ${m[2]} م عند أحد طرفي الجزيرة، ثنائي الاتجاه، تصله الحلقة من جهتين: ميل 12% مع انتقال 3.6 م بميل 6% عند كل طرف (جدولا B.9 وB.10 من كود دبي). الارتفاع الحر لم يقيم هنا.`,
+    };
+  },
+
+  /* ── The sloped ring's level landing, B.7.2.3.1 (17 Oct 2026) ── */
+  (t) => {
+    const m =
+      /^The ring is kept level for ([\d.]+) m along one long side, centred on the core, so the accessible bays stand on a floor within the 2% DBC B\.7\.2\.3\.1 allows; the rest of the ([\d.]+) m lap climbs the ([\d.]+) m storey at ([\d.]+)%, within 4%\.$/.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en: `The ring is kept level for ${m[1]} m along one long side, beside the core, for the accessible bays (2% at most, DBC B.7.2.3.1); the rest of the ${m[2]} m lap climbs the ${m[3]} m storey at ${m[4]}%, within 4%.`,
+      ar: `يبقى الممر الدائري مستويا لمسافة ${m[1]} م على أحد الجانبين الطويلين بجوار النواة، لمواقف أصحاب الهمم (ميل 2% كحد أقصى، كود دبي B.7.2.3.1)؛ وبقية اللفة (${m[2]} م) تصعد الدور (${m[3]} م) بميل ${m[4]}%، ضمن 4%.`,
+    };
+  },
+  (t) => {
+    const m = /^No level landing is laid on the sloped ring, whose lap climbs ([\d.]+)%: no run of bays stands along a long side of the ring between its turns\.$/.exec(t);
+    if (!m) return null;
+    return {
+      en: `No level landing is laid on the sloped ring (${m[1]}%): no run of bays stands along a long side between its turns.`,
+      ar: `لا توجد بسطة مستوية على الممر الدائري المائل (${m[1]}%): لا يوجد صف مواقف على جانب طويل بين انعطافيه.`,
+    };
+  },
+  (t) => {
+    const m =
+      /^No level landing fits on the sloped ring: the (\d+) accessible bays Table C\.17 asks for need ([\d.]+) m of it kept level, and the rest of the ([\d.]+) m lap would climb the ([\d.]+) m storey at ([\d.]+)%, above the 4%/.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en: `No level landing fits on the sloped ring: the ${m[1]} accessible bays Table C.17 asks for need ${m[2]} m kept level, and the rest of the ${m[3]} m lap would then climb the ${m[4]} m storey at ${m[5]}%, above the 4% a parked floor may fall (DBC B.7.2.3.1).`,
+      ar: `لا تتسع بسطة مستوية على الممر الدائري المائل: ${m[1]} مواقف لأصحاب الهمم يطلبها جدول C.17 تحتاج ${m[2]} م مستوية، فتصعد بقية اللفة (${m[3]} م) الدور (${m[4]} م) بميل ${m[5]}%، فوق 4% المسموحة لأرضية عليها مواقف (كود دبي B.7.2.3.1).`,
+    };
+  },
+  (t) => {
+    const m =
+      /^(\d+) of the (\d+) accessible bays Table C\.17 asks for could not be placed on the (ground floor|first basement|first podium parking level): the sloped ring's level landing holds no further run of bays side by side, and the rest of the ring climbs ([\d.]+)%, above the ([\d.]+)%/.exec(
+        t,
+      );
+    if (!m) return null;
+    const level: Readonly<Record<string, Said>> = {
+      'ground floor': { en: 'the ground floor', ar: 'الدور الأرضي' },
+      'first basement': { en: 'the first basement', ar: 'البدروم الأول' },
+      'first podium parking level': { en: 'the first podium parking level', ar: 'أول دور مواقف في البوديوم' },
+    };
+    const on = level[m[3] ?? '']!;
+    return {
+      en: `${m[1]} of the ${m[2]} accessible bays required could not be placed on ${on.en}: the sloped ring's level landing holds no more, and the rest of the ring climbs ${m[4]}%, above the ${m[5]}% the code allows accessible parking.`,
+      ar: `تعذر توزيع ${m[1]} من ${m[2]} موقفا مطلوبا لأصحاب الهمم في ${on.ar}: البسطة المستوية على الممر الدائري لا تتسع لأكثر، وبقية الممر تصعد بميل ${m[4]}%، فوق ${m[5]}% المسموحة لمواقف أصحاب الهمم.`,
+    };
+  },
+
+  /* ── What the layout did about columns (17 Oct 2026) ── */
+  (t) => {
+    const m = /^Bays stand side by side at ([\d.]+) m: no column gap and no structural grid was given/.exec(t);
+    if (!m) return null;
+    return {
+      en: `Bays stand side by side at ${m[1]} m: no column gap or grid was given, so no room is left for a column and Table B.11's 300 mm is not added.`,
+      ar: `المواقف متلاصقة بعرض ${m[1]} م: لم تحدد مسافة للأعمدة ولا شبكة إنشائية، فلا يترك مكان لعمود ولا تضاف 300 مم من جدول B.11.`,
+    };
+  },
+
+  /* ── The one-way loop: an island aisle the core cuts off (review, 17 Oct 2026) ── */
+  (t) => {
+    const m = /^(\d+) stretch\(es\) of aisle across the island are cut off by the core: /.exec(t);
+    if (!m) return null;
+    return {
+      en: `${m[1]} stretch(es) of aisle across the island are cut off by the core: a car could only turn in and back out against the traffic, so they are not drawn and no bay is counted along them.`,
+      ar: `${m[1]} من مقاطع الممر العابر للجزيرة تقطعها النواة: لا تدخلها سيارة إلا لتخرج عكس اتجاه الحركة، فلا ترسم ممرات ولا يحسب عليها أي موقف.`,
+    };
   },
 ];
 

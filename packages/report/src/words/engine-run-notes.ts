@@ -1134,6 +1134,40 @@ export const RUN_READERS: readonly Reader[] = [
       ar: `الطريق من ${who} على الحد ${m[2]} يمر عبر ${what} قبل أن يصل إلى ممر قيادة.${where}${clear}${tail}`,
     };
   },
+  /*
+    ── The drawings' columns sentence, as the layout wrote it (17 Oct 2026) ──
+    It used to say under every drawing that the layout charges Table B.11's
+    300 mm per bay, which only a structural grid does. Now it says which of the
+    three the layout did, and is said again here for each.
+  */
+  (t) => {
+    const head = 'Columns are not placed, and therefore no grid bubbles. ';
+    if (!t.startsWith(head)) return null;
+    const rest = t.slice(head.length);
+    const tail = { en: ' A position is given by bay number and dimensions.', ar: ' يحدد الموضع برقم الموقف والأبعاد.' };
+    const gap = /^([\d.]+) m is left clear after every (\d+) bays for the columns/.exec(rest);
+    if (gap) {
+      return {
+        en: `No columns or grid lines are drawn. ${gap[1]} m is left clear after every ${gap[2]} bays for them; Table B.11's further 300 mm beside a column is not added, and whether the gap includes it is not assessed.${tail.en}`,
+        ar: `لا ترسم أعمدة ولا محاور. تترك ${gap[1]} م بعد كل ${gap[2]} مواقف لمواضع الأعمدة، ولا تضاف 300 مم الإضافية بجانب العنصر الإنشائي في جدول B.11، ولم يقيم إن كانت المسافة تشملها.${tail.ar}`,
+      };
+    }
+    const grid = /^Each bay is charged ([\d.]+) m: Table B\.11's 300 mm beside a structural element, added on a ([\d.]+) m grid\./.exec(rest);
+    if (grid) {
+      return {
+        en: `No columns or grid lines are drawn. Each bay is charged ${grid[1]} m: Table B.11's 300 mm beside a column, on a ${grid[2]} m grid.${tail.en}`,
+        ar: `لا ترسم أعمدة ولا محاور. يحسب كل موقف بعرض ${grid[1]} م: 300 مم من جدول B.11 بجانب العنصر الإنشائي، على شبكة ${grid[2]} م.${tail.ar}`,
+      };
+    }
+    const none = /^Bays stand side by side at ([\d.]+) m: no column gap and no structural grid was given/.exec(rest);
+    if (none) {
+      return {
+        en: `No columns or grid lines are drawn. Bays stand side by side at ${none[1]} m: no column gap or grid was given, so no room is left for a column and Table B.11's 300 mm is not added.${tail.en}`,
+        ar: `لا ترسم أعمدة ولا محاور. المواقف متلاصقة بعرض ${none[1]} م: لم تحدد مسافة للأعمدة ولا شبكة إنشائية، فلا يترك مكان لعمود ولا تضاف 300 مم من جدول B.11.${tail.ar}`,
+      };
+    }
+    return null;
+  },
 ];
 
 /* ── The ramps from the street: the reasons a placement is refused ── */

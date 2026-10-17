@@ -176,8 +176,11 @@ describe('a parking level sheet', () => {
       it is a module nobody laid out. It also sorts FIRST on a level, because it
       starts at the packing rectangle's origin — which is how the first version
       of this came to measure it.
+
+      Picked: since 17 Oct 2026 this plot's default is the one-way loop, which
+      has no cross aisle (B.7.2.3.3 ¶8 ranks it first), and the case is the modules'.
     */
-    const model = runPipeline(runInput(RECT_120x80, {})).building;
+    const model = runPipeline(runInput(RECT_120x80, { levelPlan: { arrangement: 'WIDTH' } })).building;
     const level = model.levels.find((l) => l.parking)!;
     const aisles = level.parking!.aisles;
     expect(aisles.some((a) => a.crossing), 'the fixture has no cross aisle to confuse').toBe(true);

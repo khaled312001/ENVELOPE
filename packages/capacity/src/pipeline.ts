@@ -322,7 +322,9 @@ export interface RunInput {
     readonly rampType?: RampType;
     /**
      * The parking arrangement the run's actor picked from a previous run's
-     * `arrangements`, `USER_SET` under that actor. Absent, the most bays wins.
+     * `arrangements`, `USER_SET` under that actor. Absent, `DEFAULT_ARRANGEMENT_RULE`
+     * in layout.ts decides: the most bays among the arrangements whose dead ends
+     * each serve eight or fewer, or the most bays where none does.
      */
     readonly arrangement?: ParkingArrangement;
   };
@@ -1047,6 +1049,8 @@ export function runPipeline(input: RunInput): RunOutput {
       storeyHeightM: envelope.floorToFloorM,
       ...(schedule ? { rampPlan: { schedule, actor: input.actor } } : {}),
       slopedRing: parkingLevelsAvailable >= 2,
+      // Sizes the sloped ring's level landing for the accessible bays of every level that shares it.
+      parkingLevelCount: parkingLevelsAvailable,
       ...(input.levelPlan?.rampType === undefined
         ? {}
         : { rampType: { type: input.levelPlan.rampType, actor: input.actor } }),
@@ -1126,6 +1130,9 @@ export function runPipeline(input: RunInput): RunOutput {
           tracer,
           level: entryLevel,
           ...(plan.slopedFloor ? { floorGradientPct: plan.slopedFloor.gradientPct } : {}),
+          ...(plan.slopedFloor?.landing
+            ? { landing: { world: plan.slopedFloor.landing.world, gradientPct: plan.slopedFloor.landing.gradientPct } }
+            : {}),
           rects: plan.grade?.rects ?? street?.rects ?? plan.rects,
           levelBays: plan.grade?.bayCount ?? street?.bayCount ?? plan.bayCount,
           others: { perLevel: plan.bayCount, levels: parkingLevelsAvailable - 1 },

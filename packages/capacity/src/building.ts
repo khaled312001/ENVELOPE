@@ -67,7 +67,7 @@ import { CORE_NOT_MODELLED, type CoreResult } from './core.js';
 import { deadEnds } from './dead-ends.js';
 import type { CoreLayout } from './core-layout.js';
 import { GARBAGE_ROOM, layoutGroundProgram, SIZED_BY_DBC_NOT_APPLIED } from './ground-program.js';
-import { CROSS_AISLE_ROW, standardFor } from './layout.js';
+import { CROSS_AISLE_ROW, ENTRY_DRIVE_ROW, standardFor } from './layout.js';
 import type { EnvelopeSolution } from './envelope.js';
 import type { GradePlan } from './grade.js';
 import type { LevelPlan, WorldRect } from './level-plan.js';
@@ -1250,13 +1250,23 @@ function parkingOf(
         through the parked cars instead of down the driveway.
       */
       const alongX = r.widthM.gte(r.heightM);
+      const line = (alongX ? [midpoint(a, d), midpoint(b, c)] : [midpoint(a, b), midpoint(d, c)]) as readonly [
+        ModelPoint,
+        ModelPoint,
+      ];
+      /*
+        On a one-way loop the drive from the slab edge is still two-way — cars
+        come in and go out along it — and is labelled at its own width.
+      */
+      const drive = !twoWay && r.travel === undefined && r.row === ENTRY_DRIVE_ROW;
       return {
         outline: r.world.map(pt),
-        centreLine: (alongX
-          ? [midpoint(a, d), midpoint(b, c)]
-          : [midpoint(a, b), midpoint(d, c)]) as readonly [ModelPoint, ModelPoint],
-        twoWay,
-        label,
+        // A one-way aisle's arrow points the way the traffic runs: its line is drawn from where cars come on.
+        centreLine: (r.travel === -1 ? [line[1], line[0]] : line) as readonly [ModelPoint, ModelPoint],
+        twoWay: twoWay || drive,
+        label: drive
+          ? `${new Decimal(standardFor(standard.angle, 'TWO_WAY').drivewayWidthM).toFixed(2)}M WIDE 2 WAY DRIVEWAY`
+          : label,
         crossing: r.row === CROSS_AISLE_ROW,
       };
     });

@@ -188,7 +188,8 @@ export function isSimple(ring: Ring): boolean {
   return true;
 }
 
-function segmentsProperlyIntersect(p1: Pt, p2: Pt, q1: Pt, q2: Pt): boolean {
+/** Whether two closed segments share at least one point, touching included. Exact. */
+export function segmentsProperlyIntersect(p1: Pt, p2: Pt, q1: Pt, q2: Pt): boolean {
   const d1 = orientation(q1, q2, p1);
   const d2 = orientation(q1, q2, p2);
   const d3 = orientation(p1, p2, q1);

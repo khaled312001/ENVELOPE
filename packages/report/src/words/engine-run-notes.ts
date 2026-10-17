@@ -196,6 +196,25 @@ const LABEL: Readonly<Record<string, Said>> = {
     en: 'Podium parking in the plan’s level count',
     ar: 'مواقف البوديوم ضمن عدد الأدوار في مخطط الأرض',
   },
+  /* capacity `envelope.ts`: band A's base and the boundaries held to a neighbour's line. */
+  'floor area ratio': { en: 'Floor area ratio', ar: 'معامل البناء' },
+  'boundary held to its neighbour’s setback line': {
+    en: 'Boundary held to its neighbour’s setback line',
+    ar: 'حد يتبع خط ارتداد الحد المجاور',
+  },
+  'level count typed by the reader': { en: 'Level count you typed', ar: 'عدد الأدوار الذي أدخلته' },
+  'storeys above ground, typed — no affection plan stating them is on file': {
+    en: 'Storeys above ground, typed: no affection plan stating them is on file',
+    ar: 'الأدوار فوق الأرض، أدخلتها: لا يوجد مخطط أفكشن محفوظ يذكرها',
+  },
+  'FAR, typed — no instrument stating it is on file': {
+    en: 'FAR, typed: no document on file states it',
+    ar: 'معامل البناء، أدخلته: لا توجد وثيقة محفوظة تذكره',
+  },
+  'GFA, typed — no instrument stating it is on file': {
+    en: 'GFA, typed: no document on file states it',
+    ar: 'المساحة الطابقية، أدخلتها: لا توجد وثيقة محفوظة تذكرها',
+  },
 };
 
 /* The register heads a value with its parameter id where the engine gave it no label. */
@@ -231,6 +250,8 @@ const PARAMETER: Readonly<Record<string, Said>> = {
   'parking.preferred_reading': { en: 'How the preferred-parking share is rounded', ar: 'تقريب نسبة المواقف المفضلة' },
   'parking.preferred_ratio': { en: 'Preferred parking share', ar: 'نسبة المواقف المفضلة' },
   'parking.preferred_required': { en: 'Preferred bays required', ar: 'المواقف المفضلة المطلوبة' },
+  'envelope.far_max': { en: 'Floor area ratio', ar: 'معامل البناء' },
+  'envelope.tower_plate_max_m2': { en: 'Tower plate cap', ar: 'الحد الأعلى لمسطح البرج' },
 };
 
 /* Values the engine writes as words. */
@@ -816,4 +837,88 @@ export const RUN_READERS: readonly Reader[] = [
     en: 'INV-02 needs what fills each level — units, core, circulation, services — and no unit is laid out, so it did not run and is not counted as a pass. INV-01, INV-11 and INV-18 read the engine’s own level schedule.',
     ar: 'يحتاج INV-02 ما يملأ كل دور: الوحدات والنواة والحركة والخدمات، ولا توزع وحدات، فلم يشغل ولا يحسب نجاحا. أما INV-01 وINV-11 وINV-18 فتقرأ جدول الأدوار الذي ينتجه المحرك.',
   }),
+
+  /* ── capacity `envelope.ts`: a boundary held to its neighbour's setback line (`heldBoundarySentence`) ── */
+  (t) => {
+    const m =
+      /^Boundary (\d+) \(([\d.]+) m, set back ([\d.]+) m\) is held to the setback line of boundary (\d+) \(([\d.]+) m\), which it almost continues\. .* at most ([\d.]+) m² of tower footprint is given up\.$/.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en:
+        `Boundary ${m[1]} (${m[2]} m, set back ${m[3]} m) follows the setback line of boundary ${m[4]} (${m[5]} m), ` +
+        'which it almost continues. Whether such a line steps at the corner or wraps round it is not yet settled, ' +
+        `so the reading that needs no answer is used: every setback is met, and at most ${m[6]} m² of tower footprint is given up.`,
+      ar:
+        `الحد ${m[1]} (${m[2]} م، ارتداده ${m[3]} م) يتبع خط ارتداد الحد ${m[4]} (${m[5]} م) الذي يكاد يكون امتدادا له. ` +
+        'لم يحسم بعد هل يتدرج الخط عند الزاوية أم يلتف حولها، فتؤخذ القراءة التي لا تحتاج جوابا: ' +
+        `كل ارتداد محقق، ويفقد مسطح البرج ${m[6]} م² على الأكثر.`,
+    };
+  },
+  /* ── capacity `envelope.ts`: the seed's placeholders on a plot with no sheet ── */
+  (t) => {
+    const m =
+      /^No affection plan or brief stating a FAR is on file for this plot\. ([\d.]+) is a placeholder \(([^)]+)\) so a study can run before the sheet is to hand; no instrument prints it\./.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en: `No affection plan or brief on file states this plot’s FAR. ${m[1]} is a placeholder (${m[2]}) no document prints, so the study can run. Attach the affection plan, or type the FAR or GFA, to replace it.`,
+      ar: `لا يوجد مخطط أفكشن أو موجز مشروع محفوظ يذكر معامل البناء لهذه القطعة. ${m[1]} قيمة مؤقتة (${m[2]}) لا تذكرها أي وثيقة، لتعمل الدراسة. أرفق مخطط الأفكشن، أو أدخل معامل البناء أو المساحة الطابقية، لتحل محلها.`,
+    };
+  },
+  (t) => {
+    const m = /^([\d.]+) m² is a placeholder tower plate cap \(([^)]+)\); no instrument on file for this plot prints it\./.exec(t);
+    if (!m) return null;
+    return {
+      en: `${m[1]} m² is a placeholder tower plate cap (${m[2]}) no document on file prints. The tower plate is held to it until the plot’s affection plan replaces it.`,
+      ar: `${m[1]} م² حد مؤقت لمسطح البرج (${m[2]}) لا تذكره أي وثيقة محفوظة. يبقى مسطح البرج ضمنه حتى يحل محله مخطط الأفكشن الخاص بالقطعة.`,
+    };
+  },
+  /* ── capacity `envelope.ts`: a typed limit refused ── */
+  (t) => {
+    const m =
+      /^this plot’s own instrument states its floor area ratio \(([\d.—]+): "([\s\S]*)"\), and a typed (FAR|GFA) may not replace it\. Clear the typed value\.$/.exec(
+        t,
+      );
+    if (!m) return null;
+    const what = m[3] === 'GFA' ? { en: 'GFA', ar: 'مساحة طابقية' } : { en: 'FAR', ar: 'معامل بناء' };
+    return {
+      en: `This plot’s own document states its FAR (${m[1]}: "${m[2]}"), and a typed ${what.en} may not replace it. Clear the typed value.`,
+      ar: `وثيقة هذه القطعة تذكر معامل البناء (${m[1]}: «${m[2]}»)، ولا يحل محله ${what.ar} مكتوب. احذف القيمة المكتوبة.`,
+    };
+  },
+  (t) => {
+    const m =
+      /^the affection plan states ([\d.—]+) level\(s\) above ground \("([\s\S]*)"\), and a typed (\d+) may not replace it\. Clear the typed storeys, or type ([\d.—]+)\.$/.exec(
+        t,
+      );
+    if (!m) return null;
+    return {
+      en: `The affection plan states ${m[1]} storeys above ground ("${m[2]}"), and a typed ${m[3]} may not replace it. Clear it, or type ${m[4]}.`,
+      ar: `مخطط الأفكشن يذكر ${m[1]} أدوار فوق الأرض («${m[2]}»)، ولا يحل محله ${m[3]} مكتوب. احذف القيمة، أو اكتب ${m[4]}.`,
+    };
+  },
+  (t) => {
+    const m = /^a typed FAR of ([\d.-]+) is outside 0–30\. Check the figure\.$/.exec(t);
+    return m
+      ? { en: `A typed FAR of ${m[1]} is outside 0–30. Check the figure.`, ar: `معامل بناء مكتوب قدره ${m[1]} خارج المدى 0–30. راجع الرقم.` }
+      : null;
+  },
+  (t) => {
+    const m = /^a typed GFA must be above zero; got ([\d.-]+) m²\.$/.exec(t);
+    return m
+      ? { en: `A typed GFA must be above zero; got ${m[1]} m².`, ar: `يجب أن تكون المساحة الطابقية المكتوبة أكبر من صفر؛ القيمة ${m[1]} م².` }
+      : null;
+  },
+  (t) => {
+    const m = /^a typed storey count of ([\d.-]+) is not a whole number from 1 to 200\. Count the ground floor as one\.$/.exec(t);
+    return m
+      ? {
+          en: `A typed storey count of ${m[1]} is not a whole number from 1 to 200. Count the ground floor as one.`,
+          ar: `عدد الأدوار المكتوب ${m[1]} ليس عددا صحيحا من 1 إلى 200. احسب الدور الأرضي دورا.`,
+        }
+      : null;
+  },
 ];

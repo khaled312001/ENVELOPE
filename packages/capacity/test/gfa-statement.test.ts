@@ -23,7 +23,6 @@
 
 import {
   Decimal,
-  NodeKind,
   ProvenanceClass,
   ProvenanceGraph,
   Tracer,
@@ -61,15 +60,6 @@ beforeAll(async () => {
 
 const farOf = (out: RunOutput): Decimal => out.capacity.permittedFar.value;
 
-/** The rule id one computation away from a value: value → computation → rule. */
-function ruleOf(out: RunOutput, node: string): string | undefined {
-  const graph = out.graph.toJSON();
-  const computation = graph.edges.find((e) => e.from === node)?.to;
-  return graph.edges
-    .filter((e) => e.from === computation)
-    .map((e) => graph.nodes.find((n) => n.id === e.to))
-    .find((n) => n?.kind === NodeKind.RULE)?.ruleId;
-}
 const plotAreaOf = (ring: typeof RECT_80x40): Decimal => {
   const xs = ring.map((p) => p.x);
   const ys = ring.map((p) => p.y);
@@ -452,17 +442,26 @@ describe('with parking excluded from FAR', () => {
     out = runPipeline(runInput(RECT_120x80));
   });
 
-  it('allows FAR × plot area, derived from the FAR rule', () => {
+  /*
+    The seed's FAR is a placeholder no instrument prints, so on a plot with no
+    sheet the allowance is ASSUMED — it was DERIVED, citing "DCR, plot schedule"
+    — and it stands on the same gross band A does, never a second multiplication.
+  */
+  it('allows FAR × plot area, on the gross band A stands on, ASSUMED while the FAR is a placeholder', () => {
     const s = out.gfaStatement;
     expect(s.allowedGfaM2.value.toString()).toBe(
       farOf(out).times(plotAreaOf(RECT_120x80)).toString(),
     );
-    expect(s.allowedGfaM2.provenanceClass).toBe(ProvenanceClass.DERIVED);
-    // DERIVED means a cited rule is reachable — and it is the rule band A cites.
-    expect(ruleOf(out, s.allowedGfaM2.node)).toBeDefined();
-    expect(ruleOf(out, s.allowedGfaM2.node)).toBe(
-      ruleOf(out, out.capacity.regulationLimitedGfa.node),
-    );
+    expect(out.envelope.farBasis.far.provenanceClass).toBe(ProvenanceClass.ASSUMED);
+    expect(s.allowedGfaM2.provenanceClass).toBe(ProvenanceClass.ASSUMED);
+    expect(out.capacity.regulationLimitedGfa.provenanceClass).toBe(ProvenanceClass.ASSUMED);
+    const graph = out.graph.toJSON();
+    const usesOf = (node: string): string[] => {
+      const computation = graph.edges.find((e) => e.from === node)?.to;
+      return graph.edges.filter((e) => e.from === computation).map((e) => e.to);
+    };
+    expect(usesOf(s.allowedGfaM2.node)).toContain(out.envelope.farBasis.gross.node);
+    expect(usesOf(out.capacity.regulationLimitedGfa.node)).toContain(out.envelope.farBasis.gross.node);
   });
 
   it('proposes the run’s own plate, times the run’s own whole levels', () => {

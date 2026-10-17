@@ -151,6 +151,12 @@ const REASONS: Readonly<Record<string, Said>> = {
       en: 'Set aside for this run and not checked: every boundary this rule governs on this plot carries a tower setback typed on the plot step, under the name of the person who ran it.',
       ar: 'استبعدت في هذه الدراسة ولم تفحص: كل حد تحكمه هذه القاعدة في هذه القطعة يحمل ارتداد برج كتب في خطوة القطعة باسم من شغل الدراسة.',
     },
+  /* capacity `envelope.ts` TYPED_LIMIT_REASON, as the validator prefixes it. */
+  'set aside for this run and not checked: the reader typed this limit for a plot with no instrument on file that states it; the typed value is USER_SET under their name and replaces this general rule.':
+    {
+      en: 'Set aside for this run and not checked: no instrument on file states this limit for the plot, so the figure typed by the person who ran the study replaces this general rule, under their name.',
+      ar: 'استبعدت في هذه الدراسة ولم تفحص: لا توجد وثيقة محفوظة تذكر هذا الحد لهذه القطعة، فالرقم الذي كتبه من شغل الدراسة يحل محل هذه القاعدة العامة، باسمه.',
+    },
 };
 
 /** Sentences with figures in them, recognised by their fixed wording. */

@@ -21,6 +21,7 @@
 import {
   type BindingConstraint,
   type BuildableEnvelope,
+  type Citation,
   Decimal,
   metric,
   mm2ToM2,
@@ -60,6 +61,7 @@ import {
   type SetAsideRule,
 } from '@envelope/rules';
 
+import type { BandSource } from './bands.js';
 import { FixpointStatus, runFixpoint, type FixpointOutcome } from './fixpoint.js';
 
 /** Parameters the envelope solver resolves. Order is the order they are applied. */
@@ -102,6 +104,123 @@ export interface TypedSetback {
   readonly actor: { readonly id: string; readonly name: string };
 }
 
+/**
+ * The plot area an instrument prints, offered as the base its own FAR is applied to.
+ *
+ * WHY THE PRINTED AREA AND NOT THE TRACED ONE. A FAR is a ratio the instrument
+ * states against the plot area the instrument states: a sheet that prints
+ * "GFA 4,778.31 m², plot area 1,365.23 m²" permits 4,778.31 m² whatever the
+ * boundary entered on the plot step measures. Multiplying its ratio by a traced
+ * outline of 1,200 m² reported 4,200 m² — a permitted GFA the sheet never
+ * printed, off by the reader's tracing rather than by any rule.
+ *
+ * Applied only while the rule named by `farRuleId` governs `far.max`: an area
+ * printed by a sheet is no base for a FAR somebody else stated.
+ */
+export interface StatedPlotArea {
+  /** The `far.max` rule this area is the base of — the sheet's or the brief's. */
+  readonly farRuleId: string;
+  readonly areaM2: Decimal;
+  readonly citation: Citation;
+  /** The GFA the same instrument prints beside it, where it prints one. */
+  readonly gfa?: { readonly valueM2: Decimal; readonly citation: Citation };
+}
+
+/**
+ * Limits the reader typed for a plot whose instrument is not on file.
+ *
+ * Each is `USER_SET` under `actor` and replaces a GENERAL rule (the seed's
+ * placeholder FAR, the 45 m height) — never the plot's own instrument: a typed
+ * figure on a limit the affection plan or a named brief states halts the run in
+ * a sentence, as a typed setback does.
+ */
+export interface TypedLimits {
+  readonly far?: Decimal;
+  readonly gfaM2?: Decimal;
+  /** Storeys above ground, the ground floor counted — a `G+N` read as N + 1. */
+  readonly maxStoreys?: number;
+  readonly actor: { readonly id: string; readonly name: string };
+}
+
+/**
+ * Band A's base: the ratio, the area it is applied to, and the GFA they permit.
+ *
+ * Published rather than recomputed downstream so the fixpoint, band A, the GFA
+ * statement and INV-03 all divide and multiply by one figure. The traced area is
+ * published beside the stated one with the difference, because a reader who
+ * sees 1,365.23 m² on the GFA table and 1,200 m² on the plot step is owed both.
+ */
+export interface FarBasis {
+  /** The FAR applied: DERIVED from a rule, ASSUMED where that rule is a placeholder, USER_SET where typed. */
+  readonly far: Traced<Decimal>;
+  /** The rule the FAR came from, when one did. Absent when the reader typed it. */
+  readonly rule: BandSource | undefined;
+  /** The area the FAR is applied to, m²: the instrument's printed figure, or the boundary as traced. */
+  readonly baseAreaM2: Decimal;
+  /** The plot as traced from its boundary, m² — always published. */
+  readonly tracedAreaM2: Decimal;
+  /** Present when the base is an instrument's printed area. */
+  readonly stated?: {
+    readonly areaM2: Traced<Decimal>;
+    /** Printed less traced, m². Negative when the boundary as traced is the larger. */
+    readonly differenceM2: Decimal;
+  };
+  /** FAR × base, or a GFA the instrument prints (or the reader typed) where that GFA governs. */
+  readonly gross: Traced<Decimal>;
+  /** Words for band A's formula: what the gross is, in figures. */
+  readonly formula: string;
+}
+
+/**
+ * A boundary the setback line does not follow, held to its neighbour's line.
+ *
+ * The offset kernel reports these (`OffsetResult.heldToNeighbourLine`): a short
+ * boundary almost in line with a long one, asking for LESS, is drawn on the long
+ * one's line. Every setback is still met. What it costs is footprint, and a cost
+ * the reader cannot see is a silent choice — so each one is published here, said
+ * in a sentence, and entered in the register as the assumption it is.
+ */
+export interface HeldBoundary {
+  /** The boundary held, by `PlotEdge.seq`. */
+  readonly seq: number;
+  readonly lengthM: Decimal;
+  /** Its own tower setback, which the footprint meets with room to spare. */
+  readonly ownSetbackM: Decimal;
+  /** The neighbour whose setback line it is held to, and that line's setback. */
+  readonly heldToSeq: number;
+  readonly heldAtM: Decimal;
+  /** An upper bound, not a measure: the boundary's length × the difference in setback. */
+  readonly costAtMostM2: Decimal;
+}
+
+/**
+ * The sentence every held boundary is said in. Its wording is matched in
+ * `packages/report/src/words/engine-run-notes.ts`; change both together.
+ */
+export const heldBoundarySentence = (h: HeldBoundary): string =>
+  `Boundary ${h.seq} (${h.lengthM.toFixed(2)} m, set back ${h.ownSetbackM.toString()} m) is held to the ` +
+  `setback line of boundary ${h.heldToSeq} (${h.heldAtM.toString()} m), which it almost continues. Where two ` +
+  'such lines meet — a step at the corner, or the larger setback wrapping round it — is a drafting convention ' +
+  'not settled for this engine, so the one reading that needs no answer is taken: every setback is still met, ' +
+  `and at most ${h.costAtMostM2.toFixed(2)} m² of tower footprint is given up.`;
+
+/**
+ * Why a placeholder FAR is an assumption on a plot with no instrument on file.
+ * Matched in `packages/report/src/words/engine-run-notes.ts`.
+ */
+export const placeholderFarBasis = (far: Decimal, ruleId: string): string =>
+  `No affection plan or brief stating a FAR is on file for this plot. ${far.toString()} is a placeholder ` +
+  `(${ruleId}) so a study can run before the sheet is to hand; no instrument prints it. Attach the plot’s ` +
+  'affection plan, or type its FAR or GFA, to replace it.';
+
+/**
+ * Why a placeholder tower plate cap is an assumption. Matched in
+ * `packages/report/src/words/engine-run-notes.ts`.
+ */
+export const placeholderPlateBasis = (capM2: Decimal, ruleId: string): string =>
+  `${capM2.toString()} m² is a placeholder tower plate cap (${ruleId}); no instrument on file for this plot ` +
+  'prints it. The tower plate is held to it until the plot’s own affection plan replaces it.';
+
 export interface EnvelopeInput {
   readonly plot: Plot;
   readonly rules: readonly RuleRecord[];
@@ -120,6 +239,10 @@ export interface EnvelopeInput {
    * value on an edge the affection plan governs halts the run in a sentence.
    */
   readonly typedSetbacks?: ReadonlyMap<number, TypedSetback>;
+  /** Printed plot areas, each the base of one instrument's FAR. See {@link StatedPlotArea}. */
+  readonly statedPlotAreas?: readonly StatedPlotArea[];
+  /** FAR, GFA or storeys the reader typed for a plot no instrument speaks for. See {@link TypedLimits}. */
+  readonly typedLimits?: TypedLimits;
 }
 
 /** State the fixpoint iterates over. */
@@ -182,6 +305,16 @@ export interface EnvelopeSolution extends BuildableEnvelope {
    * podium is the setback ring, because then nothing was placed.
    */
   readonly podiumPlacement: Traced<string> | undefined;
+  /** Band A's base: FAR, the area it is applied to, and the GFA it permits. */
+  readonly farBasis: FarBasis;
+  /**
+   * Boundaries the tower's setback line does not follow because their neighbours'
+   * setbacks meet theirs, by `PlotEdge.seq`. A redundant chamfer costs nothing;
+   * the ones that do cost footprint are also in `heldToNeighbourLine`.
+   */
+  readonly droppedBoundaries: readonly number[];
+  /** Boundaries held to a neighbour's setback line at a cost in footprint. See {@link HeldBoundary}. */
+  readonly heldToNeighbourLine: readonly HeldBoundary[];
 }
 
 export class EnvelopeHaltedError extends Error {
@@ -520,12 +653,24 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
     height rule then does not apply and the run is refused below, never given a
     height nobody stated.
   */
-  const statedCount = num(resolveParameter('levels.max_above_ground', rules, { ...baseCtx, levels: { above_ground: 0 } }));
+  const typedLimits = input.typedLimits;
+  checkTypedLimits(typedLimits);
+  const countRes = resolveParameter('levels.max_above_ground', rules, { ...baseCtx, levels: { above_ground: 0 } });
+  /*
+    A TYPED STOREY COUNT IS A FLOOR COUNT FROM THE DCR, SAID BY A NAMED PERSON.
+    It goes where the sheet's own count goes — into the context, where DBC
+    B.4.2.2 ¶6 turns it into a height (floors × 6 m) — so the 45 m placeholder,
+    which applies only where no count is stated, stops applying, visibly. On a
+    plot whose own plan states a count, a different typed one halts the run.
+  */
+  const typedCount = typedStoreysOver(countRes, typedLimits);
+  const statedCount = typedCount !== undefined ? new Decimal(typedCount) : num(countRes);
   const statedFloors = statedCount ? { max_above_ground: statedCount.toNumber() } : {};
   const seedResolutions = resolveAll(rules, { ...baseCtx, levels: { above_ground: 0, ...statedFloors } });
   const heightCeiling = num(seedResolutions.get('height.max'));
   const floorToFloor = num(seedResolutions.get('floor_to_floor'));
-  const farMax = num(seedResolutions.get('far.max'));
+  const seedFar = farLimitOf(seedResolutions.get('far.max'), typedLimits, input.statedPlotAreas, plotAreaM2);
+  const farMax = seedFar?.far;
 
   const blockedEarly = [...seedResolutions.values()].filter(
     (r) =>
@@ -604,7 +749,9 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
   const levelCountGoverns =
     statedLevels !== undefined && (planSupersedesMetres || statedLevels.lt(levelsByMetres));
   const maxLevelsByHeight = levelCountGoverns ? statedLevels.toNumber() : levelsByMetres;
-  const permittedGfaM2 = farMax.times(plotAreaM2);
+  // Band A's own gross — on the instrument's printed area where its FAR governs — so the
+  // levels the fixpoint asks for are the levels band A will ask for.
+  const permittedGfaM2 = seedFar!.grossM2;
 
   // --- §11.7 step 2–4: ITERATE, TEST, BOUND --------------------------------
 
@@ -939,6 +1086,34 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
 
   const offset = offsetPerEdge(plot.ring, insets, arcs);
   const setbackFootprintM2 = mm2ToM2(offset.areaMm2);
+  /*
+    A CONSERVATIVE CHOICE IS STILL A CHOICE, AND IT IS SAID.
+
+    The kernel holds a short boundary that almost continues a long one, and asks
+    for less, to the long one's setback line (`offsetPerEdge`). That needs no
+    answer from anybody — every setback is met — but it gives up footprint the
+    short boundary's own figure would allow, and the alternative is a drafting
+    convention the client has not settled. Each one is an ASSUMED value in the
+    footprint's derivation, with the most it can cost in its basis, so the
+    register lists it and the footprint reads as resting on it.
+  */
+  const droppedBoundaries = seqsOfRingEdges(plot, offset.dropped ?? []);
+  const held = heldBoundariesOf(plot, offset.heldToNeighbourLine ?? [], insets);
+  const heldUses: Record<string, Traced<Decimal>> = {};
+  for (const h of held) {
+    heldUses[`held_edge_${h.seq}`] = tracer.assumed(`envelope.held_to_neighbour_line.edge_${h.seq}`, h.costAtMostM2, {
+      label: 'boundary held to its neighbour’s setback line',
+      basis: heldBoundarySentence(h),
+      unit: 'm²',
+      detail: {
+        edgeSeq: h.seq,
+        heldToSeq: h.heldToSeq,
+        ownSetbackM: h.ownSetbackM.toString(),
+        heldAtM: h.heldAtM.toString(),
+        costAtMostM2: h.costAtMostM2.toFixed(2),
+      },
+    });
+  }
 
   const setbackRule = appliedSetbacks[0];
   /*
@@ -968,13 +1143,18 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
        * this footprint, because *this* setback on *that* frontage, because that
        * clause.
        */
-      uses: Object.fromEntries(
-        appliedSetbacks.map((a) => [`edge_${a.seq}`, a.traced] as const),
-      ),
+      uses: {
+        ...Object.fromEntries(appliedSetbacks.map((a) => [`edge_${a.seq}`, a.traced] as const)),
+        ...heldUses,
+      },
       unit: 'm²',
       // A typed setback makes this USER_SET by inheritance; claiming DERIVED over
-      // it would say a clause set a value a person typed.
-      ...(appliedSetbacks.some((a) => a.ruleId === 'USER_SET') ? {} : { provenanceClass: 'DERIVED' as const }),
+      // it would say a clause set a value a person typed. A boundary held to its
+      // neighbour's line makes it ASSUMED the same way: the line it is drawn on
+      // is a convention nobody has confirmed.
+      ...(appliedSetbacks.some((a) => a.ruleId === 'USER_SET') || held.length > 0
+        ? {}
+        : { provenanceClass: 'DERIVED' as const }),
       detail: {
         metric: metric('SETBACK_PERMITTED_FOOTPRINT').metricId,
         appliedSetbacks: appliedSetbacks.map((s) => ({
@@ -983,6 +1163,16 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
           ruleId: s.ruleId,
         })),
         exactArithmetic: offset.exact,
+        ...(droppedBoundaries.length > 0 ? { droppedBoundaries } : {}),
+        ...(held.length > 0
+          ? {
+              heldToNeighbourLine: held.map((h) => ({
+                edge: h.seq,
+                heldToEdge: h.heldToSeq,
+                costAtMostM2: h.costAtMostM2.toFixed(2),
+              })),
+            }
+          : {}),
       },
     },
   );
@@ -1275,7 +1465,33 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
   };
   const towerTerm = podiumOnTowerLine ? 'podium footprint' : 'tower setback line, podium footprint';
   const capTerms = caps.map((c) => `${c.label} ${c.valueM2.toFixed(2)} m²`).join(', ');
-  const towerPlateCap = tightestCap
+  /*
+    A PLACEHOLDER PLATE CAP IS AN ASSUMPTION, AS THE PLACEHOLDER HEIGHT IS. The
+    seed's 1,280 m² cites "Part B" and no instrument prints it; on a plot with no
+    sheet it held every tower plate and read DERIVED. It is entered as what it
+    is — ASSUMED, amber, with the reason — and the plate computed from it takes
+    that class. A plot with its own sheet never loads it (`placeholdersForSheet`).
+  */
+  const plateCapPlaceholder =
+    plateAreaCap && citesPlaceholder(plateRes!.governing!.rule)
+      ? tracer.assumed('envelope.tower_plate_max_m2', plateAreaCap, {
+          label: 'tower plate cap',
+          basis: placeholderPlateBasis(plateAreaCap, plateRes!.governing!.rule.ruleId),
+          unit: 'm²',
+        })
+      : undefined;
+  const plateFormula =
+    caps.length === 1 && !towerCoverageCap && tightestCap
+      ? `min(${towerTerm}, tower plate cap ${tightestCap.valueM2.toString()} m²)`
+      : `min(${towerTerm}, ${capTerms})`;
+  const towerPlateCap = plateCapPlaceholder
+    ? tracer.computed('envelope.tower_plate_cap', plateM2, {
+        formula: plateFormula,
+        uses: { ...towerUses, plateCap: plateCapPlaceholder },
+        unit: 'm²',
+        detail: { metric: metric('TOWER_PLATE').metricId },
+      })
+    : tightestCap
     ? tracer.derived('envelope.tower_plate_cap', plateM2, {
         rule: { ruleId: tightestCap.ruleId, citation: tightestCap.citation },
         formula:
@@ -1384,7 +1600,13 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
   */
   const levelsRes = resolutions.get('levels.max_above_ground');
   const statedLevelsT =
-    statedLevels !== undefined && levelsRes?.governing
+    typedCount !== undefined
+      ? tracer.userSet('envelope.stated_level_count', typedCount, {
+          actor: typedLimits!.actor,
+          label: 'storeys above ground, typed — no affection plan stating them is on file',
+          unit: 'levels',
+        })
+      : statedLevels !== undefined && levelsRes?.governing
       ? tracer.derived('envelope.stated_level_count', statedLevels.toNumber(), {
           rule: {
             ruleId: levelsRes.governing.rule.ruleId,
@@ -1488,7 +1710,21 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
   );
 
   bindings.push(
-    levelCountGoverns && levelsRes?.governing
+    levelCountGoverns && typedCount !== undefined
+      ? {
+          /* The reader's count, under the reader's name — never a rule id it did not come from. */
+          dimension: 'levels',
+          ruleId: 'USER_SET',
+          label: 'level count typed by the reader',
+          valueM: new Decimal(maxLevelsByHeight),
+          runnerUp: {
+            ruleId: heightRes.governing!.rule.ruleId,
+            label: 'levels the height ceiling allows',
+            valueM: new Decimal(levelsByMetres),
+            withinOnePercent: false,
+          },
+        }
+      : levelCountGoverns && levelsRes?.governing
       ? {
           /* The value is the COUNT, not a height: multiplying it by the
              floor-to-floor would print a metres ceiling the plan never stated.
@@ -1515,7 +1751,31 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
         },
   );
 
+  /*
+    A GENERAL LEVEL-COUNT RULE A TYPED COUNT REPLACED, beaten and declared — the
+    seed states none, but a community rule could, and replacing it silently
+    would leave the validator holding the run to a count it did not apply.
+  */
+  if (typedCount !== undefined && statedLevelsT && levelsRes?.governing) {
+    const general = levelsRes.governing.rule;
+    tracer.supersededBy({ ruleId: general.ruleId, citation: general.citation }, statedLevelsT);
+    setAside.push({ parameterId: 'levels.max_above_ground', rule: general, reason: TYPED_LIMIT_REASON });
+  }
+
+  const finalFar = farLimitOf(resolutions.get('far.max'), typedLimits, input.statedPlotAreas, plotAreaM2);
+  if (!finalFar) {
+    throw new EnvelopeHaltedError(
+      'no rule governs far.max at the level count the solver settled on. The engine does not ' +
+        'substitute a default for a missing generative rule.',
+      { missing: ['far.max'] },
+    );
+  }
+  const farBasis = traceFarBasis(tracer, finalFar, resolutions.get('far.max'), typedLimits, setAside);
+
   return {
+    farBasis,
+    droppedBoundaries,
+    heldToNeighbourLine: held,
     setbackPermittedFootprint,
     ...(podiumSetbackFootprint ? { podiumSetbackFootprint } : {}),
     coverageCap,
@@ -1655,6 +1915,329 @@ function nearTie(
       withinOnePercent: gap.lte('0.01'),
     },
   };
+}
+
+/** Why a general rule a typed limit replaced is not applied. Declared by the validator as not checked. */
+export const TYPED_LIMIT_REASON =
+  'the reader typed this limit for a plot with no instrument on file that states it; the typed value is ' +
+  'USER_SET under their name and replaces this general rule.';
+
+/** Typed limits outside any plausible figure are refused in a sentence before anything is computed. */
+function checkTypedLimits(t: TypedLimits | undefined): void {
+  if (!t) return;
+  if (t.far !== undefined && (t.far.lte(0) || t.far.gt(30))) {
+    throw new EnvelopeHaltedError(`a typed FAR of ${t.far.toString()} is outside 0–30. Check the figure.`, {
+      typedFar: t.far.toString(),
+    });
+  }
+  if (t.gfaM2 !== undefined && t.gfaM2.lte(0)) {
+    throw new EnvelopeHaltedError(`a typed GFA must be above zero; got ${t.gfaM2.toString()} m².`, {
+      typedGfaM2: t.gfaM2.toString(),
+    });
+  }
+  if (t.maxStoreys !== undefined && (!Number.isInteger(t.maxStoreys) || t.maxStoreys < 1 || t.maxStoreys > 200)) {
+    throw new EnvelopeHaltedError(
+      `a typed storey count of ${t.maxStoreys} is not a whole number from 1 to 200. Count the ground floor as one.`,
+      { typedStoreys: t.maxStoreys },
+    );
+  }
+}
+
+/**
+ * The typed storey count the run takes, or undefined where none is typed or the
+ * plot's own plan states the same figure. A different figure on a plot whose plan
+ * states one halts: a typed number may not overrule the plot's instrument.
+ */
+function typedStoreysOver(countRes: Resolution, typed: TypedLimits | undefined): number | undefined {
+  if (typed?.maxStoreys === undefined) return undefined;
+  const governing = countRes.governing;
+  if (governing && isPlotSpecific(governing.rule)) {
+    const stated = num(countRes);
+    if (stated?.eq(typed.maxStoreys)) return undefined;
+    throw new EnvelopeHaltedError(
+      `the affection plan states ${stated?.toString() ?? '—'} level(s) above ground ` +
+        `("${governing.rule.citation.sourceTextVerbatim}"), and a typed ${typed.maxStoreys} may not replace it. ` +
+        `Clear the typed storeys, or type ${stated?.toString() ?? '—'}.`,
+      { typedStoreys: typed.maxStoreys, stated: stated?.toString() ?? null },
+    );
+  }
+  return typed.maxStoreys;
+}
+
+/** Band A's base, in plain figures, before any of it is traced. */
+interface FarLimit {
+  readonly far: Decimal;
+  readonly baseM2: Decimal;
+  readonly tracedM2: Decimal;
+  readonly grossM2: Decimal;
+  /** The instrument's printed area, where it is the base. */
+  readonly stated: StatedPlotArea | undefined;
+  /** A GFA — printed or typed — is the gross, not FAR × base. */
+  readonly gfaGoverns: boolean;
+  /** The reader typed the limit; no rule governs it. */
+  readonly typed: boolean;
+}
+
+/**
+ * The FAR, the area it is applied to and the GFA they permit, at one resolution.
+ *
+ * Pure, so the fixpoint's seed and the final pass read the same arithmetic.
+ *
+ * A PRINTED GFA THAT GOVERNS IS THE GROSS ITSELF. A sheet printing a GFA binds
+ * `far.max` as that GFA ÷ its printed area, rounded DOWN at six places
+ * (`rules/instruments/sheet.ts`). Multiplying the rounded ratio back by the area
+ * reproduces the GFA to within a millimetre-square or so, never above it — but
+ * "Band A equals the printed GFA" is the claim a reader checks against the sheet,
+ * and the printed figure is what the developer priced. So where the governing
+ * ratio is exactly that rounding of the instrument's own two figures, the gross
+ * is the printed GFA. (A governing GFA within that rounding of a whole number of
+ * plates would put the achieved FAR above the rounded ratio by under a millionth;
+ * the validator would then refuse, loudly. That is a refusal, never a wrong
+ * figure, and has not been met on any plot on file.)
+ */
+function farLimitOf(
+  res: Resolution | undefined,
+  typed: TypedLimits | undefined,
+  statedAreas: readonly StatedPlotArea[] | undefined,
+  tracedM2: Decimal,
+): FarLimit | undefined {
+  const governing = res?.status === ResolutionStatus.RESOLVED ? res.governing : undefined;
+  const instrumentGoverns = governing !== undefined && isPlotSpecific(governing.rule);
+  const typedAny = typed !== undefined && (typed.far !== undefined || typed.gfaM2 !== undefined);
+  if (typedAny && instrumentGoverns) {
+    const stated = num(res);
+    const agrees = typed.gfaM2 === undefined && stated !== undefined && typed.far!.eq(stated);
+    if (!agrees) {
+      throw new EnvelopeHaltedError(
+        `this plot’s own instrument states its floor area ratio (${stated?.toString() ?? '—'}: ` +
+          `"${governing.rule.citation.sourceTextVerbatim}"), and a typed ` +
+          `${typed.gfaM2 !== undefined ? 'GFA' : 'FAR'} may not replace it. Clear the typed value.`,
+        { ruleId: governing.rule.ruleId },
+      );
+    }
+  }
+  if (typedAny && !instrumentGoverns) {
+    const byFar = typed.far?.times(tracedM2);
+    const gfa = typed.gfaM2;
+    // Both typed: both are limits, and the lower binds (most restrictive, §11.5 step 2).
+    if (gfa !== undefined && (byFar === undefined || gfa.lt(byFar))) {
+      return { far: gfa.div(tracedM2), baseM2: tracedM2, tracedM2, grossM2: gfa, stated: undefined, gfaGoverns: true, typed: true };
+    }
+    return { far: typed.far!, baseM2: tracedM2, tracedM2, grossM2: byFar!, stated: undefined, gfaGoverns: false, typed: true };
+  }
+  const far = num(res);
+  if (!far) return undefined;
+  const stated = governing
+    ? statedAreas?.find((s) => s.farRuleId === governing.rule.ruleId && s.areaM2.gt(0))
+    : undefined;
+  const baseM2 = stated?.areaM2 ?? tracedM2;
+  const printedGfa = stated?.gfa?.valueM2;
+  const gfaGoverns =
+    printedGfa !== undefined && far.eq(printedGfa.div(stated!.areaM2).toDecimalPlaces(6, Decimal.ROUND_DOWN));
+  return {
+    far,
+    baseM2,
+    tracedM2,
+    grossM2: gfaGoverns ? printedGfa : far.times(baseM2),
+    stated,
+    gfaGoverns,
+    typed: false,
+  };
+}
+
+/** "the boundary as traced measures 1,200.00 m², 165.23 m² less" — the difference, said both ways round. */
+function tracedAside(tracedM2: Decimal, statedM2: Decimal): string {
+  const diff = statedM2.minus(tracedM2);
+  return (
+    `the boundary as traced measures ${tracedM2.toFixed(2)} m²` +
+    (diff.isZero() ? ', the same' : `, ${diff.abs().toFixed(2)} m² ${diff.isPositive() ? 'less' : 'more'}`)
+  );
+}
+
+/**
+ * Band A's base, traced. Each figure takes the class of where it came from: a
+ * cited rule DERIVED, the seed's placeholder ASSUMED with its reason, a typed
+ * figure USER_SET under the reader's name — and the general rule a typed figure
+ * replaced is recorded as superseded and declared set aside.
+ */
+function traceFarBasis(
+  tracer: Tracer,
+  limit: FarLimit,
+  res: Resolution | undefined,
+  typed: TypedLimits | undefined,
+  setAside: SetAsideRule[],
+): FarBasis {
+  const governing = res?.status === ResolutionStatus.RESOLVED ? res.governing : undefined;
+  const t = limit.tracedM2;
+
+  if (limit.typed) {
+    const actor = typed!.actor;
+    const farTyped =
+      typed!.far !== undefined
+        ? tracer.userSet('envelope.typed_far', typed!.far, {
+            actor,
+            label: 'FAR, typed — no instrument stating it is on file',
+            unit: 'ratio',
+          })
+        : undefined;
+    const gfaTyped =
+      typed!.gfaM2 !== undefined
+        ? tracer.userSet('envelope.typed_gfa_m2', typed!.gfaM2, {
+            actor,
+            label: 'GFA, typed — no instrument stating it is on file',
+            unit: 'm²',
+          })
+        : undefined;
+    const typedUses = { ...(farTyped ? { far: farTyped } : {}), ...(gfaTyped ? { gfa: gfaTyped } : {}) };
+    const far = tracer.computed('envelope.far_max', limit.far, {
+      formula: limit.gfaGoverns
+        ? `typed GFA ${limit.grossM2.toFixed(2)} m² ÷ plot area ${t.toFixed(2)} m² as traced`
+        : `FAR ${limit.far.toString()}, typed`,
+      uses: typedUses,
+      unit: 'ratio',
+    });
+    if (governing) {
+      tracer.supersededBy({ ruleId: governing.rule.ruleId, citation: governing.rule.citation }, far);
+      setAside.push({ parameterId: 'far.max', rule: governing.rule, reason: TYPED_LIMIT_REASON });
+    }
+    const formula = limit.gfaGoverns
+      ? `GFA ${limit.grossM2.toFixed(2)} m², typed` +
+        (farTyped ? ` — below the typed FAR ${farTyped.value.toString()} × plot area ${t.toFixed(2)} m²` : '')
+      : `FAR ${limit.far.toString()} × plot area ${t.toFixed(2)} m²`;
+    const gross = tracer.computed('envelope.permitted_gfa_m2', limit.grossM2, {
+      formula,
+      uses: { far, ...typedUses },
+      unit: 'm²',
+      detail: { metric: 'GFA' },
+    });
+    return { far, rule: undefined, baseAreaM2: limit.baseM2, tracedAreaM2: t, gross, formula };
+  }
+
+  const rule = governing!.rule;
+  const source: BandSource = { ruleId: rule.ruleId, citation: rule.citation };
+  const far = citesPlaceholder(rule)
+    ? tracer.assumed('envelope.far_max', limit.far, {
+        label: 'floor area ratio',
+        basis: placeholderFarBasis(limit.far, rule.ruleId),
+        unit: 'ratio',
+      })
+    : tracer.derived('envelope.far_max', limit.far, {
+        rule: source,
+        formula: 'FAR from the governing rule',
+        unit: 'ratio',
+      });
+
+  const stated = limit.stated
+    ? tracer.derived('envelope.far_base_area_m2', limit.stated.areaM2, {
+        rule: { ruleId: rule.ruleId, citation: limit.stated.citation },
+        formula:
+          `plot area as printed on the instrument whose FAR governs; ` + tracedAside(t, limit.stated.areaM2),
+        unit: 'm²',
+        detail: {
+          statedAreaM2: limit.stated.areaM2.toFixed(2),
+          tracedAreaM2: t.toFixed(2),
+          differenceM2: limit.stated.areaM2.minus(t).toFixed(2),
+        },
+      })
+    : undefined;
+
+  const formula = limit.gfaGoverns
+    ? `GFA ${limit.grossM2.toFixed(2)} m² as printed — the instrument’s own limit, its FAR ` +
+      `${limit.far.toString()} being that GFA ÷ its printed plot area ${limit.baseM2.toFixed(2)} m² ` +
+      `(${tracedAside(t, limit.baseM2)})`
+    : limit.stated
+      ? `FAR ${limit.far.toString()} × plot area ${limit.baseM2.toFixed(2)} m² as printed ` +
+        `(${tracedAside(t, limit.baseM2)})`
+      : `FAR ${limit.far.toString()} × plot area ${t.toFixed(2)} m²`;
+  const grossUses = { far, ...(stated ? { plotArea: stated } : {}) };
+  const gross =
+    far.provenanceClass === 'DERIVED'
+      ? tracer.derived('envelope.permitted_gfa_m2', limit.grossM2, {
+          rule: limit.gfaGoverns ? { ruleId: rule.ruleId, citation: limit.stated!.gfa!.citation } : source,
+          formula,
+          uses: grossUses,
+          unit: 'm²',
+          detail: { metric: 'GFA' },
+        })
+      : tracer.computed('envelope.permitted_gfa_m2', limit.grossM2, {
+          formula,
+          uses: grossUses,
+          unit: 'm²',
+          detail: { metric: 'GFA' },
+        });
+
+  return {
+    far,
+    rule: source,
+    baseAreaM2: limit.baseM2,
+    tracedAreaM2: t,
+    ...(stated ? { stated: { areaM2: stated, differenceM2: limit.baseM2.minus(t) } } : {}),
+    gross,
+    formula,
+  };
+}
+
+/** The `PlotEdge.seq` each ring edge belongs to, for a list of ring edges, without repeats. */
+function seqsOfRingEdges(plot: Plot, ringEdges: readonly number[]): number[] {
+  const out: number[] = [];
+  for (const i of ringEdges) {
+    const seq = edgeOfRingIndex(plot, i);
+    if (seq !== undefined && !out.includes(seq)) out.push(seq);
+  }
+  return out;
+}
+
+/*
+  The kernel numbers boundaries by RING edge, and the insets it was handed are
+  keyed the same way (one per ring edge, `ringSpanOf`). A plot whose ring is
+  stored counter-clockwise with no collinear vertex — how the API stores every
+  plot — is the ring the kernel offsets, so the two numberings agree; the insets
+  above already rely on it.
+*/
+function edgeOfRingIndex(plot: Plot, i: number): number | undefined {
+  return plot.edges.find((e) => {
+    const span = ringSpanOf(e);
+    return i >= span.from && i < span.from + span.count;
+  })?.seq;
+}
+
+/**
+ * Each boundary the kernel held to a neighbour's line, with that neighbour and
+ * the most it costs. The neighbour is the adjacent ring edge set back further —
+ * the larger where both are, which is the larger bound.
+ */
+function heldBoundariesOf(plot: Plot, ringEdges: readonly number[], insets: readonly EdgeInset[]): HeldBoundary[] {
+  const ring = plot.ring;
+  const n = ring.length;
+  const insetOf = new Map(insets.map((i) => [i.seq, i.insetMm]));
+  const lengthMmOf = (i: number): Decimal => {
+    const p = ring[i]!;
+    const q = ring[(i + 1) % n]!;
+    const dx = new Decimal(q.x - p.x);
+    const dy = new Decimal(q.y - p.y);
+    return dx.times(dx).plus(dy.times(dy)).sqrt();
+  };
+  const out: HeldBoundary[] = [];
+  for (const h of ringEdges) {
+    const own = insetOf.get(h);
+    const seq = edgeOfRingIndex(plot, h);
+    if (own === undefined || seq === undefined) continue;
+    const neighbour = [(h - 1 + n) % n, (h + 1) % n]
+      .filter((k) => (insetOf.get(k) ?? -1) > own)
+      .sort((a, b) => insetOf.get(b)! - insetOf.get(a)!)[0];
+    if (neighbour === undefined) continue;
+    const at = insetOf.get(neighbour)!;
+    const lengthMm = lengthMmOf(h);
+    out.push({
+      seq,
+      lengthM: lengthMm.div(1000),
+      ownSetbackM: new Decimal(own).div(1000),
+      heldToSeq: edgeOfRingIndex(plot, neighbour) ?? neighbour,
+      heldAtM: new Decimal(at).div(1000),
+      costAtMostM2: lengthMm.times(at - own).div(1_000_000).toDecimalPlaces(2, Decimal.ROUND_UP),
+    });
+  }
+  return out;
 }
 
 export { isNotApplicable, Operator };

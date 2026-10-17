@@ -114,7 +114,14 @@ export function buildInvariantSubject(
   output: RunOutput,
 ): InvariantSubject {
   const { envelope, parking, capacity } = output;
-  const plotAreaM2 = new Decimal(plot.computedAreaMm2).div(1_000_000);
+  /*
+    THE AREA THE FAR WAS STATED FOR, AS THE ENGINE PUBLISHED IT. Where the plot's
+    own sheet prints its area, band A and the FAR reached are both measured on
+    that figure; recomputing INV-03 on the traced outline would hold the run to a
+    ratio of a different plot. Lifted, not computed: `FarBasis.baseAreaM2`, which
+    is the traced area wherever no instrument prints one.
+  */
+  const plotAreaM2 = envelope.farBasis.baseAreaM2;
 
   return {
     label: `run ${runId}`,

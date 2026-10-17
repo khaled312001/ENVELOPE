@@ -304,16 +304,15 @@ describe('the sheet binds the run', () => {
       expect(bound.statusCode).toBe(201);
       expect(loose.statusCode).toBe(201);
 
-      // 1,200 m² of plot. The seed rule says FAR 5.00 → 6,000 m²; the sheet's
-      // GFA ÷ its area is 3.500003 → 4,200.0036 m². The second number is the
-      // document's, and the first is what this plot reported before the sheet
-      // reached the engine. (Band A's base is the plot as entered, not the
-      // sheet's printed 1,365.23 m² — that is a separate finding.)
+      // 1,200 m² of plot entered. The seed rule says FAR 5.00 → 6,000 m². The
+      // sheet prints GFA 4,778.31 m² on a plot area of 1,365.23 m², and that GFA
+      // is band A: it was 3.500003 × the 1,200 m² entered = 4,200.0036 m², a
+      // permitted GFA the sheet never printed, off by the tracing.
       const band = (r: { json(): unknown }): string =>
         (r.json() as { capacity: { bandA: { value: string } } }).capacity.bandA.value;
 
       expect(band(loose)).toBe('6000');
-      expect(band(bound)).toBe('4200.0036');
+      expect(band(bound)).toBe('4778.31');
     } finally {
       await app.close();
     }

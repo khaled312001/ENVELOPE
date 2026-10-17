@@ -288,7 +288,15 @@ export interface GfaStatementInput {
   readonly tracer: Tracer;
   readonly farMax: Decimal;
   readonly plotAreaM2: Decimal;
-  readonly farRule: BandSource;
+  /** Required unless `allowedGfa` is given; absent when the reader typed the FAR. */
+  readonly farRule?: BandSource;
+  /**
+   * The gross GFA the FAR permits, as the envelope traced it (`FarBasis.gross`).
+   * Where given, the table's allowance IS band A's gross — a printed GFA that
+   * governs, a typed one, or FAR × the instrument's printed area — rather than
+   * a second multiplication that could differ from it in the last digit.
+   */
+  readonly allowedGfa?: TracedDecimal;
   readonly towerPlate: TracedDecimal;
   readonly levels: Traced<number>;
   /** The model's placed, non-parking level ids, bottom to top. */
@@ -472,16 +480,30 @@ export function buildGfaStatement(input: GfaStatementInput): GfaStatement {
   // `FR-DEF-001 AC5`: every area term this module states is a GFA term, and the
   // call is the gate rather than the comment.
   const gfa = metric('GFA').metricId;
-  const grossAllowed = input.farMax.times(input.plotAreaM2);
+  const grossAllowed = input.allowedGfa?.value ?? input.farMax.times(input.plotAreaM2);
+  const allowedFormula = grossAllowed.eq(input.farMax.times(input.plotAreaM2))
+    ? `FAR ${input.farMax.toString()} × plot area ${input.plotAreaM2.toFixed(2)} m² ` +
+      '(gross, before the parking-in-FAR treatment)'
+    : `GFA ${grossAllowed.toFixed(2)} m², the limit itself rather than FAR ${input.farMax.toString()} × ` +
+      `plot area ${input.plotAreaM2.toFixed(2)} m² (gross, before the parking-in-FAR treatment)`;
 
-  const allowedGfaM2 = tracer.derived('gfa_statement.allowed_gfa_m2', grossAllowed, {
-    rule: input.farRule,
-    formula:
-      `FAR ${input.farMax.toString()} × plot area ${input.plotAreaM2.toFixed(2)} m² ` +
-      '(gross, before the parking-in-FAR treatment)',
-    unit: 'm²',
-    detail: { metric: gfa },
-  });
+  const allowedGfaM2 = input.allowedGfa
+    ? tracer.computed('gfa_statement.allowed_gfa_m2', grossAllowed, {
+        formula: allowedFormula,
+        uses: { permitted: input.allowedGfa },
+        unit: 'm²',
+        detail: { metric: gfa },
+      })
+    : input.farRule
+      ? tracer.derived('gfa_statement.allowed_gfa_m2', grossAllowed, {
+          rule: input.farRule,
+          formula: allowedFormula,
+          unit: 'm²',
+          detail: { metric: gfa },
+        })
+      : (() => {
+          throw new GfaStatementRefusedError('the GFA statement needs the FAR rule or the permitted GFA it states.');
+        })();
 
   const floors = input.levels.value;
   /*

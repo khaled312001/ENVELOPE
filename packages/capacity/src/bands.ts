@@ -73,8 +73,30 @@ export interface BandsInput {
   readonly parkingInFarTraced: Traced<'COUNTS_TOWARD_FAR' | 'EXCLUDED_FROM_FAR'>;
   readonly parkingAreaM2: Decimal;
   readonly farMax: Decimal;
+  /** The plot as traced from its boundary. What coverage is measured against. */
   readonly plotAreaM2: Decimal;
-  readonly farRule: BandSource;
+  /**
+   * The rule the FAR came from. Absent when the reader typed it — band A then
+   * cites nothing and takes the class of what it was computed from.
+   */
+  readonly farRule: BandSource | undefined;
+  /**
+   * Band A's base as the envelope published it: the FAR node, the gross it
+   * permits and the words for it. Absent, band A is `FAR × plotAreaM2` cited to
+   * `farRule`, as every caller before it was.
+   *
+   * WHY IT IS NOT ALWAYS `FAR × plotAreaM2`. A sheet's FAR is applied to the plot
+   * area the sheet prints, and where the sheet prints a GFA that governs, the GFA
+   * is the gross itself. And the achieved FAR divides by the same base, or the
+   * FAR the answer reaches would be measured on a different plot from the one
+   * the FAR it is held to was stated for.
+   */
+  readonly farBasis?: {
+    readonly far: TracedDecimal;
+    readonly gross: TracedDecimal;
+    readonly baseAreaM2: Decimal;
+    readonly formula: string;
+  };
   /**
    * The tower plate, traced, so band B's derivation reaches it rather than
    * quoting it in a formula string.
@@ -156,24 +178,45 @@ export function computeBands(input: BandsInput): BandsResult {
   // `FR-DEF-002` is about, and burying it would make two reports on the same
   // plot look like a disagreement about capacity rather than about a rule.
   const countsTowardFar = input.parkingInFar === 'COUNTS_TOWARD_FAR';
-  const bandA = tracer.derived('capacity.regulation_limited_gfa', input.permittedGfaM2, {
-    rule: input.farRule,
-    formula: countsTowardFar
-      ? `FAR ${input.farMax.toString()} × plot area ${input.plotAreaM2.toFixed(2)} m² ` +
-        `− parking ${input.parkingAreaM2.toFixed(2)} m² (parking counts toward FAR)`
-      : `FAR ${input.farMax.toString()} × plot area ${input.plotAreaM2.toFixed(2)} m² ` +
-        `(parking excluded from FAR)`,
-    unit: 'm²',
-    uses: { parkingInFar: input.parkingInFarTraced },
-    detail: {
-      band: 'A',
-      question: 'What do FAR and the area caps permit?',
-      metric: 'GFA',
-      parkingInFar: input.parkingInFar,
-      grossPermittedGfaM2: input.grossPermittedGfaM2.toFixed(2),
-      parkingAreaM2: input.parkingAreaM2.toFixed(2),
-    },
-  });
+  const basis = input.farBasis;
+  const grossWords = basis?.formula ?? `FAR ${input.farMax.toString()} × plot area ${input.plotAreaM2.toFixed(2)} m²`;
+  /** The area FAR is measured on: the base band A was applied to, so the FAR reached and the FAR permitted share one plot. */
+  const farAreaM2 = basis?.baseAreaM2 ?? input.plotAreaM2;
+  const bandAFormula = countsTowardFar
+    ? `${grossWords} − parking ${input.parkingAreaM2.toFixed(2)} m² (parking counts toward FAR)`
+    : `${grossWords} (parking excluded from FAR)`;
+  const bandAUses = { parkingInFar: input.parkingInFarTraced, ...(basis ? { permitted: basis.gross } : {}) };
+  const bandADetail = {
+    band: 'A',
+    question: 'What do FAR and the area caps permit?',
+    metric: 'GFA',
+    parkingInFar: input.parkingInFar,
+    grossPermittedGfaM2: input.grossPermittedGfaM2.toFixed(2),
+    parkingAreaM2: input.parkingAreaM2.toFixed(2),
+    farAreaM2: farAreaM2.toFixed(2),
+  };
+  /*
+    DERIVED ONLY WHERE THE FAR IS. `tracer.derived` stamps DERIVED whatever it
+    uses, so band A read DERIVED on the seed's placeholder FAR of 5.00 — a figure
+    no instrument prints — on every plot without a sheet. Where the FAR is a
+    placeholder (ASSUMED) or typed (USER_SET), band A is computed from it and
+    takes that class.
+  */
+  const bandA =
+    input.farRule && (!basis || basis.far.provenanceClass === 'DERIVED')
+      ? tracer.derived('capacity.regulation_limited_gfa', input.permittedGfaM2, {
+          rule: input.farRule,
+          formula: bandAFormula,
+          unit: 'm²',
+          uses: bandAUses,
+          detail: bandADetail,
+        })
+      : tracer.computed('capacity.regulation_limited_gfa', input.permittedGfaM2, {
+          formula: bandAFormula,
+          uses: bandAUses,
+          unit: 'm²',
+          detail: bandADetail,
+        });
 
   // --- Band B — geometric capacity ----------------------------------------
   //
@@ -233,7 +276,7 @@ export function computeBands(input: BandsInput): BandsResult {
 
   // --- Governing = min(A, B, C) -------------------------------------------
   const entries = [
-    { band: CapacityBand.REGULATORY, value: input.permittedGfaM2, traced: bandA, ruleId: input.farRule.ruleId, label: 'FAR ceiling' },
+    { band: CapacityBand.REGULATORY, value: input.permittedGfaM2, traced: bandA, ruleId: input.farRule?.ruleId ?? 'USER_SET', label: 'FAR ceiling' },
     { band: CapacityBand.GEOMETRIC, value: bandBValue, traced: bandB, ruleId: input.heightRule.ruleId, label: input.geometricLabel ?? 'height ceiling and tower plate' },
     { band: CapacityBand.PARKING, value: bandCValue, traced: bandC, ruleId: input.parkingRule.ruleId, label: 'parking supply' },
   ].sort((a, b) => a.value.comparedTo(b.value));
@@ -328,12 +371,21 @@ export function computeBands(input: BandsInput): BandsResult {
   // are derived from values already traced above, so each carries a derivation
   // reaching the same clause the corresponding cap came from (§13.3).
 
-  const permittedFar = tracer.derived('capacity.permitted_far', input.farMax, {
-    rule: input.farRule,
-    formula: 'FAR cap from the governing rule',
-    unit: 'ratio',
-    detail: { metric: 'FAR' },
-  });
+  const permittedFar =
+    input.farRule && (!basis || basis.far.provenanceClass === 'DERIVED')
+      ? tracer.derived('capacity.permitted_far', input.farMax, {
+          rule: input.farRule,
+          formula: 'FAR cap from the governing rule',
+          ...(basis ? { uses: { far: basis.far } } : {}),
+          unit: 'ratio',
+          detail: { metric: 'FAR' },
+        })
+      : tracer.computed('capacity.permitted_far', input.farMax, {
+          formula: input.farRule ? 'FAR cap from a placeholder rule' : 'FAR cap, typed by the reader',
+          uses: basis ? { far: basis.far } : {},
+          unit: 'ratio',
+          detail: { metric: 'FAR' },
+        });
 
   /*
     WHERE PARKING COUNTS TOWARD FAR, THE FAR REACHED COUNTS IT TOO. Band A takes
@@ -343,12 +395,12 @@ export function computeBands(input: BandsInput): BandsResult {
   */
   const parkingInGfa = countsTowardFar && input.parkingArea ? input.parkingArea : undefined;
   const farGfa = parkingInGfa ? governingValue.plus(parkingInGfa.value) : governingValue;
-  const achievedFarValue = input.plotAreaM2.isZero() ? new Decimal(0) : farGfa.div(input.plotAreaM2);
+  const achievedFarValue = farAreaM2.isZero() ? new Decimal(0) : farGfa.div(farAreaM2);
   const achievedFar = tracer.computed('capacity.achieved_far', achievedFarValue, {
     formula: parkingInGfa
       ? `(governing GFA ${governingValue.toFixed(2)} m² + parking ${parkingInGfa.value.toFixed(2)} m², ` +
-        `which counts toward FAR) ÷ plot area ${input.plotAreaM2.toFixed(2)} m²`
-      : `governing GFA ${governingValue.toFixed(2)} m² ÷ plot area ${input.plotAreaM2.toFixed(2)} m²`,
+        `which counts toward FAR) ÷ plot area ${farAreaM2.toFixed(2)} m²`
+      : `governing GFA ${governingValue.toFixed(2)} m² ÷ plot area ${farAreaM2.toFixed(2)} m²`,
     uses: parkingInGfa
       ? { governing: governingGfa, parking: parkingInGfa, permitted: permittedFar }
       : { governing: governingGfa, permitted: permittedFar },

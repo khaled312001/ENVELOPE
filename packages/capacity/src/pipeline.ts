@@ -70,7 +70,7 @@ import {
 import { AccessChoiceRefusedError, type AccessChoice } from './access.js';
 import { designateAccessible, designatePreferred, ENTRY_LEVEL_WORDS } from './accessible.js';
 import { CoreRefusedError, reconcileCore, solveCore, type CoreResult } from './core.js';
-import { solveEnvelope, type EnvelopeSolution, type StatementRef } from './envelope.js';
+import { solveEnvelope, type EnvelopeSolution, type StatedPlotArea, type StatementRef } from './envelope.js';
 import { planParkingLevel, type LevelPlan } from './level-plan.js';
 import { buildMassing, type MassingResult } from './massing.js';
 import { demandAtUnits, solveParking, traceUsableFraction, type UnitScheduleEntry } from './parking.js';
@@ -222,6 +222,22 @@ export interface RunInput {
    * edge; on an edge the sheet governs it halts the run in a sentence.
    */
   readonly typedSetbacks?: readonly { readonly edgeSeq: number; readonly metres: Decimal }[];
+  /**
+   * The plot areas the plot's own instruments print — its sheet's, a named
+   * brief's — each tied to the FAR rule it is the base of. Resolved at the
+   * composition root, where the sheet was read. See `StatedPlotArea`.
+   */
+  readonly statedPlotAreas?: readonly StatedPlotArea[];
+  /**
+   * FAR, GFA or storeys above ground the reader typed, for a plot no instrument
+   * on file speaks for. `USER_SET` by `actor`; on a limit the plot's own
+   * instrument states, a different figure halts the run in a sentence.
+   */
+  readonly typedLimits?: {
+    readonly far?: Decimal;
+    readonly gfaM2?: Decimal;
+    readonly maxStoreys?: number;
+  };
   readonly unitMix: {
     readonly source: 'USER_SET' | 'ASSUMED';
     readonly entries: readonly UnitTypeMix[];
@@ -588,6 +604,10 @@ export function runPipeline(input: RunInput): RunOutput {
             input.typedSetbacks.map((s) => [s.edgeSeq, { metres: s.metres, actor: input.actor }] as const),
           ),
         }
+      : {}),
+    ...(input.statedPlotAreas?.length ? { statedPlotAreas: input.statedPlotAreas } : {}),
+    ...(input.typedLimits && Object.values(input.typedLimits).some((v) => v !== undefined)
+      ? { typedLimits: { ...input.typedLimits, actor: input.actor } }
       : {}),
   });
 
@@ -1151,7 +1171,15 @@ export function runPipeline(input: RunInput): RunOutput {
   // way would satisfy INV-18 trivially and would make `FR-DEF-002 AC4`'s
   // one-click comparison show a spread of zero — which would quietly turn the
   // product's most important open question into a question that does not matter.
-  const grossPermittedGfa = farMaxOf(envelope).times(plotAreaOf(input.plot));
+  /*
+    BAND A'S BASE IS THE ENVELOPE'S, NOT `FAR × the traced outline`. Where the
+    plot's own instrument prints its plot area, its FAR is applied to that area
+    (and where it prints a GFA that governs, the GFA is the gross); with no
+    instrument it is the boundary as traced. Warsan 6211383 entered at 40 × 30 m
+    reported 4,200 m² against a sheet that prints 4,778.31 m². See `FarBasis`.
+  */
+  const farBasis = envelope.farBasis;
+  const grossPermittedGfa = farBasis.gross.value;
   const parkingAreaM2 = parking.requiredAreaM2.value;
   const availableGfaM2 =
     input.parkingInFar === 'COUNTS_TOWARD_FAR'
@@ -1165,9 +1193,10 @@ export function runPipeline(input: RunInput): RunOutput {
     parkingInFar: input.parkingInFar,
     parkingInFarTraced: treatmentTraced,
     parkingAreaM2,
-    farMax: farMaxOf(envelope),
+    farMax: farBasis.far.value,
     plotAreaM2: plotAreaOf(input.plot),
-    farRule: bandSource('far.max'),
+    farRule: farBasis.rule,
+    farBasis,
     towerPlate: envelope.towerPlateCap,
     floorAreaLevels,
     aboveGradeParking: aboveGrade,
@@ -1302,9 +1331,11 @@ export function runPipeline(input: RunInput): RunOutput {
     use === 'BASEMENT_PARKING' || use === 'PODIUM_PARKING';
   const gfaStatement = buildGfaStatement({
     tracer,
-    farMax: farMaxOf(envelope),
-    plotAreaM2: plotAreaOf(input.plot),
-    farRule: bandSource('far.max'),
+    farMax: farBasis.far.value,
+    // The area the FAR was applied to, so the table's "FAR × plot area" is band A's own.
+    plotAreaM2: farBasis.baseAreaM2,
+    ...(farBasis.rule ? { farRule: farBasis.rule } : {}),
+    allowedGfa: farBasis.gross,
     towerPlate: envelope.towerPlateCap,
     levels: capacity.levels,
     residentialLevelIds: building.levels
@@ -1364,11 +1395,6 @@ export function runPipeline(input: RunInput): RunOutput {
     building,
     gfaStatement,
   };
-}
-
-function farMaxOf(envelope: EnvelopeSolution): Decimal {
-  const v = envelope.resolutions.get('far.max')?.governing?.value;
-  return v && v.kind === 'scalar' ? v.value : new Decimal(0);
 }
 
 function plotAreaOf(plot: Plot): Decimal {
@@ -1465,6 +1491,19 @@ const PERTURBABLE: readonly Perturbable[] = [
               value: Decimal.min(new Decimal(1), input.saleableEfficiency.value.times(factor)),
             },
           },
+  },
+  {
+    /*
+      THE PLACEHOLDER FAR, MEASURED. It is ASSUMED only on a plot with no
+      instrument stating one, and moving it is moving a typed FAR — the input a
+      reader would use to replace it — so the register says how much of the
+      answer rests on a figure no instrument prints.
+    */
+    parameterId: 'envelope.far_max',
+    apply: (input, factor, base) => ({
+      ...input,
+      typedLimits: { ...input.typedLimits, far: base.envelope.farBasis.far.value.times(factor) },
+    }),
   },
   {
     parameterId: 'capacity.user_realism_discount',

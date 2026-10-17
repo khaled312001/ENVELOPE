@@ -232,8 +232,9 @@ describe('a project brief, named by the run', () => {
       expect(r.status, JSON.stringify(r.json)).toBe(201);
       expect(r.json['sheet'].briefBound).toMatchObject([{ parameterId: 'far.max', value: '5.05381' }]);
       expect(r.json['sheet'].briefBound[0].clause).toMatch(/^Developer brief, not an authority document/);
-      // 1,200 m² entered × 5.05381, not the placeholder's 5.00.
-      expect(r.json['capacity'].bandA.value).toBe('6064.572');
+      // The brief's own GFA, 8,796.46 m², on the plot area the brief prints — not 1,200 m²
+      // entered × 5.05381 (6,064.572, which it was), and not the placeholder's 5.00.
+      expect(r.json['capacity'].bandA.value).toBe('8796.46');
     } finally {
       await app.close();
     }

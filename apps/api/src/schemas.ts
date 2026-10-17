@@ -215,6 +215,21 @@ export const runRequest = z.object({
     .array(z.object({ edgeSeq: z.number().int().min(0).max(999), metres: decimalString }))
     .max(64)
     .optional(),
+  /**
+   * FAR, GFA (m²) and storeys above ground (the ground floor counted) typed by
+   * the actor for a plot with no instrument on file that states them. USER_SET.
+   * Each replaces a general (placeholder) rule; on a limit the plot's own sheet
+   * or named brief states, a different figure refuses the run (422, in a
+   * sentence). Optional and additive: absent, the run is as before.
+   */
+  typedLimits: z
+    .object({
+      far: decimalString.optional(),
+      gfaM2: decimalString.optional(),
+      maxStoreys: z.number().int().min(1).max(200).optional(),
+    })
+    .strict()
+    .optional(),
   unitMix: z
     .object({
       source: z.enum(['USER_SET', 'ASSUMED']),

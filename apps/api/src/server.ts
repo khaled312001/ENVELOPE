@@ -24,6 +24,7 @@ import {
   pendingApproval,
   type Plot,
   ringSpanOf,
+  type StatedLimits,
   toMm,
   toWire,
   type UnitTypeMix,
@@ -56,6 +57,7 @@ import {
   statementById,
   statementFor,
   StatementSubject,
+  type ProjectBrief,
   type RuleRecord,
 } from '@envelope/rules';
 import {
@@ -65,6 +67,7 @@ import {
   runPipeline,
   RunBlockedError,
   type RunInput,
+  type StatedPlotArea,
 } from '@envelope/capacity';
 import {
   fromJson,
@@ -959,7 +962,23 @@ export async function build(
       with the library first that was Table B.13 on a plot whose sheet beat it.
     */
     const runRules = [...instrumentRules, ...briefRules, ...rules];
-    const input = runInputFrom(body, plot, runRules, actor);
+    /*
+      BAND A ON THE AREA THE INSTRUMENT PRINTS. A sheet's FAR is a ratio of the
+      plot area the sheet states; multiplied by the outline as traced, Warsan
+      6211383 entered at 40 × 30 m reported 4,200 m² against the 4,778.31 m² its
+      sheet prints. The areas go to the engine tied to the FAR rule they belong
+      to, and are used only while that rule governs.
+    */
+    const statedPlotAreas = statedPlotAreasOf(
+      sheetBound ? stored?.limits : undefined,
+      instrumentRules,
+      briefRules,
+      briefRules.length > 0 ? briefFor(PROJECT_BRIEFS, plot.plotNumber) : undefined,
+    );
+    const input: RunInput = {
+      ...runInputFrom(body, plot, runRules, actor),
+      ...(statedPlotAreas.length > 0 ? { statedPlotAreas } : {}),
+    };
 
     // The baseline must be taken immediately before the run and read
     // immediately after, with no await between: the geometry counters are
@@ -1939,6 +1958,7 @@ function runInputFrom(
     ...(body.typedSetbacks?.length
       ? { typedSetbacks: body.typedSetbacks.map((s) => ({ edgeSeq: s.edgeSeq, metres: new Decimal(s.metres) })) }
       : {}),
+    ...typedLimitsOf(body),
     unitMix: {
       source: body.unitMix.source,
       entries: body.unitMix.entries.map(
@@ -1994,6 +2014,56 @@ function runInputFrom(
     ...(body.levels ? { levelSchedule: body.levels } : {}),
     ...levelPlanOf(body),
   };
+}
+
+/**
+ * The limits the actor typed for a plot with no instrument stating them, as
+ * Decimals. The engine records each USER_SET under the run's actor and refuses
+ * one that would replace the plot's own sheet.
+ */
+function typedLimitsOf(body: RunRequest): Pick<RunInput, 'typedLimits'> {
+  const t = body.typedLimits;
+  if (!t || (t.far === undefined && t.gfaM2 === undefined && t.maxStoreys === undefined)) return {};
+  return {
+    typedLimits: {
+      ...(t.far === undefined ? {} : { far: new Decimal(t.far) }),
+      ...(t.gfaM2 === undefined ? {} : { gfaM2: new Decimal(t.gfaM2) }),
+      ...(t.maxStoreys === undefined ? {} : { maxStoreys: t.maxStoreys }),
+    },
+  };
+}
+
+/**
+ * The plot areas the run's instruments print, each tied to the FAR rule it is
+ * the base of — the sheet's, and a named brief's. Read here, where the sheet and
+ * the brief were bound; the engine applies one only while its rule governs.
+ */
+function statedPlotAreasOf(
+  limits: StatedLimits | undefined,
+  instrumentRules: readonly RuleRecord[],
+  briefRules: readonly RuleRecord[],
+  brief: ProjectBrief | undefined,
+): readonly StatedPlotArea[] {
+  const out: StatedPlotArea[] = [];
+  const sheetFar = instrumentRules.find((r) => r.parameterId === 'far.max');
+  if (sheetFar && limits?.plotAreaM2) {
+    out.push({
+      farRuleId: sheetFar.ruleId,
+      areaM2: limits.plotAreaM2.value,
+      citation: limits.plotAreaM2.citation,
+      ...(limits.gfaM2 ? { gfa: { valueM2: limits.gfaM2.value, citation: limits.gfaM2.citation } } : {}),
+    });
+  }
+  const briefFar = briefRules.find((r) => r.parameterId === 'far.max');
+  if (briefFar && brief) {
+    out.push({
+      farRuleId: briefFar.ruleId,
+      areaM2: new Decimal(brief.plotAreaM2.value),
+      citation: brief.plotAreaM2.citation,
+      gfa: { valueM2: new Decimal(brief.gfaM2.value), citation: brief.gfaM2.citation },
+    });
+  }
+  return out;
 }
 
 /** What the actor stated about the parking level: the entrance, and the arrangement picked. */

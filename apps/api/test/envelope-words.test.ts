@@ -60,6 +60,10 @@ describe('the envelope’s new sentences, in both languages', () => {
     inArabic(`set aside for this run and not checked: ${TYPED_LIMIT_REASON}`);
   });
 
+  it('says the code’s metres per floor, traced apart from a typed storey count', () => {
+    inArabic('height per stated floor (DBC B.4.2.2 ¶6, ground floor counted)');
+  });
+
   it('names the new register rows', () => {
     for (const label of ['floor area ratio', 'boundary held to its neighbour’s setback line', 'level count typed by the reader']) {
       inArabic(label);

@@ -19,6 +19,7 @@
  */
 
 import {
+  asMm,
   type BindingConstraint,
   type BuildableEnvelope,
   type Citation,
@@ -34,11 +35,14 @@ import {
 } from '@envelope/core';
 import {
   arcFromBulge,
+  intersect,
   offsetPerEdge,
   scaleToArea,
+  signedArea2Shoelace,
   verifiedArea,
   type BoundaryArc,
   type EdgeInset,
+  type Pt,
   type Ring,
 } from '@envelope/geometry';
 import {
@@ -189,7 +193,12 @@ export interface HeldBoundary {
   /** The neighbour whose setback line it is held to, and that line's setback. */
   readonly heldToSeq: number;
   readonly heldAtM: Decimal;
-  /** An upper bound, not a measure: the boundary's length × the difference in setback. */
+  /**
+   * An upper bound, not a measure of the loss: the plot within the neighbour's
+   * setback of its line, past its end, intersected exactly and rounded up. Not
+   * `length × difference`, which undershoots a boundary turning away from its
+   * neighbour (see `beyondEndBandMm2`).
+   */
   readonly costAtMostM2: Decimal;
 }
 
@@ -1635,7 +1644,34 @@ export function solveEnvelope(input: EnvelopeInput): EnvelopeSolution {
           uses: { stated: statedLevelsT, f2f: floorToFloorT },
           unit: 'm',
         })
-      : heightIsTheCount && statedLevelsT
+      : heightIsTheCount && statedLevelsT && typedCount !== undefined
+        ? /*
+            A TYPED COUNT MAKES THE HEIGHT THE READER'S, NOT THE CODE'S. B.4.2.2 ¶6
+            gives the 6 m a floor; the count is what a named person typed.
+            `tracer.derived` stamps DERIVED whatever it uses, so the branch below
+            reported 48 m as set by a clause on a count nobody's instrument
+            prints. The clause's part is traced on its own — DERIVED, cited — and
+            the height is computed from it and the typed count, so it takes the
+            count's USER_SET and its derivation still reaches ¶6.
+          */
+          tracer.computed('envelope.height_ceiling_m', heightCeiling, {
+            formula:
+              `stated floor count ${statedLevelsT.value} × ${heightCeiling.div(statedLevelsT.value).toString()} m ` +
+              'per floor (DBC B.4.2.2 ¶6, ground floor counted)',
+            uses: {
+              stated: statedLevelsT,
+              perFloor: tracer.derived('envelope.height_per_stated_floor_m', heightCeiling.div(statedLevelsT.value), {
+                rule: {
+                  ruleId: heightRes.governing!.rule.ruleId,
+                  citation: heightRes.governing!.rule.citation,
+                },
+                formula: 'height per stated floor (DBC B.4.2.2 ¶6, ground floor counted)',
+                unit: 'm',
+              }),
+            },
+            unit: 'm',
+          })
+        : heightIsTheCount && statedLevelsT
         ? tracer.derived('envelope.height_ceiling_m', heightCeiling, {
             rule: {
               ruleId: heightRes.governing!.rule.ruleId,
@@ -2228,16 +2264,65 @@ function heldBoundariesOf(plot: Plot, ringEdges: readonly number[], insets: read
     if (neighbour === undefined) continue;
     const at = insetOf.get(neighbour)!;
     const lengthMm = lengthMmOf(h);
+    /*
+      THE BOUND IS MEASURED, NOT ESTIMATED. "Length × the difference" is the
+      strip along the short boundary only while the two run exactly in line. A
+      6 m leg turning 2.9° away from a 40 m frontage, at 0 m beside 3 m, gives
+      up 18.90 m² against a line that steps square at the corner, and that
+      product said "at most 18.03". What can be lost is only ever plot that the
+      carried line excludes beyond the end of the boundary it belongs to, since
+      before that end the boundary's own setback excludes it under every
+      reading. So the bound is that region's area, intersected with the plot
+      exactly, for each neighbour set back further: never below the loss, and
+      equal to the strip on a jog that runs truly in line.
+    */
+    const boundMm2 = [(h - 1 + n) % n, (h + 1) % n]
+      .filter((k) => (insetOf.get(k) ?? -1) > own)
+      .reduce((sum, k) => sum + beyondEndBandMm2(ring, k, k === (h + 1) % n, insetOf.get(k)!), 0);
     out.push({
       seq,
       lengthM: lengthMm.div(1000),
       ownSetbackM: new Decimal(own).div(1000),
       heldToSeq: edgeOfRingIndex(plot, neighbour) ?? neighbour,
       heldAtM: new Decimal(at).div(1000),
-      costAtMostM2: lengthMm.times(at - own).div(1_000_000).toDecimalPlaces(2, Decimal.ROUND_UP),
+      costAtMostM2: new Decimal(boundMm2).div(1_000_000).toDecimalPlaces(2, Decimal.ROUND_UP),
     });
   }
   return out;
+}
+
+/**
+ * The plot area closer than `atMm` to ring edge `k`'s line (on either side of
+ * it), past the end of `k` it shares with the held boundary. `sharedIsStart`
+ * says which end: the held boundary follows `k` in the ring when false.
+ *
+ * The rectangle is widened by a few millimetres on every side it is rounded on,
+ * so integer rounding can only enlarge the region — an upper bound rounded the
+ * other way would not be one.
+ */
+function beyondEndBandMm2(ring: Ring, k: number, sharedIsStart: boolean, atMm: number): number {
+  const n = ring.length;
+  const p = ring[k]!;
+  const q = ring[(k + 1) % n]!;
+  const len = Math.hypot(q.x - p.x, q.y - p.y);
+  if (len === 0) return 0;
+  // Along `k`, pointing past its shared end; and the plot's inward normal of `k`.
+  const corner = sharedIsStart ? p : q;
+  const ux = (sharedIsStart ? p.x - q.x : q.x - p.x) / len;
+  const uy = (sharedIsStart ? p.y - q.y : q.y - p.y) / len;
+  const ccw = signedArea2Shoelace(ring) > 0;
+  const nx = ccw ? -(q.y - p.y) / len : (q.y - p.y) / len;
+  const ny = ccw ? (q.x - p.x) / len : -(q.x - p.x) / len;
+  const xs = ring.map((v) => v.x);
+  const ys = ring.map((v) => v.y);
+  const far = 2 * (Math.max(...xs) - Math.min(...xs) + Math.max(...ys) - Math.min(...ys)) + 10;
+  const slack = 3;
+  const at = (s: number, t: number): Pt => ({
+    x: asMm(Math.round(corner.x + ux * s + nx * t)),
+    y: asMm(Math.round(corner.y + uy * s + ny * t)),
+  });
+  const band: Ring = [at(-slack, -far), at(far, -far), at(far, atMm + slack), at(-slack, atMm + slack)];
+  return intersect(ring, band).reduce((sum, r) => sum + Math.abs(signedArea2Shoelace(r)) / 2, 0);
 }
 
 export { isNotApplicable, Operator };

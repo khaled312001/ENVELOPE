@@ -287,8 +287,12 @@ describe('a boundary held to its neighbour’s setback line', () => {
     expect(h.ownSetbackM.toString()).toBe('0');
     expect(h.heldAtM.toString()).toBe('3');
     expect(h.lengthM.toFixed(2)).toBe('0.42');
-    // 0.424 m × 3 m, rounded up: an upper bound is never rounded down.
-    expect(h.costAtMostM2.toFixed(2)).toBe('1.28');
+    /*
+      The plot within 3 m of boundary 0's line past its end, measured: 0.424 m ×
+      3 m is the in-line strip, and the rest is the road boundary standing a
+      little off square. An upper bound, rounded up — never down.
+    */
+    expect(h.costAtMostM2.toFixed(2)).toBe('1.54');
     expect(out.envelope.droppedBoundaries).toContain(1);
 
     // The footprint rests on it, so it is not DERIVED; the register lists it with the sentence.
@@ -301,8 +305,29 @@ describe('a boundary held to its neighbour’s setback line', () => {
       'Boundary 1 (0.42 m, set back 0 m) is held to the setback line of boundary 0 (3 m), which it almost ' +
         'continues. Where two such lines meet — a step at the corner, or the larger setback wrapping round it — ' +
         'is a drafting convention not settled for this engine, so the one reading that needs no answer is taken: ' +
-        'every setback is still met, and at most 1.28 m² of tower footprint is given up.',
+        'every setback is still met, and at most 1.54 m² of tower footprint is given up.',
     );
+  });
+
+  it('bounds what a leg turning away from its neighbour gives up, which length × difference does not', () => {
+    /*
+      A 40 m frontage at 3 m, then a 6.01 m leg turning 2.9° away from it at 0 m,
+      then a side at 0 m. Held to the frontage's line the footprint is 43 × 24 =
+      1,032 m². Stepped square at the corner instead, the leg's own line would
+      add 6 × 3 + ½ × 6 × 0.3 = 18.90 m². "Length × difference" said at most
+      18.03 — a bound below the loss it bounds.
+    */
+    const leg = makePlot(
+      [pt(0, 0), pt(40, 0), pt(46, -0.3), pt(46, 30), pt(0, 30)],
+      ['ROAD', 'ADJACENT_PLOT', 'ADJACENT_PLOT', 'ADJACENT_PLOT', 'ADJACENT_PLOT'],
+      'LEG',
+    );
+    const out = runPipeline(baseInput(leg, seedRules(), { typedSetbacks: typed([3, 0, 0, 3, 3]) }));
+    expect(out.envelope.setbackPermittedFootprint.value.toString()).toBe('1032');
+    const h = out.envelope.heldToNeighbourLine.find((x) => x.seq === 1);
+    expect(h?.lengthM.times(h.heldAtM.minus(h.ownSetbackM)).toFixed(2)).toBe('18.02');
+    expect(h?.costAtMostM2.gte('18.90')).toBe(true);
+    expect(h?.costAtMostM2.lt('19.00')).toBe(true);
   });
 
   it('holds nothing where a boundary is dropped for free', () => {
@@ -364,7 +389,18 @@ describe('a plot with no sheet', () => {
     const out = runPipeline(baseInput(plot, seedRules(), { typedLimits: { maxStoreys: 8 } }));
     expect(out.envelope.maxLevelsByHeight.value).toBe(8);
     expect(out.envelope.heightCeilingM.value.toString()).toBe('48');
-    expect(out.envelope.heightCeilingM.provenanceClass).toBe(ProvenanceClass.DERIVED);
+    /*
+      The 6 m a floor is the code's; the 8 is the reader's. A height multiplied
+      out of a typed count is USER_SET — DERIVED would say a clause set a figure
+      a person typed — and its derivation still reaches B.4.2.2 ¶6 through the
+      per-floor figure, so the clause is cited, not lost.
+    */
+    expect(out.envelope.heightCeilingM.provenanceClass).toBe(ProvenanceClass.USER_SET);
+    const perFloor = out.graph.nodes.find(
+      (n) => n.parameterId === 'envelope.height_per_stated_floor_m' && n.kind === 'VALUE',
+    );
+    expect(perFloor?.provenanceClass).toBe(ProvenanceClass.DERIVED);
+    expect(perFloor?.value).toBe('6');
     const levels = out.envelope.bindingConstraints.find((b) => b.dimension === 'levels');
     expect(levels?.label).toBe('level count typed by the reader');
     expect(levels?.ruleId).toBe('USER_SET');

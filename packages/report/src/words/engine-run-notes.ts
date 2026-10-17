@@ -252,6 +252,7 @@ const PARAMETER: Readonly<Record<string, Said>> = {
   'parking.preferred_required': { en: 'Preferred bays required', ar: 'المواقف المفضلة المطلوبة' },
   'envelope.far_max': { en: 'Floor area ratio', ar: 'معامل البناء' },
   'envelope.tower_plate_max_m2': { en: 'Tower plate cap', ar: 'الحد الأعلى لمسطح البرج' },
+  'envelope.height_per_stated_floor_m': { en: 'Height per stated floor', ar: 'الارتفاع لكل دور محدد' },
 };
 
 /* Values the engine writes as words. */
@@ -921,4 +922,12 @@ export const RUN_READERS: readonly Reader[] = [
         }
       : null;
   },
+  /* ── capacity `envelope.ts`: the code's metres per floor, traced apart from a typed storey count ── */
+  (t) =>
+    t === 'height per stated floor (DBC B.4.2.2 ¶6, ground floor counted)'
+      ? {
+          en: 'Height per stated floor (DBC B.4.2.2, ground floor counted)',
+          ar: 'الارتفاع لكل دور محدد (كود دبي B.4.2.2، مع احتساب الدور الأرضي)',
+        }
+      : null,
 ];

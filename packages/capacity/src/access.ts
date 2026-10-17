@@ -309,6 +309,24 @@ function isJunction(classification: EdgeClassification | undefined): boolean {
   return classification === EdgeClassification.ROAD || classification === EdgeClassification.OTHER;
 }
 
+/*
+  WHY A CORNER IS READ AS A JUNCTION, said beside every refusal it causes. On
+  plot 6468096 the corner where the 18.30 m road meets the 12.00 m road has no
+  chamfer, and whether such a corner is a "local road intersection" under
+  B.7.2.1 ¶4 is the client's question to answer, not this engine's. The reading
+  is kept — two roads meeting at a corner is read as a junction, the side that
+  keeps the entrance farther from the traffic — and the refusal says it is a
+  reading, so it is not taken for a settled one.
+*/
+export function junctionReading(vertex: string, beyond: PlotEdge): string {
+  return beyond.classification === EdgeClassification.OTHER
+    ? `${vertex} is read as a junction because boundary ${beyond.seq} beyond it is classified OTHER and may be a ` +
+        'road; classifying it settles this.'
+    : `${vertex} is read as a junction because boundary ${beyond.seq} beyond it is a road too. Whether a corner ` +
+        'where two roads meet with no chamfer is a junction under B.7.2.1 is a question put to the client; until ' +
+        'it is answered, this reading stands.';
+}
+
 /** Where on `edge` an opening may stand, by B.7.2.1 ¶4. */
 function windowOf(
   edge: PlotEdge,
@@ -438,13 +456,16 @@ function placeChoice(
       const atStart = centre.lt(lo);
       const junction = atStart ? w.junctionAt.start : w.junctionAt.end;
       const vertex = atStart ? `P${edge.seq}` : `P${(edge.seq + 1) % n}`;
+      const i = edges.indexOf(edge);
+      const beyond = edges[atStart ? (i - 1 + n) % n : (i + 1) % n];
       throw new AccessChoiceRefusedError(
         `The ${what} on ${where} is centred ${centre.toFixed(2)} m from P${edge.seq}. A ` +
           `${gapM.toString()} m opening on this boundary must be centred between ` +
           `${lo.toFixed(2)} m and ${hi.toFixed(2)} m from P${edge.seq}` +
           (junction
             ? `: B.7.2.1 keeps it ${JUNCTION_CLEARANCE_M} m clear of the junction at ${vertex}, ` +
-              'measured from the plot corner.'
+              'measured from the plot corner.' +
+              (beyond ? ` ${junctionReading(vertex, beyond)}` : '')
             : ', so that all of it is on the boundary.'),
       );
     }

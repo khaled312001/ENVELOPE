@@ -232,3 +232,67 @@ describe('the height, when no floor count is stated', () => {
     expect(engineNote(FORMULA, 'ar')).toBe('11 دور محدد × 6 م للدور (كود دبي B.4.2.2، مع احتساب الدور الأرضي)');
   });
 });
+
+/*
+  The ramps from the street (17 Oct 2026). Every sentence below is the engine's
+  own, copied from a run; the Arabic must keep the figures that make a refusal
+  arguable, and no English clause may survive into it.
+*/
+describe('the ramps from the street, and the entrance near a corner', () => {
+  const english = /[A-Za-z]{4,} [A-Za-z]{4,} [A-Za-z]{4,}/;
+  const NOT_PLACED =
+    'The ramps from the street are not placed: neither placement fits. Straight in from the entrance on boundary 0, ' +
+    'the ramp down to B1 ends where no drive aisle on B1 lies straight ahead of it 6.00 m wide, so a car leaving it ' +
+    'has nowhere to go. Along boundary 0 from the entrance, the ramp down to B1 ends where no drive aisle on B1 lies ' +
+    'straight ahead of it 6.00 m wide, so a car leaving it has nowhere to go. The bays they would take on the levels ' +
+    'they reach are still counted.';
+  const PLACED =
+    "The ramps from the street stand on the ground floor, straight in from the entrance, and take 437.65 m² of it; how that bears on the ground floor's floor area is NOT ASSESSED. They are straight: a curved ramp from the street is not placed, and the gate level above the road (B.4.2.1) is not added to their climb.";
+  const SHORT =
+    'Straight in from the entrance on boundary 0, the two ramps, down to B1 and up to P1 side by side, need 6.00 m of ' +
+    'straight approach (B.7.2.3.3 ¶4) and 30.27 m of ramp (Tables B.9 and B.10), 36.27 m in from the boundary, and the ' +
+    'ground floor is 34.40 m deep there.';
+  const CORE =
+    "The drive from the entrance on boundary 0 runs through the core before it reaches a drive aisle. Where the core stands is assumed: centred on the tower plate, in the plate's own proportions. An opening on boundary 0 centred between 3.00 m and 32.00 m from P0, or between 48.00 m and 77.00 m from P0 would clear it. Place the entrance elsewhere on the boundary.";
+  const JUNCTION =
+    'The vehicle entrance on boundary 0 (P0 → P1) is centred 70.00 m from P0. A 6 m opening on this boundary must be ' +
+    'centred between 3.00 m and 62.00 m from P0: B.7.2.1 keeps it 15 m clear of the junction at P1, measured from the ' +
+    'plot corner. P1 is read as a junction because boundary 1 beyond it is a road too. Whether a corner where two ' +
+    'roads meet with no chamfer is a junction under B.7.2.1 is a question put to the client; until it is answered, ' +
+    'this reading stands.';
+
+  it('says why neither placement fits, each with its figure', () => {
+    const ar = engineNote(NOT_PLACED, 'ar') ?? '';
+    expect(ar).toContain('لم توضع منحدرات الشارع');
+    expect(ar.match(/6\.00 m/g)).toHaveLength(2);
+    expect(ar).not.toMatch(english);
+  });
+
+  it('says where they stand and what of the ground floor they take', () => {
+    const ar = engineNote(PLACED, 'ar') ?? '';
+    expect(ar).toContain('437.65 m²');
+    expect(ar).toContain('مستقيمة من المدخل');
+    expect(ar).not.toMatch(english);
+  });
+
+  it('keeps every figure of a placement too long for the ground floor', () => {
+    const ar = engineNote(SHORT, 'ar') ?? '';
+    for (const f of ['6.00 m', '30.27 m', '36.27 m', '34.40 m']) expect(ar).toContain(f);
+    expect(ar).not.toMatch(english);
+  });
+
+  it('names the core, its assumed position and the clear range when a drive runs into it', () => {
+    const ar = engineNote(CORE, 'ar') ?? '';
+    expect(ar).toContain('النواة');
+    expect(ar).toContain('في وسط مسطح البرج');
+    expect(ar).toContain('بين 3.00 m و32.00 m من P0');
+    expect(ar).not.toMatch(english);
+  });
+
+  it('carries the junction reading, and that it is the client’s question, into both languages', () => {
+    expect(engineNote(JUNCTION, 'en')).toMatch(/question for the client/);
+    const ar = engineNote(JUNCTION, 'ar') ?? '';
+    expect(ar).toContain('سؤال موجه للعميل');
+    expect(ar).toContain('P1');
+  });
+});

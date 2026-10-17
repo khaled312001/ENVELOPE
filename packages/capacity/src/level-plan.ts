@@ -48,6 +48,7 @@ import type { AccessiblePlan } from './accessible.js';
 import { deadEnds, type DeadEnd } from './dead-ends.js';
 import type { GradePlan } from './grade.js';
 import type { RampHeadroom } from './ramp-rules.js';
+import type { StreetRampPlan } from './street-ramp.js';
 import { findTurns, type Pt2 } from './turning.js';
 import {
   layoutParkingLevel,
@@ -216,6 +217,12 @@ export interface LevelPlan {
   readonly accessible?: AccessiblePlan;
   /** The shared layout's dead-end driveways, B.7.2.3.3 ¶8; see `dead-ends.ts`. */
   readonly deadEnds: readonly DeadEnd[];
+  /**
+   * The ramps from the street down to B1 and up to P1, where the ground floor does
+   * not park: placed from the entrance and paid for in bays on the levels they
+   * reach. Set by the pipeline, which knows the schedule; see `street-ramp.ts`.
+   */
+  readonly streetRamps?: StreetRampPlan;
 }
 
 /** The turns of one level's aisle network, checked; see `turning.ts`. */

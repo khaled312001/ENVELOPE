@@ -697,6 +697,57 @@ function accessLegend(model: BuildingModel): LegendEntry[] {
   ];
 }
 
+/*
+  THE RAMPS FROM THE STREET, where the ground floor does not park. Each is drawn
+  where it stands — on the site plan, which is the ground floor, and on the sheet
+  of the parking level it reaches, whose slab it is cut through — with the level
+  landing before it (DBC B.7.2.3.3 ¶4) and an arrow the way a car arriving from
+  the street drives. They are not the strip's ramp, and the strip's words never
+  name them: `ModelRamp.street` is what tells them apart.
+*/
+function streetRampItems(model: BuildingModel, s: number, levelId: string | null): ModelItem[] {
+  const items: ModelItem[] = [];
+  for (const ramp of model.ramps) {
+    if (!ramp.street) continue;
+    if (levelId !== null && ramp.fromLevelId !== levelId && ramp.toLevelId !== levelId) continue;
+    const source = sourceOf(ramp.gradientPct);
+    items.push(shape(Role.AISLE, ramp.street.landing, true, { name: `Level landing before ${ramp.id}, DBC B.7.2.3.3` }));
+    items.push(shape(Role.RAMP, ramp.outline, true, { source, name: ramp.label }));
+    const footMid = midpointOf(ramp.foot[0], ramp.foot[1]);
+    const headMid = midpointOf(ramp.head[0], ramp.head[1]);
+    // A car from the street starts at grade: down a ramp to a basement it drives
+    // from the head to the foot, up one to the podium from the foot to the head.
+    const down = ramp.fromElevationMm < 0;
+    const along = down ? angleOf(headMid, footMid) : angleOf(footMid, headMid);
+    const run = lengthOf(footMid, headMid);
+    const c = centroidOf(ramp.outline);
+    items.push({
+      kind: 'symbol',
+      role: Role.RAMP_ARROW,
+      symbol: SymbolName.ARROW,
+      at: c,
+      rotationDeg: round2(along),
+      scale: Math.round(run * 0.5),
+    });
+    const across = { x: -Math.sin((along * Math.PI) / 180), y: Math.cos((along * Math.PI) / 180) };
+    const head = 0.09 * Math.round(run * 0.5);
+    items.push(
+      withRule(
+        label(Role.RAMP, offsetPoint(c, across, -Math.max(3 * s, head + 1.9 * s)), ramp.label, NOTE, along, 'middle', source),
+        { ...RAMP_WORDS, within: ramp.outline, withhold: false },
+      ),
+    );
+  }
+  return items;
+}
+
+/** The key row for a ramp from the street, on a sheet that draws one and keys its arrow nowhere else. */
+function streetRampLegend(items: readonly ModelItem[], legend: readonly LegendEntry[]): LegendEntry[] {
+  const drawn = items.some((i) => i.kind === 'symbol' && i.role === Role.RAMP_ARROW);
+  if (!drawn || legend.some((e) => e.role === Role.RAMP_ARROW && e.symbol === SymbolName.ARROW)) return [];
+  return [{ role: Role.RAMP_ARROW, symbol: SymbolName.ARROW, label: 'Ramp from the street, direction of travel' }];
+}
+
 // ---------------------------------------------------------------------------
 // A-001 Site plan
 // ---------------------------------------------------------------------------
@@ -724,6 +775,7 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
     items.push(shape(Role.TOWER, tower.outline, true, { source: tower.outlineSource, name: 'Tower plate' }));
   }
   items.push(...accessItems(model, s, dimensionReachMm(model, s) + NOTE));
+  items.push(...streetRampItems(model, s, null));
 
   for (const section of model.sections) {
     const [a, b] = section.line;
@@ -755,6 +807,7 @@ function sitePlan(model: BuildingModel, meta: SheetMeta): Sheet {
     ...accessLegend(model),
     ...(model.sections.length > 0 ? [{ role: Role.CUT_LINE, label: 'Section cut line' }] : []),
   ];
+  legend.push(...streetRampLegend(items, legend));
 
   return {
     id: 'site',
@@ -960,8 +1013,9 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
   }
 
   // --- the ramp, and which way it goes from here -------------------------------------
-  const up = model.ramps.find((r) => r.fromLevelId === level.id);
-  const down = model.ramps.find((r) => r.toLevelId === level.id);
+  const up = model.ramps.find((r) => !r.street && r.fromLevelId === level.id);
+  const down = model.ramps.find((r) => !r.street && r.toLevelId === level.id);
+  items.push(...streetRampItems(model, s, level.id));
   if (parking.rampStrip) {
     const ramp = up ?? down;
     items.push(
@@ -1322,6 +1376,7 @@ function parkingSheet(model: BuildingModel, level: ModelLevel, meta: SheetMeta, 
       if (entry.symbol !== undefined && !keyed.has(entry.symbol)) legend.push(entry);
     }
   }
+  legend.push(...streetRampLegend(items, legend));
   /*
     THE MODULE, DIMENSIONED ACROSS ONE AISLE: bay, aisle, bay. It is the figure
     an architect checks first and the one the client's own drawings carry

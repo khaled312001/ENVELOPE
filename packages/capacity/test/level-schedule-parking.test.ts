@@ -74,14 +74,16 @@ describe('a ground floor the schedule does not give to parking', () => {
     expect(drawn).toBe(Number(out.building.drawnBays.value));
   });
 
-  it('draws no ramp across the ground floor, and says the two street ramps are not modelled', () => {
+  it('draws no ramp across the ground floor, and says where the two street ramps stand or why they do not', () => {
     for (const r of out.building.ramps) {
       expect(r.toElevationMm - r.fromElevationMm).toBe(out.building.levels[0]!.heightMm);
     }
     expect(out.building.ramps.some((r) => r.fromLevelId === 'B1' && r.toLevelId === 'P1')).toBe(false);
+    // Since 17 Oct 2026 `street-ramp.ts` tries both from the entrance; on this
+    // coverage-capped podium neither fits, and the run says so in figures.
     const said = out.building.notModelled.join(' ');
-    expect(said).toMatch(/The ramp from the street down to the first basement/);
-    expect(said).toMatch(/The ramp from the street up to the first podium parking level/);
+    expect(said).toMatch(/The ramps from the street are not placed: neither placement fits\./);
+    expect(said).toMatch(/the two ramps, down to B1 and up to P1 side by side,|the ramp down to B1/);
   });
 
   it('says where the parking is in words that match the stack', () => {
@@ -119,8 +121,9 @@ describe('a ground floor that does not park, with no basement', () => {
     const p2 = out.building.levels.find((l) => l.id === 'P2')!.parking!;
     expect(p1.bays.some((b) => b.accessible)).toBe(true);
     expect(p2.bays.some((b) => b.accessible)).toBe(false);
-    expect(out.building.notModelled.join(' ')).toMatch(/The ramp from the street up to the first podium parking level/);
-    expect(out.building.notModelled.join(' ')).not.toMatch(/street down to the first basement/);
+    const said = out.building.notModelled.join(' ');
+    expect(said).toMatch(/The ramps from the street (are not placed|stand on the ground floor)/);
+    expect(said).not.toMatch(/ramp down to B1|street down to the first basement/);
   });
 
   it('says a one-level answer is the ground floor, not "the ground floor and the lowest 0"', () => {

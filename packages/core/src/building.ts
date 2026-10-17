@@ -349,6 +349,15 @@ export interface ModelRamp {
   readonly toElevationMm: Mm;
   readonly gradientPct: TracedWire;
   readonly label: string;
+  /**
+   * Present on a ramp from the street, where the ground floor does not park: it
+   * starts at grade from the entrance, after the landing — the straight approach
+   * DBC B.7.2.3.3 ¶4 asks before the barrier. It does not stand in the strip the
+   * other ramps share, so a renderer drawing that strip's ramp must not take this
+   * one for it. Absent on every ramp between two parking levels, and on runs
+   * stored before 17 Oct 2026.
+   */
+  readonly street?: { readonly landing: ModelRing };
 }
 
 /** The words the client writes along his own boundaries, keyed by classification. */

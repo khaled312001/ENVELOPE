@@ -317,14 +317,20 @@ function isJunction(classification: EdgeClassification | undefined): boolean {
   is kept — two roads meeting at a corner is read as a junction, the side that
   keeps the entrance farther from the traffic — and the refusal says it is a
   reading, so it is not taken for a settled one.
+
+  CONDITIONAL, BECAUSE THE ENGINE CANNOT TELL. A chamfer is itself a ROAD
+  boundary, so "boundary j beyond it is a road" is also what a frontage meeting
+  its chamfer looks like — the plainest junction B.7.2.1 measures from. Nothing
+  on a `PlotEdge` says which, and guessing from lengths would be inventing an
+  attribute. So the question is put as a condition on the corner, true either way.
 */
 export function junctionReading(vertex: string, beyond: PlotEdge): string {
   return beyond.classification === EdgeClassification.OTHER
     ? `${vertex} is read as a junction because boundary ${beyond.seq} beyond it is classified OTHER and may be a ` +
         'road; classifying it settles this.'
-    : `${vertex} is read as a junction because boundary ${beyond.seq} beyond it is a road too. Whether a corner ` +
-        'where two roads meet with no chamfer is a junction under B.7.2.1 is a question put to the client; until ' +
-        'it is answered, this reading stands.';
+    : `${vertex} is read as a junction because boundary ${beyond.seq} beyond it is a road too. If ${vertex} is a ` +
+        'corner where two roads meet with no chamfer, whether that is a junction under B.7.2.1 is a question put ' +
+        'to the client; until it is answered, this reading stands.';
 }
 
 /** Where on `edge` an opening may stand, by B.7.2.1 ¶4. */

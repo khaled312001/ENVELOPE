@@ -280,8 +280,31 @@ describe('an entrance near a corner between two roads', () => {
       });
     expect(place).toThrow(/B\.7\.2\.1 keeps it 15 m clear of the junction at P1, measured from the plot corner\./);
     expect(place).toThrow(
-      /P1 is read as a junction because boundary 1 beyond it is a road too\. Whether a corner where two roads meet with no chamfer is a junction under B\.7\.2\.1 is a question put to the client; until it is answered, this reading stands\.$/,
+      /P1 is read as a junction because boundary 1 beyond it is a road too\. If P1 is a corner where two roads meet with no chamfer, whether that is a junction under B\.7\.2\.1 is a question put to the client; until it is answered, this reading stands\.$/,
     );
+  });
+
+  /*
+    A chamfer is a ROAD boundary too, so a frontage meeting its own chamfer is
+    read exactly as above — and there the junction is the plainest case the
+    clause measures from. The sentence must stay true at such a corner: it may
+    put the unchamfered case as a question, never call this corner one.
+  */
+  it('stays true at a corner cut by a chamfer, which is also a road boundary', () => {
+    const ring = [pt(0, 0), pt(75, 0), pt(80, 5), pt(80, 40), pt(0, 40)];
+    const base = plotOf(ring);
+    const edges = base.edges.map((e) =>
+      e.seq === 1 || e.seq === 2 ? { ...e, classification: EdgeClassification.ROAD } : e,
+    );
+    const place = () =>
+      placeVehicleAccess({
+        tracer: new Tracer(new ProvenanceGraph()),
+        plot: { ...base, edges },
+        edges,
+        chosen: { entry: { edgeSeq: 0, centreOffsetM: new Decimal('70') }, actor: { id: 'u-1', name: 'Eng. Mohamed' } },
+      });
+    expect(place).toThrow(/If P1 is a corner where two roads meet with no chamfer, whether that is a junction/);
+    expect(place).not.toThrow(/Whether a corner where two roads meet with no chamfer is a junction/);
   });
 });
 

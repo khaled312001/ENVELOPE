@@ -257,9 +257,9 @@ describe('the ramps from the street, and the entrance near a corner', () => {
   const JUNCTION =
     'The vehicle entrance on boundary 0 (P0 → P1) is centred 70.00 m from P0. A 6 m opening on this boundary must be ' +
     'centred between 3.00 m and 62.00 m from P0: B.7.2.1 keeps it 15 m clear of the junction at P1, measured from the ' +
-    'plot corner. P1 is read as a junction because boundary 1 beyond it is a road too. Whether a corner where two ' +
-    'roads meet with no chamfer is a junction under B.7.2.1 is a question put to the client; until it is answered, ' +
-    'this reading stands.';
+    'plot corner. P1 is read as a junction because boundary 1 beyond it is a road too. If P1 is a corner where two ' +
+    'roads meet with no chamfer, whether that is a junction under B.7.2.1 is a question put to the client; until it ' +
+    'is answered, this reading stands.';
 
   it('says why neither placement fits, each with its figure', () => {
     const ar = engineNote(NOT_PLACED, 'ar') ?? '';
@@ -293,6 +293,8 @@ describe('the ramps from the street, and the entrance near a corner', () => {
     expect(engineNote(JUNCTION, 'en')).toMatch(/question for the client/);
     const ar = engineNote(JUNCTION, 'ar') ?? '';
     expect(ar).toContain('سؤال موجه للعميل');
+    // A condition on the corner, as the engine says it — never a claim that this corner has no chamfer.
+    expect(ar).toContain('وإن كانت زاوية يلتقي فيها طريقان بلا شطفة');
     expect(ar).toContain('P1');
   });
 });

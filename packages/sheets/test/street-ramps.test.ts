@@ -71,6 +71,27 @@ describe('the ramps from the street, drawn', () => {
     expect(streetShapes(level('P2'))).toEqual([]);
   });
 
+  /*
+    THE LANDING WAS DRAWN ON B1 AND P1, over bays. It is the level approach at
+    grade; on the parking sheets its outline lay in aisle ink across bays the
+    layout had rightly kept, which reads as a drive through parked cars.
+  */
+  it('draws the landing on the site plan only, once, and on no bay', () => {
+    const landing = (sheet: Sheet): ShapeItem[] =>
+      sheet.items.filter((i): i is ShapeItem => i.kind === 'shape' && /^Level landing before/.test(i.name ?? ''));
+    expect(landing(sheets.find((s) => s.kind === 'SITE')!)).toHaveLength(1);
+    for (const sheet of sheets.filter((s) => s.levelId !== null)) expect(landing(sheet), sheet.number).toEqual([]);
+  });
+
+  it('says where each goes and its gradient on two lines that fit inside it, as the strip’s ramp does', () => {
+    const level = (id: string) => sheets.find((s) => s.levelId === id)!;
+    expect(texts(level('B1'))).toContain('FROM STREET DOWN TO B1');
+    expect(texts(level('P1'))).toContain('FROM STREET UP TO P1');
+    expect(texts(level('B1'))).toContain('RAMP 12% - 6% TRANSITIONS');
+    // The whole label, tables cited, stays on the outline a click opens.
+    expect(streetShapes(level('B1'))[0]!.name).toMatch(/\(DBC TABLES B\.9, B\.10\)$/);
+  });
+
   it('never takes a ramp from the street for the strip’s ramp between parking levels', () => {
     for (const sheet of sheets.filter((s) => s.levelId !== null)) {
       for (const t of texts(sheet)) expect(t, sheet.number).not.toMatch(/UP TO G\b|DOWN TO G\b/);

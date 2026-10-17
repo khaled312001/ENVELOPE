@@ -974,8 +974,8 @@ function junctionReadingOf(t: string): Said | null {
   const road = / (P\d+) is read as a junction because boundary (\d+) beyond it is a road too\./.exec(t);
   if (road) {
     return {
-      en: `${road[1]} counts as a junction because boundary ${road[2]} is a road too; whether two roads meeting with no chamfer make a junction is a question for the client, and this reading stands until answered.`,
-      ar: `تعامل ${road[1]} كتقاطع لأن الحد ${road[2]} طريق أيضا؛ وهل يعد التقاء طريقين بلا شطفة تقاطعا سؤال موجه للعميل، وتبقى هذه القراءة حتى يجيب.`,
+      en: `${road[1]} counts as a junction because boundary ${road[2]} is a road too; if it is a corner where two roads meet with no chamfer, whether that makes a junction is a question for the client, and this reading stands until answered.`,
+      ar: `تعامل ${road[1]} كتقاطع لأن الحد ${road[2]} طريق أيضا؛ وإن كانت زاوية يلتقي فيها طريقان بلا شطفة، فهل تعد تقاطعا سؤال موجه للعميل، وتبقى هذه القراءة حتى يجيب.`,
     };
   }
   const other = / (P\d+) is read as a junction because boundary (\d+) beyond it is classified OTHER/.exec(t);

@@ -451,7 +451,9 @@ export function planStreetRamps(input: StreetRampInput): StreetRampPlan {
     unit: 'm',
     detail: {
       note:
-        'How far in from the boundary a ramp from the street reaches when it runs straight in. ' +
+        'How far in from the boundary a ramp from the street reaches when it runs straight in from a ground ' +
+        'floor that stands within the approach of the boundary; where the ground floor stands farther back, ' +
+        'the ramp starts at its face instead, and a refusal gives that depth. ' +
         'The run follows the floor-to-floor: rise ÷ 12% plus a 3.6 m transition at 6% at each end.',
     },
   });

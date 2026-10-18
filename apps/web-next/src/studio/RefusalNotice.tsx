@@ -1,4 +1,4 @@
-import { Wand2 } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import type { AdviseStudioStep, RunRequestBody } from '@web/api/client.js';
@@ -84,7 +84,7 @@ function FixButton({ fix, onApply }: { readonly fix: AutoFix; readonly onApply: 
       className="mt-2 h-auto min-h-9 whitespace-normal py-1.5 text-start"
       onClick={() => (fix.kind === 'retry' ? setLeft(fix.waitS) : onApply(fix.body))}
     >
-      <Wand2 aria-hidden="true" />
+      <Wrench aria-hidden="true" />
       {label}
     </Button>
   );

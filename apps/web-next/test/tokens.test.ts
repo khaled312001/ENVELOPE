@@ -85,17 +85,12 @@ eachTheme('text contrast, WCAG 2.2 1.4.3 (4.5:1), on every surface it is set on'
     expect(ratio('--accent-strong', '--accent-subtle')).toBeGreaterThanOrEqual(4.5);
     expect(ratio('--text-primary', '--uncertain-surface')).toBeGreaterThanOrEqual(4.5);
   });
+  // The primary button, the call band and the floating WhatsApp button are all this pair.
   it('the ink button', () => expect(ratio('--text-inverse', '--surface-inverse')).toBeGreaterThanOrEqual(4.5));
-  it('white on both stops of the brand gradient (the brand button, the call band)', () => {
-    expect(ratio('--on-brand', '--brand-solid')).toBeGreaterThanOrEqual(4.5);
-    expect(ratio('--on-brand', '--brand-alt-solid')).toBeGreaterThanOrEqual(4.5);
-    // The icon tiles' third tone, and the floating WhatsApp button's glyph.
-    expect(ratio('--on-brand', '--brand-glow-solid')).toBeGreaterThanOrEqual(4.5);
-  });
-  it('both stops of the gradient phrase on the page and on a panel', () => {
-    for (const bg of ['--surface-base', '--surface-panel']) {
+  it('the accent, as link text, on the page and on a panel', () => {
+    for (const bg of ['--surface-base', '--surface-panel', '--surface-raised']) {
       expect(ratio('--accent', bg)).toBeGreaterThanOrEqual(4.5);
-      expect(ratio('--brand-alt', bg)).toBeGreaterThanOrEqual(4.5);
+      expect(ratio('--accent-strong', bg)).toBeGreaterThanOrEqual(4.5);
     }
   });
 });
@@ -107,7 +102,7 @@ eachTheme('non-text contrast, 1.4.11 (3:1)', () => {
   it('a control border against the field it sits on', () => expect(ratio('--border-strong', '--surface-sunken')).toBeGreaterThanOrEqual(1.5));
 });
 
-const PRIMITIVE = /^--(ink|night|blue|violet|cyan|green|amber|red|slate)-\d/;
+const PRIMITIVE = /^--(ink|night|blue|green|amber|red|slate)-\d/;
 
 eachTheme('amber is uncertainty and nothing else (§13.1)', () => {
   it('no other role resolves to the amber primitive', () => {
@@ -129,7 +124,7 @@ eachTheme('amber is uncertainty and nothing else (§13.1)', () => {
   });
   it('no brand colour is a provenance colour', () => {
     const provenance = new Set(['--uncertain', '--derived', '--variance'].map((k) => resolve(k)));
-    for (const k of ['--accent', '--accent-strong', '--brand-alt', '--brand-glow', '--brand-solid', '--brand-alt-solid', '--brand-glow-solid']) {
+    for (const k of ['--accent', '--accent-strong', '--accent-subtle', '--focus-ring']) {
       expect(provenance.has(resolve(k)) ? k : null).toBeNull();
     }
   });

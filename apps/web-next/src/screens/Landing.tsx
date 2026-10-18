@@ -1,25 +1,4 @@
-import {
-  ArrowRight,
-  Box,
-  CircleSlash,
-  FileCode2,
-  FileJson,
-  FileScan,
-  FileSpreadsheet,
-  FileStack,
-  FileText,
-  Gauge,
-  Layers,
-  LayoutGrid,
-  Plus,
-  Scale,
-  Workflow,
-  ScrollText,
-  ShieldOff,
-  Sparkles,
-  Waypoints,
-} from 'lucide-react';
-import { motion, useReducedMotion } from 'motion/react';
+import { Plus } from 'lucide-react';
 import { lazy, Suspense, useState } from 'react';
 
 import { LIMITS } from '@web/content/shared.js';
@@ -32,11 +11,8 @@ import { cn } from '../lib/cn.js';
 import { grouped } from '../lib/figures.js';
 import { useLocale } from '../lib/locale.js';
 import { Link } from '../lib/nav.js';
-import { Art } from '../site/art.js';
-import { Backdrop, SectionHead, SitePage, useSite } from '../site/Site.js';
+import { Band, SectionHead, SitePage, useSite } from '../site/Site.js';
 import { Button } from '../ui/button.js';
-import { arrive, EASE, followPointer, Item, Spotlight, Stagger } from '../ui/motion.js';
-import { IconTile, toneAt } from '../ui/tile.js';
 
 // three.js and the model are most of the page's weight; the words and figures paint before they arrive.
 const WorkedModel = lazy(() => import('../components/WorkedModel.js').then((m) => ({ default: m.WorkedModel })));
@@ -47,13 +23,13 @@ const WorkedModel = lazy(() => import('../components/WorkedModel.js').then((m) =
   No figure on it is typed by a person: every one is read from
   `worked-example.json`, which `scripts/verify-worked-example.mjs` writes from a
   real run and `pnpm example` re-verifies. The formulas shown are the engine's
-  own `formula` strings. The building turning in the hero is that run's
-  BuildingModel, drawn by `@envelope/massing` — the same scene the studio shows.
+  own `formula` strings. The building in the hero is that run's BuildingModel,
+  drawn by `@envelope/massing` — the same scene the studio shows — and it is the
+  page's one picture, set large, because it is the one picture that is true.
 
-  The motion is the brand's, never the figures': chips float, borders turn and
-  lines draw, but a number arrives whole. The five-way claim statement is here in
-  §16.5's order, worded by the copy the current site already carries, and "what
-  it does not do" is a longer list than the feature list.
+  Nothing on it moves to be looked at (18 Oct 2026). The five-way claim
+  statement is here in §16.5's order, and "what it does not do" is a longer list
+  than the feature list.
 */
 
 const v = worked.verified;
@@ -65,26 +41,12 @@ const BAND = {
   PARKING: { key: 'bandC', letter: 'C', value: v.bandCM2 },
 } as const;
 
-/** A figure off the worked example, floating beside the model. Decoration moves; the figure does not change. */
-function FloatChip({ className, delay, children }: { readonly className: string; readonly delay: number; readonly children: React.ReactNode }): JSX.Element {
-  const reduce = useReducedMotion();
-  return (
-    <motion.div
-      className={cn('absolute z-10 hidden rounded-lg border border-line bg-panel/90 px-3 py-2 shadow-soft backdrop-blur-md md:block', className)}
-      initial={reduce ? false : { opacity: 0, y: 12, scale: 0.96 }}
-      animate={reduce ? {} : { opacity: 1, y: [0, -6, 0], scale: 1 }}
-      transition={{ opacity: { delay, duration: 0.6 }, scale: { delay, duration: 0.6, ease: EASE }, y: { delay: delay + 0.6, duration: 5, repeat: Infinity, ease: 'easeInOut' } }}
-    >
-      {children}
-    </motion.div>
-  );
-}
+const FRAME = 'mx-auto max-w-[1240px] px-4 sm:px-6';
 
 export function Landing(): JSX.Element {
   const { t, locale } = useLocale();
   const s = useSite();
   const L = locale === 'ar' ? LANDING_AR : LANDING_EN;
-  const reduce = useReducedMotion();
   const [webgl, setWebgl] = useState(true);
   const governing = v.governingBand as keyof typeof BAND;
   const max = Math.max(...Object.values(BAND).map((b) => Number(b.value)));
@@ -92,235 +54,131 @@ export function Landing(): JSX.Element {
   return (
     <SitePage path="/">
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-b border-line">
-        <Backdrop />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="aurora -top-24 end-[-8%] size-[520px] bg-accent" />
-          <div className="aurora top-40 end-[22%] size-[380px] bg-brand-alt [animation-delay:-6s]" />
-          <div className="aurora -bottom-32 end-[2%] size-[340px] bg-brand-glow [animation-delay:-12s]" />
+      {/* ── Hero: the sentence, then the building the engine drew ─────────── */}
+      <section className={cn(FRAME, 'pt-12 pb-16 lg:pt-16')}>
+        <h1 className="heading-display max-w-[30ch] text-[30px] font-semibold tracking-[-0.025em] text-fg sm:text-[42px]">
+          {t.landing.titleA} {t.landing.titleB}
+        </h1>
+        <div className="mt-6 grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+          <p className="max-w-2xl text-[17px] leading-relaxed text-fg/80">{t.landing.lede}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button asChild variant="primary" size="lg">
+              <Link to="/studio?example=1">{t.landing.ctaExample}</Link>
+            </Button>
+            <Button asChild variant="secondary" size="lg">
+              <Link to="/studio">{t.landing.ctaStudio}</Link>
+            </Button>
+          </div>
         </div>
 
-        <div className="relative mx-auto grid max-w-[1320px] gap-10 px-4 pt-14 pb-14 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-8 lg:pt-20">
-          <Stagger onMount gap={0.09} className="grid content-start gap-6">
-            <Item variants={arrive}>
-              <span className="inline-flex items-center gap-2 rounded-full border border-line bg-panel/80 py-1 ps-1 pe-3 text-[12px] text-secondary shadow-soft backdrop-blur">
-                <span className="grid size-5 place-items-center rounded-full bg-linear-to-br from-accent to-brand-alt text-on-brand">
-                  <Sparkles className="size-3" aria-hidden="true" />
-                </span>
-                {t.landing.eyebrow}
-              </span>
-            </Item>
-            <Item variants={arrive}>
-              <h1 className="heading-display text-[28px] font-light tracking-[-0.025em] text-fg sm:text-[38px]">
-                {t.landing.titleA} <span className="text-brand font-normal">{t.landing.titleB}</span>
-              </h1>
-            </Item>
-            <Item variants={arrive}>
-              <p className="max-w-xl text-[16.5px] leading-relaxed text-secondary">{t.landing.lede}</p>
-            </Item>
-            <Item variants={arrive} className="flex flex-wrap items-center gap-3">
-              <Button asChild variant="brand" size="lg" className="group">
-                <Link to="/studio?example=1">
-                  {t.landing.ctaExample}
-                  <ArrowRight className="transition-transform duration-200 group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1" aria-hidden="true" />
-                </Link>
-              </Button>
-              <Button asChild variant="secondary" size="lg">
-                <Link to="/studio">{t.landing.ctaStudio}</Link>
-              </Button>
-            </Item>
-          </Stagger>
+        <figure className="mt-10">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-sunken sm:aspect-[16/9] lg:aspect-[2/1]">
+            <div className="canvas-grid absolute inset-0 opacity-70" aria-hidden="true" />
+            {webgl ? (
+              <Suspense fallback={null}>
+                <WorkedModel onFailed={() => setWebgl(false)} />
+              </Suspense>
+            ) : (
+              <p className="relative grid h-full place-items-center p-6 text-center text-secondary">{t.landing.noWebgl}</p>
+            )}
+          </div>
+          <figcaption className="mt-3 text-[13px] text-secondary">
+            <span className="figure text-fg">{worked.input.plot.plotNumber}</span>, {worked.input.plot.community}. {t.landing.live}.
+          </figcaption>
 
-          <motion.figure
-            className="relative"
-            initial={reduce ? false : { opacity: 0, scale: 0.96, y: 24 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 1, ease: EASE, delay: 0.15 }}
-          >
-            <div className="ring-brand shadow-lifted rounded-xl">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-sunken lg:aspect-[16/11]">
-                <div className="canvas-grid absolute inset-0 opacity-70" aria-hidden="true" />
-                {webgl ? (
-                  <Suspense fallback={null}>
-                    <WorkedModel onFailed={() => setWebgl(false)} />
-                  </Suspense>
-                ) : (
-                  <p className="relative grid h-full place-items-center p-6 text-center text-secondary">{t.landing.noWebgl}</p>
-                )}
-                <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-wrap items-center justify-between gap-2 p-3">
-                  <span className="rounded-md border border-line bg-panel/90 px-2 py-1 text-[11.5px] text-secondary backdrop-blur">
-                    <span className="figure text-fg">{worked.input.plot.plotNumber}</span> · {worked.input.plot.community}
-                  </span>
-                  <span className="flex items-center gap-1.5 rounded-md border border-line bg-panel/90 px-2 py-1 text-[11.5px] text-secondary backdrop-blur">
-                    <span className="relative flex size-2">
-                      <span className="absolute inline-flex size-full animate-pulse-ring rounded-full bg-accent" />
-                      <span className="relative inline-flex size-2 rounded-full bg-accent" />
-                    </span>
-                    {t.landing.live}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <FloatChip className="-start-6 top-[38%]" delay={0.9}>
-              <p className="text-[11px] text-secondary">{t.landing.figGoverning}</p>
-              <p className="figure text-[17px] text-fg">
-                {grouped(v.governingGfaM2)} <span className="font-sans text-[11px] text-secondary">m²</span>
-              </p>
-            </FloatChip>
-            <FloatChip className="-end-4 bottom-[18%]" delay={1.15}>
-              <p className="text-[11px] text-secondary">{t.landing.carsTitle}</p>
-              <p className="figure text-[17px] text-fg">{String(v.exports.cars.engine)}</p>
-            </FloatChip>
-          </motion.figure>
-        </div>
-
-        {/* The worked example's figures, as the engine returned them. */}
-        <div className="relative border-t border-line bg-panel/70 backdrop-blur">
-          <Stagger as="dl" className="mx-auto grid max-w-[1320px] grid-cols-2 divide-line sm:grid-cols-4 sm:divide-x rtl:sm:divide-x-reverse">
+          {/* The worked example's figures, as the engine returned them. */}
+          <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-4">
             {[
-              { k: t.landing.figGoverning, val: grouped(v.governingGfaM2), unit: 'm²', icon: Gauge },
-              { k: t.landing.figBand, val: BAND[governing].letter, unit: t.bands[BAND[governing].key].name, icon: Scale },
-              { k: t.landing.figLevels, val: v.levels, unit: '', icon: Layers },
-              { k: t.landing.figPlot, val: grouped(v.plotAreaM2), unit: 'm²', icon: Waypoints },
-            ].map((f, i) => (
-              <Item key={f.k} className="group grid gap-1 px-4 py-5 transition-colors hover:bg-raised/60 sm:px-6">
-                <dt className="flex items-center gap-2 text-[12px] text-secondary">
-                  <IconTile icon={f.icon} tone={toneAt(i)} size="xs" />
-                  {f.k}
-                </dt>
-                <dd className="figure text-[24px] font-light tracking-[-0.01em] text-fg">
+              { k: t.landing.figGoverning, val: grouped(v.governingGfaM2), unit: 'm²' },
+              { k: t.landing.figBand, val: BAND[governing].letter, unit: t.bands[BAND[governing].key].name },
+              { k: t.landing.figLevels, val: v.levels, unit: '' },
+              { k: t.landing.figPlot, val: grouped(v.plotAreaM2), unit: 'm²' },
+            ].map((f) => (
+              <div key={f.k} className="grid gap-1">
+                <dt className="text-[13px] text-secondary">{f.k}</dt>
+                <dd className="figure text-[28px] text-fg">
                   {f.val}
-                  {f.unit ? <span className="ms-1.5 font-sans text-[12px] text-secondary">{f.unit}</span> : null}
+                  {f.unit ? <span className="ms-1.5 font-sans text-[13px] text-secondary">{f.unit}</span> : null}
                 </dd>
-              </Item>
+              </div>
             ))}
-          </Stagger>
-        </div>
+          </dl>
+        </figure>
       </section>
 
-      {/* ── Three bands ──────────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-        <SectionHead icon={Gauge} tone="blue" eyebrow={t.landing.bandsEyebrow} title={t.landing.bandsTitle} lede={t.landing.bandsLede} />
-        <Stagger className="grid gap-4 md:grid-cols-3" gap={0.08}>
+      {/* ── Three bands, side by side ─────────────────────────────────────── */}
+      <Band tinted>
+        <SectionHead title={t.landing.bandsTitle} lede={t.landing.bandsLede} />
+        <div className="grid gap-10 md:grid-cols-3 md:gap-8">
           {(Object.keys(BAND) as (keyof typeof BAND)[]).map((b) => {
             const band = BAND[b];
             const isGov = b === governing;
             return (
-              <Item key={b} as="article" className="h-full">
-                <motion.div whileHover={reduce ? {} : { y: -4 }} transition={{ type: 'spring', stiffness: 300, damping: 24 }} className="h-full">
-                  <Spotlight className={cn('grid h-full gap-5 rounded-xl border bg-panel p-6 shadow-soft', isGov ? 'ring-brand border-transparent' : 'border-line')}>
-                    <header className="flex items-center justify-between gap-2">
-                      <span
-                        className={cn(
-                          'figure grid size-9 place-items-center rounded-lg text-[15px]',
-                          isGov ? 'bg-linear-to-br from-brand-solid to-brand-alt-solid text-on-brand' : 'border border-strong text-fg',
-                        )}
-                      >
-                        {band.letter}
-                      </span>
-                      {isGov ? (
-                        <span className="rounded-full border border-accent/40 bg-accent-subtle px-2.5 py-0.5 text-[11.5px] font-medium text-accent-strong">{t.landing.governs}</span>
-                      ) : null}
-                    </header>
-                    <div>
-                      <h3 className="text-[16px] font-medium text-fg">{t.bands[band.key].name}</h3>
-                      <p className="mt-1 text-[13px] text-secondary">{t.bands[band.key].question}</p>
-                    </div>
-                    <div className="grid gap-2">
-                      <p className="figure text-[30px] font-light text-fg">
-                        {grouped(band.value)}
-                        <span className="ms-1.5 font-sans text-[12px] text-secondary">m²</span>
-                      </p>
-                      {/* The bar's length is the one place a figure becomes a number, and only to draw the bar. */}
-                      <div className="h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden="true">
-                        <motion.div
-                          className={cn('h-full origin-left rounded-full rtl:origin-right', isGov ? 'bg-linear-to-r from-accent to-brand-alt' : 'bg-strong')}
-                          style={{ width: `${(Number(band.value) / max) * 100}%` }}
-                          initial={reduce ? false : { scaleX: 0 }}
-                          whileInView={{ scaleX: 1 }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 1.1, ease: EASE, delay: 0.2 }}
-                        />
-                      </div>
-                    </div>
-                    <p dir="ltr" className="figure border-t border-subtle pt-3 text-start text-[11.5px] leading-relaxed !whitespace-normal break-words text-tertiary">
-                      {v.formulas[band.key]}
-                    </p>
-                  </Spotlight>
-                </motion.div>
-              </Item>
+              <article key={b} className="grid content-start gap-4">
+                <div className="flex items-baseline gap-3">
+                  <span className="figure text-[15px] text-secondary">{band.letter}</span>
+                  <h3 className="text-[17px] font-semibold text-fg">{t.bands[band.key].name}</h3>
+                  {isGov ? <span className="text-[13px] font-medium text-accent-strong">{t.landing.governs}</span> : null}
+                </div>
+                <p className="text-[14px] text-secondary">{t.bands[band.key].question}</p>
+                <p className="figure text-[32px] text-fg">
+                  {grouped(band.value)}
+                  <span className="ms-1.5 font-sans text-[13px] text-secondary">m²</span>
+                </p>
+                {/* The bar's length is the one place a figure becomes a number, and only to draw the bar. */}
+                <div className="h-1.5 bg-raised" aria-hidden="true">
+                  <div className={cn('h-full', isGov ? 'bg-accent' : 'bg-strong')} style={{ width: `${(Number(band.value) / max) * 100}%` }} />
+                </div>
+                <p dir="ltr" className="figure text-start text-[12px] leading-relaxed !whitespace-normal break-words text-secondary">
+                  {v.formulas[band.key]}
+                </p>
+              </article>
             );
           })}
-        </Stagger>
-      </section>
-
-      {/* ── The flow, as a line that draws itself ────────────────────────── */}
-      <section className="relative overflow-hidden border-y border-line bg-panel">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="aurora -start-40 top-10 size-[420px] bg-brand-alt opacity-[calc(var(--glow-strength)*0.6)]" />
         </div>
-        <div className="relative mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-          <SectionHead icon={Workflow} tone="violet" eyebrow={t.landing.flowEyebrow} title={t.landing.flowTitle} lede={t.landing.flowLede} />
-          <FlowLine />
-        </div>
-      </section>
+      </Band>
 
-      {/* ── What it writes ───────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-        <SectionHead icon={FileStack} tone="cyan" eyebrow={t.landing.outEyebrow} title={t.landing.outTitle} lede={t.landing.outLede} />
+      {/* ── The flow, in the studio's order ───────────────────────────────── */}
+      <Band>
+        <SectionHead title={t.landing.flowTitle} lede={t.landing.flowLede} />
+        <FlowLine />
+      </Band>
+
+      {/* ── What it writes ────────────────────────────────────────────────── */}
+      <Band tinted>
+        <SectionHead title={t.landing.outTitle} lede={t.landing.outLede} />
         <FileGrid />
-      </section>
+      </Band>
 
-      {/* ── The rest of the site, one layer down each ────────────────────── */}
-      <section className="border-t border-line bg-panel">
-        <div className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-          <SectionHead icon={LayoutGrid} tone="blue" eyebrow={s.home.pagesEyebrow} title={s.home.pagesTitle} lede={s.home.pagesLede} />
-          <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" gap={0.06}>
-            {(['product', 'parking', 'method', 'exports', 'limits', 'faq'] as const).map((key) => (
-              <Item key={key} className="h-full">
-                <Link
-                  to={`/${key}`}
-                  onPointerMove={followPointer}
-                  className="spotlight shadow-soft group grid h-full content-start gap-3 overflow-hidden rounded-xl border border-line bg-base transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-strong motion-reduce:hover:translate-y-0"
-                >
-                  {/* Decoration inside a link whose heading already names it: an alt would read the card twice. */}
-                  <div className="canvas-grid border-b border-subtle">
-                    <Art
-                      name={`card-${key}`}
-                      alt=""
-                      className="w-full transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:group-hover:scale-100"
-                    />
-                  </div>
-                  <h3 className="px-6 pt-2 text-[16px] font-medium text-fg">{s.home.cards[key].title}</h3>
-                  <p className="px-6 text-[13.5px] leading-relaxed text-secondary">{s.home.cards[key].body}</p>
-                  <span className="mt-1 inline-flex items-center gap-1 px-6 pb-6 text-[13px] font-medium text-accent">
-                    {s.home.explore}
-                    <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1" aria-hidden="true" />
-                  </span>
-                </Link>
-              </Item>
-            ))}
-          </Stagger>
-        </div>
-      </section>
-
-      {/* ── The five-way claim statement, §16.5's order ──────────────────── */}
-      <section className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-        <SectionHead icon={Scale} tone="violet" eyebrow={t.landing.claimsEyebrow} title={L.claims.title} lede={L.claims.lede} />
+      {/* ── The five-way claim statement, §16.5's order ───────────────────── */}
+      <Band>
+        <SectionHead title={L.claims.title} lede={L.claims.lede} />
         <ClaimsList />
-      </section>
+      </Band>
 
-      {/* ── What it does not do ──────────────────────────────────────────── */}
-      <section className="border-y border-line bg-panel">
-        <div className="mx-auto max-w-[1320px] px-4 py-20 sm:px-6">
-          <SectionHead icon={CircleSlash} tone="cyan" eyebrow={t.landing.limitsEyebrow} title={L.limits.title} lede={L.limits.lede} />
-          <LimitsList />
-        </div>
-      </section>
+      {/* ── What it does not do ───────────────────────────────────────────── */}
+      <Band tinted>
+        <SectionHead title={L.limits.title} lede={L.limits.lede} />
+        <LimitsList />
+      </Band>
+
+      {/* ── The rest of the site, one layer down each ─────────────────────── */}
+      <Band>
+        <SectionHead title={s.home.pagesTitle} lede={s.home.pagesLede} />
+        <ul className="grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+          {(['product', 'parking', 'method', 'exports', 'limits', 'faq'] as const).map((key) => (
+            <li key={key} className="grid content-start gap-2">
+              <Link to={`/${key}`} className="text-[16px] font-semibold text-fg underline decoration-strong underline-offset-4 transition-colors hover:decoration-fg">
+                {s.home.cards[key].title}
+              </Link>
+              <p className="text-[14px] leading-relaxed text-secondary">{s.home.cards[key].body}</p>
+            </li>
+          ))}
+        </ul>
+      </Band>
 
       {/* ── Where this deployment stands — said before anything is sold ──── */}
-      <section className="mx-auto max-w-[1320px] px-4 pt-20 sm:px-6">
+      <section className={FRAME}>
         <Readiness />
       </section>
     </SitePage>
@@ -332,40 +190,38 @@ export function ClaimsList(): JSX.Element {
   const { locale } = useLocale();
   const L = locale === 'ar' ? LANDING_AR : LANDING_EN;
   return (
-          <Stagger as="dl" className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-panel shadow-soft">
-            {[
-              { c: L.claims.selfConsistency, body: L.claims.selfConsistency.body, tone: 'ok' },
-              {
-                c: L.claims.coverage,
-                body: (
-                  <>
-                    {L.claims.coverage.bodyBefore}
-                    <em>{L.claims.coverage.bodyEmphasis}</em>
-                    {L.claims.coverage.bodyAfter}
-                  </>
-                ),
-                tone: 'partial',
-              },
-              { c: L.claims.geometry, body: L.claims.geometry.body(GRID_MM), tone: 'ok' },
-              { c: L.claims.judgement, body: L.claims.judgement.body, tone: 'none' },
-              { c: L.claims.regulatory, body: L.claims.regulatory.body, tone: 'never' },
-            ].map(({ c, body, tone }) => (
-              <Item key={c.title} className="grid gap-2 px-6 py-5 transition-colors hover:bg-raised md:grid-cols-[16rem_12rem_minmax(0,1fr)] md:gap-6">
-                <dt className="text-[14.5px] font-medium text-fg">{c.title}</dt>
-                <dd>
-                  <span
-                    className={cn(
-                      'inline-flex rounded-full border px-2.5 py-0.5 text-[12px] font-medium',
-                      tone === 'never' ? 'not-assessed border-strong text-fg' : tone === 'ok' ? 'border-accent/40 bg-accent-subtle text-accent-strong' : 'border-line text-secondary',
-                    )}
-                  >
-                    {c.status}
-                  </span>
-                </dd>
-                <dd className="text-[13.5px] leading-relaxed text-secondary">{body}</dd>
-              </Item>
-            ))}
-          </Stagger>
+    <dl className="divide-y divide-line border-y border-line">
+      {[
+        { c: L.claims.selfConsistency, body: L.claims.selfConsistency.body, tone: 'ok' },
+        {
+          c: L.claims.coverage,
+          body: (
+            <>
+              {L.claims.coverage.bodyBefore}
+              <em>{L.claims.coverage.bodyEmphasis}</em>
+              {L.claims.coverage.bodyAfter}
+            </>
+          ),
+          tone: 'partial',
+        },
+        { c: L.claims.geometry, body: L.claims.geometry.body(GRID_MM), tone: 'ok' },
+        { c: L.claims.judgement, body: L.claims.judgement.body, tone: 'none' },
+        { c: L.claims.regulatory, body: L.claims.regulatory.body, tone: 'never' },
+      ].map(({ c, body, tone }) => (
+        <div key={c.title} className="grid gap-2 py-5 md:grid-cols-[16rem_12rem_minmax(0,1fr)] md:gap-6">
+          <dt className="text-[15px] font-semibold text-fg">{c.title}</dt>
+          <dd
+            className={cn(
+              'text-[14px] font-medium',
+              tone === 'never' ? 'not-assessed text-fg' : tone === 'ok' ? 'text-accent-strong' : 'text-secondary',
+            )}
+          >
+            {c.status}
+          </dd>
+          <dd className="text-[14px] leading-relaxed text-secondary">{body}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -378,24 +234,21 @@ export function LimitsList(): JSX.Element {
   const limits = [...(locale === 'ar' ? LIMITS_AR : LIMITS), ...s.limitsPage.extra];
   return (
     <>
-      <Stagger as="ul" className="grid gap-3 md:grid-cols-2" gap={0.05}>
+      <ul className="grid border-t border-line md:grid-cols-2 md:gap-x-10">
         {limits.map((l) => (
-          <Item key={l.id} as="li">
+          <li key={l.id} className="border-b border-line">
             {/* The heading says it; the reason is one click away rather than a paragraph every reader must wade through. */}
-            <Spotlight className="h-full rounded-xl border border-line bg-base shadow-soft">
-              <details className="group">
-                <summary className="flex cursor-pointer list-none items-start gap-2.5 p-5 text-[14.5px] font-medium text-fg [&::-webkit-details-marker]:hidden">
-                  <CircleSlash className="mt-0.5 size-4 shrink-0 text-secondary" aria-hidden="true" />
-                  <span className="flex-1">{l.heading}</span>
-                  <Plus className="mt-0.5 size-4 shrink-0 text-tertiary transition-transform duration-300 group-open:rotate-45" aria-hidden="true" />
-                </summary>
-                <div className="px-5 ps-11.5 pb-5 text-[13px] leading-relaxed text-secondary">{l.body}</div>
-              </details>
-            </Spotlight>
-          </Item>
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-start gap-3 py-4 text-[15px] font-medium text-fg [&::-webkit-details-marker]:hidden">
+                <span className="flex-1">{l.heading}</span>
+                <Plus className="mt-0.5 size-4 shrink-0 text-secondary transition-transform duration-200 group-open:rotate-45" aria-hidden="true" />
+              </summary>
+              <div className="pb-5 text-[14px] leading-relaxed text-secondary">{l.body}</div>
+            </details>
+          </li>
         ))}
-      </Stagger>
-      <p className="mt-6 text-[13px] text-secondary">{L.limits.after}</p>
+      </ul>
+      <p className="mt-6 text-[14px] text-secondary">{L.limits.after}</p>
     </>
   );
 }
@@ -404,82 +257,32 @@ export function LimitsList(): JSX.Element {
 export function FileGrid(): JSX.Element {
   const { t } = useLocale();
   return (
-    <Stagger className="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-3" gap={0.06}>
-      {(
-        [
-          ['html', FileText],
-          ['sheets', Layers],
-          ['dxf', FileCode2],
-          ['glb', Box],
-          ['xlsx', FileSpreadsheet],
-          ['json', FileJson],
-        ] as const
-      ).map(([f, Icon], i) => (
-        <Item key={f}>
-          <Spotlight className="group grid h-full gap-2 rounded-xl border border-line bg-panel p-5 shadow-soft transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-strong motion-reduce:hover:translate-y-0">
-            <IconTile icon={Icon} tone={toneAt(i)} size="sm" />
-            <h3 className="text-[14px] font-medium text-fg">{t.exports.file[f].name}</h3>
-            <p className="text-[12.5px] leading-relaxed text-secondary">{t.exports.file[f].body}</p>
-          </Spotlight>
-        </Item>
+    <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+      {(['html', 'sheets', 'dxf', 'glb', 'xlsx', 'json'] as const).map((f) => (
+        <div key={f} className="grid content-start gap-1">
+          <dt className="text-[15px] font-semibold text-fg">{t.exports.file[f].name}</dt>
+          <dd className="text-[14px] leading-relaxed text-secondary">{t.exports.file[f].body}</dd>
+        </div>
       ))}
-    </Stagger>
+    </dl>
   );
 }
 
-/** The six steps on a line that draws itself in as it scrolls into view. */
+/** The six steps, in the studio's own order. A real sequence, so a real ordered list. */
 export function FlowLine(): JSX.Element {
   const { t } = useLocale();
-  const reduce = useReducedMotion();
-  // The studio's own order. The refusal that used to close the line is now said where it happens: on the sheet.
-  const flow = [
-    { icon: FileScan, ...t.landing.flow.sheet },
-    { icon: Waypoints, ...t.landing.flow.plot },
-    { icon: ScrollText, ...t.landing.flow.rules },
-    { icon: Box, ...t.landing.flow.capacity },
-    { icon: Layers, ...t.landing.flow.parking },
-    { icon: FileStack, ...t.landing.flow.export },
-  ];
+  // The refusal that used to close the line is now said where it happens: on the sheet.
+  const flow = [t.landing.flow.sheet, t.landing.flow.plot, t.landing.flow.rules, t.landing.flow.capacity, t.landing.flow.parking, t.landing.flow.export];
   return (
-    <div className="relative">
-      <svg className="absolute inset-x-0 top-[22px] hidden h-1 w-full lg:block rtl:-scale-x-100" preserveAspectRatio="none" viewBox="0 0 100 1" aria-hidden="true">
-        <line x1="0" y1="0.5" x2="100" y2="0.5" stroke="var(--border-default)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-        <motion.line
-          x1="0"
-          y1="0.5"
-          x2="100"
-          y2="0.5"
-          stroke="url(#flow-line)"
-          strokeWidth="2"
-          vectorEffect="non-scaling-stroke"
-          initial={reduce ? false : { pathLength: 0 }}
-          whileInView={{ pathLength: 1 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 1.8, ease: EASE }}
-        />
-        <defs>
-          <linearGradient id="flow-line" x1="0" x2="1">
-            <stop offset="0" stopColor="var(--accent)" />
-            <stop offset="0.5" stopColor="var(--brand-alt)" />
-            <stop offset="1" stopColor="var(--brand-glow)" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <Stagger as="ol" gap={0.12} className="relative grid gap-6 sm:grid-cols-2 lg:grid-cols-6 lg:gap-4">
-        {flow.map((step, i) => (
-          <Item key={step.title} as="li" className="grid content-start gap-3">
-            <span className="group relative justify-self-start">
-              <IconTile icon={step.icon} tone={toneAt(i)} />
-              <span className="figure absolute -end-1.5 -top-1.5 grid size-5 place-items-center rounded-full border-2 border-base bg-inverse text-[10px] text-on-inverse">
-                {i + 1}
-              </span>
-            </span>
-            <h3 className="text-[14.5px] font-medium text-fg">{step.title}</h3>
-            <p className="text-[13px] leading-relaxed text-secondary">{step.body}</p>
-          </Item>
-        ))}
-      </Stagger>
-    </div>
+    <ol className="grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+      {flow.map((step, i) => (
+        <li key={step.title} className="grid grid-cols-[2rem_minmax(0,1fr)] content-start gap-x-2 gap-y-1">
+          <span className="figure row-span-2 text-[15px] text-secondary">{i + 1}</span>
+          <h3 className="text-[15px] font-semibold text-fg">{step.title}</h3>
+          <p className="text-[14px] leading-relaxed text-secondary">{step.body}</p>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -487,14 +290,9 @@ export function FlowLine(): JSX.Element {
 export function Readiness(): JSX.Element {
   const s = useSite();
   return (
-    <div className="grid gap-3 rounded-xl border border-strong bg-panel p-6 shadow-soft sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-5 sm:p-8">
-      <span className="grid size-10 place-items-center rounded-lg border border-strong bg-raised text-secondary">
-        <ShieldOff className="size-5" aria-hidden="true" />
-      </span>
-      <div className="grid gap-2">
-        <h2 className="text-[18px] font-medium text-fg">{s.limitsPage.readinessTitle}</h2>
-        <p className="not-assessed max-w-3xl text-[14px] leading-relaxed text-secondary">{s.limitsPage.readinessBody}</p>
-      </div>
+    <div className="grid gap-2 rounded-lg border border-strong p-6 sm:p-8">
+      <h2 className="text-[18px] font-semibold text-fg">{s.limitsPage.readinessTitle}</h2>
+      <p className="not-assessed max-w-3xl text-[14.5px] leading-relaxed text-secondary">{s.limitsPage.readinessBody}</p>
     </div>
   );
 }

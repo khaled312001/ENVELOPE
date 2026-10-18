@@ -1,8 +1,5 @@
-import { motion, useReducedMotion } from 'motion/react';
-
 import { SITE_AR } from '../i18n/site.ar.js';
 import { SITE_EN } from '../i18n/site.en.js';
-import { cn } from '../lib/cn.js';
 import { useLocale } from '../lib/locale.js';
 
 /** Where a reader reaches the people behind the site. Published on every page, on purpose. */
@@ -29,43 +26,32 @@ export function WhatsAppGlyph({ className }: { readonly className?: string }): J
 /*
   THE FLOATING WHATSAPP BUTTON.
 
-  In the brand's blue-violet, not WhatsApp's green: green on this site means a
-  DERIVED value, and a button that borrowed it would teach a reader the colour
-  means nothing in particular. The glyph is what makes it recognisable.
+  In the ink, not WhatsApp's green: green on this site means a DERIVED value,
+  and a button that borrowed it would teach a reader the colour means nothing in
+  particular. The glyph is what makes it recognisable.
 
   It sits at the end of the line (bottom right in English, bottom left in
-  Arabic), arrives once after the page has settled, and its glyph turns briefly
-  every few seconds. Its label is in words, because an icon alone is not a name.
+  Arabic) and stays still: no pulse, no wiggle, no entrance (18 Oct 2026). It
+  floats over the page, so it is the one thing at the edge with a shadow. Its
+  label is in words, because an icon alone is not a name.
 */
 export function WhatsAppButton(): JSX.Element {
   const { locale } = useLocale();
   const s = locale === 'ar' ? SITE_AR : SITE_EN;
-  const reduce = useReducedMotion();
   return (
-    <motion.a
+    <a
       href={whatsappHref(s.whatsapp.greeting)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={s.whatsapp.label}
       className="group fixed end-4 bottom-4 z-40 flex items-center gap-2 sm:end-6 sm:bottom-6"
-      initial={reduce ? false : { scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 1.2 }}
     >
-      <span className="pointer-events-none hidden translate-x-2 rounded-full border border-line bg-panel px-3 py-1.5 text-[12.5px] font-medium whitespace-nowrap text-fg opacity-0 shadow-soft transition-[opacity,transform] duration-300 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 sm:block rtl:-translate-x-2">
+      <span className="shadow-float pointer-events-none hidden rounded-md border border-line bg-panel px-3 py-1.5 text-[12.5px] font-medium whitespace-nowrap text-fg opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 sm:block">
         {s.whatsapp.tip}
       </span>
-      <span className="relative grid size-14 place-items-center">
-        <span className="absolute inset-0 animate-pulse-ring rounded-full bg-brand-alt-solid" aria-hidden="true" />
-        <span
-          className={cn(
-            'relative grid size-14 place-items-center rounded-full bg-linear-to-br from-brand-solid to-brand-alt-solid text-on-brand shadow-lifted',
-            'transition-transform duration-200 group-hover:scale-110 group-active:scale-95 motion-reduce:group-hover:scale-100',
-          )}
-        >
-          <WhatsAppGlyph className="size-7 animate-wiggle" />
-        </span>
+      <span className="shadow-float grid size-12 place-items-center rounded-full bg-inverse text-on-inverse transition-colors group-hover:bg-fg/90">
+        <WhatsAppGlyph className="size-6" />
       </span>
-    </motion.a>
+    </a>
   );
 }

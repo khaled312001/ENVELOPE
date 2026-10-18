@@ -3,7 +3,7 @@
   "en": [
     {
       "q": "What does Plotlogic do?",
-      "a": "It is a rule-based development platform for Dubai plots. It reads the plot's affection plan, applies the limits printed on it and the rules recorded from the Dubai Building Code, takes your brief — levels, unit mix, core — and returns the buildable envelope, the development capacity in GFA, a parking layout placed bay by bay, an A3 drawing set and a 3D model. Every figure is traced to where it came from."
+      "a": "It is a rule-based development platform for Dubai plots. It reads the plot's affection plan, applies the limits printed on it and the rules recorded from the Dubai Building Code, takes your brief (levels, unit mix, core) and returns the buildable envelope, the development capacity in GFA, a parking layout placed bay by bay, an A3 drawing set and a 3D model. Every figure is traced to where it came from."
     },
     {
       "q": "Is Plotlogic a compliance check?",
@@ -15,11 +15,11 @@
     },
     {
       "q": "Which rules does it apply?",
-      "a": "The limits printed on the plot's own affection plan first, then rules recorded from the Dubai Building Code — for parking, the bay and driveway dimensions of Table B.11, the vehicle-entrance clause B.7.2.1 and the accessible-bay tables. The recorded set is a draft that nobody has approved yet, and every report says so."
+      "a": "The limits printed on the plot's own affection plan first, then rules recorded from the Dubai Building Code. For parking these are the bay and driveway dimensions of Table B.11, the vehicle-entrance clause B.7.2.1 and the accessible-bay tables. The recorded set is a draft that nobody has approved yet, and every report says so."
     },
     {
       "q": "Where does each number come from?",
-      "a": "Every figure is traced. Open it and you see the rule it was derived from, the value you entered, or the assumption that filled a gap — with the formula the engine used. There is no constructor in the engine for an untraced value."
+      "a": "Every figure is traced. Open it and you see the rule it was derived from, the value you entered, or the assumption that filled a gap, with the formula the engine used. There is no constructor in the engine for an untraced value."
     },
     {
       "q": "What does an amber value mean?",
@@ -27,7 +27,7 @@
     },
     {
       "q": "What happens when the affection plan leaves a limit out?",
-      "a": "The study stops and names the gap. A plan that prints a height and no FAR does not get a FAR borrowed from the neighbouring plot — that borrowing is the exact failure this product exists to prevent."
+      "a": "The study stops and names the gap. A plan that prints a height and no FAR does not get a FAR borrowed from the neighbouring plot. That borrowing is the mistake this product was built to prevent."
     },
     {
       "q": "How is the parking laid out?",
@@ -35,11 +35,11 @@
     },
     {
       "q": "Does it search ramp and core positions for the highest yield?",
-      "a": "No. That search is a trade-off between possible designs, and this phase refuses to emit one by construction. What it does is pack every fixed arrangement of bays — rows across, rows along, a ring aisle and the others — and report each count. The one with the most bays is drawn first, and you can pick another."
+      "a": "No. That search is a trade-off between possible designs, and this phase refuses to emit one by construction. What it does is pack every fixed arrangement of bays (rows across, rows along, a ring aisle and the others) and report each count. The one with the most bays is drawn first, and you can pick another."
     },
     {
       "q": "Can I choose the vehicle entrance myself?",
-      "a": "Yes. The engine recommends a frontage under B.7.2.1 — away from junctions, on the more secondary road — and shows the frontages it rejected and why. You can also click the point on a road boundary where the entrance goes; the engine checks it against B.7.2.1 and, if it is too near a junction, says so and where it may go."
+      "a": "Yes. The engine recommends a frontage under B.7.2.1, away from junctions and on the more secondary road, and shows the frontages it rejected and why. You can also click the point on a road boundary where the entrance goes; the engine checks it against B.7.2.1 and, if it is too near a junction, says so and where it may go."
     },
     {
       "q": "Which files can I download?",
@@ -47,7 +47,7 @@
     },
     {
       "q": "Is there an accuracy figure?",
-      "a": "No accuracy figure is published, because the study that would measure one — comparing the engine with qualified architects working the same plots — has not been run. Until it is, no such number is quoted anywhere on this site."
+      "a": "No accuracy figure is published, because the study that would measure one, comparing the engine with qualified architects working the same plots, has not been run. Until it is, no such number is quoted anywhere on this site."
     },
     {
       "q": "Who can see my studies?",

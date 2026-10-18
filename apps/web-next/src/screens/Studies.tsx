@@ -12,7 +12,6 @@ import { useLocale } from '../lib/locale.js';
 import { Link } from '../lib/nav.js';
 import { Art } from '../site/art.js';
 import { Button } from '../ui/button.js';
-import { followPointer } from '../ui/motion.js';
 import { Badge, EmptyState, Input, Notice, Spinner } from '../ui/primitives.js';
 
 /*
@@ -44,7 +43,7 @@ export function Studies({ actor }: { readonly actor: Actor }): JSX.Element {
       <main className="mx-auto w-full max-w-[1320px] flex-1 px-4 py-8 sm:px-6">
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div className="grid gap-1">
-            <h1 className="text-[26px] font-light tracking-[-0.02em] text-fg">{t.studies.title}</h1>
+            <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-fg">{t.studies.title}</h1>
             <p className="text-[13.5px] text-secondary">{t.studies.lede}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -115,8 +114,7 @@ function StudyCard({ run, date }: { readonly run: RunSummary; readonly date: str
   return (
     <Link
       to={`/studio/${run.runId}`}
-      onPointerMove={followPointer}
-      className="spotlight shadow-soft group grid h-full grid-rows-[160px_auto] overflow-hidden rounded-lg border border-line bg-panel transition-[border-color,transform] duration-200 ease-out hover:-translate-y-1 hover:border-strong motion-reduce:hover:translate-y-0"
+      className="group grid h-full grid-rows-[160px_auto] overflow-hidden rounded-lg border border-line bg-panel transition-colors duration-150 hover:border-strong"
     >
       <div className="canvas-grid relative border-b border-line p-5">
         {run.outline ? (

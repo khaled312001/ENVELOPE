@@ -6,7 +6,6 @@ import { TopBar } from '../components/Shell.js';
 import { useIdentity } from '../lib/identity.js';
 import { useLocale } from '../lib/locale.js';
 import { Navigate, useNav } from '../lib/nav.js';
-import { Art } from '../site/art.js';
 import { useSite } from '../site/Site.js';
 import { Button } from '../ui/button.js';
 import { Field, Input, Notice, Spinner } from '../ui/primitives.js';
@@ -68,11 +67,11 @@ export function Enter(): JSX.Element {
   return (
     <div className="flex min-h-full flex-col bg-base">
       <TopBar />
-      <main className="grid flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,32%)]">
-        <div className="canvas-grid grid place-items-center px-4 py-12">
+      <main className="grid flex-1">
+        <div className="grid place-items-center px-4 py-12">
           <div className="grid w-full max-w-4xl gap-4">
             <header className="mb-2 grid gap-2 text-center">
-              <h1 className="text-[30px] font-light tracking-[-0.02em] text-fg">{t.enter.title}</h1>
+              <h1 className="text-[30px] font-semibold tracking-[-0.02em] text-fg">{t.enter.title}</h1>
               <p className="mx-auto max-w-xl text-[14px] text-secondary">{t.enter.lede}</p>
             </header>
             <div className="grid gap-4 md:grid-cols-2">
@@ -176,10 +175,6 @@ export function Enter(): JSX.Element {
             </div>
           </div>
         </div>
-        {/* The second half of the page on wide screens only: on a phone the forms are the page. */}
-        <figure className="relative hidden overflow-hidden border-s border-line xl:block">
-          <Art name="enter-panel" alt={s.art.enterPanel} eager className="absolute inset-0 size-full max-w-none object-cover" />
-        </figure>
       </main>
     </div>
   );

@@ -1,10 +1,9 @@
-import { MessageCircleQuestion, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import { useLocale } from '../../lib/locale.js';
 import { Link } from '../../lib/nav.js';
 import FAQ from '../../site/faq.json';
 import { Band, PageHero, SitePage, useSite } from '../../site/Site.js';
-import { Item, Stagger } from '../../ui/motion.js';
 
 /*
   THE QUESTIONS. `faq.json` is read here and by the prerender, which writes the
@@ -20,30 +19,28 @@ export function Faq(): JSX.Element {
   const items = FAQ[locale];
   return (
     <SitePage path="/faq">
-      <PageHero icon={MessageCircleQuestion} tone="violet" crumb={s.nav.faq} eyebrow={s.faq.eyebrow} title={s.faq.title} lede={s.faq.lede} />
-      <Band glow="violet">
-        <Stagger className="mx-auto grid max-w-3xl gap-3" gap={0.04}>
+      <PageHero crumb={s.nav.faq} title={s.faq.title} lede={s.faq.lede} />
+      <Band tinted>
+        <ul className="mx-auto max-w-3xl border-t border-line">
           {items.map((q, i) => (
-            <Item key={q.q}>
-              <details className="group rounded-xl border border-line bg-panel shadow-soft transition-colors open:border-strong" {...(i === 0 ? { open: true } : {})}>
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-5 py-4 text-[15.5px] font-medium text-fg [&::-webkit-details-marker]:hidden">
+            <li key={q.q} className="border-b border-line">
+              <details className="group" {...(i === 0 ? { open: true } : {})}>
+                <summary className="flex cursor-pointer list-none items-start justify-between gap-4 py-5 text-[16px] font-semibold text-fg [&::-webkit-details-marker]:hidden">
                   {q.q}
-                  <span className="grid size-7 shrink-0 place-items-center rounded-full border border-line text-secondary transition-transform duration-300 group-open:rotate-45 group-open:border-accent group-open:text-accent">
-                    <Plus className="size-4" aria-hidden="true" />
-                  </span>
+                  <Plus className="mt-1 size-4 shrink-0 text-secondary transition-transform duration-200 group-open:rotate-45" aria-hidden="true" />
                 </summary>
-                <p className="px-5 pb-5 text-[14px] leading-relaxed text-secondary">{q.a}</p>
+                <p className="pb-6 text-[15px] leading-relaxed text-secondary">{q.a}</p>
               </details>
-            </Item>
+            </li>
           ))}
-        </Stagger>
-        <p className="mx-auto mt-8 max-w-3xl text-[13.5px] text-secondary">
+        </ul>
+        <p className="mx-auto mt-8 max-w-3xl text-[14px] text-secondary">
           {s.faq.more}{' '}
-          <Link to="/method" className="font-medium text-accent hover:underline">
+          <Link to="/method" className="font-medium text-accent underline-offset-4 hover:underline">
             {s.nav.method}
           </Link>
-          {' · '}
-          <Link to="/limits" className="font-medium text-accent hover:underline">
+          {locale === 'ar' ? '، ' : ', '}
+          <Link to="/limits" className="font-medium text-accent underline-offset-4 hover:underline">
             {s.footer.limits}
           </Link>
         </p>

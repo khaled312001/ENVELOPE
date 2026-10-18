@@ -37,11 +37,6 @@ export function Logo({ className }: { readonly className?: string }): JSX.Elemen
   stamps and these screens do not touch.
 */
 
-/** A thin brand gradient along the bottom edge of a bar, drifting slowly. Decoration. */
-export function BrandEdge({ className }: { readonly className?: string }): JSX.Element {
-  return <span aria-hidden="true" className={cn('brand-edge pointer-events-none absolute inset-x-0 bottom-0 h-px', className)} />;
-}
-
 export function ThemeToggle(): JSX.Element {
   const { theme, toggle } = useTheme();
   const { t } = useLocale();
@@ -92,7 +87,7 @@ export function Account(): JSX.Element {
   const [profile, setProfile] = useState<boolean | null>(null);
   if (!actor) {
     return (
-      <Button asChild variant="primary" size="sm">
+      <Button asChild variant="ghost" size="sm">
         <Link to="/enter">{t.shell.enter}</Link>
       </Button>
     );
@@ -102,7 +97,7 @@ export function Account(): JSX.Element {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <Button variant="ghost" size="sm" aria-label={t.shell.accountMenu(actor.name)}>
-          <span className="tile tile-violet size-6 rounded-full text-[11px] font-semibold">
+          <span className="grid size-6 place-items-center rounded-full bg-inverse text-[11px] font-semibold text-on-inverse">
             {actor.name.trim().slice(0, 1).toUpperCase() || <UserRound aria-hidden="true" />}
           </span>
           <span className="hidden max-w-[10rem] truncate sm:inline">{actor.name}</span>
@@ -112,7 +107,7 @@ export function Account(): JSX.Element {
         <DropdownMenu.Content
           align="end"
           sideOffset={6}
-          className="z-50 min-w-56 rounded-md border border-line bg-raised p-1 text-[13px] text-fg shadow-2xl"
+          className="shadow-float z-50 min-w-56 rounded-md border border-line bg-panel p-1 text-[13px] text-fg"
         >
           <div className="px-2.5 py-2">
             <p className="font-medium">{actor.name}</p>
@@ -154,9 +149,8 @@ export function TopBar({ children }: { readonly children?: ReactNode }): JSX.Ele
   const nav =
     'group/nav relative inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium text-secondary transition-colors hover:bg-hover hover:text-fg aria-[current=page]:text-fg';
   return (
-    <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b border-line bg-base/90 px-3 backdrop-blur sm:px-4">
-      <BrandEdge />
-      <Link to="/" className="me-2 rounded-md p-1 transition-transform duration-300 hover:-translate-y-px" aria-label={t.shell.home}>
+    <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b border-line bg-base px-3 sm:px-4">
+      <Link to="/" className="me-2 rounded-md p-1" aria-label={t.shell.home}>
         <Logo />
       </Link>
       {actor ? (
@@ -167,7 +161,7 @@ export function TopBar({ children }: { readonly children?: ReactNode }): JSX.Ele
             <NavMarker />
           </NavLink>
           <NavLink to="/studio" end className={nav}>
-            <Plus className="size-3.5 text-brand-alt" aria-hidden="true" />
+            <Plus className="size-3.5 text-accent" aria-hidden="true" />
             {t.shell.newStudy}
             <NavMarker />
           </NavLink>
@@ -185,14 +179,9 @@ export function TopBar({ children }: { readonly children?: ReactNode }): JSX.Ele
 }
 
 /**
- * The underline under the current page's link, in the brand gradient. Drawn by
- * CSS from `aria-current` on the parent link, so it needs no state of its own.
+ * The underline under the current page's link, in the ink. Drawn by CSS from
+ * `aria-current` on the parent link, so it needs no state of its own.
  */
 export function NavMarker(): JSX.Element {
-  return (
-    <span
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-x-2.5 -bottom-px h-0.5 origin-center scale-x-0 rounded-full bg-linear-to-r from-accent via-brand-alt to-brand-glow transition-transform duration-300 ease-out group-hover/nav:scale-x-50 group-aria-[current=page]/nav:scale-x-100"
-    />
-  );
+  return <span aria-hidden="true" className="pointer-events-none absolute inset-x-2.5 -bottom-px hidden h-0.5 bg-fg group-aria-[current=page]/nav:block" />;
 }

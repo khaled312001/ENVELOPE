@@ -92,8 +92,8 @@ export const LIMITS: readonly Refusal[] = [
     body: (
       <>
         Travel distances, egress and façade fire performance are applicable and are{' '}
-        <em>not</em> assessed. They are listed as deferred in every single output rather
-        than omitted, because an absent check reads as a check that passed.
+        <em>not</em> assessed. They are listed as deferred in every output rather than
+        omitted, because an absent check reads as a check that passed.
       </>
     ),
   },
@@ -104,7 +104,7 @@ export const LIMITS: readonly Refusal[] = [
       <>
         There is no “realistic” band and the field does not exist in the schema. That
         number would need achieved-versus-permitted data no public source carries. If you
-        want to discount the figures you set the factor yourself and it is recorded as
+        want to discount the figures, you set the factor yourself and it is recorded as
         yours.
       </>
     ),
@@ -118,7 +118,7 @@ export const LIMITS: readonly Refusal[] = [
         single declaration. The engine refuses to compute until a person declares the
         treatment or asks to see both, and it returns a refusal rather than a guess. There
         is no default, because a default here is a silent decision made on the applicant’s
-        behalf — and the spread it would hide is shown, measured, for this plot.
+        behalf. The spread it would hide is measured and shown for this plot.
       </>
     ),
   },

@@ -66,7 +66,7 @@ export function Row({ label, children }: { readonly label: ReactNode; readonly c
 
 /** The step's one obvious action, held at the foot of the panel while the inputs scroll above it. */
 export function Footer({ children }: { readonly children: ReactNode }): JSX.Element {
-  return <div className="sticky bottom-0 -mx-4 grid gap-2 border-t border-line bg-panel/95 px-4 py-3 backdrop-blur">{children}</div>;
+  return <div className="sticky bottom-0 -mx-4 grid gap-2 border-t border-line bg-panel px-4 py-3">{children}</div>;
 }
 
 /** "Go on to the next step" — the primary action of a step whose figures are only read. */

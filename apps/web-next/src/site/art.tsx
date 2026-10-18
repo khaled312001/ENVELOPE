@@ -1,54 +1,29 @@
 import { cn } from '../lib/cn.js';
 
-import cardExports from '../assets/img/card-exports.webp';
-import cardFaq from '../assets/img/card-faq.webp';
-import cardLimits from '../assets/img/card-limits.webp';
-import cardMethod from '../assets/img/card-method.webp';
-import cardParking from '../assets/img/card-parking.webp';
-import cardProduct from '../assets/img/card-product.webp';
-import ctaPattern from '../assets/img/cta-pattern.webp';
-import enterPanel from '../assets/img/enter-panel.webp';
-import exportsModel from '../assets/img/exports-model.webp';
-import homeBackdrop from '../assets/img/home-backdrop.webp';
-import methodChain from '../assets/img/method-chain.webp';
 import notFound from '../assets/img/not-found.webp';
 import parkingReach from '../assets/img/parking-reach.webp';
-import sectionModel from '../assets/img/parking-section-model.webp';
-import productFlow from '../assets/img/product-flow.webp';
 import studiesEmpty from '../assets/img/studies-empty.webp';
 
 /*
   THE ILLUSTRATIONS, AND WHAT THEY ARE ALLOWED TO BE.
 
-  Line art drawn in mid-tones that read on both themes (measured against both
-  page backgrounds when the briefs were written), on a transparent ground, so
-  one file serves light and dark. None of them carries a number, a word or
-  amber: a figure in a picture is a figure the engine did not produce, and
-  amber is reserved for ASSUMED values.
+  Three are left, each a line drawing of something this product actually
+  handles: a parking module and the way a car reaches its bays, plot outlines on
+  sheets, an empty title block. Line art in mid-tones on a transparent ground,
+  so one file serves both themes; none carries a number, a word or amber.
 
-  The three white models are photographs of nothing the engine computed, so
-  wherever one stands near the engine's own drawings it says so beneath it.
-  The hero, the 3D view and the parking plan are never pictures — they are the
-  engine's model, drawn live.
+  The rest went on 18 Oct 2026 (the owner's call, «شيل بصمه كلود والذكاء
+  الاصطناعي من تصميم الموقع»). The white study models were renders of a building
+  nobody computed, and the card drawings — file stacks, dot fields, a tree with
+  a gradient square — were the stock pictures of a generated page. The pictures
+  this product has a right to show are its own: the building and the drawings the
+  engine draws from a real run, which the front page and the studio show live.
 */
 
 const ART = {
-  'card-product': { src: cardProduct, w: 800, h: 500 },
-  'card-parking': { src: cardParking, w: 800, h: 500 },
-  'card-method': { src: cardMethod, w: 800, h: 500 },
-  'card-exports': { src: cardExports, w: 800, h: 500 },
-  'card-limits': { src: cardLimits, w: 800, h: 500 },
-  'card-faq': { src: cardFaq, w: 800, h: 500 },
-  'home-backdrop': { src: homeBackdrop, w: 1280, h: 853 },
-  'cta-pattern': { src: ctaPattern, w: 1280, h: 853 },
-  'product-flow': { src: productFlow, w: 1600, h: 560 },
   'parking-reach': { src: parkingReach, w: 900, h: 900 },
-  'method-chain': { src: methodChain, w: 1200, h: 800 },
   'not-found': { src: notFound, w: 960, h: 640 },
   'studies-empty': { src: studiesEmpty, w: 960, h: 640 },
-  'parking-section-model': { src: sectionModel, w: 1536, h: 1024 },
-  'exports-model': { src: exportsModel, w: 1536, h: 1024 },
-  'enter-panel': { src: enterPanel, w: 1024, h: 1536 },
 } as const;
 
 export type ArtName = keyof typeof ART;
@@ -82,33 +57,4 @@ export function Art({
       className={cn('block h-auto max-w-full select-none', className)}
     />
   );
-}
-
-/**
- * A white study model in a frame. The caption that said it was a picture was
- * taken off on 14 Oct 2026 with the rest of the explanatory captions; the alt
- * text still names it as an illustration. The studio sweep is part of the
- * image, so it reads as a photograph on either theme.
- */
-export function Illustration({
-  name,
-  alt,
-  className,
-  eager = false,
-}: {
-  readonly name: Extract<ArtName, 'parking-section-model' | 'exports-model' | 'enter-panel'>;
-  readonly alt: string;
-  readonly className?: string;
-  readonly eager?: boolean;
-}): JSX.Element {
-  return (
-    <figure className={cn('group overflow-hidden rounded-xl border border-line shadow-soft', className)}>
-      <Art name={name} alt={alt} eager={eager} className="w-full transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:group-hover:scale-100" />
-    </figure>
-  );
-}
-
-/** The URL alone, for a CSS background. */
-export function artUrl(name: ArtName): string {
-  return ART[name].src;
 }

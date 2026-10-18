@@ -1,11 +1,10 @@
-import { Check, RotateCw } from 'lucide-react';
+import { BookOpenCheck, Check, RotateCw } from 'lucide-react';
 import { createContext, type ReactNode, useContext, useEffect, useId, useState } from 'react';
 
 import { type Actor, type AdviseBody, type AdviseStudioStep, type AdvisorEdit, api, ApiError } from '@web/api/client.js';
 
 import { useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
-import { SparkMark } from '../ui/spark.js';
 import { acceptable, describeField, describeValue } from './advisor-edits.js';
 
 /*
@@ -137,7 +136,7 @@ export function AdvisorBox({
   return (
     <section className="grid gap-2 rounded-md border border-line bg-base p-3" data-advisor="" aria-labelledby={id} aria-busy={asking}>
       <h3 id={id} className="flex items-center gap-2 text-[12.5px] font-medium text-fg">
-        <SparkMark className="text-accent" />
+        <BookOpenCheck className="size-4 text-accent" aria-hidden="true" />
         {t.advisor.title}
       </h3>
       {asking ? (
@@ -148,7 +147,7 @@ export function AdvisorBox({
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-[12.5px] text-secondary">{error ? t.advisor.offerError : t.advisor.offer}</p>
           <Button onClick={ask_}>
-            <SparkMark className="text-accent" />
+            <BookOpenCheck aria-hidden="true" />
             {error ? t.advisor.askError : t.advisor.ask}
           </Button>
         </div>

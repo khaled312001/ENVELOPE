@@ -195,7 +195,7 @@ export const EN = {
      * view and not the answer. The engine flow says the same on its own view.
      */
     noWebgl:
-      'This browser could not start 3D drawing — WebGL is switched off or ' +
+      'This browser could not start 3D drawing, because WebGL is switched off or ' +
       'unavailable. The figures above are this run, and the levels are stated ' +
       'in words below.',
 
@@ -237,7 +237,7 @@ export const EN = {
     proseBefore:
       'Band C is the smaller of what the floor area permits and what the parking supply ' +
       'can serve. That supply is an available area divided by an area-per-bay factor, ' +
-      'and no cited rule fixes the factor — it is the amber figure in the fold. The ' +
+      'and no cited rule fixes the factor. It is the amber figure in the fold. The ' +
       'engine lays the level out as bays, aisles and a ramp inside the podium outline ',
     proseEmphasis: 'afterwards',
     proseAfter:
@@ -259,13 +259,13 @@ export const EN = {
 
   guarantees: {
     title: 'What holds the answer up',
-    lede: 'Not a model, and not a guess with a confidence interval painted on afterwards.',
+    lede: 'No statistical model, and no guess with a confidence interval added afterwards.',
 
     /** Four stages of one mechanism, in order. Keys, not an array, so order stays in the JSX. */
     chain: {
       generate: {
-        title: 'Rules that generate, not rules that judge',
-        body: 'A setback clause becomes an inward offset; nothing is tested afterwards.',
+        title: 'Rules produce the answer',
+        body: 'A setback clause becomes an inward offset. There is no drawing to test afterwards.',
       },
       exact: {
         title: 'Exact arithmetic on a declared grid',
@@ -275,13 +275,13 @@ export const EN = {
       },
       derivation: {
         title: 'Every value carries its derivation',
-        body: 'A filled gap is amber, and it says what it costs rather than merely that it exists.',
+        body: 'A filled gap is amber, and it says what it costs as well as that it is there.',
       },
       blocks: {
-        title: 'A layer that blocks emission',
+        title: 'Checks that block the output',
         body:
-          'An independent check that cannot see the engine; a failure blocks the output and ' +
-          'never warns.',
+          'An independent check that cannot see the engine. A failure blocks the output. It ' +
+          'is never a warning.',
       },
     },
 
@@ -301,15 +301,15 @@ export const EN = {
   claims: {
     title: 'Exactly what we claim',
     lede:
-      'Separate questions get separate answers, in every report the engine produces, and ' +
-      'the wording is fixed in the specification rather than written by whoever is selling.',
+      'Each question gets its own answer in every report the engine produces. The wording ' +
+      'is fixed in the specification, and whoever is selling does not get to change it.',
 
     selfConsistency: {
       title: 'Self-consistency',
       status: 'Supported',
       body:
         'The output satisfies every constraint we encoded and its arithmetic closes. This ' +
-        'says the engine did what it was told — not that what it was told is right.',
+        'says the engine did what it was told. It does not say that what it was told is right.',
     },
     coverage: {
       title: 'Rule coverage',
@@ -344,9 +344,9 @@ export const EN = {
       status: 'Never claimed',
       body:
         'This system does not and cannot determine whether an authority would approve a ' +
-        'scheme. Not “not yet”. Not “pending certification”. It is not obtainable from any ' +
-        'computation, our validator agreeing with our generator is self-consistency and ' +
-        'nothing more, and no output of this product may be described as a compliance check.',
+        'scheme, and no later version or certification will change that. Approval cannot be ' +
+        'computed. Our validator agreeing with our generator is self-consistency and nothing ' +
+        'more, and no output of this product may be described as a compliance check.',
     },
 
     link: 'What each of these statuses would take to change',
@@ -364,8 +364,8 @@ export const EN = {
       satisfy is a small dishonesty on the page that sells honesty.
     */
     lede:
-      'More of them than there are features, and deliberately so. Every line here is a ' +
-      'thing somebody will otherwise assume.',
+      'There are more of these than there are features, on purpose. Each line is something a ' +
+      'reader would otherwise assume.',
     after:
       'There are more of these, and some of them the software performs at runtime as a ' +
       'refusal you can watch it return.',
@@ -382,7 +382,7 @@ export const EN = {
       'No rule in it is approved by a named professional, the metric definitions annex is ' +
       'unsigned, and every clause reference it carries is a placeholder rather than a ' +
       'sourced citation. Every figure it produces today is an engine demonstration on ' +
-      'draft rules — not a capacity assessment, and not quotable to a third party. That is ' +
+      'draft rules. It is not a capacity assessment, and it is not quotable to a third party. That is ' +
       'stated on every screen and printed on every report.',
     numbers: 'See the readiness numbers',
     engine: 'Open the engine anyway',

@@ -67,7 +67,7 @@ export const EN = {
     switchLanguage: 'Switch the page to Arabic',
     enter: 'Sign in',
     accountMenu: (name: string): string => `Account: ${name}`,
-    guest: 'Guest — studies are kept in this browser',
+    guest: 'Guest. Studies are kept in this browser',
     signedIn: 'Signed in',
     named: 'Named in this browser',
     signOut: 'Sign out',
@@ -81,21 +81,15 @@ export const EN = {
   },
 
   landing: {
-    eyebrow: 'Development capacity · Parking layout · Dubai',
     // The owner's description of the platform (16 Oct 2026), as the headline. "Optimized"
     // is left out: Phase 0 refuses the optimiser by construction, so the page may not claim one.
     titleA: 'A rule-based development platform that turns land data, zoning rules and developer requirements into',
     titleB: 'building configurations, capacity calculations and development decisions, starting with Dubai.',
     live: 'Engine output',
     carsTitle: 'Cars in bays',
-    bandsEyebrow: 'Capacity',
-    flowEyebrow: 'The flow',
-    outEyebrow: 'Exports',
     outTitle: 'One building, six files',
     outLede: 'Every file comes from the same model, so the cars match everywhere.',
-    parity: (n: string): string => `${n} cars in the worked example — the same in the sheets, the DXF and the 3D model.`,
-    claimsEyebrow: 'What it claims',
-    limitsEyebrow: 'Limits',
+    parity: (n: string): string => `${n} cars in the worked example, and the same count in the sheets, the DXF and the 3D model.`,
     // The hero's three inputs, said as the reader meets them. "Feasibility" stays out: no cost, price or return is computed.
     lede: 'Upload the affection plan or draw the plot, answer what no rule decides, and get the envelope, the GFA, a parking layout placed bay by bay, the drawing set and the building in 3D. Every number shows its source.',
     ctaExample: 'Open the worked example',
@@ -402,7 +396,7 @@ export const EN = {
     use: 'Use this sheet',
     using: 'In use for this study',
     another: 'Read another sheet',
-    skip: 'Skip — draw the plot',
+    skip: 'Skip and draw the plot',
     toPlot: 'Continue to the plot',
     emptyTitle: 'Start from the affection plan',
     emptyBody: 'The plot number, area, limits and, where printed, the corners are read for you.',
@@ -538,7 +532,7 @@ export const EN = {
     spread: 'Spread',
     spreadValue: (m: number): string => `${m} metres between levels`,
     envelope: 'Envelope',
-    hint: 'Drag to turn · scroll to zoom · click an element for its derivation',
+    hint: 'Drag to turn, scroll to zoom, and click an element for its derivation.',
     levelsTable: (n: number): string => `Levels table (${n})`,
     level: 'Level',
     use: 'Use',
@@ -553,7 +547,7 @@ export const EN = {
     title: 'Capacity',
     hint2: 'The governing capacity is the smallest of three limits.',
     governing: 'Governing capacity (GFA)',
-    governedBy: (letter: string, name: string): string => `Band ${letter} governs — ${name.toLowerCase()}.`,
+    governedBy: (letter: string, name: string): string => `Band ${letter} governs: ${name.toLowerCase()}.`,
     binding: 'Binding constraint:',
     bands: 'The three bands',
     headroom: (m2: string): string => `${m2} m² of headroom before the next band binds.`,
@@ -568,8 +562,8 @@ export const EN = {
     plate: 'Tower plate cap',
     core: 'Core area',
     totalBays: 'Bays the largest scheme the envelope allows would need',
-    coreRec: 'Core comparison — nothing is subtracted',
-    assumptions: (n: number): string => (n === 1 ? '1 assumption — you may edit it' : `${n} assumptions — you may edit each one`),
+    coreRec: 'Core comparison. Nothing is subtracted',
+    assumptions: (n: number): string => (n === 1 ? '1 assumption. You may edit it' : `${n} assumptions. You may edit each one`),
     sensitivity: (p: string, lo: string, hi: string, rel: string): string =>
       `Moved by ${p}, the governing capacity ranges from ${lo} to ${hi} m² (${rel}).`,
     // The level table's mark on the one level whose plate is not the tower plate; the area beside it is the engine's, amber.
@@ -618,7 +612,7 @@ export const EN = {
       circulation: 'Cross aisle',
       footprint: 'Corners a rectangle cannot reach',
     },
-    lossValue: (bays: string, m2: string): string => `${bays} bays · ${m2} m²`,
+    lossValue: (bays: string, m2: string): string => `${bays} bays, ${m2} m²`,
     standard: (w: string, l: string, d: string): string => `Bay ${w} × ${l} m, driveway ${d} m, from Table B.11.`,
     // The level at grade (Eng. Mohamed, 16 Oct 2026): the drive from the entrance, the substation on the road.
     grade: {
@@ -665,7 +659,7 @@ export const EN = {
     cannotChoose: 'Computed elsewhere. Compute it again here to choose another entrance.',
     rank: (n: number): string => `Rank ${n}`,
     noHierarchy: 'no hierarchy',
-    window: (w: string, width: string): string => `usable window ${w} m · opening ${width} m`,
+    window: (w: string, width: string): string => `usable window ${w} m, opening ${width} m`,
     inUse: 'In use',
     useThis: 'Use this boundary',
     useRecommendation: 'Use the recommendation',
@@ -691,7 +685,7 @@ export const EN = {
     exit: 'Exit',
     placing: 'A click on the plan places',
     boundaryOf: (what: string): string => `${what}: boundary`,
-    boundaryOption: (n: number, to: number, road: string): string => `Boundary ${n}, P${n} to P${to} · ${road}`,
+    boundaryOption: (n: number, to: number, road: string): string => `Boundary ${n}, P${n} to P${to}, ${road}`,
     centre: (what: string, k: number): string => `${what}: centre, metres from P${k}`,
     centreBlank: 'Leave it empty to centre it in what the code allows.',
     range: (lo: string, hi: string, k: number): string => `Between ${lo} and ${hi} m from P${k}.`,
@@ -735,7 +729,7 @@ export const EN = {
   checks: {
     title: 'Checks',
     ran: (ran: number, total: number, dormant: number): string =>
-      `${ran} of ${total} checks ran. ${dormant} had no data — not a pass.`,
+      `${ran} of ${total} checks ran. ${dormant} had no data, and that is not a pass.`,
     noneFailed: 'None failed',
     failed: 'A check failed',
     status: { PASS: 'Passed', FAIL: 'Failed', DORMANT: 'Did not run' },
@@ -769,7 +763,7 @@ export const EN = {
     g4Action: 'Sign as reviewer',
     signedBy: (name: string): string => `Signed by ${name}`,
     files: 'Files',
-    locked: 'Files — sign both gates to unlock',
+    locked: 'Files. Sign both gates to unlock them',
     file: {
       html: { name: 'Report', body: 'Opens in a new tab, with a button above it to print or save as PDF on A4.' },
       sheets: { name: 'A3 drawing set', body: 'Every sheet on this screen, for print.' },

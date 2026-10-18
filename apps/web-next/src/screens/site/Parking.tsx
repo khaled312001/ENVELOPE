@@ -1,16 +1,11 @@
-import { ArrowDownUp, ChartPie, CircleSlash, DoorOpen, RotateCw, Route, Ruler, SquareParking } from 'lucide-react';
-import { motion, useReducedMotion } from 'motion/react';
-
 import worked from '@web/screens/worked-example.json';
 
 import { cn } from '../../lib/cn.js';
 import { grouped } from '../../lib/figures.js';
 import { EngineNote } from '../../lib/engine-text.js';
 import { useLocale } from '../../lib/locale.js';
-import { Art, Illustration } from '../../site/art.js';
+import { Art } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
-import { EASE, Item, Spotlight, Stagger } from '../../ui/motion.js';
-import { IconTile } from '../../ui/tile.js';
 
 /*
   PARKING, THE PART THE CLIENT IS BUYING.
@@ -29,7 +24,6 @@ type Pt = { readonly x: string; readonly y: string };
 
 function LevelPlan(): JSX.Element {
   const s = useSite();
-  const reduce = useReducedMotion();
   const ring = worked.input.plot.vertices;
   const xs = ring.map((p) => Number(p.x));
   const ys = ring.map((p) => Number(p.y));
@@ -50,7 +44,7 @@ function LevelPlan(): JSX.Element {
     <svg role="img" aria-label={s.parking.planLabel} viewBox={`0 0 ${w} ${h}`} className="h-auto w-full">
       <defs>
         <pattern id="ramp-hatch" width="1.2" height="1.2" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <line x1="0" y1="0" x2="0" y2="1.2" stroke="var(--brand-alt)" strokeWidth="0.35" />
+          <line x1="0" y1="0" x2="0" y2="1.2" stroke="var(--text-secondary)" strokeWidth="0.35" />
         </pattern>
       </defs>
       <polygon points={pts(ring)} fill="var(--surface-panel)" stroke="var(--text-secondary)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
@@ -60,26 +54,13 @@ function LevelPlan(): JSX.Element {
           key={`r${i}`}
           points={pts(r.outline)}
           fill={r.kind === 'AISLE' ? 'var(--accent-subtle)' : r.kind === 'RAMP' ? 'url(#ramp-hatch)' : 'var(--surface-hover)'}
-          stroke={r.kind === 'RAMP' ? 'var(--brand-alt)' : 'none'}
+          stroke={r.kind === 'RAMP' ? 'var(--text-secondary)' : 'none'}
           strokeWidth={1.2}
           vectorEffect="non-scaling-stroke"
         />
       ))}
       {bays.map((r, i) => (
-        <motion.polygon
-          key={`b${i}`}
-          points={pts(r.outline)}
-          fill="var(--surface-raised)"
-          stroke="var(--text-tertiary)"
-          strokeWidth={0.75}
-          vectorEffect="non-scaling-stroke"
-          style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
-          // Transform only: a bay not yet in view is drawn, just not yet settled.
-          initial={reduce ? false : { scale: 0.4 }}
-          whileInView={{ scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.45, ease: EASE, delay: 0.012 * i }}
-        />
+        <polygon key={`b${i}`} points={pts(r.outline)} fill="var(--surface-raised)" stroke="var(--text-tertiary)" strokeWidth={0.75} vectorEffect="non-scaling-stroke" />
       ))}
       <line x1={ox1} y1={oy1} x2={ox2} y2={oy2} stroke="var(--accent)" strokeWidth={4} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
       <path
@@ -98,9 +79,19 @@ function LevelPlan(): JSX.Element {
 function KeySwatch({ className, label }: { readonly className: string; readonly label: string }): JSX.Element {
   return (
     <li className="flex items-center gap-2">
-      <span className={cn('inline-block h-3 w-5 rounded-[2px] border', className)} aria-hidden="true" />
+      <span className={cn('inline-block h-3 w-5 border', className)} aria-hidden="true" />
       {label}
     </li>
+  );
+}
+
+/** A figure with its unit, at the size every figure on this page shares. */
+function Figure({ value, unit, size = 'text-[24px]' }: { readonly value: string; readonly unit?: string; readonly size?: string }): JSX.Element {
+  return (
+    <span className={cn('figure text-fg', size)}>
+      {value}
+      {unit ? <span className="ms-1.5 font-sans text-[13px] text-secondary">{unit}</span> : null}
+    </span>
   );
 }
 
@@ -126,167 +117,149 @@ export function Parking(): JSX.Element {
     { key: 'footprint', ...lp.losses.footprint },
   ] as const;
 
+  const table = [
+    { title: s.parking.table.bay, rows: [[s.parking.table.width, `${lp.standard.bayWidthM} ${m}`], [s.parking.table.length, `${lp.standard.bayLengthM} ${m}`]] },
+    {
+      title: s.parking.table.driveway,
+      rows: [
+        [s.parking.table.width, `${lp.standard.drivewayWidthM} ${m}`],
+        ['', lp.standard.driveway === 'TWO_WAY' ? s.parking.table.twoWay : lp.standard.driveway],
+      ],
+    },
+    { title: s.parking.table.angle, rows: [['', lp.standard.angle === 'DEG_90' ? s.parking.table.deg90 : lp.standard.angle]] },
+  ];
+
   return (
     <SitePage path="/parking">
       <PageHero
-        icon={SquareParking}
-        tone="blue"
         crumb={s.nav.parking}
-        eyebrow={s.parking.eyebrow}
         title={s.parking.title}
         lede={s.parking.lede}
         aside={
-          <Stagger onMount as="dl" className="grid grid-cols-2 gap-3">
+          <dl className="grid grid-cols-2 gap-x-8 gap-y-6">
             {stats.map((st) => (
-              <Item key={st.label} className="grid gap-1 rounded-xl border border-line bg-panel/90 p-5 shadow-soft backdrop-blur">
-                <dt className="text-[12px] text-secondary">{st.label}</dt>
-                <dd className="figure text-[28px] font-light text-fg">
-                  {st.value}
-                  {st.unit ? <span className="ms-1.5 font-sans text-[12px] text-secondary">{st.unit}</span> : null}
+              <div key={st.label} className="grid gap-1 border-t border-line pt-3">
+                <dt className="text-[13px] text-secondary">{st.label}</dt>
+                <dd>
+                  <Figure value={st.value} unit={st.unit} size="text-[30px]" />
                 </dd>
-              </Item>
+              </div>
             ))}
-          </Stagger>
+          </dl>
         }
       />
 
-      <Band>
+      <section className="mx-auto max-w-[1240px] px-4 pb-20 sm:px-6">
         <figure className="grid gap-4">
-          <div className="ring-brand shadow-lifted rounded-xl">
-            <div className="canvas-grid overflow-hidden rounded-xl p-4 sm:p-8">
-              <LevelPlan />
-            </div>
+          <div className="canvas-grid overflow-hidden rounded-lg p-4 sm:p-8">
+            <LevelPlan />
           </div>
-          <figcaption className="grid gap-3 text-[12.5px] text-secondary">
-            <ul className="flex flex-wrap gap-x-5 gap-y-2">
+          <figcaption>
+            <ul className="flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-secondary">
               <KeySwatch className="border-tertiary bg-raised" label={s.parking.key.bay} />
               <KeySwatch className="border-accent/40 bg-accent-subtle" label={s.parking.key.aisle} />
-              <KeySwatch className="border-brand-alt bg-[repeating-linear-gradient(45deg,var(--brand-alt)_0_1px,transparent_1px_4px)]" label={s.parking.key.ramp} />
+              <KeySwatch className="border-secondary bg-[repeating-linear-gradient(45deg,var(--text-secondary)_0_1px,transparent_1px_4px)]" label={s.parking.key.ramp} />
               <li className="flex items-center gap-2">
-                <span className="inline-block h-1 w-5 rounded-full bg-accent" aria-hidden="true" />
-                {s.parking.accessEyebrow}
+                <span className="inline-block h-1 w-5 bg-accent" aria-hidden="true" />
+                {s.parking.key.entrance}
               </li>
             </ul>
           </figcaption>
         </figure>
-      </Band>
+      </section>
 
       <Band tinted>
-        <SectionHead icon={Ruler} tone="blue" eyebrow={s.parking.tableEyebrow} title={s.parking.tableTitle} lede={s.parking.tableLede} />
-        <Stagger className="grid gap-4 sm:grid-cols-3" gap={0.08}>
-          {[
-            { icon: SquareParking, tone: 'blue' as const, title: s.parking.table.bay, rows: [[s.parking.table.width, `${lp.standard.bayWidthM} ${m}`], [s.parking.table.length, `${lp.standard.bayLengthM} ${m}`]] },
-            {
-              icon: Route,
-              tone: 'violet' as const,
-              title: s.parking.table.driveway,
-              rows: [
-                [s.parking.table.width, `${lp.standard.drivewayWidthM} ${m}`],
-                ['', lp.standard.driveway === 'TWO_WAY' ? s.parking.table.twoWay : lp.standard.driveway],
-              ],
-            },
-            { icon: Ruler, tone: 'cyan' as const, title: s.parking.table.angle, rows: [['', lp.standard.angle === 'DEG_90' ? s.parking.table.deg90 : lp.standard.angle]] },
-          ].map((card) => (
-            <Item key={card.title} className="group grid content-start gap-4 rounded-xl border border-line bg-base p-6 shadow-soft transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-strong motion-reduce:hover:translate-y-0">
-              <span className="flex items-center gap-3 text-[15px] font-medium text-fg">
-                <IconTile icon={card.icon} tone={card.tone} size="sm" />
-                {card.title}
-              </span>
-              <dl className="grid gap-2">
-                {card.rows.map(([k, val]) => (
-                  <div key={`${k}${val}`} className="flex items-baseline justify-between gap-3 border-t border-subtle pt-2">
-                    <dt className="text-[12.5px] text-secondary">{k}</dt>
+        <SectionHead title={s.parking.tableTitle} lede={s.parking.tableLede} />
+        <div className="grid gap-x-10 gap-y-8 sm:grid-cols-3">
+          {table.map((group) => (
+            <div key={group.title} className="grid content-start gap-2">
+              <h3 className="text-[16px] font-semibold text-fg">{group.title}</h3>
+              <dl className="border-t border-line">
+                {group.rows.map(([k, val]) => (
+                  <div key={`${k}${val}`} className="flex items-baseline justify-between gap-3 border-b border-line py-2.5">
+                    <dt className="text-[13.5px] text-secondary">{k}</dt>
                     <dd className="figure text-[18px] text-fg">{val}</dd>
                   </div>
                 ))}
               </dl>
-            </Item>
+            </div>
           ))}
-        </Stagger>
+        </div>
       </Band>
 
       <Band>
-        <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
+        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
           <div>
-            <SectionHead icon={Route} tone="violet" eyebrow={s.parking.reachEyebrow} title={s.parking.reachTitle} className="mb-6" />
-            <p className="text-[15px] leading-relaxed text-secondary">{s.parking.reachBody}</p>
-            <p className="mt-4 rounded-lg border border-line bg-panel p-4 text-[13.5px] leading-relaxed text-secondary shadow-soft">{s.parking.reachTest}</p>
+            <SectionHead title={s.parking.reachTitle} className="mb-6" />
+            <p className="text-[16px] leading-relaxed text-secondary">{s.parking.reachBody}</p>
+            <p className="mt-4 text-[14.5px] leading-relaxed text-fg">{s.parking.reachTest}</p>
             <Art name="parking-reach" alt={s.art.parkingReach} className="mx-auto mt-8 w-full max-w-sm" />
           </div>
           <div>
-            <SectionHead icon={RotateCw} tone="cyan" eyebrow={s.parking.orientationEyebrow} title={s.parking.orientationTitle} className="mb-6" />
-            <p className="text-[15px] leading-relaxed text-secondary">{s.parking.orientationBody}</p>
+            <SectionHead title={s.parking.orientationTitle} className="mb-6" />
+            <p className="text-[16px] leading-relaxed text-secondary">{s.parking.orientationBody}</p>
             {orientationNote ? (
-              <blockquote className="mt-4 border-s-2 border-accent ps-4 text-[13.5px] leading-relaxed text-fg">
+              <blockquote className="mt-6 text-[14.5px] leading-relaxed text-fg">
                 <EngineNote text={orientationNote} />
               </blockquote>
             ) : null}
-            <Illustration name="parking-section-model" alt={s.art.sectionModel} className="mt-8" />
           </div>
         </div>
       </Band>
 
       <Band tinted>
-        <SectionHead icon={ChartPie} tone="violet" eyebrow={s.parking.lossesEyebrow} title={s.parking.lossesTitle} lede={s.parking.lossesLede} />
-        <Stagger className="grid gap-4 md:grid-cols-3" gap={0.08}>
+        <SectionHead title={s.parking.lossesTitle} lede={s.parking.lossesLede} />
+        <div className="grid gap-x-10 gap-y-10 md:grid-cols-3">
           {losses.map((l) => (
-            <Item key={l.key} className="h-full">
-              <Spotlight className="grid h-full content-start gap-3 rounded-xl border border-line bg-base p-6 shadow-soft">
-                <h3 className="text-[15px] font-medium text-fg">{s.parking.losses[l.key].title}</h3>
-                <p className="text-[13px] leading-relaxed text-secondary">{s.parking.losses[l.key].body}</p>
-                <dl className="mt-auto grid grid-cols-2 gap-3 border-t border-subtle pt-3">
-                  <div>
-                    <dt className="sr-only">{s.parking.key.bay}</dt>
-                    <dd className="figure text-[22px] font-light text-fg">{s.parking.losses.bays(String(l.bays))}</dd>
-                  </div>
-                  <div>
-                    <dt className="sr-only">{m2}</dt>
-                    <dd className="figure text-[22px] font-light text-fg">
-                      {grouped(l.areaM2)}
-                      <span className="ms-1 font-sans text-[12px] text-secondary">{m2}</span>
-                    </dd>
-                  </div>
-                </dl>
-              </Spotlight>
-            </Item>
+            <div key={l.key} className="grid content-start gap-2">
+              <h3 className="text-[16px] font-semibold text-fg">{s.parking.losses[l.key].title}</h3>
+              <p className="text-[14px] leading-relaxed text-secondary">{s.parking.losses[l.key].body}</p>
+              <dl className="mt-2 flex flex-wrap gap-x-8 gap-y-2">
+                <div>
+                  <dt className="sr-only">{s.parking.key.bay}</dt>
+                  <dd className="figure text-[22px] text-fg">{s.parking.losses.bays(String(l.bays))}</dd>
+                </div>
+                <div>
+                  <dt className="sr-only">{m2}</dt>
+                  <dd>
+                    <Figure value={grouped(l.areaM2)} unit={m2} size="text-[22px]" />
+                  </dd>
+                </div>
+              </dl>
+            </div>
           ))}
-        </Stagger>
+        </div>
       </Band>
 
       <Band>
-        <SectionHead icon={DoorOpen} tone="blue" eyebrow={s.parking.accessEyebrow} title={s.parking.accessTitle} lede={s.parking.accessBody} />
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="ring-brand shadow-soft grid content-start gap-4 rounded-xl bg-panel p-6">
-            <p className="flex items-center gap-2 text-[14px] font-medium text-fg">
-              <ArrowDownUp className="size-4.5 text-accent" aria-hidden="true" />
-              {s.parking.accessRecommended}
-            </p>
-            <dl className="grid grid-cols-2 gap-3">
-              <div>
-                <dt className="text-[12px] text-secondary">{s.parking.accessWidth}</dt>
-                <dd className="figure text-[22px] font-light text-fg">
-                  {v.access.recommended.widthM}
-                  <span className="ms-1 font-sans text-[12px] text-secondary">{m}</span>
+        <SectionHead title={s.parking.accessTitle} lede={s.parking.accessBody} />
+        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+          <div className="grid content-start gap-4">
+            <h3 className="text-[16px] font-semibold text-fg">{s.parking.accessRecommended}</h3>
+            <dl className="grid grid-cols-2 gap-6">
+              <div className="grid gap-1">
+                <dt className="text-[13px] text-secondary">{s.parking.accessWidth}</dt>
+                <dd>
+                  <Figure value={v.access.recommended.widthM} unit={m} />
                 </dd>
               </div>
-              <div>
-                <dt className="text-[12px] text-secondary">{s.parking.accessWindow}</dt>
-                <dd className="figure text-[22px] font-light text-fg">
-                  {v.access.recommended.usableWindowM}
-                  <span className="ms-1 font-sans text-[12px] text-secondary">{m}</span>
+              <div className="grid gap-1">
+                <dt className="text-[13px] text-secondary">{s.parking.accessWindow}</dt>
+                <dd>
+                  <Figure value={v.access.recommended.usableWindowM} unit={m} />
                 </dd>
               </div>
             </dl>
-            <p className="border-t border-subtle pt-3 text-[13px] leading-relaxed text-fg">
+            <p className="text-[14.5px] leading-relaxed text-fg">
               <EngineNote text={v.access.recommended.rationale} />
             </p>
           </div>
-          <div className="grid content-start gap-3 rounded-xl border border-line bg-panel p-6 shadow-soft">
-            <p className="text-[14px] font-medium text-fg">{s.parking.accessRejected}</p>
-            <ul className="grid gap-2">
+          <div className="grid content-start gap-4">
+            <h3 className="text-[16px] font-semibold text-fg">{s.parking.accessRejected}</h3>
+            <ul className="grid border-t border-line">
               {v.access.rejected.map((r) => (
-                <li key={r.edgeSeq} className="flex items-start gap-2.5 text-[13px] leading-relaxed text-secondary">
-                  <span className="figure mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-strong text-[10.5px] text-fg">{r.edgeSeq}</span>
+                <li key={r.edgeSeq} className="flex items-start gap-3 border-b border-line py-3 text-[14px] leading-relaxed text-secondary">
+                  <span className="figure w-6 shrink-0 text-fg">{r.edgeSeq}</span>
                   <EngineNote text={r.reason} />
                 </li>
               ))}
@@ -296,19 +269,15 @@ export function Parking(): JSX.Element {
       </Band>
 
       <Band tinted>
-        <SectionHead icon={CircleSlash} tone="cyan" eyebrow={s.parking.notEyebrow} title={s.parking.notTitle} lede={s.parking.notLede} />
-        <Stagger as="ul" className="grid gap-3" gap={0.05}>
+        <SectionHead title={s.parking.notTitle} lede={s.parking.notLede} />
+        <ul className="grid border-t border-line">
           {notes.map((n) => (
-            <Item key={n} as="li" className="flex items-start gap-3 rounded-lg border border-line bg-base p-4 text-[13px] leading-relaxed text-secondary">
-              <CircleSlash className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <li key={n} className="border-b border-line py-3.5 text-[14px] leading-relaxed text-secondary">
               <EngineNote text={n} />
-            </Item>
+            </li>
           ))}
-          <Item as="li" className="flex items-start gap-3 rounded-lg border border-strong bg-panel p-4 text-[13.5px] leading-relaxed text-fg">
-            <CircleSlash className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            {s.parking.noOptimiser}
-          </Item>
-        </Stagger>
+          <li className="border-b border-line py-3.5 text-[14.5px] leading-relaxed font-medium text-fg">{s.parking.noOptimiser}</li>
+        </ul>
       </Band>
     </SitePage>
   );

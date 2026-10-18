@@ -946,7 +946,7 @@ export function PlotMapView({
           edit?.edge === l.i ? null : editable ? (
             <span
               key={`leg-${l.i}`}
-              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-stretch overflow-visible rounded-sm bg-panel/95 text-fg shadow-soft"
+              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-stretch overflow-visible rounded-sm bg-panel/95 text-fg shadow-float"
               style={{ left: l.x, top: l.y }}
             >
               <button
@@ -974,7 +974,7 @@ export function PlotMapView({
             <span
               key={`leg-${l.i}`}
               aria-hidden="true"
-              className="figure absolute -translate-x-1/2 -translate-y-1/2 rounded-sm bg-panel/90 px-1.5 py-0.5 text-[11px] text-fg shadow-soft"
+              className="figure absolute -translate-x-1/2 -translate-y-1/2 rounded-sm bg-panel/90 px-1.5 py-0.5 text-[11px] text-fg shadow-float"
               style={{ left: l.x, top: l.y }}
             >
               {l.text}
@@ -995,7 +995,7 @@ export function PlotMapView({
                   className="pointer-events-auto absolute z-10 grid w-max max-w-64 -translate-x-1/2 -translate-y-5 gap-1"
                   style={{ left: at.x, top: at.y }}
                 >
-                  <span className="flex items-center gap-1.5 justify-self-start rounded-md border border-accent bg-panel p-1 shadow-lifted" dir="ltr">
+                  <span className="flex items-center gap-1.5 justify-self-start rounded-md border border-accent bg-panel p-1 shadow-float" dir="ltr">
                     <Input
                       autoFocus
                       aria-label={t.map.lengthInput(edit.edge, j)}
@@ -1021,7 +1021,7 @@ export function PlotMapView({
                   <p
                     id="pm-length-help"
                     role={edit.refusal ? 'alert' : undefined}
-                    className={cn('rounded-sm bg-panel/95 px-2 py-1 text-[11.5px] shadow-soft', edit.refusal ? 'text-variance' : 'text-secondary')}
+                    className={cn('rounded-sm bg-panel/95 px-2 py-1 text-[11.5px] shadow-float', edit.refusal ? 'text-variance' : 'text-secondary')}
                   >
                     {edit.refusal ? (edit.refusal === 'outside-zone-40' ? t.map.outsideZone : t.map.lengthRefusal[edit.refusal]) : t.map.lengthKeys}
                   </p>
@@ -1052,7 +1052,7 @@ export function PlotMapView({
         {canEditShape && selectedAt ? (
           <div
             dir={dir}
-            className="pointer-events-auto absolute z-10 grid w-max max-w-60 gap-1 rounded-md border border-line bg-panel/95 p-1 shadow-lifted backdrop-blur"
+            className="pointer-events-auto absolute z-10 grid w-max max-w-60 gap-1 rounded-md border border-line bg-panel/95 p-1 shadow-float"
             style={{ left: selectedAt.x + 18, top: selectedAt.y - 58 }}
           >
             <Button variant="secondary" size="sm" className="h-9" aria-label={t.map.deleteCornerOf(selectedAt.i)} onClick={() => removeCorner(selectedAt.i)}>
@@ -1075,7 +1075,7 @@ export function PlotMapView({
             title={t.map.moveHandle}
             onKeyDown={nudge}
             // Small and see-through: on a villa-sized outline a larger mark would hide the shape it moves.
-            className="absolute grid size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-accent bg-panel/75 text-accent shadow-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="absolute grid size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-accent bg-panel/75 text-accent shadow-float focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"
             style={{ left: screen.centre.x, top: screen.centre.y }}
           >
             <Move className="size-4" aria-hidden="true" />
@@ -1085,7 +1085,7 @@ export function PlotMapView({
         {live ? (
           <span
             aria-hidden="true"
-            className="figure absolute -translate-x-1/2 -translate-y-[140%] rounded-sm border border-accent bg-panel px-1.5 py-0.5 text-[12px] font-medium text-fg shadow-soft"
+            className="figure absolute -translate-x-1/2 -translate-y-[140%] rounded-sm border border-accent bg-panel px-1.5 py-0.5 text-[12px] font-medium text-fg shadow-float"
             style={{ left: live.x, top: live.y }}
           >
             {live.text}
@@ -1109,10 +1109,10 @@ export function PlotMapView({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t.map.searchPlaceholder}
-            className="h-9 bg-panel/95 ps-8 shadow-soft backdrop-blur"
+            className="h-9 bg-panel/95 ps-8 shadow-float"
           />
           {hits ? (
-            <ul className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-md border border-line bg-panel shadow-lifted">
+            <ul className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-md border border-line bg-panel shadow-float">
               {hits.length === 0 ? <li className="px-3 py-2 text-[12.5px] text-secondary">{t.map.noHits}</li> : null}
               {hits.map((h) => (
                 <li key={`${h.at.lng},${h.at.lat}`}>
@@ -1131,7 +1131,7 @@ export function PlotMapView({
           panel goes down with them instead of covering them.
         */}
         <div className="ms-auto grid justify-items-end gap-2">
-        <div role="toolbar" aria-label={t.plot.view} className="pointer-events-auto flex items-center gap-1 rounded-lg border border-line bg-panel/95 p-1 shadow-soft backdrop-blur">
+        <div role="toolbar" aria-label={t.plot.view} className="pointer-events-auto flex items-center gap-1 rounded-lg border border-line bg-panel/95 p-1 shadow-float">
           {tools.map(({ id, icon: Icon, label }) => (
             <button
               key={id}
@@ -1146,7 +1146,7 @@ export function PlotMapView({
               }}
               className={cn(
                 'inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-medium transition-colors',
-                tool === id ? 'bg-linear-to-r from-brand-solid to-brand-alt-solid text-on-brand' : 'text-secondary hover:bg-hover hover:text-fg',
+                tool === id ? 'bg-inverse text-on-inverse' :'text-secondary hover:bg-hover hover:text-fg',
               )}
             >
               <Icon className="size-4" aria-hidden="true" />
@@ -1168,7 +1168,7 @@ export function PlotMapView({
 
       {/* ── the sheet overlay, when an affection plan is in use ── */}
       {sheet ? (
-        <div className="pointer-events-auto grid w-64 gap-2 rounded-lg border border-line bg-panel/95 p-3 text-[12.5px] shadow-soft backdrop-blur">
+        <div className="pointer-events-auto grid w-64 gap-2 rounded-lg border border-line bg-panel/95 p-3 text-[12.5px] shadow-float">
           <div className="flex items-center justify-between gap-2">
             <p className="font-medium text-fg">{t.map.sheet}</p>
             <Button variant="ghost" size="icon" className="size-7" aria-pressed={sheetOn} aria-label={t.map.sheetShow} onClick={() => setSheetOn((s) => !s)}>
@@ -1266,7 +1266,7 @@ export function PlotMapView({
       {/* ── bottom: what to do, what was drawn, and the one action ── */}
       <div className="absolute inset-x-3 bottom-3 grid gap-2" dir={dir}>
         <div className="flex flex-wrap items-end gap-2">
-          <div className="grid min-w-0 flex-1 gap-1 rounded-lg border border-line bg-panel/95 px-3 py-2 shadow-soft backdrop-blur">
+          <div className="grid min-w-0 flex-1 gap-1 rounded-lg border border-line bg-panel/95 px-3 py-2 shadow-float">
             <p id="pm-how" className="flex items-center gap-2 text-[12.5px] text-fg" role="status">
               {busy ? <Spinner className="text-accent" /> : null}
               {how}
@@ -1290,7 +1290,7 @@ export function PlotMapView({
               <p className="text-[12px] text-secondary">{t.map.corners(trace.ring.length)}</p>
             ) : null}
           </div>
-          <div className="flex items-center gap-1 rounded-lg border border-line bg-panel/95 p-1 shadow-soft backdrop-blur">
+          <div className="flex items-center gap-1 rounded-lg border border-line bg-panel/95 p-1 shadow-float">
             <Button variant="ghost" size="sm" disabled={historySize === 0 && (trace.ring.length === 0 || trace.fromSheet === true)} onClick={undo}>
               <Undo2 aria-hidden="true" />
               {t.map.undo}
@@ -1314,14 +1314,14 @@ export function PlotMapView({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Credit />
           {trace.fromSheet ? (
-            <p className="flex items-center gap-1.5 rounded-md bg-panel/90 px-2.5 py-1.5 text-[12px] text-fg backdrop-blur">
+            <p className="flex items-center gap-1.5 rounded-md bg-panel/90 px-2.5 py-1.5 text-[12px] text-fg">
               <MapPinned className="size-3.5 shrink-0 text-accent" aria-hidden="true" />
               {t.map.fromSheet}
             </p>
           ) : trace.closed && trace.ring.length >= 3 ? (
             <div className="flex items-center gap-2">
-              <p className="hidden rounded-sm bg-panel/85 px-2 py-0.5 text-[11px] text-secondary backdrop-blur md:block">{t.map.precision}</p>
-              <Button variant="brand" size="lg" onClick={() => onUse(trace)}>
+              <p className="hidden rounded-sm bg-panel/85 px-2 py-0.5 text-[11px] text-secondary md:block">{t.map.precision}</p>
+              <Button variant="primary" size="lg" onClick={() => onUse(trace)}>
                 {t.map.use}
               </Button>
             </div>
@@ -1348,11 +1348,11 @@ function Credit(): JSX.Element {
         aria-expanded={open}
         aria-label={t.map.creditLabel}
         onClick={() => setOpen((o) => !o)}
-        className="grid size-7 place-items-center rounded-full bg-panel/85 text-secondary backdrop-blur hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="grid size-7 place-items-center rounded-full bg-panel/85 text-secondary hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         <Info className="size-3.5" aria-hidden="true" />
       </button>
-      {open ? <p className="rounded-sm bg-panel/85 px-2 py-0.5 text-[10.5px] text-secondary backdrop-blur">{t.map.credit}</p> : null}
+      {open ? <p className="rounded-sm bg-panel/85 px-2 py-0.5 text-[10.5px] text-secondary">{t.map.credit}</p> : null}
     </div>
   );
 }

@@ -26,7 +26,6 @@ import { InspectProvider } from '../components/Traced.js';
 import { cn } from '../lib/cn.js';
 import { useLocale } from '../lib/locale.js';
 import { useNav } from '../lib/nav.js';
-import { toneAt } from '../ui/tile.js';
 import { CapacityCanvas, CapacityPanel } from '../studio/CapacityStep.js';
 import { ChecksCanvas, ChecksPanel } from '../studio/ChecksStep.js';
 import { ComputingMark } from '../studio/ComputingMark.js';
@@ -495,10 +494,10 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
           {/* ── Steps ── */}
           <nav aria-label={t.studio.steps} className="relative border-b border-line bg-panel lg:flex lg:flex-col lg:border-e lg:border-b-0">
             <ol className="relative flex gap-1 overflow-x-auto p-2 lg:grid lg:gap-1 lg:overflow-visible lg:p-3">
-              {/* The rail joining the steps, filled in the brand gradient as far as the work has got. */}
+              {/* The rail joining the steps, filled in the accent as far as the work has got. */}
               <span aria-hidden="true" className="pointer-events-none absolute start-[36px] top-[34px] bottom-[34px] hidden w-px bg-line lg:block">
                 <motion.span
-                  className="absolute inset-x-0 top-0 h-full origin-top bg-linear-to-b from-accent via-brand-alt to-brand-glow"
+                  className="absolute inset-x-0 top-0 h-full origin-top bg-accent"
                   initial={false}
                   animate={{ scaleY: STEPS.length > 1 ? Math.max(0, STEPS.findIndex((x) => x.id === step)) / (STEPS.length - 1) : 0 }}
                   transition={{ duration: reduce ? 0 : 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -515,25 +514,25 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
                       onClick={() => setStep(s.id)}
                       aria-current={active ? 'step' : undefined}
                       className={cn(
-                        'group relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-[13px] transition-[background-color,color,transform] duration-200',
-                        active ? 'text-fg' : 'text-secondary hover:bg-hover hover:text-fg enabled:hover:translate-x-0.5 rtl:enabled:hover:-translate-x-0.5',
+                        'group relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-start text-[13px] transition-colors duration-150',
+                        active ? 'text-fg' : 'text-secondary hover:bg-hover hover:text-fg',
                         'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
                       )}
                     >
                       {active ? (
                         <motion.span
                           layoutId="step-marker"
-                          className="absolute inset-0 rounded-lg border border-accent/30 bg-linear-to-r from-accent-subtle to-transparent rtl:bg-linear-to-l"
+                          className="absolute inset-0 rounded-md bg-raised"
                           transition={{ duration: reduce ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }}
                           aria-hidden="true"
                         />
                       ) : null}
                       <span
                         className={cn(
-                          'relative grid size-7 shrink-0 place-items-center rounded-lg border text-[11px] transition-transform duration-200 group-hover:scale-105',
-                          // Brand, not green: green says DERIVED, and a finished step is not a provenance class.
+                          'relative grid size-7 shrink-0 place-items-center rounded-md border text-[11px]',
+                          // Ink and blue, not green: green says DERIVED, and a finished step is not a provenance class.
                           active
-                            ? cn('tile border-transparent', `tile-${toneAt(i)}`)
+                            ? 'border-transparent bg-inverse text-on-inverse'
                             : done[s.id]
                               ? 'border-accent/50 bg-accent-subtle text-accent-strong'
                               : 'border-line bg-panel',
@@ -556,9 +555,9 @@ export function Studio({ actor }: { readonly actor: Actor }): JSX.Element {
               <p className="text-[12px] text-secondary">
                 {t.studio.progress(String(STEPS.filter((x) => done[x.id]).length), String(STEPS.length))}
               </p>
-              <span className="h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden="true">
+              <span className="h-1.5 overflow-hidden bg-raised" aria-hidden="true">
                 <motion.span
-                  className="block h-full origin-left rounded-full bg-linear-to-r from-accent via-brand-alt to-brand-glow rtl:origin-right"
+                  className="block h-full origin-left bg-accent rtl:origin-right"
                   initial={false}
                   animate={{ scaleX: STEPS.filter((x) => done[x.id]).length / STEPS.length }}
                   transition={{ duration: reduce ? 0 : 0.7, ease: [0.22, 1, 0.36, 1] }}

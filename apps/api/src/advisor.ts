@@ -236,6 +236,8 @@ const SYSTEM = (locale: 'ar' | 'en', step: Step, at: StudioStep | undefined, edi
     '- You correct by advising. You change nothing yourself: the reader edits the field, or applies an edit you propose.',
     '  Never say a value has been changed or fixed.',
     '- If nothing needs correcting, say so in one line; never invent a problem to fill a heading.',
+    // The owner's call, 18 Oct 2026: «اخفي فى الموقع كلمه كلود». The site names it only as the AI assistant.
+    `- Refer to yourself only as ${locale === 'ar' ? '"المساعد الذكي"' : '"the AI assistant"'}. Never name the model, its version or the company that made it.`,
     '- Never say or imply that the scheme complies with, satisfies, or would be approved under any regulation.',
     '  Regulatory validity is NOT assessed by this tool. At most say a figure is "consistent with clause X as read".',
     '- Use only numbers that appear in the step data or in the code text. Never invent, estimate or round a figure.',
@@ -351,7 +353,7 @@ export function registerAdvisorRoutes(
       );
     } catch (error) {
       request.log.warn({ upstream: (error as { upstreamStatus?: number }).upstreamStatus ?? null, error: (error as Error).message }, 'advisor failed');
-      return reply.code(502).send({ error: 'AdvisorUnavailable', message: 'Claude could not be reached for this analysis. Try again shortly.' });
+      return reply.code(502).send({ error: 'AdvisorUnavailable', message: 'The AI assistant could not be reached for this analysis. Try again shortly.' });
     }
     const { text, edits } = takeEdits(said, editable, code);
     if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value as string);

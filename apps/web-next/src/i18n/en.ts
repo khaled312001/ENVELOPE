@@ -711,16 +711,16 @@ export const EN = {
 
   // Claude's reading of a step against the Dubai Building Code (`studio/AdvisorBox.tsx`).
   advisor: {
-    title: 'Claude’s review, from the Dubai Building Code',
-    asking: 'Claude is reading the Dubai Building Code and this step…',
-    failed: 'Claude could not be reached just now.',
+    title: 'AI assistant’s review, from the Dubai Building Code',
+    asking: 'The AI assistant is reading the Dubai Building Code and this step…',
+    failed: 'The AI assistant could not be reached just now.',
     busy: 'Too many analyses in the last minute. Try again shortly.',
     again: 'Ask again',
     ask: 'Review this step',
-    offer: 'When you ask, Claude checks this step against the Dubai Building Code: what to correct, and what to do next.',
-    askError: 'Ask Claude how to fix this',
-    offerError: 'Claude reads this message against the Dubai Building Code and says which field to change.',
-    note: 'Guidance from Claude Opus 5.5. It changes nothing; you make any correction.',
+    offer: 'When you ask, the AI assistant checks this step against the Dubai Building Code: what to correct, and what to do next.',
+    askError: 'Ask the AI assistant how to fix this',
+    offerError: 'The AI assistant reads this message against the Dubai Building Code and says which field to change.',
+    note: 'Guidance from the AI assistant. It changes nothing; you make any correction.',
     proposed: 'Proposed changes to your inputs, each on a clause of the code',
     apply: 'Apply',
     applyAll: (n: number): string => `Apply all ${n}`,

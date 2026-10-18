@@ -26,7 +26,7 @@ export function ChecksCanvas({ run }: { readonly run: RunView }): JSX.Element {
       <div className="mx-auto grid max-w-4xl gap-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-[20px] font-semibold text-fg">{t.checks.title}</h2>
+            <h2 className="text-[20px] font-light text-fg">{t.checks.title}</h2>
             <p className="text-[13px] text-secondary">{t.checks.ran(inv.ran, inv.total, inv.dormant.length)}</p>
           </div>
           <Badge tone={inv.passed ? 'neutral' : 'variance'}>{inv.passed ? t.checks.noneFailed : t.checks.failed}</Badge>

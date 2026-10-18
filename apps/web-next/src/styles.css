@@ -24,18 +24,10 @@
   without a second stylesheet for them.
 
   COLOUR WITH A JOB. Green is DERIVED, amber is ASSUMED, red is VARIANCE, and
-  none of them is ever decoration. Amber in particular is `--uncertain` and
-  nothing else: no accent, hover or logo.
-
-  ONE INK, ONE BLUE, NO ORNAMENT (the owner's call, 18 Oct 2026: «شيل بصمه كلود
-  والذكاء الاصطناعي من تصميم الموقع»). The site had collected every mark of a
-  generated page: a violet and cyan family beside the blue, gradients on buttons,
-  text and bands, glows behind the hero, turning borders, pointer lights, icons
-  on gradient tiles, shadows under everything at rest. They are gone, not
-  softened. What is left is the register of a drawing set: a neutral ground, the
-  drawing's ink, and one drafting blue that means "you can act on this". Surfaces
-  are told apart by a step in tone; a shadow is only for what really floats over
-  something else (a menu, a map's controls).
+  none of them is ever decoration. The brand's colour lives in a separate
+  family — blue, violet, cyan — used for the identity, the motion and the
+  emphasis, and never for a provenance class. Amber in particular is
+  `--uncertain` and nothing else: no accent, hover, logo or gradient stop.
 */
 
 :root {
@@ -64,13 +56,17 @@
   --night-400: #a4acbc;
   --night-100: #e9ebf1;
 
-  /* A drafting blue, nearer a print's line than a screen's glow. */
-  --blue-700: #174a85;
-  --blue-600: #1f5fa8;
-  --blue-400: #7fb0ea;
-  --blue-300: #a9caf2;
-  --blue-50: #e8f0f9;
-  --blue-950: #0f1e30;
+  --blue-700: #2448c7;
+  --blue-600: #2f5be0;
+  --blue-400: #74a0ff;
+  --blue-300: #9dbcff;
+  --blue-50: #ebf0ff;
+  --blue-950: #101a30;
+  --violet-700: #5b35d5;
+  --violet-600: #6d4aff;
+  --violet-300: #b6a3ff;
+  --cyan-600: #0e7f98;
+  --cyan-300: #67d8ee;
   --green-700: #136d47;
   --green-400: #4cc493;
   --green-50: #e5f5ec;
@@ -110,6 +106,15 @@
   --accent-subtle: var(--blue-50);
   --focus-ring: var(--blue-600);
 
+  /* The brand family. Emphasis and motion only — never a provenance class. */
+  --brand-alt: var(--violet-600);
+  --brand-glow: var(--cyan-600);
+  --brand-solid: var(--blue-700);
+  --brand-alt-solid: var(--violet-700);
+  /* The third solid stop, so icon tiles can come in three tones; white on it is measured like the other two. */
+  --brand-glow-solid: var(--cyan-600);
+  --on-brand: var(--ink-0);
+
   --derived: var(--green-700);
   --derived-surface: var(--green-50);
   --uncertain: var(--amber-800);
@@ -119,7 +124,8 @@
   --deferred: var(--slate-500);
   --deferred-hatch: var(--slate-150);
 
-  --shadow-color: 220 30% 15%;
+  --shadow-color: 220 40% 20%;
+  --glow-strength: 0.22;
 
   /*
     Inter for Latin, Cairo for Arabic — the owner's call of 14 Oct 2026, for a
@@ -156,6 +162,9 @@
   --accent-subtle: var(--blue-950);
   --focus-ring: var(--blue-300);
 
+  --brand-alt: var(--violet-300);
+  --brand-glow: var(--cyan-300);
+
   --derived: var(--green-400);
   --derived-surface: var(--green-950);
   --uncertain: var(--amber-400);
@@ -166,6 +175,7 @@
   --deferred-hatch: var(--slate-850);
 
   --shadow-color: 0 0% 0%;
+  --glow-strength: 0.35;
 
   color-scheme: dark;
 }
@@ -192,6 +202,12 @@
   --color-accent-strong: var(--accent-strong);
   --color-accent-subtle: var(--accent-subtle);
   --color-focus: var(--focus-ring);
+  --color-brand-alt: var(--brand-alt);
+  --color-brand-glow: var(--brand-glow);
+  --color-brand-solid: var(--brand-solid);
+  --color-brand-alt-solid: var(--brand-alt-solid);
+  --color-brand-glow-solid: var(--brand-glow-solid);
+  --color-on-brand: var(--on-brand);
 
   --color-derived: var(--derived);
   --color-derived-surface: var(--derived-surface);
@@ -210,6 +226,14 @@
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+
+  --animate-aurora: aurora 18s ease-in-out infinite alternate;
+  --animate-spin-slow: spin-angle 6s linear infinite;
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  --animate-shimmer: shimmer 2.8s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-wiggle: wiggle 4.8s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 3.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
 @layer base {
@@ -227,19 +251,9 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    /*
-      Inter's straight-sided 1 and open 4/6/9. Tabular figures are not set here:
-      in Inter `tnum` also widens the hyphen to a figure's width, which set
-      "rule-based" as "rule - based" in every heading. `.figure` and the tables
-      ask for them where columns need them.
-    */
-    font-feature-settings: 'cv01' 1, 'cv05' 1, 'ss03' 1;
+    /* Inter's tabular figures, and its straight-sided 1 and open 4/6/9, which read better in a column. */
+    font-feature-settings: 'tnum' 1, 'cv01' 1, 'cv05' 1, 'ss03' 1;
     transition: background-color 0.35s var(--ease-out), color 0.35s var(--ease-out);
-  }
-
-  /* Figures in a column line up wherever they are not already a `.figure`. */
-  table {
-    font-variant-numeric: tabular-nums;
   }
 
   ::selection {
@@ -296,24 +310,126 @@
     display: block;
   }
 
+  /* — the brand, in motion — */
+
   /*
-    The one shadow, for what floats over something else: a menu, a map's
-    controls, a page lifted off its table. Nothing at rest carries it.
+    Gradient text for ONE phrase per screen. Both stops are measured against the
+    page in both themes (test/tokens.test.ts), so the phrase reads at 4.5:1
+    wherever the gradient lands; `color` stays set beneath it for a renderer
+    that cannot clip a background to text.
   */
-  .shadow-float {
-    box-shadow:
-      0 1px 2px hsl(var(--shadow-color) / 0.08),
-      0 8px 24px -8px hsl(var(--shadow-color) / 0.22);
+  .text-brand {
+    color: var(--accent);
+    background: linear-gradient(100deg, var(--accent) 10%, var(--brand-alt) 60%, var(--accent) 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: var(--animate-shimmer);
+  }
+
+  /* The light behind the hero. Transform only, blurred, and never under body copy. */
+  .aurora {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(70px);
+    opacity: var(--glow-strength);
+    animation: var(--animate-aurora);
+    will-change: transform;
+    pointer-events: none;
   }
 
   /*
-    HEADINGS THAT NEVER TOUCH. Latin keeps a tight but clear line height;
-    Arabic letters climb and descend further, and the second line of a large
-    Arabic title ran into the first, so the rule after this layer gives Arabic
-    1.45 and a weight it can hold at size.
+    A border that turns. The angle is a registered custom property so the conic
+    gradient can be animated; where @property is unsupported the border is simply
+    still, which is the whole of the fallback.
+  */
+  .ring-brand {
+    position: relative;
+    isolation: isolate;
+  }
+  .ring-brand::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(from var(--angle), var(--accent), var(--brand-alt), var(--brand-glow), var(--accent));
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: var(--animate-spin-slow);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* A light that follows the pointer across a card. A tint, low enough to leave text contrast intact. */
+  .spotlight {
+    position: relative;
+    isolation: isolate;
+  }
+  .spotlight::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(420px circle at var(--mx, -999px) var(--my, -999px), color-mix(in oklab, var(--accent) 9%, transparent), transparent 45%);
+    opacity: 0;
+    transition: opacity 0.3s var(--ease-out);
+    pointer-events: none;
+    z-index: -1;
+  }
+  .spotlight:hover::after {
+    opacity: 1;
+  }
+
+  .shadow-soft {
+    box-shadow:
+      0 1px 2px hsl(var(--shadow-color) / 0.06),
+      0 12px 32px -12px hsl(var(--shadow-color) / 0.18);
+  }
+  .shadow-lifted {
+    box-shadow:
+      0 2px 4px hsl(var(--shadow-color) / 0.08),
+      0 40px 100px -40px hsl(var(--shadow-color) / 0.45);
+  }
+
+  /*
+    ICON TILES, IN THREE TONES OF THE BRAND. Every stop is a SOLID brand role,
+    the three white is measured on, so a white glyph reads in either theme.
+    Never green, amber or red: those three colours are provenance classes.
+  */
+  .tile {
+    display: grid;
+    place-items: center;
+    color: var(--on-brand);
+    background: linear-gradient(135deg, var(--tile-a), var(--tile-b));
+    box-shadow: 0 10px 24px -12px color-mix(in oklab, var(--tile-a) 80%, transparent);
+  }
+  .tile-blue {
+    --tile-a: var(--brand-solid);
+    --tile-b: var(--brand-glow-solid);
+  }
+  .tile-violet {
+    --tile-a: var(--brand-alt-solid);
+    --tile-b: var(--brand-solid);
+  }
+  .tile-cyan {
+    --tile-a: var(--brand-glow-solid);
+    --tile-b: var(--brand-alt-solid);
+  }
+
+  /*
+    HEADINGS THAT NEVER TOUCH. The display sizes were set at a line height of
+    1.04–1.08, which Latin survives and Arabic does not: Arabic letters climb
+    and descend further, and the second line of a 50px Arabic title ran into
+    the first. Latin keeps a tight but clear 1.12; Arabic gets 1.4 and a
+    weight it can hold at size, since a light Arabic face at 50px reads frail.
   */
   .heading-display {
-    line-height: 1.1;
+    line-height: 1.12;
     text-wrap: balance;
   }
   .heading-section {
@@ -321,19 +437,65 @@
     text-wrap: balance;
   }
 
-  /*
-    A wait, drawn as a wait: a quarter of a ring turning, in `currentColor`. It
-    replaced a three-star spark (18 Oct 2026), which every reader now takes for
-    the mark of a generated page. Longhands, not the shorthand: the release's
-    minifier once rewrote a nameless `animation:` shorthand as `animation:none`,
-    so `test/busy-css.test.ts` builds this rule the way the release does.
-  */
-  .busy-ring {
-    transform-origin: center;
-    animation-name: busy-turn;
-    animation-duration: 0.9s;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
+  /* A slow brand gradient along the edge of a bar. */
+  .brand-edge {
+    background: linear-gradient(90deg, transparent, var(--accent), var(--brand-alt), var(--brand-glow), transparent);
+    background-size: 200% 100%;
+    animation: edge-drift 8s linear infinite;
+  }
+
+  /* A field of dots in a band's corner, fading out. Drawn in a border token, never under prose. */
+  .dot-field {
+    background-image: radial-gradient(var(--border-strong) 1.2px, transparent 1.4px);
+    background-size: 18px 18px;
+    mask-image: radial-gradient(circle at 70% 30%, black, transparent 70%);
+    opacity: 0.7;
+  }
+
+  /* The tinted band: the panel surface with a breath of the brand toward its far edge. */
+  .band-tint {
+    background:
+      radial-gradient(ellipse at 100% 0%, color-mix(in oklab, var(--accent) 6%, transparent), transparent 55%),
+      radial-gradient(ellipse at 0% 100%, color-mix(in oklab, var(--brand-alt) 5%, transparent), transparent 55%),
+      var(--surface-panel);
+  }
+
+  /* A light sweeping across the call to action every few seconds. Transform only. */
+  .cta-shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 35%, color-mix(in oklab, var(--on-brand) 16%, transparent) 50%, transparent 65%);
+    transform: translateX(-100%);
+    animation: sweep 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* A dash travelling round a drawn outline. */
+  .dash-flow {
+    animation: dash-flow 7s linear infinite;
+  }
+
+  /* A brand border that lights up when a card is hovered — a card the pointer is on reads as live. */
+  /* Not on a card that already turns a brand ring: that one owns its ::before. */
+  .spotlight:not(.ring-brand)::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--accent), var(--brand-alt), var(--brand-glow));
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s var(--ease-out);
+    pointer-events: none;
+  }
+  .spotlight:not(.ring-brand):hover::before {
+    opacity: 1;
   }
 }
 
@@ -348,10 +510,11 @@
 :lang(ar) :is(h1, h2, .heading-display, .heading-section) {
   font-weight: 600;
 }
-/* Tracking pulls joined Arabic letters apart. */
+/* Tracking pulls joined Arabic letters apart; the Latin eyebrows' letter-spacing stops at the script. */
 :lang(ar) :is([class*='tracking-'], .figure) {
   letter-spacing: 0;
 }
+/* A phrase inside the title takes the title's Arabic weight, not the Latin one set on it. */
 :lang(ar) :is(h1, .heading-display) * {
   font-weight: inherit;
 }
@@ -359,10 +522,172 @@
   line-height: 1.7;
 }
 
-@keyframes busy-turn {
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spin-angle {
   to {
-    transform: rotate(360deg);
+    --angle: 360deg;
   }
+}
+
+@keyframes aurora {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(6%, -8%, 0) scale(1.12);
+  }
+  100% {
+    transform: translate3d(-6%, 6%, 0) scale(0.95);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* An icon tile drifting a few pixels. Transform only, and stopped for a reader who asked for less motion. */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* The WhatsApp glyph turning briefly, then resting most of the cycle, so it draws the eye without nagging. */
+@keyframes wiggle {
+  0%,
+  80%,
+  100% {
+    transform: rotate(0);
+  }
+  84% {
+    transform: rotate(-12deg);
+  }
+  88% {
+    transform: rotate(10deg);
+  }
+  92% {
+    transform: rotate(-6deg);
+  }
+}
+
+@keyframes pulse-soft {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  70%,
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes edge-drift {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes sweep {
+  0%,
+  55% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -928;
+  }
+}
+
+/*
+  The spark, one star at a time (the owner's call, 16 Oct 2026): the large star
+  turns in and overshoots, then the small one above, then the one below; the three
+  breathe together, then leave together, turning, and the cycle starts again. Three
+  keyframe sets rather than one with delays, so the exits stay together on every
+  loop. The large mark over the canvas is this same SVG, larger: played through
+  motion's keyframes, all three stars' opacity moved as one and fell to zero a
+  third of the way in, measured in the browser, while this version kept time.
+  With reduced motion the rule below plays each once in 0.01 ms and the path
+  returns to its own style: three still stars.
+
+  Longhands, not the shorthand: `animation: 2.8s … infinite` with no name was
+  minified to `animation:none` in the production build, and the live site drew
+  three still stars while the dev server drew them moving.
+  `test/spark-css.test.ts` builds this file the way the release does and reads it back.
+*/
+.spark-path {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-duration: 2.8s;
+  animation-timing-function: cubic-bezier(0.34, 1.2, 0.64, 1);
+  animation-iteration-count: infinite;
+}
+.spark-a { animation-name: spark-a; }
+.spark-b { animation-name: spark-b; }
+.spark-c { animation-name: spark-c; }
+
+/* The soft light behind the large mark, breathing with the stars and gone with them. */
+.spark-glow {
+  animation: spark-glow 2.8s ease-in-out infinite;
+}
+@keyframes spark-glow {
+  0% { opacity: 0; transform: scale(0.6); }
+  20% { opacity: 0.9; transform: scale(1.1); }
+  55% { opacity: 0.5; transform: scale(0.9); }
+  80% { opacity: 0.9; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(0.6); }
+}
+
+@keyframes spark-a {
+  0% { opacity: 0; transform: scale(0) rotate(-90deg); }
+  12% { opacity: 1; transform: scale(1.2) rotate(8deg); }
+  20% { opacity: 1; transform: scale(1) rotate(0deg); }
+  55% { opacity: 0.85; transform: scale(0.9) rotate(0deg); }
+  80% { opacity: 1; transform: scale(1) rotate(0deg); }
+  92%, 100% { opacity: 0; transform: scale(0.4) rotate(60deg); }
+}
+@keyframes spark-b {
+  0%, 18% { opacity: 0; transform: scale(0) rotate(-90deg); }
+  30% { opacity: 1; transform: scale(1.25) rotate(8deg); }
+  38% { opacity: 1; transform: scale(1) rotate(0deg); }
+  60% { opacity: 0.8; transform: scale(0.88) rotate(0deg); }
+  80% { opacity: 1; transform: scale(1) rotate(0deg); }
+  92%, 100% { opacity: 0; transform: scale(0.4) rotate(60deg); }
+}
+@keyframes spark-c {
+  0%, 32% { opacity: 0; transform: scale(0) rotate(-90deg); }
+  44% { opacity: 1; transform: scale(1.25) rotate(8deg); }
+  52% { opacity: 1; transform: scale(1) rotate(0deg); }
+  66% { opacity: 0.8; transform: scale(0.88) rotate(0deg); }
+  80% { opacity: 1; transform: scale(1) rotate(0deg); }
+  92%, 100% { opacity: 0; transform: scale(0.4) rotate(60deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {

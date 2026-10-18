@@ -11,6 +11,7 @@ import { EngineMessage, EngineNote, EngineText } from '../lib/engine-text.js';
 import { useLocale } from '../lib/locale.js';
 import { Button } from '../ui/button.js';
 import { Badge, EmptyState, Notice, PanelHeader, Spinner } from '../ui/primitives.js';
+import { IconTile } from '../ui/tile.js';
 import { Footer, Heading, More, NextStep } from './parts.js';
 
 // pdf.js comes down only once a sheet has been read.
@@ -52,7 +53,7 @@ export function SheetCanvas({ sheet }: { readonly sheet: SheetState | null }): J
   if (!sheet) {
     return (
       <div className="grid h-full place-items-center">
-        <EmptyState title={t.sheet.emptyTitle} body={t.sheet.emptyBody} art={<FileText className="size-10 text-secondary" strokeWidth={1.5} aria-hidden="true" />} />
+        <EmptyState title={t.sheet.emptyTitle} body={t.sheet.emptyBody} art={<IconTile icon={FileText} tone="blue" size="lg" float />} />
       </div>
     );
   }
@@ -342,7 +343,7 @@ function Drop({ busy, onFile }: { readonly busy: boolean; readonly onFile: (file
         </p>
       ) : (
         <>
-          <FileUp className="size-6 text-secondary" aria-hidden="true" />
+          <IconTile icon={FileUp} tone="blue" size="md" />
           <label htmlFor={id} className="cursor-pointer text-[14px] font-medium text-fg after:absolute after:inset-0">
             {t.sheet.drop}
           </label>

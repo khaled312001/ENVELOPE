@@ -1,9 +1,12 @@
-import { Lock, LockOpen } from 'lucide-react';
+import { Check, Equal, FileWarning, Layers, Lock, LockOpen } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 
 import worked from '@web/screens/worked-example.json';
 
 import { cn } from '../../lib/cn.js';
+import { Illustration } from '../../site/art.js';
 import { Band, PageHero, SectionHead, SitePage, useSite } from '../../site/Site.js';
+import { EASE, Item, Stagger } from '../../ui/motion.js';
 import { FileGrid } from '../Landing.js';
 
 /*
@@ -18,43 +21,70 @@ const x = worked.verified.exports;
 
 export function Exports(): JSX.Element {
   const s = useSite();
+  const reduce = useReducedMotion();
   const parity = (['engine', 'drawingSet', 'dxf', 'modelFile'] as const).map((k) => ({ k, n: x.cars[k] }));
   const gateLabel = (signed: readonly string[]): string => (signed.length === 0 ? s.exportsPage.gate.none : signed.length === 1 ? s.exportsPage.gate.g3 : s.exportsPage.gate.both);
 
   return (
     <SitePage path="/exports">
-      <PageHero crumb={s.nav.exports} title={s.exportsPage.title} lede={s.exportsPage.lede} />
+      <PageHero
+        icon={Layers}
+        tone="cyan"
+        crumb={s.nav.exports}
+        eyebrow={s.exportsPage.eyebrow}
+        title={s.exportsPage.title}
+        lede={s.exportsPage.lede}
+        aside={<Illustration name="exports-model" alt={s.art.exportsModel} eager />}
+      />
 
-      <Band tinted>
+      <Band>
+        <p className="figure mb-6 text-[11.5px] tracking-[0.14em] text-accent uppercase">{s.exportsPage.filesEyebrow}</p>
         <FileGrid />
       </Band>
 
-      <Band>
-        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+      <Band tinted>
+        <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
-            <SectionHead title={s.exportsPage.parityTitle} lede={s.exportsPage.parityLede} className="mb-6" />
-            <dl className="border-t border-line">
+            <SectionHead icon={Equal} tone="blue" eyebrow={s.exportsPage.parityEyebrow} title={s.exportsPage.parityTitle} lede={s.exportsPage.parityLede} className="mb-6" />
+            <Stagger as="dl" className="overflow-hidden rounded-xl border border-line bg-base shadow-soft">
               {parity.map(({ k, n }) => (
-                <div key={k} className="flex items-baseline justify-between gap-4 border-b border-line py-3.5">
-                  <dt className="text-[14.5px] text-secondary">{s.exportsPage.parityRows[k]}</dt>
-                  <dd className="figure text-[22px] text-fg">{String(n)}</dd>
-                </div>
+                <Item key={k} className="flex items-center justify-between gap-4 border-b border-line px-5 py-4 last:border-b-0">
+                  <dt className="text-[14px] text-secondary">{s.exportsPage.parityRows[k]}</dt>
+                  <dd className="figure flex items-center gap-2 text-[22px] font-light text-fg">
+                    {String(n)}
+                    {n === x.cars.engine ? <Check className="size-4 text-accent" aria-hidden="true" /> : null}
+                  </dd>
+                </Item>
               ))}
-            </dl>
+            </Stagger>
           </div>
           <div>
-            <SectionHead title={s.exportsPage.gatesTitle} lede={s.exportsPage.gatesLede} className="mb-6" />
-            <ol className="border-t border-line">
-              {x.gateSequence.map((g) => {
+            <SectionHead icon={Lock} tone="violet" eyebrow={s.exportsPage.gatesEyebrow} title={s.exportsPage.gatesTitle} lede={s.exportsPage.gatesLede} className="mb-6" />
+            <ol className="relative grid gap-3">
+              {x.gateSequence.map((g, i) => {
                 const ok = g.status === 200;
                 return (
-                  <li key={g.signed.join('+') || 'none'} className="flex items-center gap-4 border-b border-line py-3.5">
-                    {ok ? <LockOpen className="size-5 shrink-0 text-accent" aria-hidden="true" /> : <Lock className="size-5 shrink-0 text-secondary" aria-hidden="true" />}
+                  <motion.li
+                    key={g.signed.join('+') || 'none'}
+                    className={cn('flex items-center gap-4 rounded-xl border bg-base p-4 shadow-soft', ok ? 'ring-brand border-transparent' : 'border-line')}
+                    initial={reduce ? false : { x: -16 }}
+                    whileInView={{ x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, ease: EASE, delay: i * 0.15 }}
+                  >
+                    <span
+                      className={cn(
+                        'grid size-10 shrink-0 place-items-center rounded-lg',
+                        ok ? 'bg-linear-to-br from-brand-solid to-brand-alt-solid text-on-brand' : 'border border-strong bg-raised text-secondary',
+                      )}
+                    >
+                      {ok ? <LockOpen className="size-5" aria-hidden="true" /> : <Lock className="size-5" aria-hidden="true" />}
+                    </span>
                     <div className="grid gap-0.5">
-                      <p className={cn('text-[14.5px] font-medium', ok ? 'text-fg' : 'text-secondary')}>{gateLabel(g.signed)}</p>
+                      <p className="text-[14px] font-medium text-fg">{gateLabel(g.signed)}</p>
                       <p className="figure text-[12.5px] text-secondary">{s.exportsPage.status(String(g.status))}</p>
                     </div>
-                  </li>
+                  </motion.li>
                 );
               })}
             </ol>
@@ -62,45 +92,58 @@ export function Exports(): JSX.Element {
         </div>
       </Band>
 
-      <Band tinted>
-        <SectionHead title={s.exportsPage.sheetsTitle} />
-        <div className="grid gap-12 lg:grid-cols-3">
-          <ol className="grid content-start border-t border-line sm:grid-cols-2 sm:gap-x-8 lg:col-span-2">
+      <Band glow="cyan">
+        <SectionHead icon={Layers} tone="cyan" eyebrow={s.exportsPage.sheetsEyebrow} title={s.exportsPage.sheetsTitle} />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Stagger as="ol" className="grid content-start gap-2 lg:col-span-2 sm:grid-cols-2" gap={0.05}>
             {x.drawingSheets.map((sh) => (
-              <li key={sh.id} className="flex items-baseline gap-4 border-b border-line py-3">
-                <span className="figure w-14 shrink-0 text-[13px] text-secondary">{sh.number}</span>
-                <span className="text-[14px] text-fg">{s.exportsPage.sheetName(sh.title)}</span>
-              </li>
+              <Item key={sh.id} as="li" className="flex items-center gap-3 rounded-lg border border-line bg-panel px-4 py-3 shadow-soft">
+                <span className="figure rounded-md border border-strong px-2 py-0.5 text-[12px] text-fg">{sh.number}</span>
+                <span className="text-[13.5px] text-fg">{s.exportsPage.sheetName(sh.title)}</span>
+              </Item>
             ))}
-          </ol>
-          <div className="grid content-start gap-3">
-            <p className="text-[15px] font-semibold text-fg">{s.exportsPage.workbookTitle}</p>
+          </Stagger>
+          <div className="grid content-start gap-3 rounded-xl border border-line bg-panel p-5 shadow-soft">
+            <p className="text-[14px] font-medium text-fg">{s.exportsPage.workbookTitle}</p>
             <ul className="grid gap-1.5">
               {x.workbookSheets.map((w) => (
-                <li key={w.name} className="text-[14px] text-secondary">
+                <li key={w.name} className="text-[13px] text-secondary">
                   {s.exportsPage.sheetName(w.name)}
                 </li>
               ))}
             </ul>
           </div>
         </div>
-        <details className="group mt-10">
-          <summary className="cursor-pointer text-[15px] font-semibold text-fg">
-            {s.exportsPage.layersTitle} <span className="figure ms-1 font-normal text-secondary">({x.dxf.layers.length})</span>
+        <details className="group mt-6 rounded-xl border border-line bg-panel p-5 shadow-soft">
+          <summary className="cursor-pointer text-[14px] font-medium text-fg">
+            {s.exportsPage.layersTitle} <span className="figure ms-1 text-secondary">({x.dxf.layers.length})</span>
           </summary>
-          <ul className="figure mt-4 grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-x-6 gap-y-1 text-[12.5px] text-secondary" dir="ltr">
+          <ul className="mt-4 flex flex-wrap gap-1.5" dir="ltr">
             {x.dxf.layers.map((l) => (
-              <li key={l.name}>{l.name}</li>
+              <li key={l.name} className="figure rounded-md border border-line bg-raised px-2 py-0.5 text-[11.5px] text-secondary">
+                {l.name}
+              </li>
             ))}
           </ul>
         </details>
       </Band>
 
-      <Band>
-        <div className="grid gap-2 rounded-lg border border-strong p-6 sm:p-8">
-          <h2 className="text-[18px] font-semibold text-fg">{s.exportsPage.stampTitle}</h2>
-          <p className="max-w-3xl text-[14.5px] leading-relaxed text-secondary">{s.exportsPage.stampBody}</p>
-          <p className="figure not-assessed mt-2 text-[13px] text-fg">{x.stampedIn.map((f) => `.${f}`).join('  ')}</p>
+      <Band tinted>
+        <div className="grid gap-4 rounded-xl border border-strong bg-base p-6 shadow-soft sm:grid-cols-[auto_minmax(0,1fr)] sm:p-8">
+          <span className="grid size-10 place-items-center rounded-lg border border-strong bg-raised text-secondary">
+            <FileWarning className="size-5" aria-hidden="true" />
+          </span>
+          <div className="grid gap-2">
+            <h2 className="text-[18px] font-medium text-fg">{s.exportsPage.stampTitle}</h2>
+            <p className="text-[14px] leading-relaxed text-secondary">{s.exportsPage.stampBody}</p>
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {x.stampedIn.map((f) => (
+                <li key={f} className="figure not-assessed rounded-md border border-line px-2 py-0.5 text-[11.5px] text-fg">
+                  .{f}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </Band>
     </SitePage>

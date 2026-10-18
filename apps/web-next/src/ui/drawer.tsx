@@ -50,7 +50,7 @@ export function Drawer({
             <Dialog.Content asChild forceMount {...(description ? {} : { 'aria-describedby': undefined })}>
               <motion.div
                 dir={dir}
-                className="fixed inset-y-0 end-0 z-50 flex w-full max-w-[34rem] flex-col border-s border-line bg-panel shadow-float"
+                className="fixed inset-y-0 end-0 z-50 flex w-full max-w-[34rem] flex-col border-s border-line bg-panel shadow-2xl"
                 initial={{ x: reduce ? 0 : from, opacity: reduce ? 0 : 1 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: reduce ? 0 : from, opacity: reduce ? 0 : 1 }}

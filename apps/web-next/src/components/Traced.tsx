@@ -57,7 +57,7 @@ export function Traced({
     sm: 'text-[12.5px]',
     md: 'text-[13.5px]',
     lg: 'text-[18px] font-medium',
-    xl: 'text-[34px] leading-none',
+    xl: 'text-[34px] leading-none font-light tracking-[-0.02em]',
   } as const;
   const body = (
     <>

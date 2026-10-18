@@ -61,7 +61,7 @@ export function PdfPage({ base64, label }: { readonly base64: string; readonly l
         aria-label={t.sheet.imageAlt(label)}
         className={
           state === 'ready'
-            ? 'h-auto max-h-full w-auto max-w-full rounded-md border border-line bg-white shadow-float'
+            ? 'h-auto max-h-full w-auto max-w-full rounded-md border border-line bg-white shadow-lifted'
             : 'invisible size-0'
         }
       />

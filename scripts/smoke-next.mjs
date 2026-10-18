@@ -299,7 +299,7 @@ await step('a new study is typed in, filed and computed through the screen', asy
     return;
   }
   await page.goto(at('/studio'), { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: 'Skip and draw the plot' }).click();
+  await page.getByRole('button', { name: 'Skip — draw the plot' }).click();
   // A 50 × 30 m corner plot: boundaries 0 and 1 are roads meeting at P1, 2 and 3 neighbours.
   const xs = ['0', '50', '50', '0'];
   const ys = ['0', '0', '30', '30'];

@@ -1,4 +1,4 @@
-import { CircleCheck, FileCheck2, FileSearch, LogIn, Map as MapIcon, PenSquare, Plus, Trash2, X } from 'lucide-react';
+import { CircleCheck, FileCheck2, LogIn, Map as MapIcon, PenSquare, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { LevelPlanView, PlotCreated, PlotView, RunView } from '@web/api/client.js';
@@ -82,7 +82,7 @@ export function PlotCanvas({
   const placingNow = placing && entrance !== undefined && view === 'plan';
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-wrap items-center justify-center gap-2 border-b border-line bg-panel px-3 py-2">
+      <div className="flex flex-wrap items-center justify-center gap-2 border-b border-line bg-panel/90 px-3 py-2 backdrop-blur">
         <Segmented<PlotViewMode>
           label={t.plot.view}
           value={view}
@@ -244,7 +244,7 @@ function EdgeEditor({
         if (ev.key === 'Escape') onClose();
       }}
       className={cn(
-        'absolute top-3 grid w-[min(22rem,calc(100%-1.5rem))] gap-3 rounded-lg border border-line bg-panel p-3 shadow-float',
+        'absolute top-3 grid w-[min(22rem,calc(100%-1.5rem))] gap-3 rounded-lg border border-line bg-panel p-3 shadow-lg',
         side === 'left' ? 'left-3' : 'right-3',
       )}
     >
@@ -428,7 +428,7 @@ export function PlotPanel({
             </p>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
               <Row label={t.plot.area}>
-                <span className="figure text-[28px] leading-none text-fg">
+                <span className="figure text-[28px] leading-none font-light tracking-[-0.02em] text-fg">
                   {grouped(plot.computedAreaM2)} <span className="font-sans text-[12px] text-secondary">m²</span>
                 </span>
               </Row>
@@ -575,7 +575,7 @@ export function PlotPanel({
                       if (!s || plot || e.classification !== s.classification || (s.roadHierarchy !== '' && e.roadHierarchy !== s.roadHierarchy)) return null;
                       return (
                         <span className="flex items-center gap-1.5 text-[11.5px] text-secondary">
-                          <FileSearch className="size-3.5 shrink-0 text-accent" aria-hidden="true" />
+                          <Sparkles className="size-3.5 shrink-0 text-accent" aria-hidden="true" />
                           {t.plot.suggest.filled[s.from]}
                         </span>
                       );

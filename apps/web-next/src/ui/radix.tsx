@@ -94,7 +94,7 @@ export function Tip({ content, children }: { readonly content: ReactNode; readon
       <Tooltip.Portal>
         <Tooltip.Content
           sideOffset={6}
-          className="z-50 max-w-xs rounded-md border border-line bg-panel px-2 py-1 text-[12px] text-fg shadow-float"
+          className="z-50 max-w-xs rounded-md border border-line bg-raised px-2 py-1 text-[12px] text-fg shadow-lg"
         >
           {content}
         </Tooltip.Content>

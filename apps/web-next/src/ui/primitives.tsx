@@ -2,7 +2,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { forwardRef, type HTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useId } from 'react';
 
 import { cn } from '../lib/cn.js';
-import { BusyMark } from './busy.js';
+import { SparkMark } from './spark.js';
 
 /* ── Badge ───────────────────────────────────────────────────────────────── */
 
@@ -152,9 +152,9 @@ export function Stat({
 
 /* ── Kbd / Spinner / Empty ───────────────────────────────────────────────── */
 
-/** Every wait on the site shows the same mark as the canvas's, so the two cannot drift apart. */
+/** Every wait on the site shows the spark (the owner's call, 16 Oct 2026), not a spinning ring. */
 export function Spinner({ className }: { readonly className?: string }): JSX.Element {
-  return <BusyMark {...(className ? { className } : {})} />;
+  return <SparkMark {...(className ? { className } : {})} />;
 }
 
 export function EmptyState({

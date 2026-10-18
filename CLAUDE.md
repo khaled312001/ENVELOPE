@@ -797,17 +797,6 @@ is a defect even when it makes something easier.
   them; sign-up and the licence moved into the new site; and `/app`, `/work`,
   `/sign-in`, `/sign-up` and `/readiness` are 301s to their new pages. Settings,
   workspace and invitation links are still the classic shell, linked from nowhere.
-- **The public site carries no generated look** (owner, 18 Oct 2026: «اللى يشوف الموقع
-  ميقولش انه بال Ai معمول»). One ink, one drafting blue for actions, surfaces told apart
-  by tone, and a shadow only on what floats (`.shadow-float`). There are no gradients,
-  glows, glass, eyebrows over headings, icon-topped cards, gradient text or fade-in on
-  every section. The only pictures are the engine's own 3D model and drawings; the
-  generated webp illustrations are gone. The busy state is `BusyMark` (`ui/busy.tsx`), a
-  turning arc that replaced the gradient spark. A numeral marks only a real sequence, in an
-  `<ol>`. Do not bring any of these back as "polish". The rules came from
-  pbakaus/impeccable, Leonxlnx/taste-skill and anthropics/skills `frontend-design`. Two
-  things they would flag stay by the owner's choice: Inter, and the violet ".dev" in the
-  delivered logo.
 - Integer millimetres inside the kernel; `Decimal` for every non-geometric number. Never `number`
   for a quantity a user will see.
 - Public APIs carry explicit return types. `tsc --noEmit` clean before moving on.
